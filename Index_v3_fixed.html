@@ -1640,7 +1640,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '7.2';
+var APP_VERSION = '7.3';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Signed session token for non-org users (issued by the backend after Google
@@ -4875,13 +4875,23 @@ function refreshDropdowns(){
 }
 
 // ── CSV Export ────────────────────────────────────────────────────────────────
+// Wrapping a field in quotes stops it from breaking the CSV grid, but it does NOT
+// stop Excel/Sheets from evaluating it: a cell opening with = + - @ is still read
+// as a formula when the downloaded file is opened. Prefix those with an
+// apostrophe so the exported value stays inert text.
+function _csvCell(v){
+  var s = String(v === null || v === undefined ? '' : v);
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+  return '"' + s.replace(/"/g,'""') + '"';
+}
+
 function exportMovementsCSV(){
   var headers = ['MoveType','Date','Category','Name','Project','Qty','Unit','Source','Destination','Responsible','Comments','User'];
   var srcMovs = _oldHistoryLoaded ? oldMovements.concat(movements) : movements;
   var rows = srcMovs.slice().reverse().map(function(m){
     return [nt(m.moveType),m.dateRec||m.timestamp,nt(m.category),displayName(m),m.project||'',
             m.qty,m.unit||'',m.sourceLoc||'',m.destLoc||'',m.responsible||'',(m.comments||'').replace(/\n/g,' '),m.userEmail||'']
-      .map(function(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }).join(',');
+      .map(_csvCell).join(',');
   });
   var csv = [headers.join(',')].concat(rows).join('\n');
   var a = document.createElement('a');
@@ -4898,7 +4908,7 @@ function exportProjectCSV(){
   var rows = pm.map(function(m){
     return [nt(m.moveType),m.dateRec||m.timestamp,nt(m.category),displayName(m),m.qty,m.unit||'',
             m.sourceLoc||'',m.destLoc||'',m.responsible||'',(m.comments||'').replace(/\n/g,' ')]
-      .map(function(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }).join(',');
+      .map(_csvCell).join(',');
   });
   var csv = [headers.join(',')].concat(rows).join('\n');
   var a = document.createElement('a');

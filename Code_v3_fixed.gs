@@ -7,7 +7,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '7.2';
+var APP_VERSION = '7.3';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -161,24 +161,15 @@ function pollLogin(state) {
 //   1. USERS_V3 sheet  (managed via in-app admin panel)
 //   2. CONFIG sheet    (legacy — existing rows still work)
 // Unknown emails → DENIED (admin must register the user first).
-// ── Public user list — kept for reference (identity picker was replaced by login) ─
-function getPublicUsers() {
-  var ss         = SpreadsheetApp.getActiveSpreadsheet();
-  var usersSheet = ss.getSheetByName('USERS_V3');
-  var list       = [];
-  if (usersSheet && usersSheet.getLastRow() > 1) {
-    var uRows = usersSheet.getDataRange().getValues();
-    for (var u = 1; u < uRows.length; u++) {
-      var uEmail  = String(uRows[u][1] || '').toLowerCase().trim();
-      var uName   = String(uRows[u][2] || '').trim();
-      var uRole   = String(uRows[u][3] || 'WAREHOUSE').toUpperCase().trim();
-      var uActive = uRows[u][6];
-      var isActive = (uActive === true || String(uActive).toUpperCase() === 'TRUE' || uActive === '');
-      if (uEmail && isActive) list.push({ email: uEmail, name: uName, role: uRole });
-    }
-  }
-  return list;
-}
+// REMOVED: getPublicUsers().
+// Every global function in an Apps Script web app is a callable RPC endpoint, so
+// any signed-in Google account could invoke it from the browser console and read
+// back the full staff roster (email, name, role) — it performed no auth check at
+// all. It was dead code: the identity picker it fed was replaced by the login
+// flow below, and nothing in Index_v3_fixed.html referenced it. Deleting the
+// function removes the endpoint entirely, which is stronger than gating it.
+// If a roster is ever needed again, add it behind `getUserRole(sessionToken)`
+// with an explicit ADMIN check, the way listUsers() already does.
 
 function getUserRole(sessionToken) {
   var email = '';
@@ -289,6 +280,24 @@ function normalizeString(str) {
 // so "A-680" and "A 680" still merge into one material for stock totals.
 function _cleanDisplay(str) {
   return String(str || '').toUpperCase().trim().replace(/\s+/g, ' ');
+}
+
+// Neutralize formula injection before ANY user-supplied text reaches a cell.
+// Sheets evaluates a cell whose text starts with = or + as a live formula, so a
+// value like "=IMPORTXML(...)" typed into a comment/name field would execute
+// inside the spreadsheet and can exfiltrate data or poison totals. The - and @
+// prefixes are added because the same strings get exported to CSV and Excel
+// evaluates all four. This matters most on the Gmail-scan path, where the text
+// originates in inbound mail from outside the company.
+//
+// A leading apostrophe is Sheets' "treat as literal text" marker: it is a cell
+// format flag, NOT part of the stored value, so getValues() still returns the
+// original string and existing comparisons/verifications are unaffected.
+function _sheetSafe(val) {
+  if (val === null || val === undefined) return '';
+  if (val instanceof Date || typeof val === 'number' || typeof val === 'boolean') return val;
+  var s = String(val);
+  return /^[=+\-@\t\r]/.test(s) ? "'" + s : s;
 }
 
 // Convert a spreadsheet cell value to a plain string.
@@ -1004,25 +1013,25 @@ function _addMovementsBatch(ss, archive, movements, auth) {
 
       var row = new Array(20);
       row[AC.TIMESTAMP]   = now;
-      row[AC.CATEGORY]    = _cleanDisplay(d.category);  // stored as typed (keeps , - /)
-      row[AC.NAME]        = _cleanDisplay(d.name);      // matId above still uses normalized form
-      row[AC.GC]          = String(d.gc || '').trim();
-      row[AC.PO]          = String(d.po || '').trim();
+      row[AC.CATEGORY]    = _sheetSafe(_cleanDisplay(d.category));  // stored as typed (keeps , - /)
+      row[AC.NAME]        = _sheetSafe(_cleanDisplay(d.name));      // matId above still uses normalized form
+      row[AC.GC]          = _sheetSafe(String(d.gc || '').trim());
+      row[AC.PO]          = _sheetSafe(String(d.po || '').trim());
       row[AC.QTY]         = qty;
-      row[AC.UNIT]        = String(d.unit || 'UNIT').toUpperCase();
+      row[AC.UNIT]        = _sheetSafe(String(d.unit || 'UNIT').toUpperCase());
       row[AC.DATE_REC]    = d.dateRec || tzDate;
-      row[AC.SRC_LOC]     = src;
-      row[AC.SUPPLIER]    = String(d.supplier || '').trim();
-      row[AC.COMMENTS]    = String(d.comments || '').trim();
+      row[AC.SRC_LOC]     = _sheetSafe(src);
+      row[AC.SUPPLIER]    = _sheetSafe(String(d.supplier || '').trim());
+      row[AC.COMMENTS]    = _sheetSafe(String(d.comments || '').trim());
       row[AC.STATUS]      = statusVal;
-      row[AC.RESPONSIBLE] = String(d.responsible || auth.email).trim();
-      row[AC.PROJECT]     = proj;
-      row[AC.MAT_ID]      = matId;
+      row[AC.RESPONSIBLE] = _sheetSafe(String(d.responsible || auth.email).trim());
+      row[AC.PROJECT]     = _sheetSafe(proj);
+      row[AC.MAT_ID]      = _sheetSafe(matId);
       row[AC.DOC_LINKS]   = '';
       row[AC.USER_EMAIL]  = auth.email;
-      row[AC.DEST_LOC]    = dest;
+      row[AC.DEST_LOC]    = _sheetSafe(dest);
       row[AC.MOVETYPE]    = mt;
-      row[AC.PM]          = String(d.pm || '').trim();
+      row[AC.PM]          = _sheetSafe(String(d.pm || '').trim());
 
       newRows.push(row);
       rowMeta.push({
@@ -1701,7 +1710,7 @@ function _addReservation(ss, data, auth) {
   if (current.availableQty < qty) throw new Error('Cannot reserve. Available: ' + current.availableQty);
 
   var id = 'RES-' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd-HHmmss');
-  sheet.appendRow([id, cat, name, proj, qty, auth.email, new Date(), 'Active', '']);
+  sheet.appendRow([id, _sheetSafe(cat), _sheetSafe(name), _sheetSafe(proj), qty, auth.email, new Date(), 'Active', '']);
 
   _auditLog(ss, 'ADD_RESERVATION', auth.email, id + ' | ' + name + ' x' + qty, '', '');
   return { status: 'success', reservationId: id };
@@ -1866,7 +1875,7 @@ function lockMaterial(data, auth) {
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][9] || '').toUpperCase() !== 'ACTIVE') continue;
     if (String(rows[i][1] || '') === matId && normalizeString(rows[i][4] || '') === rackKey) {
-      sheet.getRange(i + 1, 6, 1, 4).setValues([[allowedDest.join(', '), reason, auth.email, now]]);
+      sheet.getRange(i + 1, 6, 1, 4).setValues([[_sheetSafe(allowedDest.join(', ')), _sheetSafe(reason), auth.email, now]]);
       _auditLog(ss, 'UPDATE_LOCK', auth.email, data.name + ' @ ' + rack, '', reason);
       CacheService.getScriptCache().remove('materialLocksV1');
       return { status: 'success', lock: { id: String(rows[i][0]), matId: matId, category: data.category, name: data.name, rack: rack, allowedDest: allowedDest, reason: reason, lockedBy: auth.email, lockedAt: nowStr } };
@@ -1874,7 +1883,7 @@ function lockMaterial(data, auth) {
   }
 
   var id = 'LOCK-' + new Date().getTime();
-  sheet.appendRow([id, matId, data.category, data.name, rack, allowedDest.join(', '), reason, auth.email, now, 'Active', '', '']);
+  sheet.appendRow([id, _sheetSafe(matId), _sheetSafe(data.category), _sheetSafe(data.name), _sheetSafe(rack), _sheetSafe(allowedDest.join(', ')), _sheetSafe(reason), auth.email, now, 'Active', '', '']);
   _auditLog(ss, 'LOCK_MATERIAL', auth.email, data.name + ' @ ' + rack, '', reason);
   CacheService.getScriptCache().remove('materialLocksV1');
   return { status: 'success', lock: { id: id, matId: matId, category: data.category, name: data.name, rack: rack, allowedDest: allowedDest, reason: reason, lockedBy: auth.email, lockedAt: nowStr } };
@@ -2274,18 +2283,18 @@ function _updateTruck(ss, data) {
   var values = cfg.getDataRange().getValues();
   for (var i = 1; i < values.length; i++) {
     if (String(values[i][8] || '') === data.truckName) {
-      cfg.getRange(i + 1, 10).setValue(data.assignedPerson || '');
-      cfg.getRange(i + 1, 11).setValue(data.status || 'ACTIVE');
+      cfg.getRange(i + 1, 10).setValue(_sheetSafe(data.assignedPerson || ''));
+      cfg.getRange(i + 1, 11).setValue(_sheetSafe(data.status || 'ACTIVE'));
       return { status: 'success' };
     }
   }
-  cfg.appendRow(['','','','','','','','',data.truckName, data.assignedPerson || '', data.status || 'ACTIVE','','']);
+  cfg.appendRow(['','','','','','','','',_sheetSafe(data.truckName), _sheetSafe(data.assignedPerson || ''), _sheetSafe(data.status || 'ACTIVE'),'','']);
   return { status: 'success', message: 'Truck added.' };
 }
 
 function _addUser(ss, data) {
   var cfg = ss.getSheetByName(SHEETS.CONFIG);
-  cfg.appendRow(['','','','','',data.email, data.role,'','','','','','']);
+  cfg.appendRow(['','','','','',_sheetSafe(data.email), _sheetSafe(data.role),'','','','','','']);
   return { status: 'success' };
 }
 
@@ -2310,7 +2319,7 @@ function _updateMinStock(ss, data) {
       return { status: 'success' };
     }
   }
-  cfg.appendRow(['','','','','','','','','','','',data.category, Number(data.qty) || 0]);
+  cfg.appendRow(['','','','','','','','','','','',_sheetSafe(data.category), Number(data.qty) || 0]);
   return { status: 'success' };
 }
 
@@ -2361,7 +2370,7 @@ function _runReconciliation(ss) {
 function _auditLog(ss, action, user, details, oldVal, newVal) {
   var sheet = ss.getSheetByName(SHEETS.AUDIT);
   if (!sheet) return;
-  sheet.appendRow([new Date(), action, user, details, oldVal, newVal]);
+  sheet.appendRow([new Date(), action, user, _sheetSafe(details), _sheetSafe(oldVal), _sheetSafe(newVal)]);
 }
 
 // ─── ERROR LOG ────────────────────────────────────────────────────────────────
@@ -2419,8 +2428,8 @@ function _logError(ss, severity, source, action, userEmail, message, context, re
   try {
     var sheet = _ensureErrorLogSheet(ss);
     sheet.appendRow([
-      new Date(), severity, userEmail || '', source, action || '',
-      String(message || '').substring(0, 500), _sanitizeErrorContext(context), requestId || ''
+      new Date(), severity, _sheetSafe(userEmail || ''), source, _sheetSafe(action || ''),
+      _sheetSafe(String(message || '').substring(0, 500)), _sheetSafe(_sanitizeErrorContext(context)), requestId || ''
     ]);
   } catch (e) {
     Logger.log('_logError failed: ' + e.message);
@@ -2488,31 +2497,12 @@ function _checkNotifications(ss, data, moveType, qty, userEmail) {
 }
 
 // ─── EXPORT ──────────────────────────────────────────────────────────────────
-function exportMovementsCSV(filters) {
-  var ss      = SpreadsheetApp.getActiveSpreadsheet();
-  var archive = ss.getSheetByName(SHEETS.ARCHIVE);
-  if (!archive) return '';
-
-  var data = archive.getDataRange().getValues();
-  var rows = [['MoveType','Date','Category','Name','Project','Qty','Unit','Source','Destination','Truck','Responsible','Status','Comments'].join(',')];
-
-  for (var i = 1; i < data.length; i++) {
-    var m = parseArchiveRow(data[i], i + 1);
-    if (filters) {
-      if (filters.moveType  && m.moveType !== filters.moveType)                        continue;
-      if (filters.category  && m.category !== filters.category)                        continue;
-      if (filters.project   && m.project.toLowerCase() !== filters.project.toLowerCase()) continue;
-      if (filters.dateFrom  && m.dateRec < filters.dateFrom)                           continue;
-      if (filters.dateTo    && m.dateRec > filters.dateTo)                             continue;
-    }
-    rows.push([
-      m.moveType, m.dateRec, m.category, m.name, m.project, m.qty, m.unit,
-      m.sourceLoc, m.destLoc, m.truck, m.responsible, m.status,
-      '"' + (m.comments || '').replace(/"/g,'""') + '"'
-    ].join(','));
-  }
-  return rows.join('\n');
-}
+// REMOVED: the server-side exportMovementsCSV(filters).
+// It took no session token and checked no role, so as a global function it was a
+// callable RPC endpoint that dumped the ENTIRE movement archive to any signed-in
+// Google account. It was also dead code — the client does its own export from
+// data it has already been authorized to see (exportMovementsCSV() in
+// Index_v3_fixed.html), which is the only export path the UI ever calls.
 
 // ─── CUSTOM MENU ─────────────────────────────────────────────────────────────
 function onOpen() {
@@ -2638,7 +2628,7 @@ function addUser(data, auth) {
 
   var now = new Date();
   var id  = 'USR-' + now.getTime();
-  sheet.appendRow([id, email, name, role, auth.email, now, true]);
+  sheet.appendRow([id, _sheetSafe(email), _sheetSafe(name), _sheetSafe(role), auth.email, now, true]);
   _auditLog(ss, 'ADD_USER', auth.email, email + ' as ' + role, '', '');
   return { status: 'success', id: id };
 }
@@ -2656,8 +2646,8 @@ function updateUser(data, auth) {
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][1] || '').toLowerCase().trim() === email) {
       var rowNum = i + 1;
-      if (data.name !== undefined)   sheet.getRange(rowNum, 3).setValue(String(data.name).trim());
-      if (data.role !== undefined)   sheet.getRange(rowNum, 4).setValue(String(data.role).toUpperCase().trim());
+      if (data.name !== undefined)   sheet.getRange(rowNum, 3).setValue(_sheetSafe(String(data.name).trim()));
+      if (data.role !== undefined)   sheet.getRange(rowNum, 4).setValue(_sheetSafe(String(data.role).toUpperCase().trim()));
       if (data.active !== undefined) sheet.getRange(rowNum, 7).setValue(!!data.active);
       _auditLog(ss, 'UPDATE_USER', auth.email, email + ' → ' + (data.role || 'no role change'), '', '');
       return { status: 'success' };
@@ -2746,7 +2736,7 @@ function updateConfig(data, auth) {
     for (var i = 1; i < rows.length; i++) {
       if (!rows[i][col]) { targetRow = i + 1; break; }
     }
-    cfg.getRange(targetRow, col + 1).setValue(nv);
+    cfg.getRange(targetRow, col + 1).setValue(_sheetSafe(nv));
 
   } else if (data.op === 'rename') {
     if (!val) throw new Error('Current value required for rename.');
@@ -2754,7 +2744,7 @@ function updateConfig(data, auth) {
     var renamed = 0;
     for (var i = 1; i < rows.length; i++) {
       if (String(rows[i][col] || '').trim().toUpperCase() === val.toUpperCase()) {
-        cfg.getRange(i + 1, col + 1).setValue(nv);
+        cfg.getRange(i + 1, col + 1).setValue(_sheetSafe(nv));
         renamed++;
       }
     }
@@ -2766,7 +2756,7 @@ function updateConfig(data, auth) {
         var aData = archive.getDataRange().getValues();
         for (var j = 1; j < aData.length; j++) {
           if (String(aData[j][AC.CATEGORY] || '').trim().toUpperCase() === val.toUpperCase()) {
-            archive.getRange(j + 1, AC.CATEGORY + 1).setValue(nv.toUpperCase());
+            archive.getRange(j + 1, AC.CATEGORY + 1).setValue(_sheetSafe(nv.toUpperCase()));
           }
         }
       }
@@ -2829,7 +2819,7 @@ function manageMaterial(data, auth) {
     for (var i = 1; i < rows.length; i++) {
       if (String(rows[i][AC.CATEGORY]||'').trim().toUpperCase() === cat &&
           String(rows[i][AC.NAME]    ||'').trim().toUpperCase() === oldNm) {
-        archive.getRange(i + 1, AC.NAME + 1).setValue(newNm);
+        archive.getRange(i + 1, AC.NAME + 1).setValue(_sheetSafe(newNm));
         count++;
       }
     }
@@ -2844,7 +2834,7 @@ function manageMaterial(data, auth) {
     for (var i = 1; i < rows.length; i++) {
       if (String(rows[i][AC.CATEGORY]||'').trim().toUpperCase() === cat &&
           String(rows[i][AC.NAME]    ||'').trim().toUpperCase() === nm) {
-        archive.getRange(i + 1, AC.CATEGORY + 1).setValue(newCat);
+        archive.getRange(i + 1, AC.CATEGORY + 1).setValue(_sheetSafe(newCat));
         count++;
       }
     }
@@ -2861,7 +2851,7 @@ function manageMaterial(data, auth) {
     for (var i = 1; i < rows.length; i++) {
       if (String(rows[i][AC.CATEGORY]||'').trim().toUpperCase() === cat &&
           String(rows[i][AC.NAME]    ||'').trim().toUpperCase() === srcNm) {
-        archive.getRange(i + 1, AC.NAME + 1).setValue(tgtNm);
+        archive.getRange(i + 1, AC.NAME + 1).setValue(_sheetSafe(tgtNm));
         count++;
       }
     }
@@ -2967,17 +2957,17 @@ function addIncoming(data) {
   sheet.appendRow([
     id,
     estDate,
-    String(data.category || '').toUpperCase().trim(),
-    String(data.name     || '').trim(),
+    _sheetSafe(String(data.category || '').toUpperCase().trim()),
+    _sheetSafe(String(data.name     || '').trim()),
     Number(data.qty      || 0),
-    String(data.unit     || 'UNIT'),
-    String(data.supplier || ''),
-    String(data.po       || ''),
-    String(data.notes    || ''),
+    _sheetSafe(String(data.unit     || 'UNIT')),
+    _sheetSafe(String(data.supplier || '')),
+    _sheetSafe(String(data.po       || '')),
+    _sheetSafe(String(data.notes    || '')),
     'Pending',
     auth.email,
     new Date(),
-    String(data.pm       || ''),
+    _sheetSafe(String(data.pm       || '')),
     docLink
   ]);
   return { status: 'success', id: id, docLink: docLink };
@@ -3010,17 +3000,17 @@ function updateIncoming(data) {
       sheet.getRange(i + 1, 1, 1, 14).setValues([[
         data.id,
         estDate,
-        String(data.category || '').toUpperCase().trim(),
-        String(data.name     || '').trim(),
+        _sheetSafe(String(data.category || '').toUpperCase().trim()),
+        _sheetSafe(String(data.name     || '').trim()),
         Number(data.qty      || 0),
-        String(data.unit     || 'UNIT'),
-        String(data.supplier || ''),
-        String(data.po       || ''),
-        String(data.notes    || ''),
-        String(data.status   || 'Pending'),
+        _sheetSafe(String(data.unit     || 'UNIT')),
+        _sheetSafe(String(data.supplier || '')),
+        _sheetSafe(String(data.po       || '')),
+        _sheetSafe(String(data.notes    || '')),
+        _sheetSafe(String(data.status   || 'Pending')),
         values[i][10],          // preserve addedBy
         values[i][11],          // preserve addedAt
-        String(data.pm || ''),  // PM — Project Manager
+        _sheetSafe(String(data.pm || '')),  // PM — Project Manager
         docLink
       ]]);
       return { status: 'success', docLink: docLink };
@@ -3120,7 +3110,7 @@ function modifyMovement(data, auth) {
     if (oldStr !== newStr) {
       origVals[f.label] = oldStr;
       changes.push(f.label + ': "' + oldStr + '" → "' + newStr + '"');
-      rowVals[f.col] = (key === 'qty') ? (parseFloat(newStr) || 0) : newStr;
+      rowVals[f.col] = (key === 'qty') ? (parseFloat(newStr) || 0) : _sheetSafe(newStr);
     }
   });
 
