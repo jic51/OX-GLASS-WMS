@@ -139,9 +139,22 @@
     .alert-banner{background:var(--yellow-bg);border:1px solid var(--yellow);border-radius:8px;padding:.6rem 1rem;margin-bottom:1rem;font-size:.82rem;color:var(--yellow);display:none}
     .alert-banner.show{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
     /* ── OVERLAY / MODAL ── */
-    .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:550;align-items:center;justify-content:center;padding:15px}
+    .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:550;align-items:center;justify-content:center;padding:15px}
     .overlay.show{display:flex}
-    .modal{--mpad:1.75rem;background:var(--card);border-radius:14px;padding:0 var(--mpad) var(--mpad);width:100%;max-width:640px;max-height:92vh;overflow-y:auto;box-shadow:0 12px 30px rgba(0,0,0,.25)}
+    /* height (not max-height): the box is ALWAYS this size, tied only to the
+       viewport — never shrinks for a short form, never grows for a long one.
+       Short content just leaves empty space at the bottom; long content scrolls
+       inside via overflow-y. Every .modal instance shares this one fixed size. */
+    .modal{--mpad:1.75rem;background:var(--card);border-radius:14px;padding:0 var(--mpad) var(--mpad);width:100%;max-width:min(640px,92vw);height:min(82vh,700px);overflow-y:auto;box-shadow:0 12px 30px rgba(0,0,0,.25)}
+    /* Standardized size tiers (scale with viewport via min(), never grow past
+       that from content) — every popup uses one of these three instead of an
+       ad-hoc per-modal pixel value. Content still picks the tier that fits it
+       (a lock-reason dialog doesn't need to be as wide as the movement form),
+       but within a tier every modal is now identical, and none can silently
+       balloon past its cap the way an unconstrained wide table used to. */
+    .modal-sm{max-width:min(480px,92vw)}
+    .modal-md{max-width:min(640px,92vw)}
+    .modal-lg{max-width:min(760px,92vw)}
     .modal h3{font-size:1.1rem;font-weight:700;margin-bottom:1rem}
     /* Sticky modal header — stays pinned while the body scrolls, so the X is always reachable */
     .mhdr{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:.6rem;margin:0 calc(-1 * var(--mpad)) 1.1rem;padding:.8rem 1rem .8rem 1.3rem;background:var(--card);border-bottom:1px solid var(--border);border-radius:14px 14px 0 0}
@@ -229,19 +242,27 @@
        the overlay (header, X, click-outside-to-close, a second click on Save) and
        darkens the backdrop so the user knows to wait. The modal itself stays fully
        legible — only the backdrop darkens, nothing inside becomes see-through. */
-    /* IMPORTANT: pointer-events:none on .overlay itself would make the backdrop
-       stop intercepting clicks — they'd fall straight through to whatever is
-       behind it (the rest of the page), which is the opposite of "frozen".
-       Instead: the backdrop keeps normal pointer-events (still blocks/darkens
-       everything behind it), and only the modal BOX becomes inert. closeIfOutside()
-       also short-circuits while .busy so a click that lands on the backdrop
-       doesn't flash the header either. */
-    .overlay.busy{background:rgba(0,0,0,.78);transition:background .15s}
+    /* Every overlay already darkens the whole screen at the same tone the moment
+       it opens (.overlay background above) — busy state only needs to make the
+       modal BOX itself inert. IMPORTANT: pointer-events:none on .overlay itself
+       would make the backdrop stop intercepting clicks — they'd fall straight
+       through to whatever is behind it (the rest of the page), which is the
+       opposite of "frozen". So only .modal gets it, backdrop keeps normal
+       pointer-events. closeIfOutside() also short-circuits while .busy so a
+       click that lands on the backdrop doesn't flash the header either. */
     .overlay.busy .modal{pointer-events:none;cursor:wait}
     .multi-mat-add{background:none;border:1px dashed var(--accent);color:var(--accent);border-radius:6px;padding:.4rem;font-size:.82rem;font-weight:600;cursor:pointer;width:100%;margin-top:.35rem;transition:.15s;display:block}
     .multi-mat-add:hover{background:#DBEAFE}
     /* ── INCOMING SUGGESTION BOX ── */
-    .inc-suggest-box{position:absolute;left:0;right:0;top:100%;z-index:400;background:var(--card);border:1px solid var(--accent);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.14);overflow:hidden;margin-top:2px}
+    /* position:fixed, not absolute — the modal it lives in scrolls
+       (overflow-y:auto), which clips anything absolutely positioned near its
+       edge. _positionSuggestBox() sets top/left in JS from the input's actual
+       screen position every time the box is shown, escaping that clipping
+       entirely (position:absolute is only a fallback here). Fixed width — never
+       stretches to match whatever ancestor happens to be position:relative
+       (that used to make it balloon huge in some places, thin in others).
+       Caps to 40vw so it can't overflow a narrow/mobile viewport either. */
+    .inc-suggest-box{position:absolute;width:260px;max-width:40vw;max-height:280px;overflow-y:auto;z-index:1300;background:var(--card);border:1px solid var(--accent);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.14)}
     .inc-suggest-hdr{padding:.3rem .7rem;font-size:.68rem;font-weight:700;color:var(--accent2);background:#EFF6FF;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #DBEAFE}
     .inc-suggest-item{padding:.5rem .75rem;cursor:pointer;font-size:.82rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.5rem;transition:background .12s}
     .inc-suggest-item:last-child{border-bottom:none}
@@ -425,10 +446,28 @@
     .rack-photo-card .rpc-actions{padding:.4rem .6rem;display:flex;justify-content:center}
     .rack-photo-card .rpc-btn{font-size:.72rem;background:var(--border);color:var(--text);border:none;border-radius:6px;padding:.3rem .6rem;cursor:pointer;transition:.15s}
     .rack-photo-card .rpc-btn:hover{background:var(--accent);color:#fff}
-    /* ── SETTINGS MODAL ── */
+    /* ── SETTINGS MODAL — vertical sidebar layout ──
+       .settings-tab keeps its base look (used by JS toggling .active) but now
+       lays out as a full-width sidebar row instead of an inline pill, so a long
+       tab list never wraps into a cramped multi-row header again. */
+    .modal.settings-modal{max-width:min(920px,92vw);width:100%;height:min(82vh,700px);padding:0;display:flex;flex-direction:column;overflow:hidden}
+    .settings-modal .mhdr{border-radius:14px 14px 0 0;margin:0}
+    .settings-body{display:flex;flex:1;min-height:0}
+    .settings-sidebar{width:210px;flex-shrink:0;background:var(--bg);border-right:1px solid var(--border);padding:.85rem .6rem;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+    .settings-sidebar-label{font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:.9rem .6rem .3rem}
+    .settings-sidebar-label:first-child{padding-top:.2rem}
+    /* display:flex so a tab's list/table can flex:1 to fill the fixed modal
+       height exactly — before, .mat-list and the Error Log table had their own
+       fixed max-height (320px / 45vh) left over from when the modal itself grew
+       with content; now that the modal is a fixed size, those stale caps left a
+       big empty gap below a short list instead of the list filling the box. */
+    .settings-content{flex:1;min-width:0;min-height:0;overflow-y:auto;padding:1.25rem 1.5rem 1.5rem;display:flex;flex-direction:column}
+    #settingsTabContent{display:flex;flex-direction:column;flex:1;min-height:0}
     .settings-tab{background:none;border:none;padding:.4rem .9rem;border-radius:6px;font-size:.8rem;font-weight:600;color:var(--muted);cursor:pointer;transition:.15s}
     .settings-tab.active{background:var(--accent);color:#fff}
     .settings-tab:hover:not(.active){background:rgba(0,0,0,.06)}
+    .settings-sidebar .settings-tab{display:flex;align-items:center;gap:.55rem;width:100%;text-align:left;padding:.55rem .7rem;font-size:.83rem}
+    .settings-sidebar .settings-tab:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
     .cfg-list{list-style:none;margin:0;padding:0}
     .cfg-item{display:flex;align-items:center;gap:.5rem;padding:.45rem .5rem;border-radius:6px;font-size:.85rem;border-bottom:1px solid var(--border)}
     .cfg-item:last-child{border-bottom:none}
@@ -443,7 +482,7 @@
     /* Materials tab */
     .mat-search-row{display:flex;gap:.5rem;margin-bottom:.75rem}
     .mat-search-row input{flex:1;padding:.4rem .7rem;border:1px solid var(--border);border-radius:6px;font-size:.85rem;font-family:inherit}
-    .mat-list{max-height:320px;overflow-y:auto}
+    .mat-list{flex:1;min-height:0;overflow-y:auto}
     .mat-item{display:flex;align-items:center;gap:.4rem;padding:.4rem .5rem;border-bottom:1px solid var(--border);font-size:.82rem;flex-wrap:wrap}
     .mat-item-name{flex:1;min-width:120px;font-weight:500}
     .mat-item-cat{font-size:.72rem;color:var(--muted)}
@@ -732,7 +771,7 @@
 
 <!-- ══ USERS MANAGEMENT MODAL ════════════════════════════════════════════════ -->
 <div class="overlay" id="usersOverlay">
-  <div class="modal" style="max-width:700px">
+  <div class="modal modal-lg">
     <div class="mhdr">
       <h3>👥 User Management</h3>
       <button class="modal-x" onclick="closeModal('usersOverlay')" title="Close">✕</button>
@@ -794,7 +833,6 @@
     <span>⚠️</span>
     <span id="alertText" style="flex:1"></span>
     <div class="alert-banner-actions" onclick="event.stopPropagation()">
-      <button onclick="toggleStockPanel()" title="Show detail list">📋 Details</button>
       <button id="btnMonitorSettings" onclick="openMonitorModal()" title="Choose which materials to monitor" style="display:none">⚙ Monitor</button>
     </div>
   </div>
@@ -999,7 +1037,7 @@
 
 <!-- ══ INCOMING MODAL ═══════════════════════════════════════════════════════ -->
 <div class="overlay" id="incomingOverlay">
-  <div class="modal" style="max-width:500px">
+  <div class="modal modal-sm">
     <div class="mhdr">
       <h3 id="incomingModalTitle">📦 Add Expected Material</h3>
       <button class="btn btn-ghost btn-sm" onclick="aiExtractFromIncoming()" title="Upload a PO or delivery confirmation and let AI fill the fields"
@@ -1117,7 +1155,7 @@
 
 <!-- ══ MONITOR SETTINGS MODAL ════════════════════════════════════════════════ -->
 <div class="overlay" id="monitorOverlay">
-  <div class="modal" style="max-width:660px">
+  <div class="modal modal-lg">
     <div class="mhdr">
       <h3>⚙ Low-Stock Monitor Settings</h3>
       <button class="modal-x" onclick="closeModal('monitorOverlay')" title="Close">✕</button>
@@ -1154,7 +1192,7 @@
 
 <!-- ══ EDIT MOVEMENT MODAL ════════════════════════════════════════════════════ -->
 <div class="overlay" id="editMovOverlay">
-  <div class="modal" style="max-width:620px">
+  <div class="modal modal-md">
     <div class="mhdr">
       <h3>✏️ Edit Movement</h3>
       <span id="editMovRowTag" style="font-size:.72rem;background:var(--border);padding:2px 10px;border-radius:10px;color:var(--muted);flex-shrink:0"></span>
@@ -1262,7 +1300,7 @@
 
 <!-- ══ MOVEMENT MODAL ═══════════════════════════════════════════════════════ -->
 <div class="overlay" id="moveOverlay">
-  <div class="modal">
+  <div class="modal modal-lg">
     <div class="mhdr">
       <h3 id="moveTitle">New Movement</h3>
       <button class="modal-x" onclick="closeMoveModalGuarded()" title="Close">✕</button>
@@ -1350,6 +1388,10 @@
         <label style="font-size:.72rem;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.04em">Materials to Receive</label>
         <span id="multiMatTotal" style="font-size:.9rem;font-weight:700;color:var(--accent2);background:#DBEAFE;padding:3px 12px;border-radius:20px">Total: 0</span>
       </div>
+      <label style="display:flex;align-items:center;gap:.4rem;font-size:.8rem;margin-bottom:.5rem;cursor:pointer">
+        <input type="checkbox" id="mSameEntryInfoChk" checked onchange="toggleEntrySameInfo()">
+        All materials share the same Supplier / GC / Project / PM / Received By / Comments
+      </label>
       <div id="multiMatContainer"></div>
       <button type="button" class="multi-mat-add" onclick="addMatLine()">+ Add Another Material</button>
     </div>
@@ -1440,13 +1482,14 @@
         <input type="text" id="mProj" list="projList">
         <datalist id="projList"></datalist>
       </div>
-      <div class="field">
+      <div class="field" id="mRespFieldWrap">
         <label id="respLabel">Responsible</label>
         <input type="text" id="mResp">
       </div>
       <div class="field" id="mPMField" style="display:none">
         <label>PM (Project Manager)</label>
-        <input type="text" id="mPM" placeholder="Name of project manager">
+        <input type="text" id="mPM" list="pmNameList" placeholder="Name of project manager">
+        <datalist id="pmNameList"></datalist>
       </div>
       <div class="field" id="mStatusField" style="display:none">
         <label>Status</label>
@@ -1459,7 +1502,7 @@
     </div>
 
     <!-- ── Comments ── -->
-    <div class="form-grid full" style="margin-top:.75rem">
+    <div class="form-grid full" style="margin-top:.75rem" id="mCommFieldWrap">
       <div class="field">
         <label id="commLabel">Comments</label>
         <textarea id="mComm" rows="2" placeholder="Notes, dimensions, instructions..."></textarea>
@@ -1516,44 +1559,35 @@
 
 <!-- ══ SETTINGS MODAL ════════════════════════════════════════════════════════ -->
 <div class="overlay" id="settingsOverlay">
-  <div class="modal" style="max-width:680px">
+  <div class="modal settings-modal">
     <div class="mhdr">
       <h3>⚙️ App Settings</h3>
       <button class="modal-x" onclick="closeModal('settingsOverlay')" title="Close">✕</button>
     </div>
-    <!-- Tab bar -->
-    <div style="display:flex;gap:4px;background:var(--bg);border-radius:8px;padding:4px;margin-bottom:1.25rem;flex-wrap:wrap">
-      <button class="settings-tab active" data-tab="categories"  onclick="switchSettingsTab('categories')">📦 Categories</button>
-      <button class="settings-tab"        data-tab="projects"    onclick="switchSettingsTab('projects')">📁 Projects</button>
-      <button class="settings-tab"        data-tab="suppliers"   onclick="switchSettingsTab('suppliers')">🏢 Suppliers</button>
-      <button class="settings-tab"        data-tab="locations"   onclick="switchSettingsTab('locations')">📍 Locations</button>
-      <button class="settings-tab"        data-tab="materials"   onclick="switchSettingsTab('materials')">🔧 Materials</button>
-      <button class="settings-tab"        data-tab="errorlog"    onclick="switchSettingsTab('errorlog')">🐞 Error Log</button>
+    <div class="settings-body">
+      <nav class="settings-sidebar" aria-label="Settings sections">
+        <div class="settings-sidebar-label">Catalog</div>
+        <button class="settings-tab active" data-tab="categories"  onclick="switchSettingsTab('categories')">📦 <span>Categories</span></button>
+        <button class="settings-tab"        data-tab="projects"    onclick="switchSettingsTab('projects')">📁 <span>Projects</span></button>
+        <button class="settings-tab"        data-tab="suppliers"   onclick="switchSettingsTab('suppliers')">🏢 <span>Suppliers</span></button>
+        <button class="settings-tab"        data-tab="locations"   onclick="switchSettingsTab('locations')">📍 <span>Locations</span></button>
+        <button class="settings-tab"        data-tab="materials"   onclick="switchSettingsTab('materials')">🔧 <span>Materials</span></button>
+        <button class="settings-tab"        data-tab="pmdirectory" onclick="switchSettingsTab('pmdirectory')">📇 <span>Directory</span></button>
+        <div class="settings-sidebar-label">Diagnostics</div>
+        <button class="settings-tab"        data-tab="errorlog"    onclick="switchSettingsTab('errorlog')">🐞 <span>Error Log</span></button>
+        <button class="settings-tab"        data-tab="system"      onclick="switchSettingsTab('system')">🗄 <span>System</span></button>
+      </nav>
+      <div class="settings-content">
+        <div id="settingsTabContent" style="min-height:240px"></div>
+        <div id="settingsMsgBar" style="display:none;margin-top:.75rem;padding:.5rem .75rem;border-radius:6px;font-size:.82rem"></div>
+      </div>
     </div>
-    <!-- Archive cutoff (global, not per-tab) -->
-    <div style="display:flex;align-items:center;gap:.5rem;padding:.5rem .6rem;background:var(--bg);border-radius:7px;margin-bottom:1rem;font-size:.8rem">
-      <span>🗄 Archive movements older than:</span>
-      <select id="archiveCutoffSel" onchange="_saveArchiveCutoff()" style="padding:.25rem .5rem;border-radius:6px;border:1px solid var(--border);background:var(--panel);color:var(--text)">
-        <option value="6">6 months</option>
-        <option value="12">12 months</option>
-        <option value="18">18 months</option>
-      </select>
-      <span style="color:var(--muted);font-size:.72rem">Older movements stay accessible via "Load Older History".</span>
-    </div>
-    <!-- Manual stock rebuild -->
-    <div style="display:flex;align-items:center;gap:.5rem;padding:.5rem .6rem;background:var(--bg);border-radius:7px;margin-bottom:1rem;font-size:.8rem">
-      <button id="btnRebuildStock" class="btn btn-ghost btn-sm" onclick="_rebuildStockNow()">🔧 Rebuild Stock Totals Now</button>
-      <span style="color:var(--muted);font-size:.72rem">Recalculates LIVE_STOCK / SITE_STOCK / WASTED_STOCK from the current movement history. Use this if a deleted or edited movement left stale numbers behind.</span>
-    </div>
-    <!-- Tab content -->
-    <div id="settingsTabContent" style="min-height:240px"></div>
-    <div id="settingsMsgBar" style="display:none;margin-top:.75rem;padding:.5rem .75rem;border-radius:6px;font-size:.82rem"></div>
   </div>
 </div>
 
 <!-- ══ ATTACH MODAL ══════════════════════════════════════════════════════════ -->
 <div class="overlay" id="attachOverlay">
-  <div class="modal" style="max-width:500px">
+  <div class="modal modal-sm">
     <div class="mhdr">
       <h3>📎 Attach Document</h3>
       <button class="modal-x" onclick="closeModal('attachOverlay')" title="Close">✕</button>
@@ -1587,7 +1621,7 @@
 
 <!-- ══ LOCK MATERIAL (ADMIN) ═══════════════════════════════════════════════════ -->
 <div class="overlay" id="lockMatOverlay">
-  <div class="modal" style="max-width:460px">
+  <div class="modal modal-sm">
     <div class="mhdr">
       <h3>🔒 Lock Material</h3>
       <button class="modal-x" onclick="closeModal('lockMatOverlay')" title="Close">✕</button>
@@ -1640,7 +1674,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '7.2';
+var APP_VERSION = '8.8';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Signed session token for non-org users (issued by the backend after Google
@@ -1918,25 +1952,24 @@ function renderStats(){
   var alertText = document.getElementById('alertText');
 
   if (zeroItems.length || belowMin.length){
+    // Title + counter only — the full breakdown (names, quantities) lives one
+    // click away in the detail panel this banner already opens. The old inline
+    // comma-separated name list plus a separate "Details" button both did the
+    // same job the banner's own click already does.
     var parts = [];
     if (zeroItems.length){
-      var zeroNames = zeroItems.slice(0,4).map(function(s){ return s.name; }).join(', ');
-      if (zeroItems.length > 4) zeroNames += ' +' + (zeroItems.length-4) + ' more';
-      parts.push('<span style="color:var(--red);font-weight:700">🚫 Zero stock (' + zeroItems.length + '):</span> ' + zeroNames);
+      parts.push('<span style="color:var(--red);font-weight:700">🚫 Zero Stock (' + zeroItems.length + ')</span>');
     }
     if (belowMin.length){
-      var lowNames = belowMin.slice(0,4).map(function(b){
-        return b.name + ' <span style="opacity:.75">(' + b.current + '/' + b.min + ')</span>';
-      }).join(', ');
-      if (belowMin.length > 4) lowNames += ' +' + (belowMin.length-4) + ' more';
-      parts.push('<span style="color:var(--yellow);font-weight:700">⚠ Below minimum (' + belowMin.length + '):</span> ' + lowNames);
+      parts.push('<span style="color:var(--yellow);font-weight:700">⚠ Below Minimum (' + belowMin.length + ')</span>');
     }
     // Append filter indicator if monitoring only specific materials
     var filterTag = '';
     if (monitoredMaterials && monitoredMaterials.length) {
       filterTag = ' <span style="font-size:.68rem;background:rgba(0,0,0,.12);border-radius:20px;padding:1px 7px;opacity:.85">🔍 ' + monitoredMaterials.length + ' monitored</span>';
     }
-    alertText.innerHTML = parts.join('<br style="margin:.15rem 0">') + filterTag;
+    alertText.innerHTML = parts.join(' &nbsp;·&nbsp; ') + filterTag +
+      ' <span style="font-size:.72rem;opacity:.7;font-weight:400">— click for details</span>';
     // Red border when there are zero-stock items, yellow when only low
     banner.style.borderColor  = zeroItems.length ? 'var(--red)'    : 'var(--yellow)';
     banner.style.background   = zeroItems.length ? 'var(--red-bg)' : 'var(--yellow-bg)';
@@ -2078,10 +2111,22 @@ function renderStock(){
   // (a material can span multiple racks received on different dates — this shows
   // the latest one, same "last wins" pattern as noteMap above).
   var entryDateMap = {};
+  // Every distinct supplier that has ever delivered this material — not just the
+  // most recent one. There's no per-batch/lot tracking in this system (all
+  // quantities of a material are pooled together, not tagged by which delivery
+  // they came from), so "still in warehouse" is approximated at the MATERIAL
+  // level: the badge list only shows at all when warehouseQty > 0 for that
+  // material. Once every unit of a material has been exited, none of its past
+  // suppliers are considered "active" anymore, even though we still remember them.
+  var supplierSetMap = {};
   movements.forEach(function(m) {
     var k = nt(m.category) + '|||' + nt(m.name);
     if (m.comments) noteMap[k] = m.comments; // movements are chronological; later overwrites earlier
     if (m.moveType === 'ENTRY' && m.dateRec) entryDateMap[k] = m.dateRec;
+    if (m.moveType === 'ENTRY' && m.supplier) {
+      if (!supplierSetMap[k]) supplierSetMap[k] = {};
+      supplierSetMap[k][m.supplier] = true;
+    }
   });
 
   if (!items.length) {
@@ -2107,6 +2152,13 @@ function renderStock(){
     var dateCell = entryDate
       ? '<span style="font-size:.78rem;color:var(--muted);white-space:nowrap">'+entryDate+'</span>'
       : '<span style="color:var(--muted);font-size:.72rem">—</span>';
+
+    var activeSuppliers = s.warehouseQty > 0 ? Object.keys(supplierSetMap[docKey] || {}) : [];
+    var supplierBadgeHtml = activeSuppliers.length
+      ? activeSuppliers.map(function(sup){
+          return '<span class="badge '+(CAT_BADGE[nt(s.category)] || 'badge-gray')+'" title="Supplier with stock still in warehouse" style="margin-right:4px">🏢 '+_he(sup)+'</span>';
+        }).join('')
+      : '';
 
     // Racks currently holding this material (for the Photos column of the split panel)
     var racks = Object.keys(s.warehouseLocs || {}).filter(function(r){ return s.warehouseLocs[r] > 0; })
@@ -2156,6 +2208,7 @@ function renderStock(){
       : '<p style="color:var(--muted);font-size:.8rem;padding:.25rem 0">No documents attached.</p>';
 
     var detailPanel = '<tr id="' + detailRowId + '" class="stock-detail-row"><td colspan="13">' +
+      (supplierBadgeHtml ? '<div style="padding:.6rem .75rem 0">' + supplierBadgeHtml + '</div>' : '') +
       '<div class="stock-detail-split">' +
         '<div class="sd-col"><div class="sd-col-hdr">📷 Location Photos</div>' + photosHtml + '</div>' +
         '<div class="sd-col"><div class="sd-col-hdr">📎 Documents</div>' + docsHtml + '</div>' +
@@ -3257,13 +3310,17 @@ async function submitMovement(){
         var savedName = name;
         var savedQty  = qty;
         closeModal('moveOverlay');
-        loadDataFromGoogle(true); // skipCache — always show the newly saved movement
+        // Show cached numbers instantly (no skeleton-card flash), fresh data quietly
+        // replaces them a moment later once the round-trip completes — the "reload"
+        // feeling was the skeleton cards, not the actual data refresh.
+        loadDataFromGoogle(false);
         setTimeout(function(){
-          if (res && (res.emailError || res.fileError)){
+          if (res && (res.emailError || res.fileError || res.refreshError)){
             var msgs = [];
-            if (res.emailError) msgs.push('📧 Email not sent: ' + res.emailError);
-            if (res.fileError)  msgs.push('📎 File not attached: ' + res.fileError);
-            showToast('Saved ✓ — but note: ' + msgs.join(' | '), 'warn', 6000);
+            if (res.emailError)   msgs.push('📧 Email not sent: ' + res.emailError);
+            if (res.fileError)    msgs.push('📎 File not attached: ' + res.fileError);
+            if (res.refreshError) msgs.push('⚠ ' + res.refreshError);
+            showToast('Saved ✓ — but note: ' + msgs.join(' | '), 'warn', res.refreshError ? 12000 : 6000);
           } else if (savedType === 'WASTE') {
             var remaining = (res && res.availableAfter != null) ? res.availableAfter : '—';
             showToast('✕ WASTE recorded: ' + savedQty + ' unit(s) of ' + savedName +
@@ -3362,6 +3419,19 @@ function _matLineTpl(n){
       '<div class="mat-locs-container" id="mat-locs-' + n + '"></div>' +
       '<button type="button" class="btn-add-loc" style="font-size:.75rem;padding:.25rem .7rem;margin-top:.3rem" onclick="addLocRowMat(' + n + ')">+ Add Location</button>' +
     '</div>' +
+    // Per-material Supplier/GC/PO#/Project/PM/Responsible/Comments — only shown
+    // when "All materials share the same..." is unchecked (toggleEntrySameInfo()).
+    '<div class="mat-per-info" id="mat-perinfo-' + n + '" style="display:none;margin-top:.5rem;padding-top:.5rem;border-top:1px dashed var(--border)">' +
+      '<div class="mat-line-grid">' +
+        '<div class="field"><label class="mat-line-lbl-sm">Supplier</label><input type="text" id="mat-sup-' + n + '" list="supplierList"></div>' +
+        '<div class="field"><label class="mat-line-lbl-sm">GC</label><input type="text" id="mat-gc-' + n + '"></div>' +
+        '<div class="field"><label class="mat-line-lbl-sm">PO#</label><input type="text" id="mat-po-' + n + '"></div>' +
+        '<div class="field"><label class="mat-line-lbl-sm">Project / Client</label><input type="text" id="mat-proj-' + n + '" list="projList"></div>' +
+        '<div class="field"><label class="mat-line-lbl-sm">PM</label><input type="text" id="mat-pm-' + n + '" list="pmNameList" placeholder="Name of project manager"></div>' +
+        '<div class="field"><label class="mat-line-lbl-sm">Received By</label><input type="text" id="mat-resp-' + n + '"></div>' +
+      '</div>' +
+      '<div class="field" style="margin-top:.4rem"><label class="mat-line-lbl-sm">Comments</label><textarea id="mat-comm-' + n + '" rows="2" placeholder="Notes, dimensions, instructions..."></textarea></div>' +
+    '</div>' +
   '</div>';
 }
 
@@ -3391,6 +3461,27 @@ function addMatLine(){
       if (name.length > 1) _fillSharedFromHistory(name, cat);
     });
   }
+  // If per-material mode is already active, new lines should show their own
+  // info block too (not just the ones that existed when the checkbox was toggled).
+  var chk = document.getElementById('mSameEntryInfoChk');
+  if (chk && !chk.checked) {
+    var perInfo = document.getElementById('mat-perinfo-' + n);
+    if (perInfo) perInfo.style.display = '';
+  }
+}
+
+// Checked (default) = one shared Supplier/GC/Project/PM/Responsible/Comments for
+// the whole ENTRY, same as before this feature existed. Unchecked = each
+// material gets its own set of those fields instead.
+function toggleEntrySameInfo(){
+  var same = document.getElementById('mSameEntryInfoChk').checked;
+  ['mSupField','mGCField','mPOField','mProjField','mPMField','mRespFieldWrap','mCommFieldWrap'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.style.display = same ? '' : 'none';
+  });
+  document.querySelectorAll('#multiMatContainer .mat-per-info').forEach(function(el){
+    el.style.display = same ? 'none' : '';
+  });
 }
 
 function removeMatLine(n){
@@ -3465,7 +3556,19 @@ function updateMatLineNameList(n){
 function _initMultiMatSection(){
   _matLineIdx = 0;
   document.getElementById('multiMatContainer').innerHTML = '';
+  var chk = document.getElementById('mSameEntryInfoChk');
+  if (chk) chk.checked = true; // default: same behavior as before this feature existed
   addMatLine();
+  toggleEntrySameInfo();
+  // PM datalist needs the directory even if Settings was never opened this session.
+  if (_pmDirectoryData) {
+    _refreshPmDatalist();
+  } else {
+    google.script.run
+      .withSuccessHandler(function(list) { _pmDirectoryData = list || []; _refreshPmDatalist(); })
+      .withFailureHandler(function(){})
+      .processMovement('getPmDirectory', _h({}));
+  }
 }
 
 // ── Incoming → ENTRY auto-suggest ────────────────────────────────────────────
@@ -3535,6 +3638,7 @@ function _checkIncomingSuggest(n, inputEl){
   }
   box.innerHTML = html;
   box.style.display = 'block';
+  _positionSuggestBox(box, inputEl);
 }
 
 // Safe bridge for a stock-match click: just fills the name (and category, if
@@ -3816,6 +3920,7 @@ function _checkStockSuggest(inputEl){
       '</div>';
     }).join('');
   box.style.display = 'block';
+  _positionSuggestBox(box, inputEl);
 }
 
 function _applyStockSuggest(name){
@@ -3834,6 +3939,25 @@ function _applyStockSuggest(name){
 }
 
 // ── Stock suggestion box for multi-EXIT exit-name inputs ─────────────────────
+// Positions a suggestion box using position:fixed (viewport coordinates) instead
+// of position:absolute inside the modal — the modal itself scrolls
+// (overflow-y:auto), which clips anything absolutely positioned near its edge.
+// Fixed positioning escapes that clipping entirely, so the box always renders
+// fully visible regardless of where the input sits or how far the modal has
+// scrolled. Flips to the LEFT of the input if there isn't enough room on the
+// right (near the modal's right edge), same idea for the bottom edge.
+function _positionSuggestBox(box, inputEl) {
+  var rect = inputEl.getBoundingClientRect();
+  var boxW = 260, boxH = Math.min(box.scrollHeight || 280, 280);
+  var spaceRight = window.innerWidth - rect.right;
+  var left = spaceRight >= boxW + 16 ? rect.right + 8 : Math.max(8, rect.left - boxW - 8);
+  var top  = rect.top;
+  if (top + boxH > window.innerHeight - 8) top = Math.max(8, window.innerHeight - boxH - 8);
+  box.style.position = 'fixed';
+  box.style.top  = top + 'px';
+  box.style.left = left + 'px';
+}
+
 function _checkExitMatSuggest(n, inputEl){
   var box = document.getElementById('exit-suggest-' + n);
   if (!box) return;
@@ -3860,6 +3984,7 @@ function _checkExitMatSuggest(n, inputEl){
       '</div>';
     }).join('');
   box.style.display = 'block';
+  _positionSuggestBox(box, inputEl);
 }
 
 function _applyExitMatSuggest(n, name, cat){
@@ -3954,8 +4079,12 @@ function submitMultiExit(){
       .withSuccessHandler(function(res){
         _setModalBusy('moveOverlay', false);
         closeModal('moveOverlay');
-        showToast('✓ '+res.rowCount+' movement record(s) saved.','ok');
-        loadDataFromGoogle(true);
+        if (res && res.refreshError) {
+          showToast('✓ '+res.rowCount+' movement record(s) saved — but ⚠ '+res.refreshError, 'warn', 12000);
+        } else {
+          showToast('✓ '+res.rowCount+' movement record(s) saved.','ok');
+        }
+        loadDataFromGoogle(false); // cached numbers show instantly, fresh ones catch up quietly
       })
       .withFailureHandler(function(err){
         if (btn){ btn.disabled=false; btn.textContent='Save to System'; }
@@ -4012,8 +4141,9 @@ function submitMultiEntry(){
   var docGroups = _collectDocGroups('docGroupsContainer');
 
   // Collect material lines
-  var materials = [];
-  var valid = true;
+  var materials  = [];
+  var valid      = true;
+  var sameInfo   = document.getElementById('mSameEntryInfoChk').checked;
 
   document.querySelectorAll('#multiMatContainer .mat-line').forEach(function(line){
     if (!valid) return;
@@ -4043,7 +4173,17 @@ function submitMultiEntry(){
       valid = false; return;
     }
 
-    materials.push({ category: cat, name: name, unit: unit, locations: locs, qty: totalQty });
+    var matEntry = { category: cat, name: name, unit: unit, locations: locs, qty: totalQty };
+    if (!sameInfo) {
+      matEntry.supplier    = ((document.getElementById('mat-sup-'  + n) || {}).value || '').trim();
+      matEntry.gc          = ((document.getElementById('mat-gc-'   + n) || {}).value || '').trim();
+      matEntry.po          = ((document.getElementById('mat-po-'   + n) || {}).value || '').trim();
+      matEntry.project     = ((document.getElementById('mat-proj-' + n) || {}).value || '').trim();
+      matEntry.pm          = ((document.getElementById('mat-pm-'   + n) || {}).value || '').trim();
+      matEntry.responsible = ((document.getElementById('mat-resp-' + n) || {}).value || '').trim();
+      matEntry.comments    = ((document.getElementById('mat-comm-' + n) || {}).value || '').trim();
+    }
+    materials.push(matEntry);
   });
 
   if (!valid || !materials.length) return;
@@ -4084,15 +4224,17 @@ function submitMultiEntry(){
       .withSuccessHandler(function(res){
         _setModalBusy('moveOverlay', false);
         closeModal('moveOverlay');
-        loadDataFromGoogle(true);
+        loadDataFromGoogle(false); // cached numbers show instantly, fresh ones catch up quietly
         setTimeout(function(){
           var count = (res && res.count) ? res.count : materials.length;
           var rows  = (res && res.rowCount) ? res.rowCount : count;
-          if (res && (res.emailError || res.fileError)){
+          if (res && (res.emailError || res.fileError || res.pmError || res.refreshError)){
             var msgs = [];
-            if (res.emailError) msgs.push('📧 Email: ' + res.emailError);
-            if (res.fileError)  msgs.push('📎 File: '  + res.fileError);
-            showToast('Saved ✓ — ' + count + ' material(s), ' + rows + ' row(s) — ' + msgs.join(' | '), 'warn', 7000);
+            if (res.emailError)   msgs.push('📧 Email: ' + res.emailError);
+            if (res.fileError)    msgs.push('📎 File: '  + res.fileError);
+            if (res.pmError)      msgs.push('📇 ' + res.pmError);
+            if (res.refreshError) msgs.push('⚠ ' + res.refreshError);
+            showToast('Saved ✓ — ' + count + ' material(s), ' + rows + ' row(s) — ' + msgs.join(' | '), 'warn', res.refreshError ? 12000 : 8000);
           } else {
             showToast('Saved ✓ — ' + count + ' material(s) received (' + rows + ' archive row' + (rows===1?'':'s') + ')', 'ok', 5000);
           }
@@ -4144,12 +4286,45 @@ function _loadSettings() {
   google.script.run
     .withSuccessHandler(function(d) {
       _settingsData = d;
-      var sel = document.getElementById('archiveCutoffSel');
-      if (sel) sel.value = String(d.archiveCutoffMonths || 12);
       _renderSettingsTab(_settingsTab);
     })
     .withFailureHandler(function(e) { _settingMsg('Error: '+(e.message||e), 'error'); })
     .processMovement('getSettings', _h({}));
+
+  // Prefetch Materials + Error Log in parallel so switching to those tabs feels
+  // as instant as Categories/Projects/Suppliers/Locations (which come bundled
+  // in getSettings above) — previously each one only fetched on first visit to
+  // that tab, showing a "Loading…" flash the other tabs never had.
+  _matListAll = null;
+  google.script.run
+    .withSuccessHandler(function(list) { _matListAll = list; if (_settingsTab === 'materials') _filterMatList(); })
+    .withFailureHandler(function(){})
+    .processMovement('listMaterials', _h({}));
+
+  _errorLogData = null;
+  google.script.run
+    .withSuccessHandler(function(rows) { _errorLogData = rows || []; if (_settingsTab === 'errorlog') _drawErrorLog(); })
+    .withFailureHandler(function(){})
+    .processMovement('getErrorLog', _h({}));
+
+  _pmDirectoryData = null;
+  google.script.run
+    .withSuccessHandler(function(list) {
+      _pmDirectoryData = list || [];
+      if (_settingsTab === 'pmdirectory') _drawPmDirectory();
+      _refreshPmDatalist();
+    })
+    .withFailureHandler(function(){})
+    .processMovement('getPmDirectory', _h({}));
+}
+
+// PM name datalist for the ENTRY PM fields (shared + per-material) — lets users
+// pick a registered PM instead of retyping the name, which avoids the typos that
+// would otherwise silently break the auto-grouped-email matching.
+function _refreshPmDatalist() {
+  var dl = document.getElementById('pmNameList');
+  if (!dl || !_pmDirectoryData) return;
+  dl.innerHTML = _pmDirectoryData.map(function(p){ return '<option value="'+_he(p.name)+'">'; }).join('');
 }
 
 function _saveArchiveCutoff() {
@@ -4177,6 +4352,31 @@ function _rebuildStockNow() {
     .processMovement('adminAction', _h({ action: 'reconcile' }));
 }
 
+function _renderSystemTab() {
+  var content = document.getElementById('settingsTabContent');
+  var months = String((_settingsData && _settingsData.archiveCutoffMonths) || 12);
+  content.innerHTML =
+    '<p style="font-size:.8rem;color:var(--muted);margin-bottom:1rem">System-wide maintenance — not specific to any one category.</p>' +
+    '<div class="field" style="margin-bottom:1.25rem">' +
+      '<label>Archive movements older than</label>' +
+      '<div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">' +
+        '<select id="archiveCutoffSel" onchange="_saveArchiveCutoff()" style="padding:.4rem .6rem;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text)">' +
+          '<option value="6"'  + (months==='6'  ? ' selected' : '') + '>6 months</option>' +
+          '<option value="12"' + (months==='12' ? ' selected' : '') + '>12 months</option>' +
+          '<option value="18"' + (months==='18' ? ' selected' : '') + '>18 months</option>' +
+        '</select>' +
+        '<span style="color:var(--muted);font-size:.75rem">Older movements stay accessible via "Load Older History".</span>' +
+      '</div>' +
+    '</div>' +
+    '<div class="field">' +
+      '<label>Stock totals</label>' +
+      '<div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">' +
+        '<button id="btnRebuildStock" class="btn btn-ghost btn-sm" onclick="_rebuildStockNow()">🔧 Rebuild Stock Totals Now</button>' +
+        '<span style="color:var(--muted);font-size:.75rem">Recalculates LIVE_STOCK / SITE_STOCK / WASTED_STOCK from the current movement history. Use this if a deleted or edited movement left stale numbers behind.</span>' +
+      '</div>' +
+    '</div>';
+}
+
 function switchSettingsTab(tab) {
   _settingsTab = tab;
   document.querySelectorAll('.settings-tab').forEach(function(b){ b.classList.toggle('active', b.dataset.tab === tab); });
@@ -4185,8 +4385,10 @@ function switchSettingsTab(tab) {
 
 function _renderSettingsTab(tab) {
   var content = document.getElementById('settingsTabContent');
-  if (tab === 'materials') { _renderMaterialsTab(); return; }
-  if (tab === 'errorlog')  { _renderErrorLogTab(); return; }
+  if (tab === 'materials')   { _renderMaterialsTab(); return; }
+  if (tab === 'errorlog')    { _renderErrorLogTab(); return; }
+  if (tab === 'system')      { _renderSystemTab(); return; }
+  if (tab === 'pmdirectory') { _renderPmDirectoryTab(); return; }
 
   var items = _settingsData[tab] || [];
   var label = { categories:'Category', projects:'Project', suppliers:'Supplier', locations:'Location' }[tab] || 'Item';
@@ -4216,6 +4418,8 @@ function _renderSettingsTab(tab) {
 var _errorLogData = [];
 function _renderErrorLogTab() {
   var content = document.getElementById('settingsTabContent');
+  // Already prefetched in _loadSettings() — render immediately if it's there.
+  if (_errorLogData) { _drawErrorLog(); return; }
   content.innerHTML = '<p style="padding:1rem;color:var(--muted);font-size:.85rem">Loading…</p>';
   google.script.run
     .withSuccessHandler(function(rows) { _errorLogData = rows || []; _drawErrorLog(); })
@@ -4249,7 +4453,7 @@ function _drawErrorLog(filterText) {
     '<input type="text" id="errLogSearch" placeholder="Search message, action, user, or ID…" ' +
       'style="width:100%;margin-bottom:.6rem;padding:.4rem .6rem;border:1px solid var(--border);border-radius:6px;font-size:.8rem;background:var(--bg);color:var(--text)" ' +
       'oninput="_drawErrorLog(this.value)" value="'+_he(filterText||'')+'">' +
-    '<div style="max-height:45vh;overflow:auto;border:1px solid var(--border);border-radius:6px">' +
+    '<div style="flex:1;min-height:0;overflow:auto;border:1px solid var(--border);border-radius:6px">' +
       '<table style="width:100%;border-collapse:collapse">' +
         '<thead><tr style="position:sticky;top:0;background:var(--bg)">' +
           '<th style="text-align:left;padding:.4rem;font-size:.7rem">Time</th>' +
@@ -4264,6 +4468,69 @@ function _drawErrorLog(filterText) {
     '</div>';
   var inp = document.getElementById('errLogSearch');
   if (inp) { inp.focus(); var v = inp.value; inp.value=''; inp.value=v; }
+}
+
+var _pmDirectoryData = null;
+function _renderPmDirectoryTab() {
+  var content = document.getElementById('settingsTabContent');
+  if (_pmDirectoryData) { _drawPmDirectory(); return; }
+  content.innerHTML = '<p style="padding:1rem;color:var(--muted);font-size:.85rem">Loading…</p>';
+  google.script.run
+    .withSuccessHandler(function(list) { _pmDirectoryData = list || []; _drawPmDirectory(); })
+    .withFailureHandler(function(e) { content.innerHTML = '<p style="padding:1rem;color:#c0392b;font-size:.85rem">Error: '+(e.message||e)+'</p>'; })
+    .processMovement('getPmDirectory', _h({}));
+}
+
+function _drawPmDirectory() {
+  var content = document.getElementById('settingsTabContent');
+  var rows = _pmDirectoryData.map(function(p) {
+    return '<li class="cfg-item">' +
+      '<span class="cfg-item-name" style="flex:1"><strong>'+_he(p.name)+'</strong> <span style="color:var(--muted);font-size:.78rem">'+_he(p.email)+'</span></span>' +
+      '<button class="cfg-btn cfg-btn-danger" data-action="pm-dir-delete" data-val="'+_he(p.name)+'">🗑</button>' +
+    '</li>';
+  }).join('');
+
+  content.innerHTML =
+    '<p style="font-size:.8rem;color:var(--muted);margin-bottom:.75rem">General address book — employees, suppliers, PMs, anyone you email regularly. One special behavior: if a name here matches what\'s typed in the PM field on ENTRY, materials for that batch auto-send ONE grouped email to that address (not one per material). Everyone else here is just a saved contact — use them with the "Send notification email" option when saving a movement.</p>' +
+    '<ul class="cfg-list">'+(rows || '<li style="padding:.5rem;color:var(--muted);font-size:.82rem">No contacts registered yet.</li>')+'</ul>' +
+    '<div class="cfg-add-row" style="flex-wrap:wrap">' +
+      '<input type="text" id="pmDirNewName" placeholder="Name…" style="flex:1;min-width:120px">' +
+      '<input type="email" id="pmDirNewEmail" placeholder="Email…" style="flex:1;min-width:160px">' +
+      '<button class="btn btn-primary btn-sm" onclick="_pmDirAdd()">+ Add</button>' +
+    '</div>';
+}
+
+function _pmDirAdd() {
+  var name  = (document.getElementById('pmDirNewName').value  || '').trim();
+  var email = (document.getElementById('pmDirNewEmail').value || '').trim();
+  if (!name || !email) { showToast('Enter both a name and an email.', 'warn'); return; }
+  google.script.run
+    .withSuccessHandler(function() {
+      _pmDirectoryData = null; // force refetch
+      _renderPmDirectoryTab();
+      showToast('✓ PM added.', 'ok');
+    })
+    .withFailureHandler(function(e) { showToast('⚠ Error: ' + (e.message||e), 'err', 6000); })
+    .processMovement('managePmDirectory', _h({ op: 'add', name: name, email: email }));
+}
+
+function _pmDirDelete(name) {
+  _showConfirm({
+    icon: '🗑️', danger: true,
+    title: 'Remove PM?',
+    message: '"' + name + '" will be removed from the Directory. If they were a PM, future batches for them won\'t get an automatic email until re-added.',
+    confirmText: 'Remove',
+    onConfirm: function(){
+      google.script.run
+        .withSuccessHandler(function() {
+          _pmDirectoryData = null;
+          _renderPmDirectoryTab();
+          showToast('PM removed.', 'ok');
+        })
+        .withFailureHandler(function(e) { showToast('⚠ Error: ' + (e.message||e), 'err', 6000); })
+        .processMovement('managePmDirectory', _h({ op: 'delete', name: name }));
+    }
+  });
 }
 
 function _cfgStartEdit(tab, i) {
@@ -4333,7 +4600,9 @@ function _renderMaterialsTab() {
       '<button class="btn btn-ghost btn-sm" onclick="_loadMatList()">↺ Refresh</button>' +
     '</div>' +
     '<div class="mat-list" id="matListContainer"><p style="color:var(--muted);font-size:.82rem">Loading…</p></div>';
-  _loadMatList();
+  // Already prefetched in _loadSettings() (fired the moment the modal opened) —
+  // render immediately instead of re-fetching and flashing "Loading…" again.
+  if (_matListAll) { _filterMatList(); } else { _loadMatList(); }
 }
 
 function _loadMatList() {
@@ -4426,6 +4695,8 @@ function _he(s){ return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;
       _matAction(el.getAttribute('data-op'), host.getAttribute('data-name'), host.getAttribute('data-cat'));
     } else if (a === 'cfg-delete') {
       _cfgDelete(el.getAttribute('data-tab'), el.getAttribute('data-val'));
+    } else if (a === 'pm-dir-delete') {
+      _pmDirDelete(el.getAttribute('data-val'));
     } else if (a === 'open-rack') {
       openRackDrawer(el.getAttribute('data-rack'));
     } else if (a === 'edit-incoming') {
@@ -4493,7 +4764,7 @@ function submitAttachment() {
       _setModalBusy('attachOverlay', false);
       closeModal('attachOverlay');
       showToast('Document attached ✓', 'ok');
-      loadDataFromGoogle(true); // skipCache
+      loadDataFromGoogle(false);
     })
     .withFailureHandler(function(err) {
       showToast('Upload failed: ' + (err.message || err), 'err', 6000);
@@ -4875,13 +5146,23 @@ function refreshDropdowns(){
 }
 
 // ── CSV Export ────────────────────────────────────────────────────────────────
+// Wrapping a field in quotes stops it from breaking the CSV grid, but it does NOT
+// stop Excel or Sheets from evaluating it: a cell opening with = + - @ is still
+// read as a formula when the downloaded file is opened. Prefix those with an
+// apostrophe so an exported value stays inert text.
+function _csvCell(v){
+  var s = String(v === null || v === undefined ? '' : v);
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+  return '"' + s.replace(/"/g,'""') + '"';
+}
+
 function exportMovementsCSV(){
   var headers = ['MoveType','Date','Category','Name','Project','Qty','Unit','Source','Destination','Responsible','Comments','User'];
   var srcMovs = _oldHistoryLoaded ? oldMovements.concat(movements) : movements;
   var rows = srcMovs.slice().reverse().map(function(m){
     return [nt(m.moveType),m.dateRec||m.timestamp,nt(m.category),displayName(m),m.project||'',
             m.qty,m.unit||'',m.sourceLoc||'',m.destLoc||'',m.responsible||'',(m.comments||'').replace(/\n/g,' '),m.userEmail||'']
-      .map(function(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }).join(',');
+      .map(_csvCell).join(',');
   });
   var csv = [headers.join(',')].concat(rows).join('\n');
   var a = document.createElement('a');
@@ -4898,7 +5179,7 @@ function exportProjectCSV(){
   var rows = pm.map(function(m){
     return [nt(m.moveType),m.dateRec||m.timestamp,nt(m.category),displayName(m),m.qty,m.unit||'',
             m.sourceLoc||'',m.destLoc||'',m.responsible||'',(m.comments||'').replace(/\n/g,' ')]
-      .map(function(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }).join(',');
+      .map(_csvCell).join(',');
   });
   var csv = [headers.join(',')].concat(rows).join('\n');
   var a = document.createElement('a');
@@ -5629,7 +5910,7 @@ function saveIncomingItem() {
       .withSuccessHandler(function(){
         btn.textContent = '💾 Save'; btn.disabled = false;
         closeModal('incomingOverlay');
-        loadDataFromGoogle(true); // skipCache
+        loadDataFromGoogle(false);
       })
       .withFailureHandler(function(err){
         btn.textContent = '💾 Save'; btn.disabled = false;
@@ -6972,7 +7253,7 @@ function saveGmailDraft(idx) {
       if (badge) badge.textContent = '✓ Saved!';
       if (btn)   { btn.disabled = true; btn.textContent = 'Saved'; }
       // Refresh the incoming list in background
-      loadDataFromGoogle(true);
+      loadDataFromGoogle(false);
       // Update status bar
       var saved = 0, skipped = 0, total = _gmailScanResults.length;
       for (var i = 0; i < total; i++) {

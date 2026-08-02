@@ -7,7 +7,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '7.2';
+var APP_VERSION = '8.8';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -161,23 +161,72 @@ function pollLogin(state) {
 //   1. USERS_V3 sheet  (managed via in-app admin panel)
 //   2. CONFIG sheet    (legacy — existing rows still work)
 // Unknown emails → DENIED (admin must register the user first).
-// ── Public user list — kept for reference (identity picker was replaced by login) ─
-function getPublicUsers() {
-  var ss         = SpreadsheetApp.getActiveSpreadsheet();
-  var usersSheet = ss.getSheetByName('USERS_V3');
-  var list       = [];
-  if (usersSheet && usersSheet.getLastRow() > 1) {
-    var uRows = usersSheet.getDataRange().getValues();
-    for (var u = 1; u < uRows.length; u++) {
-      var uEmail  = String(uRows[u][1] || '').toLowerCase().trim();
-      var uName   = String(uRows[u][2] || '').trim();
-      var uRole   = String(uRows[u][3] || 'WAREHOUSE').toUpperCase().trim();
-      var uActive = uRows[u][6];
-      var isActive = (uActive === true || String(uActive).toUpperCase() === 'TRUE' || uActive === '');
-      if (uEmail && isActive) list.push({ email: uEmail, name: uName, role: uRole });
-    }
+// REMOVED: getPublicUsers().
+// Every global function in an Apps Script web app is a callable RPC endpoint, so
+// any signed-in Google account could invoke it straight from the browser console
+// and read back the full staff roster (email, name, role) — it performed no auth
+// check at all. It was dead code: the identity picker it fed was replaced by the
+// login flow below, and nothing in Index_v3_fixed.html referenced it. Deleting
+// the function removes the endpoint entirely, which is stronger than gating it.
+// A roster is still available to admins through getUsers(), which is gated.
+
+// ─── AUTHORIZATION GATE ──────────────────────────────────────────────────────
+// The problem this solves: a privileged function that trusts an `auth` OBJECT
+// handed to it by its caller is not actually protected. Because every global
+// function is directly callable via google.script.run, anyone with a Google
+// account could open the browser console and run
+//
+//     google.script.run.addUser({email:'x@evil.com', role:'ADMIN'}, {role:'ADMIN'})
+//
+// forging the second argument and skipping processMovement's real check
+// entirely. The `_` name prefix does not help either — it is a convention, not
+// an access modifier, so `_`-prefixed functions are equally callable.
+//
+// The fix: identity must come from something the caller cannot fabricate — the
+// HMAC-signed session token (or the Workspace session), verified server-side.
+// _verifiedAuth is set ONLY by the two entry points that actually perform that
+// verification (processMovement and getInitialData). Apps Script starts every
+// execution with a fresh global scope, so a direct call to a privileged
+// function begins with _verifiedAuth === null and is refused before it reads or
+// writes anything.
+var _verifiedAuth = null;
+
+function _setVerifiedAuth(auth) { _verifiedAuth = auth; return auth; }
+
+// Returns the verified identity or throws. minRole:
+//   'ADMIN' → ADMIN only
+//   'WRITE' → ADMIN or WAREHOUSE (blocks VIEWER)
+//   omitted → any registered, signed-in user
+function _requireAuth(minRole) {
+  var a = _verifiedAuth;
+  if (!a || !a.email || a.role === 'NO_SESSION') {
+    throw new Error('Not authenticated. Please sign in and use the app from its own page.');
   }
-  return list;
+  if (a.role === 'DENIED') {
+    throw new Error('Access denied. Your account (' + a.email + ') is not registered in this system.');
+  }
+  if (minRole === 'ADMIN' && a.role !== 'ADMIN') throw new Error('Admin only.');
+  if (minRole === 'WRITE'  && a.role === 'VIEWER') {
+    throw new Error('Read-only access — you can view data but cannot record movements.');
+  }
+  return a;
+}
+
+// Gate for entry points that legitimately have no session token: the daily
+// time-based trigger and the developer diagnostics run from the Apps Script
+// editor. Both of those execute AS THE OWNER, so getEffectiveUser() and
+// getActiveUser() are the same account. Under the web app's "Execute as: Me"
+// deployment they never match for anyone else — getEffectiveUser() is always
+// the owner while getActiveUser() is the caller (or '' for external accounts) —
+// so this refuses every google.script.run call from another user.
+function _requireOwnerContext() {
+  var eff = '', act = '';
+  try { eff = Session.getEffectiveUser().getEmail(); } catch (e) {}
+  try { act = Session.getActiveUser().getEmail();    } catch (e) {}
+  if (!eff || eff !== act) {
+    throw new Error('This function can only be run by the project owner (scheduled trigger or Apps Script editor).');
+  }
+  return eff;
 }
 
 function getUserRole(sessionToken) {
@@ -230,6 +279,11 @@ function getUserRole(sessionToken) {
 
 // ─── CONFIG LOADER ───────────────────────────────────────────────────────────
 function loadConfig() {
+  // Returns the whole CONFIG sheet — including the legacy user list (emails +
+  // roles) and the admin email — so it must never answer an unauthenticated
+  // caller. Trigger and editor entry points establish a system identity via
+  // _setVerifiedAuth before reaching here.
+  _requireAuth();
   var ss  = SpreadsheetApp.getActiveSpreadsheet();
   var cfg = ss.getSheetByName(SHEETS.CONFIG);
   if (!cfg) return {};
@@ -291,6 +345,26 @@ function _cleanDisplay(str) {
   return String(str || '').toUpperCase().trim().replace(/\s+/g, ' ');
 }
 
+// Neutralize formula injection before ANY user-supplied text reaches a cell.
+// Sheets evaluates a cell whose text starts with = or + as a live formula, so a
+// value like "=IMPORTXML(...)" typed into a comment or material name would run
+// inside the customer's spreadsheet and can exfiltrate data or poison totals.
+// - and @ are included because the same strings get exported to CSV and Excel
+// evaluates all four. This matters most on the Gmail-scan path, where the text
+// originates in inbound mail from outside the company and is then written into
+// the very same fields.
+//
+// A leading apostrophe is Sheets' "treat as literal text" marker: it is a cell
+// format flag, NOT part of the stored value, so getValues() still returns the
+// original string and existing comparisons — including _addMovementsBatch's
+// write-verify read — behave exactly as before.
+function _sheetSafe(val) {
+  if (val === null || val === undefined) return '';
+  if (val instanceof Date || typeof val === 'number' || typeof val === 'boolean') return val;
+  var s = String(val);
+  return /^[=+\-@\t\r]/.test(s) ? "'" + s : s;
+}
+
 // Convert a spreadsheet cell value to a plain string.
 // Sheets sometimes auto-converts PO# fields like "01-04-25" to a Date object.
 // This function returns empty string for Date values (better than a timestamp dump).
@@ -311,7 +385,7 @@ function getLegacyMaterialId(cat, name, proj) {
 // ─── INITIAL DATA ────────────────────────────────────────────────────────────
 function getInitialData(sessionToken) {
   try {
-    var auth = getUserRole(sessionToken);
+    var auth = _setVerifiedAuth(getUserRole(sessionToken));
 
     // Not authenticated — return public user list so frontend can show identity picker
     if (auth.role === 'NO_SESSION') {
@@ -330,6 +404,12 @@ function getInitialData(sessionToken) {
     var archive  = ss.getSheetByName(SHEETS.ARCHIVE);
     var resSheet = ss.getSheetByName(SHEETS.RESERVATIONS);
     var config   = loadConfig();
+    // The CONFIG sheet also holds the legacy user list and the admin email. The
+    // frontend never reads either one, so strip them instead of shipping the
+    // whole staff roster to every browser that logs in. (Admins still get the
+    // real roster through getUsers(), which is role-gated.)
+    delete config.users;
+    delete config.adminEmail;
 
     var movements = [];
     if (archive) {
@@ -675,7 +755,10 @@ function _buildStockFromDerivedSheets(ss) {
 
 // ─── PROCESS MOVEMENT ────────────────────────────────────────────────────────
 function processMovement(action, data) {
-  var auth = getUserRole(data && data._sessionToken);
+  // The ONLY place (besides getInitialData) where an identity becomes trusted:
+  // the token is verified here, then published to _requireAuth via
+  // _setVerifiedAuth so the action handlers below can assert against it.
+  var auth = _setVerifiedAuth(getUserRole(data && data._sessionToken));
   if (auth.role === 'NO_SESSION') throw new Error('Not authenticated. Please sign in with your Google account.');
   if (auth.role === 'DENIED')     throw new Error('Access denied. Your account (' + auth.email + ') is not registered in this system. Contact your administrator to request access.');
   if (auth.role === 'VIEWER')     throw new Error('Read-only access — you can view data but cannot record movements. Contact an admin.');
@@ -736,6 +819,7 @@ function _processMovementInner(ss, action, data, auth) {
         rowCount:   entryRes.rowCount,
         fileError:  entryRes.fileError,
         emailError: entryRes.emailError,
+        refreshError: entryRes.refreshError,
         message:    'ENTRY recorded' + (entryRes.rowCount > 1 ? ' (' + entryRes.rowCount + ' locations).' : '.')
       };
     }
@@ -774,6 +858,7 @@ function _processMovementInner(ss, action, data, auth) {
         rowCount:   exitRes.rowCount,
         fileError:  exitRes.fileError,
         emailError: exitRes.emailError,
+        refreshError: exitRes.refreshError,
         message:    'EXIT recorded' + (exitRes.rowCount > 1 ? ' (' + exitRes.rowCount + ' locations).' : '.')
       };
     }
@@ -808,6 +893,7 @@ function _processMovementInner(ss, action, data, auth) {
         rowCount:   transferRes.rowCount,
         fileError:  transferRes.fileError,
         emailError: transferRes.emailError,
+        refreshError: transferRes.refreshError,
         message:    'TRANSFER recorded' + (transferRes.rowCount > 1 ? ' (' + transferRes.rowCount + ' pairs).' : '.')
       };
     }
@@ -849,7 +935,8 @@ function _processMovementInner(ss, action, data, auth) {
       message:        String(data.moveType || '').toUpperCase() + ' recorded successfully.',
       availableAfter: availAfter != null ? availAfter : null,
       fileError:      singleRes.fileError,
-      emailError:     singleRes.emailError
+      emailError:     singleRes.emailError,
+      refreshError:   singleRes.refreshError
     };
   }
   if (action === 'addMultiEntry')         return addMultiEntry(ss, archive, data, auth);
@@ -863,6 +950,8 @@ function _processMovementInner(ss, action, data, auth) {
   if (action === 'scanGmail')             return scanGmailForDeliveries(data, auth);
   if (action === 'modifyMovement')        return modifyMovement(data, auth);
   if (action === 'setMonitoredMaterials') return setMonitoredMaterials(data.names, auth);
+  if (action === 'getPmDirectory')        return getPmDirectory();
+  if (action === 'managePmDirectory')     return managePmDirectory(data, auth);
   if (action === 'uploadRackPhoto')       return uploadRackPhoto(data, auth);
   if (action === 'lockMaterial')          return lockMaterial(data, auth);
   if (action === 'unlockMaterial')        return unlockMaterial(data, auth);
@@ -879,7 +968,7 @@ function _processMovementInner(ss, action, data, auth) {
   if (action === 'listMaterials')  return listMaterials(auth);
   if (action === 'manageMaterial') return manageMaterial(data, auth);
   if (action === 'adminAction') {
-    if (auth.role !== 'ADMIN') throw new Error('Admin only.');
+    _requireAuth('ADMIN');
     return _adminAction(ss, data);
   }
   if (action === 'getErrorLog')     return getErrorLog(auth);
@@ -1004,25 +1093,25 @@ function _addMovementsBatch(ss, archive, movements, auth) {
 
       var row = new Array(20);
       row[AC.TIMESTAMP]   = now;
-      row[AC.CATEGORY]    = _cleanDisplay(d.category);  // stored as typed (keeps , - /)
-      row[AC.NAME]        = _cleanDisplay(d.name);      // matId above still uses normalized form
-      row[AC.GC]          = String(d.gc || '').trim();
-      row[AC.PO]          = String(d.po || '').trim();
+      row[AC.CATEGORY]    = _sheetSafe(_cleanDisplay(d.category));  // stored as typed (keeps , - /)
+      row[AC.NAME]        = _sheetSafe(_cleanDisplay(d.name));      // matId above still uses normalized form
+      row[AC.GC]          = _sheetSafe(String(d.gc || '').trim());
+      row[AC.PO]          = _sheetSafe(String(d.po || '').trim());
       row[AC.QTY]         = qty;
-      row[AC.UNIT]        = String(d.unit || 'UNIT').toUpperCase();
+      row[AC.UNIT]        = _sheetSafe(String(d.unit || 'UNIT').toUpperCase());
       row[AC.DATE_REC]    = d.dateRec || tzDate;
-      row[AC.SRC_LOC]     = src;
-      row[AC.SUPPLIER]    = String(d.supplier || '').trim();
-      row[AC.COMMENTS]    = String(d.comments || '').trim();
+      row[AC.SRC_LOC]     = _sheetSafe(src);
+      row[AC.SUPPLIER]    = _sheetSafe(String(d.supplier || '').trim());
+      row[AC.COMMENTS]    = _sheetSafe(String(d.comments || '').trim());
       row[AC.STATUS]      = statusVal;
-      row[AC.RESPONSIBLE] = String(d.responsible || auth.email).trim();
-      row[AC.PROJECT]     = proj;
-      row[AC.MAT_ID]      = matId;
+      row[AC.RESPONSIBLE] = _sheetSafe(String(d.responsible || auth.email).trim());
+      row[AC.PROJECT]     = _sheetSafe(proj);
+      row[AC.MAT_ID]      = _sheetSafe(matId);
       row[AC.DOC_LINKS]   = '';
       row[AC.USER_EMAIL]  = auth.email;
-      row[AC.DEST_LOC]    = dest;
+      row[AC.DEST_LOC]    = _sheetSafe(dest);
       row[AC.MOVETYPE]    = mt;
-      row[AC.PM]          = String(d.pm || '').trim();
+      row[AC.PM]          = _sheetSafe(String(d.pm || '').trim());
 
       newRows.push(row);
       rowMeta.push({
@@ -1070,7 +1159,20 @@ function _addMovementsBatch(ss, archive, movements, auth) {
     }
 
     // ── ONE derived-sheet refresh for the whole batch ────────────────────────
-    try { _refreshDerivedSheets(ss); } catch (re) { Logger.log('Refresh warning: ' + re.message); }
+    // CRITICAL: if this throws and we only Logger.log it, the movement itself
+    // still saves fine (so it looks correct in Movement History) but
+    // LIVE_STOCK/SITE_STOCK/WASTED_STOCK silently keep the PRE-save numbers —
+    // e.g. an EXIT that fully empties a rack, with the rack drawer still
+    // showing the old quantity forever, and nobody finds out until they notice
+    // by eye. Must land in the real ERROR_LOG (visible in Settings), not just
+    // Apps Script's own execution log that nobody checks day to day.
+    var refreshError = null;
+    try {
+      _refreshDerivedSheets(ss);
+    } catch (re) {
+      refreshError = 'Stock totals may be out of date — run Settings → System → "Rebuild Stock Totals Now". (' + re.message + ')';
+      _logError(ss, 'ERROR', 'backend', '_addMovementsBatch/_refreshDerivedSheets', auth.email, re.message, { rowCount: newRows.length }, _newRequestId());
+    }
 
     // ── ONE audit-log entry summarizing the batch ───────────────────────────
     var auditDetail = rowMeta.map(function (m) { return m.mt + ' ' + m.name + ' x' + m.qty; }).join('; ');
@@ -1108,6 +1210,7 @@ function _addMovementsBatch(ss, archive, movements, auth) {
       rowCount:       newRows.length,
       fileError:      fileError,
       emailError:     emailError,
+      refreshError:   refreshError,
       availableByMat: availableByMat
     };
 
@@ -1269,6 +1372,7 @@ function _sendBatchNotifyEmail(notify, rowMeta, auth) {
 // docs/notify: shared docs go on first row of first material; per-material docs
 //              not yet supported (all get shared docGroups for now).
 function addMultiEntry(ss, archive, data, auth) {
+  auth = _requireAuth('WRITE');   // ignores any caller-supplied `auth` — see _requireAuth
   if (!Array.isArray(data.materials) || data.materials.length === 0) {
     throw new Error('No materials provided.');
   }
@@ -1286,23 +1390,28 @@ function addMultiEntry(ss, archive, data, auth) {
       if (!locEntry.qty || locEntry.qty <= 0) continue;
 
       var isFirstRow = (rows.length === 0);
+      // Per-material values win when "same info for all" is off (mSameEntryInfoChk
+      // unchecked client-side) — mat.xxx is only sent then. Falls back to the
+      // shared data.xxx fields otherwise, same override pattern already used for
+      // EXIT's per-material destLoc.
+      var matProject = mat.project || data.project || '';
       rows.push({
         moveType:         'ENTRY',
         category:         mat.category || data.category || '',
         name:             mat.name,
-        project:          data.project  || '',
-        isGeneric:        data.isGeneric,
-        gc:               data.gc       || '',
-        po:               data.po       || '',
+        project:          matProject,
+        isGeneric:        mat.project !== undefined ? !matProject : data.isGeneric,
+        gc:               mat.gc       || data.gc       || '',
+        po:               mat.po       || data.po       || '',
         qty:              locEntry.qty,
         unit:             mat.unit      || 'UNIT',
         dateRec:          data.dateRec  || '',
         sourceLoc:        '',
         destLoc:          locEntry.loc  || '',
-        supplier:         data.supplier || '',
-        comments:         data.comments || '',
-        responsible:      data.responsible || '',
-        pm:               data.pm       || '',
+        supplier:         mat.supplier    || data.supplier    || '',
+        comments:         mat.comments    || data.comments    || '',
+        responsible:      mat.responsible || data.responsible || '',
+        pm:               mat.pm          || data.pm          || '',
         files:            [],
         // Shared docs + notify go only on the very first archive row.
         docGroups:        isFirstRow ? (data.docGroups       || []) : [],
@@ -1314,12 +1423,21 @@ function addMultiEntry(ss, archive, data, auth) {
   }
 
   var res = _addMovementsBatch(ss, archive, rows, auth);
+
+  // One email per PM, grouped — never one email per material, never a PM
+  // seeing another PM's materials. Independent of the manual "notify" checkbox
+  // (notifyRecipients above), which is for ad-hoc recipients typed by hand.
+  var pmError = null;
+  try { pmError = _sendPmGroupedEmails(rows, auth); } catch (e) { pmError = 'PM notification error: ' + e.message; }
+
   return {
     status:     'success',
     count:      totalMats,
     rowCount:   res.rowCount,
     fileError:  res.fileError  || null,
     emailError: res.emailError || null,
+    refreshError: res.refreshError || null,
+    pmError:    pmError,
     message:    totalMats + ' material(s), ' + res.rowCount + ' row(s) recorded.'
   };
 }
@@ -1328,6 +1446,7 @@ function addMultiEntry(ss, archive, data, auth) {
 // data.materials: [{category, name, locations:[{loc, qty}]}]
 // data.destLoc, data.dateRec, data.responsible, data.comments, data.status
 function addMultiExit(ss, archive, data, auth) {
+  auth = _requireAuth('WRITE');   // ignores any caller-supplied `auth` — see _requireAuth
   if (!Array.isArray(data.materials) || data.materials.length === 0) {
     throw new Error('No materials provided.');
   }
@@ -1366,6 +1485,7 @@ function addMultiExit(ss, archive, data, auth) {
     status:   'success',
     count:    totalMats,
     rowCount: res.rowCount,
+    refreshError: res.refreshError || null,
     message:  totalMats + ' material(s), ' + res.rowCount + ' row(s) recorded.'
   };
 }
@@ -1559,6 +1679,11 @@ function archiveOldMovements(ss) {
 }
 
 function archiveOldMovementsTrigger() {
+  // Time-based triggers run as the owner, so this passes; a google.script.run
+  // call from any other account does not. Without it, anyone could force a full
+  // archive rewrite on demand and burn the project's execution quota.
+  _requireOwnerContext();
+  _setVerifiedAuth({ role: 'ADMIN', email: 'system@scheduled-trigger', name: 'Scheduled trigger' });
   archiveOldMovements(SpreadsheetApp.getActiveSpreadsheet());
 }
 
@@ -1577,6 +1702,7 @@ function _ensureArchiveTrigger() {
 // ARCHIVE_HISTORY's row, not MASTER_ARCHIVE_V3's, so it's tagged `archived: true`
 // and must never be sent to modifyMovement/_updateDocument.
 function loadOlderHistory(auth) {
+  auth = _requireAuth();   // any registered user; unauthenticated callers are refused
   var ss      = SpreadsheetApp.getActiveSpreadsheet();
   var history = _ensureArchiveHistorySheet(ss);
   var data    = history.getDataRange().getValues();
@@ -1602,44 +1728,97 @@ function _refreshDerivedSheets(ss) {
   var waste   = _ensureWasteSheet(ss);
   var history = _ensureArchiveHistorySheet(ss);
 
-  var data  = archive.getDataRange().getValues().concat(history.getDataRange().getValues().slice(1));
+  var archiveData = archive.getDataRange().getValues();
+  var historyData = history.getDataRange().getValues();
+  var data  = archiveData.concat(historyData.slice(1));
   var stock = {};
+  // Self-healing MatID: any row whose stored MatID doesn't match what it should
+  // be gets corrected in the sheet as part of this same pass — so a mismatch
+  // introduced once (bad save, manual edit, old code path) doesn't keep causing
+  // this bug forever; every rebuild repairs it going forward automatically.
+  var matIdFixes = []; // { sheet: archive|history, rowNum, correctMatId }
 
   for (var i = 1; i < data.length; i++) {
     var row = data[i];
     if (!row[AC.CATEGORY]) continue;
     var m   = parseArchiveRow(row, i + 1);
-    var key = m.matId || getMaterialId(m.category, m.name);
+    // ALWAYS recompute the grouping key from category+name — never trust the
+    // stored MatID column. This was the actual root cause of stock "still in
+    // the warehouse" after a real EXIT: two rows for the literal same material
+    // (same category, same name, confirmed identical) can have DIFFERENT
+    // stored MatIDs if they were saved via different code paths/times before
+    // every write went through the same computation — the old retired
+    // _addMovement() vs the current _addMovementsBatch(), or any future drift.
+    // getMaterialId() is a pure function of category+name, so recomputing here
+    // guarantees two rows that are obviously "the same material" always land
+    // in the same bucket, regardless of what got persisted at save time.
+    var key = getMaterialId(m.category, m.name);
+
+    if (row[AC.MAT_ID] !== key) {
+      var isHistoryRow = i >= archiveData.length;
+      // Sheet row number (1-indexed, header = row 1): for archive rows it's just
+      // i+1; for history rows, i has to be re-based off where the history
+      // segment starts in the concatenated `data` array, then +2 to account for
+      // history's own header row (which was sliced out of `data` above).
+      matIdFixes.push({
+        rowNum: isHistoryRow ? (i - archiveData.length + 2) : (i + 1),
+        isHistory: isHistoryRow,
+        correctMatId: key
+      });
+    }
 
     if (!stock[key]) stock[key] = { cat: m.category, name: m.name, project: m.project, unit: m.unit || 'UNIT', locs: {}, siteProjs: {}, wasted: 0 };
     var s   = stock[key];
     var qty = m.qty;
 
+    // CRITICAL: rack names must be compared normalized (uppercase+trim), not as
+    // whatever literal text happens to be stored. _addMovementsBatch forces
+    // upper+trim on every new save, but modifyMovement's manual-edit path did
+    // NOT (fixed separately below) — so any row ever touched by a manual edit,
+    // or any older/legacy row, could have "B1A" vs "b1a" vs " B1A" sitting in
+    // the sheet. Those would never net against each other as the same rack —
+    // an ENTRY's +21 stays parked under one key forever while a later EXIT's
+    // -21 lands under a slightly different key, and even a full rebuild from
+    // scratch reproduces the same stale "still in stock" result, because the
+    // matching itself — not just when it runs — was the bug.
+    var rackKey = function(r){ return String(r || '').toUpperCase().trim(); };
+
     if (m.moveType === 'ENTRY') {
-      var rack = m.destLoc || m.sourceLoc || 'UNASSIGNED';
+      var rack = rackKey(m.destLoc || m.sourceLoc || 'UNASSIGNED');
       s.locs[rack] = (s.locs[rack] || 0) + qty;
 
     } else if (m.moveType === 'EXIT' || m.moveType === 'DISPATCH') {
-      var sr = m.sourceLoc || 'UNASSIGNED';
+      var sr = rackKey(m.sourceLoc || 'UNASSIGNED');
       s.locs[sr] = (s.locs[sr] || 0) - qty;
       var p = m.project || 'UNASSIGNED';
       s.siteProjs[p] = (s.siteProjs[p] || 0) + qty;
 
     } else if (m.moveType === 'TRANSFER') {
-      if (m.sourceLoc) s.locs[m.sourceLoc] = (s.locs[m.sourceLoc] || 0) - qty;
-      if (m.destLoc)   s.locs[m.destLoc]   = (s.locs[m.destLoc]   || 0) + qty;
+      if (m.sourceLoc) { var trSrc = rackKey(m.sourceLoc); s.locs[trSrc] = (s.locs[trSrc] || 0) - qty; }
+      if (m.destLoc)   { var trDest = rackKey(m.destLoc);  s.locs[trDest] = (s.locs[trDest] || 0) + qty; }
 
     } else if (m.moveType === 'RETURN') {
-      var retRack = m.destLoc || 'UNASSIGNED';
+      var retRack = rackKey(m.destLoc || 'UNASSIGNED');
       s.locs[retRack] = (s.locs[retRack] || 0) + qty;
       var p2 = m.project || 'UNKNOWN';
       if (s.siteProjs[p2]) s.siteProjs[p2] = Math.max(0, s.siteProjs[p2] - qty);
 
     } else if (m.moveType === 'WASTE') {
-      var s2 = m.sourceLoc || 'UNASSIGNED';
+      var s2 = rackKey(m.sourceLoc || 'UNASSIGNED');
       s.locs[s2] = (s.locs[s2] || 0) - qty;
       s.wasted  += qty;
     }
+  }
+
+  // Apply the self-healing MatID corrections found above. One setValues call
+  // per affected sheet (archive/history), not per row — same batching
+  // discipline as everything else in this function.
+  if (matIdFixes.length) {
+    var archiveFixes = matIdFixes.filter(function(f){ return !f.isHistory; });
+    var historyFixes = matIdFixes.filter(function(f){ return f.isHistory; });
+    archiveFixes.forEach(function(f){ archive.getRange(f.rowNum, AC.MAT_ID + 1).setValue(f.correctMatId); });
+    historyFixes.forEach(function(f){ history.getRange(f.rowNum, AC.MAT_ID + 1).setValue(f.correctMatId); });
+    _auditLog(ss, 'AUTO_REPAIR_MATID', 'system', matIdFixes.length + ' row(s) had a stale MatID, corrected automatically', '', '');
   }
 
   var now = new Date();
@@ -1701,7 +1880,7 @@ function _addReservation(ss, data, auth) {
   if (current.availableQty < qty) throw new Error('Cannot reserve. Available: ' + current.availableQty);
 
   var id = 'RES-' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd-HHmmss');
-  sheet.appendRow([id, cat, name, proj, qty, auth.email, new Date(), 'Active', '']);
+  sheet.appendRow([id, _sheetSafe(cat), _sheetSafe(name), _sheetSafe(proj), qty, auth.email, new Date(), 'Active', '']);
 
   _auditLog(ss, 'ADD_RESERVATION', auth.email, id + ' | ' + name + ' x' + qty, '', '');
   return { status: 'success', reservationId: id };
@@ -1734,6 +1913,130 @@ function _cancelReservation(ss, data, auth) {
 //  A=0:ID B=1:MatId C=2:Category D=3:Name E=4:Rack F=5:AllowedDestinations(CSV)
 //  G=6:Reason H=7:LockedBy I=8:LockedAt J=9:Status K=10:UnlockedBy L=11:UnlockedAt
 
+// ─── PM DIRECTORY ─────────────────────────────────────────────────────────────
+// Maps a PM's display name (typed into the PM field on ENTRY) to their email, so
+// batch ENTRY saves can auto-group materials by PM and send each PM one email
+// with just their own materials — instead of the old flow where a human had to
+// type recipient emails by hand every time. Admin-managed from Settings.
+function _ensurePmDirectorySheet(ss) {
+  var sheet = ss.getSheetByName('PM_DIRECTORY');
+  if (!sheet) {
+    sheet = ss.insertSheet('PM_DIRECTORY');
+    sheet.appendRow(['Name', 'Email']);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, 2).setFontWeight('bold');
+  }
+  return sheet;
+}
+
+function getPmDirectory() {
+  _requireAuth();   // this is an address book of real people — not public data
+  var ss    = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = _ensurePmDirectorySheet(ss);
+  var rows  = sheet.getDataRange().getValues();
+  var out   = [];
+  for (var i = 1; i < rows.length; i++) {
+    var name = String(rows[i][0] || '').trim();
+    var email = String(rows[i][1] || '').trim();
+    if (name && email) out.push({ name: name, email: email });
+  }
+  return out;
+}
+
+// data.op: 'add' | 'rename' | 'delete'. Matches by name, case-insensitive.
+function managePmDirectory(data, auth) {
+  auth = _requireAuth('ADMIN');   // ignores any caller-supplied `auth` — see _requireAuth
+  var ss    = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = _ensurePmDirectorySheet(ss);
+  var rows  = sheet.getDataRange().getValues();
+  var name  = String(data.name  || '').trim();
+  var email = String(data.email || '').trim();
+
+  if (data.op === 'add') {
+    if (!name)  throw new Error('PM name is required.');
+    if (!email || email.indexOf('@') === -1) throw new Error('A valid email is required.');
+    for (var i = 1; i < rows.length; i++) {
+      if (String(rows[i][0] || '').trim().toUpperCase() === name.toUpperCase()) {
+        throw new Error('"' + name + '" is already in the PM directory.');
+      }
+    }
+    sheet.appendRow([_sheetSafe(name), _sheetSafe(email)]);
+  } else if (data.op === 'rename') {
+    var oldName = String(data.oldName || '').trim();
+    if (!oldName) throw new Error('Current PM name is required.');
+    var found = false;
+    for (var j = 1; j < rows.length; j++) {
+      if (String(rows[j][0] || '').trim().toUpperCase() === oldName.toUpperCase()) {
+        sheet.getRange(j + 1, 1, 1, 2).setValues([[_sheetSafe(name || oldName), _sheetSafe(email || rows[j][1])]]);
+        found = true;
+        break;
+      }
+    }
+    if (!found) throw new Error('"' + oldName + '" not found in PM directory.');
+  } else if (data.op === 'delete') {
+    if (!name) throw new Error('PM name is required.');
+    var delFound = false;
+    for (var k = 1; k < rows.length; k++) {
+      if (String(rows[k][0] || '').trim().toUpperCase() === name.toUpperCase()) {
+        sheet.deleteRow(k + 1);
+        delFound = true;
+        break;
+      }
+    }
+    if (!delFound) throw new Error('"' + name + '" not found in PM directory.');
+  } else {
+    throw new Error('Unknown managePmDirectory op: ' + data.op);
+  }
+
+  _auditLog(ss, 'MANAGE_PM_DIRECTORY', auth.email, data.op, name, email);
+  return { status: 'success' };
+}
+
+// Groups the just-saved ENTRY rows by PM name and sends each PM ONE email
+// listing only their own materials — never a combined email with other PMs'
+// materials, and never more than one email per PM per batch. PMs without a
+// matching entry in PM_DIRECTORY are silently skipped (no email address to
+// send to) and reported back so the admin knows to add them.
+function _sendPmGroupedEmails(rows, auth) {
+  var byPm = {}; // upper(pmName) -> { displayName, items: [{name, qty, unit}] }
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    var pm = String(r.pm || '').trim();
+    if (!pm) continue;
+    var key = pm.toUpperCase();
+    if (!byPm[key]) byPm[key] = { displayName: pm, items: [] };
+    byPm[key].items.push({ name: r.name, qty: r.qty, unit: r.unit || 'UNIT' });
+  }
+  var pmNames = Object.keys(byPm);
+  if (!pmNames.length) return null;
+
+  var directory = getPmDirectory();
+  var emailByName = {};
+  directory.forEach(function(d) { emailByName[d.name.toUpperCase()] = d.email; });
+
+  var unmatched = [];
+  var sent = 0;
+  pmNames.forEach(function(key) {
+    var group = byPm[key];
+    var email = emailByName[key];
+    if (!email) { unmatched.push(group.displayName); return; }
+    var lines = group.items.map(function(it){ return '  • ' + it.qty + ' ' + it.unit + '(s) of ' + it.name; }).join('\n');
+    var body = 'Hi ' + group.displayName + ',\n\nThe following materials were received today for your project(s):\n\n' +
+      lines + '\n\nLet us know if you need anything.\n\nOX Glass Co. — Warehouse Team';
+    try {
+      GmailApp.sendEmail(email,
+        'Materials Received' + (group.items.length > 1 ? ' (' + group.items.length + ' items)' : ''),
+        body, { name: 'OX Glass Co. — WMS', replyTo: auth.email });
+      sent++;
+    } catch (e) {
+      unmatched.push(group.displayName + ' (send failed: ' + e.message + ')');
+    }
+  });
+
+  if (!unmatched.length) return null;
+  return 'No PM Directory match for: ' + unmatched.join(', ') + '. Add them in Settings → PM Directory.';
+}
+
 function _ensureMaterialLocksSheet(ss) {
   var sheet = ss.getSheetByName('MATERIAL_LOCKS');
   if (!sheet) {
@@ -1763,6 +2066,7 @@ function _cacheGet(key, ttlSec, builderFn) {
 }
 
 function getMaterialLocks() {
+  _requireAuth();   // lock reasons name materials, racks and staff — not public
   return _cacheGet('materialLocksV1', 300, _getMaterialLocksUncached);
 }
 
@@ -1837,7 +2141,7 @@ function _enforceMaterialLock(locksMap, mt, matId, srcKey, destKey) {
 // Create or update a lock for one (material, rack) pair. Upsert — locking an
 // already-locked pair just updates the reason/destinations. ADMIN only.
 function lockMaterial(data, auth) {
-  if (!auth || auth.role !== 'ADMIN') throw new Error('Admin only.');
+  auth = _requireAuth('ADMIN');   // ignores any caller-supplied `auth` — see _requireAuth
   var cat  = normalizeString(data.category);
   var name = normalizeString(data.name);
   var rack = String(data.rack || '').trim().toUpperCase();
@@ -1866,7 +2170,7 @@ function lockMaterial(data, auth) {
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][9] || '').toUpperCase() !== 'ACTIVE') continue;
     if (String(rows[i][1] || '') === matId && normalizeString(rows[i][4] || '') === rackKey) {
-      sheet.getRange(i + 1, 6, 1, 4).setValues([[allowedDest.join(', '), reason, auth.email, now]]);
+      sheet.getRange(i + 1, 6, 1, 4).setValues([[_sheetSafe(allowedDest.join(', ')), _sheetSafe(reason), auth.email, now]]);
       _auditLog(ss, 'UPDATE_LOCK', auth.email, data.name + ' @ ' + rack, '', reason);
       CacheService.getScriptCache().remove('materialLocksV1');
       return { status: 'success', lock: { id: String(rows[i][0]), matId: matId, category: data.category, name: data.name, rack: rack, allowedDest: allowedDest, reason: reason, lockedBy: auth.email, lockedAt: nowStr } };
@@ -1874,14 +2178,14 @@ function lockMaterial(data, auth) {
   }
 
   var id = 'LOCK-' + new Date().getTime();
-  sheet.appendRow([id, matId, data.category, data.name, rack, allowedDest.join(', '), reason, auth.email, now, 'Active', '', '']);
+  sheet.appendRow([id, _sheetSafe(matId), _sheetSafe(data.category), _sheetSafe(data.name), _sheetSafe(rack), _sheetSafe(allowedDest.join(', ')), _sheetSafe(reason), auth.email, now, 'Active', '', '']);
   _auditLog(ss, 'LOCK_MATERIAL', auth.email, data.name + ' @ ' + rack, '', reason);
   CacheService.getScriptCache().remove('materialLocksV1');
   return { status: 'success', lock: { id: id, matId: matId, category: data.category, name: data.name, rack: rack, allowedDest: allowedDest, reason: reason, lockedBy: auth.email, lockedAt: nowStr } };
 }
 
 function unlockMaterial(data, auth) {
-  if (!auth || auth.role !== 'ADMIN') throw new Error('Admin only.');
+  auth = _requireAuth('ADMIN');   // ignores any caller-supplied `auth` — see _requireAuth
   var ss    = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName('MATERIAL_LOCKS');
   if (!sheet) throw new Error('No locks exist.');
@@ -1954,6 +2258,7 @@ function _ensureRackPhotosSheet(ss) {
 
 // Returns { LOCATION_UPPER: { url, uploadedBy, uploadedAt } } for every rack with a photo.
 function getRackPhotos() {
+  _requireAuth();   // maps every rack name to a photo of its contents
   return _cacheGet('rackPhotosV1', 300, _getRackPhotosUncached);
 }
 
@@ -1981,6 +2286,9 @@ function _getRackPhotosUncached() {
 // Uploads/replaces the reference photo for one rack. WAREHOUSE + ADMIN only
 // (VIEWER is already blocked before reaching here — see processMovement's role gate).
 function uploadRackPhoto(data, auth) {
+  // Writes a file into the owner's Drive — must never be reachable without a
+  // verified, write-capable identity.
+  auth = _requireAuth('WRITE');
   var loc = String((data && data.location) || '').trim().toUpperCase();
   if (!loc) throw new Error('Location is required.');
   if (!data.fileData) throw new Error('No photo provided.');
@@ -2000,12 +2308,12 @@ function uploadRackPhoto(data, auth) {
   var found = false;
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][0] || '').trim().toUpperCase() === loc) {
-      sheet.getRange(i + 1, 1, 1, 4).setValues([[loc, url, auth.email, now]]);
+      sheet.getRange(i + 1, 1, 1, 4).setValues([[_sheetSafe(loc), url, auth.email, now]]);
       found = true;
       break;
     }
   }
-  if (!found) sheet.appendRow([loc, url, auth.email, now]);
+  if (!found) sheet.appendRow([_sheetSafe(loc), url, auth.email, now]);
 
   _auditLog(ss, 'UPLOAD_RACK_PHOTO', auth.email, loc, '', url);
   CacheService.getScriptCache().remove('rackPhotosV1');
@@ -2274,18 +2582,18 @@ function _updateTruck(ss, data) {
   var values = cfg.getDataRange().getValues();
   for (var i = 1; i < values.length; i++) {
     if (String(values[i][8] || '') === data.truckName) {
-      cfg.getRange(i + 1, 10).setValue(data.assignedPerson || '');
-      cfg.getRange(i + 1, 11).setValue(data.status || 'ACTIVE');
+      cfg.getRange(i + 1, 10).setValue(_sheetSafe(data.assignedPerson || ''));
+      cfg.getRange(i + 1, 11).setValue(_sheetSafe(data.status || 'ACTIVE'));
       return { status: 'success' };
     }
   }
-  cfg.appendRow(['','','','','','','','',data.truckName, data.assignedPerson || '', data.status || 'ACTIVE','','']);
+  cfg.appendRow(['','','','','','','','',_sheetSafe(data.truckName), _sheetSafe(data.assignedPerson || ''), _sheetSafe(data.status || 'ACTIVE'),'','']);
   return { status: 'success', message: 'Truck added.' };
 }
 
 function _addUser(ss, data) {
   var cfg = ss.getSheetByName(SHEETS.CONFIG);
-  cfg.appendRow(['','','','','',data.email, data.role,'','','','','','']);
+  cfg.appendRow(['','','','','',_sheetSafe(data.email), _sheetSafe(data.role),'','','','','','']);
   return { status: 'success' };
 }
 
@@ -2310,7 +2618,7 @@ function _updateMinStock(ss, data) {
       return { status: 'success' };
     }
   }
-  cfg.appendRow(['','','','','','','','','','','',data.category, Number(data.qty) || 0]);
+  cfg.appendRow(['','','','','','','','','','','',_sheetSafe(data.category), Number(data.qty) || 0]);
   return { status: 'success' };
 }
 
@@ -2320,7 +2628,7 @@ function _updateMinStock(ss, data) {
 // the legacy per-row _updateMinStock (that column stores material NAMEs, despite
 // the older function's parameter being called "category").
 function updateMinStockBulk(data, auth) {
-  if (!auth || auth.role !== 'ADMIN') throw new Error('Admin only.');
+  auth = _requireAuth('ADMIN');   // ignores any caller-supplied `auth` — see _requireAuth
   var ss  = SpreadsheetApp.getActiveSpreadsheet();
   var cfg = ss.getSheetByName(SHEETS.CONFIG);
   if (!cfg) throw new Error('Config sheet not found.');
@@ -2342,7 +2650,7 @@ function updateMinStockBulk(data, auth) {
     if (rowByName[nm] !== undefined) {
       cfg.getRange(rowByName[nm], 13).setValue(qty);
     } else {
-      appended.push(['','','','','','','','','','','', nm, qty]);
+      appended.push(['','','','','','','','','','','', _sheetSafe(nm), qty]);
     }
   });
   if (appended.length) {
@@ -2361,7 +2669,7 @@ function _runReconciliation(ss) {
 function _auditLog(ss, action, user, details, oldVal, newVal) {
   var sheet = ss.getSheetByName(SHEETS.AUDIT);
   if (!sheet) return;
-  sheet.appendRow([new Date(), action, user, details, oldVal, newVal]);
+  sheet.appendRow([new Date(), action, user, _sheetSafe(details), _sheetSafe(oldVal), _sheetSafe(newVal)]);
 }
 
 // ─── ERROR LOG ────────────────────────────────────────────────────────────────
@@ -2419,8 +2727,8 @@ function _logError(ss, severity, source, action, userEmail, message, context, re
   try {
     var sheet = _ensureErrorLogSheet(ss);
     sheet.appendRow([
-      new Date(), severity, userEmail || '', source, action || '',
-      String(message || '').substring(0, 500), _sanitizeErrorContext(context), requestId || ''
+      new Date(), severity, _sheetSafe(userEmail || ''), source, _sheetSafe(action || ''),
+      _sheetSafe(String(message || '').substring(0, 500)), _sheetSafe(_sanitizeErrorContext(context)), requestId || ''
     ]);
   } catch (e) {
     Logger.log('_logError failed: ' + e.message);
@@ -2429,7 +2737,7 @@ function _logError(ss, severity, source, action, userEmail, message, context, re
 
 // ADMIN only. Returns the most recent error log entries, newest first.
 function getErrorLog(auth) {
-  if (auth.role !== 'ADMIN') throw new Error('Admin only.');
+  auth = _requireAuth('ADMIN');   // ignores any caller-supplied `auth` — see _requireAuth
   var ss    = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = _ensureErrorLogSheet(ss);
   var last  = sheet.getLastRow();
@@ -2453,6 +2761,7 @@ function getErrorLog(auth) {
 // a client-side crash so admins see it — routed through the same auth gate as
 // every other action, so NO_SESSION/DENIED/VIEWER users are still blocked upstream.
 function logClientError(data, auth) {
+  auth = _requireAuth();   // otherwise anyone could flood ERROR_LOG with junk rows
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var requestId = _newRequestId();
   _logError(ss, 'ERROR', 'frontend', data.action || '', auth.email,
@@ -2488,31 +2797,12 @@ function _checkNotifications(ss, data, moveType, qty, userEmail) {
 }
 
 // ─── EXPORT ──────────────────────────────────────────────────────────────────
-function exportMovementsCSV(filters) {
-  var ss      = SpreadsheetApp.getActiveSpreadsheet();
-  var archive = ss.getSheetByName(SHEETS.ARCHIVE);
-  if (!archive) return '';
-
-  var data = archive.getDataRange().getValues();
-  var rows = [['MoveType','Date','Category','Name','Project','Qty','Unit','Source','Destination','Truck','Responsible','Status','Comments'].join(',')];
-
-  for (var i = 1; i < data.length; i++) {
-    var m = parseArchiveRow(data[i], i + 1);
-    if (filters) {
-      if (filters.moveType  && m.moveType !== filters.moveType)                        continue;
-      if (filters.category  && m.category !== filters.category)                        continue;
-      if (filters.project   && m.project.toLowerCase() !== filters.project.toLowerCase()) continue;
-      if (filters.dateFrom  && m.dateRec < filters.dateFrom)                           continue;
-      if (filters.dateTo    && m.dateRec > filters.dateTo)                             continue;
-    }
-    rows.push([
-      m.moveType, m.dateRec, m.category, m.name, m.project, m.qty, m.unit,
-      m.sourceLoc, m.destLoc, m.truck, m.responsible, m.status,
-      '"' + (m.comments || '').replace(/"/g,'""') + '"'
-    ].join(','));
-  }
-  return rows.join('\n');
-}
+// REMOVED: the server-side exportMovementsCSV(filters).
+// It took no session token and checked no role, so as a global function it was a
+// callable RPC endpoint that dumped the ENTIRE movement archive to any signed-in
+// Google account. It was also dead code — the client exports from data it has
+// already been authorized to see (exportMovementsCSV() in Index_v3_fixed.html),
+// which is the only export path the UI ever calls.
 
 // ─── CUSTOM MENU ─────────────────────────────────────────────────────────────
 function onOpen() {
@@ -2524,9 +2814,13 @@ function onOpen() {
 }
 
 function menuReconcile() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  _runReconciliation(ss);
-  SpreadsheetApp.getUi().alert('Reconciliation complete.');
+  // getUi() FIRST, deliberately: it throws outside the Sheets UI, which makes it
+  // the gate. Called the other way round, a google.script.run invocation would
+  // finish the expensive full rebuild and only then hit the error.
+  var ui = SpreadsheetApp.getUi();
+  _setVerifiedAuth({ role: 'ADMIN', email: _requireOwnerContext(), name: 'Spreadsheet menu' });
+  _runReconciliation(SpreadsheetApp.getActiveSpreadsheet());
+  ui.alert('Reconciliation complete.');
 }
 
 function menuOpenApp() {
@@ -2591,7 +2885,7 @@ function _ensureUsersSheet(ss) {
 }
 
 function getUsers(auth) {
-  if (!auth || auth.role !== 'ADMIN') throw new Error('Admin only.');
+  auth = _requireAuth('ADMIN');   // ignores any caller-supplied `auth` — see _requireAuth
   var ss    = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName('USERS_V3');
   if (!sheet || sheet.getLastRow() < 2) return [];
@@ -2616,7 +2910,7 @@ function getUsers(auth) {
 }
 
 function addUser(data, auth) {
-  if (!auth || auth.role !== 'ADMIN') throw new Error('Admin only.');
+  auth = _requireAuth('ADMIN');   // ignores any caller-supplied `auth` — see _requireAuth
   var email = String(data.email || '').toLowerCase().trim();
   var name  = String(data.name  || '').trim();
   var role  = String(data.role  || 'WAREHOUSE').toUpperCase().trim();
@@ -2638,13 +2932,13 @@ function addUser(data, auth) {
 
   var now = new Date();
   var id  = 'USR-' + now.getTime();
-  sheet.appendRow([id, email, name, role, auth.email, now, true]);
+  sheet.appendRow([id, _sheetSafe(email), _sheetSafe(name), _sheetSafe(role), auth.email, now, true]);
   _auditLog(ss, 'ADD_USER', auth.email, email + ' as ' + role, '', '');
   return { status: 'success', id: id };
 }
 
 function updateUser(data, auth) {
-  if (!auth || auth.role !== 'ADMIN') throw new Error('Admin only.');
+  auth = _requireAuth('ADMIN');   // ignores any caller-supplied `auth` — see _requireAuth
   var email = String(data.email || '').toLowerCase().trim();
   if (!email) throw new Error('Email required.');
 
@@ -2656,8 +2950,8 @@ function updateUser(data, auth) {
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][1] || '').toLowerCase().trim() === email) {
       var rowNum = i + 1;
-      if (data.name !== undefined)   sheet.getRange(rowNum, 3).setValue(String(data.name).trim());
-      if (data.role !== undefined)   sheet.getRange(rowNum, 4).setValue(String(data.role).toUpperCase().trim());
+      if (data.name !== undefined)   sheet.getRange(rowNum, 3).setValue(_sheetSafe(String(data.name).trim()));
+      if (data.role !== undefined)   sheet.getRange(rowNum, 4).setValue(_sheetSafe(String(data.role).toUpperCase().trim()));
       if (data.active !== undefined) sheet.getRange(rowNum, 7).setValue(!!data.active);
       _auditLog(ss, 'UPDATE_USER', auth.email, email + ' → ' + (data.role || 'no role change'), '', '');
       return { status: 'success' };
@@ -2667,7 +2961,7 @@ function updateUser(data, auth) {
 }
 
 function removeUser(email, auth) {
-  if (!auth || auth.role !== 'ADMIN') throw new Error('Admin only.');
+  auth = _requireAuth('ADMIN');   // ignores any caller-supplied `auth` — see _requireAuth
   email = String(email || '').toLowerCase().trim();
   if (!email) throw new Error('Email required.');
   // Prevent self-removal
@@ -2694,7 +2988,7 @@ function removeUser(email, auth) {
 // suppliers, and locations. Renaming a category also updates MASTER_ARCHIVE_V3.
 
 function getSettings(auth) {
-  if (!auth || auth.role !== 'ADMIN') throw new Error('Admin only.');
+  auth = _requireAuth('ADMIN');   // ignores any caller-supplied `auth` — see _requireAuth
   var c = loadConfig();
   return {
     categories: c.categories,
@@ -2710,7 +3004,7 @@ function getSettings(auth) {
 // data.value : current value (required for rename/delete)
 // data.newValue : replacement value (required for rename)
 function updateConfig(data, auth) {
-  if (!auth || auth.role !== 'ADMIN') throw new Error('Admin only.');
+  auth = _requireAuth('ADMIN');   // ignores any caller-supplied `auth` — see _requireAuth
   var ss  = SpreadsheetApp.getActiveSpreadsheet();
   var cfg = ss.getSheetByName(SHEETS.CONFIG);
   if (!cfg) throw new Error('CONFIG sheet not found.');
@@ -2746,7 +3040,7 @@ function updateConfig(data, auth) {
     for (var i = 1; i < rows.length; i++) {
       if (!rows[i][col]) { targetRow = i + 1; break; }
     }
-    cfg.getRange(targetRow, col + 1).setValue(nv);
+    cfg.getRange(targetRow, col + 1).setValue(_sheetSafe(nv));
 
   } else if (data.op === 'rename') {
     if (!val) throw new Error('Current value required for rename.');
@@ -2754,7 +3048,7 @@ function updateConfig(data, auth) {
     var renamed = 0;
     for (var i = 1; i < rows.length; i++) {
       if (String(rows[i][col] || '').trim().toUpperCase() === val.toUpperCase()) {
-        cfg.getRange(i + 1, col + 1).setValue(nv);
+        cfg.getRange(i + 1, col + 1).setValue(_sheetSafe(nv));
         renamed++;
       }
     }
@@ -2766,7 +3060,7 @@ function updateConfig(data, auth) {
         var aData = archive.getDataRange().getValues();
         for (var j = 1; j < aData.length; j++) {
           if (String(aData[j][AC.CATEGORY] || '').trim().toUpperCase() === val.toUpperCase()) {
-            archive.getRange(j + 1, AC.CATEGORY + 1).setValue(nv.toUpperCase());
+            archive.getRange(j + 1, AC.CATEGORY + 1).setValue(_sheetSafe(nv.toUpperCase()));
           }
         }
       }
@@ -2792,7 +3086,7 @@ function updateConfig(data, auth) {
 // Admin-only. Rename, merge, change category, or delete individual rows.
 
 function listMaterials(auth) {
-  if (!auth || auth.role !== 'ADMIN') throw new Error('Admin only.');
+  auth = _requireAuth('ADMIN');   // ignores any caller-supplied `auth` — see _requireAuth
   var archive = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.ARCHIVE);
   if (!archive) return [];
   var rows = archive.getDataRange().getValues();
@@ -2810,7 +3104,7 @@ function listMaterials(auth) {
 
 // data.op values: 'rename' | 'changeCategory' | 'merge' | 'deleteRow'
 function manageMaterial(data, auth) {
-  if (!auth || auth.role !== 'ADMIN') throw new Error('Admin only.');
+  auth = _requireAuth('ADMIN');   // ignores any caller-supplied `auth` — see _requireAuth
   var ss      = SpreadsheetApp.getActiveSpreadsheet();
   var archive = ss.getSheetByName(SHEETS.ARCHIVE);
   if (!archive) throw new Error('Archive sheet not found.');
@@ -2829,7 +3123,7 @@ function manageMaterial(data, auth) {
     for (var i = 1; i < rows.length; i++) {
       if (String(rows[i][AC.CATEGORY]||'').trim().toUpperCase() === cat &&
           String(rows[i][AC.NAME]    ||'').trim().toUpperCase() === oldNm) {
-        archive.getRange(i + 1, AC.NAME + 1).setValue(newNm);
+        archive.getRange(i + 1, AC.NAME + 1).setValue(_sheetSafe(newNm));
         count++;
       }
     }
@@ -2844,7 +3138,7 @@ function manageMaterial(data, auth) {
     for (var i = 1; i < rows.length; i++) {
       if (String(rows[i][AC.CATEGORY]||'').trim().toUpperCase() === cat &&
           String(rows[i][AC.NAME]    ||'').trim().toUpperCase() === nm) {
-        archive.getRange(i + 1, AC.CATEGORY + 1).setValue(newCat);
+        archive.getRange(i + 1, AC.CATEGORY + 1).setValue(_sheetSafe(newCat));
         count++;
       }
     }
@@ -2861,7 +3155,7 @@ function manageMaterial(data, auth) {
     for (var i = 1; i < rows.length; i++) {
       if (String(rows[i][AC.CATEGORY]||'').trim().toUpperCase() === cat &&
           String(rows[i][AC.NAME]    ||'').trim().toUpperCase() === srcNm) {
-        archive.getRange(i + 1, AC.NAME + 1).setValue(tgtNm);
+        archive.getRange(i + 1, AC.NAME + 1).setValue(_sheetSafe(tgtNm));
         count++;
       }
     }
@@ -2967,17 +3261,17 @@ function addIncoming(data) {
   sheet.appendRow([
     id,
     estDate,
-    String(data.category || '').toUpperCase().trim(),
-    String(data.name     || '').trim(),
+    _sheetSafe(String(data.category || '').toUpperCase().trim()),
+    _sheetSafe(String(data.name     || '').trim()),
     Number(data.qty      || 0),
-    String(data.unit     || 'UNIT'),
-    String(data.supplier || ''),
-    String(data.po       || ''),
-    String(data.notes    || ''),
+    _sheetSafe(String(data.unit     || 'UNIT')),
+    _sheetSafe(String(data.supplier || '')),
+    _sheetSafe(String(data.po       || '')),
+    _sheetSafe(String(data.notes    || '')),
     'Pending',
     auth.email,
     new Date(),
-    String(data.pm       || ''),
+    _sheetSafe(String(data.pm       || '')),
     docLink
   ]);
   return { status: 'success', id: id, docLink: docLink };
@@ -3010,17 +3304,17 @@ function updateIncoming(data) {
       sheet.getRange(i + 1, 1, 1, 14).setValues([[
         data.id,
         estDate,
-        String(data.category || '').toUpperCase().trim(),
-        String(data.name     || '').trim(),
+        _sheetSafe(String(data.category || '').toUpperCase().trim()),
+        _sheetSafe(String(data.name     || '').trim()),
         Number(data.qty      || 0),
-        String(data.unit     || 'UNIT'),
-        String(data.supplier || ''),
-        String(data.po       || ''),
-        String(data.notes    || ''),
-        String(data.status   || 'Pending'),
+        _sheetSafe(String(data.unit     || 'UNIT')),
+        _sheetSafe(String(data.supplier || '')),
+        _sheetSafe(String(data.po       || '')),
+        _sheetSafe(String(data.notes    || '')),
+        _sheetSafe(String(data.status   || 'Pending')),
         values[i][10],          // preserve addedBy
         values[i][11],          // preserve addedAt
-        String(data.pm || ''),  // PM — Project Manager
+        _sheetSafe(String(data.pm || '')),  // PM — Project Manager
         docLink
       ]]);
       return { status: 'success', docLink: docLink };
@@ -3055,7 +3349,7 @@ function deleteIncoming(id, sessionToken) {
 // ─── MODIFY MOVEMENT ────────────────────────────────────────────────────────
 // Admin only. Updates a row in MASTER_ARCHIVE_V3, logs to AUDIT_LOG, emails admin.
 function modifyMovement(data, auth) {
-  if (auth.role !== 'ADMIN') throw new Error('Only admins can modify movement records.');
+  auth = _requireAuth('ADMIN');   // ignores any caller-supplied `auth` — see _requireAuth
 
   var rowIdx = parseInt(data.rowIdx || 0);
   if (rowIdx < 2) throw new Error('Invalid row index.');
@@ -3110,6 +3404,20 @@ function modifyMovement(data, auth) {
   var changes    = [];
   var origVals   = {};
 
+  // Fields whose stored casing/whitespace MUST match how _addMovementsBatch
+  // writes them, or stock aggregation silently stops recognizing this row as
+  // "the same material/rack" as every other row — even a full stock rebuild
+  // can't fix it then, because the rebuild trusts whatever's actually stored.
+  // This is exactly the bug class that caused stock to look "still in the
+  // warehouse" after a real EXIT: an edited row's rack name (or category)
+  // ended up with different case/whitespace than the row it should net against.
+  var NORMALIZE_ON_WRITE = {
+    category:  function(v){ return v.toUpperCase(); },
+    name:      _cleanDisplay,
+    sourceLoc: function(v){ return v.toUpperCase(); },
+    destLoc:   function(v){ return v.toUpperCase(); }
+  };
+
   Object.keys(FIELDS).forEach(function(key) {
     if (data[key] === undefined || data[key] === null) return;
     var f      = FIELDS[key];
@@ -3117,14 +3425,22 @@ function modifyMovement(data, auth) {
     var newStr = key === 'qty'
       ? String(parseFloat(data[key]) || 0)
       : String(data[key] || '').trim();
+    if (NORMALIZE_ON_WRITE[key]) newStr = NORMALIZE_ON_WRITE[key](newStr);
     if (oldStr !== newStr) {
       origVals[f.label] = oldStr;
       changes.push(f.label + ': "' + oldStr + '" → "' + newStr + '"');
-      rowVals[f.col] = (key === 'qty') ? (parseFloat(newStr) || 0) : newStr;
+      rowVals[f.col] = (key === 'qty') ? (parseFloat(newStr) || 0) : _sheetSafe(newStr);
     }
   });
 
   if (!changes.length) throw new Error('No changes detected — nothing to save.');
+
+  // If category or name changed, the stored MatID must be recomputed too —
+  // otherwise this row keeps pointing at the OLD material forever, silently
+  // mismatching every other row for what's now supposed to be the same item.
+  if (origVals['Category'] !== undefined || origVals['Name'] !== undefined) {
+    rowVals[AC.MAT_ID] = getMaterialId(rowVals[AC.CATEGORY], rowVals[AC.NAME]);
+  }
 
   // Write updated row back
   range.setValues([rowVals]);
@@ -3173,6 +3489,8 @@ function modifyMovement(data, auth) {
 // ── Diagnostic — run this in GAS Editor to identify load issues ───────────────
 // Run this function directly from the GAS editor. Check Execution Log for results.
 function _diagnoseApp() {
+  // Editor-only: it dumps config and row counts to the log.
+  _setVerifiedAuth({ role: 'ADMIN', email: _requireOwnerContext(), name: 'Diagnostics' });
   Logger.log('=== OX Glass WMS Diagnostic ===');
   try {
     Logger.log('1. getUserRole...');
@@ -3208,6 +3526,8 @@ function _diagnoseApp() {
 
 // ── Quick test — run this directly in GAS Editor to debug Gemini ──────────────
 function _testGemini() {
+  // Editor-only: every call spends the owner's Gemini quota.
+  _requireOwnerContext();
   var apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
   if (!apiKey) { Logger.log('ERROR: GEMINI_API_KEY not set'); return; }
   var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + apiKey;
@@ -3222,7 +3542,7 @@ function _testGemini() {
 }
 
 function scanGmailForDeliveries(data, auth) {
-  if (auth.role !== 'ADMIN') throw new Error('Admin only.');
+  auth = _requireAuth('ADMIN');   // ignores any caller-supplied `auth` — see _requireAuth
 
   var apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
   if (!apiKey) throw new Error(
@@ -3611,7 +3931,7 @@ function extractDocumentInfo(fileData, mimeType, sessionToken) {
 }
 
 function setMonitoredMaterials(names, auth) {
-  if (!auth || auth.role !== 'ADMIN') throw new Error('Admin only.');
+  auth = _requireAuth('ADMIN');   // ignores any caller-supplied `auth` — see _requireAuth
   var props = PropertiesService.getScriptProperties();
   if (!names || names.length === 0) {
     props.deleteProperty('WMS_MONITORED_MATERIALS');
