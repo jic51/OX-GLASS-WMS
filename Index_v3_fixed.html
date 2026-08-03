@@ -1573,6 +1573,7 @@
         <button class="settings-tab"        data-tab="locations"   onclick="switchSettingsTab('locations')">📍 <span>Locations</span></button>
         <button class="settings-tab"        data-tab="materials"   onclick="switchSettingsTab('materials')">🔧 <span>Materials</span></button>
         <button class="settings-tab"        data-tab="pmdirectory" onclick="switchSettingsTab('pmdirectory')">📇 <span>Directory</span></button>
+        <button class="settings-tab"        data-tab="import"      onclick="switchSettingsTab('import')">📥 <span>Import</span></button>
         <div class="settings-sidebar-label">Diagnostics</div>
         <button class="settings-tab"        data-tab="errorlog"    onclick="switchSettingsTab('errorlog')">🐞 <span>Error Log</span></button>
         <button class="settings-tab"        data-tab="system"      onclick="switchSettingsTab('system')">🗄 <span>System</span></button>
@@ -1674,7 +1675,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '8.10';
+var APP_VERSION = '8.11';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Signed session token for non-org users (issued by the backend after Google
@@ -4435,6 +4436,115 @@ function _renderSystemTab() {
     '</div>';
 }
 
+// ── Bulk Import (CSV) ─────────────────────────────────────────────────────────
+// Two-step: parse+preview first (nothing written yet), then a separate confirm
+// step actually commits — same principle as everywhere else risky in this app
+// (WASTE requires a reason, deleting a movement asks first, etc.). Every
+// imported row becomes a real ENTRY movement through the same engine a normal
+// save uses, so it gets the same lock/validation/write-verify, not a shortcut.
+var _importParsedRows = [];
+
+function _renderImportTab() {
+  var content = document.getElementById('settingsTabContent');
+  content.innerHTML =
+    '<p style="font-size:.8rem;color:var(--muted);margin-bottom:.75rem">' +
+      'Bulk-import an existing inventory from a CSV file — useful for the first setup, or catching up after counting on paper. ' +
+      'Every row becomes a real ENTRY movement, reviewed here before anything is saved. Excel/Sheets: File → Save As → CSV first.' +
+    '</p>' +
+    '<div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem">' +
+      '<button class="btn btn-ghost btn-sm" onclick="_downloadImportTemplate()">⬇ Download CSV Template</button>' +
+      '<input type="file" id="importFileInput" accept=".csv" style="font-size:.82rem">' +
+    '</div>' +
+    '<div id="importPreviewBox"></div>';
+  document.getElementById('importFileInput').addEventListener('change', _onImportFileChange);
+  _importParsedRows = [];
+}
+
+function _downloadImportTemplate() {
+  var headers = ['Category','Name','Qty','Unit','Location','Project','Supplier','PO','Comments'];
+  var example = ['WINDOW','Example Window Model','25','UNIT','A1A','','Example Supplier','',''];
+  var csv = [headers.join(','), example.map(function(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }).join(',')].join('\n');
+  var a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download = 'OX_WMS_Import_Template.csv';
+  a.click();
+}
+
+function _onImportFileChange(e){
+  var file = e.target.files[0];
+  if (!file) return;
+  var box = document.getElementById('importPreviewBox');
+  box.innerHTML = '<p style="color:var(--muted);font-size:.85rem"><span class="spin-hg">⏳</span> Reading file…</p>';
+  _readFileAsBase64(file, function(b64, mime){
+    if (!b64) { box.innerHTML = '<p style="color:var(--red);font-size:.85rem">Could not read this file.</p>'; return; }
+    google.script.run
+      .withSuccessHandler(function(res){ _importParsedRows = res.rows || []; _renderImportPreview(res); })
+      .withFailureHandler(function(err){
+        box.innerHTML = '<p style="color:var(--red);font-size:.85rem">' + _he((err.message || err).replace(/^Error:\s*/i,'')) + '</p>';
+      })
+      .processMovement('parseImportFile', _h({ fileData: b64, mimeType: mime, fileName: file.name }));
+  });
+}
+
+function _renderImportPreview(res){
+  var box  = document.getElementById('importPreviewBox');
+  var rows = res.rows || [];
+
+  var summary = '<div style="display:flex;gap:.6rem;margin:.5rem 0 .75rem;flex-wrap:wrap">' +
+    '<span class="badge badge-blue">' + res.totalRows + ' row(s) found</span>' +
+    '<span class="badge badge-green">' + res.validRows + ' ready to import</span>' +
+    (res.invalidRows ? '<span class="badge badge-red">' + res.invalidRows + ' need fixing in the file</span>' : '') +
+  '</div>';
+
+  var tableRows = rows.slice(0, 100).map(function(r){
+    var rowBg = r.valid ? '' : 'background:var(--red-bg)';
+    return '<tr style="'+rowBg+'">' +
+      '<td style="padding:.3rem .5rem;color:var(--muted)">' + r.rowNum + '</td>' +
+      '<td style="padding:.3rem .5rem">' + _he(r.category) + '</td>' +
+      '<td style="padding:.3rem .5rem">' + _he(r.name) + '</td>' +
+      '<td style="padding:.3rem .5rem">' + (isNaN(r.qty) ? '' : r.qty) + '</td>' +
+      '<td style="padding:.3rem .5rem">' + _he(r.location || '—') + '</td>' +
+      '<td style="padding:.3rem .5rem;color:var(--red);font-size:.75rem">' + (r.errors.length ? _he(r.errors.join('; ')) : '') + '</td>' +
+    '</tr>';
+  }).join('');
+
+  box.innerHTML = summary +
+    '<div style="max-height:280px;overflow:auto;border:1px solid var(--border);border-radius:6px;margin-bottom:.75rem">' +
+      '<table style="width:100%;border-collapse:collapse;font-size:.8rem">' +
+        '<thead><tr style="position:sticky;top:0;background:var(--bg)">' +
+          '<th style="padding:.3rem .5rem;text-align:left">Row</th><th style="padding:.3rem .5rem;text-align:left">Category</th>' +
+          '<th style="padding:.3rem .5rem;text-align:left">Name</th><th style="padding:.3rem .5rem;text-align:left">Qty</th>' +
+          '<th style="padding:.3rem .5rem;text-align:left">Location</th><th style="padding:.3rem .5rem;text-align:left">Issue</th>' +
+        '</tr></thead>' +
+        '<tbody>' + tableRows + '</tbody>' +
+      '</table>' +
+    '</div>' +
+    (rows.length > 100 ? '<p style="font-size:.72rem;color:var(--muted);margin-bottom:.6rem">Showing the first 100 of ' + rows.length + ' rows.</p>' : '') +
+    '<button class="btn btn-primary" id="btnCommitImport" ' + (res.validRows ? '' : 'disabled') + ' onclick="_commitImport()">' +
+      '✓ Import ' + res.validRows + ' Valid Row(s)' +
+    '</button>';
+}
+
+function _commitImport(){
+  var validRows = _importParsedRows.filter(function(r){ return r.valid; });
+  if (!validRows.length) return;
+  var btn = document.getElementById('btnCommitImport');
+  btn.disabled = true; btn.innerHTML = 'Importing… <span class="spin-hg">⏳</span>';
+  google.script.run
+    .withSuccessHandler(function(res){
+      showToast('✓ Imported ' + res.rowCount + ' row(s) as new ENTRY movements.', 'ok', 6000);
+      _importParsedRows = [];
+      var box = document.getElementById('importPreviewBox'); if (box) box.innerHTML = '';
+      var fi  = document.getElementById('importFileInput');  if (fi)  fi.value = '';
+      loadDataFromGoogle(true);
+    })
+    .withFailureHandler(function(err){
+      btn.disabled = false; btn.innerHTML = '✓ Import ' + validRows.length + ' Valid Row(s)';
+      showToast('Import failed: ' + (err.message || err).replace(/^Error:\s*/i,''), 'err', 8000);
+    })
+    .processMovement('commitImport', _h({ rows: validRows }));
+}
+
 function switchSettingsTab(tab) {
   _settingsTab = tab;
   document.querySelectorAll('.settings-tab').forEach(function(b){ b.classList.toggle('active', b.dataset.tab === tab); });
@@ -4447,6 +4557,7 @@ function _renderSettingsTab(tab) {
   if (tab === 'errorlog')    { _renderErrorLogTab(); return; }
   if (tab === 'system')      { _renderSystemTab(); return; }
   if (tab === 'pmdirectory') { _renderPmDirectoryTab(); return; }
+  if (tab === 'import')      { _renderImportTab(); return; }
 
   var items = _settingsData[tab] || [];
   var label = { categories:'Category', projects:'Project', suppliers:'Supplier', locations:'Location' }[tab] || 'Item';

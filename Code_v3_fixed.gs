@@ -7,7 +7,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '8.10';
+var APP_VERSION = '8.11';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -1025,6 +1025,8 @@ function _processMovementInner(ss, action, data, auth) {
   if (action === 'lockMaterial')          return lockMaterial(data, auth);
   if (action === 'unlockMaterial')        return unlockMaterial(data, auth);
   if (action === 'updateMinStockBulk')    return updateMinStockBulk(data, auth);
+  if (action === 'parseImportFile')       return parseImportFile(data);
+  if (action === 'commitImport')          return commitImport(data, auth);
   // ── User management (ADMIN only) ─────────────────────────────────────────
   if (action === 'getUsers')       return getUsers(auth);
   if (action === 'addUser')        return addUser(data, auth);
@@ -2810,6 +2812,134 @@ function updateMinStockBulk(data, auth) {
   }
   _auditLog(ss, 'UPDATE_MIN_STOCK_BULK', auth.email, updates.length + ' material(s)', '', '');
   return { status: 'success', updated: updates.length };
+}
+
+// ─── BULK IMPORT (CSV) ────────────────────────────────────────────────────────
+// Lets an admin migrate an existing inventory (from Excel, a competitor's
+// export, a paper count) into the app in one shot instead of typing every line
+// by hand — the single biggest thing that was blocking a new customer from
+// actually starting to use this on day one.
+//
+// Deliberately CSV-only for now, not .xlsx. Reading a real Excel file needs
+// Apps Script's Advanced Drive Service, which has to be turned on by hand in
+// the editor (Services → + → Google Drive API) and can't be verified from
+// here. CSV needs nothing beyond Utilities.parseCsv(), which is built in and
+// always available — every spreadsheet tool (Excel, Sheets, Numbers) exports
+// to CSV in two clicks, so this isn't a real limitation for getting started.
+//
+// Two-step flow, never a blind commit: parseImportFile() only reads and
+// validates, returning a preview for the admin to review row by row.
+// commitImport() is a SEPARATE call that only runs after the frontend re-sends
+// the rows the admin actually saw — and it writes through _addMovementsBatch,
+// the exact same locked, stock-validated, write-verified engine a normal ENTRY
+// goes through, so an imported row can never be less trustworthy than one
+// typed in by hand.
+var IMPORT_REQUIRED_HEADERS = ['category', 'name', 'qty'];
+var IMPORT_ALL_HEADERS      = ['category', 'name', 'qty', 'unit', 'location', 'project', 'supplier', 'po', 'comments'];
+
+function parseImportFile(data) {
+  _requireAuth('ADMIN');
+  var fileName = String(data.fileName || '');
+  if (!/\.csv$/i.test(fileName)) {
+    throw new Error('Please upload a .csv file. If this is an Excel file, use File → Save As → CSV in Excel or Google Sheets first, then upload that file. (Direct .xlsx import is on the roadmap.)');
+  }
+
+  var bytes = Utilities.base64Decode(data.fileData);
+  var text  = Utilities.newBlob(bytes, 'text/csv').getDataAsString();
+  var rows;
+  try {
+    rows = Utilities.parseCsv(text);
+  } catch (e) {
+    throw new Error('Could not read this as a CSV file: ' + e.message);
+  }
+  if (!rows.length) throw new Error('The file appears to be empty.');
+
+  var header = rows[0].map(function (h) { return String(h || '').trim().toLowerCase(); });
+  var col    = {};
+  IMPORT_ALL_HEADERS.forEach(function (h) { col[h] = header.indexOf(h); });
+
+  var missing = IMPORT_REQUIRED_HEADERS.filter(function (h) { return col[h] === -1; });
+  if (missing.length) {
+    throw new Error('Missing required column header(s): ' + missing.join(', ') +
+      '. Download the template from this screen to see the exact format expected.');
+  }
+
+  var parsed = [];
+  for (var i = 1; i < rows.length; i++) {
+    var r = rows[i];
+    if (!r || r.every(function (c) { return String(c || '').trim() === ''; })) continue;  // skip blank rows
+
+    var item = {
+      rowNum:   i + 1,
+      category: String(r[col.category] || '').trim(),
+      name:     String(r[col.name]     || '').trim(),
+      qty:      Number(r[col.qty]),
+      unit:     col.unit     !== -1 ? (String(r[col.unit]     || '').trim() || 'UNIT') : 'UNIT',
+      location: col.location !== -1 ?  String(r[col.location] || '').trim() : '',
+      project:  col.project  !== -1 ?  String(r[col.project]  || '').trim() : '',
+      supplier: col.supplier !== -1 ?  String(r[col.supplier] || '').trim() : '',
+      po:       col.po       !== -1 ?  String(r[col.po]       || '').trim() : '',
+      comments: col.comments !== -1 ?  String(r[col.comments] || '').trim() : ''
+    };
+
+    var errors = [];
+    if (!item.category) errors.push('Missing Category');
+    if (!item.name)     errors.push('Missing Name');
+    if (!item.qty || item.qty <= 0 || isNaN(item.qty)) errors.push('Qty must be a number greater than 0');
+    item.valid  = errors.length === 0;
+    item.errors = errors;
+    parsed.push(item);
+  }
+
+  if (!parsed.length) throw new Error('No data rows found below the header row.');
+
+  var validCount = parsed.filter(function (p) { return p.valid; }).length;
+  return {
+    status:      'success',
+    totalRows:   parsed.length,
+    validRows:   validCount,
+    invalidRows: parsed.length - validCount,
+    rows:        parsed.slice(0, 500)   // a preview, not a data dump
+  };
+}
+
+// Commits a previously-previewed set of rows as real ENTRY movements. Only
+// ever called with rows the admin has already seen in the preview table.
+function commitImport(data, auth) {
+  auth = _requireAuth('ADMIN');   // ignores any caller-supplied `auth` — see _requireAuth
+  var rows = Array.isArray(data.rows) ? data.rows : [];
+  if (!rows.length) throw new Error('No rows to import.');
+
+  var ss      = SpreadsheetApp.getActiveSpreadsheet();
+  var archive = ss.getSheetByName(SHEETS.ARCHIVE);
+  var tzDate  = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+
+  var movements = rows.map(function (r) {
+    return {
+      moveType:    'ENTRY',
+      category:    r.category,
+      name:        r.name,
+      project:     r.project || '',
+      isGeneric:   !r.project,
+      qty:         r.qty,
+      unit:        r.unit || 'UNIT',
+      dateRec:     tzDate,
+      sourceLoc:   '',
+      destLoc:     r.location || '',
+      supplier:    r.supplier || '',
+      po:          r.po || '',
+      comments:    ('Imported from file' + (r.comments ? ' — ' + r.comments : '')).trim(),
+      responsible: auth.email,
+      // A bulk import legitimately contains similar-looking rows (same
+      // category, same rack, different SKUs entered close together); the
+      // duplicate guard exists to catch an accidental double-click, not this.
+      forceSubmit: true
+    };
+  });
+
+  var res = _addMovementsBatch(ss, archive, movements, auth);
+  _auditLog(ss, 'BULK_IMPORT', auth.email, rows.length + ' row(s) imported', '', '');
+  return { status: 'success', rowCount: res.rowCount };
 }
 
 function _runReconciliation(ss) {
