@@ -1766,6 +1766,85 @@ function _ensureArchiveTrigger() {
   ScriptApp.newTrigger('archiveOldMovementsTrigger').timeBased().everyDays(1).atHour(3).create();
 }
 
+// ─── AUTOMATIC BACKUP ─────────────────────────────────────────────────────────
+// Answers the objection every prospective customer has about "the spreadsheet
+// IS the database": a full point-in-time copy of the entire spreadsheet — every
+// sheet, not just the archive — made daily and kept for a rolling window. This
+// covers failure modes the app's own write-verify/lock logic can't: someone
+// deletes the live spreadsheet, a manual edit wipes a sheet, Drive corrupts a
+// file. Runs at 2am, one hour before the archive job at 3am, so a backup always
+// reflects pre-archive state — an extra safety margin if the archive job itself
+// ever had a bug.
+//
+// Restoring is intentionally NOT automated. An automated "restore" that can
+// overwrite the live spreadsheet is itself a way to destroy real data with one
+// wrong click. To recover: open the dated copy in the OX_WMS_v3_Backups Drive
+// folder, and either copy the needed rows back by hand, or promote that whole
+// file to be the new live spreadsheet (Extensions → Apps Script in the copy is
+// already bound and ready — just needs deploying).
+var BACKUP_FOLDER_NAME    = 'OX_WMS_v3_Backups';
+var BACKUP_RETENTION_DAYS = 30;   // tune down if Drive storage becomes a concern
+
+function dailyBackupTrigger() {
+  _requireOwnerContext();   // time-based triggers run as the owner; a google.script.run call from anyone else does not
+  _setVerifiedAuth({ role: 'ADMIN', email: 'system@scheduled-trigger', name: 'Scheduled trigger' });
+  runBackupNow();
+}
+
+// Shared by the daily trigger and the "Run Backup Now" menu item, so a manual
+// test run behaves identically to the automated one.
+function runBackupNow() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  try {
+    var folder   = _getOrCreateFolder(BACKUP_FOLDER_NAME);
+    var stamp    = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd_HHmm');
+    var copyName = ss.getName() + ' — Backup ' + stamp;
+    var copyFile = DriveApp.getFileById(ss.getId()).makeCopy(copyName, folder);
+
+    _pruneOldBackups(folder);
+
+    _auditLog(ss, 'BACKUP_CREATED', 'system', copyName, '', copyFile.getId());
+    return { status: 'success', name: copyName, id: copyFile.getId() };
+  } catch (e) {
+    _logError(ss, 'ERROR', 'backend', 'runBackupNow', 'system', e.message, null, _newRequestId());
+    // Only email on FAILURE, never on success — a daily "it worked" email would
+    // just be more noise against the same recipient quota already flagged as a
+    // thing to watch for the PM/admin notification emails elsewhere.
+    try {
+      var cfg = loadConfig();
+      MailApp.sendEmail(cfg.adminEmail || Session.getEffectiveUser().getEmail(),
+        '⚠ OX WMS — Daily backup failed',
+        'The automatic daily backup did not complete: ' + e.message +
+        '\n\nCheck Settings → Error Log in the app, or the Executions log in the Apps Script editor.');
+    } catch (e2) { /* don't let a failed alert mask the original failure */ }
+    throw e;
+  }
+}
+
+// Deletes backups older than the retention window. Runs every time a new
+// backup is made, so retention stays enforced without a separate trigger.
+function _pruneOldBackups(folder) {
+  var cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - BACKUP_RETENTION_DAYS);
+  var files = folder.getFiles();
+  while (files.hasNext()) {
+    var f = files.next();
+    if (f.getDateCreated() < cutoff) f.setTrashed(true);
+  }
+}
+
+// Idempotent — installs the daily trigger once. Bound to the "Enable Daily
+// Backup" menu item rather than onOpen(): onOpen is a SIMPLE trigger under
+// Apps Script's security model and can't call authorized services like
+// ScriptApp.newTrigger() or DriveApp — it would throw on every single open.
+function _ensureBackupTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'dailyBackupTrigger') return;
+  }
+  ScriptApp.newTrigger('dailyBackupTrigger').timeBased().everyDays(1).atHour(2).create();
+}
+
 // ADMIN only. Returns movements older than the cutoff, for on-demand viewing/
 // export ("Load older history"). Read-only in the UI — rowIdx here refers to
 // ARCHIVE_HISTORY's row, not MASTER_ARCHIVE_V3's, so it's tagged `archived: true`
@@ -2885,7 +2964,18 @@ function onOpen() {
     .addItem('Open WMS App',       'menuOpenApp')
     .addSeparator()
     .addItem('🔒 Revoke Public Sharing on Existing Files (run once)', 'menuRevokePublicSharing')
+    .addItem('🗄 Enable Daily Backup (run once)', 'menuRunBackupNow')
     .addToUi();
+}
+
+function menuRunBackupNow() {
+  var ui = SpreadsheetApp.getUi();   // throws outside the Sheets UI — the real gate
+  _setVerifiedAuth({ role: 'ADMIN', email: _requireOwnerContext(), name: 'Spreadsheet menu' });
+  _ensureBackupTrigger();
+  var res = runBackupNow();
+  ui.alert('✓ Backup created: ' + res.name +
+    '\n\nDaily automatic backups are now scheduled for 2am, kept for ' + BACKUP_RETENTION_DAYS + ' days, in a Drive folder called "' + BACKUP_FOLDER_NAME + '".' +
+    '\n\nYou only need to run this menu item again if you want an extra backup right now — the daily schedule is already set.');
 }
 
 // ONE-TIME CLEANUP. Every photo/document uploaded before this version was
