@@ -7,7 +7,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '8.9';
+var APP_VERSION = '8.10';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -40,54 +40,60 @@ function doGet(e) {
   if (e && e.parameter && e.parameter.code && e.parameter.state) {
     return _handleOAuthCallback(e.parameter.code, e.parameter.state);
   }
-  // Private document proxy: serves an uploaded photo/PDF only to a signed-in,
-  // registered user, and only for a file that actually lives inside this app's
-  // own Drive folder. See _servePrivateFile() for why this exists.
-  if (e && e.parameter && e.parameter.fileId) {
-    return _servePrivateFile(e.parameter.fileId, e.parameter.token);
-  }
   return HtmlService.createHtmlOutputFromFile('Index')
     .setTitle('OX Glass Co. — WMS v3.0')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
-// ─── PRIVATE DOCUMENT PROXY ────────────────────────────────────────────────
-// Replaces "anyone with the link can view" on uploaded photos/PDFs. Those files
-// are now created with NO public sharing at all (Drive's default for a newly
-// created file: visible only to the script's own identity, i.e. the app owner).
-// The only way to see one is through this endpoint, which checks who is asking
-// before it hands anything back — so a forwarded email or a shared read-only
-// Sheet no longer leaks supplier invoices to whoever receives it.
+// ─── PRIVATE DOCUMENT ACCESS ──────────────────────────────────────────────
+// Replaces "anyone with the link can view" on uploaded photos/PDFs. Files are
+// created with NO public sharing at all (Drive's default: visible only to the
+// script's own identity, i.e. the app owner). The only way to see one is
+// through this function, which verifies the caller before returning anything.
 //
-// Called as a plain browser GET (an <img src>, an <a href>, an <iframe src>),
-// not through google.script.run, so identity has to travel as a query param
-// instead of the request body: ?fileId=...&token=<the signed session token>.
-// Org users (@ox-glass.com) don't need the token — same as everywhere else,
-// Session.getActiveUser() identifies them automatically.
-function _servePrivateFile(fileId, token) {
+// An earlier version of this tried to serve files as a second HTTP GET request
+// (?fileId=...) that the browser made directly — as an <img src> or <iframe
+// src> pointing back at this same web app. That failed in real testing
+// ("google.com refused to connect"): the app already runs inside a Google-
+// managed sandboxed frame, and a raw sub-resource request to a SECOND Apps
+// Script URL from inside that frame doesn't carry Google's session state the
+// way a normal page load does — Google's own login gate kicked in and then
+// refused to render inside the frame.
+//
+// This version sidesteps that entirely by going through google.script.run —
+// the exact same RPC channel every other feature in this app already uses
+// successfully (saving a movement, loading stock, etc.), so there's no new
+// cross-origin or sandboxing behavior to fail. It returns the file as base64;
+// the frontend turns that into a data: URL locally, no second network request
+// to Apps Script at all.
+function getPrivateFileData(fileId, token) {
   var auth = _setVerifiedAuth(getUserRole(token));
   if (auth.role === 'NO_SESSION' || auth.role === 'DENIED') {
-    return HtmlService.createHtmlOutput('<p style="font-family:sans-serif;padding:2rem">Not authorized to view this file. Sign in to the app first.</p>');
+    throw new Error('Not authenticated.');
   }
 
   var file;
   try {
     file = DriveApp.getFileById(fileId);
-  } catch (e2) {
-    return HtmlService.createHtmlOutput('<p style="font-family:sans-serif;padding:2rem">File not found.</p>');
+  } catch (e) {
+    throw new Error('File not found.');
   }
 
   // Without this check, an authenticated WAREHOUSE user could pass ANY Drive
   // file ID the owner's account can reach — not just this app's own uploads —
-  // turning the proxy into a way to browse the owner's entire personal Drive.
+  // turning this into a way to browse the owner's entire personal Drive.
   if (!_isFileWithinAppFolder(file)) {
-    _logError(SpreadsheetApp.getActiveSpreadsheet(), 'WARN', 'backend', '_servePrivateFile',
+    _logError(SpreadsheetApp.getActiveSpreadsheet(), 'WARN', 'backend', 'getPrivateFileData',
       auth.email, 'Requested file outside app folder: ' + fileId, null, _newRequestId());
-    return HtmlService.createHtmlOutput('<p style="font-family:sans-serif;padding:2rem">File not found.</p>');
+    throw new Error('File not found.');
   }
 
-  return file.getBlob();
+  var blob = file.getBlob();
+  return {
+    mimeType: blob.getContentType(),
+    base64:   Utilities.base64Encode(blob.getBytes())
+  };
 }
 
 // Walks up a file's parent folders looking for the app's own root folder by
@@ -532,7 +538,6 @@ function getInitialData(sessionToken) {
 
     return {
       serverVersion:      APP_VERSION,
-      appUrl:             ScriptApp.getService().getUrl(),  // base URL the frontend builds private-document links from
       movements:          movements,
       stock:              stock,
       config:             config,
