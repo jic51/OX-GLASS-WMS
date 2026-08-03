@@ -7,7 +7,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '8.8';
+var APP_VERSION = '8.9';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -40,10 +40,73 @@ function doGet(e) {
   if (e && e.parameter && e.parameter.code && e.parameter.state) {
     return _handleOAuthCallback(e.parameter.code, e.parameter.state);
   }
+  // Private document proxy: serves an uploaded photo/PDF only to a signed-in,
+  // registered user, and only for a file that actually lives inside this app's
+  // own Drive folder. See _servePrivateFile() for why this exists.
+  if (e && e.parameter && e.parameter.fileId) {
+    return _servePrivateFile(e.parameter.fileId, e.parameter.token);
+  }
   return HtmlService.createHtmlOutputFromFile('Index')
     .setTitle('OX Glass Co. — WMS v3.0')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+// ─── PRIVATE DOCUMENT PROXY ────────────────────────────────────────────────
+// Replaces "anyone with the link can view" on uploaded photos/PDFs. Those files
+// are now created with NO public sharing at all (Drive's default for a newly
+// created file: visible only to the script's own identity, i.e. the app owner).
+// The only way to see one is through this endpoint, which checks who is asking
+// before it hands anything back — so a forwarded email or a shared read-only
+// Sheet no longer leaks supplier invoices to whoever receives it.
+//
+// Called as a plain browser GET (an <img src>, an <a href>, an <iframe src>),
+// not through google.script.run, so identity has to travel as a query param
+// instead of the request body: ?fileId=...&token=<the signed session token>.
+// Org users (@ox-glass.com) don't need the token — same as everywhere else,
+// Session.getActiveUser() identifies them automatically.
+function _servePrivateFile(fileId, token) {
+  var auth = _setVerifiedAuth(getUserRole(token));
+  if (auth.role === 'NO_SESSION' || auth.role === 'DENIED') {
+    return HtmlService.createHtmlOutput('<p style="font-family:sans-serif;padding:2rem">Not authorized to view this file. Sign in to the app first.</p>');
+  }
+
+  var file;
+  try {
+    file = DriveApp.getFileById(fileId);
+  } catch (e2) {
+    return HtmlService.createHtmlOutput('<p style="font-family:sans-serif;padding:2rem">File not found.</p>');
+  }
+
+  // Without this check, an authenticated WAREHOUSE user could pass ANY Drive
+  // file ID the owner's account can reach — not just this app's own uploads —
+  // turning the proxy into a way to browse the owner's entire personal Drive.
+  if (!_isFileWithinAppFolder(file)) {
+    _logError(SpreadsheetApp.getActiveSpreadsheet(), 'WARN', 'backend', '_servePrivateFile',
+      auth.email, 'Requested file outside app folder: ' + fileId, null, _newRequestId());
+    return HtmlService.createHtmlOutput('<p style="font-family:sans-serif;padding:2rem">File not found.</p>');
+  }
+
+  return file.getBlob();
+}
+
+// Walks up a file's parent folders looking for the app's own root folder by
+// name. Name-based rather than ID-based because _getOrCreateFolder() caches a
+// separate Script Property per full subfolder path (e.g. one for
+// "OX_WMS_v3_Docs/RackPhotos/A1A"), so there's no single cached ID for the bare
+// root to compare against — walking up and checking the name is simpler and
+// just as safe, since nothing in the upload path lets a caller choose where a
+// file gets created.
+function _isFileWithinAppFolder(file) {
+  var folders = file.getParents();
+  var depth = 0;
+  while (folders.hasNext() && depth < 8) {
+    var folder = folders.next();
+    if (folder.getName() === 'OX_WMS_v3_Docs') return true;
+    folders = folder.getParents();
+    depth++;
+  }
+  return false;
 }
 
 // ─── GOOGLE SIGN-IN (hybrid, for non @ox-glass.com users) ─────────────────────
@@ -469,6 +532,7 @@ function getInitialData(sessionToken) {
 
     return {
       serverVersion:      APP_VERSION,
+      appUrl:             ScriptApp.getService().getUrl(),  // base URL the frontend builds private-document links from
       movements:          movements,
       stock:              stock,
       config:             config,
@@ -2298,8 +2362,11 @@ function uploadRackPhoto(data, auth) {
   var bytes  = Utilities.base64Decode(data.fileData);
   var blob   = Utilities.newBlob(bytes, data.fileMimeType || 'image/jpeg', safe + '.jpg');
   var file   = folder.createFile(blob);
-  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-  var url = file.getUrl();
+  // No public sharing — served only through the private doGet proxy (see
+  // _servePrivateFile). getId(), not getUrl(): the frontend now builds the
+  // proxy link itself from the ID, and a getUrl() to a private file is a
+  // dead link nobody but the owner can open anyway.
+  var url = file.getId();
 
   var ss    = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = _ensureRackPhotosSheet(ss);
@@ -2371,8 +2438,9 @@ function _uploadFiles(files, materialName, po) {
     var bytes = Utilities.base64Decode(f.fileData);
     var blob  = Utilities.newBlob(bytes, mimeType, fileName);
     var file  = folder.createFile(blob);
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    links.push(file.getUrl());
+    // No public sharing — see _servePrivateFile(). Store the file ID; the
+    // frontend resolves it through the private proxy, not a raw Drive URL.
+    links.push(file.getId());
   }
   return links.join('\n');
 }
@@ -2459,8 +2527,8 @@ function _uploadDocGroups(docGroups, materialName) {
       var bytes = Utilities.base64Decode(p.fileData);
       var blob  = Utilities.newBlob(bytes, p.fileMimeType || 'image/jpeg', safeName);
       var imgFile = folder.createFile(blob);
-      imgFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-      url = imgFile.getUrl();
+      // No public sharing — see _servePrivateFile().
+      url = imgFile.getId();
     } else {
       // Multiple photos → create Google Doc with one image per page → export PDF
       url = _photosToDocPdf(photos, safeName, folder);
@@ -2535,12 +2603,12 @@ function _photosToDocPdf(photos, docName, targetFolder) {
 
   // Save PDF to target folder
   var pdfFile = targetFolder.createFile(pdfBlob);
-  pdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  // No public sharing — see _servePrivateFile().
 
   // Trash the temporary Doc
   docFile.setTrashed(true);
 
-  return pdfFile.getUrl();
+  return pdfFile.getId();
 }
 
 function _getOrCreateFolder(path) {
@@ -2810,7 +2878,65 @@ function onOpen() {
     .createMenu('🏭 OX WMS v3')
     .addItem('Run Reconciliation', 'menuReconcile')
     .addItem('Open WMS App',       'menuOpenApp')
+    .addSeparator()
+    .addItem('🔒 Revoke Public Sharing on Existing Files (run once)', 'menuRevokePublicSharing')
     .addToUi();
+}
+
+// ONE-TIME CLEANUP. Every photo/document uploaded before this version was
+// marked "anyone with the link can view" (see the removed setSharing calls
+// this same release deletes). The code fix only changes what happens to files
+// uploaded FROM NOW ON — it does nothing to the ones already sitting in Drive.
+// This menu item is what actually closes the exposure on those existing files.
+//
+// Safe to run more than once: an already-private file is left alone (a cheap
+// check, not a rewrite), so if a large OX_WMS_v3_Docs folder makes one run hit
+// Apps Script's 6-minute execution cap, just run it again from the menu — it
+// picks up wherever Drive's folder iterator continues, at negligible extra cost
+// for files already fixed.
+function menuRevokePublicSharing() {
+  var ui = SpreadsheetApp.getUi();   // throws outside the Sheets UI — the real gate
+  _setVerifiedAuth({ role: 'ADMIN', email: _requireOwnerContext(), name: 'Spreadsheet menu' });
+
+  var roots = DriveApp.getFoldersByName('OX_WMS_v3_Docs');
+  if (!roots.hasNext()) {
+    ui.alert('No OX_WMS_v3_Docs folder found in Drive — nothing to clean up.');
+    return;
+  }
+
+  var startTime       = Date.now();
+  var TIME_BUDGET_MS  = 4.5 * 60 * 1000;  // headroom under the 6-minute execution cap
+  var checked = 0, revoked = 0, failed = 0, timedOut = false;
+
+  function walk(folder) {
+    var files = folder.getFiles();
+    while (files.hasNext()) {
+      if (Date.now() - startTime > TIME_BUDGET_MS) { timedOut = true; return; }
+      var file = files.next();
+      checked++;
+      try {
+        var access = file.getSharingAccess();
+        if (access === DriveApp.Access.ANYONE_WITH_LINK || access === DriveApp.Access.ANYONE) {
+          file.setSharing(DriveApp.Access.PRIVATE, DriveApp.Permission.NONE);
+          revoked++;
+        }
+      } catch (e) {
+        failed++;
+        Logger.log('menuRevokePublicSharing: could not update ' + file.getId() + ': ' + e.message);
+      }
+    }
+    var subfolders = folder.getFolders();
+    while (subfolders.hasNext() && !timedOut) walk(subfolders.next());
+  }
+
+  walk(roots.next());
+
+  var msg = 'Checked ' + checked + ' file(s). Made ' + revoked + ' private.' +
+            (failed ? ' ' + failed + ' could not be changed — see Executions log.' : '');
+  msg += timedOut
+    ? '\n\n⏱ Stopped early to stay under the 6-minute limit. Run this menu item again to continue — files already made private are skipped quickly.'
+    : '\n\n✓ Done. Nothing under OX_WMS_v3_Docs is publicly shared anymore.';
+  ui.alert(msg);
 }
 
 function menuReconcile() {

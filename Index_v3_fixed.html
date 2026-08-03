@@ -1674,9 +1674,13 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '8.8';
+var APP_VERSION = '8.9';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
+// This web app's own URL, from getInitialData(). Every photo/document link is
+// now built by pointing back at doGet's private file proxy instead of a raw
+// (public) Drive URL — see _docUrl(). Empty until the first successful load.
+var appUrl = '';
 // Signed session token for non-org users (issued by the backend after Google
 // sign-in). Replaces the old spoofable email hint. Company users don't need it —
 // they're detected automatically by Session.getActiveUser() on the backend.
@@ -2179,7 +2183,7 @@ function renderStock(){
       ? racks.map(function(rack){
           var photo = rackPhotos[rack.toUpperCase()];
           var img = photo
-            ? '<img class="rpc-img" src="'+_escAttr(photo.url)+'" data-action="preview-media" data-url="'+_he(photo.url)+'" data-label="'+_he(rack)+'" title="Click to view full size">'
+            ? '<img class="rpc-img" src="'+_escAttr(_docUrl(photo.url))+'" data-action="preview-media" data-url="'+_he(photo.url)+'" data-label="'+_he(rack)+'" title="Click to view full size">'
             : '<div class="rpc-empty"><span style="font-size:1.3rem">📷</span><span>No photo yet</span></div>';
           var action = canUpload
             ? '<button class="rpc-btn" data-action="rack-photo-upload" data-rack="'+_he(rack)+'">' + (photo ? '🔄 Replace' : '+ Add Photo') + '</button>'
@@ -2196,7 +2200,7 @@ function renderStock(){
       ? '<div class="doc-panel" style="padding:0">' + docs.map(function(d) {
           var fileId  = extractDriveId(d.url);
           var thumb   = fileId
-            ? '<img src="https://drive.google.com/thumbnail?id=' + fileId + '&sz=w120" loading="lazy" alt="' + d.name + '">'
+            ? '<img src="' + _escAttr(_docUrl(d.url)) + '" loading="lazy" alt="' + d.name + '" onerror="this.replaceWith(Object.assign(document.createElement(\'div\'),{innerHTML:\'📄\',style:\'width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-size:1.6rem\'}))">'
             : '<div style="width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-size:1.6rem">📄</div>';
           var shortName = d.name.length > 14 ? d.name.substring(0, 13) + '…' : d.name;
           return '<div class="doc-card" data-action="preview-media" data-url="'+_he(d.url)+'" data-label="'+_he(d.name)+'" title="' + d.name + (d.dateRec ? ' · ' + d.dateRec : '') + '">' +
@@ -2284,25 +2288,43 @@ document.addEventListener('click', function(e) {
 });
 
 // ── Feature C: Doc / Photo thumbnail helpers ──────────────────────────────────
+// Handles /file/d/ID/view and ?id=ID (older rows, saved back when documents
+// still got a public Drive URL) AND a bare file ID (current rows — uploads no
+// longer get a public URL at all, just an ID; see _servePrivateFile in
+// Code_v3_fixed.gs). Both shapes resolve to the same thing: an ID to hand to
+// _docUrl(), which is the only thing allowed to actually reach the file.
 function extractDriveId(url){
-  // Handles /file/d/ID/view  and  ?id=ID  formats
-  var m = url.match(/\/d\/([a-zA-Z0-9_-]{10,})/);
+  var s = String(url || '').trim();
+  if (!s) return null;
+  var m = s.match(/\/d\/([a-zA-Z0-9_-]{10,})/);
   if (m) return m[1];
-  m = url.match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
+  m = s.match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
   if (m) return m[1];
+  if (/^[a-zA-Z0-9_-]{10,}$/.test(s)) return s;
   return null;
 }
 
+// Builds the private-proxy link for a stored ID/URL — the ONLY place a photo or
+// document is actually fetchable from. appUrl comes from getInitialData();
+// _sessionToken is '' for org (@ox-glass.com) users, who are identified
+// automatically server-side the same way they are everywhere else in the app.
+function _docUrl(raw){
+  var id = extractDriveId(raw);
+  if (!id || !appUrl) return '';
+  var sep = appUrl.indexOf('?') === -1 ? '?' : '&';
+  return appUrl + sep + 'fileId=' + encodeURIComponent(id) + '&token=' + encodeURIComponent(_sessionToken || '');
+}
+
 function renderDocLinks(linksStr){
-  if (!linksStr || linksStr.indexOf('http') === -1)
+  if (!linksStr)
     return '<span style="color:var(--muted);font-size:.75rem">—</span>';
 
   var entries = linksStr.split('\n').map(function(l){ return l.trim(); })
-                        .filter(function(l){ return l.indexOf('http') !== -1; });
+                        .filter(function(l){ return l.length > 0; });
   if (!entries.length) return '<span style="color:var(--muted);font-size:.75rem">—</span>';
 
   var thumbs = entries.map(function(entry, i){
-    // Support both "DocName||URL" (new) and plain "URL" (legacy)
+    // Support both "DocName||URL_or_ID" (new) and plain "URL_or_ID" (legacy)
     var docName = 'Doc ' + (i + 1);
     var url     = entry;
     if (entry.indexOf('||') !== -1) {
@@ -2315,10 +2337,10 @@ function renderDocLinks(linksStr){
     var shortLabel = docName.length > 8 ? docName.substring(0, 7) + '…' : docName;
     var fileId = extractDriveId(url);
     if (fileId){
-      var thumb = 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w100';
-      return '<a href="' + url + '" target="_blank" title="' + docName + '" ' +
+      var proxied = _docUrl(url);
+      return '<a href="javascript:void(0)" data-action="preview-media" data-url="' + _he(url) + '" data-label="' + _he(docName) + '" title="' + docName + '" ' +
              'style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;text-decoration:none">' +
-             '<img src="' + thumb + '" loading="lazy" ' +
+             '<img src="' + proxied + '" loading="lazy" ' +
              'style="width:34px;height:34px;object-fit:cover;border-radius:5px;border:1px solid var(--border);display:block;background:#f3f4f6" ' +
              'onerror="this.src=\'\';this.style.display=\'none\';this.nextSibling&&(this.nextSibling.style.display=\'flex\')">' +
              '<span style="display:none;width:34px;height:34px;background:#DBEAFE;border-radius:5px;font-size:1rem;align-items:center;justify-content:center">📄</span>' +
@@ -5407,7 +5429,7 @@ function _renderRackDrawerPhoto(){
   var canUpload = userRole !== 'VIEWER';
 
   var img = photo
-    ? '<img class="rpc-img" style="border-radius:8px" src="'+_escAttr(photo.url)+'" data-action="preview-media" data-url="'+_he(photo.url)+'" data-label="'+_he(_openRackName)+'" title="Click to view full size">'
+    ? '<img class="rpc-img" style="border-radius:8px" src="'+_escAttr(_docUrl(photo.url))+'" data-action="preview-media" data-url="'+_he(photo.url)+'" data-label="'+_he(_openRackName)+'" title="Click to view full size">'
     : '<div class="rpc-empty" style="border-radius:8px">' +
         '<span style="font-size:1.3rem">📷</span><span>No photo yet</span>' +
       '</div>';
@@ -5418,16 +5440,34 @@ function _renderRackDrawerPhoto(){
   box.innerHTML = img + (action ? '<div style="text-align:center">'+action+'</div>' : '');
 }
 
-// Large-preview lightbox for a document OR a rack photo. Drive files (either type,
-// since both are uploaded the same way) render via Drive's own /preview embed,
-// which handles PDFs, images, pagination, etc. in one code path.
+// Large-preview lightbox for a document OR a rack photo. Used to embed Drive's
+// own public /preview viewer — that only works for a public file, so now that
+// uploads are private it goes through the app's own proxy instead (_docUrl,
+// which points at doGet's _servePrivateFile). We don't know the file's type
+// up front, so try it as an <img> first; if that fails (a PDF won't render in
+// an <img> tag), fall back to an <iframe>, which the browser's native PDF
+// viewer renders directly since the proxy serves the real Content-Type.
 function openMediaPreview(url, label){
   document.getElementById('mediaPreviewLabel').textContent = label || '';
-  var fileId = extractDriveId(url);
-  var body = document.getElementById('mediaPreviewBody');
-  body.innerHTML = fileId
-    ? '<iframe src="https://drive.google.com/file/d/'+fileId+'/preview" allow="autoplay"></iframe>'
-    : '<img src="'+_escAttr(url)+'" alt="'+_he(label||'')+'">';
+  var body    = document.getElementById('mediaPreviewBody');
+  var proxied = _docUrl(url);
+  body.innerHTML = '';
+  if (!proxied) {
+    body.innerHTML = '<p style="color:#fff;padding:2rem">Could not load this file.</p>';
+    document.getElementById('mediaPreviewOverlay').classList.add('show');
+    return;
+  }
+  var img = document.createElement('img');
+  img.alt = label || '';
+  img.onerror = function () {
+    var iframe = document.createElement('iframe');
+    iframe.src   = proxied;
+    iframe.allow = 'autoplay';
+    body.innerHTML = '';
+    body.appendChild(iframe);
+  };
+  img.src = proxied;
+  body.appendChild(img);
   document.getElementById('mediaPreviewOverlay').classList.add('show');
 }
 
@@ -5776,7 +5816,7 @@ function renderIncomingWeekGrid() {
             catBadge(item.category) + ' ' +
             '<span style="font-weight:600">' + item.qty + ' ' + item.unit + '</span> ' +
             '<span>' + _he(item.name) + '</span>' +
-            (item.docLink ? ' <a href="'+_he(_incFirstDocUrl(item.docLink))+'" target="_blank" rel="noopener" title="Attached document" onclick="event.stopPropagation()">📎</a>' : '') +
+            (item.docLink ? ' <a href="javascript:void(0)" data-action="preview-media" data-url="'+_he(_incFirstDocUrl(item.docLink))+'" data-label="'+_he(item.name)+'" title="Attached document" onclick="event.stopPropagation()">📎</a>' : '') +
             (item.notes ? '<div style="color:var(--muted);font-size:.7rem;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">' + _he(item.notes) + '</div>' : '') +
             ' <span class="inc-status-' + (item.status||'pending').toLowerCase() + '">' + item.status + '</span>' +
           '</div>';
@@ -5819,7 +5859,7 @@ function renderIncomingTable() {
       '<td>' + (function(){
         var du = _incFirstDocUrl(item.docLink), th = _incThumbUrl(item.docLink);
         if (!du) return '<span style="color:var(--muted)">—</span>';
-        return '<a href="'+_he(du)+'" target="_blank" rel="noopener" title="Open document">' +
+        return '<a href="javascript:void(0)" data-action="preview-media" data-url="'+_he(du)+'" data-label="'+_he(item.name)+'" title="Open document">' +
           (th ? '<img src="'+_he(th)+'" style="height:42px;border-radius:4px;border:1px solid var(--border);vertical-align:middle">' : '📎') + '</a>';
       })() + '</td>' +
       '<td style="font-size:.78rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + _he(item.notes||'') + '">' + _he(item.notes||'—') + '</td>' +
@@ -5868,8 +5908,9 @@ function openIncomingModal(id) {
     var dl = (isEdit && item) ? item.docLink : '';
     if (dl){
       var u = _incFirstDocUrl(dl), th = _incThumbUrl(dl);
-      prev.innerHTML = '<a href="'+u+'" target="_blank" rel="noopener" style="text-decoration:none">' +
-        (th ? '<img src="'+th+'" style="max-width:140px;max-height:140px;border-radius:8px;border:1px solid var(--border)">'
+      var docLabel = (isEdit && item && item.name) ? item.name : 'Incoming document';
+      prev.innerHTML = '<a href="javascript:void(0)" data-action="preview-media" data-url="'+_he(u)+'" data-label="'+_he(docLabel)+'" style="text-decoration:none">' +
+        (th ? '<img src="'+_he(th)+'" style="max-width:140px;max-height:140px;border-radius:8px;border:1px solid var(--border)">'
             : '<span style="font-size:.82rem">📄 View attached document</span>') +
         '<div style="font-size:.72rem;color:var(--accent);margin-top:.2rem">📎 Current document (uploading another replaces it)</div></a>';
     } else { prev.innerHTML = ''; }
@@ -5934,8 +5975,7 @@ function saveIncomingItem() {
 function _incFirstDocUrl(docLink){ return docLink ? String(docLink).split('\n')[0].trim() : ''; }
 function _incThumbUrl(docLink){
   var u = _incFirstDocUrl(docLink); if (!u) return '';
-  var id = extractDriveId(u);
-  return id ? 'https://drive.google.com/thumbnail?id=' + id + '&sz=w200' : '';
+  return _docUrl(u);   // private proxy, not a public Drive thumbnail
 }
 function _onIncFileChange(){
   var inp  = document.getElementById('incFile');
@@ -6571,6 +6611,7 @@ function _loadCache() {
 }
 
 function _applyData(data) {
+  appUrl             = data.appUrl              || appUrl;
   movements          = data.movements          || [];
   stockData          = data.stock              || {};
   config             = data.config             || config;
