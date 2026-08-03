@@ -7,7 +7,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '8.17';
+var APP_VERSION = '8.18';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -3077,6 +3077,61 @@ function logClientError(data, auth) {
   _logError(ss, 'ERROR', 'frontend', data.action || '', auth.email,
     data.message, { stack: data.stack, url: data.url }, requestId);
   return { status: 'success', requestId: requestId };
+}
+
+// Floating "Report a Problem" button. Standalone entry point (not routed
+// through processMovement) so a VIEWER can use it too — processMovement()
+// hard-blocks VIEWER before dispatch, but a read-only user is exactly the
+// kind of person who'd spot a display bug worth reporting.
+function reportIssue(data) {
+  var auth = _setVerifiedAuth(getUserRole(data && data._sessionToken));
+  if (auth.role === 'NO_SESSION' || auth.role === 'DENIED') {
+    throw new Error('Not authenticated. Please sign in and use the app from its own page.');
+  }
+  var message = String((data && data.message) || '').trim();
+  if (!message) throw new Error('Please describe what happened.');
+  if (message.length > 4000) message = message.substring(0, 4000);
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var photos = (data && data.photos) || [];
+  var attachments = [];
+  var driveLinks = [];
+
+  if (photos.length) {
+    var stamp  = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd_HHmm');
+    var safeBy = auth.email.replace(/[^a-zA-Z0-9]/g, '_');
+    var folder = _getOrCreateFolder('OX_WMS_v3_Feedback/' + stamp + '_' + safeBy);
+    for (var i = 0; i < photos.length; i++) {
+      var p = photos[i];
+      if (!p || !p.fileData) continue;
+      var bytes = Utilities.base64Decode(p.fileData);
+      var blob  = Utilities.newBlob(bytes, p.fileMimeType || 'image/jpeg', p.fileName || ('photo_' + (i + 1) + '.jpg'));
+      var file  = folder.createFile(blob); // private by default — no public sharing
+      driveLinks.push(file.getId());
+      attachments.push(blob);
+    }
+  }
+
+  var cfg     = loadConfig();
+  var toEmail = cfg.adminEmail || Session.getEffectiveUser().getEmail();
+  var body = 'Reported by: ' + auth.email + ' (' + auth.role + ')\n' +
+    'App version: ' + APP_VERSION + '\n' +
+    'When: ' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm') + '\n' +
+    (data && data.url ? 'Page: ' + data.url + '\n' : '') +
+    '\n' + message +
+    (driveLinks.length
+      ? '\n\nPhoto(s) also saved to Drive:\n' + driveLinks.map(function(id){ return 'https://drive.google.com/file/d/' + id + '/view'; }).join('\n')
+      : '');
+
+  MailApp.sendEmail({
+    to: toEmail,
+    subject: '🐞 OX WMS — problem reported by ' + auth.email,
+    body: body,
+    attachments: attachments
+  });
+
+  _auditLog(ss, 'ISSUE_REPORTED', auth.email, message.substring(0, 200), '', driveLinks.join(','));
+  return { status: 'success' };
 }
 
 // ─── NOTIFICATIONS ───────────────────────────────────────────────────────────
