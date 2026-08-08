@@ -31,7 +31,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.1';
+var APP_VERSION = '9.2';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -3512,8 +3512,12 @@ function checkNotifications_(ss, data, moveType, qty, userEmail) {
 
 // ─── CUSTOM MENU ─────────────────────────────────────────────────────────────
 function onOpen() {
+  var cs = companySettings_();
+
   SpreadsheetApp.getUi()
     .createMenu('🏭 ' + PRODUCT_NAME)
+    .addItem(cs.setupComplete ? '⚙️ Company Settings' : '🚀 Set Up ' + PRODUCT_NAME + ' (start here)', 'showSetupWizardDialog')
+    .addSeparator()
     .addItem('Run Reconciliation', 'menuReconcile')
     .addItem('Open WMS App',       'menuOpenApp')
     .addSeparator()
@@ -3523,6 +3527,44 @@ function onOpen() {
     .addSeparator()
     .addItem('⚙️ Advanced — Push Update Live (owner only)', 'menuActivateWebApp')
     .addToUi();
+
+  // Fresh copy: open the wizard automatically instead of waiting for the owner
+  // to find the menu item. Every OTHER viewer (or the owner's own second tab
+  // after they already dismissed it once) also runs onOpen(), so this must
+  // never throw — inline, non-throwing owner check rather than
+  // requireOwnerContext_(), which is written to throw on purpose everywhere
+  // else it's used.
+  if (!cs.setupComplete) {
+    var eff = '', act = '';
+    try { eff = Session.getEffectiveUser().getEmail(); } catch (e) {}
+    try { act = Session.getActiveUser().getEmail();    } catch (e) {}
+    if (eff && eff === act) {
+      try { showSetupWizardDialog(); } catch (e) {}
+    }
+  }
+}
+
+// Opens the setup wizard as a dialog OVER the spreadsheet — no web app
+// deployment required, so this works the very first time the owner opens their
+// brand-new copy, before anything has been published. Owner-only, same
+// reasoning as every other setup-time gate: the sheet could be shared with
+// someone else before setup finishes, and only the actual owner should be able
+// to claim admin on a fresh copy.
+function showSetupWizardDialog() {
+  requireOwnerContext_();
+  var html = HtmlService.createHtmlOutputFromFile('SetupWizard')
+    .setWidth(720).setHeight(680);
+  SpreadsheetApp.getUi().showModalDialog(html, PRODUCT_NAME + ' Setup');
+}
+
+// Called by the wizard's last step once the owner says they've published the
+// web app by hand. Returns the live URL if a deployment exists, or '' if not —
+// the dialog uses that to tell them plainly whether it worked instead of
+// guessing.
+function checkDeploymentReady() {
+  requireOwnerContext_();
+  try { return { url: ScriptApp.getService().getUrl() || '' }; }
+  catch (e) { return { url: '' }; }
 }
 
 // ─── PROGRAMMATIC DEPLOYMENT — ADVANCED / OWNER-ONLY ─────────────────────────

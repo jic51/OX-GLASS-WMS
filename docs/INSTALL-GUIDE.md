@@ -1,140 +1,94 @@
-# Guía de instalación — OX Glass WMS
+# Guía de instalación — Acopio
 
-**Tiempo estimado: 5–10 minutos.** No necesitas saber programación. Solo
-necesitas una cuenta de Google (Gmail normal o de empresa, cualquiera sirve).
+**Tiempo estimado: 5 minutos.** No necesitas saber programación. Solo una
+cuenta de Google (Gmail normal o de empresa).
 
 Al terminar vas a tener tu propio sistema de inventario, corriendo en tu propia
-cuenta de Google, con tus datos guardados en tu propio Google Drive. Nadie más
-—ni siquiera nosotros— tiene acceso a tu información.
+cuenta de Google, con tus datos en tu propio Google Drive. Nadie más —ni
+siquiera nosotros— tiene acceso a tu información.
 
 ---
 
 ## Antes de empezar
 
-Vas a recibir de nosotros **un enlace** a la plantilla del sistema. Ten ese
-enlace a la mano.
+Vas a recibir de nosotros **un enlace**. Ten ese enlace a la mano.
 
-> **Importante:** haz todo este proceso desde una computadora (no desde el
-> teléfono), y con **una sola cuenta de Google abierta en el navegador**. Si
-> tienes varias cuentas de Google abiertas al mismo tiempo, Google se confunde
-> sobre cuál usar y la instalación puede fallar de formas raras.
->
-> La forma más segura: abre una **ventana de incógnito** y entra ahí solamente
-> con la cuenta que va a ser la dueña del sistema.
+> **Importante:** hazlo desde una computadora (no el teléfono), con **una sola
+> cuenta de Google abierta en el navegador**. Si tienes varias cuentas
+> abiertas al mismo tiempo, Google se confunde sobre cuál usar y la
+> instalación puede fallar de formas raras. Lo más seguro: una ventana de
+> **incógnito**, con solo la cuenta que va a ser la dueña del sistema.
 
-**¿Cuál cuenta debe ser la dueña?** La persona que abra esta plantilla se
-convierte automáticamente en el **administrador** del sistema: es quien podrá
-dar de alta a los demás usuarios y cambiar configuraciones. Elige bien desde el
-principio — normalmente el dueño del negocio o el encargado de bodega.
+**¿Cuál cuenta debe ser la dueña?** La primera persona que abre el enlace y
+completa la configuración se convierte automáticamente en el
+**administrador**. Elige bien desde el principio.
 
 ---
 
-## Paso 1 — Haz tu propia copia
+## Paso 1 — Haz tu copia
 
-1. Abre el enlace que te enviamos. Se va a abrir una hoja de Google Sheets.
-2. En el menú de arriba: **Archivo → Hacer una copia**.
-3. Ponle el nombre que quieras (ejemplo: *Inventario — Mi Empresa*).
-4. Haz clic en **Hacer una copia**.
+1. Abre el enlace que te enviamos.
+2. Te va a pedir **"Hacer una copia"**. Acepta.
 
-Se va a abrir **tu copia**. De aquí en adelante trabajas siempre en TU copia,
-nunca en la original.
-
-> ✅ **Cómo saber que estás en tu copia:** el nombre que le pusiste aparece
-> arriba a la izquierda.
+Eso es todo. Ya tienes tu propio sistema — completamente tuyo, en tu Drive,
+sin nada compartido con nadie más. El código va incluido en la copia; no hay
+que instalar ni pegar nada.
 
 ---
 
-## Paso 2 — Abre el editor de código
+## Paso 2 — Configura tu empresa
 
-No te asustes por el nombre — no vas a escribir nada de código, solo vas a
-hacer clic en unos botones.
+Al abrir tu copia, un asistente aparece automáticamente sobre la hoja
+(si no aparece: menú **🏭 Acopio → 🚀 Set Up Acopio**).
 
-1. En tu copia, menú de arriba: **Extensiones → Apps Script**.
-2. Se abre una pestaña nueva con el editor. Déjala abierta.
+Te va a pedir, en orden:
 
----
+1. **Tu empresa** — nombre, tu correo, logo (opcional).
+2. **Qué guardas** — categorías de material. Puedes elegir una plantilla
+   (vidrio, construcción) o empezar en blanco.
+3. **Dónde lo guardas** — tus racks/ubicaciones. Hay un generador automático
+   (filas × niveles × lados) o puedes escribirlos a mano.
+4. **Quién trabaja aquí** — tu equipo, con su rol (Admin / Bodega / Solo
+   lectura).
+5. **Proveedores y proyectos** — opcional, se puede saltar.
 
-## Paso 3 — Publica tu sistema (una sola vez)
-
-1. Arriba a la derecha, haz clic en el botón azul **Implementar** (*Deploy*).
-2. Elige **Nueva implementación** (*New deployment*).
-3. Haz clic en el ícono de engranaje ⚙️ junto a "Seleccionar tipo" y elige
-   **Aplicación web** (*Web app*).
-4. Llena así:
-   - **Descripción:** cualquier cosa (ejemplo: `Versión 1`)
-   - **Ejecutar como** (*Execute as*): **Yo** (*Me* — tu correo)
-   - **Quién tiene acceso** (*Who has access*): **Cualquier usuario con una
-     cuenta de Google** (*Anyone with a Google account*)
-
-   > ⚠️ Estas dos últimas opciones son importantes. "Ejecutar como: Yo" es lo
-   > que permite que el sistema guarde archivos y mande correos por ti. "Quién
-   > tiene acceso" define quién puede abrir la página — pero **no** quién puede
-   > usar el sistema: eso lo controlas tú después, dando de alta a cada persona
-   > desde adentro de la app. Alguien que no esté dado de alta verá una pantalla
-   > de "acceso denegado" aunque tenga el enlace.
-
-5. Haz clic en **Implementar** (*Deploy*).
+Nada de esto se pierde si cierras la ventana a medias — retoma donde ibas.
 
 ---
 
-## Paso 4 — Autoriza los permisos
+## Paso 3 — El único paso técnico (una sola vez)
 
-Esto pasa una sola vez, y solo lo hace el administrador.
+Al final del asistente, te va a pedir **publicar tu sistema**. Es el único
+paso donde vas a ver algo parecido a "código", y el asistente te lleva de la
+mano:
 
-1. Google te va a mostrar una ventana pidiendo autorización. Haz clic en
-   **Autorizar acceso**.
-2. Elige tu cuenta de Google (la que va a ser la dueña).
-3. **Probablemente veas una pantalla que dice "Google no ha verificado esta
-   aplicación".** Esto es normal y esperado: le estás dando permiso a un
-   programa que ahora te pertenece a ti, no a una app pública de la tienda de
-   Google. Para continuar:
-   - Haz clic en **Configuración avanzada** (*Advanced*), abajo a la izquierda.
-   - Haz clic en **Ir a [nombre del proyecto] (no seguro)**.
-4. Revisa los permisos y haz clic en **Permitir**.
+1. **Extensiones → Apps Script**
+2. Botón azul **Implementar (Deploy) → Nueva implementación**
+3. Engranaje ⚙️ junto a "Seleccionar tipo" → **Aplicación web**
+4. **Ejecutar como: Yo** · **Quién tiene acceso: Cualquier usuario con una
+   cuenta de Google**
+5. **Implementar**, luego **Autorizar acceso**
 
-> **¿Qué permisos estoy dando y por qué?**
-> - **Google Drive** — para guardar las fotos de racks y los documentos
->   (facturas, remisiones) que subas al sistema.
-> - **Enviar correo como tú** — para las notificaciones a los Project Managers.
->   *Solo puede enviar, nunca leer tu correo.*
-> - **Google Docs** — para armar los PDFs de documentos.
-> - **Tu hoja de cálculo** — es la base de datos del sistema.
->
-> El sistema **no** pide acceso a leer tu Gmail. (Existe un módulo opcional de
-> pago que escanea correos de proveedores; si lo contratas, ese sí pide ese
-> permiso, y se instala aparte.)
+> **¿Sale "Google no ha verificado esta aplicación"?** Es normal — le estás
+> dando permiso a tu propio sistema, no a una app pública. Clic en
+> **Configuración avanzada → Ir a [tu proyecto] (no seguro)**.
 
----
+6. Regresa a la pestaña del asistente y da clic en **"Ya lo hice — muéstrame
+   mi link"**. El sistema verifica que funcionó y te entrega tu dirección web
+   permanente.
 
-## Paso 5 — Guarda tu enlace
+**Guarda ese enlace** — es tu sistema. Compártelo con tu equipo (solo entrarán
+quienes hayas dado de alta en el paso 4).
 
-Al terminar, Google te muestra una **URL de aplicación web**
-(empieza con `https://script.google.com/macros/s/...`).
-
-**Esa URL es tu sistema. Guárdala:**
-- Cópiala y ponla en marcadores/favoritos de tu navegador.
-- Compártela con tu equipo (recuerda: solo entrarán quienes tú des de alta).
-
-> ¿Se te perdió el enlace? Ábrelo desde tu hoja de cálculo:
-> menú **🏭 OX WMS v3 → Open WMS App**.
+> ¿Se te perdió el enlace? Menú **🏭 Acopio → Open WMS App**, siempre desde tu
+> hoja de cálculo.
 
 ---
 
-## Paso 6 — Primer ingreso
+## Ya tienes tu inventario en Excel
 
-1. Abre la URL. Deberías entrar directo como **ADMIN**.
-2. Ve a **Configuración** (⚙️) y carga los datos de tu empresa:
-   - Categorías de material
-   - Ubicaciones / racks de tu bodega
-   - Proveedores
-   - Proyectos
-   - Usuarios de tu equipo (con su rol: Admin, Bodega, o Solo lectura)
-3. Activa el respaldo automático: en tu hoja de cálculo, menú
-   **🏭 OX WMS v3 → 🗄 Enable Daily Backup**. Se hace una copia de seguridad
-   diaria a las 2am, guardada 30 días. **Hazlo el primer día.**
-
-Si ya tienes tu inventario en Excel, no lo captures a mano: usa
-**Configuración → Importar** para subirlo desde un archivo CSV.
+No lo captures a mano: **Configuración → Importar**. Guarda tu archivo como
+**.csv** primero (un .xlsx será rechazado).
 
 ---
 
@@ -147,25 +101,21 @@ una ventana de incógnito, entra solo con la cuenta dueña, y prueba de nuevo.
 **Actualicé el código pero no veo los cambios**
 Publicar una versión nueva no es lo mismo que guardar. En el editor:
 **Implementar → Administrar implementaciones → ✏️ (editar) → Versión: Nueva
-versión → Implementar**. Ojo: usa **Administrar implementaciones**, no "Nueva
-implementación" — esta última crea una URL distinta y tu equipo seguiría
+versión → Implementar**. Usa **Administrar implementaciones**, no "Nueva
+implementación" — esa última crea una URL distinta y tu equipo seguiría
 entrando a la vieja.
 
 **Agregamos una función nueva y da error de permisos**
-Cuando el sistema estrena un permiso, Google necesita que lo autorices otra vez,
-y a veces no lo pide solo. Fuérzalo así: en el editor de Apps Script, elige
-cualquier función en el menú de arriba y presiona ▶ **Ejecutar**. Ahí sí
-aparece la ventana de autorización.
+Fuérzalo así: en el editor de Apps Script, elige cualquier función en el menú
+de arriba y presiona ▶ **Ejecutar**. Ahí aparece la ventana de autorización.
 
 **No me llegan los correos de notificación**
-Las cuentas de Gmail normales tienen un límite de 100 correos por día; las
-cuentas de Google Workspace (empresariales), 1,500. Si mandas muchas
-notificaciones al día, es probable que estés topando ese límite.
+Cuentas de Gmail normales: límite de 100 correos/día. Cuentas de Google
+Workspace: 1,500/día.
 
 ---
 
 ## ¿Necesitas ayuda?
 
 Dentro de la app, abajo a la derecha, hay un botón 🐞 (**Reportar un
-problema**). Escribe qué pasó y adjunta una foto de la pantalla — nos llega
-directo.
+problema**). Escribe qué pasó y adjunta una foto — nos llega directo.
