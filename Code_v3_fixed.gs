@@ -32,7 +32,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.6';
+var APP_VERSION = '9.7';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -2716,7 +2716,13 @@ function unlockMaterial(data, auth) {
 function updateDocument_(ss, archive, data, auth) {
   var hasDocGroups = data.docGroups && data.docGroups.length > 0;
   var hasFiles     = data.files     && data.files.length     > 0;
-  if (!hasDocGroups && !hasFiles) throw new Error('No documents provided.');
+  // keepLinks: the surviving subset of DOC_LINKS lines after the user removed
+  // some in the "Manage Documents" UI. When the caller sends it (even an empty
+  // array, i.e. "remove everything"), DOC_LINKS is REPLACED with keepLinks
+  // plus any new uploads, instead of appended to whatever's currently in the
+  // sheet. Legacy callers that never send it keep the old append-only behavior.
+  var hasKeepLinks = Array.isArray(data.keepLinks);
+  if (!hasDocGroups && !hasFiles && !hasKeepLinks) throw new Error('No documents provided.');
 
   // Get material name from the row for folder naming
   var matName = 'attachment';
@@ -2738,14 +2744,21 @@ function updateDocument_(ss, archive, data, auth) {
     } catch(e) { if (/reorganized/.test(e.message)) throw e; }
   }
 
-  var links = hasDocGroups
-    ? uploadDocGroups_(data.docGroups, matName)          // named, multi-photo groups → PDF
-    : uploadFiles_(data.files, matName, 'row-' + data.rowIdx); // legacy single-file
+  var links = '';
+  if (hasDocGroups) links = uploadDocGroups_(data.docGroups, matName);          // named, multi-photo groups → PDF
+  else if (hasFiles) links = uploadFiles_(data.files, matName, 'row-' + data.rowIdx); // legacy single-file
 
-  if (links && data.rowIdx) {
-    var existing  = archive.getRange(data.rowIdx, AC.DOC_LINKS + 1).getValue();
-    var finalText = existing ? existing + '\n' + links : links;
-    archive.getRange(data.rowIdx, AC.DOC_LINKS + 1).setRichTextValue(richTextForDocLinks_(finalText));
+  if (data.rowIdx && (links || hasKeepLinks)) {
+    var finalText;
+    if (hasKeepLinks) {
+      finalText = data.keepLinks.concat(links ? [links] : []).join('\n');
+    } else {
+      var existing = archive.getRange(data.rowIdx, AC.DOC_LINKS + 1).getValue();
+      finalText = existing ? existing + '\n' + links : links;
+    }
+    var docLinksCell = archive.getRange(data.rowIdx, AC.DOC_LINKS + 1);
+    if (finalText) docLinksCell.setRichTextValue(richTextForDocLinks_(finalText));
+    else docLinksCell.setValue(''); // all documents removed, nothing to replace with
   }
   return { status: 'success' };
 }

@@ -473,6 +473,12 @@
     .doc-card img{width:52px;height:52px;object-fit:cover;border-radius:5px;border:1px solid var(--border);background:#f3f4f6}
     .doc-card .doc-label{font-size:.63rem;font-weight:600;color:var(--text);text-align:center;word-break:break-word;line-height:1.2;max-width:72px}
     .doc-card .doc-date{font-size:.58rem;color:var(--muted);text-align:center}
+    .attach-doc-chip{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 6px;width:72px;flex-shrink:0;transition:.15s}
+    .attach-doc-chip.removed{opacity:.4}
+    .attach-doc-chip img{width:44px;height:44px;object-fit:cover;border-radius:5px;border:1px solid var(--border);background:#f3f4f6}
+    .attach-doc-chip .adc-label{font-size:.6rem;font-weight:600;color:var(--text);text-align:center;word-break:break-word;line-height:1.2;max-width:64px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .attach-doc-chip .adc-rm{position:absolute;top:-6px;right:-6px;width:19px;height:19px;border-radius:50%;background:var(--red);color:#fff;border:2px solid var(--card);font-size:.68rem;cursor:pointer;line-height:1;padding:0}
+    .attach-doc-chip .adc-undo{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);border-radius:8px;color:#fff;font-size:.62rem;font-weight:700;cursor:pointer}
     .stock-doc-summary{font-size:.72rem;color:var(--muted);white-space:nowrap}
     .doc-more-hint{font-size:.67rem;color:var(--accent);opacity:.8;margin-left:.3rem;white-space:nowrap}
     /* ── STOCK ROW DETAIL (Photos | Documents split panel) ── */
@@ -1647,10 +1653,14 @@
 <div class="overlay" id="attachOverlay">
   <div class="modal modal-sm">
     <div class="mhdr">
-      <h3>📎 Attach Document</h3>
+      <h3>📎 Manage Documents</h3>
       <button class="modal-x" onclick="closeModal('attachOverlay')" title="Close">✕</button>
     </div>
-    <p style="font-size:.8rem;color:var(--muted);margin:.25rem 0 1rem">Name your document, then take photos or pick files. Multiple photos become one PDF. Will be linked to the selected record.</p>
+    <div class="field" style="margin-bottom:1rem">
+      <label style="font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:.4rem">Already attached</label>
+      <div id="aExistingDocs" style="display:flex;flex-wrap:wrap;gap:.5rem"></div>
+    </div>
+    <p style="font-size:.8rem;color:var(--muted);margin:.25rem 0 1rem">Name a new document, then take photos or pick files. Multiple photos become one PDF.</p>
     <input type="hidden" id="aRowIdx">
     <input type="hidden" id="aFolderName">
     <!-- Doc groups rendered here by JS -->
@@ -1658,7 +1668,7 @@
     <button class="btn btn-ghost btn-sm" onclick="addDocGroup(null,'aDocGroupsContainer','a')" style="margin-top:.4rem;font-size:.8rem">+ Add Document</button>
     <div class="modal-actions" style="margin-top:1.25rem">
       <button id="btnCancelAttach" class="btn btn-ghost">Cancel</button>
-      <button class="btn btn-primary" id="attachSubmit">Upload &amp; Attach</button>
+      <button class="btn btn-primary" id="attachSubmit">Save Changes</button>
     </div>
   </div>
 </div>
@@ -1783,7 +1793,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.6';
+var APP_VERSION = '9.7';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Paid Gmail-scanner add-on: off unless the backend says this installation
@@ -5650,28 +5660,32 @@ function _settingMsg(txt, type) {
 function submitAttachment() {
   var btn  = document.getElementById('attachSubmit');
   var docs = _collectDocGroups('aDocGroupsContainer');
-  if (!docs.length) {
-    showToast('Add at least one photo or file before uploading.', 'warn');
+  var keepLinks = _attachExistingDocs.filter(function(d,i){ return !_attachRemovedIdx[i]; }).map(function(d){ return d.raw; });
+
+  if (!docs.length && keepLinks.length === _attachExistingDocs.length) {
+    showToast(_attachExistingDocs.length ? 'Nothing changed.' : 'Add at least one photo or file.', 'warn');
     return;
   }
-  btn.innerHTML = 'Uploading… <span class="spin-hg">⏳</span>'; btn.disabled = true;
+
+  btn.innerHTML = 'Saving… <span class="spin-hg">⏳</span>'; btn.disabled = true;
   _setModalBusy('attachOverlay', true);
   google.script.run
     .withSuccessHandler(function() {
       _setModalBusy('attachOverlay', false);
       closeModal('attachOverlay');
-      showToast('Document attached ✓', 'ok');
+      showToast('Documents updated ✓', 'ok');
       loadDataFromGoogle(false);
     })
     .withFailureHandler(function(err) {
-      showToast('Upload failed: ' + (err.message || err), 'err', 6000);
-      btn.textContent = 'Upload & Attach'; btn.disabled = false;
+      showToast('Save failed: ' + (err.message || err), 'err', 6000);
+      btn.textContent = 'Save Changes'; btn.disabled = false;
       _setModalBusy('attachOverlay', false);
     })
     .processMovement('updateDocument', _h({
       rowIdx:    parseInt(document.getElementById('aRowIdx').value),
       expectedCategory: _attachOrigCategory,
       expectedName:     _attachOrigName,
+      keepLinks: keepLinks,
       docGroups: docs,
       files:     []
     }));
@@ -5683,7 +5697,7 @@ function closeModal(id){
   var bm = document.getElementById('moveSubmit');
   var ba = document.getElementById('attachSubmit');
   if (bm){ bm.textContent = 'Save to System'; bm.disabled = false; }
-  if (ba){ ba.textContent = 'Upload & Attach'; ba.disabled = false; }
+  if (ba){ ba.textContent = 'Save Changes'; ba.disabled = false; }
   // Reset attach builder when the attach modal closes
   if (id === 'attachOverlay') resetAttachDocBuilder();
 }
@@ -5732,12 +5746,59 @@ function _moveModalHasData(){
 
 var _attachOrigCategory = '';
 var _attachOrigName = '';
+var _attachExistingDocs = [];
+var _attachRemovedIdx = {};
+
+function _parseDocLinksList(linksStr){
+  if (!linksStr) return [];
+  return linksStr.split('\n').map(function(l){ return l.trim(); }).filter(Boolean).map(function(line){
+    var name = 'Document', url = line;
+    if (line.indexOf('||') !== -1) {
+      var parts = line.split('||');
+      name = (parts[0]||'').trim() || name;
+      url  = (parts[1]||'').trim();
+    }
+    return { name: name, url: url, raw: line };
+  });
+}
+
+function _renderAttachExistingDocs(){
+  var box = document.getElementById('aExistingDocs');
+  if (!box) return;
+  if (!_attachExistingDocs.length){
+    box.innerHTML = '<span style="color:var(--muted);font-size:.8rem">No documents attached yet.</span>';
+    return;
+  }
+  box.innerHTML = _attachExistingDocs.map(function(d, i){
+    var removed = !!_attachRemovedIdx[i];
+    var fileId = extractDriveId(d.url);
+    var thumb = fileId
+      ? _privImgTag(d.url, 'loading="lazy" onerror="this.style.display=\'none\'"', d.name)
+      : '<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.3rem">📄</div>';
+    return '<div class="attach-doc-chip'+(removed?' removed':'')+'" title="'+_he(d.name)+'">' +
+      thumb +
+      '<span class="adc-label">'+_he(d.name)+'</span>' +
+      (removed
+        ? '<div class="adc-undo" onclick="_toggleAttachRemove('+i+')">Undo</div>'
+        : '<button class="adc-rm" onclick="_toggleAttachRemove('+i+')" title="Remove">×</button>') +
+    '</div>';
+  }).join('');
+}
+
+function _toggleAttachRemove(i){
+  if (_attachRemovedIdx[i]) delete _attachRemovedIdx[i]; else _attachRemovedIdx[i] = true;
+  _renderAttachExistingDocs();
+}
+
 function openAttachModal(rowIdx, folderName){
   document.getElementById('aRowIdx').value     = rowIdx;
   document.getElementById('aFolderName').value = folderName;
   var mov = movements.find(function(m){ return m.rowIdx === rowIdx; });
   _attachOrigCategory = mov ? (mov.category || '') : '';
   _attachOrigName     = mov ? (mov.name     || '') : '';
+  _attachExistingDocs = _parseDocLinksList(mov ? mov.docLinks : '');
+  _attachRemovedIdx = {};
+  _renderAttachExistingDocs();
   resetAttachDocBuilder();  // fresh doc builder each time
   document.getElementById('attachOverlay').classList.add('show');
 }
