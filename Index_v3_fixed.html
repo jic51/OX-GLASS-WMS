@@ -181,6 +181,10 @@
     .wiz-summary{background:#F8FAFC;border-radius:10px;padding:1rem 1.15rem;font-size:.85rem;line-height:1.9;color:#111827}
     .wiz-summary b{color:#1B2A4A}
     .wiz-toggle{display:flex;align-items:flex-start;gap:.6rem;padding:.75rem;background:#D1FAE5;border-radius:8px;font-size:.85rem;margin-bottom:1rem;color:#111827}
+    .wiz-progress{margin-top:1.1rem}
+    .wiz-progress-track{height:8px;border-radius:4px;background:#E5E7EB;overflow:hidden}
+    .wiz-progress-fill{height:100%;width:0%;background:#3B7DD8;border-radius:4px;transition:width .3s ease}
+    .wiz-progress-label{font-size:.78rem;color:#6B7280;margin-top:.45rem;text-align:center}
     /* Nudge shown after setup when an optional step was skipped */
     .setup-nudge{position:fixed;bottom:22px;left:22px;z-index:390;background:#1B2A4A;color:#fff;border-radius:10px;padding:.7rem .9rem;font-size:.8rem;box-shadow:0 6px 20px rgba(0,0,0,.25);max-width:290px}
     .setup-nudge .nudge-act{display:none;margin-top:.55rem;gap:.4rem}
@@ -474,6 +478,7 @@
     .doc-card .doc-label{font-size:.63rem;font-weight:600;color:var(--text);text-align:center;word-break:break-word;line-height:1.2;max-width:72px}
     .doc-card .doc-date{font-size:.58rem;color:var(--muted);text-align:center}
     .attach-doc-chip{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 6px;width:72px;flex-shrink:0;transition:.15s}
+    .attach-doc-chip:not(.removed){cursor:pointer}
     .attach-doc-chip.removed{opacity:.4}
     .attach-doc-chip img{width:44px;height:44px;object-fit:cover;border-radius:5px;border:1px solid var(--border);background:#f3f4f6}
     .attach-doc-chip .adc-label{font-size:.6rem;font-weight:600;color:var(--text);text-align:center;word-break:break-word;line-height:1.2;max-width:64px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1793,7 +1798,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.8';
+var APP_VERSION = '9.9';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Paid Gmail-scanner add-on: off unless the backend says this installation
@@ -2157,7 +2162,11 @@ function wizRender(){
         '🏭 <b>' + _wiz.suppliers.length + '</b> suppliers · <b>' + _wiz.projects.length + '</b> projects' +
       '</div>' +
       '<div class="wiz-hint" style="margin-top:1rem">Already have your inventory in a spreadsheet? After finishing, ' +
-      'go to <b>Settings → Import</b>. Save it as <b>.csv</b> first — an .xlsx file will be rejected.</div>';
+      'go to <b>Settings → Import</b>. Save it as <b>.csv</b> first — an .xlsx file will be rejected.</div>' +
+      '<div class="wiz-progress" id="wizProgressWrap" style="display:none">' +
+        '<div class="wiz-progress-track"><div class="wiz-progress-fill" id="wizProgressBar"></div></div>' +
+        '<div class="wiz-progress-label"><span id="wizProgressPct">0%</span> — setting up your system…</div>' +
+      '</div>';
   }
 }
 
@@ -2282,7 +2291,17 @@ function _wizDrawLocs(){
     : '<span style="color:#6B7280;font-size:.8rem">Nothing yet</span>';
 }
 
-function _wizAddUserRow(){ _wiz.users.push({email:'',name:'',role:'WAREHOUSE'}); _wizDrawUsers(); }
+function _wizAddUserRow(){
+  // Sync existing rows' DOM values into _wiz.users BEFORE pushing+redrawing —
+  // _wizDrawUsers() rebuilds every row from _wiz.users, and without this an
+  // email someone just typed (never synced anywhere but the DOM) gets wiped
+  // the moment they click "+ Add person" for a second row.
+  _wizSyncUsers();
+  _wiz.users.push({email:'',name:'',role:'WAREHOUSE'});
+  _wizDrawUsers();
+  var last = document.getElementById('wizU' + (_wiz.users.length - 1));
+  if (last) last.focus();
+}
 function _wizRemoveUser(i){ _wizSyncUsers(); _wiz.users.splice(i,1); _wizDrawUsers(); }
 
 function _wizSyncUsers(){
@@ -2298,7 +2317,8 @@ function _wizDrawUsers(){
   if (!box) return;
   box.innerHTML = _wiz.users.map(function(u,i){
     return '<div class="wiz-userrow">' +
-      '<input type="email" id="wizU'+i+'" placeholder="name@company.com" value="'+_escAttr(u.email)+'">' +
+      '<input type="email" id="wizU'+i+'" placeholder="name@company.com" value="'+_escAttr(u.email)+'" ' +
+      'onkeydown="if(event.key===\'Enter\'){event.preventDefault();_wizAddUserRow()}">' +
       '<select id="wizR'+i+'">' +
         '<option value="WAREHOUSE"'+(u.role==='WAREHOUSE'?' selected':'')+'>Warehouse</option>' +
         '<option value="ADMIN"'+(u.role==='ADMIN'?' selected':'')+'>Admin</option>' +
@@ -2314,8 +2334,27 @@ function wizFinish(){
   _wiz.users = _wiz.users.filter(function(u){ return u.email && u.email.indexOf('@') !== -1; });
   var btn = document.getElementById('wizNext');
   btn.disabled = true; btn.textContent = 'Setting up…';
+
+  // Same honest-approximation progress bar as the Sheet-side wizard (see
+  // SetupWizard.html's saveSetup): one synchronous Apps Script call has no
+  // real incremental progress to report, so this eases toward 90% and only
+  // claims done once the call actually returns.
+  var wrap = document.getElementById('wizProgressWrap');
+  var bar  = document.getElementById('wizProgressBar');
+  var pct  = document.getElementById('wizProgressPct');
+  if (wrap) wrap.style.display = '';
+  var progress = 0;
+  var ticker = setInterval(function(){
+    progress = Math.min(90, progress + (90 - progress) * 0.15 + 1);
+    if (bar) bar.style.width = progress + '%';
+    if (pct) pct.textContent = Math.round(progress) + '%';
+  }, 300);
+
   google.script.run
     .withSuccessHandler(function(){
+      clearInterval(ticker);
+      if (bar) bar.style.width = '100%';
+      if (pct) pct.textContent = '100%';
       // NOT location.reload(). The app is served inside Apps Script's sandboxed
       // googleusercontent.com iframe, and reloading that frame's own URL lands
       // on a blank page instead of the app — the URL only serves content as a
@@ -2330,6 +2369,8 @@ function wizFinish(){
       showToast('Setup complete — welcome to ' + PRODUCT + '.', 'ok');
     })
     .withFailureHandler(function(err){
+      clearInterval(ticker);
+      if (wrap) wrap.style.display = 'none';
       btn.disabled = false; btn.textContent = '✓ Start using ' + PRODUCT;
       showToast('Setup failed: ' + ((err && err.message) || err), 'err');
     })
@@ -5777,12 +5818,18 @@ function _renderAttachExistingDocs(){
   box.innerHTML = _attachExistingDocs.map(function(d, i){
     var removed = !!_attachRemovedIdx[i];
     var fileId = extractDriveId(d.url);
+    // Not on the outer chip div — the remove/undo button lives inside it with
+    // its own onclick, and the delegated click handler walks up via closest(),
+    // so a data-action on the container would fire preview-media on every
+    // click in the chip, including "Remove". Attaching it only to the
+    // thumb/label keeps the two actions separate.
+    var previewAttrs = removed ? '' : ' data-action="preview-media" data-url="'+_he(d.url)+'" data-label="'+_he(d.name)+'"';
     var thumb = fileId
-      ? _privImgTag(d.url, 'loading="lazy" onerror="this.style.display=\'none\'"', d.name)
-      : '<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.3rem">📄</div>';
+      ? _privImgTag(d.url, 'loading="lazy" onerror="this.style.display=\'none\'"' + previewAttrs, d.name)
+      : '<div'+previewAttrs+' style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.3rem">📄</div>';
     return '<div class="attach-doc-chip'+(removed?' removed':'')+'" title="'+_he(d.name)+'">' +
       thumb +
-      '<span class="adc-label">'+_he(d.name)+'</span>' +
+      '<span class="adc-label"'+previewAttrs+'>'+_he(d.name)+'</span>' +
       (removed
         ? '<div class="adc-undo" onclick="_toggleAttachRemove('+i+')">Undo</div>'
         : '<button class="adc-rm" onclick="_toggleAttachRemove('+i+')" title="Remove">×</button>') +
