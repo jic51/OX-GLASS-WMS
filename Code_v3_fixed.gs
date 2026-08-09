@@ -25,13 +25,14 @@
 // When adding a helper: end it with `_`. Only these are meant to be reachable
 // from the browser, and each authenticates for itself —
 //   doGet, getInitialData, processMovement, getPrivateFileData,
-//   heartbeat, pollLogin, reportIssue, extractDocumentInfo
+//   getPrivateFileThumbnail, heartbeat, pollLogin, reportIssue,
+//   extractDocumentInfo, getSetupState, saveSetupWizard, checkDeploymentReady
 // — plus the menu/trigger entry points, gated by getUi() / requireOwnerContext_().
 
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.5';
+var APP_VERSION = '9.6';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -351,6 +352,48 @@ function doGet(e) {
 // the frontend turns that into a data: URL locally, no second network request
 // to Apps Script at all.
 function getPrivateFileData(fileId, token) {
+  var file = resolveOwnFile_(fileId, token, 'getPrivateFileData');
+  var blob = file.getBlob();
+  return {
+    mimeType: blob.getContentType(),
+    base64:   Utilities.base64Encode(blob.getBytes())
+  };
+}
+
+// Same file, DriveApp's small pre-rendered thumbnail instead of the full blob
+// — for the many small (~30-50px) previews on screen at once (the Movements
+// Doc column, the Dashboard's photo/document grid, rack photos): those never
+// needed the full file, so fetching it was pure waste, and on a slow
+// connection or an underpowered computer that waste is what "the app feels
+// slow" actually was. A grid of 20 rows with a document each used to pull 20
+// full files just to paint them at 34px.
+//
+// Bonus this makes possible almost for free: getThumbnail() works for PDFs
+// too (Drive renders one from page 1), so a PDF's grid preview stops being a
+// generic 📄 icon and becomes an actual look at the document — inline PDF
+// preview is still blocked by Apps Script's sandbox (see the media-preview
+// code), but the grid never hit that wall to begin with.
+//
+// Returns null (not an error) when Drive has no thumbnail for this file yet —
+// happens on a very recently uploaded file, or a type Drive doesn't render.
+// The frontend already has an icon fallback for exactly this case.
+function getPrivateFileThumbnail(fileId, token) {
+  var file = resolveOwnFile_(fileId, token, 'getPrivateFileThumbnail');
+  var blob = file.getThumbnail();
+  if (!blob) return null;
+  return {
+    mimeType: blob.getContentType(),
+    base64:   Utilities.base64Encode(blob.getBytes())
+  };
+}
+
+// Shared by getPrivateFileData/getPrivateFileThumbnail: authenticates the
+// caller and confirms the requested file is actually one this app manages.
+// Without the folder check, an authenticated WAREHOUSE user could pass ANY
+// Drive file ID the owner's account can reach — not just this app's own
+// uploads — turning either endpoint into a way to browse the owner's entire
+// personal Drive.
+function resolveOwnFile_(fileId, token, callerName) {
   var auth = setVerifiedAuth_(getUserRole(token));
   if (auth.role === 'NO_SESSION' || auth.role === 'DENIED') {
     throw new Error('Not authenticated.');
@@ -363,20 +406,12 @@ function getPrivateFileData(fileId, token) {
     throw new Error('File not found.');
   }
 
-  // Without this check, an authenticated WAREHOUSE user could pass ANY Drive
-  // file ID the owner's account can reach — not just this app's own uploads —
-  // turning this into a way to browse the owner's entire personal Drive.
   if (!isFileWithinAppFolder_(file)) {
-    logError_(SpreadsheetApp.getActiveSpreadsheet(), 'WARN', 'backend', 'getPrivateFileData',
+    logError_(SpreadsheetApp.getActiveSpreadsheet(), 'WARN', 'backend', callerName,
       auth.email, 'Requested file outside app folder: ' + fileId, null, newRequestId_());
     throw new Error('File not found.');
   }
-
-  var blob = file.getBlob();
-  return {
-    mimeType: blob.getContentType(),
-    base64:   Utilities.base64Encode(blob.getBytes())
-  };
+  return file;
 }
 
 // Walks up a file's parent folders looking for the app's own root folder by

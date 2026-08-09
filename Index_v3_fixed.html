@@ -1783,7 +1783,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.5';
+var APP_VERSION = '9.6';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Paid Gmail-scanner add-on: off unless the backend says this installation
@@ -2942,7 +2942,7 @@ function extractDriveId(url){
 // frame ("google.com refused to connect"). Going through google.script.run
 // sidesteps that: no second network request to script.google.com happens at
 // all, so there is nothing for Google's sandboxing to interfere with.
-var _fileDataCache = {};   // fileId -> {mimeType, base64}   (successes only)
+var _fileDataCache = {};   // "<kind>:<fileId>" -> {mimeType, base64}   (successes only)
 
 // ── Throttled fetching — this is what fixes "too many scripts running" ───────
 //
@@ -2962,12 +2962,17 @@ var _fileDataCache = {};   // fileId -> {mimeType, base64}   (successes only)
 //
 // Two limits below, and the pair matters:
 //   • at most MAX_INFLIGHT calls open at any moment, the rest queued;
-//   • one call per file ID — repeat requests for a file already being fetched
-//     wait on that same request instead of starting another. The same document
-//     commonly appears in several rows, so without this the queue would happily
-//     fetch identical bytes many times over.
-var _privQueue     = [];   // [{id, done}] waiting for a slot
-var _privInflight  = {};   // fileId -> [done, …] callbacks awaiting one open call
+//   • one call per (kind, file ID) — repeat requests for something already
+//     being fetched wait on that same request instead of starting another.
+//     The same document commonly appears in several rows, so without this the
+//     queue would happily fetch identical bytes many times over.
+//
+// "kind" is 'thumb' or 'full', kept as separate cache/inflight entries under
+// separate keys — the same file is legitimately fetched both ways (a small
+// grid preview, then the full file when someone clicks to actually view it),
+// and they must not collide or overwrite one another.
+var _privQueue     = [];   // [{key, id, kind}] waiting for a slot
+var _privInflight  = {};   // key -> [done, …] callbacks awaiting one open call
 var _privActive    = 0;
 var _PRIV_MAX_INFLIGHT = 3;
 
@@ -2983,13 +2988,30 @@ function _privLater(cb, arg){ setTimeout(function(){ cb(arg); }, 0); }
 function _privPump(){
   while (_privActive < _PRIV_MAX_INFLIGHT && _privQueue.length){
     var job = _privQueue.shift();
-    if (_fileDataCache[job.id]) { _privDeliver(job.id); continue; }  // arrived while queued
+    if (_fileDataCache[job.key]) { _privDeliver(job.key); continue; }  // arrived while queued
     _privActive++;
-    (function(id){
+    (function(job){
       google.script.run
         .withSuccessHandler(function(res){
-          if (res) _fileDataCache[id] = res;
-          _privActive--; _privDeliver(id); _privPump();
+          _privActive--;
+          if (res) {
+            _fileDataCache[job.key] = res;
+            _privDeliver(job.key);
+          } else if (job.kind === 'thumb') {
+            // Drive has no thumbnail for this file (yet) — most often a file
+            // uploaded moments ago, before Drive finished generating one, or a
+            // type it doesn't render a thumbnail for at all. Fall back to the
+            // full file for just this request rather than showing it broken;
+            // this goes back through _fetchPrivateFile so it still shares a
+            // cache/inflight entry with anyone else already fetching the full
+            // version of the same file.
+            var waiting = _privInflight[job.key] || [];
+            delete _privInflight[job.key];
+            waiting.forEach(function(cb){ _fetchPrivateFile(job.id, cb, 'full'); });
+          } else {
+            _privDeliver(job.key);
+          }
+          _privPump();
         })
         .withFailureHandler(function(){
           // Deliberately NOT cached as a permanent failure. One transient error
@@ -2998,30 +3020,32 @@ function _privPump(){
           // stayed broken until a full page reload even though the file was
           // fine. A later render simply tries again; the queue above is what
           // keeps those retries from piling up.
-          _privActive--; _privDeliver(id); _privPump();
+          _privActive--; _privDeliver(job.key); _privPump();
         })
-        .getPrivateFileData(id, _sessionToken || null);
-    })(job.id);
+        [job.kind === 'thumb' ? 'getPrivateFileThumbnail' : 'getPrivateFileData'](job.id, _sessionToken || null);
+    })(job);
   }
 }
 
-function _privDeliver(id){
-  var cached = _fileDataCache[id];
+function _privDeliver(key){
+  var cached = _fileDataCache[key];
   var url = cached ? 'data:' + cached.mimeType + ';base64,' + cached.base64 : null;
-  var waiting = _privInflight[id] || [];
-  delete _privInflight[id];
+  var waiting = _privInflight[key] || [];
+  delete _privInflight[key];
   waiting.forEach(function(cb){ _privLater(cb, url); });
 }
 
-function _fetchPrivateFile(rawUrlOrId, done){
+function _fetchPrivateFile(rawUrlOrId, done, kind){
+  kind = kind === 'thumb' ? 'thumb' : 'full';
   var id = extractDriveId(rawUrlOrId);
   if (!id) { _privLater(done, null); return; }
-  var cached = _fileDataCache[id];
+  var key = kind + ':' + id;
+  var cached = _fileDataCache[key];
   if (cached) { _privLater(done, 'data:' + cached.mimeType + ';base64,' + cached.base64); return; }
 
-  if (_privInflight[id]) { _privInflight[id].push(done); return; }  // ride along
-  _privInflight[id] = [done];
-  _privQueue.push({ id: id });
+  if (_privInflight[key]) { _privInflight[key].push(done); return; }  // ride along
+  _privInflight[key] = [done];
+  _privQueue.push({ key: key, id: id, kind: kind });
   _privPump();
 }
 
@@ -3030,6 +3054,11 @@ function _fetchPrivateFile(rawUrlOrId, done){
 // layout doesn't jump), then swaps in the real image once _fetchPrivateFile
 // resolves. If the element has scrolled out of the DOM by then (a fast filter
 // change, a closed modal), the swap is just skipped — nothing to clean up.
+//
+// Always requests the THUMBNAIL, not the full file — every use of this
+// function is a small grid preview (document chips, rack photos), which never
+// needed full resolution. openMediaPreview() fetches the full file separately
+// when someone actually clicks to view one.
 var _privImgSeq = 0;
 function _privImgTag(raw, attrs, altText){
   var pid = 'privimg-' + (++_privImgSeq);
@@ -3040,7 +3069,7 @@ function _privImgTag(raw, attrs, altText){
     if (dataUrl) { el.src = dataUrl; el.removeAttribute('data-priv-pending'); }
     else if (el.dataset.privFallback) { el.outerHTML = el.dataset.privFallback; }
     else { el.style.display = 'none'; }
-  });
+  }, 'thumb');
   return '<img id="' + pid + '" src="' + blankPx + '" data-priv-pending="1" ' +
     (attrs || '') + ' alt="' + _he(altText || '') + '">';
 }
