@@ -508,14 +508,25 @@
     .media-preview-body iframe,.media-preview-body embed{width:100%;height:80vh;border:none}
     /* ── RACK PHOTO GALLERY ── */
     .rack-photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.75rem}
-    .rack-photo-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
-    .rack-photo-card .rpc-hdr{display:flex;justify-content:space-between;align-items:center;padding:.4rem .6rem;font-size:.78rem;font-weight:700;color:var(--navy)}
-    .rack-photo-card .rpc-qty{font-size:.7rem;font-weight:600;color:var(--accent2);background:#DBEAFE;border-radius:10px;padding:1px 8px}
-    .rack-photo-card .rpc-img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;cursor:pointer;background:#F3F4F6}
-    .rack-photo-card .rpc-empty{width:100%;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:.75rem;background:#F3F4F6;flex-direction:column;gap:.3rem}
-    .rack-photo-card .rpc-actions{padding:.4rem .6rem;display:flex;justify-content:center}
-    .rack-photo-card .rpc-btn{font-size:.72rem;background:var(--border);color:var(--text);border:none;border-radius:6px;padding:.3rem .6rem;cursor:pointer;transition:.15s}
-    .rack-photo-card .rpc-btn:hover{background:var(--accent);color:#fff}
+    /* Compact rack photo chips — same footprint and rhythm as .doc-card, so the
+       two columns of the expanded stock row read as one panel instead of a big
+       4:3 photo box on the left and small chips on the right. */
+    .rack-photo-card{position:relative;background:#fff;border:1px solid var(--border);border-radius:8px;padding:7px 6px;width:84px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:3px;transition:.15s}
+    .rack-photo-card:hover{border-color:var(--accent);box-shadow:0 0 0 2px rgba(59,125,216,.15)}
+    .rack-photo-card .rpc-img{width:52px;height:52px;object-fit:cover;border-radius:5px;border:1px solid var(--border);background:#f3f4f6;display:block;cursor:pointer}
+    .rack-photo-card .rpc-empty{width:52px;height:52px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:1.4rem;background:#f3f4f6;border:1px dashed var(--border);border-radius:5px}
+    .rack-photo-card .rpc-name{font-size:.63rem;font-weight:600;color:var(--text);text-align:center;word-break:break-word;line-height:1.2;max-width:72px}
+    .rack-photo-card .rpc-qty{font-size:.58rem;font-weight:600;color:var(--accent2)}
+    .rack-photo-card .rpc-btn{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--navy);color:#fff;border:2px solid var(--card);font-size:.6rem;cursor:pointer;line-height:1;padding:0;opacity:0;transition:.15s}
+    .rack-photo-card:hover .rpc-btn,.rack-photo-card .rpc-btn:focus{opacity:1}
+    .rack-photo-card .rpc-btn:hover{background:var(--accent)}
+    @media (hover:none){.rack-photo-card .rpc-btn{opacity:1}}
+    [data-theme="dark"] .rack-photo-card{background:#0F172A}
+    /* Rack drawer keeps the large photo — it's a panel about one rack. */
+    .rdp-img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;cursor:pointer;background:#F3F4F6;border-radius:8px}
+    .rdp-empty{width:100%;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:.75rem;background:#F3F4F6;flex-direction:column;gap:.3rem;border-radius:8px}
+    .rdp-btn{font-size:.72rem;background:var(--border);color:var(--text);border:none;border-radius:6px;padding:.3rem .6rem;cursor:pointer;transition:.15s;margin-top:.4rem}
+    .rdp-btn:hover{background:var(--accent);color:#fff}
     /* ── SETTINGS MODAL — vertical sidebar layout ──
        .settings-tab keeps its base look (used by JS toggling .active) but now
        lays out as a full-width sidebar row instead of an inline pill, so a long
@@ -1830,7 +1841,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.14';
+var APP_VERSION = '9.15';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Paid Gmail-scanner add-on: off unless the backend says this installation
@@ -2908,19 +2919,24 @@ function renderStock(){
 
     // Left column: one card per rack holding this material (photo or "+ Add Photo")
     var photosHtml = racks.length
-      ? racks.map(function(rack){
+      ? '<div class="doc-panel" style="padding:0">' + racks.map(function(rack){
           var photo = rackPhotos[rack.toUpperCase()];
           var img = photo
             ? _privImgTag(photo.url, 'class="rpc-img" data-action="preview-media" data-url="'+_he(photo.url)+'" data-label="'+_he(rack)+'" title="Click to view full size"', rack)
-            : '<div class="rpc-empty"><span style="font-size:1.3rem">📷</span><span>No photo yet</span></div>';
+            : '<div class="rpc-empty" title="No photo yet">📷</div>';
+          // Upload moved onto a hover badge: the full-width "+ Add Photo" bar was
+          // most of each card's height, and there is one card per rack.
           var action = canUpload
-            ? '<button class="rpc-btn" data-action="rack-photo-upload" data-rack="'+_he(rack)+'">' + (photo ? '🔄 Replace' : '+ Add Photo') + '</button>'
+            ? '<button class="rpc-btn" data-action="rack-photo-upload" data-rack="'+_he(rack)+'" title="' +
+              (photo ? 'Replace photo' : 'Add photo') + '">' + (photo ? '🔄' : '+') + '</button>'
             : '';
-          return '<div class="rack-photo-card">' +
-            '<div class="rpc-hdr"><span>📦 '+_he(rack)+'</span><span class="rpc-qty">'+s.warehouseLocs[rack]+'</span></div>' +
-            img + (action ? '<div class="rpc-actions">'+action+'</div>' : '') +
+          return '<div class="rack-photo-card" title="' + _he(rack) + ' — ' + s.warehouseLocs[rack] + ' unit(s)">' +
+            img +
+            '<span class="rpc-name">' + _he(rack) + '</span>' +
+            '<span class="rpc-qty">' + s.warehouseLocs[rack] + '</span>' +
+            action +
           '</div>';
-        }).join('')
+        }).join('') + '</div>'
       : '<p style="color:var(--muted);font-size:.8rem;padding:.25rem 0">No warehouse stock right now.</p>';
 
     // Right column: attached documents (invoices, delivery photos, etc.)
@@ -6714,13 +6730,16 @@ function _renderRackDrawerPhoto(){
   var photo = rackPhotos[String(_openRackName || '').toUpperCase()];
   var canUpload = userRole !== 'VIEWER';
 
+  // Own classes, not .rpc-* — those are now the compact 52px chips used in the
+  // expanded stock row. The drawer is the one place a big photo still belongs:
+  // it's a whole panel about a single rack, not one cell in a grid of them.
   var img = photo
-    ? _privImgTag(photo.url, 'class="rpc-img" style="border-radius:8px" data-action="preview-media" data-url="'+_he(photo.url)+'" data-label="'+_he(_openRackName)+'" title="Click to view full size"', _openRackName)
-    : '<div class="rpc-empty" style="border-radius:8px">' +
+    ? _privImgTag(photo.url, 'class="rdp-img" data-action="preview-media" data-url="'+_he(photo.url)+'" data-label="'+_he(_openRackName)+'" title="Click to view full size"', _openRackName)
+    : '<div class="rdp-empty">' +
         '<span style="font-size:1.3rem">📷</span><span>No photo yet</span>' +
       '</div>';
   var action = canUpload
-    ? '<button class="rpc-btn" style="margin-top:.4rem" data-action="rack-photo-upload" data-rack="'+_he(_openRackName)+'">' + (photo ? '🔄 Replace Photo' : '+ Add Photo') + '</button>'
+    ? '<button class="rdp-btn" data-action="rack-photo-upload" data-rack="'+_he(_openRackName)+'">' + (photo ? '🔄 Replace Photo' : '+ Add Photo') + '</button>'
     : '';
 
   box.innerHTML = img + (action ? '<div style="text-align:center">'+action+'</div>' : '');

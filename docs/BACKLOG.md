@@ -39,8 +39,6 @@ here once they ship (the commit message is the record of what changed and why).
 - Installable PWA + offline queue
 - Granular per-role permissions (prerequisite for any costs/pricing module)
 - Live sync between open windows
-- Dashboard photos panel redesign (drop the large per-location photo box, match
-  the compact document chips)
 - `.xlsx` direct import (today: CSV only)
 - Editable column labels (cosmetic)
 - "Save with cancel-X" delayed-confirm animation on movement submit
