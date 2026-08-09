@@ -38,7 +38,6 @@ here once they ship (the commit message is the record of what changed and why).
 - QR / barcode scanning + label printing
 - Installable PWA + offline queue
 - Granular per-role permissions (prerequisite for any costs/pricing module)
-- Supplier/project "not registered — add it?" prompt on ENTRY
 - Live sync between open windows
 - Dashboard photos panel redesign (drop the large per-location photo box, match
   the compact document chips)

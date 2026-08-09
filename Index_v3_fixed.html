@@ -660,6 +660,11 @@
     .doc-photo-thumb img{width:100%;height:100%;object-fit:cover;display:block}
     .doc-photo-thumb .remove-photo{position:absolute;top:1px;right:1px;background:rgba(0,0,0,.65);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:.65rem;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0}
     .doc-group-actions{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+    .cfg-new-hint{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap;margin-top:.3rem;font-size:.72rem;color:var(--muted)}
+    .cfg-new-add{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:.22rem .5rem;font-size:.7rem;font-weight:700;cursor:pointer;font-family:inherit}
+    .cfg-new-add:hover{filter:brightness(1.1)}
+    .cfg-new-add:disabled{opacity:.6;cursor:default}
+    .cfg-new-ok{color:var(--green);font-weight:700}
     .doc-drive-row{display:flex;gap:.4rem;align-items:center;margin-top:.45rem}
     .doc-drive-row input{flex:1;min-width:0;padding:.38rem .6rem;border:1.5px solid var(--border);border-radius:7px;font-size:.78rem;font-family:inherit;background:var(--card);color:var(--text);min-height:36px}
     .doc-drive-row input:focus{outline:none;border-color:var(--accent)}
@@ -1154,7 +1159,7 @@
       </div>
       <div class="field">
         <label>Supplier</label>
-        <input type="text" id="incSupplier" list="supplierList" placeholder="Supplier name">
+        <input type="text" id="incSupplier" list="supplierList" data-cfg-new="suppliers" placeholder="Supplier name">
       </div>
       <div class="field">
         <label>PO #</label>
@@ -1312,7 +1317,7 @@
       </div>
       <div class="field">
         <label>Project</label>
-        <input type="text" id="em_project" list="projList">
+        <input type="text" id="em_project" list="projList" data-cfg-new="projects">
       </div>
       <div class="field">
         <label>GC (General Contractor)</label>
@@ -1320,7 +1325,7 @@
       </div>
       <div class="field">
         <label>Supplier</label>
-        <input type="text" id="em_supplier" list="supplierList">
+        <input type="text" id="em_supplier" list="supplierList" data-cfg-new="suppliers">
       </div>
       <div class="field">
         <label>PO #</label>
@@ -1546,14 +1551,14 @@
     <div class="form-grid" style="margin-top:.75rem">
       <div class="field" id="mSupField">
         <label>Supplier</label>
-        <input type="text" id="mSup" list="supplierList">
+        <input type="text" id="mSup" list="supplierList" data-cfg-new="suppliers">
         <datalist id="supplierList"></datalist>
       </div>
       <div class="field" id="mGCField"><label>GC</label><input type="text" id="mGC"></div>
       <div class="field" id="mPOField"><label>PO#</label><input type="text" id="mPO"></div>
       <div class="field" id="mProjField">
         <label>Project / Client</label>
-        <input type="text" id="mProj" list="projList">
+        <input type="text" id="mProj" list="projList" data-cfg-new="projects">
         <datalist id="projList"></datalist>
       </div>
       <div class="field" id="mRespFieldWrap">
@@ -1804,7 +1809,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.12';
+var APP_VERSION = '9.13';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Paid Gmail-scanner add-on: off unless the backend says this installation
@@ -4291,10 +4296,10 @@ function _matLineTpl(n){
     // when "All materials share the same..." is unchecked (toggleEntrySameInfo()).
     '<div class="mat-per-info" id="mat-perinfo-' + n + '" style="display:none;margin-top:.5rem;padding-top:.5rem;border-top:1px dashed var(--border)">' +
       '<div class="mat-line-grid">' +
-        '<div class="field"><label class="mat-line-lbl-sm">Supplier</label><input type="text" id="mat-sup-' + n + '" list="supplierList"></div>' +
+        '<div class="field"><label class="mat-line-lbl-sm">Supplier</label><input type="text" id="mat-sup-' + n + '" list="supplierList" data-cfg-new="suppliers"></div>' +
         '<div class="field"><label class="mat-line-lbl-sm">GC</label><input type="text" id="mat-gc-' + n + '"></div>' +
         '<div class="field"><label class="mat-line-lbl-sm">PO#</label><input type="text" id="mat-po-' + n + '"></div>' +
-        '<div class="field"><label class="mat-line-lbl-sm">Project / Client</label><input type="text" id="mat-proj-' + n + '" list="projList"></div>' +
+        '<div class="field"><label class="mat-line-lbl-sm">Project / Client</label><input type="text" id="mat-proj-' + n + '" list="projList" data-cfg-new="projects"></div>' +
         '<div class="field"><label class="mat-line-lbl-sm">PM</label><input type="text" id="mat-pm-' + n + '" list="pmNameList" placeholder="Name of project manager"></div>' +
         '<div class="field"><label class="mat-line-lbl-sm">Received By</label><input type="text" id="mat-resp-' + n + '"></div>' +
       '</div>' +
@@ -6217,11 +6222,106 @@ function updateMatList(){
   if (dl2) dl2.innerHTML = dl.innerHTML;
 }
 
+// ── "That supplier/project isn't on your list — add it?" ─────────────────────
+// Typing a value that isn't registered has always been allowed, and the
+// movement saves fine either way — the value is just free text on that row.
+// What was missing is that it never made it onto the master list, so the next
+// person typing the same supplier got no suggestion and could easily spell it
+// differently. This offers to register it right there instead of making
+// someone stop, go to Settings, add it, and come back.
+//
+// Only offered to ADMINs, because updateConfig is ADMIN-gated server-side —
+// showing the prompt to a warehouse user would just produce a permission error
+// after they clicked it.
+function _cfgKnownValues(type){
+  var fromConfig = (type === 'suppliers' ? config.suppliers : config.projects) || [];
+  var fromRows = movements.map(function(m){
+    return type === 'suppliers' ? m.supplier : m.project;
+  }).filter(Boolean);
+  var set = {};
+  fromConfig.concat(fromRows).forEach(function(v){
+    var k = String(v || '').trim().toUpperCase();
+    if (k) set[k] = true;
+  });
+  return set;
+}
+
+function _cfgHintFor(input){
+  var next = input.nextElementSibling;
+  return (next && next.classList && next.classList.contains('cfg-new-hint')) ? next : null;
+}
+
+function _clearCfgHint(input){
+  var h = _cfgHintFor(input);
+  if (h) h.remove();
+}
+
+function _maybeOfferCfgAdd(input){
+  var type = input.getAttribute('data-cfg-new');
+  if (!type) return;
+  _clearCfgHint(input);
+  if (userRole !== 'ADMIN') return;
+
+  var val = (input.value || '').trim();
+  if (!val) return;
+  if (_cfgKnownValues(type)[val.toUpperCase()]) return;   // already known — nothing to offer
+
+  var label = type === 'suppliers' ? 'supplier' : 'project';
+  var hint = document.createElement('div');
+  hint.className = 'cfg-new-hint';
+  hint.innerHTML =
+    '<span>New ' + label + ' — not on your list yet.</span>' +
+    '<button type="button" class="cfg-new-add">+ Add it</button>';
+  hint.querySelector('.cfg-new-add').addEventListener('click', function(){
+    _cfgAddInline(type, val, hint);
+  });
+  input.insertAdjacentElement('afterend', hint);
+}
+
+function _cfgAddInline(type, value, hintEl){
+  var btn = hintEl.querySelector('.cfg-new-add');
+  if (btn){ btn.disabled = true; btn.textContent = 'Adding…'; }
+  google.script.run
+    .withSuccessHandler(function(){
+      // Keep the local copy in step so the hint doesn't reappear on the next
+      // blur, and so the datalist offers it immediately.
+      var list = type === 'suppliers'
+        ? (config.suppliers = config.suppliers || [])
+        : (config.projects  = config.projects  || []);
+      if (list.indexOf(value) === -1) list.push(value);
+      refreshDropdowns();
+      hintEl.innerHTML = '<span class="cfg-new-ok">✓ Added to your ' +
+        (type === 'suppliers' ? 'suppliers' : 'projects') + '</span>';
+      setTimeout(function(){ if (hintEl.parentNode) hintEl.remove(); }, 2500);
+    })
+    .withFailureHandler(function(e){
+      if (btn){ btn.disabled = false; btn.textContent = '+ Add it'; }
+      showToast('Could not add: ' + ((e && e.message) || e), 'err', 5000);
+    })
+    .processMovement('updateConfig', _h({ type: type, op: 'add', newValue: value }));
+}
+
+// 'change' rather than 'input': it fires on blur and on picking a datalist
+// suggestion, so the prompt appears once the value is settled instead of
+// flickering on every keystroke.
+document.addEventListener('change', function(e){
+  var el = e.target;
+  if (el && el.getAttribute && el.getAttribute('data-cfg-new')) _maybeOfferCfgAdd(el);
+});
+document.addEventListener('focusin', function(e){
+  var el = e.target;
+  if (el && el.getAttribute && el.getAttribute('data-cfg-new')) _clearCfgHint(el);
+});
+
 function refreshDropdowns(){
   updateMatList();
 
   var pd = document.getElementById('projList'); pd.innerHTML = '';
-  Array.from(new Set(movements.map(function(m){ return m.project; }).filter(Boolean))).sort()
+  // config.projects included deliberately: a project configured in Settings but
+  // not yet used in any movement was missing from this list entirely, so the
+  // suggestions only ever showed projects that already had history.
+  Array.from(new Set((config.projects || []).concat(
+    movements.map(function(m){ return m.project; }).filter(Boolean)))).sort()
     .forEach(function(p){ var o = document.createElement('option'); o.value = p; pd.appendChild(o); });
 
   var rd1 = document.getElementById('rackList'); rd1.innerHTML = '';
