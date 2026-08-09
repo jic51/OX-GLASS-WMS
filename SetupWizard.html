@@ -471,12 +471,15 @@ function checkLink(){
         box.innerHTML =
           '<div class="link-box"><input type="text" id="wLinkUrl" readonly value="'+_escAttr(res.url)+'" onclick="this.select()">'+
           '<button class="btn btn-sm btn-copy" onclick="copyLink(document.getElementById(\'wLinkUrl\').value,this)">Copy</button></div>'+
-          '<div class="hint">Bookmark this — it is your system’s permanent address. Share it with your team.<br>'+
-            'Just deployed, or this doesn\'t look right? <a href="#" onclick="checkLink();return false;" style="color:#3B7DD8">🔄 Check again</a>'+
+          '<div class="hint">'+
+            (res.saved
+              ? '✓ This is the link you saved — it is stored and will be here next time you open setup.<br>'
+              : 'Bookmark this — it is your system’s permanent address. Share it with your team.<br>')+
+            'Doesn\'t open? <a href="#" onclick="checkLink();return false;" style="color:#3B7DD8">🔄 Check again</a>'+
             ' · <a href="#" onclick="showLinkOverride();return false;" style="color:#3B7DD8">✏️ Paste the correct link</a></div>'+
           '<div id="wLinkOverride" style="display:none;margin-top:.6rem">'+
-            '<input type="text" id="wLinkOverrideInput" placeholder="Paste the exact link Google showed after deploying">'+
-            '<button class="btn btn-sm" style="margin-top:.4rem" onclick="applyLinkOverride()">Use this link instead</button>'+
+            '<input type="text" id="wLinkOverrideInput" placeholder="https://script.google.com/…/exec">'+
+            '<button class="btn btn-sm" style="margin-top:.4rem" id="wLinkOverrideBtn" onclick="applyLinkOverride()">Save this link</button>'+
           '</div>'+
           '<button class="btn btn-primary" style="margin-top:.9rem;width:100%" onclick="google.script.host.close()">Done — close this window</button>';
       } else {
@@ -489,13 +492,13 @@ function checkLink(){
     })
     .checkDeploymentReady();
 }
-// Safety valve for a known Apps Script rough edge: ScriptApp.getService().getUrl()
-// can return an empty/stale value for a beat after a brand-new deployment is
-// created, or (rarer, on a freshly-copied bound script) not match the link
-// Google actually showed the owner in the Deploy dialog. Rather than trust our
-// own read of it blindly, let the owner override the display with what they
-// see with their own eyes — this is purely local, nothing is sent back to the
-// server, it only changes what gets copied/bookmarked from this screen.
+// On a Sheet copied from an already-deployed one, ScriptApp.getService().getUrl()
+// can hand back a URL built from the ORIGINAL script's deployment — a dead link,
+// on a copy that has no deployment of its own. The owner can see the real URL in
+// Google's Deploy dialog, so let them correct it, and PERSIST that correction
+// server-side (Script Properties) so it survives closing the wizard. An earlier
+// version only patched the textbox, which is why reopening setup showed the same
+// dead link all over again.
 function showLinkOverride(){
   var el = document.getElementById('wLinkOverride');
   if (el) el.style.display = '';
@@ -503,9 +506,20 @@ function showLinkOverride(){
 function applyLinkOverride(){
   var v = (document.getElementById('wLinkOverrideInput').value||'').trim();
   if (!v) return;
-  var inp = document.getElementById('wLinkUrl');
-  if (inp) inp.value = v;
-  document.getElementById('wLinkOverride').style.display = 'none';
+  var btn = document.getElementById('wLinkOverrideBtn');
+  if (btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
+  _err('');
+  google.script.run
+    .withSuccessHandler(function(){
+      // Re-read from the server rather than trusting the local value, so the
+      // screen shows exactly what was stored.
+      checkLink();
+    })
+    .withFailureHandler(function(e){
+      if (btn){ btn.disabled = false; btn.textContent = 'Save this link'; }
+      _err((e && e.message) || 'Could not save that link.');
+    })
+    .saveWebAppUrl(v);
 }
 
 var _copyResetTimer = null;

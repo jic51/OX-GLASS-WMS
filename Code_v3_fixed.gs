@@ -26,13 +26,14 @@
 // from the browser, and each authenticates for itself —
 //   doGet, getInitialData, processMovement, getPrivateFileData,
 //   getPrivateFileThumbnail, heartbeat, pollLogin, reportIssue,
-//   extractDocumentInfo, getSetupState, saveSetupWizard, checkDeploymentReady
+//   extractDocumentInfo, getSetupState, saveSetupWizard, checkDeploymentReady,
+//   saveWebAppUrl
 // — plus the menu/trigger entry points, gated by getUi() / requireOwnerContext_().
 
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.9';
+var APP_VERSION = '9.10';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -414,19 +415,49 @@ function resolveOwnFile_(fileId, token, callerName) {
   return file;
 }
 
-// Walks up a file's parent folders looking for the app's own root folder by
-// name. Name-based rather than ID-based because getOrCreateFolder_() caches a
-// separate Script Property per full subfolder path (e.g. one for
+// Every root folder name this installation is allowed to serve files from.
+//
+// It is a LIST, not just the current name, because the current name can change
+// out from under files that were already uploaded. Concretely, the bug this
+// fixes: Script Properties do NOT survive "Make a copy" of a Sheet, but the
+// sheet DATA does. So on a copy, FOLDER_PREFIX comes back empty, the wizard
+// sets it fresh from the company name (e.g. Acopio_OX_Glass_LLC), and
+// docsFolderName_() starts returning Acopio_OX_Glass_LLC_Docs — while every
+// DOC_LINKS value copied along with the rows still points at files sitting in
+// the OLD folder (OX_WMS_v3_Docs). The boundary check then rejected literally
+// every existing document and photo as "outside app folder", which is exactly
+// what the logs showed. Keeping the previous names accepted is what makes an
+// upgrade/copy stop orphaning its own history.
+function acceptedDocFolderNames_() {
+  var names = [docsFolderName_()];
+  // The pre-wizard default, hardcoded for the same reason companySettings_()
+  // defaults to it: installations older than the wizard have all their files
+  // under this name and nothing recorded in history to find them by.
+  if (names.indexOf('OX_WMS_v3_Docs') === -1) names.push('OX_WMS_v3_Docs');
+  var hist = PropertiesService.getScriptProperties().getProperty('FOLDER_PREFIX_HISTORY') || '';
+  hist.split(',').forEach(function(p){
+    p = String(p || '').trim();
+    if (!p) return;
+    var n = p + '_Docs';
+    if (names.indexOf(n) === -1) names.push(n);
+  });
+  return names;
+}
+
+// Walks up a file's parent folders looking for one of this app's own root
+// folders by name. Name-based rather than ID-based because getOrCreateFolder_()
+// caches a separate Script Property per full subfolder path (e.g. one for
 // "<prefix>_Docs/RackPhotos/A1A"), so there's no single cached ID for the bare
 // root to compare against — walking up and checking the name is simpler and
 // just as safe, since nothing in the upload path lets a caller choose where a
 // file gets created.
 function isFileWithinAppFolder_(file) {
+  var accepted = acceptedDocFolderNames_();
   var folders = file.getParents();
   var depth = 0;
   while (folders.hasNext() && depth < 8) {
     var folder = folders.next();
-    if (folder.getName() === docsFolderName_()) return true;
+    if (accepted.indexOf(folder.getName()) !== -1) return true;
     folders = folder.getParents();
     depth++;
   }
@@ -3634,10 +3665,39 @@ function showSetupWizardDialog() {
 // web app by hand. Returns the live URL if a deployment exists, or '' if not —
 // the dialog uses that to tell them plainly whether it worked instead of
 // guessing.
+//
+// A URL the owner saved by hand WINS over ScriptApp.getService().getUrl().
+// That ordering is deliberate, not a preference: on a Sheet copied from an
+// already-deployed one, getUrl() has been observed returning a URL carrying the
+// ORIGINAL script's deployment ID — a link that 404s, on a copy whose own Apps
+// Script project has no deployment at all. There is no API to ask "is this URL
+// actually live", so the owner (who can see the real one in the Deploy dialog)
+// is the more reliable source, and 'saved' tells the wizard to say so.
 function checkDeploymentReady() {
   requireOwnerContext_();
-  try { return { url: ScriptApp.getService().getUrl() || '' }; }
-  catch (e) { return { url: '' }; }
+  var p = PropertiesService.getScriptProperties();
+  var saved = String(p.getProperty('WEB_APP_URL') || '').trim();
+  if (saved) return { url: saved, saved: true };
+  try { return { url: ScriptApp.getService().getUrl() || '', saved: false }; }
+  catch (e) { return { url: '', saved: false }; }
+}
+
+// Persists the URL the owner pasted from Google's Deploy dialog, so it survives
+// closing and reopening the wizard. Previously the override lived only in the
+// dialog's DOM, which meant reopening setup showed the same dead link again —
+// the correction was thrown away the moment the window closed.
+function saveWebAppUrl(url) {
+  requireOwnerContext_();
+  var u = String(url || '').trim();
+  if (!u) {
+    PropertiesService.getScriptProperties().deleteProperty('WEB_APP_URL');
+    return { url: '', saved: false };
+  }
+  if (!/^https:\/\/script\.google\.com\/.*\/exec(\?.*)?$/.test(u)) {
+    throw new Error('That does not look like a web app link. It should start with https://script.google.com/ and end in /exec');
+  }
+  PropertiesService.getScriptProperties().setProperty('WEB_APP_URL', u);
+  return { url: u, saved: true };
 }
 
 // ─── PROGRAMMATIC DEPLOYMENT — ADVANCED / OWNER-ONLY ─────────────────────────
