@@ -372,22 +372,45 @@ function saveSetup(){
 }
 
 function renderPublishStep(){
+  document.getElementById('wSteps').innerHTML = STEPS.map(function(x,i){ return '<div class="done"></div>'; }).join('');
   document.getElementById('wTitle').textContent = 'One last step — publish your app';
   document.getElementById('wSub').textContent = 'This is the only technical step, and only the owner (you) does it, once.';
   var next = document.getElementById('wNext');
   next.textContent = "✓ I did it — show my link"; next.onclick = checkLink;
   document.getElementById('wBack').style.display = 'none';
+  document.getElementById('wSkip').style.display = 'none';
   document.getElementById('wBody').innerHTML =
     '<div class="steps-list">'+
-      '<b>1.</b> Menu bar above: <b>Extensions → Apps Script</b><br>'+
-      '<b>2.</b> Top right, blue button: <b>Deploy → New deployment</b><br>'+
-      '<b>3.</b> Click the ⚙️ gear next to "Select type" → choose <b>Web app</b><br>'+
-      '<b>4.</b> Set <b>Execute as: Me</b>, and <b>Who has access: Anyone with a Google account</b><br>'+
-      '<b>5.</b> Click <b>Deploy</b>, then <b>Authorize access</b> and approve the permissions<br>'+
-      '<b>6.</b> Come back to this tab and click the button below'+
+      '<b>1.</b> First, name your project: top-left of the Apps Script editor, click <b>"Untitled project"</b> and type your company name — this is what your team sees on the permission screen.<br>'+
+      '<b>2.</b> Menu bar above: <b>Extensions → Apps Script</b> (opens in a new tab — this tab stays open, come back to it later)<br>'+
+      '<b>3.</b> Top right, blue button: <b>Deploy → New deployment</b><br>'+
+      '<b>4.</b> Click the ⚙️ gear next to "Select type" → choose <b>Web app</b><br>'+
+      '<b>5.</b> Set <b>Execute as: Me</b>, and <b>Who has access: Anyone with a Google account</b><br>'+
+      '<b>6.</b> Click <b>Deploy</b>, then <b>Authorize access</b> and approve the permissions<br>'+
+      '<b>7.</b> Come back to this tab and click the button below'+
     '</div>'+
-    '<div class="hint">You may see "Google hasn\'t verified this app" — that is expected for software you just installed for yourself. Click <b>Advanced</b>, then <b>Go to (your project name)</b> to continue.</div>'+
-    '<div id="wLinkResult"></div>';
+    '<div class="hint">You may see "Google hasn\'t verified this app" — that is expected for software you just installed for yourself. Click <b>Advanced</b>, then <b>Go to (your project name)</b> to continue. You may also see a note about a missing Privacy Policy link — also expected, and not something you need to fix.</div>'+
+    '<div id="wLinkResult"></div>'+
+    '<div style="margin-top:1.1rem;text-align:center"><a href="#" onclick="reconfigure();return false;" style="font-size:.78rem;color:#6B7280">Need to change something you already entered? Reconfigure</a></div>';
+}
+
+// Reached this dialog after setup was already saved — either earlier in this
+// same session (just finished all 5 steps) or on reopening the dialog later
+// (which used to restart the whole wizard from a blank slate, discarding
+// nothing on the SHEET but making it look like everything had to be re-typed,
+// and risking a genuine wipe if the customer clicked through without
+// re-entering categories/locations — see the guards in saveSetupWizard).
+// Skips straight to the one step that can still be pending: publishing.
+function showAlreadyConfigured(){
+  savedOk = true;
+  step = STEPS.length - 1;
+  renderPublishStep();
+}
+
+function reconfigure(){
+  savedOk = false;
+  step = 0;
+  render();
 }
 
 function checkLink(){
@@ -418,10 +441,13 @@ function copyLink(url){
   document.body.appendChild(inp); inp.select(); document.execCommand('copy'); document.body.removeChild(inp);
 }
 
-// getInitialData-style bootstrap: pre-fill the admin email with whoever this
-// dialog is running as, same way the web app wizard does.
+// Bootstrap. Two jobs: pre-fill the admin email with whoever this dialog is
+// running as, and — the important one — check whether setup was already
+// completed (possibly in an earlier opening of this same dialog) so reopening
+// resumes at publishing instead of silently restarting data entry from zero.
 google.script.run.withSuccessHandler(function(state){
   if (state && state.ownerEmail) W.adminEmail = state.ownerEmail;
+  if (state && state.needsSetup === false) { showAlreadyConfigured(); return; }
   render();
 }).withFailureHandler(function(){ render(); }).getSetupState();
 </script>

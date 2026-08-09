@@ -31,7 +31,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.2';
+var APP_VERSION = '9.3';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -225,6 +225,17 @@ function saveSetupWizard(data) {
   p.setProperty('COMPANY_NAME', companyName);
   p.setProperty('COMPANY_DOMAIN', String(data.companyDomain || '').trim().replace(/^@/, ''));
 
+  // The spreadsheet file itself still said "Untitled spreadsheet" or whatever
+  // the customer typed before running setup — fix that too, not just the data
+  // inside it. This does NOT change the Apps Script project's own name (the one
+  // shown on Google's "trust this app" screen) — that lives on the hidden
+  // per-copy Cloud project and can only be changed by hand in the Apps Script
+  // editor, which is why the publish step also tells them to do it there.
+  try {
+    var wanted = companyName + ' — ' + PRODUCT_NAME;
+    if (ss.getName() !== wanted) ss.rename(wanted);
+  } catch (e) {}
+
   // Only ever set once. Re-running the wizard must not rename the folders that
   // already hold this company's documents.
   if (!p.getProperty('FOLDER_PREFIX')) {
@@ -240,9 +251,14 @@ function saveSetupWizard(data) {
 
   var cfg = ss.getSheetByName(SHEETS.CONFIG);
   if (cfg) {
-    if (data.categories) writeConfigColumn_(cfg, 1, data.categories);
-    if (data.suppliers)  writeConfigColumn_(cfg, 2, data.suppliers);
-    if (data.projects)   writeConfigColumn_(cfg, 0, data.projects);
+    // Guarded on .length, not just truthiness — an empty array [] is truthy in
+    // JS. Re-running the wizard (e.g. after a browser refresh mid-flow, or just
+    // to reconfigure one thing) with a step the customer clicked through
+    // without re-entering anything must NOT wipe out what they configured the
+    // first time.
+    if (data.categories && data.categories.length) writeConfigColumn_(cfg, 1, data.categories);
+    if (data.suppliers  && data.suppliers.length)  writeConfigColumn_(cfg, 2, data.suppliers);
+    if (data.projects   && data.projects.length)   writeConfigColumn_(cfg, 0, data.projects);
     if (data.locations && data.locations.length) {
       writeConfigColumn_(cfg, 3, data.locations.map(function(l){ return l.name; }));
       writeConfigColumn_(cfg, 4, data.locations.map(function(l){ return l.type || 'RACK'; }));
@@ -3514,18 +3530,27 @@ function checkNotifications_(ss, data, moveType, qty, userEmail) {
 function onOpen() {
   var cs = companySettings_();
 
+  // "Advanced" groups tools a brand-new customer never needs: two are one-time
+  // migration cleanups for data that only exists on installations that predate
+  // the fix each one addresses (a fresh copy has nothing for either to do —
+  // see their own "nothing to clean up" messages), and the third only works at
+  // all on a standard Google Cloud project, which is us, not a typical
+  // customer. Kept reachable rather than deleted, since OX Glass's own
+  // installation still needs them.
+  var advanced = SpreadsheetApp.getUi().createMenu('🔧 Advanced')
+    .addItem('🔒 Revoke Public Sharing on Existing Files (run once)', 'menuRevokePublicSharing')
+    .addItem('🧹 Normalize Status Column (run once)', 'menuNormalizeStatus')
+    .addItem('Push Update Live (owner, standard Cloud project only)', 'menuActivateWebApp');
+
   SpreadsheetApp.getUi()
     .createMenu('🏭 ' + PRODUCT_NAME)
     .addItem(cs.setupComplete ? '⚙️ Company Settings' : '🚀 Set Up ' + PRODUCT_NAME + ' (start here)', 'showSetupWizardDialog')
     .addSeparator()
-    .addItem('Run Reconciliation', 'menuReconcile')
     .addItem('Open WMS App',       'menuOpenApp')
-    .addSeparator()
-    .addItem('🔒 Revoke Public Sharing on Existing Files (run once)', 'menuRevokePublicSharing')
     .addItem('🗄 Backup Now / Enable Daily Backup', 'menuRunBackupNow')
-    .addItem('🧹 Normalize Status Column (run once)', 'menuNormalizeStatus')
+    .addItem('Run Reconciliation', 'menuReconcile')
     .addSeparator()
-    .addItem('⚙️ Advanced — Push Update Live (owner only)', 'menuActivateWebApp')
+    .addSubMenu(advanced)
     .addToUi();
 
   // Fresh copy: open the wizard automatically instead of waiting for the owner

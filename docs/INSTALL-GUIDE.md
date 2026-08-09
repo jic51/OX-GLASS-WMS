@@ -62,18 +62,26 @@ Al final del asistente, te va a pedir **publicar tu sistema**. Es el único
 paso donde vas a ver algo parecido a "código", y el asistente te lleva de la
 mano:
 
-1. **Extensiones → Apps Script**
-2. Botón azul **Implementar (Deploy) → Nueva implementación**
-3. Engranaje ⚙️ junto a "Seleccionar tipo" → **Aplicación web**
-4. **Ejecutar como: Yo** · **Quién tiene acceso: Cualquier usuario con una
+1. **Extensiones → Apps Script** (se abre en una pestaña nueva; esta pestaña
+   se queda abierta, regresa a ella después).
+2. Arriba a la izquierda dice **"Proyecto sin título"** — haz clic y ponle el
+   nombre de tu empresa. Esto es lo que tu equipo va a ver en la pantalla de
+   permisos, así que vale la pena hacerlo antes de publicar.
+3. Botón azul **Implementar (Deploy) → Nueva implementación**
+4. Engranaje ⚙️ junto a "Seleccionar tipo" → **Aplicación web**
+5. **Ejecutar como: Yo** · **Quién tiene acceso: Cualquier usuario con una
    cuenta de Google**
-5. **Implementar**, luego **Autorizar acceso**
+6. **Implementar**, luego **Autorizar acceso**
 
 > **¿Sale "Google no ha verificado esta aplicación"?** Es normal — le estás
 > dando permiso a tu propio sistema, no a una app pública. Clic en
 > **Configuración avanzada → Ir a [tu proyecto] (no seguro)**.
+>
+> **¿Sale un aviso de que falta la Política de Privacidad?** También es
+> normal — es un límite de Google para software personal como este, no algo
+> que tengas que arreglar.
 
-6. Regresa a la pestaña del asistente y da clic en **"Ya lo hice — muéstrame
+7. Regresa a la pestaña del asistente y da clic en **"Ya lo hice — muéstrame
    mi link"**. El sistema verifica que funcionó y te entrega tu dirección web
    permanente.
 
@@ -112,6 +120,12 @@ de arriba y presiona ▶ **Ejecutar**. Ahí aparece la ventana de autorización.
 **No me llegan los correos de notificación**
 Cuentas de Gmail normales: límite de 100 correos/día. Cuentas de Google
 Workspace: 1,500/día.
+
+**Cerré la ventana del asistente antes de terminar — ¿tengo que empezar de
+nuevo?**
+No. Vuelve a abrirla desde el menú **🏭 Acopio**: si ya guardaste tu
+configuración (llegaste hasta el paso de publicar), la ventana te lleva
+directo ahí de nuevo, sin pedirte los datos otra vez.
 
 ---
 
