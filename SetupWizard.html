@@ -60,6 +60,8 @@
   .steps-list code{background:#E5E7EB;border-radius:4px;padding:1px 5px;font-size:.78rem}
   .link-box{display:flex;gap:.5rem;align-items:center;background:#D1FAE5;border-radius:8px;padding:.7rem .9rem;margin-top:.75rem}
   .link-box input{flex:1;border:none;background:transparent;font-size:.82rem;color:#065F46;font-family:monospace}
+  .btn-copy{transition:background-color .25s ease,color .25s ease,border-color .25s ease}
+  .btn-copy.copied{background:#059669;border-color:#059669;color:#fff}
 </style>
 </head>
 <body>
@@ -423,7 +425,7 @@ function checkLink(){
       if (res && res.url){
         box.innerHTML =
           '<div class="link-box"><input type="text" readonly value="'+_escAttr(res.url)+'" onclick="this.select()">'+
-          '<button class="btn btn-sm" onclick="copyLink(\''+_escAttr(res.url)+'\')">Copy</button></div>'+
+          '<button class="btn btn-sm btn-copy" onclick="copyLink(\''+_escAttr(res.url)+'\',this)">Copy</button></div>'+
           '<div class="hint">Bookmark this — it is your system’s permanent address. Share it with your team.</div>'+
           '<button class="btn btn-primary" style="margin-top:.9rem;width:100%" onclick="google.script.host.close()">Done — close this window</button>';
       } else {
@@ -436,9 +438,23 @@ function checkLink(){
     })
     .checkDeploymentReady();
 }
-function copyLink(url){
+var _copyResetTimer = null;
+function copyLink(url, btn){
   var inp = document.createElement('input'); inp.value = url;
   document.body.appendChild(inp); inp.select(); document.execCommand('copy'); document.body.removeChild(inp);
+  if (!btn) return;
+  // Swap to a checkmark for 2s, then fade back — the CSS transition on
+  // .btn-copy (background/color) is what makes both the in and the out feel
+  // smooth instead of an instant flip in either direction.
+  clearTimeout(_copyResetTimer);
+  var original = btn.dataset.label || btn.textContent;
+  btn.dataset.label = original;
+  btn.textContent = '✓ Copied';
+  btn.classList.add('copied');
+  _copyResetTimer = setTimeout(function(){
+    btn.textContent = original;
+    btn.classList.remove('copied');
+  }, 2000);
 }
 
 // Bootstrap. Two jobs: pre-fill the admin email with whoever this dialog is
