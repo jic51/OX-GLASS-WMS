@@ -23,6 +23,8 @@
     /* ── TOPBAR ── */
     .topbar{background:var(--navy);padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;border-bottom:3px solid var(--accent);flex-wrap:wrap;gap:10px}
     .topbar h1{color:#fff;font-size:1.1rem;font-weight:700}
+    .topbar-brand{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .app-logo{height:30px;max-width:150px;object-fit:contain;border-radius:4px;flex-shrink:0}
     .topbar-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
     .nav{display:flex;gap:2px;background:var(--steel);padding:3px;border-radius:8px;flex-wrap:wrap}
     .nav button{background:none;border:none;color:rgba(255,255,255,.6);padding:.45rem 1rem;border-radius:6px;font-size:.8rem;font-weight:600;transition:.2s}
@@ -779,7 +781,8 @@
 
 <!-- ══ TOPBAR ══════════════════════════════════════════════════════════════════ -->
 <div class="topbar">
-  <div>
+  <div class="topbar-brand">
+    <img id="appLogo" class="app-logo" alt="" style="display:none">
     <h1 id="appTitle">Warehouse</h1>
     <div class="author-badge">
       <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
@@ -1798,7 +1801,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.10';
+var APP_VERSION = '9.11';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Paid Gmail-scanner add-on: off unless the backend says this installation
@@ -2423,6 +2426,25 @@ function applyCompanyBranding(c){
   }
   var badge = document.getElementById('poweredByBadge');
   if (badge) badge.textContent = c.productName || PRODUCT;
+
+  // The logo was being uploaded, stored and even sent to the browser as
+  // c.logoId — and then nothing ever rendered it, which is why setting one in
+  // the wizard appeared to do nothing at all. It's a private Drive file inside
+  // the app's own folder, so it resolves through the same throttled fetch as
+  // every other private image rather than a public <img src>.
+  var logo = document.getElementById('appLogo');
+  if (logo && c.logoId && logo.dataset.loadedId !== c.logoId){
+    logo.dataset.loadedId = c.logoId;
+    _fetchPrivateFile(c.logoId, function(dataUrl){
+      if (!dataUrl) return;               // leave it hidden rather than show a broken image
+      logo.src = dataUrl;
+      logo.alt = name || '';
+      logo.style.display = '';
+    }, 'full');                            // full file: a logo is already tiny, and the
+                                           // thumbnail would drop its transparency
+  } else if (logo && !c.logoId){
+    logo.style.display = 'none';
+  }
 }
 
 // ── Report a Problem (floating button) ──────────────────────────────────────
@@ -3049,7 +3071,7 @@ function _privPump(){
           if (res) {
             _fileDataCache[job.key] = res;
             _privDeliver(job.key);
-          } else if (job.kind === 'thumb') {
+          } else if (job.kind === 'thumb' || job.kind === 'big') {
             // Drive has no thumbnail for this file (yet) — most often a file
             // uploaded moments ago, before Drive finished generating one, or a
             // type it doesn't render a thumbnail for at all. Fall back to the
@@ -3076,7 +3098,12 @@ function _privPump(){
           _privLastErr[job.key] = (err && err.message) ? err.message : String(err || 'Unknown error');
           _privActive--; _privDeliver(job.key); _privPump();
         })
-        [job.kind === 'thumb' ? 'getPrivateFileThumbnail' : 'getPrivateFileData'](job.id, _sessionToken || null);
+        // 'thumb' = Drive's own small render (grid cells). 'big' = the same
+        // render asked for at preview size — the only way to show a PDF's page 1
+        // inside this app, since the browser's PDF plugin can't run in Apps
+        // Script's sandboxed frame. 'full' = the actual file bytes.
+        [job.kind === 'full' ? 'getPrivateFileData' : 'getPrivateFileThumbnail'](
+          job.id, _sessionToken || null, job.kind === 'big' ? 1600 : 0);
     })(job);
   }
 }
@@ -3092,7 +3119,7 @@ function _privDeliver(key){
 }
 
 function _fetchPrivateFile(rawUrlOrId, done, kind){
-  kind = kind === 'thumb' ? 'thumb' : 'full';
+  kind = (kind === 'thumb' || kind === 'big') ? kind : 'full';
   var id = extractDriveId(rawUrlOrId);
   if (!id) { _privLater(done, null, 'Invalid file reference.'); return; }
   var key = kind + ':' + id;
@@ -6488,29 +6515,44 @@ function openMediaPreview(url, label){
     }
 
     if (blob.type === 'application/pdf') {
-      // <embed> renders as a black rectangle here. The whole app runs inside the
-      // sandboxed googleusercontent.com iframe Apps Script serves HtmlService
-      // pages in, and Chrome's built-in PDF viewer is a plugin — plugins do not
-      // get instantiated in that sandbox. The blob itself is fine: ↗ Open shows
-      // the same URL correctly, because a top-level tab is not sandboxed.
+      // Chrome's built-in PDF viewer is a plugin, and plugins are not
+      // instantiated inside the sandboxed googleusercontent.com frame Apps
+      // Script serves this page in — so <embed> painted black and <iframe>
+      // painted the broken-file icon. Neither can be fixed from here.
       //
-      // <iframe> is a different mechanism and does render in some browsers, so
-      // it's worth attempting — but we cannot detect from script whether it
-      // actually painted (no error fires either way). So the hint below is
-      // always shown rather than only on failure: better a redundant line of
-      // text than a user staring at a black box with no idea what to do.
+      // What DOES work is the same mechanism the grid thumbnails already use:
+      // Drive renders page 1 server-side, so we ask for that render at preview
+      // size and show it as a plain <img>. It's page 1 only, not the whole
+      // document — hence the hint pointing at ↗ Open for the rest — but it
+      // beats a broken box, and it's a real look at the actual page.
       body.style.flexDirection = 'column';
       var hint = document.createElement('div');
       hint.style.cssText = 'flex-shrink:0;width:100%;background:#1f2937;color:#e5e7eb;' +
         'font-size:.78rem;padding:.5rem .9rem;text-align:center';
-      hint.innerHTML = 'PDF not showing below? Google\'s viewer is blocked inside this ' +
-        'window — use <strong>↗ Open</strong> above to see it full size.';
+      hint.innerHTML = 'Preview of page 1 — use <strong>↗ Open</strong> above for the full document.';
       body.appendChild(hint);
 
-      var frame = document.createElement('iframe');
-      frame.src = _mediaPreviewBlobUrl;
-      frame.style.cssText = 'width:100%;flex:1;min-height:0;border:none;background:#fff';
-      body.appendChild(frame);
+      var holder = document.createElement('div');
+      holder.style.cssText = 'flex:1;min-height:0;width:100%;display:flex;align-items:center;' +
+        'justify-content:center;overflow:auto;padding:.75rem';
+      holder.innerHTML = '<p style="color:#fff">Rendering preview…</p>';
+      body.appendChild(holder);
+
+      _fetchPrivateFile(url, function(bigUrl){
+        if (bigUrl) {
+          holder.innerHTML = '';
+          var pimg = document.createElement('img');
+          pimg.src = bigUrl;
+          pimg.alt = label || '';
+          pimg.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;' +
+            'background:#fff;border-radius:4px';
+          holder.appendChild(pimg);
+        } else {
+          holder.innerHTML = '<p style="color:#fff;text-align:center;padding:1.5rem">' +
+            'No preview available for this PDF.<br>' +
+            '<span style="opacity:.7;font-size:.8rem">Use ↗ Open or ⬇ Download above.</span></p>';
+        }
+      }, 'big');
       return;
     }
 

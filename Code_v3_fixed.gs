@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.10';
+var APP_VERSION = '9.11';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -378,14 +378,49 @@ function getPrivateFileData(fileId, token) {
 // Returns null (not an error) when Drive has no thumbnail for this file yet —
 // happens on a very recently uploaded file, or a type Drive doesn't render.
 // The frontend already has an icon fallback for exactly this case.
-function getPrivateFileThumbnail(fileId, token) {
+// size (optional): requested pixel size for the long edge. DriveApp's own
+// getThumbnail() only ever returns Drive's small fixed-size render, which is
+// right for a 34px grid cell but useless as an actual preview — so when a size
+// is asked for we go through the Drive REST API's thumbnailLink instead, which
+// accepts a size suffix. This is what makes a readable page-1 preview of a PDF
+// possible inside the app, where Chrome's PDF plugin is blocked by Apps
+// Script's sandbox. Falls back to the small thumbnail if the REST path fails.
+function getPrivateFileThumbnail(fileId, token, size) {
   var file = resolveOwnFile_(fileId, token, 'getPrivateFileThumbnail');
+  var px = parseInt(size, 10);
+  if (px > 0) {
+    var big = driveThumbnailAtSize_(fileId, px);
+    if (big) return big;
+  }
   var blob = file.getThumbnail();
   if (!blob) return null;
   return {
     mimeType: blob.getContentType(),
     base64:   Utilities.base64Encode(blob.getBytes())
   };
+}
+
+// Drive hands back a thumbnailLink ending in a size suffix like "=s220"; swapping
+// that for a bigger value is the documented way to get a larger render. Both
+// calls carry the script's own OAuth token — thumbnailLink is NOT a public URL,
+// and the caller has already passed resolveOwnFile_'s ownership check.
+// Returns null on any failure so the caller can fall back rather than error out.
+function driveThumbnailAtSize_(fileId, px) {
+  try {
+    var auth = { headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }, muteHttpExceptions: true };
+    var meta = UrlFetchApp.fetch(
+      'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(fileId) + '?fields=thumbnailLink', auth);
+    if (meta.getResponseCode() !== 200) return null;
+    var link = JSON.parse(meta.getContentText()).thumbnailLink;
+    if (!link) return null;
+    link = link.replace(/=s\d+(-[a-z]+)?$/, '=s' + px);
+    var img = UrlFetchApp.fetch(link, auth);
+    if (img.getResponseCode() !== 200) return null;
+    var b = img.getBlob();
+    return { mimeType: b.getContentType(), base64: Utilities.base64Encode(b.getBytes()) };
+  } catch (e) {
+    return null;
+  }
 }
 
 // Shared by getPrivateFileData/getPrivateFileThumbnail: authenticates the
