@@ -5,14 +5,15 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
-1. **Attach documents directly from Google Drive** (Drive Picker) — today a file
-   already in Drive has to be downloaded and re-uploaded.
-2. **Polish the wizard's Copy button animation** — the checkmark transition works
-   now, but the in/out timing still feels abrupt.
-3. **Clean master template Sheet** for customer distribution. Blocking for real
+1. **Clean master template Sheet** for customer distribution. Blocking for real
    sales: sheet DATA copies (unlike Script Properties), so a template carrying
    OX's own movements/users would leak that data and admin access into every
-   customer copy. Needs: code pasted in, wizard never run, zero rows.
+   customer copy. Needs: code pasted in, wizard never run, zero rows. Also the
+   only way to verify what the publish step reports on a genuinely fresh copy.
+2. **Polish the wizard's Copy button animation** — the checkmark transition works
+   now, but the in/out timing still feels abrupt.
+3. **Polish the company logo placement** in the topbar — it renders, but the
+   sizing/position isn't what Jose wants yet.
 
 ## Known limits (investigated, not fixable from code)
 
@@ -26,6 +27,11 @@ here once they ship (the commit message is the record of what changed and why).
   instantiate inside Apps Script's sandboxed googleusercontent.com frame. Worked
   around in v9.11 by showing Drive's server-side render of page 1; a true
   scrollable viewer would need PDF.js bundled in (~100 lines + testing).
+- **Google's own Drive Picker dialog** — needs an API key from a standard Cloud
+  project, which customer copies (hidden default project) cannot create. Shipped
+  a paste-a-Drive-link flow in v9.12 instead; it needs no Cloud config, so it
+  works on every copy. Revisit only if the distribution model ever moves off
+  copy-per-customer.
 
 ## Features
 

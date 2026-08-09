@@ -660,6 +660,9 @@
     .doc-photo-thumb img{width:100%;height:100%;object-fit:cover;display:block}
     .doc-photo-thumb .remove-photo{position:absolute;top:1px;right:1px;background:rgba(0,0,0,.65);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:.65rem;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0}
     .doc-group-actions{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+    .doc-drive-row{display:flex;gap:.4rem;align-items:center;margin-top:.45rem}
+    .doc-drive-row input{flex:1;min-width:0;padding:.38rem .6rem;border:1.5px solid var(--border);border-radius:7px;font-size:.78rem;font-family:inherit;background:var(--card);color:var(--text);min-height:36px}
+    .doc-drive-row input:focus{outline:none;border-color:var(--accent)}
     .btn-camera{background:var(--navy);color:#fff;border:none;border-radius:7px;padding:.38rem .75rem;font-size:.78rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:.3rem;flex-shrink:0;min-height:36px}
     .btn-camera:hover{filter:brightness(1.15)}
     .btn-camera:active{transform:scale(.97)}
@@ -1801,7 +1804,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.11';
+var APP_VERSION = '9.12';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Paid Gmail-scanner add-on: off unless the backend says this installation
@@ -5921,8 +5924,14 @@ function addDocGroup(suggestedName, containerId, idPrefix) {
     '<div class="doc-group-actions">' +
       '<button class="btn-camera" onclick="triggerCameraCapture(\'' + uid + '\')">📸 Camera</button>' +
       '<button class="btn-gallery" onclick="triggerGalleryPick(\'' + uid + '\')">📁 Files</button>' +
+      '<button class="btn-gallery" onclick="toggleDriveAttach(\'' + uid + '\')">☁️ Drive</button>' +
       '<span class="doc-photo-count" id="pcount-' + uid + '">No photos yet</span>' +
       '<span class="doc-more-hint" id="hint-' + uid + '" style="display:none">— 📸 tap again to add a page</span>' +
+    '</div>' +
+    '<div class="doc-drive-row" id="driveRow-' + uid + '" style="display:none">' +
+      '<input type="text" id="driveInput-' + uid + '" placeholder="Paste a Google Drive link" ' +
+        'onkeydown="if(event.key===\'Enter\'){event.preventDefault();addDriveRef(\'' + uid + '\')}">' +
+      '<button class="btn-gallery" onclick="addDriveRef(\'' + uid + '\')">Add</button>' +
     '</div>' +
     /* Camera: one shot at a time, opens native camera on mobile */
     '<input type="file" class="doc-cam-input"  id="docCamInput-'  + uid + '" accept="image/*" capture="environment" style="display:none">' +
@@ -5972,16 +5981,74 @@ function _handlePhotoFiles(uid, files) {
   });
 }
 
+// Reveal/hide the "paste a Drive link" row for one document group.
+//
+// This is a link box rather than Google's own file-picker dialog on purpose.
+// The Picker needs an API key from a STANDARD Cloud project, and every customer
+// copy runs on the hidden default project Apps Script creates — the same wall
+// that blocks self-deploy (see docs/BACKLOG.md). A link box needs no Cloud
+// configuration at all, so it works on every copy.
+function toggleDriveAttach(uid){
+  var row = document.getElementById('driveRow-' + uid);
+  if (!row) return;
+  var showing = row.style.display === '';
+  row.style.display = showing ? 'none' : '';
+  if (!showing) {
+    var inp = document.getElementById('driveInput-' + uid);
+    if (inp) inp.focus();
+  }
+}
+
+function addDriveRef(uid){
+  var inp = document.getElementById('driveInput-' + uid);
+  if (!inp) return;
+  var raw = (inp.value || '').trim();
+  if (!raw) return;
+  var id = extractDriveId(raw);
+  if (!id) {
+    showToast('That does not look like a Google Drive link.', 'warn');
+    return;
+  }
+  var strip = document.getElementById('strip-' + uid);
+  if (!strip) return;
+  if (strip.querySelector('[data-drive-id="' + id + '"]')) {
+    showToast('That file is already attached to this document.', 'warn');
+    inp.value = '';
+    return;
+  }
+  var chip = document.createElement('div');
+  chip.className = 'doc-photo-thumb';
+  chip.dataset.driveId = id;
+  chip.title = 'From Drive — copied into the system when you save';
+  chip.innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;' +
+      'font-size:1.3rem;flex-direction:column;gap:2px">☁️' +
+      '<span style="font-size:.5rem;color:#555">Drive</span></div>' +
+    '<button class="remove-photo" onclick="this.closest(\'.doc-photo-thumb\').remove();_updateDocPhotoCount()" title="Remove">✕</button>';
+  strip.appendChild(chip);
+  inp.value = '';
+  document.getElementById('driveRow-' + uid).style.display = 'none';
+  _updateDocPhotoCount();
+}
+
 function _updateDocPhotoCount() {
   document.querySelectorAll('.doc-group').forEach(function(group) {
     var uid   = group.dataset.gid;
-    var count = group.querySelectorAll('.doc-photo-thumb').length;
+    var photos = group.querySelectorAll('.doc-photo-thumb:not([data-drive-id])').length;
+    var drives = group.querySelectorAll('.doc-photo-thumb[data-drive-id]').length;
+    var count  = photos + drives;
     var pcEl  = document.getElementById('pcount-' + uid);
     var htEl  = document.getElementById('hint-'   + uid);
     // Update count label
-    if (pcEl) pcEl.textContent = count === 0 ? 'No photos yet' : count + ' photo' + (count !== 1 ? 's' : '');
+    if (pcEl) {
+      pcEl.textContent = count === 0
+        ? 'No photos yet'
+        : (photos ? photos + ' photo' + (photos !== 1 ? 's' : '') : '') +
+          (photos && drives ? ' · ' : '') +
+          (drives ? drives + ' from Drive' : '');
+    }
     // Show "tap Camera again" hint only after exactly 1 photo so user knows multi-page is possible
-    if (htEl) htEl.style.display = count === 1 ? 'inline' : 'none';
+    if (htEl) htEl.style.display = photos === 1 ? 'inline' : 'none';
   });
 }
 
@@ -6028,12 +6095,15 @@ function _collectDocGroups(containerId) {
   container.querySelectorAll('.doc-group').forEach(function(groupEl) {
     var name   = (groupEl.querySelector('.doc-group-name').value || '').trim() || 'Document';
     var photos = [];
+    var driveIds = [];
     groupEl.querySelectorAll('.doc-photo-thumb').forEach(function(thumb) {
-      if (thumb.dataset.b64) {
+      if (thumb.dataset.driveId) {
+        driveIds.push(thumb.dataset.driveId);
+      } else if (thumb.dataset.b64) {
         photos.push({ fileData: thumb.dataset.b64, fileMimeType: thumb.dataset.mime || 'image/jpeg' });
       }
     });
-    if (photos.length) groups.push({ name: name, photos: photos });
+    if (photos.length || driveIds.length) groups.push({ name: name, photos: photos, driveIds: driveIds });
   });
   return groups;
 }

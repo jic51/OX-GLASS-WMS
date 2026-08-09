@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.11';
+var APP_VERSION = '9.12';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -3026,6 +3026,77 @@ function checkDuplicateMovement_(archive, mt, cat, name, qty, userEmail) {
   return null;
 }
 
+// ─── ATTACH AN EXISTING DRIVE FILE ───────────────────────────────────────────
+// Copies a file the user already has in Drive into the app's docs folder, so it
+// can be attached without downloading and re-uploading it.
+//
+// SECURITY — the reason this is not a two-line DriveApp.getFileById().makeCopy():
+// the web app runs as USER_DEPLOYING, so the server's Drive access is the
+// OWNER'S Drive, not the caller's. Without a check, any signed-in warehouse user
+// could paste any file ID the owner's account happens to be able to read and
+// have the server copy it somewhere they can then read it back through
+// getPrivateFileData — turning "attach from Drive" into a way to pull private
+// files out of the owner's Drive. So we verify the CALLER can genuinely reach
+// the file before copying it, and refuse otherwise.
+function importDriveFileIntoFolder_(fileId, docName, folder) {
+  var auth = requireAuth_('WRITE');
+  var id = String(fileId || '').trim();
+  if (!id) return null;
+
+  var file;
+  try {
+    file = DriveApp.getFileById(id);
+  } catch (e) {
+    throw new Error('That Drive file could not be opened. Check the link, or that it is shared with ' +
+      (Session.getEffectiveUser().getEmail() || 'this system') + '.');
+  }
+
+  if (!callerCanReadDriveFile_(file, id, auth.email)) {
+    logError_(SpreadsheetApp.getActiveSpreadsheet(), 'WARN', 'backend', 'importDriveFileIntoFolder_',
+      auth.email, 'Attempted to attach a Drive file they cannot access: ' + id, null, newRequestId_());
+    throw new Error('You do not have access to that file in Drive, so it cannot be attached. ' +
+      'Ask whoever owns it to share it with you, or upload the file directly.');
+  }
+
+  var copy = file.makeCopy(docName || file.getName(), folder);
+  return copy.getId();
+}
+
+// True when `email` can read the file in their own right — as its owner, via a
+// permission granted to them, to their whole domain, or because it is shared
+// with anyone who has the link. Read through the Drive REST API because
+// DriveApp exposes no "can this OTHER person read it" question; permissions
+// are readable here because the script runs as the file's owner/editor.
+// Fails CLOSED: any error means "not verified", so a copy never happens on a
+// permissions call we could not complete.
+function callerCanReadDriveFile_(file, fileId, email) {
+  var who = String(email || '').toLowerCase().trim();
+  if (!who) return false;
+
+  try {
+    var owner = file.getOwner();
+    if (owner && String(owner.getEmail() || '').toLowerCase() === who) return true;
+  } catch (e) {}
+
+  try {
+    var res = UrlFetchApp.fetch(
+      'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(fileId) +
+        '/permissions?fields=permissions(type,role,emailAddress,domain)&supportsAllDrives=true',
+      { headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }, muteHttpExceptions: true });
+    if (res.getResponseCode() !== 200) return false;
+
+    var perms = (JSON.parse(res.getContentText()).permissions) || [];
+    var callerDomain = who.split('@')[1] || '';
+    for (var i = 0; i < perms.length; i++) {
+      var p = perms[i];
+      if (p.type === 'anyone') return true;
+      if (p.type === 'domain' && callerDomain && String(p.domain || '').toLowerCase() === callerDomain) return true;
+      if (String(p.emailAddress || '').toLowerCase() === who) return true;
+    }
+  } catch (e) {}
+  return false;
+}
+
 // ─── MULTI-PHOTO NAMED DOCUMENT GROUPS ───────────────────────────────────────
 // docGroups = [ { name: "Invoice", photos: [ {fileData, fileMimeType} ] }, … ]
 // Returns newline-separated "DocName||DriveURL" strings for storage in DOC_LINKS.
@@ -3041,11 +3112,24 @@ function uploadDocGroups_(docGroups, materialName) {
   for (var i = 0; i < docGroups.length; i++) {
     var group  = docGroups[i];
     var photos = group.photos || [];
-    if (!photos.length) continue;
+    var driveIds = group.driveIds || [];
+    if (!photos.length && !driveIds.length) continue;
 
     var rawName  = (group.name || ('Document ' + (i + 1))).trim();
     var safeName = rawName.replace(/[\/\\?%*:|"<>]/g, '_');
     var url;
+
+    // Files the user picked out of Drive instead of uploading. Copied into the
+    // app's own folder rather than linked in place: a link would break the
+    // moment the original is moved, renamed or unshared, and the whole
+    // private-file pipeline (getPrivateFileData / the folder boundary check)
+    // only serves what lives under the app's folder.
+    for (var d = 0; d < driveIds.length; d++) {
+      var copiedId = importDriveFileIntoFolder_(
+        driveIds[d], safeName + (driveIds.length > 1 ? ' ' + (d + 1) : ''), folder);
+      if (copiedId) links.push(rawName + '||' + copiedId);
+    }
+    if (!photos.length) continue;
 
     if (photos.length === 1) {
       // Single photo → store as image directly (faster)
