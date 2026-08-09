@@ -1793,7 +1793,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.7';
+var APP_VERSION = '9.8';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Paid Gmail-scanner add-on: off unless the backend says this installation
@@ -2983,6 +2983,7 @@ var _fileDataCache = {};   // "<kind>:<fileId>" -> {mimeType, base64}   (success
 // and they must not collide or overwrite one another.
 var _privQueue     = [];   // [{key, id, kind}] waiting for a slot
 var _privInflight  = {};   // key -> [done, …] callbacks awaiting one open call
+var _privLastErr   = {};   // key -> the actual server error text for the most recent failure
 var _privActive    = 0;
 var _PRIV_MAX_INFLIGHT = 3;
 
@@ -2993,7 +2994,7 @@ var _PRIV_MAX_INFLIGHT = 3;
 // getElementById() on an element that does not exist yet, gives up, and the
 // image stays blank forever. Deferring by a tick costs nothing and makes the
 // ordering impossible to get wrong.
-function _privLater(cb, arg){ setTimeout(function(){ cb(arg); }, 0); }
+function _privLater(cb, arg, arg2){ setTimeout(function(){ cb(arg, arg2); }, 0); }
 
 function _privPump(){
   while (_privActive < _PRIV_MAX_INFLIGHT && _privQueue.length){
@@ -3019,17 +3020,19 @@ function _privPump(){
             delete _privInflight[job.key];
             waiting.forEach(function(cb){ _fetchPrivateFile(job.id, cb, 'full'); });
           } else {
+            _privLastErr[job.key] = 'File not found or no longer accessible.';
             _privDeliver(job.key);
           }
           _privPump();
         })
-        .withFailureHandler(function(){
+        .withFailureHandler(function(err){
           // Deliberately NOT cached as a permanent failure. One transient error
           // — a hiccup, a momentary execution-quota trip — used to mark the file
           // dead for the rest of the session, so a thumbnail that failed once
           // stayed broken until a full page reload even though the file was
           // fine. A later render simply tries again; the queue above is what
           // keeps those retries from piling up.
+          _privLastErr[job.key] = (err && err.message) ? err.message : String(err || 'Unknown error');
           _privActive--; _privDeliver(job.key); _privPump();
         })
         [job.kind === 'thumb' ? 'getPrivateFileThumbnail' : 'getPrivateFileData'](job.id, _sessionToken || null);
@@ -3040,15 +3043,17 @@ function _privPump(){
 function _privDeliver(key){
   var cached = _fileDataCache[key];
   var url = cached ? 'data:' + cached.mimeType + ';base64,' + cached.base64 : null;
+  var err = cached ? null : (_privLastErr[key] || null);
+  delete _privLastErr[key];
   var waiting = _privInflight[key] || [];
   delete _privInflight[key];
-  waiting.forEach(function(cb){ _privLater(cb, url); });
+  waiting.forEach(function(cb){ _privLater(cb, url, err); });
 }
 
 function _fetchPrivateFile(rawUrlOrId, done, kind){
   kind = kind === 'thumb' ? 'thumb' : 'full';
   var id = extractDriveId(rawUrlOrId);
-  if (!id) { _privLater(done, null); return; }
+  if (!id) { _privLater(done, null, 'Invalid file reference.'); return; }
   var key = kind + ':' + id;
   var cached = _fileDataCache[key];
   if (cached) { _privLater(done, 'data:' + cached.mimeType + ';base64,' + cached.base64); return; }
@@ -6417,9 +6422,10 @@ function openMediaPreview(url, label){
   _releaseMediaPreviewBlob();
   _mediaPreviewName = label || 'document';
 
-  _fetchPrivateFile(url, function(dataUrl){
+  _fetchPrivateFile(url, function(dataUrl, errMsg){
     if (!dataUrl) {
-      body.innerHTML = '<p style="color:#fff;padding:2rem">Could not load this file.</p>';
+      body.innerHTML = '<p style="color:#fff;padding:2rem">Could not load this file.' +
+        (errMsg ? '<br><span style="opacity:.7;font-size:.8rem">' + _he(errMsg) + '</span>' : '') + '</p>';
       return;
     }
     var blob = _dataUrlToBlob(dataUrl);
