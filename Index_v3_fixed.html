@@ -660,6 +660,26 @@
     .doc-photo-thumb img{width:100%;height:100%;object-fit:cover;display:block}
     .doc-photo-thumb .remove-photo{position:absolute;top:1px;right:1px;background:rgba(0,0,0,.65);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:.65rem;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0}
     .doc-group-actions{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+    /* Floating deck of "you typed something new — register it?" suggestions,
+       for the ones the inline prompt under the field didn't get used on.
+       Sits above the 🐞 report button, same corner. Collapsed it is a deck:
+       the cards overlap so it stays small; on hover they fan out into a
+       readable column. Touch has no hover, so tapping toggles .open — without
+       that, anything behind the front card would be unreachable on a phone. */
+    .cfg-deck{position:fixed;right:22px;bottom:86px;z-index:399;display:flex;flex-direction:column;align-items:flex-end;max-width:min(300px,calc(100vw - 44px))}
+    .cfg-deck:empty{display:none}
+    .cfg-card{background:var(--navy);color:#fff;border-radius:10px;padding:.6rem .7rem;font-size:.76rem;box-shadow:0 6px 20px rgba(0,0,0,.25);width:250px;max-width:100%;transition:margin .18s ease,opacity .18s ease,transform .18s ease;cursor:default}
+    .cfg-deck:not(:hover):not(.open) .cfg-card:not(:last-child){margin-bottom:-50px;transform:scale(.96);opacity:.6}
+    .cfg-deck:not(:hover):not(.open) .cfg-card:nth-last-child(n+4){opacity:0;pointer-events:none}
+    .cfg-card + .cfg-card{margin-top:.45rem}
+    .cfg-card-lbl{font-size:.63rem;text-transform:uppercase;letter-spacing:.05em;color:#a1b0cb;font-weight:700}
+    .cfg-card-val{font-weight:700;margin:.15rem 0 .45rem;word-break:break-word}
+    .cfg-card-acts{display:flex;gap:.4rem;align-items:center}
+    .cfg-card-acts button{border:none;border-radius:6px;padding:.28rem .6rem;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit}
+    .cfg-card-add{background:var(--accent);color:#fff}
+    .cfg-card-add:disabled{opacity:.6;cursor:default}
+    .cfg-card-skip{background:rgba(255,255,255,.14);color:#dbe4f5}
+    @media (max-width:640px){.cfg-deck{right:16px;bottom:72px;max-width:calc(100vw - 32px)}.cfg-card{width:230px}}
     .cfg-new-hint{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap;margin-top:.3rem;font-size:.72rem;color:var(--muted)}
     .cfg-new-add{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:.22rem .5rem;font-size:.7rem;font-weight:700;cursor:pointer;font-family:inherit}
     .cfg-new-add:hover{filter:brightness(1.1)}
@@ -1754,6 +1774,7 @@
 </div>
 
 <!-- Floating "report a problem" button — available from every screen -->
+<div class="cfg-deck" id="cfgDeck" onclick="this.classList.toggle('open')"></div>
 <button id="reportIssueFab" class="report-issue-fab" onclick="openReportIssueModal()" title="Report a problem">🐞</button>
 
 <div class="overlay" id="reportIssueOverlay">
@@ -1809,7 +1830,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.13';
+var APP_VERSION = '9.14';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Paid Gmail-scanner add-on: off unless the backend says this installation
@@ -6276,29 +6297,105 @@ function _maybeOfferCfgAdd(input){
     _cfgAddInline(type, val, hint);
   });
   input.insertAdjacentElement('afterend', hint);
+
+  // Also queue it for the floating deck. The inline prompt only exists while
+  // that field is on screen — close the modal without clicking it and the
+  // suggestion was gone for good. Registering it in the deck means an ignored
+  // prompt survives, and clicking either one clears both.
+  _queueCfgAdd(type, val);
 }
 
-function _cfgAddInline(type, value, hintEl){
-  var btn = hintEl.querySelector('.cfg-new-add');
-  if (btn){ btn.disabled = true; btn.textContent = 'Adding…'; }
+// ── Floating deck of unregistered suppliers/projects ─────────────────────────
+var _pendingCfgAdds = [];   // [{type, value}] still unregistered and not dismissed
+var _dismissedCfgAdds = {}; // "type|VALUE" the user waved off — don't re-offer this session
+
+function _cfgKey(type, value){ return type + '|' + String(value).toUpperCase(); }
+
+function _queueCfgAdd(type, value){
+  if (userRole !== 'ADMIN') return;
+  var key = _cfgKey(type, value);
+  if (_dismissedCfgAdds[key]) return;
+  if (_cfgKnownValues(type)[String(value).toUpperCase()]) return;
+  var dup = _pendingCfgAdds.some(function(p){ return _cfgKey(p.type, p.value) === key; });
+  if (!dup) _pendingCfgAdds.push({ type: type, value: value });
+  _renderCfgDeck();
+}
+
+function _unqueueCfgAdd(type, value){
+  var key = _cfgKey(type, value);
+  _pendingCfgAdds = _pendingCfgAdds.filter(function(p){ return _cfgKey(p.type, p.value) !== key; });
+  _renderCfgDeck();
+}
+
+function _renderCfgDeck(){
+  var deck = document.getElementById('cfgDeck');
+  if (!deck) return;
+  // Drop anything that got registered by other means (Settings, the inline
+  // prompt, another tab) before painting.
+  _pendingCfgAdds = _pendingCfgAdds.filter(function(p){
+    return !_cfgKnownValues(p.type)[String(p.value).toUpperCase()];
+  });
+  if (!_pendingCfgAdds.length){ deck.innerHTML = ''; deck.classList.remove('open'); return; }
+
+  deck.innerHTML = _pendingCfgAdds.map(function(p, i){
+    return '<div class="cfg-card" data-i="' + i + '">' +
+      '<div class="cfg-card-lbl">New ' + (p.type === 'suppliers' ? 'supplier' : 'project') + '</div>' +
+      '<div class="cfg-card-val">' + _he(p.value) + '</div>' +
+      '<div class="cfg-card-acts">' +
+        '<button type="button" class="cfg-card-add" data-act="add" data-i="' + i + '">+ Add to list</button>' +
+        '<button type="button" class="cfg-card-skip" data-act="skip" data-i="' + i + '">Not now</button>' +
+      '</div></div>';
+  }).join('');
+
+  deck.querySelectorAll('button[data-act]').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();   // don't toggle the deck's own open/closed state
+      var p = _pendingCfgAdds[parseInt(btn.getAttribute('data-i'), 10)];
+      if (!p) return;
+      if (btn.getAttribute('data-act') === 'skip'){
+        _dismissedCfgAdds[_cfgKey(p.type, p.value)] = true;
+        _unqueueCfgAdd(p.type, p.value);
+        return;
+      }
+      btn.disabled = true; btn.textContent = 'Adding…';
+      _cfgAddValue(p.type, p.value, function(ok, err){
+        if (ok) { showToast('Added to your ' + p.type + ' ✓', 'ok'); _unqueueCfgAdd(p.type, p.value); }
+        else { btn.disabled = false; btn.textContent = '+ Add to list'; showToast('Could not add: ' + err, 'err', 5000); }
+      });
+    });
+  });
+}
+
+// Shared by the inline prompt and the deck — one place that actually saves.
+function _cfgAddValue(type, value, done){
   google.script.run
     .withSuccessHandler(function(){
-      // Keep the local copy in step so the hint doesn't reappear on the next
-      // blur, and so the datalist offers it immediately.
       var list = type === 'suppliers'
         ? (config.suppliers = config.suppliers || [])
         : (config.projects  = config.projects  || []);
       if (list.indexOf(value) === -1) list.push(value);
       refreshDropdowns();
-      hintEl.innerHTML = '<span class="cfg-new-ok">✓ Added to your ' +
-        (type === 'suppliers' ? 'suppliers' : 'projects') + '</span>';
-      setTimeout(function(){ if (hintEl.parentNode) hintEl.remove(); }, 2500);
+      done(true);
     })
-    .withFailureHandler(function(e){
-      if (btn){ btn.disabled = false; btn.textContent = '+ Add it'; }
-      showToast('Could not add: ' + ((e && e.message) || e), 'err', 5000);
-    })
+    .withFailureHandler(function(e){ done(false, (e && e.message) || String(e)); })
     .processMovement('updateConfig', _h({ type: type, op: 'add', newValue: value }));
+}
+
+function _cfgAddInline(type, value, hintEl){
+  var btn = hintEl.querySelector('.cfg-new-add');
+  if (btn){ btn.disabled = true; btn.textContent = 'Adding…'; }
+  _cfgAddValue(type, value, function(ok, err){
+    if (!ok){
+      if (btn){ btn.disabled = false; btn.textContent = '+ Add it'; }
+      showToast('Could not add: ' + err, 'err', 5000);
+      return;
+    }
+    // Registered — so the deck must not keep offering the same thing.
+    _unqueueCfgAdd(type, value);
+    hintEl.innerHTML = '<span class="cfg-new-ok">✓ Added to your ' +
+      (type === 'suppliers' ? 'suppliers' : 'projects') + '</span>';
+    setTimeout(function(){ if (hintEl.parentNode) hintEl.remove(); }, 2500);
+  });
 }
 
 // 'change' rather than 'input': it fires on blur and on picking a datalist
@@ -6342,6 +6439,10 @@ function refreshDropdowns(){
   var sd = document.getElementById('supplierList'); sd.innerHTML = '';
   var supSet = Array.from(new Set(config.suppliers.concat(movements.map(function(m){ return m.supplier; }).filter(Boolean)))).sort();
   supSet.forEach(function(s){ var o = document.createElement('option'); o.value = s; sd.appendChild(o); });
+
+  // A value may have been registered from Settings or another tab since the
+  // deck was painted — this drops anything that is no longer "new".
+  _renderCfgDeck();
 
   var td = document.getElementById('mTruck');
   td.innerHTML = '<option value="">— None —</option>';
