@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.17';
+var APP_VERSION = '9.18';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -435,6 +435,12 @@ function resolveOwnFile_(fileId, token, callerName) {
     throw new Error('Not authenticated.');
   }
 
+  // Highest ceiling of the lot: one page of the Movements table can legitimately
+  // ask for dozens of thumbnails, and expanding stock rows adds more. The
+  // frontend already caps itself at 3 concurrent and caches per file — this is
+  // the backstop for a client that ignores both.
+  requireQuota_('file', auth.email, 600, 300);
+
   var file;
   try {
     file = DriveApp.getFileById(fileId);
@@ -614,9 +620,46 @@ function handleOAuthCallback_(code, state) {
   return HtmlService.createHtmlOutput(html).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
+// ─── RATE LIMITING ───────────────────────────────────────────────────────────
+// The web app is published as "Anyone with a Google account", so the URL alone
+// is enough to reach these endpoints — authentication decides what you get
+// back, not whether the script runs. That means anyone with the link can make
+// the owner's account burn Apps Script execution quota, and quota is per-owner
+// and shared by every real user: exhausting it takes the warehouse offline for
+// everybody. That is the failure this guards against, not data theft.
+//
+// CacheService, not Properties: these counters are throwaway, and Properties
+// has a hard quota of its own that a flood would then consume too.
+//
+// Limits are deliberately generous — several times what heavy normal use
+// looks like — because locking out a real warehouse mid-shift is far worse
+// than letting an abuser through a little longer.
+function throttle_(bucket, id, limit, windowSec) {
+  var key = 'rl_' + bucket + '_' + Utilities.base64EncodeWebSafe(String(id || 'anon')).substring(0, 40);
+  var cache = CacheService.getScriptCache();
+  var raw = cache.get(key);
+  var n = raw ? (parseInt(raw, 10) || 0) : 0;
+  if (n >= limit) return false;
+  // Not atomic — Apps Script has no atomic increment, and two calls landing in
+  // the same instant can both read the same n. That undercounts slightly under
+  // a burst, which is acceptable: this is a flood ceiling, not a precise meter.
+  cache.put(key, String(n + 1), windowSec);
+  return true;
+}
+
+function requireQuota_(bucket, id, limit, windowSec) {
+  if (!throttle_(bucket, id, limit, windowSec)) {
+    throw new Error('Too many requests — please wait a moment and try again.');
+  }
+}
+
 // Main window polls this until the popup callback has stored the verified email.
 // Returns a signed session token the browser will send on every later call.
 function pollLogin(state) {
+  // Keyed by the state value the caller supplied: this runs BEFORE any identity
+  // exists, so there is nothing else to key on. A tight limit here also blunts
+  // guessing at other people's login states.
+  requireQuota_('poll', state, 120, 300);
   var cache = CacheService.getScriptCache();
   var email = cache.get('login_' + state);
   if (!email) return { ready: false };
@@ -860,6 +903,11 @@ function getLegacyMaterialId(cat, name, proj) {
 function getInitialData(sessionToken) {
   try {
     var auth = setVerifiedAuth_(getUserRole(sessionToken));
+
+    // Applied only to identified callers: an anonymous visitor gets the small
+    // public sign-in payload below, and throttling by a key everyone shares
+    // ('anon') would let one abuser lock the sign-in screen for all of them.
+    if (auth.email) requireQuota_('init', auth.email, 180, 300);
 
     // Not authenticated — return public user list so frontend can show identity picker
     if (auth.role === 'NO_SESSION') {
@@ -1238,6 +1286,10 @@ function processMovement(action, data) {
   if (auth.role === 'NO_SESSION') throw new Error('Not authenticated. Please sign in with your Google account.');
   if (auth.role === 'DENIED')     throw new Error('Access denied. Your account (' + auth.email + ') is not registered in this system. Contact your administrator to request access.');
   if (auth.role === 'VIEWER')     throw new Error('Read-only access — you can view data but cannot record movements. Contact an admin.');
+
+  // 240/minute per user. A busy operator saving movements, editing config and
+  // running searches lands nowhere near this; a runaway loop or a script does.
+  requireQuota_('pm', auth.email, 240, 60);
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   try {
@@ -3771,6 +3823,10 @@ function reportIssue(data) {
   if (auth.role === 'NO_SESSION' || auth.role === 'DENIED') {
     throw new Error('Not authenticated. Please sign in and use the app from its own page.');
   }
+  // Tighter than the rest: every report writes to Drive and sends mail, so a
+  // flood here costs far more per call than a normal RPC.
+  requireQuota_('issue', auth.email, 10, 600);
+
   var message = String((data && data.message) || '').trim();
   if (!message) throw new Error('Please describe what happened.');
   if (message.length > 4000) message = message.substring(0, 4000);
@@ -4244,6 +4300,12 @@ function heartbeat(sessionToken) {
   // getUserRole() returns NO_SESSION and would register a ghost empty user.
   var auth = getUserRole(sessionToken);
   if (!auth || auth.role === 'DENIED' || auth.role === 'NO_SESSION' || !auth.email) return [];
+
+  // Returns empty instead of throwing: presence is decoration, and a thrown
+  // error here would pop a failure toast in a perfectly healthy session. Each
+  // call rewrites the sessions property, so it is worth capping — the client
+  // polls about once a minute, making 60/5min ~12x normal.
+  if (!throttle_('hb', auth.email, 60, 300)) return [];
 
   var props    = PropertiesService.getScriptProperties();
   var raw      = props.getProperty('WMS_SESSIONS');

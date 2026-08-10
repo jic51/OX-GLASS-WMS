@@ -27,13 +27,20 @@ here once they ship (the commit message is the record of what changed and why).
   instantiate inside Apps Script's sandboxed googleusercontent.com frame. Worked
   around in v9.11 by showing Drive's server-side render of page 1; a true
   scrollable viewer would need PDF.js bundled in (~100 lines + testing).
-- **Google's own Drive Picker dialog** — needs an API key from a standard Cloud
-  project, which customer copies (hidden default project) cannot create. Shipped
-  a paste-a-Drive-link flow in v9.12 instead; it needs no Cloud config, so it
-  works on every copy. Revisit only if the distribution model ever moves off
-  copy-per-customer.
+- ~~Google's own Drive Picker~~ — NOT actually blocked. The first read of this
+  was wrong: the Picker does need an API key from a standard Cloud project, but
+  that project is Jose's and is configured once for all customers, not one per
+  customer copy. Moved to Features as real work.
 
 ## Features
+
+- **Real Google Drive Picker** (replaces the paste-a-link box). Needs a Cloud
+  project Jose owns: Picker API enabled, an API key, and an OAuth Client ID —
+  configured ONCE by him, reused by every customer copy, the same way
+  OAUTH_CLIENT_ID already works for sign-in. Doing the picker browser-side with
+  the end user's own token also removes the privacy problem the link box has:
+  each person browses THEIR Drive instead of the owner's. Blocked only on Jose
+  creating that Cloud project.
 
 - QR / barcode scanning + label printing
 - Installable PWA + offline queue
@@ -46,5 +53,4 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Operational
 
-- Rate limiting / abuse throttling
 - Admin email alert on critical errors
