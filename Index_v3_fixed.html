@@ -696,6 +696,7 @@
     .cfg-new-add:hover{filter:brightness(1.1)}
     .cfg-new-add:disabled{opacity:.6;cursor:default}
     .cfg-new-ok{color:var(--green);font-weight:700}
+    .doc-photo-bad{border:1.5px solid var(--red)!important;background:#FEF2F2!important}
     .doc-drive-row{display:flex;gap:.4rem;align-items:center;margin-top:.45rem}
     .doc-drive-row input{flex:1;min-width:0;padding:.38rem .6rem;border:1.5px solid var(--border);border-radius:7px;font-size:.78rem;font-family:inherit;background:var(--card);color:var(--text);min-height:36px}
     .doc-drive-row input:focus{outline:none;border-color:var(--accent)}
@@ -1841,7 +1842,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.19';
+var APP_VERSION = '9.20';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Paid Gmail-scanner add-on: off unless the backend says this installation
@@ -6052,6 +6053,42 @@ function triggerGalleryPick(uid) {
 var MAX_ATTACH_BYTES = 25 * 1024 * 1024;   // 25 MB
 function _fmtMB(bytes){ return (bytes / (1024 * 1024)).toFixed(1) + ' MB'; }
 
+// A rejected file stays on screen as a red chip instead of silently vanishing.
+// Dropping it without a trace looked like the app had simply ignored the click,
+// and the toast is gone in seconds — this keeps the reason attached to the file
+// it is about, and blocks saving until it is removed.
+function _addRejectedFileChip(strip, fileName, reason){
+  var chip = document.createElement('div');
+  chip.className = 'doc-photo-thumb doc-photo-bad';
+  chip.dataset.bad = '1';
+  chip.title = fileName + ' — ' + reason;
+  chip.innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;' +
+      'flex-direction:column;gap:1px;font-size:1.1rem">⚠️' +
+      '<span style="font-size:.46rem;color:#B91C1C;padding:0 2px;text-align:center;line-height:1.1">Too big</span></div>' +
+    '<button class="remove-photo" onclick="this.closest(\'.doc-photo-thumb\').remove();_updateDocPhotoCount()" title="Remove">✕</button>';
+  strip.appendChild(chip);
+  _updateDocPhotoCount();
+}
+
+// True when any document builder currently holds a rejected file. Save buttons
+// consult this so an invalid attachment is caught before the movement is
+// written, rather than surfacing as "Saved ✓ — 📎 File: ..." afterwards, with
+// the row already in the sheet and the document lost.
+function _hasRejectedFiles(containerId){
+  var c = document.getElementById(containerId || 'docGroupsContainer');
+  return !!(c && c.querySelector('[data-bad="1"]'));
+}
+
+// Keeps the save button in step with whether a rejected file is present.
+function _syncSaveDisabledForBadFiles(containerId, buttonId){
+  var btn = document.getElementById(buttonId);
+  if (!btn) return;
+  var bad = _hasRejectedFiles(containerId);
+  btn.disabled = bad;
+  btn.title = bad ? 'Remove the oversized file before saving' : '';
+}
+
 function _handlePhotoFiles(uid, files) {
   var strip = document.getElementById('strip-' + uid);
   if (!strip) return;
@@ -6061,10 +6098,11 @@ function _handlePhotoFiles(uid, files) {
     // a 30 MB photo is fine because it leaves the canvas a few hundred KB.
     var isImg = file.type && file.type.indexOf('image') === 0;
     if (!isImg && file.size > MAX_ATTACH_BYTES) {
+      _addRejectedFileChip(strip, file.name,
+        _fmtMB(file.size) + ' — over the ' + _fmtMB(MAX_ATTACH_BYTES) + ' limit');
       showToast('“' + file.name + '” is ' + _fmtMB(file.size) + ' — too large to attach (limit ' +
         _fmtMB(MAX_ATTACH_BYTES) + '). A file this size can be stored but never opened from inside ' +
-        'the app, so it is refused here. Attach a smaller version, or put the link in the comments.',
-        'err', 9000);
+        'the app, so it is refused here. Remove it to continue saving.', 'err', 9000);
       return;
     }
     _compressImage(file, 1200, 0.82, function(b64, mime) {
@@ -6136,9 +6174,14 @@ function addDriveRef(uid){
 }
 
 function _updateDocPhotoCount() {
+  // Every add/remove funnels through here, so it is the one place that can keep
+  // the save buttons honest about rejected files.
+  _syncSaveDisabledForBadFiles('docGroupsContainer', 'moveSubmit');
+  _syncSaveDisabledForBadFiles('aDocGroupsContainer', 'attachSubmit');
+
   document.querySelectorAll('.doc-group').forEach(function(group) {
     var uid   = group.dataset.gid;
-    var photos = group.querySelectorAll('.doc-photo-thumb:not([data-drive-id])').length;
+    var photos = group.querySelectorAll('.doc-photo-thumb:not([data-drive-id]):not([data-bad])').length;
     var drives = group.querySelectorAll('.doc-photo-thumb[data-drive-id]').length;
     var count  = photos + drives;
     var pcEl  = document.getElementById('pcount-' + uid);
@@ -6201,7 +6244,9 @@ function _collectDocGroups(containerId) {
     var photos = [];
     var driveIds = [];
     groupEl.querySelectorAll('.doc-photo-thumb').forEach(function(thumb) {
-      if (thumb.dataset.driveId) {
+      if (thumb.dataset.bad) {
+        return;   // rejected file — never sent; the save button is blocked anyway
+      } else if (thumb.dataset.driveId) {
         driveIds.push(thumb.dataset.driveId);
       } else if (thumb.dataset.b64) {
         photos.push({ fileData: thumb.dataset.b64, fileMimeType: thumb.dataset.mime || 'image/jpeg' });
@@ -6379,27 +6424,64 @@ function _maybeOfferCfgAdd(input){
     _cfgAddInline(type, val, hint);
   });
   input.insertAdjacentElement('afterend', hint);
-
-  // Also queue it for the floating deck. The inline prompt only exists while
-  // that field is on screen — close the modal without clicking it and the
-  // suggestion was gone for good. Registering it in the deck means an ignored
-  // prompt survives, and clicking either one clears both.
-  _queueCfgAdd(type, val);
 }
 
 // ── Floating deck of unregistered suppliers/projects ─────────────────────────
-var _pendingCfgAdds = [];   // [{type, value}] still unregistered and not dismissed
-var _dismissedCfgAdds = {}; // "type|VALUE" the user waved off — don't re-offer this session
+//
+// DERIVED from the data, not remembered from typing. The first version pushed a
+// card the moment an unknown value was typed, which got both ends wrong: typing
+// a new project and then picking an existing one instead left a card for a value
+// that was never used, and reloading the page wiped every card because the queue
+// only lived in memory.
+//
+// Reading it off the saved movements instead makes both cases fall out for free:
+// a value abandoned before saving never appears, and one that WAS saved survives
+// reloads because it is recomputed from the same rows every time. "Unregistered"
+// means used in a movement but absent from CONFIG — exactly what the deck is for.
+var _pendingCfgAdds = [];
+var _DISMISS_KEY = 'acopio_cfg_dismissed';
 
 function _cfgKey(type, value){ return type + '|' + String(value).toUpperCase(); }
 
-function _queueCfgAdd(type, value){
-  if (userRole !== 'ADMIN') return;
-  var key = _cfgKey(type, value);
-  if (_dismissedCfgAdds[key]) return;
-  if (_cfgKnownValues(type)[String(value).toUpperCase()]) return;
-  var dup = _pendingCfgAdds.some(function(p){ return _cfgKey(p.type, p.value) === key; });
-  if (!dup) _pendingCfgAdds.push({ type: type, value: value });
+// Dismissals persist: waving a card off used to last only until reload, so a
+// value the admin had already decided against came back on every visit.
+function _loadDismissed(){
+  try { return JSON.parse(localStorage.getItem(_DISMISS_KEY) || '{}') || {}; }
+  catch (e) { return {}; }
+}
+function _dismissCfgAdd(type, value){
+  var d = _loadDismissed();
+  d[_cfgKey(type, value)] = 1;
+  try { localStorage.setItem(_DISMISS_KEY, JSON.stringify(d)); } catch (e) {}
+}
+
+var _CFG_DECK_MAX = 4;      // cards shown at once; the rest are counted, not stacked
+var _cfgDeckExtra = 0;
+
+function _recomputeCfgDeck(){
+  _pendingCfgAdds = [];
+  _cfgDeckExtra = 0;
+  if (userRole !== 'ADMIN') { _renderCfgDeck(); return; }
+
+  var dismissed = _loadDismissed();
+  var seen = {};
+  var found = [];
+  // Newest first, so what someone is working on right now surfaces ahead of
+  // whatever is oldest in the loaded window.
+  for (var i = movements.length - 1; i >= 0; i--){
+    var m = movements[i];
+    [['projects', m.project], ['suppliers', m.supplier]].forEach(function(pair){
+      var type = pair[0], val = String(pair[1] || '').trim();
+      if (!val) return;
+      var key = _cfgKey(type, val);
+      if (seen[key] || dismissed[key]) return;
+      if (_cfgKnownValues(type)[val.toUpperCase()]) return;
+      seen[key] = 1;
+      found.push({ type: type, value: val });
+    });
+  }
+  _pendingCfgAdds = found.slice(0, _CFG_DECK_MAX);
+  _cfgDeckExtra   = Math.max(0, found.length - _CFG_DECK_MAX);
   _renderCfgDeck();
 }
 
@@ -6427,7 +6509,11 @@ function _renderCfgDeck(){
         '<button type="button" class="cfg-card-add" data-act="add" data-i="' + i + '">+ Add to list</button>' +
         '<button type="button" class="cfg-card-skip" data-act="skip" data-i="' + i + '">Not now</button>' +
       '</div></div>';
-  }).join('');
+  }).join('') +
+  (_cfgDeckExtra
+    ? '<div class="cfg-card" style="opacity:.75"><div class="cfg-card-lbl">Also unregistered</div>' +
+      '<div class="cfg-card-val">' + _cfgDeckExtra + ' more — see Settings → Config</div></div>'
+    : '');
 
   deck.querySelectorAll('button[data-act]').forEach(function(btn){
     btn.addEventListener('click', function(e){
@@ -6435,7 +6521,7 @@ function _renderCfgDeck(){
       var p = _pendingCfgAdds[parseInt(btn.getAttribute('data-i'), 10)];
       if (!p) return;
       if (btn.getAttribute('data-act') === 'skip'){
-        _dismissedCfgAdds[_cfgKey(p.type, p.value)] = true;
+        _dismissCfgAdd(p.type, p.value);
         _unqueueCfgAdd(p.type, p.value);
         return;
       }
@@ -6522,9 +6608,9 @@ function refreshDropdowns(){
   var supSet = Array.from(new Set(config.suppliers.concat(movements.map(function(m){ return m.supplier; }).filter(Boolean)))).sort();
   supSet.forEach(function(s){ var o = document.createElement('option'); o.value = s; sd.appendChild(o); });
 
-  // A value may have been registered from Settings or another tab since the
-  // deck was painted — this drops anything that is no longer "new".
-  _renderCfgDeck();
+  // Recomputed from the freshly loaded movements + config, so the deck reflects
+  // what is actually unregistered right now — including after a page reload.
+  _recomputeCfgDeck();
 
   var td = document.getElementById('mTruck');
   td.innerHTML = '<option value="">— None —</option>';

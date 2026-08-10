@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.19';
+var APP_VERSION = '9.20';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -3203,9 +3203,31 @@ function uploadDocGroups_(docGroups, materialName) {
     }
     if (!photos.length) continue;
 
-    if (photos.length === 1) {
+    // Only real images can be stitched into the multi-page PDF — that path
+    // inserts each one into a Google Doc as an image. A PDF or a video in the
+    // same group used to be handed to it too, which threw "Invalid image data"
+    // and lost the WHOLE group, documents and photos alike, leaving the
+    // movement saved with no attachments and only a warning in the toast.
+    // Non-images are stored as their own files instead of poisoning the batch.
+    var images = [], others = [];
+    photos.forEach(function (p) {
+      var mt = String(p.fileMimeType || '');
+      (mt.indexOf('image/') === 0 ? images : others).push(p);
+    });
+
+    others.forEach(function (p, k) {
+      var oname = safeName + (others.length > 1 ? ' ' + (k + 1) : '');
+      var ofile = folder.createFile(
+        Utilities.newBlob(Utilities.base64Decode(p.fileData),
+          p.fileMimeType || 'application/octet-stream', oname));
+      links.push(rawName + '||' + ofile.getId());
+    });
+
+    if (!images.length) continue;
+
+    if (images.length === 1) {
       // Single photo → store as image directly (faster)
-      var p    = photos[0];
+      var p    = images[0];
       var bytes = Utilities.base64Decode(p.fileData);
       var blob  = Utilities.newBlob(bytes, p.fileMimeType || 'image/jpeg', safeName);
       var imgFile = folder.createFile(blob);
@@ -3213,7 +3235,7 @@ function uploadDocGroups_(docGroups, materialName) {
       url = imgFile.getId();
     } else {
       // Multiple photos → create Google Doc with one image per page → export PDF
-      url = photosToDocPdf_(photos, safeName, folder);
+      url = photosToDocPdf_(images, safeName, folder);
     }
 
     if (url) links.push(rawName + '||' + url);
