@@ -1207,7 +1207,7 @@
     </div>
     <div class="field" style="margin-top:.5rem">
       <label>📎 Attach PDF / Photo <span style="font-weight:400;color:var(--muted)">(load sheet, delivery doc — replaces entering each material)</span></label>
-      <input type="file" id="incFile" class="incFile" accept="image/*,.pdf" onchange="_onIncFileChange()"
+      <input type="file" id="incFile" class="incFile" accept="image/*,.pdf,video/*" onchange="_onIncFileChange()"
         style="font-size:.82rem">
       <div id="incDocPreview" style="margin-top:.55rem"></div>
     </div>
@@ -1634,7 +1634,7 @@
       <button class="btn btn-ghost btn-sm" onclick="addDocGroup()" style="margin-top:.35rem;font-size:.8rem">+ Add Document</button>
       <div id="aiExtractStatus" style="display:none;margin-top:.5rem;font-size:.78rem;padding:.4rem .6rem;border-radius:6px;background:var(--purple-bg);color:var(--purple)"></div>
       <!-- Hidden file input (kept for AI extract compatibility) -->
-      <input type="file" id="legacyFileInput" class="mFile" accept="image/*,.pdf" style="display:none">
+      <input type="file" id="legacyFileInput" class="mFile" accept="image/*,.pdf,video/*" style="display:none">
     </div>
 
     <!-- ── Notification Section (ENTRY only) ── -->
@@ -1841,7 +1841,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.18';
+var APP_VERSION = '9.19';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Paid Gmail-scanner add-on: off unless the backend says this installation
@@ -6020,7 +6020,7 @@ function addDocGroup(suggestedName, containerId, idPrefix) {
     /* Camera: one shot at a time, opens native camera on mobile */
     '<input type="file" class="doc-cam-input"  id="docCamInput-'  + uid + '" accept="image/*" capture="environment" style="display:none">' +
     /* Gallery: multiple files, no forced camera */
-    '<input type="file" class="doc-file-input" id="docFileInput-' + uid + '" accept="image/*,.pdf" style="display:none" multiple>';
+    '<input type="file" class="doc-file-input" id="docFileInput-' + uid + '" accept="image/*,.pdf,video/*" style="display:none" multiple>';
 
   container.appendChild(group);
   document.getElementById('docCamInput-'  + uid).addEventListener('change', function(e) {
@@ -6042,11 +6042,31 @@ function triggerGalleryPick(uid) {
 }
 
 // Compress + add photos to a group's strip
+// Anything this app has to hand back to the browser travels base64-encoded
+// through a single google.script.run reply, and Apps Script refuses to build a
+// blob past its own ceiling — which is where "El archivo … supera el tamaño de
+// archivo máximo permitido" came from. That error used to appear only when
+// someone later tried to VIEW the file: it uploaded happily, then turned out to
+// be unopenable. Checking at pick time is the whole point — the moment to say
+// a file is too big is before it is attached, not days later.
+var MAX_ATTACH_BYTES = 25 * 1024 * 1024;   // 25 MB
+function _fmtMB(bytes){ return (bytes / (1024 * 1024)).toFixed(1) + ' MB'; }
+
 function _handlePhotoFiles(uid, files) {
   var strip = document.getElementById('strip-' + uid);
   if (!strip) return;
   files.forEach(function(file) {
     if (!file) return;
+    // Images are compressed below, so only non-images are judged on raw size;
+    // a 30 MB photo is fine because it leaves the canvas a few hundred KB.
+    var isImg = file.type && file.type.indexOf('image') === 0;
+    if (!isImg && file.size > MAX_ATTACH_BYTES) {
+      showToast('“' + file.name + '” is ' + _fmtMB(file.size) + ' — too large to attach (limit ' +
+        _fmtMB(MAX_ATTACH_BYTES) + '). A file this size can be stored but never opened from inside ' +
+        'the app, so it is refused here. Attach a smaller version, or put the link in the comments.',
+        'err', 9000);
+      return;
+    }
     _compressImage(file, 1200, 0.82, function(b64, mime) {
       var thumb = document.createElement('div');
       thumb.className   = 'doc-photo-thumb';
@@ -6312,13 +6332,17 @@ function updateMatList(){
 // Only offered to ADMINs, because updateConfig is ADMIN-gated server-side —
 // showing the prompt to a warehouse user would just produce a permission error
 // after they clicked it.
+// "Known" means REGISTERED IN CONFIG — the master list — and nothing else.
+//
+// This used to also count values appearing in movement rows, which quietly
+// defeated the whole feature: the moment a movement was saved, its brand-new
+// project became "known" because it was now in the history, so the suggestion
+// deleted itself on the next data refresh — right when the value most needed
+// registering. It also meant a supplier free-typed fifty times was never
+// offered, because its own history counted as proof it was on the list.
 function _cfgKnownValues(type){
-  var fromConfig = (type === 'suppliers' ? config.suppliers : config.projects) || [];
-  var fromRows = movements.map(function(m){
-    return type === 'suppliers' ? m.supplier : m.project;
-  }).filter(Boolean);
   var set = {};
-  fromConfig.concat(fromRows).forEach(function(v){
+  ((type === 'suppliers' ? config.suppliers : config.projects) || []).forEach(function(v){
     var k = String(v || '').trim().toUpperCase();
     if (k) set[k] = true;
   });
@@ -6843,6 +6867,18 @@ function openMediaPreview(url, label){
       img.alt = label || '';
       img.src = _mediaPreviewBlobUrl;
       body.appendChild(img);
+      return;
+    }
+
+    // Video plays inline: <video> is a native element, not a plugin, so the
+    // sandbox restriction that blocks the PDF viewer below doesn't apply.
+    if (blob.type.indexOf('video/') === 0) {
+      var vid = document.createElement('video');
+      vid.src = _mediaPreviewBlobUrl;
+      vid.controls = true;
+      vid.playsInline = true;
+      vid.style.cssText = 'max-width:100%;max-height:100%;background:#000';
+      body.appendChild(vid);
       return;
     }
 

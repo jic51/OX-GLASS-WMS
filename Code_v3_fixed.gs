@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.18';
+var APP_VERSION = '9.19';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -354,6 +354,15 @@ function doGet(e) {
 // to Apps Script at all.
 function getPrivateFileData(fileId, token) {
   var file = resolveOwnFile_(fileId, token, 'getPrivateFileData');
+  // Checked before getBlob(), which is what actually fails on a large file —
+  // with an untranslated Apps Script message ("… supera el tamaño de archivo
+  // máximo permitido") that says nothing about what to do next.
+  var size = 0;
+  try { size = file.getSize(); } catch (e) {}
+  if (size > MAX_ATTACH_BYTES) {
+    throw new Error('This file is ' + (size / 1048576).toFixed(1) + ' MB. Files over ' +
+      (MAX_ATTACH_BYTES / 1048576) + ' MB cannot be opened inside the app — open it from Drive instead.');
+  }
   var blob = file.getBlob();
   return {
     mimeType: blob.getContentType(),
@@ -3103,6 +3112,17 @@ function importDriveFileIntoFolder_(fileId, docName, folder) {
       (Session.getEffectiveUser().getEmail() || 'this system') + '.');
   }
 
+  // Refused here rather than after copying: a file this big can be stored but
+  // never opened from inside the app, so attaching it would hand the user
+  // something unreadable and only reveal that when they clicked it.
+  var dsize = 0;
+  try { dsize = file.getSize(); } catch (e) {}
+  if (dsize > MAX_ATTACH_BYTES) {
+    throw new Error('“' + file.getName() + '” is ' + (dsize / 1048576).toFixed(1) + ' MB. Files over ' +
+      (MAX_ATTACH_BYTES / 1048576) + ' MB cannot be opened inside the app, so they cannot be attached. ' +
+      'Link to it from the comments instead, or attach a smaller version.');
+  }
+
   if (!callerCanReadDriveFile_(file, id, auth.email)) {
     logError_(SpreadsheetApp.getActiveSpreadsheet(), 'WARN', 'backend', 'importDriveFileIntoFolder_',
       auth.email, 'Attempted to attach a Drive file they cannot access: ' + id, null, newRequestId_());
@@ -3542,6 +3562,14 @@ function chooseImportSheet_(sheets, wanted) {
   }
   return sheets[0];
 }
+
+// Ceiling for anything the app has to serve back to a browser. Everything the
+// preview shows travels base64-encoded inside one google.script.run reply, and
+// Apps Script will not build a blob past its own limit — so a file bigger than
+// this can be stored, but never opened from inside the app. Attaching one would
+// be handing the user something they cannot read, so the attach paths refuse it
+// up front instead. Kept in step with MAX_ATTACH_BYTES in Index.html.
+var MAX_ATTACH_BYTES = 25 * 1024 * 1024;   // 25 MB
 
 var IMPORT_REQUIRED_HEADERS = ['category', 'name', 'qty'];
 var IMPORT_ALL_HEADERS      = ['category', 'name', 'qty', 'unit', 'location', 'project', 'supplier', 'po', 'comments'];
