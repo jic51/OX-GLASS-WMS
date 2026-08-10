@@ -1841,7 +1841,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.15';
+var APP_VERSION = '9.16';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Paid Gmail-scanner add-on: off unless the backend says this installation
@@ -2205,7 +2205,7 @@ function wizRender(){
         '🏭 <b>' + _wiz.suppliers.length + '</b> suppliers · <b>' + _wiz.projects.length + '</b> projects' +
       '</div>' +
       '<div class="wiz-hint" style="margin-top:1rem">Already have your inventory in a spreadsheet? After finishing, ' +
-      'go to <b>Settings → Import</b>. Save it as <b>.csv</b> first — an .xlsx file will be rejected.</div>' +
+      'go to <b>Settings → Import</b>. Excel (.xlsx) and .csv both work.</div>' +
       '<div class="wiz-progress" id="wizProgressWrap" style="display:none">' +
         '<div class="wiz-progress-track"><div class="wiz-progress-fill" id="wizProgressBar"></div></div>' +
         '<div class="wiz-progress-label"><span id="wizProgressPct">0%</span> — setting up your system…</div>' +
@@ -5299,12 +5299,12 @@ function _renderImportTab() {
   var content = document.getElementById('settingsTabContent');
   content.innerHTML =
     '<p style="font-size:.8rem;color:var(--muted);margin-bottom:.75rem">' +
-      'Bulk-import an existing inventory from a CSV file — useful for the first setup, or catching up after counting on paper. ' +
-      'Every row becomes a real ENTRY movement, reviewed here before anything is saved. Excel/Sheets: File → Save As → CSV first.' +
+      'Bulk-import an existing inventory from an Excel (.xlsx) or CSV file — useful for the first setup, or catching up after counting on paper. ' +
+      'Every row becomes a real ENTRY movement, reviewed here before anything is saved. Excel files use the first sheet.' +
     '</p>' +
     '<div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem">' +
       '<button class="btn btn-ghost btn-sm" onclick="_downloadImportTemplate()">⬇ Download CSV Template</button>' +
-      '<input type="file" id="importFileInput" accept=".csv" style="font-size:.82rem">' +
+      '<input type="file" id="importFileInput" accept=".csv,.xlsx,.xls" style="font-size:.82rem">' +
     '</div>' +
     '<div id="importPreviewBox"></div>';
   document.getElementById('importFileInput').addEventListener('change', _onImportFileChange);

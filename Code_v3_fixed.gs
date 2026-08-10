@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.15';
+var APP_VERSION = '9.16';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -3387,18 +3387,88 @@ function updateMinStockBulk(data, auth) {
 // the exact same locked, stock-validated, write-verified engine a normal ENTRY
 // goes through, so an imported row can never be less trustworthy than one
 // typed in by hand.
+// Excel → CSV, via Drive's own converter.
+//
+// Apps Script cannot read .xlsx bytes directly — there is no XLSX parser in the
+// runtime, and hand-rolling one (it's a ZIP of XML parts) is a lot of code to
+// maintain for something Drive already does correctly. So: upload the file
+// asking Drive to convert it to a Google Sheet, export that Sheet as CSV, and
+// bin the temporary file.
+//
+// Deliberately NOT SpreadsheetApp.openById() on the converted file, which would
+// be the obvious way to read it: this app declares spreadsheets.currentonly,
+// which grants access to its OWN spreadsheet and nothing else, so opening the
+// temp file would fail on scope. Exporting through the Drive API needs only the
+// drive scope the app already has — no new permission on the consent screen.
+//
+// Only the FIRST sheet is imported: CSV export has no concept of multiple tabs.
+function excelToCsvText_(base64Data, fileName) {
+  var token    = ScriptApp.getOAuthToken();
+  var bytes    = Utilities.base64Decode(base64Data);
+  var boundary = '----acopioImport' + Date.now();
+  var metadata = { name: 'Acopio import (temporary) — ' + fileName,
+                   mimeType: 'application/vnd.google-apps.spreadsheet' };
+
+  var head = '--' + boundary + '\r\n' +
+             'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+             JSON.stringify(metadata) + '\r\n' +
+             '--' + boundary + '\r\n' +
+             'Content-Type: application/octet-stream\r\n\r\n';
+  var tail = '\r\n--' + boundary + '--';
+  var payload = Utilities.newBlob(head).getBytes()
+                  .concat(bytes)
+                  .concat(Utilities.newBlob(tail).getBytes());
+
+  var up = UrlFetchApp.fetch(
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', {
+      method: 'post',
+      contentType: 'multipart/related; boundary=' + boundary,
+      payload: payload,
+      headers: { Authorization: 'Bearer ' + token },
+      muteHttpExceptions: true
+    });
+  if (up.getResponseCode() !== 200) {
+    throw new Error('Could not read that Excel file. If it is password-protected or an old .xls, ' +
+      'open it in Excel and use File → Save As → CSV, then upload that instead.');
+  }
+
+  var tempId = JSON.parse(up.getContentText()).id;
+  try {
+    var exp = UrlFetchApp.fetch(
+      'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(tempId) + '/export?mimeType=text/csv', {
+        headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true });
+    if (exp.getResponseCode() !== 200) {
+      throw new Error('Could not read the contents of that Excel file.');
+    }
+    return exp.getContentText();
+  } finally {
+    // Always cleaned up, including when the export above threw — otherwise a
+    // failed import would quietly litter the owner's Drive with temp copies.
+    try { DriveApp.getFileById(tempId).setTrashed(true); } catch (e) {}
+  }
+}
+
 var IMPORT_REQUIRED_HEADERS = ['category', 'name', 'qty'];
 var IMPORT_ALL_HEADERS      = ['category', 'name', 'qty', 'unit', 'location', 'project', 'supplier', 'po', 'comments'];
 
 function parseImportFile(data) {
   requireAuth_('ADMIN');
   var fileName = String(data.fileName || '');
-  if (!/\.csv$/i.test(fileName)) {
-    throw new Error('Please upload a .csv file. If this is an Excel file, use File → Save As → CSV in Excel or Google Sheets first, then upload that file. (Direct .xlsx import is on the roadmap.)');
+  var isExcel  = /\.xlsx?$/i.test(fileName);
+  if (!isExcel && !/\.csv$/i.test(fileName)) {
+    throw new Error('Please upload a .csv or .xlsx file.');
   }
 
-  var bytes = Utilities.base64Decode(data.fileData);
-  var text  = Utilities.newBlob(bytes, 'text/csv').getDataAsString();
+  var text;
+  if (isExcel) {
+    // Excel files are converted to CSV by Drive and then run through the exact
+    // same parser below — one code path for reading rows, so an .xlsx import
+    // can't drift away from the .csv one that is already well tested.
+    text = excelToCsvText_(data.fileData, fileName);
+  } else {
+    var bytes = Utilities.base64Decode(data.fileData);
+    text = Utilities.newBlob(bytes, 'text/csv').getDataAsString();
+  }
 
   // Strip a UTF-8 byte-order-mark. Excel's "CSV UTF-8 (Comma delimited)" export
   // adds one at the very start of the file; left in place it silently glues
