@@ -682,26 +682,45 @@
        collapse can be pure margin+transform — those animate, height does not,
        and a staircase of mismatched heights would not read as a deck. Newest is
        last in the DOM so it paints on top without fighting z-index. */
-    .cfg-deck{position:fixed;right:22px;bottom:86px;z-index:399;display:flex;flex-direction:column;align-items:flex-end;max-width:min(300px,calc(100vw - 44px));max-height:70vh}
+    /* At most DECK_VISIBLE cards are ever in the DOM (see _renderCfgDeck), so
+       the pile is a real hand of cards, not a 300-card staircase — as one is
+       dealt with, the next flows in. Padding on the container leaves room for
+       the rotated corners and the count badge to sit OUTSIDE the top card. */
+    .cfg-deck{position:fixed;right:22px;bottom:86px;z-index:399;display:flex;flex-direction:column;align-items:flex-end;max-width:min(300px,calc(100vw - 44px));padding:14px 12px 0 14px}
     .cfg-deck:empty{display:none}
-    .cfg-card{position:relative;background:var(--navy);color:#fff;border-radius:10px;padding:.55rem .7rem;font-size:.76rem;box-shadow:0 6px 20px rgba(0,0,0,.25);width:250px;max-width:100%;height:88px;flex-shrink:0;transition:margin .22s ease,transform .22s ease,opacity .22s ease;cursor:default;overflow:hidden}
+    .cfg-card{position:relative;background:var(--navy);color:#fff;border-radius:10px;padding:.55rem .7rem;font-size:.76rem;box-shadow:0 6px 20px rgba(0,0,0,.25);width:250px;max-width:100%;height:88px;flex-shrink:0;transition:margin .22s ease,transform .22s ease,opacity .22s ease;cursor:default}
     .cfg-card + .cfg-card{margin-top:.45rem}
-    /* Piled: every card but the top one pulled up under it, each nudged a
-       little so the edges show. Rotation alternates via nth-child for a hand-
-       stacked look rather than a perfectly square pile. */
-    .cfg-deck:not(:hover):not(.open) .cfg-card{margin-top:-84px;transform:rotate(-2deg)}
-    .cfg-deck:not(:hover):not(.open) .cfg-card:nth-child(even){transform:rotate(1.6deg) translateX(-3px)}
-    .cfg-deck:not(:hover):not(.open) .cfg-card:nth-child(3n){transform:rotate(-3.2deg) translateX(2px)}
+    /* Piled: each card pulled fully up under the next, offset a few px so the
+       edges show. Rotation alternates for a hand-stacked look. */
+    .cfg-deck:not(:hover):not(.open) .cfg-card{margin-top:-82px;transform:rotate(-2.4deg)}
+    .cfg-deck:not(:hover):not(.open) .cfg-card:nth-child(even){transform:rotate(1.8deg) translateX(-4px)}
+    .cfg-deck:not(:hover):not(.open) .cfg-card:nth-child(3n){transform:rotate(-3.4deg) translateX(3px)}
     .cfg-deck:not(:hover):not(.open) .cfg-card:first-child{margin-top:0}
+    /* The visible one sits square on top of the pile. */
     .cfg-deck:not(:hover):not(.open) .cfg-card:last-child{transform:rotate(0deg)}
-    /* Only the top card can be clicked while piled — the ones underneath are
-       decoration until the deck is fanned out. */
+    /* Only the top card takes clicks while piled — the rest are decoration
+       until the deck is fanned out. */
     .cfg-deck:not(:hover):not(.open) .cfg-card:not(:last-child){pointer-events:none}
-    /* Fanned out: many suggestions can exceed the screen, so the column scrolls
-       rather than running off the top of the viewport. */
-    .cfg-deck:hover,.cfg-deck.open{overflow-y:auto;overflow-x:hidden;padding:6px 4px 2px 6px}
-    .cfg-count{position:absolute;top:-8px;right:-8px;min-width:22px;height:22px;border-radius:11px;background:var(--accent);color:#fff;font-size:.7rem;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 5px;border:2px solid var(--card);box-shadow:0 2px 6px rgba(0,0,0,.3)}
+    /* Badge lives on the top card but must not be clipped by it, so no
+       overflow:hidden anywhere on the card — the value ellipsizes instead. */
+    .cfg-count{position:absolute;top:-9px;right:-9px;min-width:24px;height:24px;border-radius:12px;background:var(--accent);color:#fff;font-size:.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 6px;border:2px solid var(--card);box-shadow:0 2px 6px rgba(0,0,0,.35);z-index:2}
     .cfg-deck:hover .cfg-count,.cfg-deck.open .cfg-count{display:none}
+
+    /* ── Phone/tablet: bell in the topbar instead of the hover deck ── */
+    .cfg-bell{display:none;position:relative;background:rgba(255,255,255,.12);border:none;color:#fff;border-radius:8px;width:38px;height:34px;font-size:1rem;cursor:pointer;align-items:center;justify-content:center}
+    .cfg-bell-count{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;border-radius:9px;background:var(--accent);color:#fff;font-size:.62rem;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid var(--navy)}
+    .cfg-bell-panel{display:none;position:fixed;top:60px;right:12px;left:12px;max-width:380px;margin-left:auto;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.3);z-index:420;max-height:70vh;overflow-y:auto}
+    .cfg-bell-panel.show{display:block}
+    .cfg-bell-hdr{display:flex;justify-content:space-between;align-items:center;padding:.6rem .8rem;border-bottom:1px solid var(--border);font-size:.8rem;font-weight:700;color:var(--text);position:sticky;top:0;background:var(--card)}
+    .cfg-bell-hdr button{background:none;border:none;color:var(--muted);font-size:.95rem;cursor:pointer}
+    .cfg-bell-row{padding:.6rem .8rem;border-bottom:1px solid var(--border)}
+    .cfg-bell-row:last-child{border-bottom:none}
+    .cfg-bell-row .cfg-card-lbl{color:var(--muted)}
+    .cfg-bell-row .cfg-card-val{color:var(--text)}
+    @media (max-width:900px){
+      .cfg-deck{display:none!important}
+      .cfg-bell{display:inline-flex}
+    }
     .cfg-card-lbl{font-size:.63rem;text-transform:uppercase;letter-spacing:.05em;color:#a1b0cb;font-weight:700}
     .cfg-card-val{font-weight:700;margin:.15rem 0 .45rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .cfg-card-acts{display:flex;gap:.4rem;align-items:center}
@@ -891,9 +910,23 @@
         </div>
       </div>
     </div>
+    <!-- Unregistered suppliers/projects — phone/tablet entry point. The corner
+         deck relies on hover, which touch devices do not have, so on small
+         screens the deck is hidden and this opens the same list as a panel. -->
+    <button class="cfg-bell" id="cfgBellBtn" onclick="toggleCfgBell(event)" title="Unregistered suppliers / projects">
+      🔔<span class="cfg-bell-count" id="cfgBellCount">0</span>
+    </button>
     <!-- Dark mode toggle -->
     <button class="dark-toggle" id="btnDarkMode" onclick="toggleDarkMode()" title="Toggle dark / light mode">🌙</button>
   </div>
+</div>
+
+<div class="cfg-bell-panel" id="cfgBellPanel">
+  <div class="cfg-bell-hdr">
+    <span>Not on your lists yet</span>
+    <button onclick="toggleCfgBell(event)" title="Close">✕</button>
+  </div>
+  <div id="cfgBellList"></div>
 </div>
 
 <!-- ══ TOAST CONTAINER ═══════════════════════════════════════════════════════ -->
@@ -1861,7 +1894,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.21';
+var APP_VERSION = '9.22';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Paid Gmail-scanner add-on: off unless the backend says this installation
@@ -6459,6 +6492,7 @@ function _maybeOfferCfgAdd(input){
 // means used in a movement but absent from CONFIG — exactly what the deck is for.
 var _pendingCfgAdds = [];
 var _DISMISS_KEY = 'acopio_cfg_dismissed';
+var _DECK_VISIBLE = 5;   // cards in the pile at once; the rest wait their turn
 
 function _cfgKey(type, value){ return type + '|' + String(value).toUpperCase(); }
 
@@ -6508,6 +6542,10 @@ function _unqueueCfgAdd(type, value){
   _renderCfgDeck();
 }
 
+// All of them — no cap here. The pile only ever shows _DECK_VISIBLE at a time,
+// and the badge reports the true total, so a long tail of legacy values costs
+// no screen space until someone opens the deck.
+
 function _renderCfgDeck(){
   var deck = document.getElementById('cfgDeck');
   if (!deck) return;
@@ -6516,56 +6554,141 @@ function _renderCfgDeck(){
   _pendingCfgAdds = _pendingCfgAdds.filter(function(p){
     return !_cfgKnownValues(p.type)[String(p.value).toUpperCase()];
   });
-  if (!_pendingCfgAdds.length){ deck.innerHTML = ''; deck.classList.remove('open'); return; }
 
-  // _pendingCfgAdds is newest-first; the DOM is painted oldest-first so the
-  // newest card ends up last and therefore on top of the pile, which is what
-  // "the newest one sits over all the others" means visually.
   var total = _pendingCfgAdds.length;
-  deck.innerHTML = _pendingCfgAdds.slice().reverse().map(function(p, revIdx){
-    var i = total - 1 - revIdx;                 // index back into _pendingCfgAdds
-    var isTop = revIdx === total - 1;
-    return '<div class="cfg-card" data-i="' + i + '">' +
+  _syncCfgBell(total);
+  if (!total){ deck.innerHTML = ''; deck.classList.remove('open'); return; }
+
+  // Only a handful are ever in the DOM. Rendering all of them produced a
+  // staircase reaching off the top of the screen and a fan nobody could use;
+  // dealing with one simply lets the next take its place.
+  var hand = _pendingCfgAdds.slice(0, _DECK_VISIBLE);
+
+  // hand is newest-first; painted in reverse so the newest lands LAST in the
+  // DOM and therefore on top of the pile.
+  deck.innerHTML = hand.slice().reverse().map(function(p, revIdx){
+    var isTop = revIdx === hand.length - 1;
+    // Keyed by type|value, never by array position: indices shift the moment a
+    // card is removed, which had later clicks acting on the wrong entry.
+    var k = _he(_cfgKey(p.type, p.value));
+    return '<div class="cfg-card" data-key="' + k + '">' +
       (isTop && total > 1 ? '<span class="cfg-count" title="' + total + ' unregistered">' + total + '</span>' : '') +
       '<div class="cfg-card-lbl">New ' + (p.type === 'suppliers' ? 'supplier' : 'project') + '</div>' +
-      '<div class="cfg-card-val">' + _he(p.value) + '</div>' +
+      '<div class="cfg-card-val" title="' + _he(p.value) + '">' + _he(p.value) + '</div>' +
       '<div class="cfg-card-acts">' +
-        '<button type="button" class="cfg-card-add" data-act="add" data-i="' + i + '">+ Add to list</button>' +
-        '<button type="button" class="cfg-card-skip" data-act="skip" data-i="' + i + '">Not now</button>' +
+        '<button type="button" class="cfg-card-add" data-act="add" data-key="' + k + '">+ Add to list</button>' +
+        '<button type="button" class="cfg-card-skip" data-act="skip" data-key="' + k + '">Not now</button>' +
       '</div></div>';
   }).join('');
 
   deck.querySelectorAll('button[data-act]').forEach(function(btn){
     btn.addEventListener('click', function(e){
       e.stopPropagation();   // don't toggle the deck's own open/closed state
-      var p = _pendingCfgAdds[parseInt(btn.getAttribute('data-i'), 10)];
-      if (!p) return;
-      if (btn.getAttribute('data-act') === 'skip'){
-        _dismissCfgAdd(p.type, p.value);
-        _unqueueCfgAdd(p.type, p.value);
-        return;
-      }
-      btn.disabled = true; btn.textContent = 'Adding…';
-      _cfgAddValue(p.type, p.value, function(ok, err){
-        if (ok) { showToast('Added to your ' + p.type + ' ✓', 'ok'); _unqueueCfgAdd(p.type, p.value); }
-        else { btn.disabled = false; btn.textContent = '+ Add to list'; showToast('Could not add: ' + err, 'err', 5000); }
-      });
+      _cfgCardAction(btn.getAttribute('data-act'), btn.getAttribute('data-key'), btn);
     });
   });
 }
 
+// One handler for both the desktop deck and the phone panel.
+function _cfgCardAction(act, key, btn){
+  var p = null;
+  for (var i = 0; i < _pendingCfgAdds.length; i++){
+    if (_cfgKey(_pendingCfgAdds[i].type, _pendingCfgAdds[i].value) === key){ p = _pendingCfgAdds[i]; break; }
+  }
+  if (!p) return;
+
+  if (act === 'skip'){
+    _dismissCfgAdd(p.type, p.value);
+    // Recompute rather than just splice: with only a handful rendered, the next
+    // unregistered value has to take the freed slot. Splicing alone emptied the
+    // deck after a few dismissals and nothing returned until a page reload.
+    _recomputeCfgDeck();
+    return;
+  }
+
+  if (btn){ btn.disabled = true; btn.textContent = 'Adding…'; }
+  _cfgAddValue(p.type, p.value, function(ok, err){
+    if (ok){
+      showToast('Added to your ' + (p.type === 'suppliers' ? 'suppliers' : 'projects') + ' ✓', 'ok');
+    } else {
+      if (btn){ btn.disabled = false; btn.textContent = '+ Add to list'; }
+      showToast('Could not add: ' + err, 'err', 5000);
+      return;
+    }
+    _recomputeCfgDeck();
+  });
+}
+
+// ── Phone/tablet panel ───────────────────────────────────────────────────────
+function _syncCfgBell(total){
+  var btn = document.getElementById('cfgBellBtn');
+  var cnt = document.getElementById('cfgBellCount');
+  if (!btn || !cnt) return;
+  cnt.textContent = total;
+  btn.style.visibility = total ? '' : 'hidden';
+  if (!total){
+    var panel = document.getElementById('cfgBellPanel');
+    if (panel) panel.classList.remove('show');
+    return;
+  }
+  var list = document.getElementById('cfgBellList');
+  if (!list) return;
+  // The panel lists ALL of them — it scrolls, so there is no reason to ration
+  // them the way the pile does.
+  list.innerHTML = _pendingCfgAdds.map(function(p){
+    var k = _he(_cfgKey(p.type, p.value));
+    return '<div class="cfg-bell-row">' +
+      '<div class="cfg-card-lbl">New ' + (p.type === 'suppliers' ? 'supplier' : 'project') + '</div>' +
+      '<div class="cfg-card-val" title="' + _he(p.value) + '">' + _he(p.value) + '</div>' +
+      '<div class="cfg-card-acts">' +
+        '<button type="button" class="cfg-card-add" data-act="add" data-key="' + k + '">+ Add to list</button>' +
+        '<button type="button" class="cfg-card-skip" data-act="skip" data-key="' + k + '">Not now</button>' +
+      '</div></div>';
+  }).join('');
+  list.querySelectorAll('button[data-act]').forEach(function(b){
+    b.addEventListener('click', function(e){
+      e.stopPropagation();
+      _cfgCardAction(b.getAttribute('data-act'), b.getAttribute('data-key'), b);
+    });
+  });
+}
+
+function toggleCfgBell(e){
+  if (e) e.stopPropagation();
+  var panel = document.getElementById('cfgBellPanel');
+  if (panel) panel.classList.toggle('show');
+}
+
+document.addEventListener('click', function(e){
+  var panel = document.getElementById('cfgBellPanel');
+  if (!panel || !panel.classList.contains('show')) return;
+  if (panel.contains(e.target) || (e.target.closest && e.target.closest('#cfgBellBtn'))) return;
+  panel.classList.remove('show');
+});
+
 // Shared by the inline prompt and the deck — one place that actually saves.
 function _cfgAddValue(type, value, done){
+  function accept(){
+    var list = type === 'suppliers'
+      ? (config.suppliers = config.suppliers || [])
+      : (config.projects  = config.projects  || []);
+    if (list.indexOf(value) === -1) list.push(value);
+    refreshDropdowns();
+    done(true);
+  }
   google.script.run
-    .withSuccessHandler(function(){
-      var list = type === 'suppliers'
-        ? (config.suppliers = config.suppliers || [])
-        : (config.projects  = config.projects  || []);
-      if (list.indexOf(value) === -1) list.push(value);
-      refreshDropdowns();
-      done(true);
+    .withSuccessHandler(accept)
+    .withFailureHandler(function(e){
+      var msg = (e && e.message) || String(e);
+      // "already exists" is not a failure — the goal was for this value to be on
+      // the list, and it is. It happens when the browser's copy of CONFIG has
+      // gone stale (something else added it: Settings in another tab, an import,
+      // the wizard), so the deck kept offering a value the sheet already had and
+      // the click surfaced a red error for a no-op. Treat it as done and let the
+      // local copy catch up.
+      if (/already exists/i.test(msg)) { accept(); return; }
+      done(false, msg);
     })
-    .withFailureHandler(function(e){ done(false, (e && e.message) || String(e)); })
     .processMovement('updateConfig', _h({ type: type, op: 'add', newValue: value }));
 }
 
