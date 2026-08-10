@@ -769,6 +769,13 @@
     .loc-item.dragging{opacity:.4}
     .loc-grip{color:var(--muted);font-size:.85rem;line-height:1}
     .loc-empty{color:var(--muted);font-size:.75rem;padding:.35rem .5rem;font-style:italic}
+    .loc-group-archived{opacity:.85}
+    .loc-group-archived .loc-group-hdr{background:var(--bg)}
+    .loc-group-archived .loc-item{background:transparent;border-style:dashed;color:var(--muted)}
+    .loc-arch-note{font-size:.66rem;color:var(--muted);margin-left:.4rem}
+    .loc-arch-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.8rem;padding:0 0 0 .2rem;line-height:1}
+    .loc-arch-btn:hover{color:var(--accent)}
+    .loc-pick{margin-right:.15rem;cursor:pointer}
     .loc-savebar{display:none;gap:.5rem;align-items:center;flex-wrap:wrap;position:sticky;bottom:0;background:var(--navy);color:#fff;border-radius:8px;padding:.55rem .75rem;margin-top:.75rem;font-size:.8rem}
     .loc-savebar.show{display:flex}
     /* Possible-duplicate groups in Settings → Projects / Suppliers */
@@ -1945,7 +1952,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.28';
+var APP_VERSION = '9.29';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Paid Gmail-scanner add-on: off unless the backend says this installation
@@ -5632,15 +5639,23 @@ var _locExtraGroups = [];   // groups created on screen but still empty
 // renamed or deleted — deleting any other group empties into it, so a location
 // can never end up with nowhere to be.
 var LOC_DEFAULT_GROUP = 'ALL LOCATIONS';
+// Archiving instead of deleting: every movement that ever went into or out of a
+// location names it, so removing it would leave that history pointing at
+// nothing. An archived location keeps all its history and simply stops being
+// offered when recording new movements. Stored as a reserved group name, which
+// needs no schema change and makes restoring it a drag back out.
+var LOC_ARCHIVED_GROUP = 'ARCHIVED';
 
 function _locTypesInOrder(){
   var seen = {}, out = [LOC_DEFAULT_GROUP];
   seen[LOC_DEFAULT_GROUP] = 1;
+  seen[LOC_ARCHIVED_GROUP] = 1;          // pinned to the end below, never inline
   _locLayout.forEach(function(l){
     var t = l.type || LOC_DEFAULT_GROUP;
     if (!seen[t]) { seen[t] = 1; out.push(t); }
   });
   _locExtraGroups.forEach(function(t){ if (!seen[t]) { seen[t] = 1; out.push(t); } });
+  out.push(LOC_ARCHIVED_GROUP);
   return out;
 }
 
@@ -5671,6 +5686,7 @@ function _renderLocationsTab(){
       '<button class="btn btn-primary btn-sm" onclick="_locCreate()">Create</button>' +
       '<button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'locNewRow\').style.display=\'none\'">Cancel</button>' +
     '</div>' +
+    '<div id="locMergeBar" class="cfg-pickbar"></div>' +
     '<div class="loc-groups" id="locGroups"></div>' +
     '<div id="locSaveBar" class="loc-savebar"></div>';
   _redrawLocGroups();
@@ -5678,13 +5694,20 @@ function _renderLocationsTab(){
 
 function _renderLocGroup(type){
   var items = _locLayout.filter(function(l){ return (l.type || LOC_DEFAULT_GROUP) === type; });
-  var isDefault = (type === LOC_DEFAULT_GROUP);
-  return '<div class="loc-group' + (isDefault ? ' loc-group-default' : '') + '" data-type="' + _he(type) + '">' +
+  var isDefault  = (type === LOC_DEFAULT_GROUP);
+  var isArchived = (type === LOC_ARCHIVED_GROUP);
+  var fixed = isDefault || isArchived;   // neither can be renamed or removed
+  if (isArchived && !items.length) return '';   // no empty archive box in the way
+
+  return '<div class="loc-group' + (isDefault ? ' loc-group-default' : '') +
+      (isArchived ? ' loc-group-archived' : '') + '" data-type="' + _he(type) + '">' +
     '<div class="loc-group-hdr">' +
-      '<span class="loc-group-name">' + _he(type) + '</span>' +
+      '<span class="loc-group-name">' + (isArchived ? '🗄 ' : '') + _he(type) + '</span>' +
       '<span class="loc-group-count">' + items.length + '</span>' +
-      '<button class="cfg-btn" title="Sort this group A–Z" onclick="_locSortGroup(\'' + _he(type) + '\')">A–Z</button>' +
-      (isDefault ? '' :
+      (isArchived
+        ? '<span class="loc-arch-note">Kept for history — not offered on new movements. Drag out to restore.</span>'
+        : '<button class="cfg-btn" title="Sort this group A–Z" onclick="_locSortGroup(\'' + _he(type) + '\')">A–Z</button>') +
+      (fixed ? '' :
         '<button class="cfg-btn" title="Rename group" onclick="_locRenameGroup(\'' + _he(type) + '\')">✏️</button>' +
         '<button class="cfg-btn cfg-btn-danger" title="Delete group" onclick="_locDeleteGroup(\'' + _he(type) + '\')">🗑</button>') +
     '</div>' +
@@ -5692,10 +5715,25 @@ function _renderLocGroup(type){
       (items.length
         ? items.map(function(l){
             return '<li class="loc-item" draggable="true" data-name="' + _he(l.name) + '">' +
-              '<span class="loc-grip">⠿</span><span>' + _he(l.name) + '</span></li>';
+              '<input type="checkbox" class="loc-pick" data-name="' + _he(l.name) + '" title="Select to merge">' +
+              '<span class="loc-grip">⠿</span><span>' + _he(l.name) + '</span>' +
+              '<button class="loc-arch-btn" title="' + (isArchived ? 'Restore' : 'Archive') + '" ' +
+                'onclick="_locToggleArchive(\'' + _he(l.name) + '\')">' + (isArchived ? '↩' : '🗄') + '</button>' +
+            '</li>';
           }).join('')
         : '<li class="loc-empty">' + (isDefault ? 'Nothing unfiled' : 'Drop a location here') + '</li>') +
     '</ul></div>';
+}
+
+// Archive / restore is a group move, so it goes through the same save as
+// everything else on this screen.
+function _locToggleArchive(name){
+  var entry = null;
+  _locLayout.forEach(function(l){ if (l.name === name) entry = l; });
+  if (!entry) return;
+  entry.type = (entry.type === LOC_ARCHIVED_GROUP) ? LOC_DEFAULT_GROUP : LOC_ARCHIVED_GROUP;
+  _redrawLocGroups();
+  _locMarkDirty();
 }
 
 var _locNewKind = 'location';
@@ -5716,6 +5754,7 @@ function _locCreate(){
   if (!v) { if (inp) inp.focus(); return; }
 
   if (_locNewKind === 'group'){
+    if (v === LOC_ARCHIVED_GROUP) { showToast('That name is reserved for archived locations.', 'warn'); return; }
     if (_locTypesInOrder().indexOf(v) !== -1) { showToast('That group already exists.', 'warn'); return; }
     // A group with no members has nothing to store — CONFIG keeps a type per
     // LOCATION, not a list of groups — so it lives on screen until something
@@ -5738,7 +5777,7 @@ function _locRenameGroup(type){
   if (next === null) return;
   next = String(next).trim().toUpperCase();
   if (!next || next === type) return;
-  if (next === LOC_DEFAULT_GROUP) { showToast('That name is reserved.', 'warn'); return; }
+  if (next === LOC_DEFAULT_GROUP || next === LOC_ARCHIVED_GROUP) { showToast('That name is reserved.', 'warn'); return; }
   if (_locTypesInOrder().indexOf(next) !== -1) { showToast('That group already exists.', 'warn'); return; }
   _locLayout.forEach(function(l){ if ((l.type || LOC_DEFAULT_GROUP) === type) l.type = next; });
   _locExtraGroups = _locExtraGroups.map(function(t){ return t === type ? next : t; });
@@ -5787,6 +5826,75 @@ function _redrawLocGroups(){
   if (!box) return;
   box.innerHTML = _locTypesInOrder().map(_renderLocGroup).join('');
   _wireLocDnD();
+  _wireLocMerge();
+}
+
+// Merging locations, for the case archiving doesn't cover: the same shelf
+// entered under two spellings. Rewrites both the source and destination columns
+// of every movement, so nothing is left pointing at the name that goes away.
+function _wireLocMerge(){
+  var bar = document.getElementById('locMergeBar');
+  if (!bar) return;
+
+  function picked(){
+    return Array.prototype.map.call(document.querySelectorAll('.loc-pick:checked'),
+      function(cb){ return cb.getAttribute('data-name'); });
+  }
+
+  function draw(){
+    var sel = picked();
+    if (sel.length < 2){ bar.innerHTML = ''; bar.classList.remove('show'); return; }
+    bar.classList.add('show');
+    bar.innerHTML =
+      '<span class="cfg-pick-count">' + sel.length + ' selected — keep which one?</span>' +
+      '<select id="locMergeKeep">' +
+        sel.map(function(v){ return '<option value="' + _he(v) + '">' + _he(v) + '</option>'; }).join('') +
+      '</select>' +
+      '<button class="btn btn-primary btn-sm" id="locMergeBtn">Merge</button>' +
+      '<button class="btn btn-ghost btn-sm" id="locMergeClear">Clear</button>';
+
+    document.getElementById('locMergeClear').addEventListener('click', function(){
+      document.querySelectorAll('.loc-pick:checked').forEach(function(cb){ cb.checked = false; });
+      draw();
+    });
+
+    document.getElementById('locMergeBtn').addEventListener('click', function(){
+      var into = document.getElementById('locMergeKeep').value;
+      var from = sel.filter(function(v){ return v !== into; });
+      var btn  = document.getElementById('locMergeBtn');
+      _showConfirm({
+        icon: '🔀', title: 'Merge into "' + into + '"?',
+        message: from.join('\n') + '\n\nwill become "' + into + '" on every movement, both as a ' +
+                 'source and as a destination. This rewrites history and cannot be undone automatically.',
+        confirmText: 'Merge',
+        onConfirm: function(){
+          btn.disabled = true; btn.textContent = 'Merging…';
+          google.script.run
+            .withSuccessHandler(function(res){
+              showToast('Merged ✓ — ' + res.rowsChanged + ' entr(ies) updated.', 'ok', 5000);
+              var gone = {};
+              from.forEach(function(v){ gone[v.toUpperCase()] = 1; });
+              _locLayout = _locLayout.filter(function(l){ return !gone[l.name.toUpperCase()]; });
+              movements.forEach(function(m){
+                if (m.sourceLoc && gone[String(m.sourceLoc).toUpperCase()]) m.sourceLoc = into;
+                if (m.destLoc   && gone[String(m.destLoc).toUpperCase()])   m.destLoc   = into;
+              });
+              config.locations = (config.locations || []).filter(function(l){ return !gone[String(l.name).toUpperCase()]; });
+              bar.innerHTML = ''; bar.classList.remove('show');
+              _redrawLocGroups();
+              refreshDropdowns();
+            })
+            .withFailureHandler(function(e){
+              btn.disabled = false; btn.textContent = 'Merge';
+              showToast('Merge failed: ' + (e.message || e), 'err', 6000);
+            })
+            .processMovement('mergeLocations', _h({ from: from, into: into }));
+        }
+      });
+    });
+  }
+
+  document.querySelectorAll('.loc-pick').forEach(function(cb){ cb.addEventListener('change', draw); });
 }
 
 function _wireLocDnD(){
@@ -7475,7 +7583,11 @@ function refreshDropdowns(){
 
   var rd1 = document.getElementById('rackList'); rd1.innerHTML = '';
   var rd2 = document.getElementById('rackListDest'); rd2.innerHTML = '';
-  var rackNames = config.locations.map(function(l){ return l.name; });
+  // Archived locations keep all their history but stop being offered for NEW
+  // movements — that is the whole point of archiving rather than deleting.
+  var rackNames = config.locations
+    .filter(function(l){ return String(l.type || '').toUpperCase() !== 'ARCHIVED'; })
+    .map(function(l){ return l.name; });
   var rackSet   = Array.from(new Set(
     rackNames.concat(
       movements.map(function(m){ return m.sourceLoc; }).filter(Boolean),

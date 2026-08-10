@@ -32,6 +32,11 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Polish pass (do at the end, after the functional work)
 
+- **Scrollbars look bad.** Jose dislikes the default side scrollbar. Do NOT
+  hide it outright: the bar is the only cue that a long Movements table or
+  Settings list continues below, and removing it hides that from warehouse
+  staff. Style it instead — thin (~6px), themed, low contrast, on the scrolling
+  containers rather than the whole page.
 - **Count badge on the front suggestion card is too faint.** It inherits the
   deck's resting opacity along with everything else, so the number is hard to
   read at a glance — the one thing on the pile that should stay legible. Make it
