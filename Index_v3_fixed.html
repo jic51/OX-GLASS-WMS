@@ -688,7 +688,13 @@
        the rotated corners and the count badge to sit OUTSIDE the top card. */
     .cfg-deck{position:fixed;right:22px;bottom:86px;z-index:399;display:flex;flex-direction:column;align-items:flex-end;max-width:min(300px,calc(100vw - 44px));padding:14px 12px 0 14px}
     .cfg-deck:empty{display:none}
-    .cfg-card{position:relative;background:var(--navy);color:#fff;border-radius:10px;padding:.55rem .7rem;font-size:.76rem;box-shadow:0 6px 20px rgba(0,0,0,.25);width:250px;max-width:100%;height:88px;flex-shrink:0;transition:margin .22s ease,transform .22s ease,opacity .22s ease;cursor:default}
+    /* Closing is deliberately slower than opening — a pile snapping shut the
+       instant the pointer leaves reads as the app swatting you away. */
+    .cfg-card{position:relative;background:var(--navy);color:#fff;border-radius:10px;padding:.55rem .7rem;font-size:.76rem;box-shadow:0 6px 20px rgba(0,0,0,.25);width:250px;max-width:100%;height:88px;flex-shrink:0;transition:margin .5s ease,transform .5s ease,opacity .45s ease;cursor:default}
+    .cfg-deck:hover .cfg-card,.cfg-deck.open .cfg-card{transition:margin .22s ease,transform .22s ease,opacity .2s ease}
+    /* Resting state is nearly see-through so the deck never competes with the
+       app behind it; hovering brings it back to full strength. */
+    .cfg-deck.dim:not(:hover):not(.open) .cfg-card{opacity:.25}
     .cfg-card + .cfg-card{margin-top:.45rem}
     /* Piled: each card pulled fully up under the next, offset a few px so the
        edges show. Rotation alternates for a hand-stacked look. */
@@ -1894,7 +1900,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.22';
+var APP_VERSION = '9.23';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Paid Gmail-scanner add-on: off unless the backend says this installation
@@ -6463,8 +6469,8 @@ function _maybeOfferCfgAdd(input){
   if (userRole !== 'ADMIN') return;
 
   var val = (input.value || '').trim();
-  if (!val) return;
-  if (_cfgKnownValues(type)[val.toUpperCase()]) return;   // already known — nothing to offer
+  if (!val) { _clearTypedCfgValue(input); return; }
+  if (_cfgKnownValues(type)[val.toUpperCase()]) { _clearTypedCfgValue(input); return; }
 
   var label = type === 'suppliers' ? 'supplier' : 'project';
   var hint = document.createElement('div');
@@ -6476,6 +6482,47 @@ function _maybeOfferCfgAdd(input){
     _cfgAddInline(type, val, hint);
   });
   input.insertAdjacentElement('afterend', hint);
+
+  // Surface it in the deck straight away rather than waiting for the movement
+  // to be saved. Typed values are held separately from the ones derived from
+  // saved rows (see _typedCfgAdds) so that changing your mind can retract them.
+  _noteTypedCfgValue(input, type, val);
+}
+
+// ── Values typed but not yet saved ───────────────────────────────────────────
+// The deck is built from saved movements, which is what makes it survive a
+// reload — but waiting for a save meant the suggestion only showed up after the
+// fact. These fill that gap: added the moment an unknown value is typed, and
+// retracted if that same field is then changed to something else, so picking an
+// existing project after typing a new one doesn't leave a card behind for a
+// value that was never used.
+var _typedCfgAdds = [];      // [{type, value}] pending, this session only
+var _typedByField = {};      // field id -> the key it last contributed
+
+function _noteTypedCfgValue(input, type, val){
+  var fieldId = input.id || (input.id = 'cfgfld-' + Math.random().toString(36).slice(2));
+  var key = _cfgKey(type, val);
+  var prev = _typedByField[fieldId];
+  if (prev === key) return;
+
+  if (prev) _typedCfgAdds = _typedCfgAdds.filter(function(t){ return _cfgKey(t.type, t.value) !== prev; });
+  _typedByField[fieldId] = key;
+  if (!_typedCfgAdds.some(function(t){ return _cfgKey(t.type, t.value) === key; })){
+    _typedCfgAdds.push({ type: type, value: val });
+  }
+  _recomputeCfgDeck();
+}
+
+// Called when a field settles on a value that IS already registered — the card
+// it previously contributed has to go, or the deck keeps offering a value the
+// user visibly abandoned.
+function _clearTypedCfgValue(input){
+  var fieldId = input.id;
+  if (!fieldId || !_typedByField[fieldId]) return;
+  var prev = _typedByField[fieldId];
+  delete _typedByField[fieldId];
+  _typedCfgAdds = _typedCfgAdds.filter(function(t){ return _cfgKey(t.type, t.value) !== prev; });
+  _recomputeCfgDeck();
 }
 
 // ── Floating deck of unregistered suppliers/projects ─────────────────────────
@@ -6515,6 +6562,17 @@ function _recomputeCfgDeck(){
   var dismissed = _loadDismissed();
   var seen = {};
   var found = [];
+
+  // Typed-but-unsaved first: they are the most recent thing that happened, and
+  // the whole point of tracking them is immediate feedback.
+  _typedCfgAdds.forEach(function(t){
+    var key = _cfgKey(t.type, t.value);
+    if (seen[key] || dismissed[key]) return;
+    if (_cfgKnownValues(t.type)[String(t.value).toUpperCase()]) return;
+    seen[key] = 1;
+    found.push({ type: t.type, value: t.value });
+  });
+
   // Newest first, so what someone is working on right now surfaces ahead of
   // whatever is oldest in the loaded window.
   for (var i = movements.length - 1; i >= 0; i--){
@@ -6587,6 +6645,11 @@ function _renderCfgDeck(){
       _cfgCardAction(btn.getAttribute('data-act'), btn.getAttribute('data-key'), btn);
     });
   });
+
+  // Solid on arrival, then fades — unless the pointer is already on the deck,
+  // in which case re-rendering after an action must not yank it dim underneath.
+  if (deck.matches(':hover') || deck.classList.contains('open')) _cfgWake();
+  else { deck.classList.remove('dim'); _cfgScheduleDim(_CFG_SOLID_MS); }
 }
 
 // One handler for both the desktop deck and the phone panel.
@@ -6599,6 +6662,9 @@ function _cfgCardAction(act, key, btn){
 
   if (act === 'skip'){
     _dismissCfgAdd(p.type, p.value);
+    // Also drop it from the typed set, or the next keystroke in that field
+    // would re-add what was just waved off.
+    _typedCfgAdds = _typedCfgAdds.filter(function(t){ return _cfgKey(t.type, t.value) !== key; });
     // Recompute rather than just splice: with only a handful rendered, the next
     // unregistered value has to take the freed slot. Splicing alone emptied the
     // deck after a few dismissals and nothing returned until a page reload.
@@ -6652,6 +6718,36 @@ function _syncCfgBell(total){
     });
   });
 }
+
+// ── Deck fade timing ─────────────────────────────────────────────────────────
+// A new card arrives at full strength and stays readable for a few seconds
+// (long enough to notice without having to chase it), then fades back to a
+// whisper so it stops competing with the app. Hovering restores it instantly;
+// leaving waits a beat before fading again, so brushing past the deck on the
+// way somewhere else doesn't make it vanish mid-glance.
+var _CFG_SOLID_MS = 3500;   // how long a freshly rendered deck stays solid
+var _CFG_REDIM_MS = 2000;   // pause after the pointer leaves before fading
+var _cfgDimTimer = null;
+
+function _cfgScheduleDim(delay){
+  clearTimeout(_cfgDimTimer);
+  var deck = document.getElementById('cfgDeck');
+  if (!deck) return;
+  _cfgDimTimer = setTimeout(function(){ deck.classList.add('dim'); }, delay);
+}
+
+function _cfgWake(){
+  clearTimeout(_cfgDimTimer);
+  var deck = document.getElementById('cfgDeck');
+  if (deck) deck.classList.remove('dim');
+}
+
+(function _wireCfgDeckFade(){
+  var deck = document.getElementById('cfgDeck');
+  if (!deck) return;
+  deck.addEventListener('mouseenter', _cfgWake);
+  deck.addEventListener('mouseleave', function(){ _cfgScheduleDim(_CFG_REDIM_MS); });
+})();
 
 function toggleCfgBell(e){
   if (e) e.stopPropagation();

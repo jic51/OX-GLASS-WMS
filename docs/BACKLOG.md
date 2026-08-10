@@ -53,4 +53,3 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Operational
 
-- Admin email alert on critical errors

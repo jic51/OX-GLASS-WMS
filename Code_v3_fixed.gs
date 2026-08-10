@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.22';
+var APP_VERSION = '9.23';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -3828,6 +3828,82 @@ function logError_(ss, severity, source, action, userEmail, message, context, re
   } catch (e) {
     Logger.log('logError_ failed: ' + e.message);
   }
+  // Separate try: a failure to notify must never swallow the log write above,
+  // and vice versa.
+  try {
+    if (String(severity || '').toUpperCase() === 'ERROR') {
+      notifyAdminOfError_(action, userEmail, message, requestId);
+    }
+  } catch (e2) {
+    Logger.log('notifyAdminOfError_ failed: ' + e2.message);
+  }
+}
+
+// Emails the admin when something breaks badly enough to be logged as ERROR.
+//
+// ERROR_LOG has always recorded these, but it is a sheet nobody opens until
+// they already suspect a problem — so a nightly backup that silently stopped
+// working, or stock totals that quietly failed to rebuild, could go unnoticed
+// for weeks. The whole point of this product is that the numbers can be
+// trusted, so the admin has to be told when they might not be.
+//
+// Throttled hard, by design: an error that fires on every save would otherwise
+// mail the admin hundreds of times in an afternoon and get the alerts filtered
+// out as noise — which is worse than not sending them. One message per distinct
+// action per hour, and a daily ceiling so a storm can never turn into a mailbox
+// full of near-identical warnings.
+var ERROR_MAIL_PER_ACTION_SEC = 3600;
+var ERROR_MAIL_DAILY_CAP      = 12;
+
+function notifyAdminOfError_(action, userEmail, message, requestId) {
+  var p = PropertiesService.getScriptProperties();
+  if (p.getProperty('ERROR_ALERTS_ENABLED') === 'false') return;   // opt-out
+
+  var to = adminNotifyEmail_();
+  if (!to) return;
+
+  var cache = CacheService.getScriptCache();
+  var actKey = 'errmail_' + Utilities.base64EncodeWebSafe(String(action || 'general')).substring(0, 60);
+  if (cache.get(actKey)) return;                       // already mailed for this action recently
+
+  var today   = Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'UTC', 'yyyy-MM-dd');
+  var capKey  = 'errmailcount_' + today;
+  var sentRaw = cache.get(capKey);
+  var sent    = sentRaw ? (parseInt(sentRaw, 10) || 0) : 0;
+  if (sent >= ERROR_MAIL_DAILY_CAP) return;
+
+  cache.put(actKey, '1', ERROR_MAIL_PER_ACTION_SEC);
+  cache.put(capKey, String(sent + 1), 86400);
+
+  var cs = companySettings_();
+  var who = cs.name || PRODUCT_NAME;
+  var url = '';
+  try { url = String(p.getProperty('WEB_APP_URL') || ScriptApp.getService().getUrl() || ''); } catch (e) {}
+
+  MailApp.sendEmail({
+    to: to,
+    subject: '⚠️ ' + who + ' — system error in ' + (action || 'the app'),
+    htmlBody:
+      '<div style="font-family:Arial,sans-serif;font-size:14px;color:#111">' +
+      '<p>An error was recorded in <b>' + escHtml_(who) + '</b>.</p>' +
+      '<table cellpadding="6" style="border-collapse:collapse;font-size:13px">' +
+        '<tr><td style="color:#666">Where</td><td><b>' + escHtml_(action || '—') + '</b></td></tr>' +
+        '<tr><td style="color:#666">Message</td><td>' + escHtml_(String(message || '').substring(0, 400)) + '</td></tr>' +
+        '<tr><td style="color:#666">User</td><td>' + escHtml_(userEmail || '—') + '</td></tr>' +
+        '<tr><td style="color:#666">When</td><td>' + new Date().toLocaleString() + '</td></tr>' +
+        '<tr><td style="color:#666">Ref</td><td>' + escHtml_(requestId || '—') + '</td></tr>' +
+      '</table>' +
+      '<p style="font-size:12px;color:#666">Full history: <b>Settings → System → Error Log</b>' +
+        (url ? ' — <a href="' + escHtml_(url) + '">open ' + escHtml_(who) + '</a>' : '') + '</p>' +
+      '<p style="font-size:12px;color:#666">Repeats of this same error are suppressed for an hour so this ' +
+        'stays useful. To turn these off: Apps Script → Project Settings → Script Properties → ' +
+        'ERROR_ALERTS_ENABLED = false</p></div>'
+  });
+}
+
+function escHtml_(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 // ADMIN only. Returns the most recent error log entries, newest first.
