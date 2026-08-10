@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.16';
+var APP_VERSION = '9.17';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -3401,8 +3401,12 @@ function updateMinStockBulk(data, auth) {
 // temp file would fail on scope. Exporting through the Drive API needs only the
 // drive scope the app already has — no new permission on the consent screen.
 //
-// Only the FIRST sheet is imported: CSV export has no concept of multiple tabs.
-function excelToCsvText_(base64Data, fileName) {
+// Returns EVERY tab: [{name, text}]. The first version of this exported
+// text/csv, which silently gives back only the first sheet — so a workbook
+// with the inventory on tab 3 imported as whatever happened to be on tab 1,
+// with nothing to tell the user why. Exporting format=zip yields one CSV per
+// tab, which Utilities.unzip can open, so the caller can pick the right one.
+function excelToSheets_(base64Data, fileName) {
   var token    = ScriptApp.getOAuthToken();
   var bytes    = Utilities.base64Decode(base64Data);
   var boundary = '----acopioImport' + Date.now();
@@ -3434,18 +3438,57 @@ function excelToCsvText_(base64Data, fileName) {
 
   var tempId = JSON.parse(up.getContentText()).id;
   try {
+    var auth = { headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true };
+
+    // One CSV per tab, zipped. Each entry is named "<workbook> - <tab>.csv".
+    var zip = UrlFetchApp.fetch(
+      'https://docs.google.com/spreadsheets/d/' + encodeURIComponent(tempId) + '/export?format=zip', auth);
+    if (zip.getResponseCode() === 200) {
+      try {
+        var parts = Utilities.unzip(zip.getBlob().setContentType('application/zip'));
+        var sheets = parts.filter(function (b) { return /\.csv$/i.test(b.getName() || ''); })
+          .map(function (b) {
+            var n = String(b.getName() || '').replace(/\.csv$/i, '');
+            var dash = n.indexOf(' - ');            // strip the workbook-name prefix
+            return { name: dash !== -1 ? n.substring(dash + 3) : n, text: b.getDataAsString() };
+          });
+        if (sheets.length) return sheets;
+      } catch (e) {
+        // Not a zip after all (a single-tab workbook can come back as plain
+        // CSV) — fall through to the single-sheet path rather than failing.
+      }
+    }
+
     var exp = UrlFetchApp.fetch(
-      'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(tempId) + '/export?mimeType=text/csv', {
-        headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true });
+      'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(tempId) + '/export?mimeType=text/csv', auth);
     if (exp.getResponseCode() !== 200) {
       throw new Error('Could not read the contents of that Excel file.');
     }
-    return exp.getContentText();
+    return [{ name: 'Sheet1', text: exp.getContentText() }];
   } finally {
     // Always cleaned up, including when the export above threw — otherwise a
     // failed import would quietly litter the owner's Drive with temp copies.
     try { DriveApp.getFileById(tempId).setTrashed(true); } catch (e) {}
   }
+}
+
+// Picks which tab to import from a multi-tab workbook: the one the caller asked
+// for, else the first whose header row actually carries the required columns.
+// Without that second rule a workbook whose first tab is a cover sheet or a
+// summary would import as "0 valid rows" and look broken.
+function chooseImportSheet_(sheets, wanted) {
+  if (wanted) {
+    for (var i = 0; i < sheets.length; i++) if (sheets[i].name === wanted) return sheets[i];
+  }
+  for (var j = 0; j < sheets.length; j++) {
+    var head;
+    try { head = Utilities.parseCsv(String(sheets[j].text || '').replace(/^﻿/, ''))[0] || []; }
+    catch (e) { continue; }
+    var lower = head.map(function (h) { return String(h || '').trim().toLowerCase(); });
+    var hasAll = IMPORT_REQUIRED_HEADERS.every(function (h) { return lower.indexOf(h) !== -1; });
+    if (hasAll) return sheets[j];
+  }
+  return sheets[0];
 }
 
 var IMPORT_REQUIRED_HEADERS = ['category', 'name', 'qty'];
@@ -3460,11 +3503,17 @@ function parseImportFile(data) {
   }
 
   var text;
+  var sheetNames = [];   // tabs found in an Excel workbook (empty for a .csv)
+  var usedSheet  = '';
   if (isExcel) {
     // Excel files are converted to CSV by Drive and then run through the exact
     // same parser below — one code path for reading rows, so an .xlsx import
     // can't drift away from the .csv one that is already well tested.
-    text = excelToCsvText_(data.fileData, fileName);
+    var sheets = excelToSheets_(data.fileData, fileName);
+    sheetNames = sheets.map(function (s) { return s.name; });
+    var chosen = chooseImportSheet_(sheets, String(data.sheetName || '').trim());
+    usedSheet  = chosen.name;
+    text       = chosen.text;
   } else {
     var bytes = Utilities.base64Decode(data.fileData);
     text = Utilities.newBlob(bytes, 'text/csv').getDataAsString();
@@ -3510,8 +3559,15 @@ function parseImportFile(data) {
 
   var missing = IMPORT_REQUIRED_HEADERS.filter(function (h) { return col[h] === -1; });
   if (missing.length) {
-    throw new Error('Missing required column header(s): ' + missing.join(', ') +
-      '. Download the template from this screen to see the exact format expected.');
+    throw new Error('Missing required column header(s) on ' +
+      (usedSheet ? 'sheet "' + usedSheet + '"' : 'this file') + ': ' + missing.join(', ') + '.' +
+      // Naming the other tabs matters: otherwise a workbook whose data sits on
+      // a later tab just reads as "your file is wrong", with no hint that the
+      // right data is in the same file one tab over.
+      (sheetNames.length > 1
+        ? ' This workbook also has: ' + sheetNames.filter(function (n) { return n !== usedSheet; }).join(', ') +
+          ' — pick the right one from the Sheet list on this screen.'
+        : ' Download the template from this screen to see the exact format expected.'));
   }
 
   var parsed = [];
@@ -3550,6 +3606,8 @@ function parseImportFile(data) {
     validRows:    validCount,
     invalidRows:  parsed.length - validCount,
     rawLineCount: rawLineCount,
+    sheetNames:   sheetNames,            // tabs found (Excel only) — lets the UI offer a picker
+    usedSheet:    usedSheet,
     rows:         parsed.slice(0, 500)   // a preview, not a data dump
   };
 }

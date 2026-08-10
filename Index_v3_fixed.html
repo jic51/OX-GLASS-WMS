@@ -1841,7 +1841,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.16';
+var APP_VERSION = '9.17';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Paid Gmail-scanner add-on: off unless the backend says this installation
@@ -5300,7 +5300,7 @@ function _renderImportTab() {
   content.innerHTML =
     '<p style="font-size:.8rem;color:var(--muted);margin-bottom:.75rem">' +
       'Bulk-import an existing inventory from an Excel (.xlsx) or CSV file — useful for the first setup, or catching up after counting on paper. ' +
-      'Every row becomes a real ENTRY movement, reviewed here before anything is saved. Excel files use the first sheet.' +
+      'Every row becomes a real ENTRY movement, reviewed here before anything is saved. Multi-sheet workbooks: the right sheet is detected automatically, and you can switch sheets after loading.' +
     '</p>' +
     '<div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem">' +
       '<button class="btn btn-ghost btn-sm" onclick="_downloadImportTemplate()">⬇ Download CSV Template</button>' +
@@ -5321,6 +5321,10 @@ function _downloadImportTemplate() {
   a.click();
 }
 
+// Kept so a different tab of the SAME workbook can be re-parsed without making
+// the user pick the file again.
+var _importFileB64 = '', _importFileName = '', _importFileMime = '';
+
 function _onImportFileChange(e){
   var file = e.target.files[0];
   if (!file) return;
@@ -5328,25 +5332,62 @@ function _onImportFileChange(e){
   box.innerHTML = '<p style="color:var(--muted);font-size:.85rem"><span class="spin-hg">⏳</span> Reading file…</p>';
   _readFileAsBase64(file, function(b64, mime){
     if (!b64) { box.innerHTML = '<p style="color:var(--red);font-size:.85rem">Could not read this file.</p>'; return; }
-    google.script.run
-      .withSuccessHandler(function(res){ _importParsedRows = res.rows || []; _renderImportPreview(res); })
-      .withFailureHandler(function(err){
-        box.innerHTML = '<p style="color:var(--red);font-size:.85rem">' + _he((err.message || err).replace(/^Error:\s*/i,'')) + '</p>';
-      })
-      .processMovement('parseImportFile', _h({ fileData: b64, mimeType: mime, fileName: file.name }));
+    _importFileB64 = b64; _importFileName = file.name; _importFileMime = mime;
+    _parseImportSheet('');
   });
+}
+
+function _parseImportSheet(sheetName){
+  var box = document.getElementById('importPreviewBox');
+  box.innerHTML = '<p style="color:var(--muted);font-size:.85rem"><span class="spin-hg">⏳</span> Reading' +
+    (sheetName ? ' sheet “' + _he(sheetName) + '”' : ' file') + '…</p>';
+  google.script.run
+    .withSuccessHandler(function(res){ _importParsedRows = res.rows || []; _renderImportPreview(res); })
+    .withFailureHandler(function(err){
+      box.innerHTML = '<p style="color:var(--red);font-size:.85rem">' +
+        _he((err.message || err).replace(/^Error:\s*/i,'')) + '</p>' + _importSheetPickerHtml();
+      _wireImportSheetPicker();
+    })
+    .processMovement('parseImportFile', _h({
+      fileData: _importFileB64, mimeType: _importFileMime,
+      fileName: _importFileName, sheetName: sheetName || ''
+    }));
+}
+
+// Rendered under both the preview and any error, so a workbook whose data sits
+// on a later tab is recoverable without re-picking the file.
+var _importSheetNames = [], _importUsedSheet = '';
+function _importSheetPickerHtml(){
+  if (!_importSheetNames || _importSheetNames.length < 2) return '';
+  return '<div style="margin-top:.6rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">' +
+    '<label style="font-size:.78rem;color:var(--muted);font-weight:600">Sheet:</label>' +
+    '<select id="importSheetPick" style="font-size:.82rem;padding:.3rem .5rem;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text)">' +
+      _importSheetNames.map(function(n){
+        return '<option value="'+_he(n)+'"'+(n===_importUsedSheet?' selected':'')+'>'+_he(n)+'</option>';
+      }).join('') +
+    '</select>' +
+    '<span style="font-size:.72rem;color:var(--muted)">This workbook has ' + _importSheetNames.length + ' sheets.</span>' +
+  '</div>';
+}
+function _wireImportSheetPicker(){
+  var sel = document.getElementById('importSheetPick');
+  if (sel) sel.addEventListener('change', function(){ _parseImportSheet(sel.value); });
 }
 
 function _renderImportPreview(res){
   var box  = document.getElementById('importPreviewBox');
   var rows = res.rows || [];
 
+  _importSheetNames = res.sheetNames || [];
+  _importUsedSheet  = res.usedSheet  || '';
+  var sheetNote = _importSheetPickerHtml();
+
   var lineNote = res.rawLineCount
     ? '<p style="font-size:.72rem;color:var(--muted);margin-bottom:.4rem">The file itself has ' + res.rawLineCount +
       ' non-empty line(s), including the header. If that number looks too low, the file you selected doesn\'t have all your rows in it yet — re-save/export it and upload again.</p>'
     : '';
 
-  var summary = lineNote + '<div style="display:flex;gap:.6rem;margin:.5rem 0 .75rem;flex-wrap:wrap">' +
+  var summary = sheetNote + lineNote + '<div style="display:flex;gap:.6rem;margin:.5rem 0 .75rem;flex-wrap:wrap">' +
     '<span class="badge badge-blue">' + res.totalRows + ' row(s) found</span>' +
     '<span class="badge badge-green">' + res.validRows + ' ready to import</span>' +
     (res.invalidRows ? '<span class="badge badge-red">' + res.invalidRows + ' need fixing in the file</span>' : '') +
@@ -5379,6 +5420,7 @@ function _renderImportPreview(res){
     '<button class="btn btn-primary" id="btnCommitImport" ' + (res.validRows ? '' : 'disabled') + ' onclick="_commitImport()">' +
       '✓ Import ' + res.validRows + ' Valid Row(s)' +
     '</button>';
+  _wireImportSheetPicker();
 }
 
 function _commitImport(){
