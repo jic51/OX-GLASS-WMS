@@ -24,6 +24,11 @@ here once they ship (the commit message is the record of what changed and why).
    now, but the in/out timing still feels abrupt.
 4. **Polish the company logo placement** in the topbar — it renders, but the
    sizing/position isn't what Jose wants yet.
+5. **User-menu rework** — move the 🐞 report-a-problem button out of the
+   floating bottom-right corner and into the topbar cluster with the account
+   email and settings. Do it as part of that menu's redesign, not on its own.
+   Frees the corner for the suggestion deck, which currently has to sit above
+   the 🐞 to avoid it.
 
 ## Known limits (investigated, not fixable from code)
 
