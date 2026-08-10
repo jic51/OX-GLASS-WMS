@@ -10,9 +10,19 @@ here once they ship (the commit message is the record of what changed and why).
    OX's own movements/users would leak that data and admin access into every
    customer copy. Needs: code pasted in, wizard never run, zero rows. Also the
    only way to verify what the publish step reports on a genuinely fresh copy.
-2. **Polish the wizard's Copy button animation** — the checkmark transition works
+2. **Fix how the suggestion deck fades.** Opacity is applied to each CARD, so
+   piled cards composite one translucent layer over another: the opacities add
+   up, text from the cards underneath shows through the one on top, and the
+   pile reads as a smudge with letters and edges bleeding through it.
+   Fix: move the opacity onto the `.cfg-deck` CONTAINER instead. The browser
+   composites the stack first and fades the finished result as a single layer,
+   so the front card stays legible, the ones behind contribute only their
+   edges, and nothing shows through. Small change, needs a visual check in both
+   themes.
+
+3. **Polish the wizard's Copy button animation** — the checkmark transition works
    now, but the in/out timing still feels abrupt.
-3. **Polish the company logo placement** in the topbar — it renders, but the
+4. **Polish the company logo placement** in the topbar — it renders, but the
    sizing/position isn't what Jose wants yet.
 
 ## Known limits (investigated, not fixable from code)
