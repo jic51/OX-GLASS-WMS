@@ -32,6 +32,12 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Polish pass (do at the end, after the functional work)
 
+- **Count badge on the front suggestion card is too faint.** It inherits the
+  deck's resting opacity along with everything else, so the number is hard to
+  read at a glance — the one thing on the pile that should stay legible. Make it
+  ~10–15% more opaque than the cards behind it (likely: exempt `.cfg-count` from
+  the container fade, or give it its own higher opacity).
+
 - **Audit every animation in the app.** Some look bad as they are, and several
   places that should have motion have none. Example raised: a merge-suggestion
   box currently just vanishes — it should collapse quickly and let the boxes
