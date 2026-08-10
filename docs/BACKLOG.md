@@ -30,6 +30,16 @@ here once they ship (the commit message is the record of what changed and why).
    Frees the corner for the suggestion deck, which currently has to sit above
    the 🐞 to avoid it.
 
+## Polish pass (do at the end, after the functional work)
+
+- **Audit every animation in the app.** Some look bad as they are, and several
+  places that should have motion have none. Example raised: a merge-suggestion
+  box currently just vanishes — it should collapse quickly and let the boxes
+  below slide up into the freed space. Same question for toasts, modal
+  open/close, row insertion in Movements, the deck fan, and tab switches. One
+  pass, one consistent set of durations/easings, rather than tuning them one at
+  a time.
+
 ## Known limits (investigated, not fixable from code)
 
 - **Self-deploy automation** — blocked by Google's hidden default Cloud project
