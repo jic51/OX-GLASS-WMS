@@ -44,6 +44,30 @@ here once they ship (the commit message is the record of what changed and why).
   pass, one consistent set of durations/easings, rather than tuning them one at
   a time.
 
+## Idea to define — proactive data-quality suggestions
+
+Jose's idea: the app notices gaps and inconsistencies and offers to fix them,
+each as a card with two choices — "no supplier on the entry for X — add it?",
+"no PM on the entry for X", "X and Y look like the same material — merge?".
+Behind a Settings toggle, off by default.
+
+The mechanics already exist (the suggestion deck, the similarity matcher, the
+merge endpoints), so this is mostly rules plus judgement. What has to be
+decided BEFORE building, because getting it wrong makes the app naggy and it
+gets switched off for good:
+
+- **Which gaps are worth raising at all?** A missing supplier on an internal
+  transfer is not a problem; a missing supplier on a purchase probably is. The
+  rules have to know the difference or every second movement raises a card.
+- **When does it appear** — right after saving, batched daily, or only when
+  someone opens the app? Immediately after saving is the most useful and the
+  most annoying.
+- **Who sees it?** Admin only, or the person who recorded the movement?
+- **How does "Later" behave?** Never again for that row, or come back in a
+  week? Never-again risks burying real gaps; recurring risks nagging.
+- **A ceiling.** An installation importing a year of history would generate
+  thousands at once. Needs a cap and a "review all" screen rather than a deck.
+
 ## Open decision — external sign-in for customers
 
 Staff on the customer's own Google domain are identified automatically and need

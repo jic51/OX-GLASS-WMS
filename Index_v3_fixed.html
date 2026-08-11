@@ -768,6 +768,19 @@
     .cfg-card-skip{background:rgba(255,255,255,.14);color:#dbe4f5}
     @media (max-width:640px){.cfg-deck{right:16px;bottom:72px;max-width:calc(100vw - 32px)}.cfg-card{width:230px}}
     /* Manual merge picker */
+    .submit-hint{flex:1;min-width:160px;font-size:.75rem;color:var(--orange);font-weight:600;text-align:left}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .cat-fix-btn{margin-top:.35rem;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:.3rem .55rem;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit}
+    .cat-fix-btn:hover{filter:brightness(1.1)}
+    /* Own tooltip instead of the browser's title bubble: that one cannot be
+       styled at all — its shape, delay, colours and single-line wrapping are
+       decided by the operating system, not by the page. */
+    .tip{position:relative}
+    .tip::after{content:attr(data-tip);position:absolute;left:50%;top:calc(100% + 8px);transform:translateX(-50%) translateY(-4px);
+      background:var(--navy);color:#fff;font-size:.72rem;font-weight:600;line-height:1.35;letter-spacing:0;text-transform:none;
+      padding:.4rem .55rem;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.28);white-space:normal;width:max-content;max-width:190px;
+      opacity:0;pointer-events:none;transition:opacity .15s ease,transform .15s ease;z-index:60}
+    .tip:hover::after{opacity:1;transform:translateX(-50%) translateY(0)}
     .cfg-pick{margin-right:.5rem;flex-shrink:0;cursor:pointer}
     .cfg-pickbar{display:none;gap:.5rem;align-items:center;flex-wrap:wrap;background:var(--navy);color:#fff;border-radius:8px;padding:.5rem .7rem;margin-bottom:.75rem}
     .cfg-pickbar.show{display:flex}
@@ -1132,11 +1145,11 @@
           <thead><tr>
             <th style="width:30px"></th>
             <th>Category</th><th>Name / Description</th>
-            <th title="Units in warehouse">In Warehouse</th>
-            <th title="Units dispatched to a job — used or delivered">Used / Del</th>
-            <th title="Warehouse minus reservations">Available</th>
-            <th title="Units recorded as waste/damaged">Wasted</th>
-            <th>Reserved</th><th title="Where this material is stored">Location</th><th>Status</th><th title="Date Received from the most recent ENTRY of this material">Date Received</th><th>Last Note</th><th>Docs</th>
+            <th class="tip" data-tip="Units on hand in the warehouse">In Warehouse</th>
+            <th class="tip" data-tip="Sent out to a job — used or delivered">Used / Del</th>
+            <th class="tip" data-tip="In warehouse, minus what is reserved">Available</th>
+            <th class="tip" data-tip="Recorded as damaged or scrapped">Wasted</th>
+            <th>Reserved</th><th class="tip" data-tip="Where this material is stored">Location</th><th>Status</th><th class="tip" data-tip="Date of the most recent entry">Date Received</th><th>Last Note</th><th>Docs</th>
           </tr></thead>
           <tbody id="stockBody"></tbody>
         </table>
@@ -1809,7 +1822,8 @@
     </div>
 
     <!-- ── Actions ── -->
-    <div class="modal-actions">
+    <div class="modal-actions" style="flex-wrap:wrap">
+      <span id="moveSubmitHint" class="submit-hint" style="display:none"></span>
       <button id="btnCancelMove" class="btn btn-ghost">Cancel</button>
       <button class="btn btn-primary" id="moveSubmit">Save to System</button>
     </div>
@@ -1993,7 +2007,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.35';
+var APP_VERSION = '9.36';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Paid Gmail-scanner add-on: off unless the backend says this installation
@@ -2120,6 +2134,21 @@ function _catOptions(){
   return cats.map(function(c){ return '<option value="'+_he(c)+'">'+_he(c)+'</option>'; }).join('');
 }
 
+// Telling someone their catalog is empty and leaving them to find Settings is
+// half an answer. Settings opens straight over the form — the overlays are
+// independent, so the half-filled entry underneath is untouched — and closing
+// it refills the dropdowns and re-checks the form, so the category they just
+// created is selectable without starting over.
+function openCategorySettings(){
+  _settingsTab = 'categories';
+  openSettingsModal();
+}
+
+function _catHelperHtml(){
+  if (config.categories && config.categories.length) return '';
+  return '<button type="button" class="cat-fix-btn" onclick="openCategorySettings()">⚙️ Add categories</button>';
+}
+
 function refreshCategoryDropdowns() {
   var opts = _catOptions();
   var optsBlank = '<option value="">All Categories</option>' + opts;
@@ -2135,6 +2164,104 @@ function refreshCategoryDropdowns() {
   var mt = document.getElementById('mType');
   if (mt){ var mv=mt.value; mt.innerHTML=opts; if(mv) mt.value=mv; }
 }
+
+// ── Save button reflects whether the form is actually saveable ───────────────
+// Previously every check happened on submit, so the only way to learn a field
+// was missing was to press Save and be told. A disabled button with the reason
+// on it says the same thing before the click, and stops a half-filled ENTRY
+// from reaching the server at all.
+function _refreshCatHelpers(){
+  var have = !!(config.categories && config.categories.length);
+  document.querySelectorAll('.cat-fix-btn').forEach(function(b){
+    b.style.display = have ? 'none' : '';
+  });
+}
+
+function _moveFormProblem(){
+  if (!(config.categories && config.categories.length)) return 'Add at least one category first';
+
+  var lines = document.querySelectorAll('#multiMatContainer .mat-line');
+  if (lines.length){
+    var anyComplete = false, missing = '';
+    lines.forEach(function(line){
+      var n    = line.id.replace('mat-line-', '');
+      var name = ((document.getElementById('mat-name-' + n) || {}).value || '').trim();
+      var cat  = ((document.getElementById('mat-cat-'  + n) || {}).value || '').trim();
+      var qty  = 0;
+      var lc = document.getElementById('mat-locs-' + n);
+      if (lc) lc.querySelectorAll('.loc-row').forEach(function(row){
+        var q = parseInt((row.querySelector('.loc-qty') || {}).value, 10) || 0;
+        var loc = ((row.querySelector('.loc-rack') || {}).value || '').trim();
+        if (q > 0 && loc) qty += q;
+      });
+      if (name && cat && qty > 0) anyComplete = true;
+      else if (!missing) {
+        missing = !name ? 'Material ' + n + ' needs a name'
+                : !cat  ? 'Material ' + n + ' needs a category'
+                : 'Material ' + n + ' needs a location and quantity';
+      }
+    });
+    if (!anyComplete) return missing || 'Fill in a material to save';
+    return '';
+  }
+
+  // Multi-EXIT: rows are .exit-mat-line with id exit-mat-N, and each carries its
+  // own list of location rows holding the quantities.
+  var exitLines = document.querySelectorAll('#multiExitContainer .exit-mat-line');
+  if (exitLines.length){
+    var okExit = false, exitMissing = '';
+    exitLines.forEach(function(line){
+      var n    = line.id.replace('exit-mat-', '');
+      var name = ((document.getElementById('exit-name-' + n) || {}).value || '').trim();
+      var qty  = 0;
+      var lc = document.getElementById('exit-locs-' + n);
+      if (lc) lc.querySelectorAll('.exit-qty').forEach(function(inp){
+        qty += Math.max(0, parseInt(inp.value, 10) || 0);
+      });
+      if (name && qty > 0) okExit = true;
+      else if (!exitMissing) exitMissing = !name ? 'Pick a material to take out' : 'Enter how many to take out';
+    });
+    if (!okExit) return exitMissing || 'Fill in a material to save';
+    return '';
+  }
+
+  // Single-material EXIT uses its own rows container.
+  var exitRows = document.querySelectorAll('#exitRowsContainer .exit-qty');
+  if (exitRows.length){
+    var nmEx = ((document.getElementById('mName') || {}).value || '').trim();
+    if (!nmEx) return 'Enter the material name';
+    var tot = 0;
+    exitRows.forEach(function(inp){ tot += Math.max(0, parseInt(inp.value, 10) || 0); });
+    if (tot <= 0) return 'Enter how many to take out';
+    return '';
+  }
+
+  // Single-material form
+  var nm = ((document.getElementById('mName') || {}).value || '').trim();
+  if (!nm) return 'Enter the material name';
+  var q = parseInt((document.getElementById('mQty') || {}).value, 10) || 0;
+  if (q <= 0) return 'Enter a quantity greater than zero';
+  return '';
+}
+
+function _updateMoveSubmitState(){
+  var btn = document.getElementById('moveSubmit');
+  var ov  = document.getElementById('moveOverlay');
+  if (!btn || !ov || !ov.classList.contains('show')) return;
+  if (ov.classList.contains('busy')) return;    // mid-save: leave the button alone
+
+  var problem = '';
+  try { problem = _moveFormProblem(); } catch (e) { problem = ''; }
+  btn.disabled = !!problem;
+  btn.title    = problem || '';
+  var hint = document.getElementById('moveSubmitHint');
+  if (hint){ hint.textContent = problem; hint.style.display = problem ? '' : 'none'; }
+}
+
+// Delegated, because material and location rows are added and removed while the
+// form is open — binding per field would miss every row created later.
+document.addEventListener('input',  function(e){ if (e.target.closest && e.target.closest('#moveOverlay')) _updateMoveSubmitState(); });
+document.addEventListener('change', function(e){ if (e.target.closest && e.target.closest('#moveOverlay')) _updateMoveSubmitState(); });
 
 function displayName(m){
   return (m.name||'').trim() || (m.comments||'').substring(0,60) || 'Unnamed';
@@ -3922,6 +4049,9 @@ function validateExitRows(){
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
 function openMoveModal(type){
+  // Judged again on every open: the catalog or the form contents may have
+  // changed since last time, and a stale disabled button is worse than none.
+  setTimeout(_updateMoveSubmitState, 0);
   if (userRole === 'VIEWER'){
     alert('👁 View-only access — you cannot record movements.\nContact Jose or an admin to get write permissions.');
     return;
@@ -4473,7 +4603,7 @@ function _matLineTpl(n){
     '<div class="mat-line-grid">' +
       '<div class="field">' +
         '<label class="mat-line-lbl-sm">Category</label>' +
-        '<select id="mat-cat-' + n + '" onchange="updateMatLineNameList(' + n + ')">' + catOpts + '</select>' +
+        '<select id="mat-cat-' + n + '" onchange="updateMatLineNameList(' + n + ')">' + catOpts + '</select>' + _catHelperHtml() +
       '</div>' +
       '<div class="field" style="grid-column:span 1;position:relative">' +
         '<label class="mat-line-lbl-sm">Name / Description</label>' +
@@ -4848,7 +4978,7 @@ function addExitMatLine(){
       '</div>'+
       '<div class="exit-mat-grid">'+
         '<div class="field"><label>Category</label>'+
-          '<select id="exit-cat-'+n+'" onchange="updateExitMatNameList('+n+')">'+catOpts+'</select>'+
+          '<select id="exit-cat-'+n+'" onchange="updateExitMatNameList('+n+')">'+catOpts+'</select>'+_catHelperHtml()+
         '</div>'+
         '<div class="field" style="position:relative"><label>Name / Description</label>'+
           '<input type="text" id="exit-name-'+n+'" list="matNameList" placeholder="Type material name…"'+
@@ -6687,6 +6817,14 @@ function submitAttachment() {
 // ── Close / Open helpers ──────────────────────────────────────────────────────
 function closeModal(id){
   document.getElementById(id).classList.remove('show');
+  // Settings can be opened ON TOP of a half-filled movement form (that is the
+  // point of the "Add categories" shortcut). Coming back, the form has to see
+  // whatever was just created, and its Save button has to be re-judged.
+  if (id === 'settingsOverlay'){
+    try { refreshCategoryDropdowns(); refreshDropdowns(); } catch (e) {}
+    try { _refreshCatHelpers(); } catch (e) {}
+    setTimeout(_updateMoveSubmitState, 0);
+  }
   var bm = document.getElementById('moveSubmit');
   var ba = document.getElementById('attachSubmit');
   if (bm){ bm.textContent = 'Save to System'; bm.disabled = false; }
