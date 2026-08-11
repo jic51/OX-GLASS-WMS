@@ -10,16 +10,11 @@ here once they ship (the commit message is the record of what changed and why).
    done from code: rename the Apps Script project, share as Viewer, hand out the
    /copy link, and copy it once himself to see what a customer sees. See
    docs/MASTER-TEMPLATE.md.
-2. **Fix how the suggestion deck fades.** Opacity is applied to each CARD, so
-   piled cards composite one translucent layer over another: the opacities add
-   up, text from the cards underneath shows through the one on top, and the
-   pile reads as a smudge with letters and edges bleeding through it.
-   Fix: move the opacity onto the `.cfg-deck` CONTAINER instead. The browser
-   composites the stack first and fades the finished result as a single layer,
-   so the front card stays legible, the ones behind contribute only their
-   edges, and nothing shows through. Small change, needs a visual check in both
-   themes.
-
+2. **Rename / show / hide table columns from Settings** — APPROVED, do this
+   next. Labels stored per installation in CONFIG, edited in Settings, reusing
+   the existing column picker for visibility. Two headers were renamed in the
+   code in v9.34 as a stopgap. Adding genuinely NEW columns is a separate,
+   much larger feature (user-defined fields on every movement) — not folded in.
 3. **Polish the wizard's Copy button animation** — the checkmark transition works
    now, but the in/out timing still feels abrupt.
 4. **Polish the company logo placement** in the topbar — it renders, but the
@@ -37,12 +32,6 @@ here once they ship (the commit message is the record of what changed and why).
   Settings list continues below, and removing it hides that from warehouse
   staff. Style it instead — thin (~6px), themed, low contrast, on the scrolling
   containers rather than the whole page.
-- **Count badge on the front suggestion card is too faint.** It inherits the
-  deck's resting opacity along with everything else, so the number is hard to
-  read at a glance — the one thing on the pile that should stay legible. Make it
-  ~10–15% more opaque than the cards behind it (likely: exempt `.cfg-count` from
-  the container fade, or give it its own higher opacity).
-
 - **Card removal animation.** When a card leaves either corner deck, the ones
   below should tilt slightly — less than the full pile angle — and slide up into
   the freed space, unhurried. Today it just disappears. Same treatment for the
@@ -108,12 +97,6 @@ Revisit when the first customer actually needs external access.
   each person browses THEIR Drive instead of the owner's. Blocked only on Jose
   creating that Cloud project.
 
-- **Customer-editable column labels and visibility.** Renaming shipped for two
-  headers in v9.34 (At Site → Used / Del, Rack(s) → Location), but they are still
-  hardcoded. Real version: labels stored per installation in CONFIG, edited from
-  Settings, with show/hide per column reusing the existing column picker. Adding
-  genuinely NEW columns is a much bigger change — it means user-defined fields on
-  every movement — and should be treated as a separate feature, not folded in.
 - **Error log housekeeping.** Add "Clear resolved" / "Clear all" in Settings →
   Error Log, plus automatic pruning of entries older than N days, so the log
   reflects what is wrong NOW instead of everything that was ever wrong.
