@@ -25,6 +25,14 @@ here once they ship (the commit message is the record of what changed and why).
    Frees the corner for the suggestion deck, which currently has to sit above
    the 🐞 to avoid it.
 
+6. **One edit mode and one delete mode per screen.** Today every row carries its
+   own ✏️ and 🗑, which is noisy and makes accidental deletion easy. Replace with
+   a single "Edit" toggle and a single "Delete" toggle per window: turn one on
+   and the rows reveal their controls, turn it off and the screen is read-only
+   again. Applies to Settings catalogs, Locations, the Movements table and the
+   user list. Design once, apply everywhere — the value is in it being the same
+   gesture in every window.
+
 ## Polish pass (do at the end, after the functional work)
 
 - **Scrollbars look bad.** Jose dislikes the default side scrollbar. Do NOT
