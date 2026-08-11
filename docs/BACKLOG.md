@@ -51,6 +51,32 @@ here once they ship (the commit message is the record of what changed and why).
   pass, one consistent set of durations/easings, rather than tuning them one at
   a time.
 
+## Open decision — external sign-in for customers
+
+Staff on the customer's own Google domain are identified automatically and need
+no OAuth client. Only people OUTSIDE that domain (personal Gmail, contractors)
+need the "Sign in with Google" button, which needs an OAuth client.
+
+Google has **no public API** to add authorized redirect URIs to an OAuth client
+— it is Cloud Console only, and there is an open feature request for it
+(googleapis/google-cloud-go#10768). Every Apps Script copy has its own /exec
+URL, so a shared client means registering each customer's URL by hand.
+
+Three ways out, in preference order:
+
+1. **Per-customer setup, as a paid step** (current behaviour). Ship with no
+   OAuth client; enable it only for customers who ask, by adding their /exec URL
+   to Jose's client. No work for the customers that don't need it.
+2. **Broker redirect** — point the OAuth client at ONE fixed URL Jose owns,
+   which forwards the code back to the customer's app via the `state`
+   parameter. One redirect URI registered, ever, no per-customer work. Costs a
+   permanent dependency on that broker staying up, and it must validate `state`
+   strictly or it becomes an open redirect.
+3. **Customer creates their own client** — full independence, but it is an hour
+   of Cloud Console work no warehouse owner will do. Realistically dead.
+
+Revisit when the first customer actually needs external access.
+
 ## Known limits (investigated, not fixable from code)
 
 - **Self-deploy automation** — blocked by Google's hidden default Cloud project
