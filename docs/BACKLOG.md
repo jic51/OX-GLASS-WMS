@@ -5,11 +5,11 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
-1. **Clean master template Sheet** for customer distribution. Blocking for real
-   sales: sheet DATA copies (unlike Script Properties), so a template carrying
-   OX's own movements/users would leak that data and admin access into every
-   customer copy. Needs: code pasted in, wizard never run, zero rows. Also the
-   only way to verify what the publish step reports on a genuinely fresh copy.
+1. **Clean master template Sheet** — tooling shipped in v9.30 (Advanced →
+   Erase everything / Check if clean). Remaining work is Jose's and cannot be
+   done from code: rename the Apps Script project, share as Viewer, hand out the
+   /copy link, and copy it once himself to see what a customer sees. See
+   docs/MASTER-TEMPLATE.md.
 2. **Fix how the suggestion deck fades.** Opacity is applied to each CARD, so
    piled cards composite one translucent layer over another: the opacities add
    up, text from the cards underneath shows through the one on top, and the
