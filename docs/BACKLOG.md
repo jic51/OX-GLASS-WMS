@@ -10,11 +10,11 @@ here once they ship (the commit message is the record of what changed and why).
    done from code: rename the Apps Script project, share as Viewer, hand out the
    /copy link, and copy it once himself to see what a customer sees. See
    docs/MASTER-TEMPLATE.md.
-2. **Rename / show / hide table columns from Settings** — APPROVED, do this
-   next. Labels stored per installation in CONFIG, edited in Settings, reusing
-   the existing column picker for visibility. Two headers were renamed in the
-   code in v9.34 as a stopgap. Adding genuinely NEW columns is a separate,
-   much larger feature (user-defined fields on every movement) — not folded in.
+2. **Extend column renaming to the Movements table.** Shipped in v9.39 for the
+   Stock Dashboard (Settings → Columns: rename, show/hide, reset). Movements has
+   its own per-browser column picker; it needs the same installation-wide
+   labels, and a decision on whether its visibility toggles should stay
+   per-browser or become shared like the Stock ones.
 3. **Polish the wizard's Copy button animation** — the checkmark transition works
    now, but the in/out timing still feels abrupt.
 4. **Polish the company logo placement** in the topbar — it renders, but the
