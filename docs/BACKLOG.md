@@ -33,6 +33,12 @@ here once they ship (the commit message is the record of what changed and why).
    user list. Design once, apply everywhere — the value is in it being the same
    gesture in every window.
 
+7. **Apply the silent-update pattern to the rest of Settings.** v9.37 fixed it
+   for catalog add/rename/delete: patch what is on screen instead of re-fetching
+   and repainting, and drop the "Saving… / Saved ✓ / Loading…" sequence. The
+   same churn is still in the other Settings screens — Materials, Directory,
+   users, the archive-cutoff setting, rack photos. One pass over all of them.
+
 ## Polish pass (do at the end, after the functional work)
 
 - **Scrollbars look bad.** Jose dislikes the default side scrollbar. Do NOT
