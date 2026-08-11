@@ -43,6 +43,10 @@ here once they ship (the commit message is the record of what changed and why).
   ~10–15% more opaque than the cards behind it (likely: exempt `.cfg-count` from
   the container fade, or give it its own higher opacity).
 
+- **Card removal animation.** When a card leaves either corner deck, the ones
+  below should tilt slightly — less than the full pile angle — and slide up into
+  the freed space, unhurried. Today it just disappears. Same treatment for the
+  merge-suggestion boxes.
 - **Audit every animation in the app.** Some look bad as they are, and several
   places that should have motion have none. Example raised: a merge-suggestion
   box currently just vanishes — it should collapse quickly and let the boxes
@@ -104,11 +108,19 @@ Revisit when the first customer actually needs external access.
   each person browses THEIR Drive instead of the owner's. Blocked only on Jose
   creating that Cloud project.
 
+- **Customer-editable column labels and visibility.** Renaming shipped for two
+  headers in v9.34 (At Site → Used / Del, Rack(s) → Location), but they are still
+  hardcoded. Real version: labels stored per installation in CONFIG, edited from
+  Settings, with show/hide per column reusing the existing column picker. Adding
+  genuinely NEW columns is a much bigger change — it means user-defined fields on
+  every movement — and should be treated as a separate feature, not folded in.
+- **Error log housekeeping.** Add "Clear resolved" / "Clear all" in Settings →
+  Error Log, plus automatic pruning of entries older than N days, so the log
+  reflects what is wrong NOW instead of everything that was ever wrong.
 - QR / barcode scanning + label printing
 - Installable PWA + offline queue
 - Granular per-role permissions (prerequisite for any costs/pricing module)
 - Live sync between open windows
-- Editable column labels (cosmetic)
 - "Save with cancel-X" delayed-confirm animation on movement submit
 - App icon redesign
 - Responsive / device audit
