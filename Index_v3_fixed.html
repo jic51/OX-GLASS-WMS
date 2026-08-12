@@ -776,10 +776,18 @@
     .splash-note{font-size:.8rem;color:#a1b0cb;text-align:center;min-height:1.2em}
     .submit-hint{flex:1;min-width:160px;font-size:.75rem;color:var(--orange);font-weight:600;text-align:left}
     .btn:disabled{opacity:.5;cursor:not-allowed}
-    .col-pref-table{width:100%;border-collapse:collapse;font-size:.82rem}
-    .col-pref-table th{text-align:left;padding:.4rem .5rem;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)}
-    .col-pref-table td{padding:.35rem .5rem;border-bottom:1px solid var(--border)}
-    .col-pref-table input[type=text]{width:100%;padding:.35rem .5rem;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:.82rem;font-family:inherit}
+    .stock-col-bar{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.6rem}
+    .col-edit-help{font-size:.74rem;color:var(--muted)}
+    th.col-edit{cursor:grab;white-space:nowrap}
+    th.col-edit.col-dragging{opacity:.4}
+    th.col-edit.col-drop{outline:2px dashed var(--accent);outline-offset:-3px}
+    th.col-edit.col-off{opacity:.45}
+    .col-drag{opacity:.6;margin-right:.25rem;cursor:grab}
+    .col-rename{width:118px;padding:.2rem .35rem;border:1px solid rgba(255,255,255,.35);border-radius:5px;background:rgba(255,255,255,.12);color:#fff;font-size:.72rem;font-family:inherit;font-weight:700}
+    .col-rename:focus{outline:none;border-color:#fff;background:rgba(255,255,255,.2)}
+    .col-name-ro{font-weight:700}
+    .col-eye,.col-lock{background:none;border:none;cursor:pointer;font-size:.78rem;margin-left:.3rem;padding:0}
+    .col-lock{cursor:default;opacity:.6}
     .cat-fix-btn{margin-top:.35rem;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:.3rem .55rem;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit}
     .cat-fix-btn:hover{filter:brightness(1.1)}
     /* Own tooltip instead of the browser's title bubble: that one cannot be
@@ -1161,6 +1169,14 @@
           <button id="btnMonitorSettingsToolbar" class="btn btn-ghost btn-sm" onclick="openMonitorModal()" title="Choose which materials to monitor and set minimum-stock thresholds" style="display:none">⚙ Stock Alerts</button>
         </div>
       </div>
+      <div id="stockColBar" class="stock-col-bar">
+        <button class="btn btn-ghost btn-sm" id="btnEditCols" onclick="toggleColEdit()">⚙ Columns</button>
+        <span class="col-edit-help" id="colEditHelp" style="display:none">
+          Drag a heading to move it · click the eye to hide it<span id="colEditAdminHelp"> · click a name to rename it for everyone</span>
+        </span>
+        <button class="btn btn-primary btn-sm" id="btnColDone" style="display:none" onclick="finishColEdit()">Done</button>
+        <button class="btn btn-ghost btn-sm" id="btnColReset" style="display:none" onclick="resetColEdit()">Reset</button>
+      </div>
       <div id="stockSelectBar" style="display:none;align-items:center;gap:.75rem;background:var(--red-bg);border:1px solid var(--red);border-radius:8px;padding:.5rem .9rem;margin-bottom:.75rem">
         <span id="stockSelectCount" style="font-size:.85rem;font-weight:700;color:var(--red)"></span>
         <button class="btn btn-danger btn-sm" onclick="exitSelectedStock()">↑ Exit Selected</button>
@@ -1168,15 +1184,7 @@
       </div>
       <div class="table-wrapper">
         <table>
-          <thead><tr>
-            <th style="width:30px"></th>
-            <th class="sc-category">Category</th><th class="sc-name">Name / Description</th>
-            <th class="sc-inWarehouse tip" data-tip="Units on hand in the warehouse">In Warehouse</th>
-            <th class="sc-atSite tip" data-tip="Sent out to a job — used or delivered">Used / Del</th>
-            <th class="sc-available tip" data-tip="In warehouse, minus what is reserved">Available</th>
-            <th class="sc-wasted tip" data-tip="Recorded as damaged or scrapped">Wasted</th>
-            <th class="sc-reserved">Reserved</th><th class="sc-location tip" data-tip="Where this material is stored">Location</th><th class="sc-status">Status</th><th class="sc-dateReceived tip" data-tip="Date of the most recent entry">Date Received</th><th class="sc-lastNote">Last Note</th><th class="sc-docs">Docs</th>
-          </tr></thead>
+          <thead><tr id="stockHeadRow"></tr></thead>
           <tbody id="stockBody"></tbody>
         </table>
       </div>
@@ -1872,7 +1880,6 @@
         <button class="settings-tab"        data-tab="locations"   onclick="switchSettingsTab('locations')">📍 <span>Locations</span></button>
         <button class="settings-tab"        data-tab="materials"   onclick="switchSettingsTab('materials')">🔧 <span>Materials</span></button>
         <button class="settings-tab"        data-tab="pmdirectory" onclick="switchSettingsTab('pmdirectory')">📇 <span>Directory</span></button>
-        <button class="settings-tab"        data-tab="columns"     onclick="switchSettingsTab('columns')">📐 <span>Columns</span></button>
         <button class="settings-tab"        data-tab="import"      onclick="switchSettingsTab('import')">📥 <span>Import</span></button>
         <div class="settings-sidebar-label">Diagnostics</div>
         <button class="settings-tab"        data-tab="errorlog"    onclick="switchSettingsTab('errorlog')">🐞 <span>Error Log</span></button>
@@ -2034,7 +2041,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.39';
+var APP_VERSION = '9.40';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Paid Gmail-scanner add-on: off unless the backend says this installation
@@ -2324,112 +2331,220 @@ var STOCK_COLS = [
   { key:'docs',         def:'Docs',             lock:false }
 ];
 
+// Names are the COMPANY's and are set by an admin for everyone — a report has
+// to mean the same thing to two people reading it. Which columns you see and
+// what order they sit in is YOURS: one person watching reservations and another
+// watching waste want different screens, and neither should be able to rearrange
+// the other's. So labels live on the server, order and visibility in this
+// browser.
 var columnPrefs = { labels: {}, hidden: [] };
+var _COL_ORDER_KEY  = 'acopio_stock_col_order';
+var _COL_HIDDEN_KEY = 'acopio_stock_col_hidden';
+var _colEditing = false;
 
-function _applyColumnPrefs(){
-  // Hiding is done with one injected stylesheet rule per column rather than by
-  // rebuilding rows: the table is re-rendered constantly, and a rule survives
-  // every render for free.
-  var hidden = columnPrefs.hidden || [];
-  var css = hidden.map(function(k){ return '.sc-' + k + '{display:none}'; }).join('');
-  var tag = document.getElementById('colPrefStyle');
-  if (!tag){
-    tag = document.createElement('style');
-    tag.id = 'colPrefStyle';
-    document.head.appendChild(tag);
-  }
-  tag.textContent = css;
+function _defaultColOrder(){ return STOCK_COLS.map(function(c){ return c.key; }); }
 
-  STOCK_COLS.forEach(function(c){
-    var th = document.querySelector('thead th.sc-' + c.key);
-    if (!th) return;
-    var custom = (columnPrefs.labels || {})[c.key];
-    // Only the label text is replaced — the tooltip element and its data stay,
-    // so renaming a column does not cost its explanation.
-    th.childNodes[0] ? (th.childNodes[0].nodeValue = custom || c.def) : (th.textContent = custom || c.def);
-  });
+function _colOrder(){
+  var saved = [];
+  try { saved = JSON.parse(localStorage.getItem(_COL_ORDER_KEY) || '[]') || []; } catch (e) {}
+  var known = {};
+  STOCK_COLS.forEach(function(c){ known[c.key] = 1; });
+  // Filtered against the current column set, then topped up: a saved order from
+  // an older version must not drop a column that has since been added, or hold
+  // on to one that no longer exists.
+  var out = saved.filter(function(k){ return known[k]; });
+  _defaultColOrder().forEach(function(k){ if (out.indexOf(k) === -1) out.push(k); });
+  return out;
 }
 
+function _colHidden(){
+  try { return JSON.parse(localStorage.getItem(_COL_HIDDEN_KEY) || '[]') || []; }
+  catch (e) { return []; }
+}
+
+function _saveColView(order, hidden){
+  try {
+    localStorage.setItem(_COL_ORDER_KEY, JSON.stringify(order));
+    localStorage.setItem(_COL_HIDDEN_KEY, JSON.stringify(hidden));
+  } catch (e) {}
+}
+
+function _visibleStockColCount(){
+  if (_colEditing) return _colOrder().length;      // edit mode shows every column
+  var hidden = {};
+  _colHidden().forEach(function(k){ hidden[k] = 1; });
+  return _colOrder().filter(function(k){ return !hidden[k]; }).length;
+}
+
+function _colDef(key){
+  var found = null;
+  STOCK_COLS.forEach(function(c){ if (c.key === key) found = c; });
+  return found;
+}
+
+function _applyColumnPrefs(){ renderStockHead(); }
+
 function _colLabel(key){
-  var c = null;
-  STOCK_COLS.forEach(function(x){ if (x.key === key) c = x; });
+  var c = _colDef(key);
   if (!c) return key;
   return (columnPrefs.labels || {})[key] || c.def;
 }
 
-function _renderColumnsTab(){
-  var content = document.getElementById('settingsTabContent');
+// The header is rendered rather than written in the markup, because the order
+// is the user's and can change at any moment.
+function renderStockHead(){
+  var row = document.getElementById('stockHeadRow');
+  if (!row) return;
   var hidden = {};
-  (columnPrefs.hidden || []).forEach(function(k){ hidden[k] = 1; });
+  _colHidden().forEach(function(k){ hidden[k] = 1; });
+  var isAdmin = userRole === 'ADMIN';
 
-  content.innerHTML =
-    '<p style="font-size:.8rem;color:var(--muted);margin-bottom:.9rem">' +
-      'Rename the columns of the Stock Dashboard to match how your team talks, and hide the ones you do not use. ' +
-      'Leave a name blank to go back to the default. This changes the screen only — nothing in your data is renamed.' +
-    '</p>' +
-    '<table class="col-pref-table"><thead><tr>' +
-      '<th style="width:44px">Show</th><th>Default</th><th>Your name for it</th>' +
-    '</tr></thead><tbody>' +
-    STOCK_COLS.map(function(c){
-      var cur = (columnPrefs.labels || {})[c.key] || '';
-      return '<tr>' +
-        '<td style="text-align:center">' +
-          (c.lock
-            ? '<span title="This column cannot be hidden" style="color:var(--muted)">—</span>'
-            : '<input type="checkbox" class="col-show" data-key="' + c.key + '"' + (hidden[c.key] ? '' : ' checked') + '>') +
-        '</td>' +
-        '<td style="font-size:.8rem;color:var(--muted)">' + _he(c.def) + '</td>' +
-        '<td><input type="text" class="col-label" data-key="' + c.key + '" value="' + _escAttr(cur) + '" placeholder="' + _escAttr(c.def) + '"></td>' +
-      '</tr>';
-    }).join('') +
-    '</tbody></table>' +
-    '<div style="display:flex;gap:.5rem;margin-top:1rem;flex-wrap:wrap">' +
-      '<button class="btn btn-primary btn-sm" id="colPrefSave">Save columns</button>' +
-      '<button class="btn btn-ghost btn-sm" id="colPrefReset">Reset to defaults</button>' +
-    '</div>';
+  var html = '<th style="width:30px"></th>';
+  _colOrder().forEach(function(key){
+    var c = _colDef(key);
+    if (!c) return;
+    if (hidden[key] && !_colEditing) return;      // gone entirely until edit mode
 
-  document.getElementById('colPrefSave').addEventListener('click', function(){
-    var btn = this;
-    var labels = {}, hid = [];
-    document.querySelectorAll('.col-label').forEach(function(inp){
-      var v = (inp.value || '').trim();
-      if (v) labels[inp.getAttribute('data-key')] = v;
-    });
-    document.querySelectorAll('.col-show').forEach(function(cb){
-      if (!cb.checked) hid.push(cb.getAttribute('data-key'));
-    });
-    btn.disabled = true; btn.textContent = 'Saving…';
-    google.script.run
-      .withSuccessHandler(function(){
-        columnPrefs = { labels: labels, hidden: hid };
-        _applyColumnPrefs();
-        btn.disabled = false; btn.textContent = 'Save columns';
-        showToast('Columns updated ✓', 'ok');
-      })
-      .withFailureHandler(function(e){
-        btn.disabled = false; btn.textContent = 'Save columns';
-        showToast('Could not save: ' + (e.message || e), 'err', 6000);
-      })
-      .processMovement('saveColumnPrefs', _h({ labels: labels, hidden: hid }));
+    var cls = 'sc-' + key + (hidden[key] ? ' col-off' : '');
+    if (_colEditing){
+      html += '<th class="' + cls + ' col-edit" draggable="true" data-col="' + key + '">' +
+        '<span class="col-drag" title="Drag to move">⋮⋮</span>' +
+        (isAdmin
+          ? '<input class="col-rename" data-col="' + key + '" value="' + _escAttr(_colLabel(key)) + '" ' +
+            'title="Name shown to everyone in this company">'
+          : '<span class="col-name-ro">' + _he(_colLabel(key)) + '</span>') +
+        (c.lock
+          ? '<span class="col-lock" title="This column cannot be hidden">🔒</span>'
+          : '<button class="col-eye" data-col="' + key + '" title="' + (hidden[key] ? 'Show' : 'Hide') + '">' +
+            (hidden[key] ? '🚫' : '👁') + '</button>') +
+      '</th>';
+    } else {
+      var c2 = _colDef(key);
+      var tip = COL_TIPS[key];
+      html += '<th class="sc-' + key + (tip ? ' tip' : '') + '"' + (tip ? ' data-tip="' + _escAttr(tip) + '"' : '') + '>' +
+        _he(_colLabel(key)) + '</th>';
+    }
   });
+  row.innerHTML = html;
+  if (_colEditing) _wireColEdit();
+}
 
-  document.getElementById('colPrefReset').addEventListener('click', function(){
-    _showConfirm({
-      icon: '↩', title: 'Reset column names?',
-      message: 'Every column goes back to its default name and becomes visible again.',
-      confirmText: 'Reset',
-      onConfirm: function(){
+var COL_TIPS = {
+  inWarehouse:  'Units on hand in the warehouse',
+  atSite:       'Sent out to a job — used or delivered',
+  available:    'In warehouse, minus what is reserved',
+  wasted:       'Recorded as damaged or scrapped',
+  location:     'Where this material is stored',
+  dateReceived: 'Date of the most recent entry'
+};
+
+function toggleColEdit(){
+  _colEditing = !_colEditing;
+  document.getElementById('btnColDone').style.display  = _colEditing ? '' : 'none';
+  document.getElementById('btnColReset').style.display = _colEditing ? '' : 'none';
+  document.getElementById('colEditHelp').style.display = _colEditing ? '' : 'none';
+  var adminHelp = document.getElementById('colEditAdminHelp');
+  if (adminHelp) adminHelp.style.display = (userRole === 'ADMIN') ? '' : 'none';
+  document.getElementById('btnEditCols').style.display = _colEditing ? 'none' : '';
+  renderStockHead();
+  renderStock();
+}
+
+function finishColEdit(){
+  // Order and visibility are this browser's and are already saved as they
+  // change. Only the names have to reach the server, and only an admin can
+  // send them.
+  if (userRole === 'ADMIN'){
+    var labels = {};
+    document.querySelectorAll('.col-rename').forEach(function(inp){
+      var key = inp.getAttribute('data-col');
+      var v   = (inp.value || '').trim();
+      var def = (_colDef(key) || {}).def;
+      if (v && v !== def) labels[key] = v;         // matching the default is not an override
+    });
+    var changed = JSON.stringify(labels) !== JSON.stringify(columnPrefs.labels || {});
+    if (changed){
+      google.script.run
+        .withSuccessHandler(function(){ columnPrefs.labels = labels; showToast('Column names saved for everyone ✓', 'ok'); })
+        .withFailureHandler(function(e){ showToast('Could not save names: ' + (e.message || e), 'err', 6000); })
+        .processMovement('saveColumnPrefs', _h({ labels: labels, hidden: [] }));
+      columnPrefs.labels = labels;
+    }
+  }
+  _colEditing = false;
+  document.getElementById('btnColDone').style.display  = 'none';
+  document.getElementById('btnColReset').style.display = 'none';
+  document.getElementById('colEditHelp').style.display = 'none';
+  document.getElementById('btnEditCols').style.display = '';
+  renderStockHead();
+  renderStock();
+}
+
+function resetColEdit(){
+  _showConfirm({
+    icon: '↩', title: 'Reset columns?',
+    message: userRole === 'ADMIN'
+      ? 'Your column order and hidden columns go back to default. Column NAMES go back to default for everyone in the company.'
+      : 'Your column order and hidden columns go back to default. Column names are set by an admin and are not affected.',
+    confirmText: 'Reset',
+    onConfirm: function(){
+      _saveColView(_defaultColOrder(), []);
+      if (userRole === 'ADMIN'){
+        columnPrefs.labels = {};
         google.script.run
-          .withSuccessHandler(function(){
-            columnPrefs = { labels: {}, hidden: [] };
-            _applyColumnPrefs();
-            _renderColumnsTab();
-            showToast('Columns reset ✓', 'ok');
-          })
-          .withFailureHandler(function(e){ showToast('Could not reset: ' + (e.message || e), 'err', 6000); })
+          .withSuccessHandler(function(){})
+          .withFailureHandler(function(){})
           .processMovement('saveColumnPrefs', _h({ labels: {}, hidden: [] }));
       }
+      renderStockHead();
+      renderStock();
+    }
+  });
+}
+
+var _colDragKey = null;
+function _wireColEdit(){
+  document.querySelectorAll('#stockHeadRow th.col-edit').forEach(function(th){
+    th.addEventListener('dragstart', function(e){
+      _colDragKey = th.getAttribute('data-col');
+      th.classList.add('col-dragging');
+      try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', _colDragKey); } catch (x) {}
     });
+    th.addEventListener('dragend', function(){ th.classList.remove('col-dragging'); });
+    th.addEventListener('dragover', function(e){ e.preventDefault(); th.classList.add('col-drop'); });
+    th.addEventListener('dragleave', function(){ th.classList.remove('col-drop'); });
+    th.addEventListener('drop', function(e){
+      e.preventDefault();
+      th.classList.remove('col-drop');
+      var target = th.getAttribute('data-col');
+      if (!_colDragKey || _colDragKey === target) return;
+      var order = _colOrder().filter(function(k){ return k !== _colDragKey; });
+      var at = order.indexOf(target);
+      order.splice(at === -1 ? order.length : at, 0, _colDragKey);
+      _colDragKey = null;
+      _saveColView(order, _colHidden());
+      renderStockHead();
+      renderStock();
+    });
+  });
+
+  document.querySelectorAll('#stockHeadRow .col-eye').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var key = btn.getAttribute('data-col');
+      var hidden = _colHidden();
+      var i = hidden.indexOf(key);
+      if (i === -1) hidden.push(key); else hidden.splice(i, 1);
+      _saveColView(_colOrder(), hidden);
+      renderStockHead();
+      renderStock();
+    });
+  });
+
+  // Typing in a name must not start a drag.
+  document.querySelectorAll('#stockHeadRow .col-rename').forEach(function(inp){
+    inp.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+    inp.addEventListener('dragstart', function(e){ e.preventDefault(); e.stopPropagation(); });
   });
 }
 
@@ -3294,6 +3409,9 @@ function exitSelectedStock(){
 
 // ── Dashboard: Stock Table ────────────────────────────────────────────────────
 function renderStock(){
+  // Header and body are drawn from the same order on every pass — rendering one
+  // without the other is how a column ends up under the wrong heading.
+  renderStockHead();
   var q  = (document.getElementById('stockSearch').value || '').toLowerCase();
   var cf = document.getElementById('stockFilter').value;
   var sf = document.getElementById('stockStatusFilter').value;
@@ -3337,7 +3455,7 @@ function renderStock(){
 
   if (!items.length) {
     document.getElementById('stockBody').innerHTML =
-      '<tr><td colspan="13"><div class="empty-state"><div class="empty-icon">📦</div><p>No stock items match your filters.</p></div></td></tr>';
+      '<tr><td colspan="' + (_visibleStockColCount() + 1) + '"><div class="empty-state"><div class="empty-icon">📦</div><p>No stock items match your filters.</p></div></td></tr>';
     _updateStockSelectBar();
     return;
   }
@@ -3418,7 +3536,7 @@ function renderStock(){
         }).join('') + '</div>'
       : '<p style="color:var(--muted);font-size:.8rem;padding:.25rem 0">No documents attached.</p>';
 
-    var detailPanel = '<tr id="' + detailRowId + '" class="stock-detail-row"><td colspan="13">' +
+    var detailPanel = '<tr id="' + detailRowId + '" class="stock-detail-row"><td colspan="' + (_visibleStockColCount() + 1) + '">' +
       (supplierBadgeHtml ? '<div style="padding:.6rem .75rem 0">' + supplierBadgeHtml + '</div>' : '') +
       '<div class="stock-detail-split">' +
         '<div class="sd-col"><div class="sd-col-hdr">📷 Location Photos</div>' + photosHtml + '</div>' +
@@ -3435,21 +3553,31 @@ function renderStock(){
       ' onclick="event.stopPropagation()" onchange="toggleStockSelect(this)"' +
       (selDisabled ? ' title="No available stock to exit"' : ' title="Select for Exit"') + '>';
 
+    // Cells are built by NAME and then emitted in the user's own order, so the
+    // row can never drift out of step with the header it sits under.
+    var cells = {
+      category:     '<td class="sc-category">'+catBadge(s.category)+'</td>',
+      name:         '<td class="sc-name"><strong>'+_he(s.name)+'</strong>'+(s.project&&s.project!=='GENERIC'?'<br><span style="font-size:.72rem;color:var(--muted)">'+_he(s.project)+'</span>':'')+'</td>',
+      inWarehouse:  '<td class="sc-inWarehouse" style="color:var(--green);font-weight:600">'+Math.max(0,s.warehouseQty)+'</td>',
+      atSite:       '<td class="sc-atSite" style="color:var(--orange);font-weight:600">'+Math.max(0,s.siteQty)+'</td>',
+      available:    '<td class="sc-available"><strong style="font-size:1.05rem;color:'+(s.availableQty<=0?'var(--red)':'inherit')+'">'+Math.max(0,s.availableQty)+'</strong></td>',
+      wasted:       '<td class="sc-wasted" style="color:'+(s.wastedQty>0?'var(--red)':'var(--muted)')+';font-size:.82rem;font-weight:'+(s.wastedQty>0?'600':'400')+'">'+(s.wastedQty>0?'✕ '+s.wastedQty:'—')+'</td>',
+      reserved:     '<td class="sc-reserved" style="color:var(--muted);font-size:.8rem">'+(s.reservedQty>0?'<span class="badge badge-orange">'+s.reservedQty+' reserved</span>':'—')+'</td>',
+      location:     '<td class="sc-location" style="color:var(--muted);font-size:.78rem;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+_escAttr(locSummary(s.warehouseLocs))+'">'+_he(locSummary(s.warehouseLocs))+'</td>',
+      status:       '<td class="sc-status">'+stockBadge(s)+'</td>',
+      dateReceived: '<td class="sc-dateReceived">'+dateCell+'</td>',
+      lastNote:     '<td class="sc-lastNote">'+noteCell+'</td>',
+      docs:         '<td class="sc-docs" style="text-align:center">'+summaryCell+'</td>'
+    };
+    var hiddenNow = {};
+    _colHidden().forEach(function(k){ hiddenNow[k] = 1; });
+    var body = _colOrder().map(function(k){
+      if (hiddenNow[k] && !_colEditing) return '';
+      return cells[k] || '';
+    }).join('');
+
     return '<tr class="'+(zero?'row-zero':'')+'" data-action="toggle-stock-detail" data-row-id="'+detailRowId+'" style="cursor:pointer" title="Click to view location photos and documents">'+
-      '<td onclick="event.stopPropagation()">'+selCell+'</td>'+
-      '<td class="sc-category">'+catBadge(s.category)+'</td>'+
-      '<td class="sc-name"><strong>'+_he(s.name)+'</strong>'+(s.project&&s.project!=='GENERIC'?'<br><span style="font-size:.72rem;color:var(--muted)">'+_he(s.project)+'</span>':'')+'</td>'+
-      '<td class="sc-inWarehouse" style="color:var(--green);font-weight:600">'+Math.max(0,s.warehouseQty)+'</td>'+
-      '<td class="sc-atSite" style="color:var(--orange);font-weight:600">'+Math.max(0,s.siteQty)+'</td>'+
-      '<td class="sc-available"><strong style="font-size:1.05rem;color:'+(s.availableQty<=0?'var(--red)':'inherit')+'">'+Math.max(0,s.availableQty)+'</strong></td>'+
-      '<td class="sc-wasted" style="color:'+(s.wastedQty>0?'var(--red)':'var(--muted)')+';font-size:.82rem;font-weight:'+(s.wastedQty>0?'600':'400')+'">'+
-        (s.wastedQty>0?'✕ '+s.wastedQty:'—')+'</td>'+
-      '<td class="sc-reserved" style="color:var(--muted);font-size:.8rem">'+(s.reservedQty>0?'<span class="badge badge-orange">'+s.reservedQty+' reserved</span>':'—')+'</td>'+
-      '<td class="sc-location" style="color:var(--muted);font-size:.78rem;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+_escAttr(locSummary(s.warehouseLocs))+'">'+_he(locSummary(s.warehouseLocs))+'</td>'+
-      '<td class="sc-status">'+stockBadge(s)+'</td>'+
-      '<td class="sc-dateReceived">'+dateCell+'</td>'+
-      '<td class="sc-lastNote">'+noteCell+'</td>'+
-      '<td class="sc-docs" style="text-align:center">'+summaryCell+'</td></tr>'+
+      '<td onclick="event.stopPropagation()">'+selCell+'</td>'+ body + '</tr>'+
       detailPanel;
   }).join('');
   _updateStockSelectBar();
@@ -5951,7 +6079,6 @@ function _renderSettingsTab(tab) {
   if (tab === 'system')      { _renderSystemTab(); return; }
   if (tab === 'pmdirectory') { _renderPmDirectoryTab(); return; }
   if (tab === 'import')      { _renderImportTab(); return; }
-  if (tab === 'columns')     { _renderColumnsTab(); return; }
   if (tab === 'locations')   { _renderLocationsTab(); return; }
 
   var items = _settingsData[tab] || [];
