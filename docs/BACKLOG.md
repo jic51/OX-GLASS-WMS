@@ -48,6 +48,21 @@ here once they ship (the commit message is the record of what changed and why).
    below the logo at every width, and centre them horizontally as the window
    grows instead of moving them up.
 
+9. **"Set up now" that goes nowhere should not count as a dismissal.** The
+   bottom-right setup nudge ("You haven't set up your suppliers, projects yet")
+   snoozes for seven days the moment either button is clicked — including
+   "Set up now". So opening Settings, not touching anything and closing it has
+   exactly the effect of "Not now", which is not what the person said.
+
+   Instead: if Settings closes with nothing added, bring the nudge back after
+   about 20 minutes, and make the return gentle rather than a pop — it slides in
+   from off the left edge, fully transparent, and fades up to its normal colour
+   as it travels to where it was sitting. Only "Not now" gets the long snooze.
+
+   Worth deciding while building it: whether it should keep coming back every 20
+   minutes or back off after the second or third time. A nudge that returns
+   forever on the same terms stops being a nudge.
+
 ## Polish pass (do at the end, after the functional work)
 
 - **Scrollbars look bad.** Jose dislikes the default side scrollbar. Do NOT

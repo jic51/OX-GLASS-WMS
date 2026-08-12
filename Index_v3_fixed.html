@@ -778,6 +778,19 @@
     .splash-note{font-size:.8rem;color:#a1b0cb;text-align:center;min-height:1.2em}
     .submit-hint{flex:1;min-width:160px;font-size:.75rem;color:var(--orange);font-weight:600;text-align:left}
     .btn:disabled{opacity:.5;cursor:not-allowed}
+    /* Settings → Company */
+    .co-form{max-width:460px}
+    .co-label{display:block;font-size:.78rem;font-weight:700;color:var(--text);margin:1rem 0 .3rem}
+    .co-form .co-label:first-child{margin-top:0}
+    .co-opt{font-weight:400;color:var(--muted)}
+    .co-input{width:100%;padding:.5rem .6rem;border:1px solid var(--border);border-radius:7px;background:var(--card);color:var(--text);font-size:.86rem;font-family:inherit}
+    .co-input:focus{outline:none;border-color:var(--accent)}
+    .co-hint{font-size:.73rem;color:var(--muted);margin:.35rem 0 0;line-height:1.45}
+    .co-logo-box{display:inline-flex;align-items:center;justify-content:center;min-width:150px;min-height:64px;padding:.5rem .75rem;border:1px solid var(--border);border-radius:8px;background:var(--bg)}
+    .co-logo-box img{max-height:52px;max-width:240px;object-fit:contain}
+    .co-logo-empty{color:var(--muted);font-size:.78rem}
+    .co-logo-acts{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.5rem}
+    .co-save{margin-top:1.4rem;padding-top:1rem;border-top:1px solid var(--border)}
     .col-bar{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:.15rem 0 .6rem}
     .col-edit-help{font-size:.74rem;color:var(--muted)}
     th.col-edit{cursor:grab;white-space:nowrap}
@@ -1893,6 +1906,8 @@
     </div>
     <div class="settings-body">
       <nav class="settings-sidebar" aria-label="Settings sections">
+        <div class="settings-sidebar-label">Company</div>
+        <button class="settings-tab"        data-tab="company"     onclick="switchSettingsTab('company')">🏷 <span>Name &amp; Logo</span></button>
         <div class="settings-sidebar-label">Catalog</div>
         <button class="settings-tab active" data-tab="categories"  onclick="switchSettingsTab('categories')">📦 <span>Categories</span></button>
         <button class="settings-tab"        data-tab="projects"    onclick="switchSettingsTab('projects')">📁 <span>Projects</span></button>
@@ -2052,7 +2067,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.42';
+var APP_VERSION = '9.43';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Paid Gmail-scanner add-on: off unless the backend says this installation
@@ -2911,9 +2926,10 @@ function wizRender(){
 // (far above the ~28px it renders at, so it stays sharp on high-DPI screens)
 // and re-encoded as PNG to preserve transparency. A 3 MB upload becomes a few
 // KB, which matters because this is stored in Drive and fetched on every load.
-function _wizLogoPick(inp){
-  if (!inp.files || !inp.files[0]) return;
-  var f = inp.files[0];
+// Shared by the wizard and by Settings → Company, so a logo uploaded either way
+// is prepared identically. cb receives { dataUrl, fileData, w, h }.
+function _resizeLogoFile(f, cb){
+  if (!f) return;
   if (f.size > 8 * 1024 * 1024) { showToast('That image is very large - pick one under 8 MB.','warn'); return; }
   var reader = new FileReader();
   reader.onload = function(){
@@ -2927,16 +2943,23 @@ function _wizLogoPick(inp){
       cv.width = w; cv.height = h;
       cv.getContext('2d').drawImage(img, 0, 0, w, h);
       var dataUrl = cv.toDataURL('image/png');
-      _wiz.logo = { fileData: dataUrl.split(',')[1], fileMimeType: 'image/png', fileName: 'logo.png' };
-      document.getElementById('wizLogoPrev').innerHTML =
-        '<img src="' + dataUrl + '" style="max-height:52px;border-radius:6px;background:#F3F4F6;padding:4px">' +
-        '<div class="wiz-hint">Resized to ' + w + 'x' + h + ' automatically - any size or shape works.</div>';
+      cb({ dataUrl: dataUrl, fileData: dataUrl.split(',')[1], w: w, h: h });
     };
     img.onerror = function(){ showToast('That file is not a readable image.','err'); };
     img.src = reader.result;
   };
   reader.onerror = function(){ showToast('Could not read that image.','err'); };
   reader.readAsDataURL(f);
+}
+
+function _wizLogoPick(inp){
+  if (!inp.files || !inp.files[0]) return;
+  _resizeLogoFile(inp.files[0], function(r){
+    _wiz.logo = { fileData: r.fileData, fileMimeType: 'image/png', fileName: 'logo.png' };
+    document.getElementById('wizLogoPrev').innerHTML =
+      '<img src="' + r.dataUrl + '" style="max-height:52px;border-radius:6px;background:#F3F4F6;padding:4px">' +
+      '<div class="wiz-hint">Resized to ' + r.w + 'x' + r.h + ' automatically - any size or shape works.</div>';
+  });
 }
 
 function _wizPreset(kind, btn){
@@ -5971,6 +5994,116 @@ function _rebuildStockNow() {
     .processMovement('adminAction', _h({ action: 'reconcile' }));
 }
 
+// ── Company: name, domain and logo ──────────────────────────────────────────
+// All three used to be settable only inside the setup wizard, so a company
+// whose logo arrived a month after going live had to walk back through the
+// whole wizard to add it. They are settings now.
+var _coLogo = null;          // picked, not saved yet: { dataUrl, fileData, w, h }
+var _coLogoRemove = false;
+
+// The header's logo is already an <img> holding the real image, so the preview
+// costs nothing. On a page that hasn't fetched it yet, the copy the splash
+// screen remembers does just as well.
+function _coCurrentLogoUrl(){
+  var el = document.getElementById('appLogo');
+  if (el && el.src && el.style.display !== 'none') return el.src;
+  try { return localStorage.getItem('acopio_brand_logo') || ''; } catch (e) { return ''; }
+}
+
+function _coLogoBoxHtml(){
+  var url = _coLogo ? _coLogo.dataUrl : (_coLogoRemove ? '' : _coCurrentLogoUrl());
+  if (!url){
+    return '<div class="co-logo-box co-logo-empty">' +
+      (_coLogoRemove ? 'Logo will be removed when you save.' : 'No logo yet') + '</div>';
+  }
+  return '<div class="co-logo-box"><img src="' + _escAttr(url) + '" alt=""></div>' +
+    (_coLogo ? '<div class="co-hint">New image, ' + _coLogo.w + '×' + _coLogo.h +
+               ' — click Save changes to apply it.</div>' : '');
+}
+
+function _renderCompanyTab(){
+  var c = (_settingsData && _settingsData.company) || {};
+  document.getElementById('settingsTabContent').innerHTML =
+    '<div class="co-form">' +
+      '<label class="co-label" for="coName">Company name</label>' +
+      '<input type="text" id="coName" class="co-input" maxlength="60" value="' + _escAttr(c.name || '') + '">' +
+      '<p class="co-hint">Shown in the header, on the browser tab, on the loading screen, and as the sender name on every email this system sends.</p>' +
+
+      '<label class="co-label" for="coDomain">Email domain <span class="co-opt">(optional)</span></label>' +
+      '<input type="text" id="coDomain" class="co-input" maxlength="60" placeholder="yourcompany.com" value="' + _escAttr(c.domain || '') + '">' +
+      '<p class="co-hint">People with an email at this domain are recognised as staff. Everyone still has to be on the user list to get in — this only saves them the extra sign-in step. Leave it blank if your team uses personal Gmail accounts.</p>' +
+
+      '<label class="co-label">Logo</label>' +
+      '<div id="coLogoWrap">' + _coLogoBoxHtml() + '</div>' +
+      '<div class="co-logo-acts">' +
+        '<input type="file" id="coLogoFile" accept="image/*" style="display:none" onchange="_coLogoPick(this)">' +
+        '<button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById(\'coLogoFile\').click()">' +
+          (_coCurrentLogoUrl() && !_coLogoRemove ? 'Replace image' : 'Choose image') + '</button>' +
+        ((_coCurrentLogoUrl() && !_coLogoRemove) || _coLogo
+          ? '<button type="button" class="btn btn-ghost btn-sm" onclick="_coClearLogo()">Remove</button>' : '') +
+        (_coLogoRemove || _coLogo
+          ? '<button type="button" class="btn btn-ghost btn-sm" onclick="_coUndoLogo()">Undo</button>' : '') +
+      '</div>' +
+      '<p class="co-hint">Any size or shape works — it is resized automatically. Appears beside the company name in the header and on the loading screen.</p>' +
+
+      '<div class="co-save"><button type="button" class="btn btn-primary" id="coSave" onclick="_saveCompanyProfile()">Save changes</button></div>' +
+    '</div>';
+}
+
+function _coLogoPick(inp){
+  if (!inp.files || !inp.files[0]) return;
+  _resizeLogoFile(inp.files[0], function(r){
+    _coLogo = r;
+    _coLogoRemove = false;
+    _renderCompanyTab();
+  });
+  inp.value = '';    // so picking the same file twice still fires onchange
+}
+
+function _coClearLogo(){ _coLogo = null; _coLogoRemove = true;  _renderCompanyTab(); }
+function _coUndoLogo(){  _coLogo = null; _coLogoRemove = false; _renderCompanyTab(); }
+
+function _saveCompanyProfile(){
+  var name   = (document.getElementById('coName').value   || '').trim();
+  var domain = (document.getElementById('coDomain').value || '').trim();
+  if (!name){ _settingMsg('Company name is required.', 'error'); return; }
+
+  var payload = { name: name, domain: domain };
+  var picked = _coLogo;
+  if (_coLogoRemove) payload.removeLogo = true;
+  else if (picked) payload.logo = { fileData: picked.fileData, fileMimeType: 'image/png', fileName: 'logo.png' };
+
+  var btn = document.getElementById('coSave');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  google.script.run
+    .withSuccessHandler(function(res){
+      var c = (res && res.company) || {};
+      if (_settingsData) _settingsData.company = c;
+      // We already hold the image in the browser, so paint it straight into the
+      // header rather than making applyCompanyBranding fetch back the file we
+      // just uploaded.
+      if (picked && c.logoId){
+        var el = document.getElementById('appLogo');
+        if (el){
+          el.dataset.loadedId = c.logoId;
+          el.src = picked.dataUrl; el.alt = name; el.style.display = '';
+        }
+        try {
+          if (picked.dataUrl.length < 400000) localStorage.setItem('acopio_brand_logo', picked.dataUrl);
+        } catch (e) {}
+      }
+      applyCompanyBranding(c);
+      _coLogo = null; _coLogoRemove = false;
+      _renderCompanyTab();
+      showToast('Company details saved ✓', 'ok');
+    })
+    .withFailureHandler(function(e){
+      btn.disabled = false; btn.textContent = 'Save changes';
+      _settingMsg('Could not save: ' + (e.message || e), 'error');
+    })
+    .processMovement('saveCompanyProfile', _h(payload));
+}
+
 function _renderSystemTab() {
   var content = document.getElementById('settingsTabContent');
   var months = String((_settingsData && _settingsData.archiveCutoffMonths) || 12);
@@ -6183,6 +6316,7 @@ function _renderSettingsTab(tab) {
   if (tab === 'pmdirectory') { _renderPmDirectoryTab(); return; }
   if (tab === 'import')      { _renderImportTab(); return; }
   if (tab === 'locations')   { _renderLocationsTab(); return; }
+  if (tab === 'company')     { _renderCompanyTab(); return; }
 
   var items = _settingsData[tab] || [];
   var label = { categories:'Category', projects:'Project', suppliers:'Supplier', locations:'Location' }[tab] || 'Item';
