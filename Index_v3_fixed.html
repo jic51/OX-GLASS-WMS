@@ -2067,7 +2067,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.43';
+var APP_VERSION = '9.44';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Paid Gmail-scanner add-on: off unless the backend says this installation
@@ -2251,62 +2251,106 @@ function _refreshCatHelpers(){
   });
 }
 
+// Which form is on screen is decided by which SECTION is visible, not by which
+// container happens to hold rows: the move overlay is one modal reused by every
+// movement type, and switching type hides a section without emptying it. Going
+// by rows alone let a leftover ENTRY line answer for an EXIT form.
+function _moveSectionVisible(id){
+  var el = document.getElementById(id);
+  return !!(el && el.style.display !== 'none');
+}
+
 function _moveFormProblem(){
   if (!(config.categories && config.categories.length)) return 'Add at least one category first';
 
-  var lines = document.querySelectorAll('#multiMatContainer .mat-line');
+  var lines = _moveSectionVisible('multiMatSection')
+    ? document.querySelectorAll('#multiMatContainer .mat-line') : [];
+  // Mirrors submitMultiEntry(): EVERY card needs a name and a positive
+  // quantity, and it stops at the first one that doesn't. A category is not
+  // required there, so it is not required here either.
   if (lines.length){
-    var anyComplete = false, missing = '';
-    lines.forEach(function(line){
-      var n    = line.id.replace('mat-line-', '');
-      var name = ((document.getElementById('mat-name-' + n) || {}).value || '').trim();
-      var cat  = ((document.getElementById('mat-cat-'  + n) || {}).value || '').trim();
-      var qty  = 0;
-      var lc = document.getElementById('mat-locs-' + n);
+    var entryProblem = '';
+    lines.forEach(function(line, i){
+      if (entryProblem) return;
+      var n     = line.id.replace('mat-line-', '');
+      var label = 'Material ' + (i + 1);
+      var name  = ((document.getElementById('mat-name-' + n) || {}).value || '').trim();
+      if (!name){ entryProblem = label + ' needs a name'; return; }
+      var qty = 0;
+      var lc  = document.getElementById('mat-locs-' + n);
       if (lc) lc.querySelectorAll('.loc-row').forEach(function(row){
-        var q = parseInt((row.querySelector('.loc-qty') || {}).value, 10) || 0;
-        var loc = ((row.querySelector('.loc-rack') || {}).value || '').trim();
-        if (q > 0 && loc) qty += q;
+        qty += Math.max(0, parseInt((row.querySelector('.loc-qty') || {}).value, 10) || 0);
       });
-      if (name && cat && qty > 0) anyComplete = true;
-      else if (!missing) {
-        missing = !name ? 'Material ' + n + ' needs a name'
-                : !cat  ? 'Material ' + n + ' needs a category'
-                : 'Material ' + n + ' needs a location and quantity';
-      }
+      if (qty <= 0) entryProblem = label + ' needs a location and quantity';
     });
-    if (!anyComplete) return missing || 'Fill in a material to save';
-    return '';
+    return entryProblem;
   }
 
-  // Multi-EXIT: rows are .exit-mat-line with id exit-mat-N, and each carries its
-  // own list of location rows holding the quantities.
-  var exitLines = document.querySelectorAll('#multiExitContainer .exit-mat-line');
+  // Multi-EXIT: rows are .exit-mat-line with id exit-mat-N, and each carries a
+  // list of .exit-loc-row location rows holding the quantities.
+  //
+  // Every check below mirrors exactly what submitMultiExit() refuses to send —
+  // and it refuses on the FIRST bad material, so every card has to be complete,
+  // not just one of them. A validator that disagrees with the save is worse
+  // than none: it either blocks a good form or lets a bad one through to a
+  // toast.
+  var exitLines = _moveSectionVisible('multiExitSection')
+    ? document.querySelectorAll('#multiExitContainer .exit-mat-line') : [];
   if (exitLines.length){
-    var okExit = false, exitMissing = '';
-    exitLines.forEach(function(line){
-      var n    = line.id.replace('exit-mat-', '');
-      var name = ((document.getElementById('exit-name-' + n) || {}).value || '').trim();
-      var qty  = 0;
-      var lc = document.getElementById('exit-locs-' + n);
-      if (lc) lc.querySelectorAll('.exit-qty').forEach(function(inp){
-        qty += Math.max(0, parseInt(inp.value, 10) || 0);
+    var sameDest   = !!(document.getElementById('mExitSameDestChk') || {}).checked;
+    var sharedDest = ((document.getElementById('mExitDest') || {}).value || '').trim();
+    var exitProblem = '';
+    exitLines.forEach(function(line, i){
+      if (exitProblem) return;
+      var label = 'Material ' + (i + 1);
+      var name = ((line.querySelector('input[id^="exit-name-"]') || {}).value || '').trim();
+      if (!name){ exitProblem = label + ' needs a name'; return; }
+      // .el-qty, not .exit-qty — that second class belongs to the older
+      // single-material EXIT form further down. Looking for the wrong one here
+      // meant the quantity always read as zero, so Save stayed dead however
+      // much was typed in.
+      var qty = 0;
+      line.querySelectorAll('.exit-loc-row').forEach(function(row){
+        qty += Math.max(0, parseInt((row.querySelector('.el-qty') || {}).value, 10) || 0);
       });
-      if (name && qty > 0) okExit = true;
-      else if (!exitMissing) exitMissing = !name ? 'Pick a material to take out' : 'Enter how many to take out';
+      if (qty <= 0){ exitProblem = label + ' needs how many to take out'; return; }
+      if (!sameDest){
+        var d = ((line.querySelector('input[id^="exit-dest-"]') || {}).value || '').trim();
+        if (!d) exitProblem = label + ' needs a destination';
+      }
     });
-    if (!okExit) return exitMissing || 'Fill in a material to save';
-    return '';
+    if (!exitProblem && sameDest && !sharedDest) exitProblem = 'Enter the destination';
+    return exitProblem;
   }
 
   // Single-material EXIT uses its own rows container.
-  var exitRows = document.querySelectorAll('#exitRowsContainer .exit-qty');
+  var exitRows = _moveSectionVisible('exitLocsSection')
+    ? document.querySelectorAll('#exitRowsContainer .exit-qty') : [];
   if (exitRows.length){
     var nmEx = ((document.getElementById('mName') || {}).value || '').trim();
     if (!nmEx) return 'Enter the material name';
     var tot = 0;
     exitRows.forEach(function(inp){ tot += Math.max(0, parseInt(inp.value, 10) || 0); });
     if (tot <= 0) return 'Enter how many to take out';
+    return '';
+  }
+
+  // TRANSFER: a name, plus at least one row that has a source rack, a
+  // destination rack and a quantity. Its own Qty box is HIDDEN for this type
+  // and the real total is added up from the rows at submit — so falling
+  // through to the single-material check below, which insists on that hidden
+  // box, would leave Save dead no matter what was filled in.
+  if (_moveSectionVisible('multiTransferSection')){
+    var trName = ((document.getElementById('mName') || {}).value || '').trim();
+    if (!trName) return 'Enter the material name';
+    var pairs = 0;
+    document.querySelectorAll('#transferRowsContainer .transfer-row').forEach(function(row){
+      var src = ((row.querySelector('.tr-rack') || {}).value || '').trim();
+      var dst = ((row.querySelector('.tr-dest') || {}).value || '').trim();
+      var q   = Math.max(0, parseInt((row.querySelector('.tr-qty') || {}).value, 10) || 0);
+      if (src && dst && q > 0) pairs++;
+    });
+    if (!pairs) return 'Add a source rack, a destination rack and a quantity';
     return '';
   }
 
@@ -2336,6 +2380,13 @@ function _updateMoveSubmitState(){
 // form is open — binding per field would miss every row created later.
 document.addEventListener('input',  function(e){ if (e.target.closest && e.target.closest('#moveOverlay')) _updateMoveSubmitState(); });
 document.addEventListener('change', function(e){ if (e.target.closest && e.target.closest('#moveOverlay')) _updateMoveSubmitState(); });
+// Clicks too, deferred by a tick so the handler has already run: adding or
+// removing a material or location row, and "Auto-fill Racks" writing
+// quantities in code, all change whether the form is complete without anyone
+// typing a character.
+document.addEventListener('click', function(e){
+  if (e.target.closest && e.target.closest('#moveOverlay')) setTimeout(_updateMoveSubmitState, 0);
+});
 
 // ── Column labels and visibility ─────────────────────────────────────────────
 // The words on a warehouse screen belong to the warehouse. One business calls a
