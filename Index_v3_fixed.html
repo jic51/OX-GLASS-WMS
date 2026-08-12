@@ -837,6 +837,15 @@
       padding:.4rem .55rem;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.28);white-space:normal;width:max-content;max-width:190px;
       opacity:0;pointer-events:none;transition:opacity .15s ease,transform .15s ease;z-index:60}
     .tip:hover::after{opacity:1;transform:translateX(-50%) translateY(0)}
+    /* A table heading that carries a tooltip must still stick.
+       .tip sets position:relative to anchor its bubble, and a class beats the
+       `thead th` rule that makes headings sticky whatever the order — so every
+       column with a tooltip quietly stopped sticking and scrolled away with the
+       rows, leaving a see-through gap in the header bar. Re-asserting sticky at
+       higher specificity fixes it without costing the tooltip anything: sticky
+       is a positioned value, so it anchors the bubble just as well as relative
+       did. */
+    thead th.tip{position:sticky;top:0}
     .cfg-pick{margin-right:.5rem;flex-shrink:0;cursor:pointer}
     .cfg-pickbar{display:none;gap:.5rem;align-items:center;flex-wrap:wrap;background:var(--navy);color:#fff;border-radius:8px;padding:.5rem .7rem;margin-bottom:.75rem}
     .cfg-pickbar.show{display:flex}
@@ -2114,7 +2123,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.46';
+var APP_VERSION = '9.47';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Paid Gmail-scanner add-on: off unless the backend says this installation
