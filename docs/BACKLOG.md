@@ -10,22 +10,17 @@ here once they ship (the commit message is the record of what changed and why).
    done from code: rename the Apps Script project, share as Viewer, hand out the
    /copy link, and copy it once himself to see what a customer sees. See
    docs/MASTER-TEMPLATE.md.
-2. **Extend the column editor to the Movements table.** Shipped in v9.40 for the
-   Stock Dashboard: "⚙ Columns" above the table turns on inline editing —
-   admins rename (company-wide), everyone hides and drags to reorder (their own
-   browser). Movements still has the old per-browser checkbox picker and no
-   renaming; give it the same editor.
-3. **Polish the wizard's Copy button animation** — the checkmark transition works
+2. **Polish the wizard's Copy button animation** — the checkmark transition works
    now, but the in/out timing still feels abrupt.
-4. **Polish the company logo placement** in the topbar — it renders, but the
+3. **Polish the company logo placement** in the topbar — it renders, but the
    sizing/position isn't what Jose wants yet.
-5. **User-menu rework** — move the 🐞 report-a-problem button out of the
+4. **User-menu rework** — move the 🐞 report-a-problem button out of the
    floating bottom-right corner and into the topbar cluster with the account
    email and settings. Do it as part of that menu's redesign, not on its own.
    Frees the corner for the suggestion deck, which currently has to sit above
    the 🐞 to avoid it.
 
-6. **One edit mode and one delete mode per screen.** Today every row carries its
+5. **One edit mode and one delete mode per screen.** Today every row carries its
    own ✏️ and 🗑, which is noisy and makes accidental deletion easy. Replace with
    a single "Edit" toggle and a single "Delete" toggle per window: turn one on
    and the rows reveal their controls, turn it off and the screen is read-only
@@ -33,7 +28,7 @@ here once they ship (the commit message is the record of what changed and why).
    user list. Design once, apply everywhere — the value is in it being the same
    gesture in every window.
 
-7. **Apply the silent-update pattern to the rest of Settings.** v9.37 fixed it
+6. **Apply the silent-update pattern to the rest of Settings.** v9.37 fixed it
    for catalog add/rename/delete: patch what is on screen instead of re-fetching
    and repainting, and drop the "Saving… / Saved ✓ / Loading…" sequence. The
    same churn is still in the other Settings screens — Materials, Directory,
