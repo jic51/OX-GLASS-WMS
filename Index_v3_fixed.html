@@ -791,6 +791,23 @@
     .co-logo-empty{color:var(--muted);font-size:.78rem}
     .co-logo-acts{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.5rem}
     .co-save{margin-top:1.4rem;padding-top:1rem;border-top:1px solid var(--border)}
+    /* One edit mode and one delete mode per screen. Rows carry no controls
+       until a mode is switched on, so a list reads as a list and deleting is
+       something you have to mean. */
+    .row-mode-bar{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;margin:0 0 .7rem}
+    .rm-btn{display:inline-flex;align-items:center;gap:.3rem;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:.3rem .7rem;font-size:.78rem;font-weight:700;font-family:inherit;cursor:pointer;transition:.15s}
+    .rm-btn:hover{border-color:var(--accent)}
+    .rm-btn.on{background:var(--navy);border-color:var(--navy);color:#fff}
+    .rm-btn.rm-del:hover{border-color:var(--red)}
+    .rm-btn.rm-del.on{background:var(--red);border-color:var(--red);color:#fff}
+    .rm-hint{font-size:.74rem;color:var(--muted)}
+    .row-mode-bar.is-del .rm-hint{color:var(--red);font-weight:600}
+    /* Only ever ADDS display:none — when the mode is on the rule stops matching
+       and each control keeps whatever display it had. */
+    [data-rowscope]:not(.mode-edit) [data-rowact="edit"],
+    [data-rowscope]:not(.mode-del)  [data-rowact="del"]{display:none!important}
+    /* Delete mode is worth noticing from across the room. */
+    [data-rowscope].mode-del{outline:1px solid var(--red);outline-offset:4px;border-radius:6px}
     .col-bar{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:.15rem 0 .6rem}
     .col-edit-help{font-size:.74rem;color:var(--muted)}
     th.col-edit{cursor:grab;white-space:nowrap}
@@ -1167,7 +1184,8 @@
     </div>
 
     <!-- Users table -->
-    <div class="table-wrapper" style="max-height:45vh">
+    <div id="rowModeSlot_usr"></div>
+    <div class="table-wrapper" style="max-height:45vh" data-rowscope="usr">
       <table class="users-table">
         <thead><tr>
           <th>Email</th><th>Name</th><th>Role</th>
@@ -1275,8 +1293,9 @@
         </span>
         <button class="btn btn-primary btn-sm" id="btnColDone_mov" style="display:none" onclick="finishColEdit('mov')">Done</button>
         <button class="btn btn-ghost btn-sm" id="btnColReset_mov" style="display:none" onclick="resetColEdit('mov')">Reset</button>
+        <span id="rowModeSlot_mov"></span>
       </div>
-      <div class="table-wrapper" id="tableContainer"></div>
+      <div class="table-wrapper" id="tableContainer" data-rowscope="mov"></div>
     </div>
   </div>
 
@@ -2067,7 +2086,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.44';
+var APP_VERSION = '9.45';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Paid Gmail-scanner add-on: off unless the backend says this installation
@@ -2388,6 +2407,88 @@ document.addEventListener('click', function(e){
   if (e.target.closest && e.target.closest('#moveOverlay')) setTimeout(_updateMoveSubmitState, 0);
 });
 
+// ── One edit mode and one delete mode per screen ─────────────────────────────
+// Every list used to carry a pencil and a bin on every single row. On a screen
+// with forty locations that is eighty buttons competing with the data, and the
+// bin sits one slip of the finger away from the row above it.
+//
+// Instead each screen has two toggles at the top. Nothing is editable until
+// "Edit" is on; nothing can be deleted until "Delete" is on; and the two are
+// mutually exclusive, so the screen is only ever in one state and it says which
+// one. Turning both off is the resting state — a list you can read.
+//
+// Same two buttons, same place, same behaviour in every window: the value is in
+// not having to learn each screen separately.
+var ROW_MODES = {
+  cfg: { edit: 'Rename', del: 'Delete',
+         editHint: 'Click the pencil on a row to rename it.',
+         delHint:  'Click the bin on a row to delete it.' },
+  pm:  { edit: null, del: 'Delete',
+         delHint:  'Click the bin on a contact to remove it.' },
+  mat: { edit: 'Edit', del: null,
+         editHint: 'Rename a material, move it to another category, or merge it into another.' },
+  loc: { edit: 'Rename', del: 'Remove',
+         editHint: 'Click the pencil on a group to rename it.',
+         delHint:  'Bin deletes a group (its locations move to ALL LOCATIONS). The box archives a single location.' },
+  mov: { edit: 'Edit', del: 'Delete',
+         editHint: 'Click the pencil on a row to correct that record.',
+         delHint:  'Click the bin on a row to delete that record permanently.',
+         refresh: function(){ renderMovements(); } },   // its actions column comes and goes with the mode
+  usr: { edit: 'Edit', del: 'Deactivate',
+         editHint: 'Click the pencil on a person to change their name or role.',
+         delHint:  'Click 🚫 to stop someone signing in. Their history is kept.' }
+};
+
+var _rowModes = {};    // scope -> '' | 'edit' | 'del'
+
+function _rowModeBarHtml(scope){
+  var d = ROW_MODES[scope];
+  if (!d) return '';
+  var m = _rowModes[scope] || '';
+  return '<div class="row-mode-bar' + (m === 'del' ? ' is-del' : '') + '" id="rmb-' + scope + '">' +
+    (d.edit ? '<button type="button" class="rm-btn rm-edit' + (m === 'edit' ? ' on' : '') + '" ' +
+              'onclick="setRowMode(\'' + scope + '\',\'edit\')">✏️ ' + _he(d.edit) + '</button>' : '') +
+    (d.del  ? '<button type="button" class="rm-btn rm-del' + (m === 'del' ? ' on' : '') + '" ' +
+              'onclick="setRowMode(\'' + scope + '\',\'del\')">🗑 ' + _he(d.del) + '</button>' : '') +
+    '<span class="rm-hint">' + _he(_rowModeHint(scope)) + '</span>' +
+  '</div>';
+}
+
+function _rowModeHint(scope){
+  var d = ROW_MODES[scope] || {};
+  var m = _rowModes[scope] || '';
+  return m === 'edit' ? (d.editHint || '') : m === 'del' ? (d.delHint || '') : '';
+}
+
+// Clicking the mode you are already in turns it off — the same button both
+// enters and leaves, so there is never a third button to find.
+function setRowMode(scope, mode){
+  _rowModes[scope] = (_rowModes[scope] === mode) ? '' : mode;
+  _applyRowMode(scope);
+  var d = ROW_MODES[scope];
+  if (d && d.refresh) d.refresh();
+}
+
+function _applyRowMode(scope){
+  var m = _rowModes[scope] || '';
+  document.querySelectorAll('[data-rowscope="' + scope + '"]').forEach(function(el){
+    el.classList.toggle('mode-edit', m === 'edit');
+    el.classList.toggle('mode-del',  m === 'del');
+  });
+  var bar = document.getElementById('rmb-' + scope);
+  if (!bar) return;
+  bar.classList.toggle('is-del', m === 'del');
+  var e = bar.querySelector('.rm-edit'), d = bar.querySelector('.rm-del');
+  if (e) e.classList.toggle('on', m === 'edit');
+  if (d) d.classList.toggle('on', m === 'del');
+  var hint = bar.querySelector('.rm-hint');
+  if (hint) hint.textContent = _rowModeHint(scope);
+}
+
+// Called right after a screen paints its rows, so a mode left on survives the
+// repaint that follows a rename or a delete.
+function _mountRowMode(scope){ _applyRowMode(scope); }
+
 // ── Column labels and visibility ─────────────────────────────────────────────
 // The words on a warehouse screen belong to the warehouse. One business calls a
 // shelf a rack, the next calls it a bay; "At Site" reads as delivered to one
@@ -2471,7 +2572,9 @@ var COL_TABLES = {
     defaultHidden: ['rawLoc','gc','supplier','pm','sysDate'],
     head: 'movHeadRow',
     lead: function(){ return ''; },
-    tail: function(){ return userRole === 'ADMIN' ? '<th></th>' : ''; },  // edit / delete
+    // The actions column comes and goes with the row mode, so a table nobody
+    // is editing has no empty column hanging off the end of it.
+    tail: function(){ return (userRole === 'ADMIN' && _rowModes.mov) ? '<th></th>' : ''; },
     refresh: function(){ renderMovements(); }                             // rebuilds its own header
   }
 };
@@ -4089,14 +4192,14 @@ function renderMovements(){
       return cells[k] || '';
     }).join('');
 
-    var adminCell = isAdmin
-      ? '<td><div style="display:flex;align-items:center;gap:2px">'+(m.archived?'<span style="font-size:.68rem;color:var(--muted)" title="Archived movement — read only">📜</span>':'<button class="btn-icon" title="Edit record" onclick="openEditMovModal('+m.rowIdx+')" style="color:var(--accent)">✏️</button><button class="btn-icon" title="Delete record" onclick="deleteMovementRow('+m.rowIdx+')" style="color:var(--red);opacity:.7">🗑</button>')+'</div></td>'
+    var adminCell = (isAdmin && _rowModes.mov)
+      ? '<td><div style="display:flex;align-items:center;gap:2px">'+(m.archived?'<span style="font-size:.68rem;color:var(--muted)" title="Archived movement — read only">📜</span>':'<button class="btn-icon" data-rowact="edit" title="Edit record" onclick="openEditMovModal('+m.rowIdx+')" style="color:var(--accent)">✏️</button><button class="btn-icon" data-rowact="del" title="Delete record" onclick="deleteMovementRow('+m.rowIdx+')" style="color:var(--red);opacity:.7">🗑</button>')+'</div></td>'
       : '';
 
     return '<tr class="'+rowClass(m.moveType)+'">' + body + adminCell + '</tr>';
   }).join('');
 
-  var span = _visibleColCount('mov') + (isAdmin ? 1 : 0);
+  var span = _visibleColCount('mov') + ((isAdmin && _rowModes.mov) ? 1 : 0);
 
   // An empty result used to replace the whole table, header included — which
   // took the column editor off screen with it. The message is a row now, so the
@@ -4122,6 +4225,12 @@ function renderMovements(){
   // The header is rebuilt with the table, so its drag/hide/rename handlers have
   // to be attached again each time.
   if (_colEdit.mov) _wireColEdit('mov');
+
+  // Admins get the Edit / Delete toggles beside the column button. Mounted once
+  // and then left alone — re-rendering the table must not reset the mode.
+  var rmSlot = document.getElementById('rowModeSlot_mov');
+  if (rmSlot && isAdmin && !rmSlot.firstChild) rmSlot.innerHTML = _rowModeBarHtml('mov');
+  _mountRowMode('mov');
 
   tc.querySelectorAll('[data-row]').forEach(function(btn){
     btn.addEventListener('click', function(){ openAttachModal(parseInt(btn.dataset.row), btn.dataset.po); });
@@ -6388,8 +6497,8 @@ function _renderSettingsTab(tab) {
         '<button class="cfg-btn" onclick="_cfgSaveRename(\''+tab+'\','+i+')">✓</button>' +
         '<button class="cfg-btn" onclick="_cfgCancelEdit(\''+tab+'\','+i+')">✗</button>' +
       '</div>' +
-      '<button class="cfg-btn" onclick="_cfgStartEdit(\''+tab+'\','+i+')">✏️</button>' +
-      '<button class="cfg-btn cfg-btn-danger" data-action="cfg-delete" data-tab="'+tab+'" data-val="'+_he(v)+'">🗑</button>' +
+      '<button class="cfg-btn" data-rowact="edit" onclick="_cfgStartEdit(\''+tab+'\','+i+')">✏️</button>' +
+      '<button class="cfg-btn cfg-btn-danger" data-rowact="del" data-action="cfg-delete" data-tab="'+tab+'" data-val="'+_he(v)+'">🗑</button>' +
     '</li>';
   }).join('');
 
@@ -6398,12 +6507,14 @@ function _renderSettingsTab(tab) {
       (mergeable ? ' Tick two or more to merge them by hand.' : '') + '</p>' +
     (mergeable ? _renderSimilarGroups(tab, items, label) : '') +
     (mergeable ? '<div class="cfg-pickbar" id="cfgPickBar"></div>' : '') +
-    '<ul class="cfg-list">'+rows+'</ul>' +
+    _rowModeBarHtml('cfg') +
+    '<ul class="cfg-list" data-rowscope="cfg">'+rows+'</ul>' +
     '<div class="cfg-add-row">' +
       '<input type="text" id="cfgNewVal" placeholder="New '+label+' name…" onkeydown="if(event.key===\'Enter\')_cfgAdd(\''+tab+'\')">' +
       '<button class="btn btn-primary btn-sm" onclick="_cfgAdd(\''+tab+'\')">+ Add</button>' +
     '</div>';
   if (mergeable) { _wireSimilarGroups(tab); _wireManualMerge(tab, label); }
+  _mountRowMode('cfg');
 }
 
 // ── Locations, grouped by type ───────────────────────────────────────────────
@@ -6473,7 +6584,8 @@ function _renderLocationsTab(){
       '<button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'locNewRow\').style.display=\'none\'">Cancel</button>' +
     '</div>' +
     '<div id="locMergeBar" class="cfg-pickbar"></div>' +
-    '<div class="loc-groups" id="locGroups"></div>' +
+    _rowModeBarHtml('loc') +
+    '<div class="loc-groups" id="locGroups" data-rowscope="loc"></div>' +
     '<div id="locSaveBar" class="loc-savebar"></div>';
   _redrawLocGroups();
 }
@@ -6494,8 +6606,8 @@ function _renderLocGroup(type){
         ? '<span class="loc-arch-note">Kept for history — not offered on new movements. Drag out to restore.</span>'
         : '<button class="cfg-btn" title="Sort this group A–Z" onclick="_locSortGroup(\'' + _he(type) + '\')">A–Z</button>') +
       (fixed ? '' :
-        '<button class="cfg-btn" title="Rename group" onclick="_locRenameGroup(\'' + _he(type) + '\')">✏️</button>' +
-        '<button class="cfg-btn cfg-btn-danger" title="Delete group" onclick="_locDeleteGroup(\'' + _he(type) + '\')">🗑</button>') +
+        '<button class="cfg-btn" data-rowact="edit" title="Rename group" onclick="_locRenameGroup(\'' + _he(type) + '\')">✏️</button>' +
+        '<button class="cfg-btn cfg-btn-danger" data-rowact="del" title="Delete group" onclick="_locDeleteGroup(\'' + _he(type) + '\')">🗑</button>') +
     '</div>' +
     '<ul class="loc-list" data-type="' + _he(type) + '">' +
       (items.length
@@ -6503,7 +6615,7 @@ function _renderLocGroup(type){
             return '<li class="loc-item" draggable="true" data-name="' + _he(l.name) + '">' +
               '<input type="checkbox" class="loc-pick" data-name="' + _he(l.name) + '" title="Select to merge">' +
               '<span class="loc-grip">⠿</span><span>' + _he(l.name) + '</span>' +
-              '<button class="loc-arch-btn" title="' + (isArchived ? 'Restore' : 'Archive') + '" ' +
+              '<button class="loc-arch-btn" data-rowact="del" title="' + (isArchived ? 'Restore' : 'Archive') + '" ' +
                 'onclick="_locToggleArchive(\'' + _he(l.name) + '\')">' + (isArchived ? '↩' : '🗄') + '</button>' +
             '</li>';
           }).join('')
@@ -6613,6 +6725,7 @@ function _redrawLocGroups(){
   box.innerHTML = _locTypesInOrder().map(_renderLocGroup).join('');
   _wireLocDnD();
   _wireLocMerge();
+  _mountRowMode('loc');
 }
 
 // Merging locations, for the case archiving doesn't cover: the same shelf
@@ -7102,18 +7215,20 @@ function _drawPmDirectory() {
   var rows = _pmDirectoryData.map(function(p) {
     return '<li class="cfg-item">' +
       '<span class="cfg-item-name" style="flex:1"><strong>'+_he(p.name)+'</strong> <span style="color:var(--muted);font-size:.78rem">'+_he(p.email)+'</span></span>' +
-      '<button class="cfg-btn cfg-btn-danger" data-action="pm-dir-delete" data-val="'+_he(p.name)+'">🗑</button>' +
+      '<button class="cfg-btn cfg-btn-danger" data-rowact="del" data-action="pm-dir-delete" data-val="'+_he(p.name)+'">🗑</button>' +
     '</li>';
   }).join('');
 
   content.innerHTML =
     '<p style="font-size:.8rem;color:var(--muted);margin-bottom:.75rem">General address book — employees, suppliers, PMs, anyone you email regularly. One special behavior: if a name here matches what\'s typed in the PM field on ENTRY, materials for that batch auto-send ONE grouped email to that address (not one per material). Everyone else here is just a saved contact — use them with the "Send notification email" option when saving a movement.</p>' +
-    '<ul class="cfg-list">'+(rows || '<li style="padding:.5rem;color:var(--muted);font-size:.82rem">No contacts registered yet.</li>')+'</ul>' +
+    _rowModeBarHtml('pm') +
+    '<ul class="cfg-list" data-rowscope="pm">'+(rows || '<li style="padding:.5rem;color:var(--muted);font-size:.82rem">No contacts registered yet.</li>')+'</ul>' +
     '<div class="cfg-add-row" style="flex-wrap:wrap">' +
       '<input type="text" id="pmDirNewName" placeholder="Name…" style="flex:1;min-width:120px">' +
       '<input type="email" id="pmDirNewEmail" placeholder="Email…" style="flex:1;min-width:160px">' +
       '<button class="btn btn-primary btn-sm" onclick="_pmDirAdd()">+ Add</button>' +
     '</div>';
+  _mountRowMode('pm');
 }
 
 function _pmDirAdd() {
@@ -7266,7 +7381,8 @@ function _renderMaterialsTab() {
       '<input type="text" id="matSearchInp" placeholder="Search material name…" oninput="_filterMatList()">' +
       '<button class="btn btn-ghost btn-sm" onclick="_loadMatList()">↺ Refresh</button>' +
     '</div>' +
-    '<div class="mat-list" id="matListContainer"><p style="color:var(--muted);font-size:.82rem">Loading…</p></div>';
+    _rowModeBarHtml('mat') +
+    '<div class="mat-list" id="matListContainer" data-rowscope="mat"><p style="color:var(--muted);font-size:.82rem">Loading…</p></div>';
   // Already prefetched in _loadSettings() (fired the moment the modal opened) —
   // render immediately instead of re-fetching and flashing "Loading…" again.
   if (_matListAll) { _filterMatList(); } else { _loadMatList(); }
@@ -7298,11 +7414,12 @@ function _filterMatList() {
       '<span class="mat-item-cat">'+catBadge(m.category)+'</span>' +
       '<span class="mat-item-name">'+_he(m.name)+'</span>' +
       '<span style="color:var(--muted);font-size:.7rem">'+m.count+' rows</span>' +
-      '<button class="cfg-btn" data-action="mat-action" data-op="rename">✏️ Rename</button>' +
-      '<button class="cfg-btn" data-action="mat-action" data-op="changeCategory">↕ Category</button>' +
-      '<button class="cfg-btn" data-action="mat-action" data-op="merge">🔗 Merge</button>' +
+      '<button class="cfg-btn" data-rowact="edit" data-action="mat-action" data-op="rename">✏️ Rename</button>' +
+      '<button class="cfg-btn" data-rowact="edit" data-action="mat-action" data-op="changeCategory">↕ Category</button>' +
+      '<button class="cfg-btn" data-rowact="edit" data-action="mat-action" data-op="merge">🔗 Merge</button>' +
     '</div>';
   }).join('') + (filtered.length > 80 ? '<p style="font-size:.75rem;color:var(--muted);padding:.5rem">Showing first 80. Type to filter.</p>' : '');
+  _mountRowMode('mat');
 }
 
 function _matAction(op, name, cat) {
@@ -7312,8 +7429,8 @@ function _matAction(op, name, cat) {
     _matCall({ op: 'rename', name: name, category: cat, newName: nv.trim() });
 
   } else if (op === 'changeCategory') {
-    var cats = (config.categories && config.categories.length) ? config.categories : _DEFAULT_CATS;
-    var cur  = cats.indexOf(cat);
+    var cats = (config.categories || []);
+    if (!cats.length){ showToast('Add categories in Settings first.', 'warn'); return; }
     var nv   = prompt('Move "' + name + '" to category:\n\n' + cats.join('\n') + '\n\nType the category name exactly:', cat);
     if (!nv || nv.trim().toUpperCase() === cat) return;
     _matCall({ op: 'changeCategory', name: name, category: cat, newCategory: nv.trim().toUpperCase() });
@@ -9724,6 +9841,9 @@ function _roleBadge(role) {
 }
 
 function _renderUsersTable() {
+  var slot = document.getElementById('rowModeSlot_usr');
+  if (slot && !slot.firstChild) slot.innerHTML = _rowModeBarHtml('usr');
+  _mountRowMode('usr');
   var tbody = document.getElementById('usersTableBody');
   if (!_usersData.length) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:1rem">No users registered yet.</td></tr>';
@@ -9740,9 +9860,9 @@ function _renderUsersTable() {
       '<td><span class="badge ' + (u.active ? 'badge-green' : 'badge-gray') + '">' + (u.active ? 'Active' : 'Inactive') + '</span></td>' +
       '<td style="white-space:nowrap">' +
         (!isSelf
-          ? '<button class="btn-icon" data-action="edit-user" data-email="' + _he(u.email) + '" title="Edit">✏️</button> ' +
+          ? '<button class="btn-icon" data-rowact="edit" data-action="edit-user" data-email="' + _he(u.email) + '" title="Edit">✏️</button> ' +
             (u.active
-              ? '<button class="btn-icon" data-action="deact-user" data-email="' + _he(u.email) + '" title="Deactivate">🚫</button>'
+              ? '<button class="btn-icon" data-rowact="del" data-action="deact-user" data-email="' + _he(u.email) + '" title="Deactivate">🚫</button>'
               : '<span style="color:var(--muted);font-size:.72rem">inactive</span>')
           : '<span style="color:var(--muted);font-size:.72rem">—</span>') +
       '</td>' +

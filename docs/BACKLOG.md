@@ -20,21 +20,13 @@ here once they ship (the commit message is the record of what changed and why).
    Frees the corner for the suggestion deck, which currently has to sit above
    the 🐞 to avoid it.
 
-5. **One edit mode and one delete mode per screen.** Today every row carries its
-   own ✏️ and 🗑, which is noisy and makes accidental deletion easy. Replace with
-   a single "Edit" toggle and a single "Delete" toggle per window: turn one on
-   and the rows reveal their controls, turn it off and the screen is read-only
-   again. Applies to Settings catalogs, Locations, the Movements table and the
-   user list. Design once, apply everywhere — the value is in it being the same
-   gesture in every window.
-
-6. **Apply the silent-update pattern to the rest of Settings.** v9.37 fixed it
+5. **Apply the silent-update pattern to the rest of Settings.** v9.37 fixed it
    for catalog add/rename/delete: patch what is on screen instead of re-fetching
    and repainting, and drop the "Saving… / Saved ✓ / Loading…" sequence. The
    same churn is still in the other Settings screens — Materials, Directory,
    users, the archive-cutoff setting, rack photos. One pass over all of them.
 
-7. **Narrow the cards on a phone.** On a small phone screen the notification
+6. **Narrow the cards on a phone.** On a small phone screen the notification
    cards and the bell's suggestion cards are as wide as the screen and squat,
    and they cover the app. Below the phone breakpoint only (they are right at
    tablet width and up): halve their width and let them grow taller — the
@@ -42,13 +34,13 @@ here once they ship (the commit message is the record of what changed and why).
    width, the bell's cards the same height as now at half the width. Not
    smaller — narrower. Nothing above the phone breakpoint changes.
 
-8. **Stop the tab bar from jumping between rows.** At tablet width the tabs sit
+7. **Stop the tab bar from jumping between rows.** At tablet width the tabs sit
    on their own line under the company name; past a certain width they jump up
    beside the logo, and the whole page shifts as they go. Keep them on the line
    below the logo at every width, and centre them horizontally as the window
    grows instead of moving them up.
 
-9. **"Set up now" that goes nowhere should not count as a dismissal.** The
+8. **"Set up now" that goes nowhere should not count as a dismissal.** The
    bottom-right setup nudge ("You haven't set up your suppliers, projects yet")
    snoozes for seven days the moment either button is clicked — including
    "Set up now". So opening Settings, not touching anything and closing it has
