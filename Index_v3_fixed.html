@@ -381,6 +381,12 @@
     .cconfirm-footer button{flex:1;max-width:160px;padding:.55rem 1rem;border-radius:8px;font-size:.9rem;font-weight:600;border:none;cursor:pointer;transition:.15s}
     .cconfirm-footer button:hover{filter:brightness(.9)}
     .cconfirm-cancel{background:var(--border);color:var(--text)}
+    .cprompt-input{width:100%;margin-top:.9rem;padding:.55rem .7rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:.92rem;font-family:inherit;text-align:center}
+    .cprompt-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.14)}
+    .cprompt-list{margin-top:.7rem;max-height:170px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:.3rem;justify-content:center}
+    .cprompt-chip{background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:.22rem .7rem;font-size:.75rem;font-weight:600;color:var(--text);cursor:pointer;font-family:inherit}
+    .cprompt-chip:hover{border-color:var(--accent);color:var(--accent)}
+    .cprompt-err{margin-top:.5rem;font-size:.76rem;color:var(--red);font-weight:600;min-height:1.1em}
     /* ── MULTI-EXIT MATERIAL LINES ── */
     .exit-mat-line{background:#FFF5F5;border:1px solid #FECACA;border-radius:8px;padding:.75rem;margin-bottom:.65rem;position:relative}
     .exit-mat-line-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem}
@@ -705,7 +711,7 @@
     .sys-card-x:hover{background:var(--red)}
     .sys-card-title{font-weight:800;color:var(--text);display:flex;align-items:center;gap:.35rem}
     .sys-card-when{color:var(--muted);font-size:.72rem;margin-top:.15rem}
-    .sys-card-detail{color:var(--muted);font-size:.71rem;margin-top:.3rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .sys-card-detail{color:var(--muted);font-size:.71rem;margin-top:.3rem;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.35}
     .cfg-deck:empty{display:none}
     /* Closing is deliberately slower than opening — a pile snapping shut the
        instant the pointer leaves reads as the app swatting you away. */
@@ -768,11 +774,11 @@
     .app-splash{position:fixed;inset:0;z-index:2000;background:var(--navy);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.1rem;transition:opacity .45s ease;padding:1.5rem}
     .app-splash.gone{opacity:0;pointer-events:none}
     .splash-mark{display:flex;align-items:center;gap:.6rem;font-size:1.7rem;font-weight:800;letter-spacing:.02em;text-align:center}
-    .splash-logo{max-width:min(280px,64vw);max-height:96px;object-fit:contain}
+    .splash-logo{max-width:min(350px,72vw);max-height:120px;object-fit:contain}
     /* Deliberately quiet: the customer's name is the headline, ours is a
        credit line under the bar. */
     .splash-by{font-size:.68rem;color:#8fa0bd;letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:.4rem}
-    .splash-by b{color:#fff;font-weight:800;letter-spacing:.02em;text-transform:none;font-size:.84rem}
+    .splash-by b{color:#fff;font-weight:800;letter-spacing:.02em;text-transform:none;font-size:1.05rem}
     .splash-bar{width:min(260px,70vw);height:5px;border-radius:3px;background:rgba(255,255,255,.18);overflow:hidden}
     .splash-fill{height:100%;width:8%;background:#fff;border-radius:3px;transition:width .5s ease}
     .splash-note{font-size:.8rem;color:#a1b0cb;text-align:center;min-height:1.2em}
@@ -1040,7 +1046,7 @@
   <div class="splash-note" id="splashNote">Connecting to your spreadsheet…</div>
   <div class="splash-by" id="splashBy" style="display:none">
     powered by
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
     <b>Acopio</b>
   </div>
 </div>
@@ -1544,6 +1550,28 @@
     <div class="cconfirm-footer">
       <button class="cconfirm-cancel" id="confirmCancelBtn" onclick="_confirmCancel()">Cancel</button>
       <button class="btn-primary btn" id="confirmOkBtn" onclick="_confirmOk()">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ASK-FOR-A-VALUE DIALOG ═════════════════════════════════════════════════
+     The browser's own prompt() is a black bar bolted to the top of the window
+     that announces the googleusercontent.com address it came from. It looks
+     like a security warning, not like this app. Same shell as the confirm
+     dialog above, so every question the app asks looks the same. -->
+<div class="cconfirm-overlay" id="promptOverlay">
+  <div class="cconfirm-dialog">
+    <div class="cconfirm-icon-row" id="promptIcon">✏️</div>
+    <div class="cconfirm-body">
+      <h3 id="promptTitle">Rename</h3>
+      <p id="promptMessage"></p>
+      <input type="text" class="cprompt-input" id="promptInput" autocomplete="off">
+      <div class="cprompt-list" id="promptChoices"></div>
+      <div class="cprompt-err" id="promptErr"></div>
+    </div>
+    <div class="cconfirm-footer">
+      <button class="cconfirm-cancel" onclick="_promptCancel()">Cancel</button>
+      <button class="btn btn-primary" id="promptOkBtn" onclick="_promptOk()">Save</button>
     </div>
   </div>
 </div>
@@ -2086,7 +2114,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.45';
+var APP_VERSION = '9.46';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Paid Gmail-scanner add-on: off unless the backend says this installation
@@ -3508,6 +3536,7 @@ function _activeTab() {
 }
 
 function showTab(tab, btnId){
+  _clearRowModes();     // Edit / Delete never survive leaving the screen they were armed on
   document.querySelectorAll('.section').forEach(function(s){ s.classList.remove('active'); });
   document.getElementById(tab).classList.add('active');
   document.querySelectorAll('.nav button').forEach(function(b){ b.classList.remove('active'); });
@@ -6063,6 +6092,7 @@ var _settingsTab  = 'categories';
 var _matListAll   = [];   // full material list for Materials tab
 
 function openSettingsModal() {
+  _clearRowModes();
   document.getElementById('settingsMsgBar').style.display = 'none';
   document.getElementById('settingsOverlay').classList.add('show');
   _loadSettings();
@@ -6463,9 +6493,25 @@ function _commitImport(){
 }
 
 function switchSettingsTab(tab) {
+  // Edit and Delete belong to the screen they were switched on in. Carrying
+  // them across meant you could leave Delete armed on four tabs at once and
+  // come back to a screen already primed to remove things.
+  _clearRowModes();
   _settingsTab = tab;
   document.querySelectorAll('.settings-tab').forEach(function(b){ b.classList.toggle('active', b.dataset.tab === tab); });
   _renderSettingsTab(tab);
+}
+
+// Every scope off, and every bar that is currently on screen repainted to say
+// so. Called on any move between screens.
+function _clearRowModes(){
+  Object.keys(ROW_MODES).forEach(function(scope){
+    if (!_rowModes[scope]) return;
+    _rowModes[scope] = '';
+    _applyRowMode(scope);
+    var d = ROW_MODES[scope];
+    if (d && d.refresh) d.refresh();
+  });
 }
 
 function _renderSettingsTab(tab) {
@@ -6671,16 +6717,20 @@ function _locCreate(){
 }
 
 function _locRenameGroup(type){
-  var next = prompt('Rename group "' + type + '" to:', type);
-  if (next === null) return;
-  next = String(next).trim().toUpperCase();
-  if (!next || next === type) return;
-  if (next === LOC_DEFAULT_GROUP || next === LOC_ARCHIVED_GROUP) { showToast('That name is reserved.', 'warn'); return; }
-  if (_locTypesInOrder().indexOf(next) !== -1) { showToast('That group already exists.', 'warn'); return; }
-  _locLayout.forEach(function(l){ if ((l.type || LOC_DEFAULT_GROUP) === type) l.type = next; });
-  _locExtraGroups = _locExtraGroups.map(function(t){ return t === type ? next : t; });
-  _redrawLocGroups();
-  _locMarkDirty();
+  _showPrompt({
+    icon: '🗂', title: 'Rename group', message: 'Currently "' + type + '".',
+    value: type, confirmText: 'Rename',
+    onOk: function(next){
+      next = String(next).trim().toUpperCase();
+      if (!next || next === type) return;                      // nothing to do — just close
+      if (next === LOC_DEFAULT_GROUP || next === LOC_ARCHIVED_GROUP) return 'That name is reserved.';
+      if (_locTypesInOrder().indexOf(next) !== -1) return 'A group called ' + next + ' already exists.';
+      _locLayout.forEach(function(l){ if ((l.type || LOC_DEFAULT_GROUP) === type) l.type = next; });
+      _locExtraGroups = _locExtraGroups.map(function(t){ return t === type ? next : t; });
+      _redrawLocGroups();
+      _locMarkDirty();
+    }
+  });
 }
 
 function _locDeleteGroup(type){
@@ -7424,21 +7474,49 @@ function _filterMatList() {
 
 function _matAction(op, name, cat) {
   if (op === 'rename') {
-    var nv = prompt('Rename "' + name + '" to:', name);
-    if (!nv || nv.trim() === name) return;
-    _matCall({ op: 'rename', name: name, category: cat, newName: nv.trim() });
+    _showPrompt({
+      icon: '✏️', title: 'Rename material', message: 'Every movement recorded under this name changes with it.',
+      value: name, confirmText: 'Rename',
+      onOk: function(nv){
+        if (!nv || nv === name) return;
+        _matCall({ op: 'rename', name: name, category: cat, newName: nv });
+      }
+    });
 
   } else if (op === 'changeCategory') {
     var cats = (config.categories || []);
     if (!cats.length){ showToast('Add categories in Settings first.', 'warn'); return; }
-    var nv   = prompt('Move "' + name + '" to category:\n\n' + cats.join('\n') + '\n\nType the category name exactly:', cat);
-    if (!nv || nv.trim().toUpperCase() === cat) return;
-    _matCall({ op: 'changeCategory', name: name, category: cat, newCategory: nv.trim().toUpperCase() });
+    // The categories are offered as chips — typing one exactly, from memory,
+    // was never a reasonable thing to ask.
+    _showPrompt({
+      icon: '↕', title: 'Move to another category',
+      message: '"' + name + '" is in ' + cat + '. Pick where it belongs.',
+      value: cat, choices: cats, confirmText: 'Move',
+      onOk: function(nv){
+        nv = String(nv).trim().toUpperCase();
+        if (!nv || nv === cat) return;
+        if (cats.map(function(c){ return String(c).toUpperCase(); }).indexOf(nv) === -1)
+          return 'There is no category called ' + nv + '.';
+        _matCall({ op: 'changeCategory', name: name, category: cat, newCategory: nv });
+      }
+    });
 
   } else if (op === 'merge') {
-    var nv = prompt('Merge "' + name + '" INTO which existing material?\n(Type the exact target name — all rows of "' + name + '" will be renamed to the target)', '');
-    if (!nv || !nv.trim()) return;
-    var nvTrimmed = nv.trim();
+    _showPrompt({
+      icon: '🔗', title: 'Merge into another material',
+      message: 'Every row of "' + name + '" is renamed to the material you pick.',
+      placeholder: 'Exact name of the material to keep', confirmText: 'Continue',
+      choices: (_matListAll || []).filter(function(m){ return m.name !== name; })
+                                  .slice(0, 40).map(function(m){ return m.name; }),
+      onOk: function(nv){
+        if (!nv) return 'Type or pick the material to merge into.';
+        _matMergeConfirm(name, cat, nv);
+      }
+    });
+  }
+}
+
+function _matMergeConfirm(name, cat, nvTrimmed){
     _showConfirm({
       icon:'🔀', danger: true,
       title: 'Merge Materials?',
@@ -7446,19 +7524,54 @@ function _matAction(op, name, cat) {
       confirmText: 'Merge',
       onConfirm: function(){ _matCall({ op: 'merge', name: name, category: cat, targetName: nvTrimmed }); }
     });
-  }
 }
 
+// Renaming, re-filing or merging a material rewrites rows all over the
+// archive, so the totals genuinely have to come back from the server. What
+// does NOT have to happen is the app blinking: the list on screen and the
+// movements already loaded are patched immediately, and the server refresh
+// runs underneath without the loading state.
 function _matCall(payload) {
-  _settingMsg('Working…', 'info');
   google.script.run
     .withSuccessHandler(function(res) {
-      _settingMsg('Done ✓ (' + (res.updated || res.merged || 1) + ' rows updated)', 'ok');
-      _loadMatList();
-      loadDataFromGoogle(true);  // skipCache — refresh movements + stock
+      _applyMatChangeLocally(payload);
+      showToast('Done ✓ — ' + (res.updated || res.merged || 1) + ' row(s) updated.', 'ok');
+      loadDataFromGoogle(true, true);   // skipCache, quiet
     })
     .withFailureHandler(function(e){ _settingMsg('Error: '+(e.message||e), 'error'); })
     .processMovement('manageMaterial', _h(payload));
+}
+
+function _applyMatChangeLocally(p){
+  var was = String(p.name || '').toUpperCase();
+  var wasCat = String(p.category || '').toUpperCase();
+  var list = _matListAll || [];
+
+  function sameRow(m){
+    return String(m.name).toUpperCase() === was &&
+           String(m.category || '').toUpperCase() === wasCat;
+  }
+
+  if (p.op === 'rename'){
+    list.forEach(function(m){ if (sameRow(m)) m.name = p.newName; });
+    movements.forEach(function(m){ if (sameRow(m)) m.name = p.newName; });
+
+  } else if (p.op === 'changeCategory'){
+    list.forEach(function(m){ if (sameRow(m)) m.category = p.newCategory; });
+    movements.forEach(function(m){ if (sameRow(m)) m.category = p.newCategory; });
+
+  } else if (p.op === 'merge'){
+    var target = String(p.targetName || '').toUpperCase();
+    var moved  = 0;
+    list.forEach(function(m){ if (sameRow(m)) moved = m.count || 0; });
+    _matListAll = list.filter(function(m){ return !sameRow(m); });
+    _matListAll.forEach(function(m){
+      if (String(m.name).toUpperCase() === target) m.count = (m.count || 0) + moved;
+    });
+    movements.forEach(function(m){ if (sameRow(m)) m.name = p.targetName; });
+  }
+
+  _filterMatList();     // just this list, in place — no round trip to redraw it
 }
 
 // ── Shared settings helpers ───────────────────────────────────────────────────
@@ -7575,6 +7688,7 @@ function closeModal(id){
   // point of the "Add categories" shortcut). Coming back, the form has to see
   // whatever was just created, and its Save button has to be re-judged.
   if (id === 'settingsOverlay'){
+    try { _clearRowModes(); } catch (e) {}
     try { refreshCategoryDropdowns(); refreshDropdowns(); } catch (e) {}
     try { _refreshCatHelpers(); } catch (e) {}
     setTimeout(_updateMoveSubmitState, 0);
@@ -9919,8 +10033,16 @@ function saveUser() {
     .withSuccessHandler(function() {
       btn.textContent = 'Save User'; btn.disabled = false;
       _userFormMsg(_editingUser ? 'User updated.' : 'User added successfully.', 'ok');
+      // The row is patched in place rather than the whole list being fetched
+      // again: the browser already knows exactly what changed, and re-reading
+      // the sheet to learn it puts a "Loading…" flash over a list of four names.
+      var found = null;
+      _usersData.forEach(function(u){ if (u.email === email) found = u; });
+      if (found){ found.name = name; found.role = role; found.active = true; }
+      else _usersData.push({ email: email, name: name, role: role, active: true,
+                             addedBy: userEmail, addedAt: _isoDate(new Date()) });
       resetUserForm();
-      _loadUsersTable();
+      _renderUsersTable();
     })
     .withFailureHandler(function(err) {
       btn.textContent = 'Save User'; btn.disabled = false;
@@ -9937,7 +10059,11 @@ function deactivateUser(email) {
     confirmText: 'Deactivate',
     onConfirm: function(){
       google.script.run
-        .withSuccessHandler(function() { _loadUsersTable(); })
+        .withSuccessHandler(function() {
+          _usersData.forEach(function(u){ if (u.email === email) u.active = false; });
+          _renderUsersTable();
+          showToast(email + ' can no longer sign in.', 'ok');
+        })
         .withFailureHandler(function(err) { showToast(err.message || err, 'err', 5000); })
         .processMovement('removeUser', _h({ email: email }));
     }
@@ -10092,9 +10218,13 @@ function _showAccessDeniedScreen(status, email) {
 }
 
 // ── Load Data from Backend ────────────────────────────────────────────────────
-function loadDataFromGoogle(skipCache){
+// quiet=true refreshes the data underneath without the loading dot, the
+// skeleton or the "connecting…" line. Used after an edit that has already been
+// applied on screen, where the round trip is only there to true up the totals
+// the server derives.
+function loadDataFromGoogle(skipCache, quiet){
   lastLoadTime = null;
-  setConnStatus('loading');
+  if (!quiet) setConnStatus('loading');
 
   // ── Show cached data instantly while fresh data loads in background ──────
   // skipCache=true is passed after a save/delete so user sees loading state
@@ -10111,7 +10241,7 @@ function loadDataFromGoogle(skipCache){
     refreshDropdowns();
     refreshProjectDropdown();
     renderAll();
-  } else {
+  } else if (!quiet) {
     setLoading(true);
     // Show explicit loading message so user knows app is connecting (can take 10-20s)
     var sr = document.getElementById('statsRow');
@@ -10711,6 +10841,64 @@ function _confirmCancel() {
   _confirmCb = null;
   document.getElementById('confirmOverlay').classList.remove('show');
 }
+
+// ── Ask for a value, in the app's own dialog ─────────────────────────────────
+// opts: { icon, title, message, value, placeholder, confirmText, danger,
+//         choices:[…], onOk(value) }  — return a string from onOk to show it as
+// an error and keep the dialog open.
+var _promptCb = null;
+function _showPrompt(opts){
+  opts = opts || {};
+  _promptCb = opts.onOk || null;
+  document.getElementById('promptIcon').textContent    = opts.icon || '✏️';
+  document.getElementById('promptTitle').textContent   = opts.title || '';
+  var msg = document.getElementById('promptMessage');
+  msg.textContent = opts.message || '';
+  msg.style.display = opts.message ? '' : 'none';
+  var inp = document.getElementById('promptInput');
+  inp.value = opts.value || '';
+  inp.placeholder = opts.placeholder || '';
+  document.getElementById('promptErr').textContent = '';
+  var ok = document.getElementById('promptOkBtn');
+  ok.textContent = opts.confirmText || 'Save';
+  ok.className = 'btn ' + (opts.danger ? 'btn-danger' : 'btn-primary');
+
+  // Anything the answer is likely to be, offered as one click instead of a
+  // sentence asking the person to type it exactly.
+  var box = document.getElementById('promptChoices');
+  var choices = opts.choices || [];
+  box.innerHTML = choices.map(function(c){
+    return '<button type="button" class="cprompt-chip">' + _he(c) + '</button>';
+  }).join('');
+  box.style.display = choices.length ? '' : 'none';
+  box.querySelectorAll('.cprompt-chip').forEach(function(b){
+    b.addEventListener('click', function(){ inp.value = b.textContent; inp.focus(); });
+  });
+
+  document.getElementById('promptOverlay').classList.add('show');
+  setTimeout(function(){ inp.focus(); inp.select(); }, 40);
+}
+
+function _promptOk(){
+  if (!_promptCb) { _promptCancel(); return; }
+  var v = (document.getElementById('promptInput').value || '').trim();
+  var err = _promptCb(v);
+  if (err){ document.getElementById('promptErr').textContent = err; return; }   // stay open
+  _promptCb = null;
+  document.getElementById('promptOverlay').classList.remove('show');
+}
+
+function _promptCancel(){
+  _promptCb = null;
+  document.getElementById('promptOverlay').classList.remove('show');
+}
+
+document.addEventListener('keydown', function(e){
+  var ov = document.getElementById('promptOverlay');
+  if (!ov || !ov.classList.contains('show')) return;
+  if (e.key === 'Enter'){ e.preventDefault(); _promptOk(); }
+  else if (e.key === 'Escape'){ e.preventDefault(); _promptCancel(); }
+});
 
 // ── Edit Movement ─────────────────────────────────────────────────────────────
 var _editMovRowIdx = 0;
