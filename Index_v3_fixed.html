@@ -683,6 +683,10 @@
     .day-empty{color:var(--muted);font-size:.78rem;font-style:italic}
     .inc-status-pending{background:#FEF3C7;color:#92400E;border-radius:20px;padding:.1rem .5rem;font-size:.68rem;font-weight:700}
     .inc-status-arrived{background:var(--green-bg);color:var(--green);border-radius:20px;padding:.1rem .5rem;font-size:.68rem;font-weight:700}
+    .inc-group-row td{background:var(--bg);padding:.45rem .75rem;border-top:2px solid var(--border)}
+    .inc-group-lbl{font-size:.76rem;font-weight:800;color:var(--text);letter-spacing:.01em}
+    .inc-group-count{font-size:.68rem;font-weight:800;background:var(--border);color:var(--muted);border-radius:10px;padding:1px 8px;margin-left:.45rem}
+    .inc-group-note{font-size:.7rem;color:var(--muted);margin-left:.6rem;font-weight:400}
     .inc-status-cancelled{background:#F3F4F6;color:#6B7280;border-radius:20px;padding:.1rem .5rem;font-size:.68rem;font-weight:700;text-decoration:line-through}
     /* ── MORNING POPUP ── */
     .morning-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
@@ -776,16 +780,16 @@
        would not read as a deck. Newest is last in the DOM so it paints on top
        without fighting z-index. Padding on the container leaves room for the
        rotated corners and the badge to sit OUTSIDE the top card. */
-    .deck{position:fixed;right:22px;bottom:22px;z-index:399;display:flex;flex-direction:column;align-items:flex-end;max-width:min(320px,calc(100vw - 44px));padding:16px 12px 0 14px}
+    .deck{position:fixed;right:22px;bottom:22px;z-index:399;display:flex;flex-direction:column;align-items:flex-end;max-width:min(350px,calc(100vw - 44px));padding:16px 12px 0 14px}
     .deck:empty{display:none}
-    .deck-card{position:relative;width:270px;max-width:100%;height:96px;flex-shrink:0;border-radius:10px;padding:.6rem .75rem;font-size:.78rem;box-shadow:0 6px 20px rgba(0,0,0,.22);transition:margin .5s ease,transform .5s ease,background-color .45s ease,color .45s ease,border-color .45s ease,box-shadow .45s ease}
+    .deck-card{position:relative;width:300px;max-width:100%;height:110px;flex-shrink:0;border-radius:11px;padding:.7rem .85rem;font-size:.8rem;box-shadow:0 6px 20px rgba(0,0,0,.22);transition:margin .5s ease,transform .5s ease,background-color .45s ease,color .45s ease,border-color .45s ease,box-shadow .45s ease}
     .deck-card + .deck-card{margin-top:.45rem}
     /* Closing is deliberately slower than opening — a pile snapping shut the
        instant the pointer leaves reads as the app swatting you away. */
     .deck:hover .deck-card,.deck.open .deck-card{transition:margin .22s ease,transform .22s ease,background-color .2s ease,color .2s ease,border-color .2s ease,box-shadow .2s ease}
     /* Piled: every card pulled up under the next, offset a few px, rotation
        alternating for a hand-stacked look. */
-    .deck:not(:hover):not(.open) .deck-card{margin-top:-90px;transform:rotate(-2.4deg)}
+    .deck:not(:hover):not(.open) .deck-card{margin-top:-104px;transform:rotate(-2.4deg)}
     .deck:not(:hover):not(.open) .deck-card:nth-child(even){transform:rotate(1.8deg) translateX(-4px)}
     .deck:not(:hover):not(.open) .deck-card:nth-child(3n){transform:rotate(-3.4deg) translateX(3px)}
     .deck:not(:hover):not(.open) .deck-card:first-child{margin-top:0}
@@ -850,7 +854,7 @@
       .deck{display:none!important}
       .cfg-bell{display:inline-flex}
     }
-    @media (max-width:640px){.deck{right:16px;max-width:calc(100vw - 32px)}.deck-card{width:230px}}
+    @media (max-width:640px){.deck{right:16px;max-width:calc(100vw - 32px)}.deck-card{width:250px}}
     /* Manual merge picker */
     .app-splash{position:fixed;inset:0;z-index:2000;background:var(--navy);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.1rem;transition:opacity .45s ease;padding:1.5rem}
     .app-splash.gone{opacity:0;pointer-events:none}
@@ -1099,9 +1103,14 @@
        text simply wraps to roughly twice the height rather than being shrunk —
        nothing here changes the font size. Phone only; from tablet up they are
        already the right shape. */
-    @media (max-width:520px){
+    /* Stacked from here down, not only on a phone: the moment the tabs need
+       two rows there is height beside them going spare and no width to spare,
+       so the account circle goes on top and the bell under it. */
+    @media (max-width:720px){
       .topbar-tools{flex-direction:column;gap:8px;align-items:center}
       .nav{flex:1 1 auto}
+    }
+    @media (max-width:520px){
       .setup-nudge{left:12px;right:auto;width:calc(50vw - 18px);max-width:none}
       .cfg-bell-panel{left:auto;right:12px;width:calc(50vw - 18px);max-width:none}
     }
@@ -2261,7 +2270,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.54';
+var APP_VERSION = '9.55';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 var _lastUserName = '';    // display name on file, so the account menu can be repainted without it
@@ -9800,14 +9809,64 @@ function renderIncomingTable() {
     return;
   }
   var isAdmin = userRole === 'ADMIN';
+  var todayKey = _isoDate(new Date());
+
+  // Grouped by what you need to DO about each one, and each group ordered the
+  // way that group is read. The list used to be one run sorted oldest-date
+  // first, so it opened on deliveries that arrived months ago and you had to
+  // scroll past the whole year to find what is coming.
+  var GROUPS = [
+    { key:'overdue',  label:'⚠ Overdue',           note:'Committed to a date that has passed and still not marked as arrived.' },
+    { key:'expected', label:'📅 Expected',          note:'Soonest first.' },
+    { key:'nodate',   label:'❔ No date yet',       note:'Waiting on the supplier to say when.' },
+    { key:'arrived',  label:'✓ Arrived',            note:'Most recent first.' },
+    { key:'cancelled',label:'✕ Cancelled',          note:'' }
+  ];
+  var buckets = { overdue:[], expected:[], nodate:[], arrived:[], cancelled:[] };
+  filtered.forEach(function(item){
+    var st = String(item.status || 'Pending').toLowerCase();
+    if (st === 'cancelled')                     buckets.cancelled.push(item);
+    else if (st === 'arrived' || st === 'received') buckets.arrived.push(item);
+    else if (_incIsOverdue(item, todayKey))     buckets.overdue.push(item);
+    else if (!item.estDate)                     buckets.nodate.push(item);
+    else                                        buckets.expected.push(item);
+  });
+  // Soonest first for anything still coming — that is the next thing to plan
+  // around. Newest first for anything already settled — nobody scrolls a
+  // history to reach the oldest row.
+  var asc  = function(a,b){ return (a.estDate||'') < (b.estDate||'') ? -1 : 1; };
+  var desc = function(a,b){ return (a.estDate||'') > (b.estDate||'') ? -1 : 1; };
+  buckets.overdue.sort(asc);       // longest overdue at the top
+  buckets.expected.sort(asc);
+  buckets.arrived.sort(desc);
+  buckets.cancelled.sort(desc);
+
   var html = '<table><thead><tr>' +
     '<th>Est. Date</th><th>Status</th><th>Category</th><th>Name</th>' +
     '<th>Qty</th><th>Unit</th><th>Doc</th><th>Notes / Comments</th>' +
     (isAdmin ? '<th></th>' : '') +
     '</tr></thead><tbody>';
-  html += filtered.map(function(item){
-    var today = _isoDate(new Date());
-    var isOverdue = _incIsOverdue(item, today);
+
+  var colCount = 8 + (isAdmin ? 1 : 0);
+  html += GROUPS.map(function(g){
+    var rows = buckets[g.key];
+    if (!rows.length) return '';
+    return '<tr class="inc-group-row"><td colspan="' + colCount + '">' +
+        '<span class="inc-group-lbl">' + g.label + '</span>' +
+        '<span class="inc-group-count">' + rows.length + '</span>' +
+        (g.note ? '<span class="inc-group-note">' + g.note + '</span>' : '') +
+      '</td></tr>' + rows.map(_incRowHtml).join('');
+  }).join('');
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+// One row of the incoming table. Pulled out of renderIncomingTable so the
+// grouped sections can each emit their own rows without duplicating it.
+function _incRowHtml(item){
+  var isAdmin = userRole === 'ADMIN';
+  var today = _isoDate(new Date());
+  var isOverdue = _incIsOverdue(item, today);
     var statusBadge = '<span class="inc-status-' + (item.status||'pending').toLowerCase() + '">' + (item.status||'Pending') + '</span>';
     if (isOverdue) statusBadge += ' <span class="badge badge-red" style="font-size:.65rem">overdue</span>';
     var soft = (item.dateMode && item.dateMode !== 'exact');
@@ -9828,9 +9887,6 @@ function renderIncomingTable() {
       '<td style="font-size:.78rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + _he(item.notes||'') + '">' + _he(item.notes||'—') + '</td>' +
       (isAdmin ? '<td><button class="btn-icon" data-action="edit-incoming" data-id="' + _he(item.id) + '">✏️</button></td>' : '') +
     '</tr>';
-  }).join('');
-  html += '</tbody></table>';
-  container.innerHTML = html;
 }
 
 function openIncomingModal(id) {
@@ -10781,9 +10837,11 @@ function _dismissSysCard(id){
 // notice, once, and never again. The watermark is gone; the only thing that
 // removes a card is the ✕, which is what the ✕ is for.
 //
-// It cannot pile up without bound: the server returns only the most recent
-// handful of system events, so the deck is naturally capped at what has
-// happened lately.
+// It cannot pile up without bound, and that ceiling is the one honest limit
+// here: the server returns the most recent 30 system events, so an undismissed
+// notice DOES eventually fall off — once 30 newer ones exist. At roughly one
+// backup a day that is a month of ignoring it, which is long enough to mean
+// nobody was ever going to read it.
 function _announceSystemActivity(){
   var dismissed = _loadSysDismissed();
   _sysCards = (systemActivity || []).filter(function(a){
@@ -11149,7 +11207,7 @@ var LEGAL_DOCS = {
 <h3>10. Changes</h3>
 <p>Material changes to this policy will be communicated to active customers by email before they take effect. The date at the top always reflects the current version.</p>
 <h3>11. Contact</h3>
-<p>Jose Castro — jose@ox-glass.com</p>` },
+<p>Jose Castro — joseisrael5101@gmail.com</p>` },
   terms:   { title: 'Terms of Service', html: `<p><strong>Last updated:</strong> 6 August 2026</p>
 <p>These terms govern your use of Acopio, warehouse-management software provided by Jose Castro ("we", "us"). By installing or using it, you agree to them. If you are agreeing on behalf of a company, you confirm you are authorised to do so.</p>
 <hr>
@@ -11211,7 +11269,7 @@ var LEGAL_DOCS = {
 <h3>12. Governing law</h3>
 <p>The laws of the State of Utah, United States, without regard to conflict-of-law rules. Disputes go to the state or federal courts located in Utah.</p>
 <h3>13. Contact</h3>
-<p>Jose Castro — jose@ox-glass.com</p>` }
+<p>Jose Castro — joseisrael5101@gmail.com</p>` }
 };
 
 function openLegal(which){

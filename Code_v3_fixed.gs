@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.54';
+var APP_VERSION = '9.55';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -1003,7 +1003,7 @@ function getInitialData(sessionToken) {
     return {
       serverVersion:      APP_VERSION,
       company:            publicCompany_(),
-      systemActivity:     (function(){ try { return getSystemActivity(8); } catch (e) { return []; } })(),
+      systemActivity:     (function(){ try { return getSystemActivity(30); } catch (e) { return []; } })(),
       columnPrefs:        columnPrefs_(),
       movements:          movements,
       stock:              stock,
@@ -3826,6 +3826,11 @@ function describeMatIdFixes_(fixes) {
          'so their stock counts against the right material: ' + named + more;
 }
 
+// limit is how many undismissed notices the app can hold at once. Anything
+// older than that genuinely does fall away — see the note in
+// _announceSystemActivity on the client. Kept generous rather than tight: a
+// notice that disappears before it is read is the bug this whole feature was
+// meant to fix.
 function getSystemActivity(limit) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEETS.AUDIT);
@@ -3834,8 +3839,11 @@ function getSystemActivity(limit) {
   if (last < 2) return [];
 
   // Only the tail is read. The audit sheet grows without bound and a full
-  // getDataRange() here would be paid on every single app load.
-  var span  = Math.min(400, last - 1);
+  // getDataRange() here would be paid on every single app load. The tail has to
+  // be long enough that ordinary traffic — every movement saved, every config
+  // change — cannot push the system's own entries out of range before anyone
+  // has seen them.
+  var span  = Math.min(1500, last - 1);
   var rows  = sheet.getRange(last - span + 1, 1, span, 6).getValues();
   var out   = [];
   for (var i = rows.length - 1; i >= 0 && out.length < (limit || 8); i--) {

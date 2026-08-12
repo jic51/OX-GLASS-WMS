@@ -147,4 +147,4 @@ version.
 
 ## 11. Contact
 
-Jose Castro — jose@ox-glass.com
+Jose Castro — joseisrael5101@gmail.com
