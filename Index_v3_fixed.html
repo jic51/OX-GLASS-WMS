@@ -21,12 +21,22 @@
     button{font-family:inherit;cursor:pointer}
     input,select,textarea{font-family:inherit;font-size:.9rem}
     /* ── TOPBAR ── */
-    .topbar{background:var(--navy);padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;border-bottom:3px solid var(--accent);flex-wrap:wrap;gap:10px}
+    /* Two rows, at every width. The topbar used to be one flex line that WRAPPED
+       when it ran out of room, so the tab bar jumped up beside the company name
+       on a wide window and dropped below it on a narrower one — and the whole
+       page shifted as it went. Now the tabs have a line of their own that they
+       never leave; they just move toward the middle as the window grows. */
+    .topbar{background:var(--navy);padding:.7rem 1.5rem .6rem;display:flex;flex-direction:column;gap:.55rem;position:sticky;top:0;z-index:100;border-bottom:3px solid var(--accent)}
+    .topbar-row1{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+    .topbar-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    /* The report-a-problem button, no longer floating over the bottom-right
+       corner where it crowded the card decks. */
+    .topbar-icon-btn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:7px;width:34px;height:30px;font-size:.95rem;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:.15s;padding:0}
+    .topbar-icon-btn:hover{background:var(--accent);border-color:var(--accent)}
     .topbar h1{color:#fff;font-size:1.1rem;font-weight:700}
     .topbar-brand{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
     .app-logo{height:30px;max-width:150px;object-fit:contain;border-radius:4px;flex-shrink:0}
-    .topbar-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-    .nav{display:flex;gap:2px;background:var(--steel);padding:3px;border-radius:8px;flex-wrap:wrap}
+    .nav{display:flex;gap:2px;background:var(--steel);padding:3px;border-radius:8px;flex-wrap:wrap;align-self:center;max-width:100%}
     .nav button{background:none;border:none;color:rgba(255,255,255,.6);padding:.45rem 1rem;border-radius:6px;font-size:.8rem;font-weight:600;transition:.2s}
     .nav button:hover{color:#fff;background:rgba(255,255,255,.08)}
     .nav button.active{background:var(--accent);color:#fff}
@@ -194,11 +204,6 @@
     .setup-nudge button{border:none;border-radius:6px;padding:.3rem .6rem;font-size:.74rem;font-weight:600;cursor:pointer;font-family:inherit}
     @media (max-width:640px){.setup-nudge{left:12px;right:12px;bottom:76px;max-width:none}.wiz-box{padding:1.25rem}.wiz-gen{grid-template-columns:1fr}}
     .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:550;align-items:center;justify-content:center;padding:15px}
-    /* Floating "report a problem" button — z-index sits well under .overlay (550)
-       so any open modal already covers it; no extra show/hide logic needed. */
-    .report-issue-fab{position:fixed;bottom:22px;right:22px;width:52px;height:52px;border-radius:50%;background:var(--navy);color:#fff;border:none;font-size:1.4rem;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.28);z-index:400;display:flex;align-items:center;justify-content:center;transition:.15s}
-    .report-issue-fab:hover{background:var(--accent);transform:scale(1.06)}
-    @media (max-width:640px){.report-issue-fab{bottom:16px;right:16px;width:46px;height:46px;font-size:1.2rem}}
     .ri-photo-thumb{position:relative;width:52px;height:52px;flex-shrink:0}
     .ri-photo-thumb img{width:52px;height:52px;object-fit:cover;border-radius:6px;border:1px solid var(--border);display:block}
     .ri-photo-thumb button{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--red);color:#fff;border:none;font-size:.65rem;cursor:pointer;line-height:1;padding:0}
@@ -689,7 +694,7 @@
        the pile is a real hand of cards, not a 300-card staircase — as one is
        dealt with, the next flows in. Padding on the container leaves room for
        the rotated corners and the count badge to sit OUTSIDE the top card. */
-    .corner-decks{position:fixed;right:22px;bottom:86px;z-index:399;display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+    .corner-decks{position:fixed;right:22px;bottom:22px;z-index:399;display:flex;flex-direction:column;align-items:flex-end;gap:10px}
     .cfg-deck{display:flex;flex-direction:column;align-items:flex-end;max-width:min(300px,calc(100vw - 44px));padding:14px 12px 0 14px}
     /* Notifications: same pile behaviour as the suggestion deck, but bigger and
        with nothing to decide — just an ✕ where the count badge sits. They are
@@ -769,7 +774,7 @@
     .cfg-card-add{background:var(--accent);color:#fff}
     .cfg-card-add:disabled{opacity:.6;cursor:default}
     .cfg-card-skip{background:rgba(255,255,255,.14);color:#dbe4f5}
-    @media (max-width:640px){.cfg-deck{right:16px;bottom:72px;max-width:calc(100vw - 32px)}.cfg-card{width:230px}}
+    @media (max-width:640px){.cfg-deck{right:16px;max-width:calc(100vw - 32px)}.cfg-card{width:230px}}
     /* Manual merge picker */
     .app-splash{position:fixed;inset:0;z-index:2000;background:var(--navy);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.1rem;transition:opacity .45s ease;padding:1.5rem}
     .app-splash.gone{opacity:0;pointer-events:none}
@@ -1012,9 +1017,22 @@
     @media(prefers-reduced-motion:reduce){
       *{animation-duration:.01ms!important;transition-duration:.01ms!important}
     }
+    /* ── Small phones: these two boxes cover the app ─────────────────────────
+       On a narrow phone the setup message and the notification panel each ran
+       the full width of the screen and sat squat across it, hiding whatever was
+       underneath. Half the width leaves the app readable beside them, and the
+       text simply wraps to roughly twice the height rather than being shrunk —
+       nothing here changes the font size. Phone only; from tablet up they are
+       already the right shape. */
+    @media (max-width:520px){
+      .setup-nudge{left:12px;right:auto;width:calc(50vw - 18px);max-width:none}
+      .cfg-bell-panel{left:auto;right:12px;width:calc(50vw - 18px);max-width:none}
+      .sys-card{width:calc(50vw - 22px);height:190px}
+      .sys-deck:not(:hover):not(.open) .sys-card{margin-top:-184px}
+    }
     /* ── RESPONSIVE ── */
     @media(max-width:768px){
-      .topbar{flex-direction:column;align-items:flex-start}
+      .topbar{padding:.7rem 1rem .6rem}
       .nav{width:100%;flex-wrap:wrap}
       .nav button{flex-grow:1;text-align:center;padding:.6rem;min-height:40px}
       .toolbar{flex-direction:column;align-items:stretch;width:100%}
@@ -1089,6 +1107,7 @@
 
 <!-- ══ TOPBAR ══════════════════════════════════════════════════════════════════ -->
 <div class="topbar">
+ <div class="topbar-row1">
   <div class="topbar-brand">
     <img id="appLogo" class="app-logo" alt="" style="display:none">
     <h1 id="appTitle">Warehouse</h1>
@@ -1098,15 +1117,7 @@
     </div>
     <span id="jsVersionTag" style="font-size:.65rem;color:rgba(255,80,80,.9);font-weight:700;padding:2px 6px;border-radius:4px;background:rgba(255,0,0,.15)">JS NOT LOADED</span>
   </div>
-  <div class="topbar-right">
-    <div class="nav">
-      <button id="btn-dashboard" class="active">Stock Dashboard</button>
-      <button id="btn-movements">Movements &amp; History</button>
-      <button id="btn-projects">Project View</button>
-      <button id="btn-warehouse">Warehouse Map</button>
-      <button id="btn-incoming">📦 Incoming</button>
-    </div>
-
+  <div class="topbar-tools">
     <!-- Connection indicator -->
     <button id="connBtn" class="conn-btn loading" title="Connecting…" onclick="loadDataFromGoogle()"></button>
 
@@ -1146,9 +1157,20 @@
     <button class="cfg-bell" id="cfgBellBtn" onclick="toggleCfgBell(event)" title="Unregistered suppliers / projects">
       🔔<span class="cfg-bell-count" id="cfgBellCount">0</span>
     </button>
+    <!-- Report a problem — in the cluster with the account and settings now,
+         rather than floating over the bottom-right corner. -->
+    <button id="reportIssueBtn" class="topbar-icon-btn" onclick="openReportIssueModal()" title="Report a problem">🐞</button>
     <!-- Dark mode toggle -->
     <button class="dark-toggle" id="btnDarkMode" onclick="toggleDarkMode()" title="Toggle dark / light mode">🌙</button>
   </div>
+ </div>
+ <div class="nav">
+  <button id="btn-dashboard" class="active">Stock Dashboard</button>
+  <button id="btn-movements">Movements &amp; History</button>
+  <button id="btn-projects">Project View</button>
+  <button id="btn-warehouse">Warehouse Map</button>
+  <button id="btn-incoming">📦 Incoming</button>
+ </div>
 </div>
 
 <div class="cfg-bell-panel" id="cfgBellPanel">
@@ -2072,12 +2094,13 @@
   </div>
 </div>
 
-<!-- Floating "report a problem" button — available from every screen -->
+<!-- Notification and suggestion decks. They sit lower in the corner than they
+     used to: the report-a-problem button that they had to clear now lives in
+     the topbar. -->
 <div class="corner-decks">
   <div class="sys-deck" id="sysDeck" onclick="this.classList.toggle('open')"></div>
   <div class="cfg-deck" id="cfgDeck" onclick="this.classList.toggle('open')"></div>
 </div>
-<button id="reportIssueFab" class="report-issue-fab" onclick="openReportIssueModal()" title="Report a problem">🐞</button>
 
 <div class="overlay" id="reportIssueOverlay">
   <div class="modal modal-sm">
@@ -2123,7 +2146,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.47';
+var APP_VERSION = '9.48';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 // Paid Gmail-scanner add-on: off unless the backend says this installation
