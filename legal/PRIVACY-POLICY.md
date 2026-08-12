@@ -1,3 +1,7 @@
+<!-- SOURCE OF TRUTH. This text is also mirrored inside Index_v3_fixed.html
+     (LEGAL_DOCS), because every customer runs their own copy with nowhere to
+     link out to. Change it here first, then re-generate the copy in the app. -->
+
 # Privacy Policy — Acopio
 
 **Last updated:** 6 August 2026
