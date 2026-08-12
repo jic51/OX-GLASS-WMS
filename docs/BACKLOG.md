@@ -34,6 +34,20 @@ here once they ship (the commit message is the record of what changed and why).
    same churn is still in the other Settings screens — Materials, Directory,
    users, the archive-cutoff setting, rack photos. One pass over all of them.
 
+7. **Narrow the cards on a phone.** On a small phone screen the notification
+   cards and the bell's suggestion cards are as wide as the screen and squat,
+   and they cover the app. Below the phone breakpoint only (they are right at
+   tablet width and up): halve their width and let them grow taller — the
+   bottom-left system message about double its current height at half the
+   width, the bell's cards the same height as now at half the width. Not
+   smaller — narrower. Nothing above the phone breakpoint changes.
+
+8. **Stop the tab bar from jumping between rows.** At tablet width the tabs sit
+   on their own line under the company name; past a certain width they jump up
+   beside the logo, and the whole page shifts as they go. Keep them on the line
+   below the logo at every width, and centre them horizontally as the window
+   grows instead of moving them up.
+
 ## Polish pass (do at the end, after the functional work)
 
 - **Scrollbars look bad.** Jose dislikes the default side scrollbar. Do NOT
