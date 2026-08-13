@@ -48,8 +48,13 @@
        the moment the tabs got tight, which is exactly what it was moved here to
        stop doing. The tabs absorb the squeeze instead — their own buttons wrap
        inside the bar. */
-    .topbar-row2{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:nowrap}
-    .topbar-tools{display:flex;align-items:center;gap:10px;flex-shrink:0}
+    /* The tabs sit centred in whatever room is left; the account cluster is
+       pinned to the right edge and stays there at every width. Auto margins on
+       the nav absorb the free space evenly on both sides, which centres it
+       without a spacer element and without unpinning the cluster. */
+    .topbar-row2{display:flex;align-items:center;gap:10px;flex-wrap:nowrap}
+    .topbar-row2 .nav{margin:0 auto}
+    .topbar-tools{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:auto}
     .tools-primary{display:flex;align-items:center;gap:9px}
     /* The Acopio badge with the running version tucked under it — present
        enough to read when someone asks "what version are you on?", quiet
@@ -2203,7 +2208,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.59';
+var APP_VERSION = '9.60';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 var _lastUserName = '';    // display name on file, so the account menu can be repainted without it
