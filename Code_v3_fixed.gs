@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.57';
+var APP_VERSION = '9.58';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -4273,6 +4273,7 @@ function onOpen() {
     .addItem('🧹 Normalize Status Column (run once)', 'menuNormalizeStatus')
     .addItem('Push Update Live (owner, standard Cloud project only)', 'menuActivateWebApp')
     .addSeparator()
+    .addItem('🩺 Check this installation', 'menuCheckInstallation')
     .addItem('🔎 Check if this copy is a clean template', 'menuVerifyMasterTemplate')
     .addItem('💣 Erase everything — make this a blank template', 'menuPrepareMasterTemplate');
 
@@ -4646,6 +4647,145 @@ var TEMPLATE_WIPE_PROPS = [
   'OAUTH_CLIENT_ID', 'OAUTH_CLIENT_SECRET', 'OAUTH_REDIRECT_URI',
   'COLUMN_PREFS'
 ];
+
+// ─── INSTALLATION CHECK ──────────────────────────────────────────────────────
+// Script Properties are the one part of an installation that is invisible,
+// unlabelled and one click from gone. Google's editor shows a bare list of
+// names with no hint that FOLDER_PREFIX is holding every document link in the
+// system together, so deleting "the ones that don't look necessary" is a
+// reasonable thing for an owner to do and a very bad thing for the app.
+//
+// This says what each one is for, what happens without it, and repairs the ones
+// that can be repaired — including working FOLDER_PREFIX back out of the Drive
+// folders that already exist, which is the only one whose loss actually
+// destroys something.
+var PROPERTY_GUIDE = [
+  { key:'FOLDER_PREFIX', sev:'CRITICAL',
+    what:'Names the Drive folders holding every document and photo ever attached.',
+    lost:'Attachments stop opening — the app looks in a folder that is not the one they are in.' },
+  { key:'SETUP_COMPLETE', sev:'IMPORTANT',
+    what:'Marks setup as finished.',
+    lost:'The menu offers to run setup again and treats this as a fresh copy.' },
+  { key:'COMPANY_NAME', sev:'COSMETIC',
+    what:'Your company name in the header, the browser tab and outgoing email.',
+    lost:'The app says "Warehouse". Re-enter it in Settings › Company.' },
+  { key:'COMPANY_DOMAIN', sev:'IMPORTANT',
+    what:'Recognises your own staff by their email domain.',
+    lost:'Staff are asked to sign in with Google instead of being recognised.' },
+  { key:'COMPANY_LOGO_ID', sev:'COSMETIC',
+    what:'Your logo.', lost:'No logo. Upload it again in Settings › Company.' },
+  { key:'WEB_APP_URL', sev:'IMPORTANT',
+    what:'The /exec address your team opens.',
+    lost:'Setup shows the wrong link again, and bug reports cannot say where the app lives.' },
+  { key:'SESSION_SECRET', sev:'AUTO',
+    what:'Signs sign-in tokens. Recreated automatically.',
+    lost:'Everyone who signed in with Google has to sign in once more. Nothing else.' },
+  { key:'WMS_SESSIONS', sev:'AUTO',
+    what:'Who is currently signed in.', lost:'Same — one extra sign-in.' },
+  { key:'WMS_MONITORED_MATERIALS', sev:'RECOVERABLE',
+    what:'Which materials have a minimum-stock alert, and at what level.',
+    lost:'Low-stock alerts stop. Set them again from ⚙ Stock Alerts.' },
+  { key:'COLUMN_PREFS', sev:'RECOVERABLE',
+    what:'Your renamed column headings.', lost:'Headings go back to their default names.' },
+  { key:'GEMINI_API_KEY', sev:'RECOVERABLE',
+    what:'Key for the AI document reader.', lost:'AI Extract stops working. Paste the key back.' },
+  { key:'OAUTH_CLIENT_ID', sev:'RECOVERABLE',
+    what:'Lets people OUTSIDE your domain sign in.', lost:'Only your own domain can get in.' },
+  { key:'OAUTH_CLIENT_SECRET', sev:'RECOVERABLE', what:'Pairs with the client ID.', lost:'Same.' },
+  { key:'OAUTH_REDIRECT_URI', sev:'AUTO',
+    what:'Where Google returns after an external sign-in.',
+    lost:'Refilled automatically the next time the /exec link is saved in setup.' },
+  { key:'ERROR_ALERTS_ENABLED', sev:'OPTIONAL',
+    what:'Set to false to stop error emails.', lost:'Alerts are on, which is the default.' },
+  { key:'GMAIL_SCAN_ENABLED', sev:'OPTIONAL',
+    what:'Legacy flag. The scanner has no UI.', lost:'Nothing.' },
+  { key:'FOLDER_PREFIX_HISTORY', sev:'IMPORTANT',
+    what:'Older folder names, so documents filed under a previous company name still open.',
+    lost:'Attachments from before a rename stop opening.' }
+];
+
+// Reads the Drive folders this account owns and works out what FOLDER_PREFIX
+// must have been — the folders are named "<prefix>_Docs", so they still know.
+function detectFolderPrefixes_() {
+  var found = {};
+  try {
+    var it = DriveApp.searchFolders('title contains "_Docs"');
+    while (it.hasNext()) {
+      var name = it.next().getName();
+      var m = name.match(/^(.+)_Docs$/);
+      if (m) found[m[1]] = true;
+    }
+  } catch (e) {}
+  return Object.keys(found);
+}
+
+function menuCheckInstallation() {
+  var ui = SpreadsheetApp.getUi();
+  var p  = PropertiesService.getScriptProperties();
+  var missing = [], ok = [], repaired = [];
+
+  PROPERTY_GUIDE.forEach(function (g) {
+    var v = String(p.getProperty(g.key) || '').trim();
+    if (v) { ok.push(g.key); return; }
+    missing.push(g);
+  });
+
+  // Repair what can be repaired without asking, and only that.
+  if (!String(p.getProperty('SESSION_SECRET') || '').trim()) {
+    serverSecret_();                      // creates it
+    repaired.push('SESSION_SECRET — recreated');
+  }
+  var url = String(p.getProperty('WEB_APP_URL') || '').trim();
+  if (url && !String(p.getProperty('OAUTH_REDIRECT_URI') || '').trim()) {
+    p.setProperty('OAUTH_REDIRECT_URI', url);
+    repaired.push('OAUTH_REDIRECT_URI — set from your saved app link');
+  }
+  // Setup is complete if there is an admin on the user list, whatever the flag says.
+  if (String(p.getProperty('SETUP_COMPLETE') || '') !== 'true') {
+    var users = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('USERS_V3');
+    var hasAdmin = false;
+    if (users && users.getLastRow() > 1) {
+      users.getDataRange().getValues().slice(1).forEach(function (r) {
+        if (String(r[3] || '').toUpperCase().trim() === 'ADMIN') hasAdmin = true;
+      });
+    }
+    if (hasAdmin) { p.setProperty('SETUP_COMPLETE', 'true'); repaired.push('SETUP_COMPLETE — you already have an admin, so setup is done'); }
+  }
+
+  var lines = [];
+  if (repaired.length) lines.push('REPAIRED AUTOMATICALLY\n  • ' + repaired.join('\n  • ') + '\n');
+
+  var stillMissing = missing.filter(function (g) {
+    return !(repaired.join(' ').indexOf(g.key) !== -1);
+  });
+
+  if (!stillMissing.length) {
+    lines.push('Everything the app needs is present.');
+  } else {
+    var bySev = { CRITICAL:[], IMPORTANT:[], RECOVERABLE:[], COSMETIC:[], OPTIONAL:[], AUTO:[] };
+    stillMissing.forEach(function (g) { (bySev[g.sev] || bySev.OPTIONAL).push(g); });
+    ['CRITICAL','IMPORTANT','RECOVERABLE','COSMETIC','OPTIONAL','AUTO'].forEach(function (sev) {
+      if (!bySev[sev].length) return;
+      lines.push(sev);
+      bySev[sev].forEach(function (g) {
+        lines.push('  • ' + g.key + '\n      ' + g.what + '\n      Without it: ' + g.lost);
+      });
+      lines.push('');
+    });
+  }
+
+  // FOLDER_PREFIX is the one worth spelling out, because the folders themselves
+  // still hold the answer and guessing wrong orphans every attachment.
+  if (!String(p.getProperty('FOLDER_PREFIX') || '').trim()) {
+    var guesses = detectFolderPrefixes_();
+    lines.push('FOLDER_PREFIX is missing. Your Drive has these document folders:');
+    lines.push(guesses.length ? '  • ' + guesses.join('\n  • ') : '  (none found)');
+    lines.push('Set FOLDER_PREFIX to the one your attachments are in — without the "_Docs".');
+    lines.push('Project Settings › Script Properties › Add.');
+  }
+
+  ui.alert('🩺 ' + PRODUCT_NAME + ' — installation check', lines.join('\n'), ui.ButtonSet.OK);
+}
 
 function menuPrepareMasterTemplate() {
   var ui = SpreadsheetApp.getUi();   // throws outside the Sheets UI — the real gate
