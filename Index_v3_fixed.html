@@ -2203,7 +2203,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.58';
+var APP_VERSION = '9.59';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 var _lastUserName = '';    // display name on file, so the account menu can be repainted without it
@@ -7810,8 +7810,14 @@ function _applyMatChangeLocally(p){
   _filterMatList();     // just this list, in place — no round trip to redraw it
 }
 
-// ── Shared settings helpers ───────────────────────────────────────────────────
+// ── Shared escaping helpers ─────────────────────────────────────────────────
+// Both live here, together. _escAttr used to be defined in the middle of the
+// Gmail scanner's code — nothing to do with Gmail, it just ended up there — and
+// removing that feature took a helper used 26 times across the app with it. A
+// missing function is not a syntax error, so every check passed and the app
+// simply stopped part-way through its first render.
 function _he(s){ return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function _escAttr(s){ return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 
 // ── Event delegation ──────────────────────────────────────────────────────────
 // Buttons inside dynamically-rendered lists carry  data-action + data-* payload
@@ -11657,6 +11663,21 @@ document.addEventListener('visibilitychange', function(){
   t.textContent = 'v' + APP_VERSION;
   t.className = 'ver-tag';       // the alarm styling was only for "never ran"
 })();
+
+// A JavaScript error anywhere in the first render used to leave the splash up
+// forever: the screen said "Almost there" and meant "I died". Whatever went
+// wrong, the loading screen comes down and says so — a visible error is worth
+// a great deal more than a convincing wait.
+window.addEventListener('error', function(e){
+  try { _hideSplash(); } catch (x) {}
+  try {
+    showToast('Something went wrong loading the app: ' + (e && e.message ? e.message : 'unknown error') +
+              ' — please report this with the 🐞 button.', 'err', 15000);
+  } catch (x) {}
+});
+window.addEventListener('unhandledrejection', function(){
+  try { _hideSplash(); } catch (x) {}
+});
 
 // Start
 loadDataFromGoogle();
