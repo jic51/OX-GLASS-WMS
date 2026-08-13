@@ -68,6 +68,27 @@ Workspace domain, the copy must be made by a company account.** If someone
 copies it with a personal Gmail, nobody in the domain is recognised
 automatically any more — including the people who do have company accounts.
 
+## Robustez — renombrar la carpeta de Drive rompe los documentos
+
+`checkFileInAppFolder_()` valida por NOMBRE de carpeta (ver
+`acceptedDocFolderNames_`). Si el cliente renombra `Acopio_X_Docs` en su Drive,
+la app sigue ESCRIBIENDO ahí (el ID está en caché) pero deja de ABRIR los
+documentos: "Requested file outside app folder" — el mismo error que ya costó
+un día entero de diagnóstico.
+
+Moverla de sitio sí es seguro; renombrarla no, y nada en la app lo advierte.
+
+Dos arreglos posibles:
+1. **Validar por ID en vez de por nombre.** Guardar el ID de la carpeta raíz al
+   crearla y comparar contra ese. Más correcto, y sobrevive a un rename.
+2. **Detectarlo y avisar.** Si el ID en caché existe pero su nombre ya no
+   coincide, decirlo en el chequeo 🩺 Check this installation y ofrecer
+   adoptar el nombre nuevo.
+
+Lo primero es la solución; lo segundo es el aviso que hoy no existe. Vale hacer
+los dos. Mientras tanto está documentado en docs/VENTAS.md como algo que hay
+que decirle al cliente.
+
 ## Polish pass (do at the end, after the functional work)
 
 - **Scrollbars look bad.** Jose dislikes the default side scrollbar. Do NOT
