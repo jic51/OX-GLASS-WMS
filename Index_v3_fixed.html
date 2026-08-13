@@ -2254,7 +2254,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.61';
+var APP_VERSION = '9.62';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 var _lastUserName = '';    // display name on file, so the account menu can be repainted without it
@@ -6779,13 +6779,23 @@ function _commitImport(){
     .processMovement('commitImport', _h({ rows: validRows }));
 }
 
+// Marcar la pestaña activa vivía SOLO dentro de switchSettingsTab, así que
+// cualquier otra vía de entrada — una tarjeta de notificación que abre System,
+// el atajo de "Add categories" — pintaba el contenido correcto con la pestaña
+// equivocada resaltada. Ahora lo hace el renderizador, que es por donde pasan
+// todas las vías.
+function _syncSettingsTabButtons(tab){
+  document.querySelectorAll('.settings-tab').forEach(function(b){
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+}
+
 function switchSettingsTab(tab) {
   // Edit and Delete belong to the screen they were switched on in. Carrying
   // them across meant you could leave Delete armed on four tabs at once and
   // come back to a screen already primed to remove things.
   _clearRowModes();
   _settingsTab = tab;
-  document.querySelectorAll('.settings-tab').forEach(function(b){ b.classList.toggle('active', b.dataset.tab === tab); });
   _renderSettingsTab(tab);
 }
 
@@ -6802,6 +6812,7 @@ function _clearRowModes(){
 }
 
 function _renderSettingsTab(tab) {
+  _syncSettingsTabButtons(tab);
   var content = document.getElementById('settingsTabContent');
   if (tab === 'materials')   { _renderMaterialsTab(); return; }
   if (tab === 'errorlog')    { _renderErrorLogTab(); return; }

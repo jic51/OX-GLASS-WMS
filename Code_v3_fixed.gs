@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.61';
+var APP_VERSION = '9.62';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -88,6 +88,92 @@ function companySettings_() {
 function publicCompany_() {
   var cs = companySettings_();
   return { name: cs.name, domain: cs.domain, logoId: cs.logoId, productName: PRODUCT_NAME };
+}
+
+// ─── UNA SOLA CARPETA MAESTRA ────────────────────────────────────────────────
+// Las tres carpetas de la app nacían sueltas en la raíz del Drive del dueño, y
+// la hoja quedaba en un cuarto sitio. Con dos o tres instalaciones de prueba
+// eso ya es un Drive imposible de ordenar — y el día que un cliente pide
+// soporte, hay que buscar en un Drive que no es el nuestro.
+//
+// Los NOMBRES no cambian, solo la ubicación. Es deliberado: el chequeo de
+// seguridad de los adjuntos compara por nombre, y renombrar la carpeta de
+// documentos es exactamente lo que dejó archivos huérfanos una vez. Mover es
+// seguro — Drive identifica por ID, no por dónde está.
+//
+//   Acopio_<Empresa>/                       ← maestra
+//   ├── <Empresa> — Acopio                  ← la hoja
+//   ├── Acopio_<Empresa>_Docs/
+//   ├── Acopio_<Empresa>_Backups/
+//   └── Acopio_<Empresa>_Feedback/
+function masterFolderName_() { return companySettings_().folderPrefix; }
+
+function getMasterFolder_() {
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty('FOLDER_MASTER');
+  if (id) { try { return DriveApp.getFolderById(id); } catch (e) {} }   // borrada o movida a papelera
+  var f = DriveApp.createFolder(masterFolderName_());
+  try { props.setProperty('FOLDER_MASTER', f.getId()); } catch (e) {}
+  return f;
+}
+
+// Ordenar es una comodidad, nunca una razón para que falle una subida: si Drive
+// se niega a mover algo, el archivo ya está guardado y eso es lo que importa.
+function ensureUnderMaster_(item) {
+  try {
+    var master = getMasterFolder_();
+    if (item.getId() === master.getId()) return;
+    var parents = item.getParents();
+    while (parents.hasNext()) if (parents.next().getId() === master.getId()) return;
+    item.moveTo(master);
+  } catch (e) {
+    Logger.log('ensureUnderMaster_: ' + e.message);
+  }
+}
+
+// Recoge lo que ya existe suelto y lo mete en la maestra. Para instalaciones
+// anteriores a esto, y como reparación si alguien mueve algo de sitio.
+function organizeDriveFolders_() {
+  var moved = [];
+  var master = getMasterFolder_();
+
+  [docsFolderName_(), backupFolderName_(), feedbackFolderName_()].forEach(function (name) {
+    var key = 'FOLDER_' + name.replace(/\W/g, '_');
+    var id  = PropertiesService.getScriptProperties().getProperty(key);
+    if (!id) return;                       // nunca se creó: nada que mover
+    try {
+      var f = DriveApp.getFolderById(id);
+      var already = false;
+      var ps = f.getParents();
+      while (ps.hasNext()) if (ps.next().getId() === master.getId()) already = true;
+      if (!already) { f.moveTo(master); moved.push(f.getName()); }
+    } catch (e) { Logger.log('organizeDriveFolders_ ' + name + ': ' + e.message); }
+  });
+
+  // La hoja también. Es el archivo que el cliente abre a diario, así que vivir
+  // fuera de su propia carpeta es justo lo que hace difícil encontrarla.
+  try {
+    var ss   = SpreadsheetApp.getActiveSpreadsheet();
+    var file = DriveApp.getFileById(ss.getId());
+    var inMaster = false;
+    var fps = file.getParents();
+    while (fps.hasNext()) if (fps.next().getId() === master.getId()) inMaster = true;
+    if (!inMaster) { file.moveTo(master); moved.push(file.getName()); }
+  } catch (e) { Logger.log('organizeDriveFolders_ sheet: ' + e.message); }
+
+  PropertiesService.getScriptProperties().setProperty('DRIVE_ORGANIZED', 'true');
+  return { master: master.getName(), moved: moved };
+}
+
+function menuOrganizeDrive() {
+  var ui = SpreadsheetApp.getUi();
+  var r = organizeDriveFolders_();
+  ui.alert('📁 ' + PRODUCT_NAME + ' — Drive',
+    r.moved.length
+      ? 'Everything now lives in one folder:\n\n' + r.master + '\n\nMoved:\n  • ' + r.moved.join('\n  • ') +
+        '\n\nNothing was renamed and nothing was lost — only the location changed.'
+      : 'Already tidy. Everything is in ' + r.master + '.',
+    ui.ButtonSet.OK);
 }
 
 function docsFolderName_()     { return companySettings_().folderPrefix + '_Docs'; }
@@ -292,6 +378,10 @@ function saveSetupWizard(data) {
   });
 
   if (data.enableBackup) { try { ensureBackupTrigger_(); } catch (e) {} }
+
+  // Con el nombre de la empresa ya definido, la carpeta maestra puede nacer con
+  // el nombre correcto y la hoja mudarse a ella de una vez.
+  try { organizeDriveFolders_(); } catch (e) { Logger.log('organizeDriveFolders_: ' + e.message); }
 
   // Populates LIVE_STOCK / SITE_STOCK / WASTED_STOCK with their headers (and
   // any stock, on a copy that already has movements) so the first load reads a
@@ -3443,6 +3533,9 @@ function getOrCreateFolder_(path) {
         // folder gets created rather than the original being found. Caching
         // every level (above) is what keeps that from happening in practice.
         next = DriveApp.createFolder(parts[i]);
+        // Nace ya dentro de la carpeta maestra, así que una instalación nueva
+        // nunca deja nada suelto en la raíz.
+        ensureUnderMaster_(next);
       }
       try { props.setProperty(cacheKey, next.getId()); } catch (e) {}
     }
@@ -4274,6 +4367,7 @@ function onOpen() {
     .addItem('🧹 Normalize Status Column (run once)', 'menuNormalizeStatus')
     .addItem('Push Update Live (owner, standard Cloud project only)', 'menuActivateWebApp')
     .addSeparator()
+    .addItem('📁 Tidy up my Drive (one folder for everything)', 'menuOrganizeDrive')
     .addItem('🩺 Check this installation', 'menuCheckInstallation')
     .addItem('🔎 Check if this copy is a clean template', 'menuVerifyMasterTemplate')
     .addItem('💣 Erase everything — make this a blank template', 'menuPrepareMasterTemplate');

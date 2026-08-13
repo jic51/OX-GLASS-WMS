@@ -68,6 +68,27 @@ Workspace domain, the copy must be made by a company account.** If someone
 copies it with a personal Gmail, nobody in the domain is recognised
 automatically any more — including the people who do have company accounts.
 
+6. **Una ventana abierta debe bloquear la app de atrás.** Con App Settings y
+   con Low-Stock Monitor Settings abiertos se puede seguir tocando lo que está
+   detrás. Hay que revisar TODAS las ventanas, no solo esas dos: el fondo no se
+   toca, y Escape o clic fuera cierran (donde tenga sentido). Es un bug de
+   corrección, no de estética — permite guardar dos veces o editar algo que la
+   ventana de enfrente cree que está quieto.
+
+7. **Rediseñar la ventana de Low-Stock Monitor.** Hoy es una parrilla de todos
+   los materiales de golpe. Como lo quiere Jose:
+   - El campo "Min" **deshabilitado** hasta que se marque su checkbox.
+   - Arriba, centradas, **solo las etiquetas de categoría** en gris (el mismo
+     gris de desactivado que ya usa la app), en orden alfabético.
+   - Al hacer clic en una categoría toma **su propio color** y aparecen debajo
+     sus materiales para marcar y ponerles mínimo. Se pueden activar varias.
+   - Al volver a hacer clic se desactiva, y **abajo solo quedan los materiales
+     con el checkbox marcado** (con el orden que tienen hoy, pero debajo del
+     grupo de categorías).
+
+   La idea de fondo: se empieza por la pregunta correcta — *"¿de qué categoría
+   quiero vigilar algo?"* — en vez de por una lista de cientos de materiales.
+
 ## Robustez — renombrar la carpeta de Drive rompe los documentos
 
 `checkFileInAppFolder_()` valida por NOMBRE de carpeta (ver
@@ -88,6 +109,28 @@ Dos arreglos posibles:
 Lo primero es la solución; lo segundo es el aviso que hoy no existe. Vale hacer
 los dos. Mientras tanto está documentado en docs/VENTAS.md como algo que hay
 que decirle al cliente.
+
+## Operación del negocio — riesgos anotados
+
+**El cliente OAuth es un punto único de falla.** El ID y el secreto son de
+Jose y quedan guardados en las Script Properties de CADA copia vendida.
+
+- **Si se rompe algo con el acceso externo, revisar esto PRIMERO.** Es la pieza
+  compartida entre todos los clientes: si falla, falla para todos a la vez, y
+  eso se distingue de un problema de un solo cliente en treinta segundos.
+- Un admin del cliente puede leer el secreto en sus propiedades. El daño posible
+  es bajo (los permisos son solo nombre y correo) pero es real.
+- **Si el proyecto de Cloud se pierde o se borra, las credenciales NO se
+  recuperan.** Un cliente nuevo tiene un ID y un secreto nuevos, y hay que
+  actualizarlos en la copia de cada cliente uno por uno, además de volver a
+  registrar todas las URLs. Guardar el ID y el secreto fuera de Google, y no
+  borrar ese proyecto nunca.
+
+**Actualizaciones — decidido:** los bugs son prioridad y se empujan a todos los
+clientes; las mejoras grandes se agrupan y se sueltan por tandas. La
+actualización se cobra como parte del soporte mensual (opción 2 de las tres que
+se discutieron). El Marketplace queda como la inversión que resolvería esto de
+raíz, para cuando haya volumen que lo justifique.
 
 ## Polish pass (do at the end, after the functional work)
 
