@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.56';
+var APP_VERSION = '9.57';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -1073,7 +1073,7 @@ function getInitialData(sessionToken) {
       users:              users,
       rackPhotos:         rackPhotos,
       materialLocks:      materialLocks,
-      gmailScanEnabled:   isGmailScanEnabled()
+      gmailScanEnabled:   false   // the scanner has no UI; see isGmailScanEnabled()
     };
   } catch (err) {
     try {
@@ -1543,7 +1543,10 @@ function processMovementInner_(ss, action, data, auth) {
   if (action === 'addIncoming')           return addIncoming(data);
   if (action === 'updateIncoming')        return updateIncoming(data);
   if (action === 'deleteIncoming')        return deleteIncoming(data.id, data._sessionToken);
-  if (action === 'scanGmail')             return scanGmailForDeliveries(data, auth);
+  // 'scanGmail' is deliberately NOT dispatched. The scanner needs Google's
+  // restricted mail scope, which is not in the manifest, so the call could only
+  // ever fail — and an action that cannot succeed should not be reachable.
+  // scanGmailForDeliveries() is kept for the day it ships as a real add-on.
   if (action === 'modifyMovement')        return modifyMovement(data, auth);
   if (action === 'setMonitoredMaterials') return setMonitoredMaterials(data.names, auth);
   if (action === 'getPmDirectory')        return getPmDirectory();
@@ -4402,7 +4405,17 @@ function saveWebAppUrl(url) {
   if (!/^https:\/\/script\.google\.com\/.*\/exec(\?.*)?$/.test(u)) {
     throw new Error('That does not look like a web app link. It should start with https://script.google.com/ and end in /exec');
   }
-  PropertiesService.getScriptProperties().setProperty('WEB_APP_URL', u);
+  var p2 = PropertiesService.getScriptProperties();
+  p2.setProperty('WEB_APP_URL', u);
+  // The external sign-in flow has to hand Google back the exact same address,
+  // and it lived in a second property that somebody had to type in by hand —
+  // which is how it ends up missing, or subtly different, on a fresh copy.
+  // Setting it here means pasting the link once does both. It is not
+  // overwritten if it was set deliberately: a broker or a proxy redirect is a
+  // legitimate reason for the two to differ.
+  if (!String(p2.getProperty('OAUTH_REDIRECT_URI') || '').trim()) {
+    p2.setProperty('OAUTH_REDIRECT_URI', u);
+  }
   return { url: u, saved: true };
 }
 
