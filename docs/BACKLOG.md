@@ -16,6 +16,15 @@ here once they ship (the commit message is the record of what changed and why).
    sizing/position isn't what Jose wants yet. Jose says it is fine for now —
    waiting on him to say what he actually wants there.
 
+4. **Group the Incoming list by kind of date as well as by state.** v9.55
+   grouped it by what you need to do (Overdue / Expected / No date / Arrived /
+   Cancelled). Jose also wants the option of grouping by how the date is known
+   — exact, a window, approximate, unknown — which is a different question:
+   the first asks "what do I chase today", the second asks "how solid is my
+   plan". Same mechanism, so it is a small piece of work; worth doing once the
+   flexible dates have been used for a while and it is clear which grouping
+   people actually reach for.
+
 ## Polish pass (do at the end, after the functional work)
 
 - **Scrollbars look bad.** Jose dislikes the default side scrollbar. Do NOT

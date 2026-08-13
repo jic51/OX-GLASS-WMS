@@ -780,16 +780,22 @@
        would not read as a deck. Newest is last in the DOM so it paints on top
        without fighting z-index. Padding on the container leaves room for the
        rotated corners and the badge to sit OUTSIDE the top card. */
-    .deck{position:fixed;right:22px;bottom:22px;z-index:399;display:flex;flex-direction:column;align-items:flex-end;max-width:min(350px,calc(100vw - 44px));padding:16px 12px 0 14px}
+    .deck{position:fixed;right:22px;bottom:22px;z-index:399;display:flex;flex-direction:column;align-items:flex-end;max-width:min(400px,calc(100vw - 44px));padding:16px 12px 0 14px}
     .deck:empty{display:none}
-    .deck-card{position:relative;width:300px;max-width:100%;height:110px;flex-shrink:0;border-radius:11px;padding:.7rem .85rem;font-size:.8rem;box-shadow:0 6px 20px rgba(0,0,0,.22);transition:margin .5s ease,transform .5s ease,background-color .45s ease,color .45s ease,border-color .45s ease,box-shadow .45s ease}
+    /* Each kind carries its own size, and the collapse is computed FROM that
+       size rather than from one hardcoded number — so a mixed pile still
+       collapses exactly, whatever is in it. Colour alone was not enough of a
+       difference: a notification holds a sentence and needs the width to show
+       it, a suggestion holds one name and a pair of buttons. */
+    .deck-card{position:relative;--card-h:96px;--card-w:270px;width:var(--card-w);max-width:100%;height:var(--card-h);flex-shrink:0;border-radius:11px;padding:.62rem .8rem;font-size:.78rem;box-shadow:0 6px 20px rgba(0,0,0,.22);transition:margin .5s ease,transform .5s ease,background-color .45s ease,color .45s ease,border-color .45s ease,box-shadow .45s ease}
+    .sys-card{--card-h:112px;--card-w:352px;cursor:pointer}
     .deck-card + .deck-card{margin-top:.45rem}
     /* Closing is deliberately slower than opening — a pile snapping shut the
        instant the pointer leaves reads as the app swatting you away. */
     .deck:hover .deck-card,.deck.open .deck-card{transition:margin .22s ease,transform .22s ease,background-color .2s ease,color .2s ease,border-color .2s ease,box-shadow .2s ease}
     /* Piled: every card pulled up under the next, offset a few px, rotation
        alternating for a hand-stacked look. */
-    .deck:not(:hover):not(.open) .deck-card{margin-top:-104px;transform:rotate(-2.4deg)}
+    .deck:not(:hover):not(.open) .deck-card{margin-top:calc(6px - var(--card-h));transform:rotate(-2.4deg)}
     .deck:not(:hover):not(.open) .deck-card:nth-child(even){transform:rotate(1.8deg) translateX(-4px)}
     .deck:not(:hover):not(.open) .deck-card:nth-child(3n){transform:rotate(-3.4deg) translateX(3px)}
     .deck:not(:hover):not(.open) .deck-card:first-child{margin-top:0}
@@ -825,7 +831,9 @@
     .deck.dim:not(:hover):not(.open) .sys-card-detail{opacity:.6}
     .sys-card-title{font-weight:800;color:var(--text);display:flex;align-items:center;gap:.35rem}
     .sys-card-when{color:var(--muted);font-size:.72rem;margin-top:.15rem}
-    .sys-card-detail{color:var(--muted);font-size:.71rem;margin-top:.3rem;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.35}
+    .sys-card-detail{color:var(--muted);font-size:.71rem;margin-top:.3rem;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;line-height:1.32}
+    .sys-card-more{position:absolute;right:.8rem;bottom:.5rem;font-size:.66rem;font-weight:700;color:var(--accent);opacity:0;transition:opacity .15s}
+    .sys-card:hover .sys-card-more{opacity:1}
 
     /* The two corner controls. Neither is ever translucent with the card under
        it: the one thing you can act on while the pile is at rest has to stay
@@ -854,7 +862,7 @@
       .deck{display:none!important}
       .cfg-bell{display:inline-flex}
     }
-    @media (max-width:640px){.deck{right:16px;max-width:calc(100vw - 32px)}.deck-card{width:250px}}
+    @media (max-width:640px){.deck{right:16px;max-width:calc(100vw - 32px)}.deck-card{--card-w:250px}.sys-card{--card-w:calc(100vw - 60px)}}
     /* Manual merge picker */
     .app-splash{position:fixed;inset:0;z-index:2000;background:var(--navy);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.1rem;transition:opacity .45s ease;padding:1.5rem}
     .app-splash.gone{opacity:0;pointer-events:none}
@@ -987,7 +995,13 @@
     .sysact-dot{color:var(--green);font-weight:800}
     .sysact-label{font-weight:700;color:var(--text)}
     .sysact-when{color:var(--muted);font-size:.74rem}
-    .sysact-detail{color:var(--muted);font-size:.72rem;width:100%;padding-left:1.3rem}
+    .sysact-detail{color:var(--muted);font-size:.72rem;width:100%;padding-left:1.3rem;line-height:1.5}
+    .sysact-link{display:inline-block;margin:.3rem 0 0 1.3rem;background:none;border:none;padding:0;font-family:inherit;font-size:.72rem;font-weight:700;color:var(--accent);cursor:pointer;text-decoration:none}
+    .sysact-link:hover{text-decoration:underline}
+    /* Lands you on the exact entry you clicked through from. */
+    @keyframes spotlight{0%{background:var(--yellow-bg)}100%{background:transparent}}
+    .sysact-spot{animation:spotlight 6s ease-out both;border-radius:8px}
+    tr.row-spotlight td{animation:spotlight 6s ease-out both}
     .cfg-new-hint{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap;margin-top:.3rem;font-size:.72rem;color:var(--muted)}
     .cfg-new-add{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:.22rem .5rem;font-size:.7rem;font-weight:700;cursor:pointer;font-family:inherit}
     .cfg-new-add:hover{filter:brightness(1.1)}
@@ -2270,7 +2284,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.55';
+var APP_VERSION = '9.56';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 var _lastUserName = '';    // display name on file, so the account menu can be repainted without it
@@ -3675,7 +3689,17 @@ function submitReportIssue(){
       btn.disabled = false; btn.textContent = 'Send Report';
       showToast('Could not send the report: ' + ((err && err.message) || err), 'err');
     })
-    .reportIssue(_h({ message: message, photos: _riPhotos, url: location.href }));
+    // location.href here is the INSIDE of Google's sandboxed frame
+    // (…googleusercontent.com/userCodeAppPanel), which opens a blank page for
+    // anyone who clicks it — it was in every report and helped nobody. What
+    // does help: which screen they were on, and what they were running it in.
+    .reportIssue(_h({
+      message:  message,
+      photos:   _riPhotos,
+      screen:   _activeTab(),
+      viewport: window.innerWidth + '×' + window.innerHeight,
+      browser:  navigator.userAgent
+    }));
 }
 
 function locSummary(locs){
@@ -4387,6 +4411,7 @@ function renderMovements(){
   var paged     = filtered.slice(0, pageEnd);
   var remaining = total - pageEnd;
 
+  _movRenderedRows = paged.map(function(m){ return m.archived ? null : m.rowIdx; });
   var rows = paged.map(function(m){
     var norm = normMT(m.moveType);
     var isOut = (norm === 'EXIT' || norm === 'WASTE');
@@ -6517,6 +6542,78 @@ function _saveCompanyProfile(){
     .processMovement('saveCompanyProfile', _h(payload));
 }
 
+// The id a notification and its row in the System tab agree on, so clicking
+// the card can scroll to the entry it came from.
+function _sysActId(a){ return String(a.at || '') + '|' + String(a.action || ''); }
+
+// Opens Settings on the System tab and lights up the entry the card came from,
+// so "what did it actually do?" is one click rather than a hunt through the
+// audit sheet.
+function _openSystemActivity(id){
+  if (userRole !== 'ADMIN'){
+    showToast('Ask an admin to look this up in Settings → System.', 'info', 5000);
+    return;
+  }
+  _settingsTab = 'system';
+  openSettingsModal();
+  setTimeout(function(){
+    var el = document.getElementById('sysact-' + id);
+    if (!el) return;
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    el.classList.add('sysact-spot');
+    setTimeout(function(){ el.classList.remove('sysact-spot'); }, 6000);
+  }, 350);
+}
+
+// "Corrected automatically" is only reassuring if you can go and look. A backup
+// is a file in Drive; a re-link happened on numbered rows of the archive, which
+// the app can show you itself.
+function _sysActRefHtml(a){
+  var r = a.ref;
+  if (!r) return a.extra ? '<span class="sysact-detail" style="opacity:.7">' + _he(a.extra) + '</span>' : '';
+  if (r.kind === 'drive'){
+    return '<a class="sysact-link" target="_blank" rel="noopener" ' +
+           'href="https://drive.google.com/file/d/' + _he(r.id) + '/view">' + _he(r.label || 'Open in Drive') + ' ↗</a>';
+  }
+  if (r.kind === 'rows' && r.rows && r.rows.length){
+    return '<button type="button" class="sysact-link" onclick="_showMovementRows(\'' + _he(r.rows.join(',')) + '\')">' +
+           _he(r.label || 'Show the rows') + ' (' + r.rows.join(', ') + ') →</button>';
+  }
+  return '';
+}
+
+// Takes you to the movements it is talking about: closes Settings, switches to
+// Movements & History, and marks the rows. An archived row is not in the loaded
+// window, so it says so rather than silently doing nothing.
+function _showMovementRows(csv){
+  var want = {};
+  String(csv).split(',').forEach(function(n){ want[String(n).trim()] = 1; });
+  closeModal('settingsOverlay');
+  showTab('movements', 'btn-movements');
+  var search = document.getElementById('movSearch');
+  if (search) search.value = '';
+  _movPage = 1;
+  renderMovements();
+  setTimeout(function(){
+    var found = 0;
+    document.querySelectorAll('#tableContainer tbody tr').forEach(function(tr, i){
+      var idx = _movRowIndexAt(i);
+      if (idx && want[String(idx)]){
+        tr.classList.add('row-spotlight');
+        if (!found) tr.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        found++;
+        setTimeout(function(){ tr.classList.remove('row-spotlight'); }, 6000);
+      }
+    });
+    if (!found) showToast('Those rows are in the archived history — use "Load Older History" to see them.', 'warn', 6000);
+  }, 60);
+}
+
+// The row index the table painted at this position, read back from the data it
+// painted from — the table itself does not carry it.
+var _movRenderedRows = [];
+function _movRowIndexAt(i){ return _movRenderedRows[i]; }
+
 function _renderSystemTab() {
   var content = document.getElementById('settingsTabContent');
   var months = String((_settingsData && _settingsData.archiveCutoffMonths) || 12);
@@ -6525,10 +6622,11 @@ function _renderSystemTab() {
   // without anyone having to open the Sheet and read AUDIT_LOG by hand.
   var actHtml = (systemActivity && systemActivity.length)
     ? '<ul class="sysact-list">' + systemActivity.map(function(a){
-        return '<li><span class="sysact-dot">✓</span>' +
+        return '<li id="sysact-' + _he(_sysActId(a)) + '"><span class="sysact-dot">✓</span>' +
           '<span class="sysact-label">' + _he(a.label) + '</span>' +
           '<span class="sysact-when">' + _he(_fmtWhen(a.at)) + '</span>' +
-          (a.detail ? '<span class="sysact-detail">' + _he(a.detail) + (a.extra ? ' · ' + _he(a.extra) : '') + '</span>' : '') +
+          (a.detail ? '<span class="sysact-detail">' + _he(a.detail) + '</span>' : '') +
+          _sysActRefHtml(a) +
         '</li>';
       }).join('') + '</ul>'
     : '<p style="font-size:.78rem;color:var(--muted)">Nothing automatic has run yet. The daily backup runs at 2am ' +
@@ -8640,6 +8738,14 @@ function _paintDeck(){
     btn.addEventListener('click', function(e){
       e.stopPropagation();
       _dismissSysCard(btn.getAttribute('data-sys-x'));
+    });
+  });
+  // The card itself opens the full record. Admin only — Settings is.
+  deck.querySelectorAll('[data-sys-open]').forEach(function(card){
+    card.addEventListener('click', function(e){
+      if (e.target.closest('.sys-card-x')) return;
+      e.stopPropagation();
+      _openSystemActivity(card.getAttribute('data-sys-open'));
     });
   });
   deck.querySelectorAll('button[data-act]').forEach(function(btn){
@@ -10861,11 +10967,12 @@ function _renderSysDeck(){
 
   // Newest painted last so it sits nearest the top of the pile.
   _sysDeckHtml = _sysCards.slice(0, 5).reverse().map(function(c){
-    return '<div class="deck-card sys-card">' +
+    return '<div class="deck-card sys-card" data-sys-open="' + _he(c.id) + '" title="Click for the full record">' +
       '<button class="sys-card-x" data-sys-x="' + _he(c.id) + '" title="Dismiss">✕</button>' +
       '<div class="sys-card-title">✓ ' + _he(c.label) + '</div>' +
       '<div class="sys-card-when">' + _he(_fmtWhen(c.at)) + '</div>' +
-      (c.detail ? '<div class="sys-card-detail">' + _he(c.detail) + (c.extra ? ' · ' + _he(c.extra) : '') + '</div>' : '') +
+      (c.detail ? '<div class="sys-card-detail">' + _he(c.detail) + '</div>' : '') +
+      '<span class="sys-card-more">Details →</span>' +
     '</div>';
   }).join('');
   _paintDeck();

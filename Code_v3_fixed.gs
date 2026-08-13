@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.55';
+var APP_VERSION = '9.56';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -544,6 +544,61 @@ function oauthCfg_() {
 //   2. GAS Editor → ⚙ Project Settings → Script Properties →
 //      GMAIL_SCAN_ENABLED = true
 //   3. Re-run any function once so Google re-prompts for the new permission.
+// Google retires Gemini model names on its own schedule — gemini-2.0-flash
+// stopped answering and every AI feature returned a 404 that said nothing
+// useful to a warehouse manager. The name lives in one place now, and in a
+// Script Property, so a retirement is a two-minute settings change instead of
+// a code release for every customer.
+var GEMINI_MODEL_DEFAULT = 'gemini-2.5-flash';
+
+function geminiModel_() {
+  return String(PropertiesService.getScriptProperties().getProperty('GEMINI_MODEL') || '').trim()
+         || GEMINI_MODEL_DEFAULT;
+}
+
+// Ordered fallbacks, tried in turn. The configured model first, then names that
+// have outlived several deprecations — so one retirement does not take the
+// feature down with it.
+function geminiModels_() {
+  var out = [geminiModel_()];
+  ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-flash-latest'].forEach(function (m) {
+    if (out.indexOf(m) === -1) out.push(m);
+  });
+  return out;
+}
+
+function geminiUrl_(model, apiKey) {
+  return 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + apiKey;
+}
+
+// One call, trying each model until one answers. Returns the HTTPResponse of
+// the first success, or of the last attempt so the caller can report something.
+function geminiFetch_(requestBody, apiKey) {
+  var models = geminiModels_();
+  var last = null;
+  for (var i = 0; i < models.length; i++) {
+    last = UrlFetchApp.fetch(geminiUrl_(models[i], apiKey), {
+      method: 'POST',
+      contentType: 'application/json',
+      payload: JSON.stringify(requestBody),
+      muteHttpExceptions: true
+    });
+    if (last.getResponseCode() === 200) return last;
+    // 404 means "that model is gone" — worth trying the next name. Anything
+    // else (bad key, quota, malformed request) will fail the same way on every
+    // model, so stop and report it.
+    if (last.getResponseCode() !== 404) return last;
+  }
+  return last;
+}
+
+// The /exec address the customer actually opens. ScriptApp.getService().getUrl()
+// reports a deployment that was never published (Google issue 170799249), so
+// the one pasted in during setup wins.
+function savedWebAppUrl_() {
+  return String(PropertiesService.getScriptProperties().getProperty('WEB_APP_URL') || '').trim();
+}
+
 function isGmailScanEnabled() {
   return String(PropertiesService.getScriptProperties().getProperty('GMAIL_SCAN_ENABLED') || '')
            .toLowerCase() === 'true';
@@ -2475,10 +2530,13 @@ function refreshDerivedSheets_(ss) {
     var historyFixes = matIdFixes.filter(function(f){ return f.isHistory; });
     archiveFixes.forEach(function(f){ archive.getRange(f.rowNum, AC.MAT_ID + 1).setValue(f.correctMatId); });
     historyFixes.forEach(function(f){ history.getRange(f.rowNum, AC.MAT_ID + 1).setValue(f.correctMatId); });
+    // The row numbers go in a shape the app can parse back out, so the
+    // notification can offer to show you the actual rows rather than leaving
+    // you to search the sheet for them.
     auditLog_(ss, 'AUTO_REPAIR_MATID', 'system',
       describeMatIdFixes_(matIdFixes),
-      'was ' + matIdFixes[0].wasMatId + (matIdFixes.length > 1 ? ' (and ' + (matIdFixes.length - 1) + ' more)' : ''),
-      'now ' + matIdFixes[0].correctMatId);
+      'rows ' + matIdFixes.map(function (f) { return f.rowNum; }).join(','),
+      'was ' + matIdFixes[0].wasMatId + ' → now ' + matIdFixes[0].correctMatId);
   }
 
   var now = new Date();
@@ -3810,20 +3868,29 @@ var SYSTEM_EVENT_LABELS = {
   AUTO_REPAIR_MATID: 'Movements re-linked to the right material'
 };
 
-// Plain English for the notification card and the System tab. Names the
-// movements that were re-linked — up to three, then a count — so the owner can
-// check the rows themselves instead of taking the word "corrected" on trust.
+// Plain English for the notification card and the System tab.
+//
+// "1 row(s) had a stale MatID, corrected automatically" told an owner nothing:
+// not which row, not what it means, and — the part that actually confused
+// Jose — not WHY it happened. It is almost always a consequence of somebody
+// editing a movement: the material's ID is computed from its category and
+// name, so renaming either one leaves the stored ID pointing at the old
+// identity, and the next stock recalculation quietly re-links it. Nothing is
+// wrong; the app is finishing a job the editor started. Saying so is the
+// difference between a reassuring note and an alarming one.
 function describeMatIdFixes_(fixes) {
   var named = fixes.slice(0, 3).map(function (f) {
-    return (f.kind ? f.kind + ' ' : '') + f.what +
+    return 'row ' + f.rowNum + ' — ' + (f.kind ? f.kind + ' ' : '') + f.what +
            (f.qty ? ' ×' + f.qty + (f.unit ? ' ' + f.unit : '') : '') +
            (f.where ? ' @ ' + f.where : '') +
            (f.when ? ' (' + f.when + ')' : '');
   }).join(' · ');
   var more = fixes.length > 3 ? ' …and ' + (fixes.length - 3) + ' more' : '';
   return fixes.length + ' movement' + (fixes.length === 1 ? '' : 's') +
-         ' were filed under an out-of-date material ID and have been re-linked, ' +
-         'so their stock counts against the right material: ' + named + more;
+         ' still pointed at an old material identity — usually because someone ' +
+         'edited the category or name on that movement — and ' +
+         (fixes.length === 1 ? 'has' : 'have') + ' been re-linked so the stock ' +
+         'counts against the right material. Nothing was lost: ' + named + more;
 }
 
 // limit is how many undismissed notices the app can hold at once. Anything
@@ -3850,12 +3917,24 @@ function getSystemActivity(limit) {
     var actor = String(rows[i][2] || '').toLowerCase().trim();
     if (!SYSTEM_ACTORS[actor]) continue;
     var action = String(rows[i][1] || '');
+    // Anything the app can take you to, it should. A backup is a file in
+    // Drive; a re-link happened on numbered rows of the archive. Both are
+    // reachable, and "corrected automatically" is only reassuring if you can
+    // go and look.
+    var ref = null;
+    if (action === 'BACKUP_CREATED' && String(rows[i][5] || '').trim()) {
+      ref = { kind: 'drive', id: String(rows[i][5]).trim(), label: 'Open the backup in Drive' };
+    } else if (action === 'AUTO_REPAIR_MATID') {
+      var m = String(rows[i][4] || '').match(/rows ([\d,]+)/);
+      if (m) ref = { kind: 'rows', rows: m[1].split(','), label: 'Show the movement' + (m[1].indexOf(',') === -1 ? '' : 's') };
+    }
     out.push({
       at:     rows[i][0] ? new Date(rows[i][0]).toISOString() : '',
       action: action,
       label:  SYSTEM_EVENT_LABELS[action] || action.replace(/_/g, ' ').toLowerCase(),
       detail: String(rows[i][3] || ''),
-      extra:  [rows[i][4], rows[i][5]].filter(function (v) { return String(v || '').trim(); }).join(' · ')
+      extra:  [rows[i][4], rows[i][5]].filter(function (v) { return String(v || '').trim(); }).join(' · '),
+      ref:    ref
     });
   }
   return out;
@@ -4102,11 +4181,28 @@ function reportIssue(data) {
   }
 
   var cfg     = loadConfig();
+  var cs      = companySettings_();
+  // The installation's admin gets it, and so does whoever supports the product
+  // — set SUPPORT_EMAIL to route reports somewhere other than the admin's inbox.
   var toEmail = cfg.adminEmail || Session.getEffectiveUser().getEmail();
-  var body = 'Reported by: ' + auth.email + ' (' + auth.role + ')\n' +
+  var support = String(PropertiesService.getScriptProperties().getProperty('SUPPORT_EMAIL') || '').trim();
+  if (support && support.toLowerCase() !== String(toEmail).toLowerCase()) toEmail += ',' + support;
+
+  // What a person actually needs to reproduce a problem. The old body carried
+  // a link to the sandboxed frame's own address
+  // (…googleusercontent.com/userCodeAppPanel), which opens a blank page for
+  // everybody including the developer — it is the inside of the iframe, not
+  // the app. The app's real address, which screen they were on, and what they
+  // were running it in are the things that answer "where do I look?".
+  var body = 'Company: ' + (cs.name || '(not set)') + '\n' +
+    'Reported by: ' + auth.email + ' (' + auth.role + ')\n' +
     'App version: ' + APP_VERSION + '\n' +
     'When: ' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm') + '\n' +
-    (data && data.url ? 'Page: ' + data.url + '\n' : '') +
+    (data && data.screen  ? 'Screen: ' + String(data.screen).substring(0, 60) + '\n' : '') +
+    (data && data.viewport ? 'Window: ' + String(data.viewport).substring(0, 40) + '\n' : '') +
+    (data && data.browser ? 'Browser: ' + String(data.browser).substring(0, 200) + '\n' : '') +
+    'App URL: ' + (savedWebAppUrl_() || '(not saved — Settings › publish step)') + '\n' +
+    'Spreadsheet: ' + ss.getUrl() + '\n' +
     '\n' + message +
     (driveLinks.length
       ? '\n\nPhoto(s) also saved to Drive:\n' + driveLinks.map(function(id){ return 'https://drive.google.com/file/d/' + id + '/view'; }).join('\n')
@@ -5791,7 +5887,7 @@ function testGemini_() {
   requireOwnerContext_();
   var apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
   if (!apiKey) { Logger.log('ERROR: GEMINI_API_KEY not set'); return; }
-  var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + apiKey;
+  var url = geminiUrl_(geminiModel_(), apiKey);
   var resp = UrlFetchApp.fetch(url, {
     method: 'POST',
     contentType: 'application/json',
@@ -5909,20 +6005,13 @@ function parseEmailsBatch_(emailMetas, apiKey) {
       'Body: '    + em.bodyText + '\n\n';
   });
 
-  var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + apiKey;
   var requestBody = {
     contents: [{ parts: [{ text: prompt }] }],
     generationConfig: { temperature: 0.05, maxOutputTokens: 4096 }
   };
 
   try {
-    var response = UrlFetchApp.fetch(url, {
-      method: 'POST',
-      contentType: 'application/json',
-      payload: JSON.stringify(requestBody),
-      muteHttpExceptions: true
-    });
-
+    var response = geminiFetch_(requestBody, apiKey);
     var code = response.getResponseCode();
     var body = response.getContentText();
 
@@ -6001,12 +6090,7 @@ function parseEmailTextAsIncoming_(bodyText, subject, from, apiKey) {
     '}\n' +
     'Return ONLY the JSON object, no other text.';
 
-  // Try gemini-2.0-flash first, fall back to gemini-1.5-flash
-  var models = [
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-lite',
-    'gemini-1.5-flash-002'
-  ];
+  var models = geminiModels_();
   var baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/';
   var requestBody = {
     contents: [{ parts: [{ text: prompt }] }],
@@ -6150,8 +6234,6 @@ function extractDocumentInfo(fileData, mimeType, sessionToken) {
     'For category, infer from the product description. ' +
     'For qty, extract the total quantity being delivered.';
 
-  var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + apiKey;
-
   var requestBody = {
     contents: [{
       parts: [
@@ -6162,12 +6244,7 @@ function extractDocumentInfo(fileData, mimeType, sessionToken) {
     generationConfig: { temperature: 0.05 }
   };
 
-  var response = UrlFetchApp.fetch(url, {
-    method: 'POST',
-    contentType: 'application/json',
-    payload: JSON.stringify(requestBody),
-    muteHttpExceptions: true
-  });
+  var response = geminiFetch_(requestBody, apiKey);
 
   var code = response.getResponseCode();
   var body = response.getContentText();
