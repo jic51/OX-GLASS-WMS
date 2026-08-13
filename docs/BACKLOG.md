@@ -25,6 +25,49 @@ here once they ship (the commit message is the record of what changed and why).
    flexible dates have been used for a while and it is clear which grouping
    people actually reach for.
 
+5. **The "Add Expected Material" dialog is too narrow.** It has a horizontal
+   scrollbar on a desktop screen, which no dialog should ever have. Widen it so
+   nothing scrolls sideways on a large screen, and on a phone only the vertical
+   scrollbar appears. Check the other modals for the same thing while in there.
+
+## Open decision — access when the customer has no Workspace domain
+
+The identification rule, verified in `getUserRole()`:
+
+1. `Session.getActiveUser().getEmail()` returns an email ONLY when the visitor
+   is in the same Google Workspace domain as the **owner of the copy** (or is
+   the owner). Personal Gmail visitors get an empty string.
+2. Otherwise the email has to come from a signed session token, issued by the
+   "Sign in with Google" flow — which needs an OAuth client and its redirect URI
+   registered by hand in Cloud Console.
+
+`COMPANY_DOMAIN` plays no part in this. It is only used for wording on the
+sign-in screen. Recognition comes from the real Workspace relationship between
+visitor and owner, not from that property.
+
+**So a company with no domain, where several people use personal Gmail, needs
+the OAuth path for everyone except the person who made the copy.** That is the
+scenario to solve, and there are three candidates:
+
+1. **Register each customer's /exec URL on Jose's OAuth client.** Works today,
+   ~5 minutes per customer, done once. Priced as a setup step.
+2. **Broker redirect** — one fixed URL Jose owns that forwards back via the
+   `state` parameter. One registration ever. Costs a permanent dependency on
+   that broker and strict `state` validation.
+3. **Deploy with `executeAs: USER_ACCESSING` instead of `USER_DEPLOYING`.**
+   Then `getActiveUser()` returns everyone's real email with no OAuth client at
+   all. NOT free: the script would run with each user's own permissions, so the
+   owner has to share the spreadsheet and the Drive folders with them, every
+   user sees the "unverified app" screen, and the whole "the server holds the
+   owner's access, not yours" design changes. **Worth actually testing on a
+   throwaway copy before deciding** — it is the only option that removes the
+   manual step entirely, and its cost has not been measured.
+
+Also worth writing into the setup guide either way: **if the company has a
+Workspace domain, the copy must be made by a company account.** If someone
+copies it with a personal Gmail, nobody in the domain is recognised
+automatically any more — including the people who do have company accounts.
+
 ## Polish pass (do at the end, after the functional work)
 
 - **Scrollbars look bad.** Jose dislikes the default side scrollbar. Do NOT
