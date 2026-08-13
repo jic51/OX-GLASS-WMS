@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.60';
+var APP_VERSION = '9.61';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -1570,6 +1570,7 @@ function processMovementInner_(ss, action, data, auth) {
   if (action === 'mergeLocations')     return mergeLocations(data, auth);
   if (action === 'saveColumnPrefs')    return saveColumnPrefs(data, auth);
   if (action === 'saveCompanyProfile') return saveCompanyProfile(data, auth);
+  if (action === 'parseIncomingEmail') return parseIncomingEmail(data, auth);
   // ── Material management (ADMIN only) ──────────────────────────────────────
   if (action === 'listMaterials')  return listMaterials(auth);
   if (action === 'manageMaterial') return manageMaterial(data, auth);
@@ -5847,6 +5848,128 @@ function deleteIncoming(id, sessionToken) {
     }
   }
   throw new Error('Incoming item not found: ' + id);
+}
+
+// ─── READ AN EMAIL INTO EXPECTED DELIVERIES ──────────────────────────────────
+// The supplier's confirmation email already contains everything an "expected
+// delivery" record needs. Retyping it is the boring, error-prone part of the
+// job, and it is the reason the Incoming tab sits empty in most installations.
+//
+// This takes the text of the email — pasted in, no Gmail permission of any
+// kind — and returns DRAFTS for a person to check before anything is saved. It
+// never writes: extraction from prose is a guess, and a guess that saves itself
+// is how a warehouse ends up with deliveries nobody ordered.
+//
+// Reading the message the user pastes needs no scope at all. That is the whole
+// point: the alternative, searching their mailbox, needs Google's restricted
+// mail scope and an annual paid audit to distribute (see isGmailScanEnabled).
+function parseIncomingEmail(data, auth) {
+  auth = requireAuth_('ADMIN');
+  // One email is one Gemini call against the owner's paid quota.
+  requireQuota_('emailparse', auth.email, 20, 600);
+
+  var text = String((data && data.text) || '').trim();
+  if (!text) throw new Error('Paste the email first.');
+  if (text.length < 25) throw new Error('That is too short to read anything out of.');
+  if (text.length > 12000) text = text.substring(0, 12000);
+
+  var apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  if (!apiKey) throw new Error(
+    'This needs a Gemini API key, which has not been set up on this system.\n\n' +
+    'An admin adds it once: Apps Script editor → ⚙ Project Settings → Script Properties\n' +
+    'Property: GEMINI_API_KEY   Value: a key from aistudio.google.com\n\n' +
+    'The key is yours and the usage is billed to you by Google, not by us.'
+  );
+
+  // The customer's own categories and units, so the answer lands on the lists
+  // this installation actually uses instead of inventing new ones.
+  var cfg   = loadConfig();
+  var cats  = (cfg.categories || []).slice(0, 40);
+  var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+
+  var prompt =
+    'You are reading an email for a warehouse, to record what is ARRIVING and when.\n' +
+    'Today is ' + today + '. Resolve any relative date against that.\n\n' +
+    'Return ONLY a JSON array — no markdown, no explanation. One object per distinct\n' +
+    'material being delivered. If the email is not about a delivery at all, return [].\n\n' +
+    '{\n' +
+    '  "name":     "what is arriving, as specific as the email allows",\n' +
+    '  "category": ' + (cats.length ? 'one of: ' + cats.join(' | ') + ' (or null if none fit)' : 'null') + ',\n' +
+    '  "qty":      number or null,\n' +
+    '  "unit":     "UNIT | SQ FT | LN FT | PIECE | BOX | PALLET",\n' +
+    '  "supplier": "who is sending it",\n' +
+    '  "po":       "PO or order number",\n' +
+    '  "pm":       "project manager or contact named, if any",\n' +
+    '  "dateMode": "exact | window | about | unknown",\n' +
+    '  "estDate":  "YYYY-MM-DD or null",\n' +
+    '  "estDateEnd":"YYYY-MM-DD or null, only when dateMode is window",\n' +
+    '  "dateNote": "the words the email used about timing, verbatim and short",\n' +
+    '  "notes":    "tracking number, delivery instructions, anything else useful"\n' +
+    '}\n\n' +
+    'RULES ABOUT THE DATE — these matter more than anything else here:\n' +
+    '- A named day ("arriving Sept 3", "ships Monday") → "exact".\n' +
+    '- A range ("between the 5th and the 10th") → "window", with both dates.\n' +
+    '- Vague but bounded ("next week", "in about 2 weeks", "end of the month")\n' +
+    '  → "about", estDate = your best single date, dateNote = their words.\n' +
+    '- Nothing about timing, or explicitly unknown ("we will confirm", "waiting\n' +
+    '  on the factory") → "unknown", estDate = null, dateNote = why if it says.\n' +
+    '- NEVER invent a date to fill the field. "unknown" is a correct answer and\n' +
+    '  a wrong date is worse than no date — nobody can tell them apart later.\n\n' +
+    'Use null for anything the email does not say. Do not guess quantities.\n\n' +
+    'EMAIL:\n' + text;
+
+  var response = geminiFetch_({
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0.05, maxOutputTokens: 2048 }
+  }, apiKey);
+
+  var code = response.getResponseCode();
+  var body = response.getContentText();
+  if (code === 429) throw new Error('The AI is over its quota for now. Try again in a few minutes.');
+  if (code !== 200) {
+    Logger.log('parseIncomingEmail HTTP ' + code + ': ' + body.substring(0, 400));
+    throw new Error('The AI could not be reached (HTTP ' + code + '). Check the Gemini key in Script Properties.');
+  }
+
+  var items = [];
+  try {
+    var raw = JSON.parse(body).candidates[0].content.parts[0].text;
+    raw = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
+    var start = raw.indexOf('['), end = raw.lastIndexOf(']');
+    if (start !== -1 && end !== -1) raw = raw.substring(start, end + 1);
+    items = JSON.parse(raw) || [];
+  } catch (e) {
+    Logger.log('parseIncomingEmail parse error: ' + e.message + ' | ' + body.substring(0, 400));
+    throw new Error('The AI answered in a shape this could not read. Try pasting a bit less of the email.');
+  }
+  if (!Array.isArray(items)) items = [];
+
+  // Everything the model returns is normalised here rather than trusted. A
+  // date mode outside the four we support, or an end date on something that is
+  // not a window, would be written straight into the sheet otherwise.
+  var out = items.slice(0, 20).map(function (it) {
+    it = it || {};
+    var mode = incomingDateMode_(it.dateMode);
+    if (!it.estDate) mode = (mode === 'window' || mode === 'about') ? 'unknown' : mode;
+    if (mode === 'unknown') it.estDate = '';
+    if (mode !== 'window') it.estDateEnd = '';
+    return {
+      name:       String(it.name || '').trim().substring(0, 120),
+      category:   String(it.category || '').toUpperCase().trim().substring(0, 40),
+      qty:        Number(it.qty) > 0 ? Number(it.qty) : 0,
+      unit:       String(it.unit || 'UNIT').toUpperCase().trim().substring(0, 20),
+      supplier:   String(it.supplier || '').trim().substring(0, 80),
+      po:         String(it.po || '').trim().substring(0, 40),
+      pm:         String(it.pm || '').trim().substring(0, 80),
+      dateMode:   mode,
+      estDate:    String(it.estDate || '').substring(0, 10),
+      estDateEnd: String(it.estDateEnd || '').substring(0, 10),
+      dateNote:   String(it.dateNote || '').trim().substring(0, 60),
+      notes:      String(it.notes || '').trim().substring(0, 300)
+    };
+  }).filter(function (it) { return it.name; });
+
+  return { status: 'success', items: out };
 }
 
 // ─── GMAIL SCANNER ───────────────────────────────────────────────────────────

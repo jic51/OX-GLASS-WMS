@@ -652,6 +652,18 @@
     .day-empty{color:var(--muted);font-size:.78rem;font-style:italic}
     .inc-status-pending{background:#FEF3C7;color:#92400E;border-radius:20px;padding:.1rem .5rem;font-size:.68rem;font-weight:700}
     .inc-status-arrived{background:var(--green-bg);color:var(--green);border-radius:20px;padding:.1rem .5rem;font-size:.68rem;font-weight:700}
+    /* Draft rows from an email — editable before anything is saved. */
+    .ei-card{border:1px solid var(--border);border-radius:9px;padding:.7rem .8rem;margin-bottom:.6rem;background:var(--card)}
+    .ei-card.saved{border-color:var(--green);background:var(--green-bg)}
+    .ei-card.skipped{opacity:.4}
+    .ei-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem .7rem}
+    @media(max-width:560px){.ei-grid{grid-template-columns:1fr}}
+    .ei-grid .field.full{grid-column:1/-1}
+    .ei-grid label{font-size:.66rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:.2rem}
+    .ei-grid input,.ei-grid select{width:100%;padding:.38rem .6rem;border:1px solid var(--border);border-radius:6px;font-size:.83rem;font-family:inherit;background:var(--card);color:var(--text)}
+    .ei-grid input:focus,.ei-grid select:focus{outline:none;border-color:var(--accent)}
+    .ei-foot{display:flex;gap:.5rem;justify-content:flex-end;align-items:center;margin-top:.6rem}
+    .ei-guess{font-size:.7rem;color:var(--yellow);font-weight:700;flex:1}
     .inc-group-row td{background:var(--bg);padding:.45rem .75rem;border-top:2px solid var(--border)}
     .inc-group-lbl{font-size:.76rem;font-weight:800;color:var(--text);letter-spacing:.01em}
     .inc-group-count{font-size:.68rem;font-weight:800;background:var(--border);color:var(--muted);border-radius:10px;padding:1px 8px;margin-left:.45rem}
@@ -1477,6 +1489,7 @@
       <div class="card-header">
         <h2>📅 This Week's Expected Arrivals</h2>
         <div class="toolbar">
+          <button id="btnFromEmail" class="btn btn-ghost btn-sm" style="display:none;border-color:var(--purple);color:var(--purple)" onclick="openEmailImport()" title="Paste a supplier email and let the app fill these in">📧 From an email</button>
           <button id="btnAddIncoming" class="btn btn-primary btn-sm" style="display:none" onclick="openIncomingModal()">+ Add Expected</button>
         </div>
       </div>
@@ -1504,6 +1517,39 @@
   </div>
 
 </div><!-- /container -->
+
+<!-- ══ READ AN EMAIL INTO EXPECTED DELIVERIES ═══════════════════════════════
+     Paste, read, check, save. Nothing is written until a person has looked at
+     it: pulling facts out of prose is a guess, and a guess that saves itself is
+     how a warehouse ends up with deliveries nobody ordered. -->
+<div class="overlay" id="emailImportOverlay">
+  <div class="modal modal-md">
+    <div class="mhdr">
+      <h3>📧 Read an email</h3>
+      <button class="modal-x" onclick="closeModal('emailImportOverlay')" title="Close">✕</button>
+    </div>
+    <div id="emailImportStep1">
+      <p style="font-size:.82rem;color:var(--muted);margin-bottom:.6rem">
+        Paste the supplier's email below — the whole thing, subject and all. Nothing is
+        saved until you have checked what it found.
+      </p>
+      <textarea id="emailImportText" rows="10" placeholder="Paste the email here…"
+        style="width:100%;padding:.65rem .8rem;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font-size:.86rem;font-family:inherit;resize:vertical"></textarea>
+      <div style="display:flex;gap:.6rem;align-items:center;margin-top:.75rem;flex-wrap:wrap">
+        <button class="btn btn-primary" id="btnReadEmail" onclick="runEmailImport()">Read it</button>
+        <span id="emailImportStatus" style="font-size:.8rem;color:var(--muted);flex:1;min-width:0"></span>
+      </div>
+    </div>
+    <div id="emailImportStep2" style="display:none">
+      <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.7rem">
+        <span id="emailImportFound" style="font-size:.85rem;font-weight:700"></span>
+        <button class="btn btn-ghost btn-sm" onclick="_emailImportBack()">← Paste a different email</button>
+        <button class="btn btn-primary btn-sm" style="margin-left:auto" id="btnSaveAllEmail" onclick="_emailSaveAll()">Save all</button>
+      </div>
+      <div id="emailImportResults"></div>
+    </div>
+  </div>
+</div>
 
 <!-- ══ MORNING POPUP ════════════════════════════════════════════════════════ -->
 <div class="morning-overlay" id="morningOverlay">
@@ -2208,7 +2254,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.60';
+var APP_VERSION = '9.61';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 var _lastUserName = '';    // display name on file, so the account menu can be repainted without it
@@ -10124,6 +10170,170 @@ function _doDeleteIncomingItem(id){
     .processMovement('deleteIncoming', _h({ id: id }));
 }
 
+// ── Read an email into expected deliveries ──────────────────────────────────
+// Three states: paste, check, saved. Nothing reaches the sheet until somebody
+// has looked at it — see parseIncomingEmail() in Code.gs for why.
+var _emailDrafts = [];
+
+function openEmailImport(){
+  _emailDrafts = [];
+  document.getElementById('emailImportText').value = '';
+  document.getElementById('emailImportStatus').textContent = '';
+  document.getElementById('emailImportStep1').style.display = '';
+  document.getElementById('emailImportStep2').style.display = 'none';
+  document.getElementById('emailImportOverlay').classList.add('show');
+  setTimeout(function(){ document.getElementById('emailImportText').focus(); }, 60);
+}
+
+function _emailImportBack(){
+  document.getElementById('emailImportStep1').style.display = '';
+  document.getElementById('emailImportStep2').style.display = 'none';
+  document.getElementById('emailImportStatus').textContent = '';
+}
+
+function runEmailImport(){
+  var text = (document.getElementById('emailImportText').value || '').trim();
+  var status = document.getElementById('emailImportStatus');
+  if (text.length < 25){ status.textContent = 'Paste a bit more of the email first.'; return; }
+
+  var btn = document.getElementById('btnReadEmail');
+  btn.disabled = true; btn.textContent = 'Reading…';
+  status.innerHTML = '<span class="spin-hg">⏳</span> Reading the email — a few seconds.';
+
+  google.script.run
+    .withSuccessHandler(function(res){
+      btn.disabled = false; btn.textContent = 'Read it';
+      _emailDrafts = (res && res.items) || [];
+      if (!_emailDrafts.length){
+        status.textContent = 'Nothing about a delivery in that one. Try another email, or add it by hand.';
+        return;
+      }
+      status.textContent = '';
+      document.getElementById('emailImportFound').textContent =
+        _emailDrafts.length + ' item' + (_emailDrafts.length === 1 ? '' : 's') + ' found — check them before saving';
+      document.getElementById('emailImportStep1').style.display = 'none';
+      document.getElementById('emailImportStep2').style.display = '';
+      _renderEmailDrafts();
+    })
+    .withFailureHandler(function(err){
+      btn.disabled = false; btn.textContent = 'Read it';
+      status.textContent = (err && err.message ? err.message : String(err)).replace(/^Error:\s*/i, '');
+    })
+    .processMovement('parseIncomingEmail', _h({ text: text }));
+}
+
+function _renderEmailDrafts(){
+  var cats = (config.categories || []);
+  document.getElementById('emailImportResults').innerHTML = _emailDrafts.map(function(d, i){
+    var catOpts = '<option value="">—</option>' + cats.map(function(c){
+      return '<option value="' + _escAttr(c) + '"' + (c.toUpperCase() === d.category ? ' selected' : '') + '>' + _he(c) + '</option>';
+    }).join('');
+    var modeOpts = [['exact','On a known date'],['window','Between two dates'],['about','Around a date'],['unknown','Not known yet']]
+      .map(function(m){ return '<option value="' + m[0] + '"' + (d.dateMode === m[0] ? ' selected' : '') + '>' + m[1] + '</option>'; }).join('');
+    return '<div class="ei-card" id="ei-' + i + '">' +
+      '<div class="ei-grid">' +
+        '<div class="field full"><label>What is arriving</label><input id="ei-name-' + i + '" value="' + _escAttr(d.name) + '"></div>' +
+        '<div class="field"><label>Category</label><select id="ei-cat-' + i + '">' + catOpts + '</select></div>' +
+        '<div class="field"><label>Qty</label><input type="number" id="ei-qty-' + i + '" value="' + (d.qty || '') + '" min="0"></div>' +
+        '<div class="field"><label>Supplier</label><input id="ei-sup-' + i + '" value="' + _escAttr(d.supplier) + '"></div>' +
+        '<div class="field"><label>PO #</label><input id="ei-po-' + i + '" value="' + _escAttr(d.po) + '"></div>' +
+        '<div class="field"><label>When</label><select id="ei-mode-' + i + '" onchange="_eiSyncMode(' + i + ')">' + modeOpts + '</select></div>' +
+        '<div class="field"><label id="ei-datelbl-' + i + '">Date</label><input type="date" id="ei-date-' + i + '" value="' + _escAttr(d.estDate) + '"></div>' +
+        '<div class="field" id="ei-endwrap-' + i + '"><label>…and</label><input type="date" id="ei-end-' + i + '" value="' + _escAttr(d.estDateEnd) + '"></div>' +
+        '<div class="field full" id="ei-notewrap-' + i + '"><label>What the email said about timing</label><input id="ei-note-' + i + '" value="' + _escAttr(d.dateNote) + '"></div>' +
+        '<div class="field full"><label>Notes</label><input id="ei-notes-' + i + '" value="' + _escAttr(d.notes) + '"></div>' +
+      '</div>' +
+      '<div class="ei-foot">' +
+        (d.dateMode === 'unknown' ? '<span class="ei-guess">The email did not give a date — saved as "not known yet" rather than a guess.</span>' : '<span class="ei-guess"></span>') +
+        '<button class="btn btn-ghost btn-sm" onclick="_eiSkip(' + i + ')">Skip</button>' +
+        '<button class="btn btn-primary btn-sm" id="ei-save-' + i + '" onclick="_eiSave(' + i + ')">Save</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  _emailDrafts.forEach(function(d, i){ _eiSyncMode(i); });
+}
+
+// Same rule as the Add Expected form: only the fields that mode uses.
+function _eiSyncMode(i){
+  var mode = (document.getElementById('ei-mode-' + i) || {}).value || 'exact';
+  var show = function(id, on){ var el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
+  show('ei-endwrap-' + i,  mode === 'window');
+  show('ei-notewrap-' + i, mode === 'about' || mode === 'unknown');
+  var dateWrap = document.getElementById('ei-date-' + i);
+  if (dateWrap) dateWrap.parentNode.style.display = (mode === 'unknown') ? 'none' : '';
+  var lbl = document.getElementById('ei-datelbl-' + i);
+  if (lbl) lbl.textContent = mode === 'window' ? 'Any time between' : mode === 'about' ? 'Roughly around' : 'Date';
+}
+
+function _eiPayload(i){
+  var v = function(id){ var el = document.getElementById(id); return el ? (el.value || '').trim() : ''; };
+  var mode = v('ei-mode-' + i) || 'exact';
+  return {
+    name:       v('ei-name-' + i) || '(from email)',
+    category:   v('ei-cat-' + i),
+    qty:        Number(v('ei-qty-' + i)) || 0,
+    unit:       (_emailDrafts[i] && _emailDrafts[i].unit) || 'UNIT',
+    supplier:   v('ei-sup-' + i),
+    po:         v('ei-po-' + i),
+    pm:         (_emailDrafts[i] && _emailDrafts[i].pm) || '',
+    notes:      v('ei-notes-' + i),
+    status:     'Pending',
+    dateMode:   mode,
+    estDate:    mode === 'unknown' ? '' : v('ei-date-' + i),
+    estDateEnd: mode === 'window'  ? v('ei-end-' + i) : '',
+    dateNote:   v('ei-note-' + i)
+  };
+}
+
+function _eiSkip(i){
+  var card = document.getElementById('ei-' + i);
+  if (card) card.classList.add('skipped');
+}
+
+function _eiSave(i, done){
+  var card = document.getElementById('ei-' + i);
+  if (!card || card.classList.contains('saved') || card.classList.contains('skipped')){ if (done) done(); return; }
+  var payload = _eiPayload(i);
+  if (payload.dateMode !== 'unknown' && !payload.estDate){
+    showToast('Item ' + (i + 1) + ' needs a date, or set it to "Not known yet".', 'warn');
+    if (done) done();
+    return;
+  }
+  var btn = document.getElementById('ei-save-' + i);
+  if (btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
+  google.script.run
+    .withSuccessHandler(function(){
+      card.classList.add('saved');
+      if (btn){ btn.textContent = 'Saved ✓'; }
+      if (done) done();
+    })
+    .withFailureHandler(function(err){
+      if (btn){ btn.disabled = false; btn.textContent = 'Save'; }
+      showToast('Could not save item ' + (i + 1) + ': ' + ((err && err.message) || err), 'err', 6000);
+      if (done) done();
+    })
+    .processMovement('addIncoming', _h(payload));
+}
+
+// One at a time rather than all at once: each save is a server execution, and
+// firing a dozen together is what trips "too many scripts running".
+function _emailSaveAll(){
+  var btn = document.getElementById('btnSaveAllEmail');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  var i = 0;
+  (function next(){
+    if (i >= _emailDrafts.length){
+      btn.disabled = false; btn.textContent = 'Save all';
+      showToast('Saved. Closing — the list will refresh.', 'ok');
+      closeModal('emailImportOverlay');
+      loadDataFromGoogle(true, true);   // quiet refresh
+      return;
+    }
+    var idx = i++;
+    _eiSave(idx, next);
+  })();
+}
+
 // ── Morning Popup ─────────────────────────────────────────────────────────────
 function _isoDate(dt) {
   return dt.toISOString().substring(0, 10);
@@ -11118,6 +11328,8 @@ function applyRoleUI(){
   // Admin-only: Incoming button + Monitor settings gear
   var addInc = document.getElementById('btnAddIncoming');
   if (addInc) addInc.style.display = isAdmin ? '' : 'none';
+  var fromEmail = document.getElementById('btnFromEmail');
+  if (fromEmail) fromEmail.style.display = isAdmin ? '' : 'none';
   var gear = document.getElementById('btnMonitorSettings');
   if (gear) gear.style.display = isAdmin ? '' : 'none';
   var gearToolbar = document.getElementById('btnMonitorSettingsToolbar');
