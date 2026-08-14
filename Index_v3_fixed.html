@@ -2288,7 +2288,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.63';
+var APP_VERSION = '9.64';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 var _lastUserName = '';    // display name on file, so the account menu can be repainted without it
@@ -7559,8 +7559,23 @@ function _drawErrorLog(filterText) {
     '</tr>';
   }).join('');
 
+  // Counted, not just listed. "3 errors" and "3 errors among 240 warnings" are
+  // two different situations, and the second one is why Clear warnings exists.
+  var warnCount = 0;
+  _errorLogData.forEach(function(r){ if (String(r.severity).toUpperCase() === 'WARN') warnCount++; });
+  var errCount = _errorLogData.length - warnCount;
+
   content.innerHTML =
-    '<p style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem">Last '+_errorLogData.length+' entries (backend + frontend). ERROR = unexpected bug, WARN = expected validation rejection.</p>' +
+    '<p style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem">' +
+      '<b>'+errCount+'</b> error'+(errCount===1?'':'s')+' and <b>'+warnCount+'</b> warning'+(warnCount===1?'':'s')+' ' +
+      '(backend + frontend). ERROR = unexpected bug, WARN = the app correctly refusing something. ' +
+      'Entries older than 30 days are removed on their own.</p>' +
+    '<div style="display:flex;gap:.4rem;margin-bottom:.6rem;flex-wrap:wrap">' +
+      '<button class="btn btn-sm" onclick="_clearErrorLog(\'warnings\')"' + (warnCount ? '' : ' disabled') + '>' +
+        '🧹 Clear '+warnCount+' warning'+(warnCount===1?'':'s')+'</button>' +
+      '<button class="btn btn-sm btn-danger" onclick="_clearErrorLog(\'all\')"' + (_errorLogData.length ? '' : ' disabled') + '>' +
+        '🗑 Clear everything</button>' +
+    '</div>' +
     '<input type="text" id="errLogSearch" placeholder="Search message, action, user, or ID…" ' +
       'style="width:100%;margin-bottom:.6rem;padding:.4rem .6rem;border:1px solid var(--border);border-radius:6px;font-size:.8rem;background:var(--bg);color:var(--text)" ' +
       'oninput="_drawErrorLog(this.value)" value="'+_he(filterText||'')+'">' +
@@ -7579,6 +7594,39 @@ function _drawErrorLog(filterText) {
     '</div>';
   var inp = document.getElementById('errLogSearch');
   if (inp) { inp.focus(); var v = inp.value; inp.value=''; inp.value=v; }
+}
+
+// Clearing the log is not undoable and it is not urgent, so it asks first —
+// with the count in the question, because "clear the log" and "delete 240
+// entries" feel like different decisions and only the second one is accurate.
+function _clearErrorLog(mode) {
+  var warnings = mode === 'warnings';
+  var n = warnings
+    ? _errorLogData.filter(function(r){ return String(r.severity).toUpperCase() === 'WARN'; }).length
+    : _errorLogData.length;
+  if (!n) return;
+
+  _showConfirm({
+    icon: warnings ? '🧹' : '🗑️',
+    danger: !warnings,
+    title: warnings ? 'Clear warnings?' : 'Clear the whole log?',
+    message: warnings
+      ? 'Removes ' + n + ' warning' + (n===1?'':'s') + ' and keeps every error. Warnings are the app refusing '
+        + 'something on purpose — clearing them makes real problems easier to see. This cannot be undone.'
+      : 'Removes all ' + n + ' entries, errors included. Only do this once the problems in the list are '
+        + 'actually fixed — it is the record of what went wrong. This cannot be undone.',
+    confirmText: warnings ? 'Clear warnings' : 'Clear everything',
+    onConfirm: function(){
+      google.script.run
+        .withSuccessHandler(function(res){
+          showToast((res && res.removed ? res.removed : 0) + ' entries removed', 'ok');
+          _errorLogData = null;                 // forces a real reload, not a redraw of stale rows
+          _renderErrorLogTab();
+        })
+        .withFailureHandler(function(e){ showToast('Could not clear the log: ' + (e.message||e), 'err'); })
+        .processMovement('clearErrorLog', _h({ mode: mode }));
+    }
+  });
 }
 
 var _pmDirectoryData = null;

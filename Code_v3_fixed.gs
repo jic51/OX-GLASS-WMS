@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.63';
+var APP_VERSION = '9.64';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -586,24 +586,73 @@ function acceptedDocFolderNames_() {
   return names;
 }
 
+// The same list as acceptedDocFolderNames_(), but as folder IDs.
+//
+// An ID survives a rename; a name does not. That difference cost a full day of
+// diagnosis once already: if the customer renames Acopio_X_Docs in their own
+// Drive, the app keeps WRITING there (the ID is cached) but stops being able to
+// OPEN anything — "Requested file outside app folder" on every attachment they
+// ever uploaded. Nothing in the app warned them, and nothing they could see
+// explained it.
+//
+// getOrCreateFolder_() caches one Script Property per path segment, and the
+// first segment of every documents path IS the bare root, so the ID is already
+// there under the same key the name produces.
+function acceptedDocFolderIds_() {
+  var props = PropertiesService.getScriptProperties();
+  var ids = [];
+  acceptedDocFolderNames_().forEach(function (name) {
+    var id = String(props.getProperty('FOLDER_' + name.replace(/\W/g, '_')) || '').trim();
+    if (id && ids.indexOf(id) === -1) ids.push(id);
+  });
+  return ids;
+}
+
 // Walks up a file's parent folders looking for one of this app's own root
-// folders by name. Name-based rather than ID-based because getOrCreateFolder_()
-// caches a separate Script Property per full subfolder path (e.g. one for
-// "<prefix>_Docs/RackPhotos/A1A"), so there's no single cached ID for the bare
-// root to compare against — walking up and checking the name is simpler and
-// just as safe, since nothing in the upload path lets a caller choose where a
-// file gets created.
+// folders.
+//
+// BY ID FIRST, because that is the check that is actually correct — it is the
+// folder we created, whatever the customer has since called it. The name check
+// stays as a second chance rather than being replaced: an installation from
+// before the ID was cached, or one whose cache was cleared, has no ID to match
+// and would otherwise lose access to its whole history. Accepting either is
+// strictly more permissive than what shipped before, so nothing that opens
+// today can stop opening.
 function isFileWithinAppFolder_(file) {
-  var accepted = acceptedDocFolderNames_();
+  var acceptedNames = acceptedDocFolderNames_();
+  var acceptedIds   = acceptedDocFolderIds_();
   var folders = file.getParents();
   var depth = 0;
   while (folders.hasNext() && depth < 8) {
     var folder = folders.next();
-    if (accepted.indexOf(folder.getName()) !== -1) return true;
+    if (acceptedIds.indexOf(folder.getId()) !== -1) return true;
+    if (acceptedNames.indexOf(folder.getName()) !== -1) return true;
     folders = folder.getParents();
     depth++;
   }
   return false;
+}
+
+// Folders the app created whose name in Drive is no longer the name the app
+// expects — i.e. somebody renamed them. Nothing is broken by this any more
+// (the ID check above handles it), but it is still worth SAYING, because the
+// folder names are how a person finds their own files, and because a renamed
+// folder is a sign the customer wanted to call it something else — which is a
+// conversation to have, not a fault to hide.
+function renamedAppFolders_() {
+  var props = PropertiesService.getScriptProperties();
+  var out = [];
+  var expected = [masterFolderName_(), docsFolderName_(), backupFolderName_(), feedbackFolderName_()];
+  expected.forEach(function (name, i) {
+    var key = (i === 0) ? 'FOLDER_MASTER' : 'FOLDER_' + name.replace(/\W/g, '_');
+    var id  = String(props.getProperty(key) || '').trim();
+    if (!id) return;                                   // never created — nothing to compare
+    try {
+      var actual = DriveApp.getFolderById(id).getName();
+      if (actual !== name) out.push({ expected: name, actual: actual });
+    } catch (e) { /* trashed or gone; the create-on-demand path handles that */ }
+  });
+  return out;
 }
 
 // ─── GOOGLE SIGN-IN (hybrid, for users outside the company's Workspace) ──────
@@ -1669,6 +1718,7 @@ function processMovementInner_(ss, action, data, auth) {
     return adminAction_(ss, data);
   }
   if (action === 'getErrorLog')     return getErrorLog(auth);
+  if (action === 'clearErrorLog')   return clearErrorLog(data, auth);
   if (action === 'logClientError')  return logClientError(data, auth);
   if (action === 'loadOlderHistory') return loadOlderHistory(auth);
   throw new Error('Unknown action: ' + action);
@@ -4207,10 +4257,78 @@ function escHtml_(s) {
 }
 
 // ADMIN only. Returns the most recent error log entries, newest first.
+// How long an entry is worth keeping. A log that never forgets stops answering
+// the only question anyone asks of it — "what is wrong NOW" — because the
+// answer is buried under everything that was ever wrong and has since been
+// fixed. Thirty days is long enough to cover "it did this last month too" and
+// short enough that the list stays readable.
+var ERROR_LOG_KEEP_DAYS = 30;
+
+// Pruning happens when an admin OPENS the log, not on every write. The write
+// path runs inside real work (a save, a backup) and must stay cheap; the read
+// path runs once, by hand, when somebody is already waiting for a table to
+// appear. Same result, none of the cost where it would be felt.
+function pruneErrorLog_(sheet, days) {
+  var last = sheet.getLastRow();
+  if (last < 2) return 0;
+  var keepDays = days || ERROR_LOG_KEEP_DAYS;
+  var cutoff = new Date().getTime() - keepDays * 86400000;
+  var stamps = sheet.getRange(2, 1, last - 1, 1).getValues();
+
+  // Rows are appended in time order, so everything to prune is at the TOP and
+  // one deleteRows() call removes it. Counting instead of filtering is what
+  // keeps this from being 300 separate deletes on a big log.
+  var oldCount = 0;
+  for (var i = 0; i < stamps.length; i++) {
+    var d = stamps[i][0];
+    var t = (d instanceof Date) ? d.getTime() : Date.parse(String(d));
+    if (isNaN(t) || t >= cutoff) break;
+    oldCount++;
+  }
+  if (oldCount > 0) sheet.deleteRows(2, oldCount);
+  return oldCount;
+}
+
+// ADMIN only. Empties the log — either the whole thing, or just the WARN rows.
+//
+// Clearing WARN alone is the one that gets used: a WARN is the app correctly
+// refusing something (a quantity that would go negative, a duplicate name), so
+// after a busy week the real ERRORs are a handful of rows hidden among hundreds
+// of those. Removing the noise is how the signal becomes readable again.
+function clearErrorLog(data, auth) {
+  auth = requireAuth_('ADMIN');
+  var mode  = String((data && data.mode) || 'all').toLowerCase();
+  var ss    = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ensureErrorLogSheet_(ss);
+  var last  = sheet.getLastRow();
+  if (last < 2) return { status: 'success', removed: 0 };
+
+  var removed = 0;
+  if (mode === 'warnings') {
+    var sev = sheet.getRange(2, 2, last - 1, 1).getValues();
+    // Bottom-up: deleting a row shifts everything below it, so walking
+    // downwards would make every index after the first deletion wrong.
+    for (var i = sev.length - 1; i >= 0; i--) {
+      if (String(sev[i][0] || '').toUpperCase() === 'WARN') { sheet.deleteRows(i + 2, 1); removed++; }
+    }
+  } else {
+    removed = last - 1;
+    sheet.deleteRows(2, removed);
+  }
+
+  // Deliberately logged. Emptying the record of what went wrong is itself
+  // something a second admin may need to know happened.
+  logError_(ss, 'WARN', 'backend', 'clearErrorLog', auth.email,
+    'Error log cleared (' + mode + ') — ' + removed + ' entries removed', null, newRequestId_());
+
+  return { status: 'success', removed: removed };
+}
+
 function getErrorLog(auth) {
   auth = requireAuth_('ADMIN');   // ignores any caller-supplied `auth` — see requireAuth_
   var ss    = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ensureErrorLogSheet_(ss);
+  try { pruneErrorLog_(sheet); } catch (e) { Logger.log('pruneErrorLog_: ' + e.message); }
   var last  = sheet.getLastRow();
   if (last < 2) return [];
   var rowCount = Math.min(last - 1, 300);
@@ -4877,6 +4995,22 @@ function menuCheckInstallation() {
     lines.push(guesses.length ? '  • ' + guesses.join('\n  • ') : '  (none found)');
     lines.push('Set FOLDER_PREFIX to the one your attachments are in — without the "_Docs".');
     lines.push('Project Settings › Script Properties › Add.');
+  }
+
+  // Renamed folders. Not a fault — the app follows them by ID — but the person
+  // reading this is the one who has to find their own files in Drive, and being
+  // told the app knows about the rename is the difference between "it's fine"
+  // and a support call.
+  var renamed = renamedAppFolders_();
+  if (renamed.length) {
+    lines.push('');
+    lines.push('RENAMED FOLDERS (the app is still using them — nothing is lost)');
+    renamed.forEach(function (r) {
+      lines.push('  • "' + r.actual + '"\n      The app created this as "' + r.expected + '".');
+    });
+    lines.push('  Documents and photos keep opening: the app follows the folder');
+    lines.push('  itself, not its name. Rename it back only if you want the four');
+    lines.push('  folders to match each other again.');
   }
 
   ui.alert('🩺 ' + PRODUCT_NAME + ' — installation check', lines.join('\n'), ui.ButtonSet.OK);
