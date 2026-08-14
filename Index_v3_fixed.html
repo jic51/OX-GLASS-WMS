@@ -2288,7 +2288,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.64';
+var APP_VERSION = '9.65';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 var _lastUserName = '';    // display name on file, so the account menu can be repainted without it
@@ -8098,19 +8098,63 @@ function _topOpenOverlay(){
   return best;
 }
 
-function _syncModalShield(){
-  var top = _topOpenOverlay();
-  Array.prototype.slice.call(document.body.children).forEach(function(el){
-    if (el === top || el.tagName === 'SCRIPT' || _SHIELD_SKIP[el.id]) return;
-    if (top){
-      if (!el.hasAttribute('inert')) el.setAttribute('inert', '');
-      el.classList.add('app-inert');
-    } else {
-      el.removeAttribute('inert');
-      el.classList.remove('app-inert');
-    }
+// EVERY WRITE BELOW IS GUARDED BY A CHECK, AND THAT IS NOT AN OPTIMISATION —
+// IT IS THE WHOLE CORRECTNESS OF THIS FUNCTION.
+//
+// The observer watches the `class` attribute of the overlays, and the shield
+// puts a class ON those same overlays. classList.add/remove rewrite the class
+// attribute even when the token was already there — or already absent — and a
+// rewrite is a mutation, which wakes the observer, which runs this again, and
+// again. Observer callbacks are microtasks, so that chain never yields to the
+// browser: nothing paints, no server response is ever processed, and the splash
+// spins for ever on a blank screen. That is precisely what v9.63 shipped, and
+// the reason it was invisible to every check we run is that it is not a syntax
+// error and not a missing function — it is valid code that never stops.
+//
+// Testing before writing makes the second pass do nothing at all, so the chain
+// ends after one round. The observer is ALSO disconnected while the shield
+// runs, which discards anything the shield's own writes would have queued. Two
+// independent defences on purpose: a hang leaves no error message to debug
+// from, so this must not be able to come back.
+var _shieldObs = null;
+
+function _shieldObserve(){
+  if (!_shieldObs) return;
+  _shieldOverlays().forEach(function(el){
+    _shieldObs.observe(el, { attributes: true, attributeFilter: ['class'] });
   });
-  document.documentElement.classList[top ? 'add' : 'remove']('modal-open');
+}
+
+function _syncModalShield(){
+  if (_shieldObs) _shieldObs.disconnect();
+  try {
+    var top = _topOpenOverlay();
+    Array.prototype.slice.call(document.body.children).forEach(function(el){
+      if (el.tagName === 'SCRIPT' || _SHIELD_SKIP[el.id]) return;
+      // The front window must be actively RELEASED, not merely skipped. A
+      // window that was behind another one is already carrying inert, so
+      // skipping it the moment it becomes the front window leaves it frozen:
+      // open Settings over a movement form and Settings itself is dead, close
+      // Settings and the form never comes back. Deciding a state for every
+      // element on every pass — instead of only touching the ones being
+      // blocked — is what makes the stack work in both directions.
+      var block = !!top && el !== top;
+      if (block){
+        if (!el.hasAttribute('inert'))           el.setAttribute('inert', '');
+        if (!el.classList.contains('app-inert')) el.classList.add('app-inert');
+      } else {
+        if (el.hasAttribute('inert'))            el.removeAttribute('inert');
+        if (el.classList.contains('app-inert'))  el.classList.remove('app-inert');
+      }
+    });
+    var html = document.documentElement;
+    var want = !!top;
+    if (html.classList.contains('modal-open') !== want){
+      html.classList[want ? 'add' : 'remove']('modal-open');
+    }
+  } finally {
+    _shieldObserve();
+  }
 }
 
 // Escape closes the front window — but ONLY the windows where pressing it can
@@ -8141,10 +8185,8 @@ function _onShieldKeydown(e){
 
 function _initModalShield(){
   try {
-    var obs = new MutationObserver(_syncModalShield);
-    _shieldOverlays().forEach(function(el){
-      obs.observe(el, { attributes: true, attributeFilter: ['class'] });
-    });
+    _shieldObs = new MutationObserver(_syncModalShield);
+    _shieldObserve();
     _syncModalShield();
     document.addEventListener('keydown', _onShieldKeydown);
   } catch (e) {}
