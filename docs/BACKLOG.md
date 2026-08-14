@@ -186,23 +186,137 @@ Revisit when the first customer actually needs external access.
   that project is Jose's and is configured once for all customers, not one per
   customer copy. Moved to Features as real work.
 
-## Features
+## Diseño pendiente — precios y costos en el flujo de datos
 
-- **Real Google Drive Picker** (replaces the paste-a-link box). Needs a Cloud
-  project Jose owns: Picker API enabled, an API key, and an OAuth Client ID —
-  configured ONCE by him, reused by every customer copy, the same way
-  OAUTH_CLIENT_ID already works for sign-in. Doing the picker browser-side with
-  the end user's own token also removes the privacy problem the link box has:
-  each person browses THEIR Drive instead of the owner's. Blocked only on Jose
-  creating that Cloud project.
+**Decidido en principio: costo promedio ponderado, calculado en la ENTRADA,
+estampado en cada movimiento.**
 
-- QR / barcode scanning + label printing
-- Installable PWA + offline queue
-- Granular per-role permissions (prerequisite for any costs/pricing module)
-- Live sync between open windows
-- "Save with cancel-X" delayed-confirm animation on movement submit
-- App icon redesign
-- Responsive / device audit
+Lo que hace un software de inventario normal: cada material tiene un costo, y
+ese costo cambia con cada compra. Tres métodos estándar:
+
+- **FIFO** — las unidades más viejas conservan su costo; se consumen en orden.
+  Exige llevar *capas* (lotes) por material, y que alguien en bodega elija de
+  qué lote sale cada salida. Es una segunda estructura de datos completa.
+- **Promedio ponderado (WAC)** — un solo número por material, recalculado en
+  cada entrada: `nuevo = (qty_ant*prom_ant + qty_ent*costo_ent)/(qty_ant+qty_ent)`.
+- **Costo estándar** — un número fijo puesto a mano, con la diferencia contra
+  lo real reportada aparte.
+
+Se elige el promedio ponderado porque es un número por material y una fórmula
+en la entrada, y porque es defendible ante un contador. FIFO es correcto pero
+cuesta un modelo de lotes que ni la hoja ni el usuario de bodega aguantan.
+
+**La pieza que casi todos hacen mal y hay que hacer bien: el costo se ESTAMPA
+en la fila del movimiento.** Valorar una salida de hace un año con el promedio
+de hoy da un número falso. Estampado, la historia es inmutable y auditable sin
+recalcular nada.
+
+Cambios concretos:
+1. `MATERIALS`: `avg_cost` (calculado, no editable) y `last_cost` (referencia).
+2. `MOVEMENTS`: `unit_cost` y `total_cost`. En ENTRY lo escribe el usuario (o
+   total de factura ÷ cantidad); en EXIT/WASTE/TRANSFER lo rellena la app desde
+   `avg_cost` y queda bloqueado.
+3. Recalcular `avg_cost` en cada ENTRY.
+
+Números que se desbloquean de inmediato:
+- **Valor del inventario** en el dashboard — el único número que un dueño mira.
+- **Costo por proyecto** — suma de EXIT por proyecto. Para OX Glass esto es lo
+  más valioso: qué consumió realmente un trabajo.
+- **Desperdicio en dólares** — WASTE × costo. Es el número que VENDE la app.
+- **Gasto por proveedor y por periodo.**
+
+Dónde podemos ser mejores que el software normal:
+- **El costo es opcional por material.** Casi todos obligan a poner costo a
+  todo. Aquí un material sin costo simplemente no entra en la valoración, y el
+  dashboard dice honestamente "82% de tu stock está valorado". Es lo que hace
+  que se pueda adoptar sin capturar 400 costos el primer día.
+- **La app sugiere el costo de la última compra** en gris; escribir encima es
+  una sola acción.
+- **Alerta de cambio de precio** — "este proveedor cobró 18% más que la vez
+  pasada". Barato de calcular, y es justo lo que un manager nota tarde.
+- **Nunca inventar un costo.** Misma regla que las fechas en el importador de
+  correo.
+
+**Prerrequisito duro: permisos.** En una bodega la mayoría NO debe ver dinero.
+Los permisos granulares dejan de ser opcionales y se vuelven el paso previo —
+como mínimo una bandera `canSeeCosts` por rol antes de escribir la primera
+columna de costo.
+
+## Diseño pendiente — plantillas por industria (Store, Workshop…)
+
+Investigado. Lo que un negocio tipo panadería/tienda necesita y una bodega no:
+
+| Necesidad | ¿Lo tenemos? |
+|---|---|
+| Par levels / mínimos que disparan el pedido diario | **Sí** — es el Low-Stock Monitor |
+| Desperdicio como métrica de primera clase | **Sí** — el tipo WASTE ya existe |
+| Proveedores, entradas, historial | **Sí** |
+| Categorías y unidades propias del rubro | **Sí**, solo hay que precargarlas |
+| Caducidad por lote (FEFO: sale primero lo que vence primero) | **No** — feature real |
+| Recetas (1 batch de pan consume 2kg de harina…) | **No** — feature real |
+| Variantes (talla/color) y POS | **No**, y no es nuestro terreno |
+
+**Conclusión honesta: una plantilla es un punto de partida, no otro producto.**
+Podemos entregar un arranque "Store / Shop" que ayude de verdad, pero no
+podemos llamarle sistema para panadería hasta que exista la caducidad.
+
+Lo que una plantilla SÍ define (elegida en el wizard):
+- Categorías y unidades de medida precargadas.
+- Nombres de ubicación del rubro (Shelf / Cooler / Freezer / Dry storage en vez
+  de Rack / Bay).
+- **El vocabulario de la interfaz** — "Project" pasa a "Order" o "Job". Esta es
+  la parte de mayor valor: es lo que hace que el cliente sienta que la app se
+  hizo para él.
+- Qué columnas se ven por defecto y reglas de mínimo de ejemplo.
+
+Lo que NO cambia: el motor.
+
+Tres arranques para empezar: **Warehouse** (lo que hay), **Store / Shop**,
+**Workshop / Contractor**. Una panadería usa Store, más caducidad cuando exista.
+
+Es además la forma más barata de ampliar el mercado: ~un día de trabajo por
+plantilla, cero cambios de motor.
+
+## Features — agrupados por dificultad
+
+### Fáciles (una sesión cada uno)
+- **Iconos profesionales** en vez de emojis. Bloqueado solo en que Jose baje
+  los archivos. Qué pedir en Flaticon: **SVG** (no PNG), **una sola familia /
+  estilo** para las ~50 que usa la app, trazo (outline) y no relleno de color,
+  y en un solo ZIP. Estáticos primero; los animados solo para el splash y los
+  estados vacíos, nunca en botones.
+- **Icono de la app** (el que se ve al agregarla a la pantalla del teléfono).
+  Trivial una vez haya diseño.
+- **Auditoría responsive** — revisar y ajustar pantalla por pantalla. Sin
+  lógica nueva, pero son varias pantallas.
+
+### Medianos (dos a cuatro sesiones)
+- **Rediseñar el Low-Stock Monitor** (ver arriba).
+- **Sincronización entre ventanas abiertas.** Apps Script no tiene push, así
+  que es sondeo: un `getVersionStamp` barato cada N segundos y recargar solo si
+  cambió. El costo es cuota de ejecución, así que el intervalo hay que
+  elegirlo con cuidado y apagarlo con la pestaña en segundo plano.
+- **Limpieza del error log** — HECHO en v9.64.
+
+### Grandes (una semana o más)
+- **Permisos granulares por rol** — prerrequisito de los costos.
+- **Precios y costos** (ver arriba).
+- **Plantillas por industria** (ver arriba).
+- **QR / códigos de barras + impresión de etiquetas.**
+- **Sugerencias proactivas de calidad de datos** (ver más abajo).
+- **Drive Picker real** — bloqueado en que Jose cree el proyecto de Cloud.
+- **Caducidad por lote (FEFO)** — prerrequisito de cualquier cliente de comida.
+
+### Bloqueado por la plataforma — NO prometer
+- **PWA instalable con modo offline.** Verificado: Apps Script sirve el HTML
+  dentro de un iframe sandbox en googleusercontent.com, y un service worker no
+  se puede registrar desde ahí — es el componente que hace que un PWA funcione
+  sin conexión. Google lo documenta como restricción del HTML Service y nadie
+  en la comunidad ha logrado desplegar un web app de GAS como PWA.
+  Lo que SÍ se puede: "Agregar a pantalla de inicio" en Android y iOS crea un
+  acceso directo con nuestro icono. Da el icono en el teléfono, no el offline.
+  El offline de verdad exigiría sacar el frontend de Apps Script a un hosting
+  propio, que es otro producto.
 
 ## Operational
 
