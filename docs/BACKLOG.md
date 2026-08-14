@@ -25,10 +25,20 @@ here once they ship (the commit message is the record of what changed and why).
    flexible dates have been used for a while and it is clear which grouping
    people actually reach for.
 
-5. **The "Add Expected Material" dialog is too narrow.** It has a horizontal
-   scrollbar on a desktop screen, which no dialog should ever have. Widen it so
-   nothing scrolls sideways on a large screen, and on a phone only the vertical
-   scrollbar appears. Check the other modals for the same thing while in there.
+
+5. **Rediseñar la ventana de Low-Stock Monitor.** Hoy es una parrilla de todos
+   los materiales de golpe. Como lo quiere Jose:
+   - El campo "Min" **deshabilitado** hasta que se marque su checkbox.
+   - Arriba, centradas, **solo las etiquetas de categoría** en gris (el mismo
+     gris de desactivado que ya usa la app), en orden alfabético.
+   - Al hacer clic en una categoría toma **su propio color** y aparecen debajo
+     sus materiales para marcar y ponerles mínimo. Se pueden activar varias.
+   - Al volver a hacer clic se desactiva, y **abajo solo quedan los materiales
+     con el checkbox marcado** (con el orden que tienen hoy, pero debajo del
+     grupo de categorías).
+
+   La idea de fondo: se empieza por la pregunta correcta — *"¿de qué categoría
+   quiero vigilar algo?"* — en vez de por una lista de cientos de materiales.
 
 ## Open decision — access when the customer has no Workspace domain
 
@@ -67,27 +77,6 @@ Also worth writing into the setup guide either way: **if the company has a
 Workspace domain, the copy must be made by a company account.** If someone
 copies it with a personal Gmail, nobody in the domain is recognised
 automatically any more — including the people who do have company accounts.
-
-6. **Una ventana abierta debe bloquear la app de atrás.** Con App Settings y
-   con Low-Stock Monitor Settings abiertos se puede seguir tocando lo que está
-   detrás. Hay que revisar TODAS las ventanas, no solo esas dos: el fondo no se
-   toca, y Escape o clic fuera cierran (donde tenga sentido). Es un bug de
-   corrección, no de estética — permite guardar dos veces o editar algo que la
-   ventana de enfrente cree que está quieto.
-
-7. **Rediseñar la ventana de Low-Stock Monitor.** Hoy es una parrilla de todos
-   los materiales de golpe. Como lo quiere Jose:
-   - El campo "Min" **deshabilitado** hasta que se marque su checkbox.
-   - Arriba, centradas, **solo las etiquetas de categoría** en gris (el mismo
-     gris de desactivado que ya usa la app), en orden alfabético.
-   - Al hacer clic en una categoría toma **su propio color** y aparecen debajo
-     sus materiales para marcar y ponerles mínimo. Se pueden activar varias.
-   - Al volver a hacer clic se desactiva, y **abajo solo quedan los materiales
-     con el checkbox marcado** (con el orden que tienen hoy, pero debajo del
-     grupo de categorías).
-
-   La idea de fondo: se empieza por la pregunta correcta — *"¿de qué categoría
-   quiero vigilar algo?"* — en vez de por una lista de cientos de materiales.
 
 ## Robustez — renombrar la carpeta de Drive rompe los documentos
 
