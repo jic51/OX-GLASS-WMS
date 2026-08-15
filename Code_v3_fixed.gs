@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.65';
+var APP_VERSION = '9.66';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -388,6 +388,10 @@ function saveSetupWizard(data) {
   // valid, if empty, set of derived sheets instead of failing.
   try { refreshDerivedSheets_(ss); } catch (e) {}
 
+  // Read the acceptance off the welcome sheet BEFORE deleting it. This is the
+  // first moment the code runs WITH authorization, so it is the first moment we
+  // can record who accepted rather than only that somebody did.
+  recordTermsAcceptance_(actor);
   removeStartHereSheet_(ss);   // setup done — the welcome sheet has served its purpose
 
   p.setProperty('SETUP_COMPLETE', 'true');
@@ -4316,10 +4320,14 @@ function clearErrorLog(data, auth) {
     sheet.deleteRows(2, removed);
   }
 
-  // Deliberately logged. Emptying the record of what went wrong is itself
-  // something a second admin may need to know happened.
-  logError_(ss, 'WARN', 'backend', 'clearErrorLog', auth.email,
-    'Error log cleared (' + mode + ') — ' + removed + ' entries removed', null, newRequestId_());
+  // Recorded, because emptying the record of what went wrong is something a
+  // second admin may need to know happened — but in the AUDIT_LOG, which is
+  // where administrative actions belong. v9.64 wrote it into the ERROR_LOG
+  // itself, so clearing the log left a fresh row in the log saying the log had
+  // been cleared. Nothing broke, but it read like a new problem appearing at
+  // the exact moment you were tidying up, which is the opposite of the point.
+  auditLog_(ss, 'CLEAR_ERROR_LOG', auth.email,
+    'Error log cleared (' + mode + ')', String(removed) + ' entries', '');
 
   return { status: 'success', removed: removed };
 }
@@ -4515,13 +4523,89 @@ function onOpen() {
   if (!cs.setupComplete) {
     try {
       SpreadsheetApp.getActiveSpreadsheet().toast(
-        'Open the "🏭 ' + PRODUCT_NAME + '" menu above and choose "Set Up ' + PRODUCT_NAME + '".',
-        '👋 Not set up yet', 30);
+        'Go to the "👉 START HERE" tab at the bottom of this window.',
+        '👋 Welcome to ' + PRODUCT_NAME, 30);
     } catch (e) {}
     // Still attempted: on a copy that HAS been authorized this sometimes works,
     // and costs nothing when it does not.
     try { showSetupWizardDialog(); } catch (e) {}
+
+    // Build the welcome sheet if it is not there. It used to be created only by
+    // the template tool, which means it reached exactly the customers who got a
+    // file made from the clean template — and nobody who was handed a copy of a
+    // working system, which is how the first real copies were made. A sheet
+    // that only appears in the ideal case is not a welcome, so it is created
+    // here too, on any copy that has not finished setup.
+    try {
+      if (!SpreadsheetApp.getActiveSpreadsheet().getSheetByName(START_HERE_SHEET)) {
+        createStartHereSheet_(SpreadsheetApp.getActiveSpreadsheet());
+      }
+    } catch (e) {}
   }
+}
+
+// Google's toast fades after a few seconds and there is no way to make one
+// stay. So on a copy that is not set up yet, it is re-shown when the person
+// clicks around a sheet that is not the welcome page — throttled to once every
+// five minutes, because the alternative is a toast on every single click, which
+// is worse than no toast at all.
+//
+// Best-effort by design: if PropertiesService is not reachable from a simple
+// trigger on an unauthorized copy, the throttle read throws, the catch swallows
+// it, and nothing is shown. The welcome SHEET is the notice that always works;
+// this is only a second chance for someone who has already wandered off it.
+var NUDGE_EVERY_MS = 5 * 60 * 1000;
+
+function onSelectionChange(e) {
+  try {
+    if (!e || !e.range) return;
+    if (e.range.getSheet().getName() === START_HERE_SHEET) return;
+    if (companySettings_().setupComplete) return;
+
+    var p = PropertiesService.getDocumentProperties();
+    var last = parseInt(p.getProperty('NUDGE_AT') || '0', 10) || 0;
+    if (Date.now() - last < NUDGE_EVERY_MS) return;
+    p.setProperty('NUDGE_AT', String(Date.now()));
+
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      'Setup has not been done yet. Open the "👉 START HERE" tab at the bottom.',
+      '👋 Welcome to ' + PRODUCT_NAME, 15);
+  } catch (err) { /* simple trigger — never surface anything */ }
+}
+
+// ─── THE ACCEPT BUTTON ───────────────────────────────────────────────────────
+// Sheets has no way to place a real button from code — a drawing with a script
+// attached has to be drawn by hand, and Apps Script cannot create one. A
+// CHECKBOX is the closest thing that exists: it is one click, it looks like a
+// control, and ticking it fires onEdit.
+//
+// onEdit is a simple trigger, with the same handcuffs as onOpen: no
+// authorization, so no dialog and no Session call. It is still worth trying to
+// open the wizard — on a copy the owner has already authorized it works — and
+// when it does not, the sheet rewrites itself to say what to do next, in front
+// of the person, instead of a toast that fades while they are reading it.
+function onEdit(e) {
+  try {
+    if (!e || !e.range) return;
+    var sh = e.range.getSheet();
+    if (sh.getName() !== START_HERE_SHEET) return;
+    if (e.range.getA1Notation() !== TERMS_CHECKBOX_CELL) return;
+    if (e.range.getValue() !== true) return;
+
+    sh.getRange(TERMS_STAMP_CELL).setValue('Accepted ' + new Date().toLocaleString());
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      'Thank you. Opening setup — if nothing opens, use the "🏭 ' + PRODUCT_NAME + '" menu above.',
+      '✓ Terms accepted', 20);
+
+    try { showSetupWizardDialog(); return; } catch (err) {}
+
+    // The dialog could not open (this copy has not been authorized yet). Say so
+    // on the sheet, where it stays put.
+    sh.getRange(TERMS_NEXT_CELL).setValue(
+      '→ Now open the  🏭 ' + PRODUCT_NAME + '  menu at the top of this window and choose ' +
+      '"🚀 Set Up ' + PRODUCT_NAME + '".');
+    sh.getRange(TERMS_NEXT_CELL).setFontWeight('bold').setFontColor('#B45309');
+  } catch (err) { /* a simple trigger must never surface an error to the user */ }
 }
 
 // The one instruction that reaches a customer with no authorization, no menu
@@ -4530,38 +4614,134 @@ function onOpen() {
 // done, so a working system is not left carrying a welcome mat.
 var START_HERE_SHEET = '👉 START HERE';
 
+// Fixed addresses, because onEdit has to recognise the checkbox by position —
+// it gets a cell, not a name. Change the layout below and these move with it.
+var TERMS_CHECKBOX_CELL = 'B14';
+var TERMS_LABEL_CELL    = 'C14';
+var TERMS_STAMP_CELL    = 'C15';
+var TERMS_NEXT_CELL     = 'C22';
+
+// Google's own colours are the only ones a spreadsheet can be styled with, so
+// this borrows the app's palette rather than inventing a second one.
+var SH_NAVY = '#1B2A4A', SH_ACCENT = '#3B7DD8', SH_MUTED = '#6B7280', SH_PAPER = '#FFFFFF';
+
 function createStartHereSheet_(ss) {
   var sh = ss.getSheetByName(START_HERE_SHEET);
   if (sh) ss.deleteSheet(sh);
   sh = ss.insertSheet(START_HERE_SHEET, 0);
 
-  var lines = [
-    ['Welcome — your warehouse system is ready to set up.'],
-    [''],
-    ['1.  Look at the menu bar at the top of this window.'],
-    ['2.  Click  🏭 ' + PRODUCT_NAME + '  (it sits to the right of "Help").'],
-    ['3.  Choose  "🚀 Set Up ' + PRODUCT_NAME + ' (start here)".'],
-    [''],
-    ['That opens a short setup — your company, what you store, where you store'],
-    ['it, and who works here. About 10 minutes, once.'],
-    [''],
-    ['Google will ask you to authorize the system the first time. It will warn'],
-    ['that the app is not verified — that is expected: this copy belongs to YOU,'],
-    ['and the "developer" it names is your own account. Click Advanced, then'],
-    ['"Go to ..." to continue.'],
-    [''],
-    ['Do not type anything into the other tabs at the bottom — the app fills'],
-    ['those in for you.'],
-    [''],
-    ['This sheet disappears by itself once setup is finished.']
-  ];
-  sh.getRange(1, 1, lines.length, 1).setValues(lines);
-  sh.getRange(1, 1).setFontSize(16).setFontWeight('bold');
-  sh.getRange(3, 1, 3, 1).setFontWeight('bold');
-  sh.setColumnWidth(1, 640);
+  // A page, not a grid. Column A is the left margin, B holds the checkbox, C
+  // holds every line of text, D is the right margin — which is what lets the
+  // checkbox sit BESIDE its label the way a form does, instead of above it.
   sh.setHiddenGridlines(true);
+  sh.setColumnWidth(1, 40); sh.setColumnWidth(2, 40);
+  sh.setColumnWidth(3, 620); sh.setColumnWidth(4, 40);
+  sh.getRange('A1:Z60').setBackground(SH_PAPER).setFontFamily('Arial');
+
+  function put(cell, text, opts) {
+    opts = opts || {};
+    var r = sh.getRange(cell);
+    r.setValue(text);
+    if (opts.size)   r.setFontSize(opts.size);
+    if (opts.bold)   r.setFontWeight('bold');
+    if (opts.color)  r.setFontColor(opts.color);
+    if (opts.bg)     r.setBackground(opts.bg);
+    if (opts.wrap)   r.setWrap(true);
+    return r;
+  }
+
+  // ── Masthead ──
+  sh.getRange('A1:D3').setBackground(SH_NAVY);
+  sh.setRowHeight(1, 14); sh.setRowHeight(2, 42); sh.setRowHeight(3, 26);
+  put('C2', PRODUCT_NAME, { size: 26, bold: true, color: '#FFFFFF', bg: SH_NAVY });
+  put('C3', 'Warehouse management, in your own Google Drive.',
+      { size: 11, color: '#C7D2E4', bg: SH_NAVY });
+
+  // ── Welcome ──
+  sh.setRowHeight(4, 26);
+  put('C5', 'Welcome. This copy is yours.', { size: 17, bold: true, color: SH_NAVY });
+  sh.setRowHeight(6, 8);
+  put('C7',
+    'Everything lives in this file, in your own Google Drive. Nobody else can see it, ' +
+    'and it does not stop working if you stop paying anyone. Setting it up takes about ' +
+    'ten minutes and you only do it once.',
+    { size: 11, color: '#374151', wrap: true });
+  sh.setRowHeight(7, 56);
+
+  // ── Terms ──
+  sh.setRowHeight(8, 18);
+  put('C9', 'BEFORE YOU START', { size: 9, bold: true, color: SH_MUTED });
+  put('C10',
+    'By using ' + PRODUCT_NAME + ' you accept the Terms of Service and the Privacy Policy. ' +
+    'In short: your data stays in your Drive and is never sent anywhere else; the system is ' +
+    'provided as it is, and you are responsible for keeping your own backups (it can take one ' +
+    'for you every night). The full text is in the app under Settings → Legal.',
+    { size: 11, color: '#374151', wrap: true });
+  sh.setRowHeight(10, 74);
+
+  sh.setRowHeight(11, 10);
+  sh.getRange('B12:C12').setBackground('#EFF4FB');
+  sh.setRowHeight(12, 6);
+  sh.getRange('B13:C13').setBackground('#EFF4FB'); sh.setRowHeight(13, 6);
+  sh.getRange('B14:C16').setBackground('#EFF4FB');
+  sh.setRowHeight(14, 30);
+
+  // The nearest thing to a button that Apps Script can put on a sheet. It is
+  // one click, it looks like a control, and ticking it fires onEdit().
+  var chk = sh.getRange(TERMS_CHECKBOX_CELL);
+  chk.insertCheckboxes();
+  chk.setValue(false);
+  chk.setHorizontalAlignment('center');
+  put(TERMS_LABEL_CELL, 'I accept the Terms of Service and Privacy Policy — tick this box to begin.',
+      { size: 12, bold: true, color: SH_NAVY, bg: '#EFF4FB' });
+  sh.setRowHeight(15, 20);
+  put(TERMS_STAMP_CELL, '', { size: 10, color: SH_MUTED, bg: '#EFF4FB' });
+  sh.setRowHeight(16, 8);
+
+  // ── What happens next ──
+  sh.setRowHeight(17, 22);
+  put('C18', 'WHAT HAPPENS NEXT', { size: 9, bold: true, color: SH_MUTED });
+  put('C19', '1.   Setup opens and asks for your company name and logo.', { size: 11, color: '#374151' });
+  put('C20', '2.   You tell it what you store and where you store it.', { size: 11, color: '#374151' });
+  put('C21', '3.   You add the people who work here. That is all.', { size: 11, color: '#374151' });
+  sh.setRowHeight(22, 34);
+  put(TERMS_NEXT_CELL, '', { size: 11, wrap: true });
+
+  // ── The warning screen, explained before they meet it ──
+  sh.setRowHeight(23, 16);
+  put('C24',
+    'Google will ask you to authorize this the first time, and will warn that the app is ' +
+    '"not verified". That is expected and it is not a problem: this copy belongs to YOU, and ' +
+    'the developer it names is your own account. Click Advanced, then "Go to…" to continue.',
+    { size: 10, color: SH_MUTED, wrap: true });
+  sh.setRowHeight(24, 56);
+
+  put('C26', 'Leave the other tabs at the bottom alone — the system fills those in for you. ' +
+             'This page disappears by itself once setup is finished.',
+      { size: 10, color: SH_MUTED, wrap: true });
+  sh.setRowHeight(26, 34);
+
+  try { sh.setFrozenRows(3); } catch (e) {}
   ss.setActiveSheet(sh);
+  try { sh.setActiveSelection(TERMS_CHECKBOX_CELL); } catch (e) {}
   return sh;
+}
+
+// Reads the acceptance off the welcome sheet into Script Properties. Called
+// from the wizard, which is the first moment we are running WITH authorization
+// and can therefore record WHO accepted — onEdit cannot: no Session call is
+// allowed in a simple trigger, so the tick alone proves when, not who.
+function recordTermsAcceptance_(email) {
+  try {
+    var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(START_HERE_SHEET);
+    var ticked = sh ? sh.getRange(TERMS_CHECKBOX_CELL).getValue() === true : false;
+    var p = PropertiesService.getScriptProperties();
+    if (!p.getProperty('TERMS_ACCEPTED_AT')) {
+      p.setProperty('TERMS_ACCEPTED_AT', new Date().toISOString());
+      p.setProperty('TERMS_ACCEPTED_BY', String(email || ''));
+      p.setProperty('TERMS_ACCEPTED_HOW', ticked ? 'start-here-checkbox' : 'setup-wizard');
+    }
+  } catch (e) { Logger.log('recordTermsAcceptance_: ' + e.message); }
 }
 
 function removeStartHereSheet_(ss) {
