@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.66';
+var APP_VERSION = '9.67';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -4526,9 +4526,20 @@ function onOpen() {
         'Go to the "👉 START HERE" tab at the bottom of this window.',
         '👋 Welcome to ' + PRODUCT_NAME, 30);
     } catch (e) {}
-    // Still attempted: on a copy that HAS been authorized this sometimes works,
-    // and costs nothing when it does not.
-    try { showSetupWizardDialog(); } catch (e) {}
+    // NOT attempted any more: showSetupWizardDialog() from here. The old
+    // comment said trying it "costs nothing when it does not work". That was
+    // wrong, and a customer's screenshot proved it — Sheets pops up a grey
+    // "Message details / Exception: Specified permissions are not sufficient to
+    // call Ui.showModalDialog" box, and it does that even though the call sits
+    // inside a try/catch, because the permission failure is reported by Sheets
+    // itself and not only raised into the script.
+    //
+    // It could never have worked either way: a simple trigger has neither the
+    // script.container.ui scope the dialog needs nor the Session call
+    // requireOwnerContext_() makes first, and authorizing the copy does not
+    // change that — simple triggers always run restricted. So the first thing
+    // a brand-new customer saw was an exception. The welcome SHEET is the whole
+    // mechanism now, and it needs no permission at all.
 
     // Build the welcome sheet if it is not there. It used to be created only by
     // the template tool, which means it reached exactly the customers who got a
@@ -4580,10 +4591,16 @@ function onSelectionChange(e) {
 // control, and ticking it fires onEdit.
 //
 // onEdit is a simple trigger, with the same handcuffs as onOpen: no
-// authorization, so no dialog and no Session call. It is still worth trying to
-// open the wizard — on a copy the owner has already authorized it works — and
-// when it does not, the sheet rewrites itself to say what to do next, in front
-// of the person, instead of a toast that fades while they are reading it.
+// authorization, so no dialog and no Session call — ever, on any copy,
+// authorized or not. It does NOT try to open the wizard: that attempt is what
+// produced the grey "permissions are not sufficient to call Ui.showModalDialog"
+// box a customer hit the first time they ticked the box, and a try/catch does
+// not suppress it because Sheets reports the permission failure itself.
+//
+// So ticking the box does the two things a simple trigger CAN do, and both of
+// them last: it stamps the acceptance, and it writes the next step onto the
+// sheet, right under the box, where it stays put instead of fading like a
+// toast.
 function onEdit(e) {
   try {
     if (!e || !e.range) return;
@@ -4593,18 +4610,13 @@ function onEdit(e) {
     if (e.range.getValue() !== true) return;
 
     sh.getRange(TERMS_STAMP_CELL).setValue('Accepted ' + new Date().toLocaleString());
+    sh.getRange(TERMS_NEXT_CELL)
+      .setValue('→ Now open the  🏭 ' + PRODUCT_NAME + '  menu at the top of this window ' +
+                'and choose  "🚀 Set Up ' + PRODUCT_NAME + '".')
+      .setFontWeight('bold').setFontColor('#B45309');
     SpreadsheetApp.getActiveSpreadsheet().toast(
-      'Thank you. Opening setup — if nothing opens, use the "🏭 ' + PRODUCT_NAME + '" menu above.',
+      'Now use the "🏭 ' + PRODUCT_NAME + '" menu at the top and choose "Set Up ' + PRODUCT_NAME + '".',
       '✓ Terms accepted', 20);
-
-    try { showSetupWizardDialog(); return; } catch (err) {}
-
-    // The dialog could not open (this copy has not been authorized yet). Say so
-    // on the sheet, where it stays put.
-    sh.getRange(TERMS_NEXT_CELL).setValue(
-      '→ Now open the  🏭 ' + PRODUCT_NAME + '  menu at the top of this window and choose ' +
-      '"🚀 Set Up ' + PRODUCT_NAME + '".');
-    sh.getRange(TERMS_NEXT_CELL).setFontWeight('bold').setFontColor('#B45309');
   } catch (err) { /* a simple trigger must never surface an error to the user */ }
 }
 
@@ -4619,7 +4631,7 @@ var START_HERE_SHEET = '👉 START HERE';
 var TERMS_CHECKBOX_CELL = 'B14';
 var TERMS_LABEL_CELL    = 'C14';
 var TERMS_STAMP_CELL    = 'C15';
-var TERMS_NEXT_CELL     = 'C22';
+var TERMS_NEXT_CELL     = 'C16';
 
 // Google's own colours are the only ones a spreadsheet can be styled with, so
 // this borrows the app's palette rather than inventing a second one.
@@ -4659,6 +4671,8 @@ function createStartHereSheet_(ss) {
 
   // ── Welcome ──
   sh.setRowHeight(4, 26);
+  // 17pt in a 21px default row is clipped — the row has to be told.
+  sh.setRowHeight(5, 30);
   put('C5', 'Welcome. This copy is yours.', { size: 17, bold: true, color: SH_NAVY });
   sh.setRowHeight(6, 8);
   put('C7',
@@ -4683,7 +4697,7 @@ function createStartHereSheet_(ss) {
   sh.getRange('B12:C12').setBackground('#EFF4FB');
   sh.setRowHeight(12, 6);
   sh.getRange('B13:C13').setBackground('#EFF4FB'); sh.setRowHeight(13, 6);
-  sh.getRange('B14:C16').setBackground('#EFF4FB');
+  sh.getRange('B14:C17').setBackground('#EFF4FB');
   sh.setRowHeight(14, 30);
 
   // The nearest thing to a button that Apps Script can put on a sheet. It is
@@ -4696,16 +4710,22 @@ function createStartHereSheet_(ss) {
       { size: 12, bold: true, color: SH_NAVY, bg: '#EFF4FB' });
   sh.setRowHeight(15, 20);
   put(TERMS_STAMP_CELL, '', { size: 10, color: SH_MUTED, bg: '#EFF4FB' });
-  sh.setRowHeight(16, 8);
+  // The instruction lives INSIDE the same panel as the checkbox, one line
+  // below it — the eye is already there when the box is ticked, and it is the
+  // one sentence that decides whether the customer gets any further. It starts
+  // as a grey prompt so somebody who never ticks the box still sees what the
+  // box is for.
+  sh.setRowHeight(16, 32);
+  put(TERMS_NEXT_CELL, 'Tick the box above to continue.',
+      { size: 11, color: SH_MUTED, bg: '#EFF4FB', wrap: true });
+  sh.setRowHeight(17, 8);
 
   // ── What happens next ──
-  sh.setRowHeight(17, 22);
-  put('C18', 'WHAT HAPPENS NEXT', { size: 9, bold: true, color: SH_MUTED });
-  put('C19', '1.   Setup opens and asks for your company name and logo.', { size: 11, color: '#374151' });
-  put('C20', '2.   You tell it what you store and where you store it.', { size: 11, color: '#374151' });
-  put('C21', '3.   You add the people who work here. That is all.', { size: 11, color: '#374151' });
-  sh.setRowHeight(22, 34);
-  put(TERMS_NEXT_CELL, '', { size: 11, wrap: true });
+  sh.setRowHeight(18, 22);
+  put('C19', 'WHAT HAPPENS NEXT', { size: 9, bold: true, color: SH_MUTED });
+  put('C20', '1.   Setup asks for your company name and logo.', { size: 11, color: '#374151' });
+  put('C21', '2.   You tell it what you store and where you store it.', { size: 11, color: '#374151' });
+  put('C22', '3.   You add the people who work here. That is all.', { size: 11, color: '#374151' });
 
   // ── The warning screen, explained before they meet it ──
   sh.setRowHeight(23, 16);
@@ -4721,9 +4741,13 @@ function createStartHereSheet_(ss) {
       { size: 10, color: SH_MUTED, wrap: true });
   sh.setRowHeight(26, 34);
 
-  try { sh.setFrozenRows(3); } catch (e) {}
+  // No frozen rows, and the cursor parks at A1. Both are the same mistake seen
+  // from two sides: freezing the masthead and then selecting the checkbox cell
+  // fourteen rows down made Sheets scroll to it, so the file opened with the
+  // welcome paragraph already hidden behind the frozen band. A page is read
+  // from the top.
   ss.setActiveSheet(sh);
-  try { sh.setActiveSelection(TERMS_CHECKBOX_CELL); } catch (e) {}
+  try { sh.setActiveSelection('A1'); } catch (e) {}
   return sh;
 }
 
