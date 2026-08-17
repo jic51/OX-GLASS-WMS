@@ -27,7 +27,10 @@
 // Needs:  npm install playwright
 
 
-const SRC='/workspace/ox-glass-wms/Index_v3_fixed.html';
+const fs=require('fs'), os=require('os'), path=require('path');
+const {chromium}=require('playwright');
+
+const SRC=process.argv[2] || path.join(__dirname,'..','Index_v3_fixed.html');
 let html=fs.readFileSync(SRC,'utf8');
 
 // Fake backend: getInitialData answers with a small but realistic dataset.
@@ -51,6 +54,17 @@ function mv(i){return{rowIdx:i+2,type:['ENTRY','EXIT','TRANSFER','WASTE','RETURN
 window.__DATA={ userRole:'ADMIN', userEmail:'jose@ox-glass.com', userName:'Jose Castro',
  serverVersion:'audit', company:{name:'OX Glass LLC.',domain:'ox-glass.com',logo:''},
  movements:Array.from({length:60},function(_,i){return mv(i);}),
+ stock:(function(){var o={};NAMES.forEach(function(nm,i){var k=nm.toUpperCase();
+   o[k]={name:nm,category:CATS[i%CATS.length],unit:'pcs',warehouseQty:(i*7)%40,siteQty:i*2,
+         availableQty:(i*7)%40,wastedQty:i%3,reservedQty:0,location:LOCS[i%LOCS.length],status:'OK',
+         dateReceived:new Date(2026,7,10).toISOString(),lastNote:''};});
+   // A few more per category so the monitor has something to scroll.
+   CATS.forEach(function(c,ci){for(var j=0;j<6;j++){var nm=c+' ITEM '+(j+1);
+     o[nm]={name:nm,category:c,unit:'pcs',warehouseQty:(ci*3+j)%25,siteQty:j,availableQty:(ci*3+j)%25,
+            wastedQty:0,reservedQty:0,location:LOCS[j%LOCS.length],status:'OK',
+            dateReceived:new Date(2026,7,11).toISOString(),lastNote:''};}});
+   return o;})(),
+ monitoredMaterials:null,
  config:{categories:CATS,projects:['ALTA VISTA','44 NORTH','BHS12'],suppliers:['AMSCO','ALSIDE','CASCADE'],
    locations:LOCS.map(function(l){return{name:l,group:'RACKS'};}),units:['pcs','ft','box'],users:[]},
  incoming:[], rackPhotos:{}, systemActivity:[
