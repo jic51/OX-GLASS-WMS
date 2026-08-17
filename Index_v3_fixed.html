@@ -2304,7 +2304,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.68';
+var APP_VERSION = '9.69';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 var _lastUserName = '';    // display name on file, so the account menu can be repainted without it
@@ -11454,12 +11454,18 @@ function toggleDarkMode() {
   _setDarkUI(!isDark);
   try { localStorage.setItem('oxwms_theme', next); } catch(e) {}
 }
+// Light unless the person asked for dark IN THIS APP. It used to follow the
+// operating system, which meant anyone whose laptop is set to dark — most
+// people now — met the app in dark for the very first time, before it had a
+// chance to look like anything. Dark mode is a preference somebody chooses once
+// they already know the product; it is a bad first impression, and first
+// impressions are the one thing that cannot be retried.
+//
+// The toggle is untouched: choose dark and it is remembered for ever. What is
+// gone is the app guessing on somebody's behalf before they have seen it.
 (function initTheme() {
   var saved;
   try { saved = localStorage.getItem('oxwms_theme'); } catch(e) {}
-  if (!saved) {
-    saved = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  }
   if (saved === 'dark') {
     document.documentElement.setAttribute('data-theme', 'dark');
     _setDarkUI(true);
