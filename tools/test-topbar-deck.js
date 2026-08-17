@@ -43,10 +43,10 @@ const page = `<!doctype html><html><head><meta charset="utf-8"><style>${styles}<
   </div>
 </div>
 <div class="container" style="height:3000px">tall page</div>
-<div class="deck" id="cornerDeck">
-  <div class="deck-card sys-card" data-card-id="a">A</div>
-  <div class="deck-card sys-card" data-card-id="b">B</div>
-  <div class="deck-card sys-card" data-card-id="c">C</div>
+<div class="deck stack-2 stack-3" id="cornerDeck">
+  <div class="deck-card sys-card" style="--i:2" data-card-id="a">A</div>
+  <div class="deck-card sys-card" style="--i:1" data-card-id="b">B</div>
+  <div class="deck-card sys-card" style="--i:0" data-card-id="c">C</div>
 </div>
 <script>
 function _cfgWake(){} function _cfgScheduleDim(){} var _CFG_REDIM_MS = 2000;
@@ -131,6 +131,40 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await p.mouse.click(400, 400);
   await wait(80);
   check('clicking away unpins it', (await state()).open, false);
+
+  // ── The look of the pile, as specified ──
+  // Cards are scaled down at rest so opening them is one movement: they GROW to
+  // full size. Measuring both states is the only way to know they still do.
+  const frontWidth = async () => p.evaluate(() =>
+    document.querySelector('[data-card-id="c"]').getBoundingClientRect().width);
+  const closedW = await frontWidth();
+  await p.evaluate(() => document.getElementById('cornerDeck').classList.add('open'));
+  await wait(900);
+  const openW = await frontWidth();
+  check('cards are smaller at rest than open', closedW < openW - 10, true);
+  await p.evaluate(() => document.getElementById('cornerDeck').classList.remove('open'));
+  await wait(900);
+
+  // Two strips above the front card say "there is more underneath" — never
+  // three, however deep the pile is; the badge gives the exact number.
+  const peek = await p.evaluate(() => {
+    const c = document.querySelector('[data-card-id="c"]');
+    return { one: parseFloat(getComputedStyle(c, '::before').opacity),
+             two: parseFloat(getComputedStyle(c, '::after').opacity) };
+  });
+  check('one peeking edge shown',    peek.one > 0, true);
+  check('a second, fainter edge',    peek.two > 0 && peek.two < peek.one, true);
+
+  // The fan is staggered: each card a beat behind the one in front of it.
+  const delays = await p.evaluate(() => {
+    document.getElementById('cornerDeck').classList.add('open');
+    return Array.from(document.querySelectorAll('.deck-card'))
+      .map(el => getComputedStyle(el).transitionDelay.split(',')[0].trim());
+  });
+  check('the fan is staggered, not simultaneous', delays[0] !== delays[2], true);
+  check('the front card moves first',             delays[2], '0s');
+  await p.evaluate(() => document.getElementById('cornerDeck').classList.remove('open'));
+  await wait(50);
 
   // The exit: a leaving card must give its height back over time, not vanish.
   const eased = await p.evaluate(() => {

@@ -842,23 +842,50 @@
        collapses exactly, whatever is in it. Colour alone was not enough of a
        difference: a notification holds a sentence and needs the width to show
        it, a suggestion holds one name and a pair of buttons. */
-    .deck-card{position:relative;--card-h:96px;--card-w:270px;width:var(--card-w);max-width:100%;height:var(--card-h);flex-shrink:0;border-radius:11px;padding:.62rem .8rem;font-size:.78rem;box-shadow:0 6px 20px rgba(0,0,0,.22);transition:margin .5s cubic-bezier(.22,.61,.36,1),transform .5s cubic-bezier(.22,.61,.36,1),opacity .3s ease,background-color .45s ease,color .45s ease,border-color .45s ease,box-shadow .45s ease}
+    /* One place for the pace of the whole pile. Jose asked for "2 out of 5" —
+       unhurried enough that the eye follows what moved, short of the point
+       where waiting for it becomes the feeling. */
+    .deck{--deck-in:.62s;--deck-out:.5s;--deck-ease:cubic-bezier(.22,.61,.36,1);--deck-step:55ms}
+    .deck-card{position:relative;--card-h:96px;--card-w:270px;width:var(--card-w);max-width:100%;height:var(--card-h);flex-shrink:0;border-radius:11px;padding:.62rem .8rem;font-size:.78rem;box-shadow:0 6px 20px rgba(0,0,0,.22);transition:margin var(--deck-in) var(--deck-ease),transform var(--deck-in) var(--deck-ease),opacity var(--deck-out) ease,background-color .45s ease,color .45s ease,border-color .45s ease,box-shadow .45s ease}
+    /* Fanning out: all at once, each a beat behind the one in front, so the pile
+       reads as paper being spread rather than a list appearing. --i is written
+       by _paintDeck, counting back from the card on top. */
+    .deck.open .deck-card{transition-delay:calc(var(--i, 0) * var(--deck-step))}
+    /* Open, the cards need air between them and a lighter shadow. The resting
+       shadow is tuned for ONE card lifting off the page; repeated down a fan it
+       lands in the gap between two white cards and reads as a dark bar. */
+    .deck.open .deck-card{box-shadow:0 4px 14px rgba(0,0,0,.13)}
+    .deck.open .deck-card + .deck-card{margin-top:.7rem}
+    /* Arriving from off-screen right. The card is already at its resting size
+       when it lands, so it does not grow and slide at the same time — one
+       movement at a time is what makes either of them readable. */
+    @keyframes deck-in-rest{from{transform:translateX(150%) scale(.88);opacity:0}to{transform:scale(.88);opacity:1}}
+    @keyframes deck-in-open{from{transform:translateX(150%);opacity:0}to{transform:none;opacity:1}}
+    .deck:not(.open) .deck-card.entering{animation:deck-in-rest var(--deck-in) var(--deck-ease) both}
+    .deck.open .deck-card.entering{animation:deck-in-open var(--deck-in) var(--deck-ease) both}
     /* Leaving. The card slides out to the right and gives its height back over
        the same beat, so everything below rises into the gap instead of jumping.
        margin-bottom is what moves the others: shrinking it by the card's own
        height pulls the whole column up, and because it is on the transition
        list above it does it over time rather than in one frame. */
-    .deck-card.leaving{opacity:0;transform:translateX(34px) scale(.96);margin-bottom:calc(-1 * (var(--card-h) + .45rem));pointer-events:none}
+    .deck-card.leaving{opacity:0;transform:translateX(150%) scale(.9);margin-bottom:calc(-1 * (var(--card-h) + .45rem));pointer-events:none;transition-delay:0s!important}
     .sys-card{--card-h:112px;--card-w:352px;cursor:pointer}
     .deck-card + .deck-card{margin-top:.45rem}
-    /* Closing is deliberately slower than opening — a pile snapping shut the
-       instant the pointer leaves reads as the app swatting you away. */
-    .deck.open .deck-card{transition:margin .22s ease,transform .22s ease,background-color .2s ease,color .2s ease,border-color .2s ease,box-shadow .2s ease}
+    /* Opening uses --deck-in and the stagger; the base rule above (--deck-out)
+       is what closing falls back to. LONGHAND on purpose: the `transition`
+       shorthand that used to live here reset transition-delay to 0s, and
+       because it sat further down the sheet it silently wiped the stagger set
+       above AND pinned the whole fan to .22s, so neither the pace Jose asked
+       for nor the stagger ever reached the screen. A shorthand and a longhand
+       for the same property, in that order, is a trap worth naming. */
+    .deck.open .deck-card{transition-duration:var(--deck-in)}
     /* Piled: every card pulled up under the next, offset a few px, rotation
        alternating for a hand-stacked look. */
-    .deck:not(.open) .deck-card{margin-top:calc(6px - var(--card-h));transform:rotate(-2.4deg)}
-    .deck:not(.open) .deck-card:nth-child(even){transform:rotate(1.8deg) translateX(-4px)}
-    .deck:not(.open) .deck-card:nth-child(3n){transform:rotate(-3.4deg) translateX(3px)}
+    /* Every card is scaled DOWN at rest, not just the visible one, so opening
+       the pile is one movement — they grow to full size on the way out and
+       shrink back on the way in. The hand-stacked rotations that used to live
+       here only ever applied to cards nobody could see. */
+    .deck:not(.open) .deck-card{margin-top:calc(6px - var(--card-h));transform:scale(.88);transform-origin:bottom right}
     .deck:not(.open) .deck-card:first-child{margin-top:0}
     /* At rest ONE card is on screen and you can see the app through it. Two
        earlier attempts are the reason it works this way: per-card opacity
@@ -868,7 +895,24 @@
        and the front one gets a translucent BACKGROUND rather than a faded
        element, which is what keeps its badge and its ✕ crisp on top of it. */
     .deck:not(.open) .deck-card:not(:last-child){visibility:hidden;pointer-events:none;opacity:0}
-    .deck:not(.open) .deck-card:last-child{transform:rotate(0deg) scale(.88);transform-origin:bottom right}
+    /* "There are more underneath" — two strips peeking above the front card,
+       never more, however deep the pile goes; the badge already says the exact
+       number. They are DRAWN rather than being the real cards showing through:
+       the front card is deliberately see-through at rest, so a card behind it
+       would bleed through its whole face and turn the corner into the smudge
+       two earlier attempts already produced. A strip sits only in the few
+       pixels above the card, where there is nothing to muddy. */
+    .deck-card::before,.deck-card::after{content:'';position:absolute;left:50%;transform:translateX(-50%);border-radius:8px 8px 0 0;height:7px;background:var(--peek,rgba(148,163,184,.75));opacity:0;pointer-events:none;transition:opacity var(--deck-out) var(--deck-ease)}
+    /* Far enough apart to read as two sheets rather than one thick bar, and the
+       one further back is fainter — depth is what tells you it is a pile. */
+    .deck:not(.open) .deck-card:last-child::before{width:92%;top:-7px}
+    .deck:not(.open) .deck-card:last-child::after{width:82%;top:-15px}
+    .deck.stack-2:not(.open) .deck-card:last-child::before{opacity:1}
+    .deck.stack-3:not(.open) .deck-card:last-child::after{opacity:.6}
+    .sys-card{--peek:rgba(148,163,184,.72)}
+    .cfg-card{--peek:rgba(27,42,74,.5)}
+    [data-theme="dark"] .sys-card{--peek:rgba(148,163,184,.5)}
+    [data-theme="dark"] .cfg-card{--peek:rgba(148,178,230,.45)}
 
     /* A suggestion: dark card, asks a question, answered with its buttons. */
     .cfg-card{background:var(--navy);color:#fff;border:1px solid transparent}
@@ -2342,7 +2386,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.71';
+var APP_VERSION = '9.72';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 var _lastUserName = '';    // display name on file, so the account menu can be repainted without it
@@ -9057,8 +9101,11 @@ function _recomputeCfgDeck(){
 
 function _unqueueCfgAdd(type, value){
   var key = _cfgKey(type, value);
-  _pendingCfgAdds = _pendingCfgAdds.filter(function(p){ return _cfgKey(p.type, p.value) !== key; });
-  _renderCfgDeck();
+  var el  = document.querySelector('.cfg-card[data-key="' + (window.CSS && CSS.escape ? CSS.escape(key) : key) + '"]');
+  _deckCardLeave(el, function(){
+    _pendingCfgAdds = _pendingCfgAdds.filter(function(p){ return _cfgKey(p.type, p.value) !== key; });
+    _renderCfgDeck();
+  });
 }
 
 // All of them — no cap here. The pile only ever shows _DECK_VISIBLE at a time,
@@ -9072,6 +9119,21 @@ function _unqueueCfgAdd(type, value){
 // innerHTML a second time would throw away the handlers wired after the first.
 var _cfgDeckHtml = '', _sysDeckHtml = '', _cfgDeckTotal = 0, _sysDeckTotal = 0;
 
+// Cards already shown at least once, so a background refresh cannot make the
+// whole pile fly in from the right again.
+var _deckSeenIds = {};
+
+// Every card leaves the same way, whichever kind it is and whichever control
+// removed it: out to the right, giving its height back over the same beat so
+// the ones below rise into the gap. Redrawing first would rebuild the pile and
+// leave nothing to animate, so the redraw waits for the movement to finish.
+var _DECK_LEAVE_ANIM_MS = 500;
+function _deckCardLeave(el, then){
+  if (!el){ if (then) then(); return; }
+  el.classList.add('leaving');
+  setTimeout(function(){ if (then) then(); }, _DECK_LEAVE_ANIM_MS);
+}
+
 function _paintDeck(){
   var deck = document.getElementById('cornerDeck');
   if (!deck) return;
@@ -9079,7 +9141,36 @@ function _paintDeck(){
   // something already done, the other is waiting on an answer, and the thing
   // waiting on you belongs on top.
   deck.innerHTML = _sysDeckHtml + _cfgDeckHtml;
-  if (!deck.innerHTML){ deck.classList.remove('open'); return; }
+  if (!deck.innerHTML){
+    deck.classList.remove('open', 'stack-2', 'stack-3');
+    return;
+  }
+
+  var cards = deck.querySelectorAll('.deck-card');
+
+  // Two strips above the front card say "there is more underneath" without
+  // ever showing a third. The badge already gives the exact number, so the
+  // strips only have to answer "one, or several?".
+  deck.classList.toggle('stack-2', cards.length >= 2);
+  deck.classList.toggle('stack-3', cards.length >= 3);
+
+  // Fan-out order: the card on top moves first and the ones under it follow a
+  // beat later, which is the direction paper actually spreads.
+  for (var ci = 0; ci < cards.length; ci++){
+    cards[ci].style.setProperty('--i', String(cards.length - 1 - ci));
+  }
+
+  // A card that has never been on screen slides in from off the right edge.
+  // Anything already seen must NOT re-animate: this function runs on every
+  // background refresh, and a pile that flies in again each time a movement is
+  // saved somewhere else is worse than one that never moved at all.
+  cards.forEach(function(card){
+    var id = card.getAttribute('data-card-id') || card.getAttribute('data-key');
+    if (!id || _deckSeenIds[id]) return;
+    _deckSeenIds[id] = 1;
+    card.classList.add('entering');
+    card.addEventListener('animationend', function(){ card.classList.remove('entering'); }, { once: true });
+  });
 
   // The badge counts the WHOLE pile, including the cards held back from the
   // DOM, and rides on whichever card is actually on top.
@@ -11543,13 +11634,10 @@ function _dismissSysCard(id){
   // jump into the gap with no motion at all, which is what made the deck feel
   // like a list rather than a stack of paper.
   var el = document.querySelector('[data-card-id="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"]');
-  var finish = function(){
+  _deckCardLeave(el, function(){
     _sysCards = _sysCards.filter(function(c){ return c.id !== id; });
     _renderSysDeck();
-  };
-  if (!el){ finish(); return; }
-  el.classList.add('leaving');
-  setTimeout(finish, 300);
+  });
 }
 
 // A notification stays until somebody presses its ✕. It used to carry a
