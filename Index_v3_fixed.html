@@ -1238,6 +1238,46 @@
       .setup-nudge{left:12px;right:auto;width:calc(50vw - 18px);max-width:none}
       .cfg-bell-panel{left:auto;right:12px;width:calc(50vw - 18px);max-width:none}
     }
+    /* ── TOUCH ───────────────────────────────────────────────────────────────
+       Measured across six real device widths, and the finding was the same at
+       every one of them: nothing overflows the page, but almost everything is
+       too small to hit with a thumb. The search boxes and filters were 30–32px
+       tall, the buttons 25–27px, the avatar 34px, and the connection dot — a
+       real button that reloads the data — was TEN PIXELS square. Apple asks for
+       44, Android for 48; a warehouse worker wearing gloves needs every one of
+       them.
+
+       (pointer: coarse) rather than a width breakpoint, on purpose: this is
+       about the finger, not the window. A tablet at 1024px is still a
+       touchscreen, and a narrow window on a laptop is still a mouse — a width
+       rule gets both of those backwards.
+
+       Only the hit areas grow. Nothing here changes a font size, a colour or a
+       layout, so the app looks the same and simply becomes usable. */
+    @media (pointer: coarse){
+      .toolbar input,.toolbar select,.toolbar button,
+      .btn,.btn-sm{min-height:44px}
+      /* Inside a table row the buttons stay compact — 44px each would double
+         the height of every row — but 22px is not a target either. */
+      td .btn-sm,td button,.cfg-btn{min-height:34px;min-width:34px}
+      .acct-btn{width:44px;height:44px;font-size:.85rem}
+      .cfg-bell{min-width:44px;min-height:44px}
+      .nav button{min-height:44px}
+      /* The ones with no class of their own — a bare <button> inherits none of
+         the sizing above, which is exactly why these were the smallest things
+         on the screen: the ✕ on the morning popup measured 16×19. */
+      .alert-banner-actions button,.morning-popup-hdr button,.rack-drawer-hdr button,
+      .rm-btn,.sys-card-x,.cfg-card-add,.cfg-card-skip{min-height:36px;min-width:36px}
+      .rm-btn,.alert-banner-actions button{min-height:40px}
+      /* The connection dot keeps its size and gains a 44px hit area around it.
+         A pseudo-element with no paint of its own still takes the tap, so the
+         design does not change at all — the target simply stops being the size
+         of the dot. */
+      .conn-btn{position:relative}
+      .conn-btn::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%}
+      /* Anything a finger has to land on inside a modal, too. */
+      .modal input,.modal select,.modal textarea,.modal-type-bar button{min-height:44px}
+    }
     /* ── RESPONSIVE ── */
     @media(max-width:768px){
       .topbar{padding:.7rem 1rem .6rem}
@@ -2386,7 +2426,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.72';
+var APP_VERSION = '9.73';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 var _lastUserName = '';    // display name on file, so the account menu can be repainted without it
@@ -11270,6 +11310,32 @@ function _enterGatedScreen(){
   _deckHover = false; _deckPinned = false;
 }
 
+// Links that reload the app as each of the browser's other signed-in Google
+// accounts. GAS web apps honour ?authuser=N (0 = first signed in, 1 = second…).
+//
+// This lived only on the "access denied" screen, which is the wrong one: denied
+// means the app KNOWS who you are and your address is not on the list. The
+// screen that actually needs it is the one that cannot identify you at all,
+// because by far the most common cause is being signed into the wrong Google
+// account in this browser — which is precisely what happened to Jose on his
+// phone and with his personal account on the laptop.
+//
+// target="_top" is required: a plain link navigates the sandboxed iframe to the
+// /exec address, which Google will not render inside itself, and the frame goes
+// white.
+function _accountSwitcherHtml(){
+  var baseUrl = window.location.href.replace(/[?&]authuser=\d/g, '');
+  var sep     = baseUrl.indexOf('?') !== -1 ? '&' : '?';
+  return [0, 1, 2, 3].map(function(nn){
+    var bg = nn === 0 ? '#F3F4F6' : nn === 1 ? '#EFF6FF' : nn === 2 ? '#F0FDF4' : '#FFF7ED';
+    return '<a href="' + baseUrl + sep + 'authuser=' + nn + '" target="_top" rel="noopener" ' +
+      'style="display:inline-flex;align-items:center;justify-content:center;background:' + bg + ';' +
+             'color:#1a1a2e;border:1px solid #E5E7EB;border-radius:8px;padding:.5rem .9rem;' +
+             'font-size:.82rem;font-weight:600;text-decoration:none;flex:1;min-width:90px">' +
+      'Account ' + (nn + 1) + '</a>';
+  }).join('');
+}
+
 function _showGoogleSignIn(clientId, redirectUri) {
   _oauthClientId    = clientId    || '';
   _oauthRedirectUri = redirectUri || '';
@@ -11308,6 +11374,16 @@ function _showGoogleSignIn(clientId, redirectUri) {
               'That is switched on separately by whoever set this system up.</p>' +
           '</div>'
       ) +
+      // Offered whether or not external sign-in is configured, because it is
+      // the fix in most cases: the browser is simply on the wrong account.
+      '<div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid #E5E7EB">' +
+        '<p style="font-size:.75rem;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem">' +
+          'Signed in with the wrong account?</p>' +
+        '<div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center">' + _accountSwitcherHtml() + '</div>' +
+        '<p style="font-size:.72rem;color:#9CA3AF;margin-top:.6rem">' +
+          'These are the Google accounts already signed in on this device, in the order Google lists them. ' +
+          'On a phone, the company account is often not the first one.</p>' +
+      '</div>' +
     '</div></div>';
 }
 
@@ -11366,25 +11442,7 @@ function _showAccessDeniedScreen(status, email) {
   // GAS web apps respect the ?authuser=N parameter to pick which signed-in
   // Google account runs the app (0 = first, 1 = second, 2 = third…).
   // We generate links for accounts 0–3 so the user can switch without logging out.
-  var baseUrl = window.location.href.replace(/[?&]authuser=\d/g, '');
-  var sep     = baseUrl.indexOf('?') !== -1 ? '&' : '?';
-
-  var accountBtns = [0, 1, 2, 3].map(function(n) {
-    var url = baseUrl + sep + 'authuser=' + n;
-    // target="_top" is not a nicety here. The app runs inside Apps Script's
-    // sandboxed googleusercontent.com iframe, and a plain link navigates THAT
-    // FRAME to the /exec address — which Google will not render inside itself,
-    // so the frame goes blank and the only way back is a manual refresh. That
-    // is precisely the white screen Jose hit switching accounts. _top makes the
-    // browser navigate the real window instead.
-    return '<a href="' + url + '" target="_top" rel="noopener" ' +
-      'style="display:inline-flex;align-items:center;justify-content:center;gap:.35rem;' +
-             'background:' + (n === 0 ? '#F3F4F6' : n === 1 ? '#EFF6FF' : n === 2 ? '#F0FDF4' : '#FFF7ED') + ';' +
-             'color:#1a1a2e;border:1px solid #E5E7EB;border-radius:8px;' +
-             'padding:.5rem .9rem;font-size:.82rem;font-weight:600;text-decoration:none;flex:1;min-width:90px">' +
-      'Account ' + (n + 1) +
-      '</a>';
-  }).join('');
+  var accountBtns = _accountSwitcherHtml();
 
   _enterGatedScreen();
   document.querySelector('.container').innerHTML  =

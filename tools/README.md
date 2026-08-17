@@ -11,6 +11,9 @@ node tools/test-button-states.js
 node tools/test-topbar-deck.js
 ```
 
+`tools/audit-responsive.js` is a tape measure, not a test — run it when layout
+changes, read the numbers, fix what they show, run it again.
+
 The browser tests need `npm install playwright` once; Chromium is already on
 the machine (`/opt/pw-browsers/chromium-*/chrome-linux/chrome`, override with
 `CHROME_PATH`).
@@ -38,6 +41,9 @@ come back from — is invisible to both. Those get a browser test.
   MEASUREMENT that the tab bar is centred. That last one is the argument for
   browser tests in one line: the old auto-margin layout put the tabs 146px off
   centre and looked almost right.
+- `audit-responsive.js` — opens the real app at six device sizes, on every tab,
+  and reports sideways page scroll, controls too small for a thumb, anything
+  past the right edge, and page errors. Screenshots land in ./audit/.
 
 Both lift the real code out of `Index_v3_fixed.html` rather than keeping a copy,
 so they cannot quietly drift away from what ships.
