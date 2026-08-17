@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.67';
+var APP_VERSION = '9.68';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -4785,7 +4785,54 @@ function showSetupWizardDialog() {
   requireOwnerContext_();
   var html = HtmlService.createHtmlOutputFromFile('SetupWizard')
     .setWidth(720).setHeight(680);
-  SpreadsheetApp.getUi().showModalDialog(html, PRODUCT_NAME + ' Setup');
+  try {
+    SpreadsheetApp.getUi().showModalDialog(html, PRODUCT_NAME + ' Setup');
+  } catch (err) {
+    // "Specified permissions are not sufficient to call Ui.showModalDialog"
+    // means this copy's appsscript.json is missing script.container.ui — the
+    // permission to open a window over the sheet. The manifest that ships with
+    // Acopio has it, but the Apps Script editor HIDES appsscript.json by
+    // default, so a copy updated by pasting Code and Index keeps whatever
+    // manifest it already had, and this is the first thing that breaks.
+    //
+    // Sheets prints the raw exception no matter what we do here, so this cannot
+    // hide it. What it can do is leave the explanation and the fix somewhere
+    // the person will actually find them, instead of a stack trace and nothing.
+    explainDialogPermission_(String(err && err.message || err));
+    throw err;
+  }
+}
+
+// Writes the diagnosis onto the welcome sheet, creating it if it is not there.
+// A sheet is the only surface available: every other way of talking to the user
+// from here — alert, prompt, sidebar, dialog — needs the very permission that
+// has just been reported missing.
+function explainDialogPermission_(msg) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sh = ss.getSheetByName(START_HERE_SHEET) || createStartHereSheet_(ss);
+    var row = 30;
+    sh.getRange(row, 3).setValue('⚠  SETUP CANNOT OPEN — ONE SETTING IS MISSING')
+      .setFontWeight('bold').setFontSize(12).setFontColor('#B91C1C');
+    sh.setRowHeight(row, 28);
+    var steps = [
+      'Google says: ' + msg,
+      '',
+      'This copy is missing permission to open a window over the sheet. Fix it once:',
+      '1.  Extensions → Apps Script.',
+      '2.  ⚙ Project Settings → tick "Show appsscript.json manifest file in editor".',
+      '3.  Open appsscript.json in the file list on the left.',
+      '4.  Inside "oauthScopes", add this line:',
+      '        "https://www.googleapis.com/auth/script.container.ui",',
+      '5.  Save, come back here, reload the page, and use the 🏭 ' + PRODUCT_NAME + ' menu again.',
+      '     Google will ask you to authorize once more — that is expected.'
+    ];
+    for (var i = 0; i < steps.length; i++) {
+      sh.getRange(row + 1 + i, 3).setValue(steps[i]).setFontSize(10).setFontColor('#374151');
+    }
+    ss.setActiveSheet(sh);
+    try { sh.setActiveSelection('C' + row); } catch (e) {}
+  } catch (e) { Logger.log('explainDialogPermission_: ' + e.message); }
 }
 
 // Called by the wizard's last step once the owner says they've published the
