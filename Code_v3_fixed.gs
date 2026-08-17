@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.69';
+var APP_VERSION = '9.70';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -1201,7 +1201,7 @@ function getInitialData(sessionToken) {
     return {
       serverVersion:      APP_VERSION,
       company:            publicCompany_(),
-      systemActivity:     (function(){ try { return getSystemActivity(30); } catch (e) { return []; } })(),
+      systemActivity:     (function(){ try { return getSystemActivity(30, _auth.email); } catch (e) { return []; } })(),
       columnPrefs:        columnPrefs_(),
       movements:          movements,
       stock:              stock,
@@ -1723,6 +1723,7 @@ function processMovementInner_(ss, action, data, auth) {
   }
   if (action === 'getErrorLog')     return getErrorLog(auth);
   if (action === 'clearErrorLog')   return clearErrorLog(data, auth);
+  if (action === 'dismissSystemCard') return dismissSystemCard(data, auth);
   if (action === 'logClientError')  return logClientError(data, auth);
   if (action === 'loadOlderHistory') return loadOlderHistory(auth);
   throw new Error('Unknown action: ' + action);
@@ -4049,7 +4050,52 @@ function describeMatIdFixes_(fixes) {
 // _announceSystemActivity on the client. Kept generous rather than tight: a
 // notice that disappears before it is read is the bug this whole feature was
 // meant to fix.
-function getSystemActivity(limit) {
+// WHICH CARDS THIS PERSON HAS ALREADY DISMISSED — SERVER-SIDE, ON PURPOSE.
+//
+// It used to live in the browser's localStorage, and every backup notice since
+// August came back on every load however many times the ✕ had been pressed.
+// The app is served inside Apps Script's sandboxed googleusercontent.com frame,
+// and storage there is not something to build on: it is partitioned, and the
+// frame's origin is not the customer's to rely on. A dismissal is a fact about
+// a PERSON, not about a browser — press ✕ at the desk and it should also be
+// gone on the phone — so it belongs on the server, where the rest of what the
+// app knows about that person already lives.
+function sysDismissKey_(email) {
+  return 'SYSDISM_' + String(email || '').toLowerCase().replace(/\W/g, '_').substring(0, 80);
+}
+
+function sysDismissedSet_(email) {
+  var out = {};
+  if (!email) return out;
+  try {
+    var raw = PropertiesService.getScriptProperties().getProperty(sysDismissKey_(email));
+    (JSON.parse(raw || '[]') || []).forEach(function (id) { out[id] = 1; });
+  } catch (e) {}
+  return out;
+}
+
+// Capped so one property can never outgrow the 9KB a Script Property holds.
+// The oldest dismissals are the ones to drop: their events have long since
+// fallen off the end of the 30 the server returns, so they can never come back
+// anyway.
+var SYS_DISMISS_MAX = 150;
+
+function dismissSystemCard(data, auth) {
+  auth = requireAuth_();
+  var id = String((data && data.id) || '').trim();
+  if (!id) return { status: 'success' };
+  var p    = PropertiesService.getScriptProperties();
+  var key  = sysDismissKey_(auth.email);
+  var list = [];
+  try { list = JSON.parse(p.getProperty(key) || '[]') || []; } catch (e) { list = []; }
+  if (list.indexOf(id) === -1) list.push(id);
+  if (list.length > SYS_DISMISS_MAX) list = list.slice(list.length - SYS_DISMISS_MAX);
+  p.setProperty(key, JSON.stringify(list));
+  return { status: 'success', dismissed: list.length };
+}
+
+function getSystemActivity(limit, forEmail) {
+  var dismissed = sysDismissedSet_(forEmail);
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEETS.AUDIT);
   if (!sheet) return [];
@@ -4068,6 +4114,11 @@ function getSystemActivity(limit) {
     var actor = String(rows[i][2] || '').toLowerCase().trim();
     if (!SYSTEM_ACTORS[actor]) continue;
     var action = String(rows[i][1] || '');
+    var atIso  = rows[i][0] ? new Date(rows[i][0]).toISOString() : '';
+    // Same id the browser used to build: timestamp + action. Filtered HERE so
+    // the limit above counts cards this person will actually see, instead of
+    // being spent on ones they dismissed months ago.
+    if (dismissed[atIso + '|' + action]) continue;
     // Anything the app can take you to, it should. A backup is a file in
     // Drive; a re-link happened on numbered rows of the archive. Both are
     // reachable, and "corrected automatically" is only reassuring if you can
@@ -4080,7 +4131,7 @@ function getSystemActivity(limit) {
       if (m) ref = { kind: 'rows', rows: m[1].split(','), label: 'Show the movement' + (m[1].indexOf(',') === -1 ? '' : 's') };
     }
     out.push({
-      at:     rows[i][0] ? new Date(rows[i][0]).toISOString() : '',
+      at:     atIso,
       action: action,
       label:  SYSTEM_EVENT_LABELS[action] || action.replace(/_/g, ' ').toLowerCase(),
       detail: String(rows[i][3] || ''),

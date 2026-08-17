@@ -52,9 +52,16 @@
        pinned to the right edge and stays there at every width. Auto margins on
        the nav absorb the free space evenly on both sides, which centres it
        without a spacer element and without unpinning the cluster. */
-    .topbar-row2{display:flex;align-items:center;gap:10px;flex-wrap:nowrap}
-    .topbar-row2 .nav{margin:0 auto}
-    .topbar-tools{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:auto}
+    /* THREE COLUMNS, not auto margins. `margin:0 auto` on the tabs and
+       `margin-left:auto` on the cluster made THREE auto margins share the free
+       space, so the tabs settled a third of the way along instead of in the
+       middle — which is the lopsided bar Jose measured with red pen. An empty
+       first column the same width as the third puts the tabs dead centre of the
+       whole bar, wherever the cluster happens to end up. minmax(0,…) lets the
+       tab bar give way first when the window narrows, as it did before. */
+    .topbar-row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,auto) minmax(0,1fr);align-items:center;gap:10px}
+    .topbar-row2 .nav{grid-column:2;justify-self:center;margin:0}
+    .topbar-tools{grid-column:3;justify-self:end;display:flex;align-items:center;gap:10px;flex-shrink:0}
     .tools-primary{display:flex;align-items:center;gap:9px}
     /* The Acopio badge with the running version tucked under it — present
        enough to read when someone asks "what version are you on?", quiet
@@ -810,23 +817,35 @@
        rotated corners and the badge to sit OUTSIDE the top card. */
     .deck{position:fixed;right:22px;bottom:22px;z-index:399;display:flex;flex-direction:column;align-items:flex-end;max-width:min(400px,calc(100vw - 44px));padding:16px 12px 0 14px}
     .deck:empty{display:none}
+    /* Reading the pile should not mean the page slides around underneath it.
+       Scroll only — no backdrop, no dimming: this is a corner of the screen
+       asking for a moment, not a window demanding the room. The page scrollbar
+       is already hidden (see html{scrollbar-width:none}), so nothing reflows
+       when it locks. */
+    html.deck-open{overflow:hidden}
     /* Each kind carries its own size, and the collapse is computed FROM that
        size rather than from one hardcoded number — so a mixed pile still
        collapses exactly, whatever is in it. Colour alone was not enough of a
        difference: a notification holds a sentence and needs the width to show
        it, a suggestion holds one name and a pair of buttons. */
-    .deck-card{position:relative;--card-h:96px;--card-w:270px;width:var(--card-w);max-width:100%;height:var(--card-h);flex-shrink:0;border-radius:11px;padding:.62rem .8rem;font-size:.78rem;box-shadow:0 6px 20px rgba(0,0,0,.22);transition:margin .5s ease,transform .5s ease,background-color .45s ease,color .45s ease,border-color .45s ease,box-shadow .45s ease}
+    .deck-card{position:relative;--card-h:96px;--card-w:270px;width:var(--card-w);max-width:100%;height:var(--card-h);flex-shrink:0;border-radius:11px;padding:.62rem .8rem;font-size:.78rem;box-shadow:0 6px 20px rgba(0,0,0,.22);transition:margin .5s cubic-bezier(.22,.61,.36,1),transform .5s cubic-bezier(.22,.61,.36,1),opacity .3s ease,background-color .45s ease,color .45s ease,border-color .45s ease,box-shadow .45s ease}
+    /* Leaving. The card slides out to the right and gives its height back over
+       the same beat, so everything below rises into the gap instead of jumping.
+       margin-bottom is what moves the others: shrinking it by the card's own
+       height pulls the whole column up, and because it is on the transition
+       list above it does it over time rather than in one frame. */
+    .deck-card.leaving{opacity:0;transform:translateX(34px) scale(.96);margin-bottom:calc(-1 * (var(--card-h) + .45rem));pointer-events:none}
     .sys-card{--card-h:112px;--card-w:352px;cursor:pointer}
     .deck-card + .deck-card{margin-top:.45rem}
     /* Closing is deliberately slower than opening — a pile snapping shut the
        instant the pointer leaves reads as the app swatting you away. */
-    .deck:hover .deck-card,.deck.open .deck-card{transition:margin .22s ease,transform .22s ease,background-color .2s ease,color .2s ease,border-color .2s ease,box-shadow .2s ease}
+    .deck.open .deck-card{transition:margin .22s ease,transform .22s ease,background-color .2s ease,color .2s ease,border-color .2s ease,box-shadow .2s ease}
     /* Piled: every card pulled up under the next, offset a few px, rotation
        alternating for a hand-stacked look. */
-    .deck:not(:hover):not(.open) .deck-card{margin-top:calc(6px - var(--card-h));transform:rotate(-2.4deg)}
-    .deck:not(:hover):not(.open) .deck-card:nth-child(even){transform:rotate(1.8deg) translateX(-4px)}
-    .deck:not(:hover):not(.open) .deck-card:nth-child(3n){transform:rotate(-3.4deg) translateX(3px)}
-    .deck:not(:hover):not(.open) .deck-card:first-child{margin-top:0}
+    .deck:not(.open) .deck-card{margin-top:calc(6px - var(--card-h));transform:rotate(-2.4deg)}
+    .deck:not(.open) .deck-card:nth-child(even){transform:rotate(1.8deg) translateX(-4px)}
+    .deck:not(.open) .deck-card:nth-child(3n){transform:rotate(-3.4deg) translateX(3px)}
+    .deck:not(.open) .deck-card:first-child{margin-top:0}
     /* At rest ONE card is on screen and you can see the app through it. Two
        earlier attempts are the reason it works this way: per-card opacity
        stacked into a smudge with the cards behind bleeding through, and muting
@@ -834,15 +853,15 @@
        the answer — the ones behind are hidden outright so nothing can stack,
        and the front one gets a translucent BACKGROUND rather than a faded
        element, which is what keeps its badge and its ✕ crisp on top of it. */
-    .deck:not(:hover):not(.open) .deck-card:not(:last-child){visibility:hidden;pointer-events:none}
-    .deck:not(:hover):not(.open) .deck-card:last-child{transform:rotate(0deg) scale(.88);transform-origin:bottom right}
+    .deck:not(.open) .deck-card:not(:last-child){visibility:hidden;pointer-events:none;opacity:0}
+    .deck:not(.open) .deck-card:last-child{transform:rotate(0deg) scale(.88);transform-origin:bottom right}
 
     /* A suggestion: dark card, asks a question, answered with its buttons. */
     .cfg-card{background:var(--navy);color:#fff;border:1px solid transparent}
-    .deck.dim:not(:hover):not(.open) .cfg-card{background:var(--navy-ghost);color:rgba(255,255,255,.72);border-color:rgba(255,255,255,.12);box-shadow:0 2px 10px rgba(0,0,0,.12)}
-    .deck.dim:not(:hover):not(.open) .cfg-card .cfg-card-lbl,
-    .deck.dim:not(:hover):not(.open) .cfg-card .cfg-card-val{color:rgba(255,255,255,.72)}
-    .deck.dim:not(:hover):not(.open) .cfg-card-acts{opacity:0}
+    .deck.dim:not(.open) .cfg-card{background:var(--navy-ghost);color:rgba(255,255,255,.72);border-color:rgba(255,255,255,.12);box-shadow:0 2px 10px rgba(0,0,0,.12)}
+    .deck.dim:not(.open) .cfg-card .cfg-card-lbl,
+    .deck.dim:not(.open) .cfg-card .cfg-card-val{color:rgba(255,255,255,.72)}
+    .deck.dim:not(.open) .cfg-card-acts{opacity:0}
     .cfg-card-lbl{font-size:.63rem;text-transform:uppercase;letter-spacing:.05em;color:#a1b0cb;font-weight:700}
     .cfg-card-val{font-weight:700;margin:.15rem 0 .45rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .cfg-card-acts{display:flex;gap:.4rem;align-items:center}
@@ -853,10 +872,10 @@
 
     /* A notification: light card, reports a fact, dismissed with its ✕. */
     .sys-card{background:var(--card);color:var(--text);border:1px solid var(--border);border-left:4px solid var(--green)}
-    .deck.dim:not(:hover):not(.open) .sys-card{background:var(--card-ghost);border-color:rgba(0,0,0,.06);border-left-color:var(--border);box-shadow:0 2px 10px rgba(0,0,0,.08)}
-    .deck.dim:not(:hover):not(.open) .sys-card .sys-card-title{color:var(--muted)}
-    .deck.dim:not(:hover):not(.open) .sys-card-when,
-    .deck.dim:not(:hover):not(.open) .sys-card-detail{opacity:.6}
+    .deck.dim:not(.open) .sys-card{background:var(--card-ghost);border-color:rgba(0,0,0,.06);border-left-color:var(--border);box-shadow:0 2px 10px rgba(0,0,0,.08)}
+    .deck.dim:not(.open) .sys-card .sys-card-title{color:var(--muted)}
+    .deck.dim:not(.open) .sys-card-when,
+    .deck.dim:not(.open) .sys-card-detail{opacity:.6}
     .sys-card-title{font-weight:800;color:var(--text);display:flex;align-items:center;gap:.35rem}
     .sys-card-when{color:var(--muted);font-size:.72rem;margin-top:.15rem}
     .sys-card-detail{color:var(--muted);font-size:.71rem;margin-top:.3rem;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;line-height:1.32}
@@ -869,7 +888,7 @@
     .sys-card-x{position:absolute;top:-9px;right:-9px;width:24px;height:24px;border-radius:12px;background:var(--navy);color:#fff;border:2px solid var(--card);font-size:.78rem;font-weight:800;cursor:pointer;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.35);z-index:2}
     .sys-card-x:hover{background:var(--red)}
     .cfg-count{position:absolute;top:-9px;left:-9px;min-width:24px;height:24px;border-radius:12px;background:var(--accent);color:#fff;font-size:.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 6px;border:2px solid var(--card);box-shadow:0 2px 6px rgba(0,0,0,.35);z-index:2}
-    .deck:hover .cfg-count,.deck.open .cfg-count{display:none}
+    .deck.open .cfg-count{display:none}
     .deck.dim .cfg-count,.deck.dim .sys-card-x{opacity:1}
 
     /* ── Phone/tablet: bell in the topbar instead of the hover deck ── */
@@ -1148,9 +1167,14 @@
     /* Stacked from here down, not only on a phone: the moment the tabs need
        two rows there is height beside them going spare and no width to spare,
        so the account circle goes on top and the bell under it. */
+    /* Below this the grid goes away and the old flex row comes back unchanged —
+       tabs taking the room, cluster stacked beside them. Jose asked for the
+       small-screen behaviour to stay exactly as it is, so it is restored here
+       rather than reworked. */
     @media (max-width:720px){
-      .topbar-tools{flex-direction:column;gap:8px;align-items:center}
-      .nav{flex:1 1 auto}
+      .topbar-row2{display:flex;flex-wrap:nowrap}
+      .topbar-row2 .nav{flex:1 1 auto;margin:0}
+      .topbar-tools{flex-direction:column;gap:8px;align-items:center;margin-left:auto}
     }
     @media (max-width:520px){
       .setup-nudge{left:12px;right:auto;width:calc(50vw - 18px);max-width:none}
@@ -2258,7 +2282,7 @@
 <!-- One pile for both kinds of card. Tapping toggles .open — touch has no
      hover, and without that anything behind the front card would be
      unreachable on a tablet. -->
-<div class="deck" id="cornerDeck" onclick="this.classList.toggle('open')"></div>
+<div class="deck" id="cornerDeck"></div>
 
 <div class="overlay" id="reportIssueOverlay">
   <div class="modal modal-sm">
@@ -2304,7 +2328,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.69';
+var APP_VERSION = '9.70';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 var _lastUserName = '';    // display name on file, so the account menu can be repainted without it
@@ -9027,7 +9051,7 @@ function _renderCfgDeck(){
     if (!_cfgSeenKeys[k]) { _cfgSeenKeys[k] = 1; isNew = true; }
   });
 
-  if (deck.matches(':hover') || deck.classList.contains('open')) _cfgWake();
+  if (deck.classList.contains('open')) _cfgWake();
   else if (isNew) { deck.classList.remove('dim'); _cfgScheduleDim(_CFG_SOLID_MS); }
   else deck.classList.add('dim');   // a re-render on its own never wakes it
 }
@@ -9181,11 +9205,65 @@ function _cfgWake(){
   if (deck) deck.classList.remove('dim');
 }
 
+// ── The pile opens and closes from HERE, not from CSS :hover ─────────────────
+// :hover fed back into itself. Opening the pile makes it grow upward and the
+// front card jump from scale(.88) to full size, which moves the geometry out
+// from under the pointer; :hover is then false, so it shuts; the pointer is
+// over it again, so it opens. That is the card "changing size three times" in
+// Jose's video — not a transition to be tuned, a loop to be cut.
+//
+// Driving it from JS with a delay on the way out breaks the loop: a momentary
+// loss of hover while the pile is still settling no longer closes anything.
+// Clicking PINS it open, so reading a long notice does not depend on holding
+// the mouse still.
+var _deckHover = false, _deckPinned = false, _deckLeaveTimer = null;
+var _DECK_LEAVE_MS = 280;
+
+function _deckApply(){
+  var deck = document.getElementById('cornerDeck');
+  if (!deck) return;
+  var open = _deckHover || _deckPinned;
+  deck.classList.toggle('open', open);
+  // The page behind must hold still while somebody is reading the pile — but
+  // NOT dim. A modal darkens because it wants your whole attention; this only
+  // wants the words under the pointer to stop sliding away. The page scrollbar
+  // is already hidden, so locking it shifts no layout.
+  document.documentElement.classList.toggle('deck-open', open);
+  if (open) _cfgWake(); else _cfgScheduleDim(_CFG_REDIM_MS);
+}
+
+function _deckEnter(){
+  clearTimeout(_deckLeaveTimer);
+  _deckHover = true;
+  _deckApply();
+}
+
+function _deckLeave(){
+  clearTimeout(_deckLeaveTimer);
+  _deckLeaveTimer = setTimeout(function(){ _deckHover = false; _deckApply(); }, _DECK_LEAVE_MS);
+}
+
+function _deckTogglePin(){
+  _deckPinned = !_deckPinned;
+  _deckApply();
+}
+
 (function _wireCfgDeckFade(){
   var deck = document.getElementById('cornerDeck');
   if (!deck) return;
-  deck.addEventListener('mouseenter', _cfgWake);
-  deck.addEventListener('mouseleave', function(){ _cfgScheduleDim(_CFG_REDIM_MS); });
+  deck.addEventListener('mouseenter', _deckEnter);
+  deck.addEventListener('mouseleave', _deckLeave);
+  // Touch has no hover at all, so a tap has to do the whole job.
+  deck.addEventListener('click', function(e){
+    if (e.target.closest('[data-sys-x],[data-sys-open],button')) return;  // real controls win
+    _deckTogglePin();
+  });
+  // Unpin by clicking anywhere else, the way any other open panel behaves.
+  document.addEventListener('click', function(e){
+    if (!_deckPinned) return;
+    if (deck.contains(e.target)) return;
+    _deckPinned = false; _deckApply();
+  });
 })();
 
 // Above the breakpoint the corner decks take over and the bell disappears — but
@@ -10966,12 +11044,30 @@ function deactivateUser(email) {
 // ── Identity Picker (for non-org users when GAS can't detect email) ──────────
 // Sign-in screen for non-org users. Company users never reach this (auto-detected).
 var _oauthClientId = '', _oauthRedirectUri = '';
+
+// Everything that is not the gate has to go, not just the topbar.
+//
+// Both gate screens replaced .container and hid the topbar, and stopped there —
+// but the notification pile, the bell panel and the footer are siblings of
+// .container, not children, so they stayed on screen. The result was a sign-in
+// page with the company's backup notices stacked over it: information about the
+// system, shown to somebody the system has not identified yet.
+function _enterGatedScreen(){
+  ['.topbar', '.system-footer', '#cfgBellPanel', '#cornerDeck', '#rackDrawer', '#rackDrawerOverlay']
+    .forEach(function(sel){
+      var el = document.querySelector(sel);
+      if (el) el.style.display = 'none';
+    });
+  // Nothing is left to hover, so nothing should still be holding the scroll.
+  document.documentElement.classList.remove('deck-open');
+  _deckHover = false; _deckPinned = false;
+}
+
 function _showGoogleSignIn(clientId, redirectUri) {
   _oauthClientId    = clientId    || '';
   _oauthRedirectUri = redirectUri || '';
-  var topbar    = document.querySelector('.topbar');
   var container = document.querySelector('.container');
-  if (topbar)    topbar.style.display = 'none';
+  _enterGatedScreen();
   if (!container) return;
 
   var configured = _oauthClientId && _oauthRedirectUri;
@@ -11068,7 +11164,13 @@ function _showAccessDeniedScreen(status, email) {
 
   var accountBtns = [0, 1, 2, 3].map(function(n) {
     var url = baseUrl + sep + 'authuser=' + n;
-    return '<a href="' + url + '" ' +
+    // target="_top" is not a nicety here. The app runs inside Apps Script's
+    // sandboxed googleusercontent.com iframe, and a plain link navigates THAT
+    // FRAME to the /exec address — which Google will not render inside itself,
+    // so the frame goes blank and the only way back is a manual refresh. That
+    // is precisely the white screen Jose hit switching accounts. _top makes the
+    // browser navigate the real window instead.
+    return '<a href="' + url + '" target="_top" rel="noopener" ' +
       'style="display:inline-flex;align-items:center;justify-content:center;gap:.35rem;' +
              'background:' + (n === 0 ? '#F3F4F6' : n === 1 ? '#EFF6FF' : n === 2 ? '#F0FDF4' : '#FFF7ED') + ';' +
              'color:#1a1a2e;border:1px solid #E5E7EB;border-radius:8px;' +
@@ -11077,7 +11179,7 @@ function _showAccessDeniedScreen(status, email) {
       '</a>';
   }).join('');
 
-  document.querySelector('.topbar').style.display = 'none';
+  _enterGatedScreen();
   document.querySelector('.container').innerHTML  =
     '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;background:var(--bg)">' +
     '<div style="background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.12);padding:2.5rem 2rem;max-width:480px;width:100%;text-align:center">' +
@@ -11298,23 +11400,40 @@ function _fmtWhen(iso){
   return sameDay ? 'today at ' + time : d.toLocaleDateString() + ' at ' + time;
 }
 
-var _SYSACT_DISMISS_KEY = 'acopio_sysact_dismissed';
 var _sysCards = [];
 
-function _loadSysDismissed(){
-  try { return JSON.parse(localStorage.getItem(_SYSACT_DISMISS_KEY) || '{}') || {}; }
-  catch (e) { return {}; }
-}
+// Dismissals are the SERVER's memory now, not this browser's.
+//
+// They lived in localStorage, and every backup notice since August came back on
+// every load however many times the ✕ had been pressed. The app runs inside
+// Apps Script's sandboxed googleusercontent.com frame and storage there is not
+// something to build on. It is also the wrong place in principle: pressing ✕ is
+// a fact about a person, so it should hold on their phone too.
+//
+// This set is only a same-session mirror, so a dismissed card cannot flicker
+// back before the next load answers.
+var _sysDismissedNow = {};
+
 function _dismissSysCard(id){
-  var d = _loadSysDismissed();
-  d[id] = 1;
-  // Only the recent ones are ever shown, so this map cannot grow unbounded in
-  // any way that matters, but trim it anyway rather than letting it creep.
-  var keys = Object.keys(d);
-  if (keys.length > 200) keys.slice(0, keys.length - 200).forEach(function(k){ delete d[k]; });
-  try { localStorage.setItem(_SYSACT_DISMISS_KEY, JSON.stringify(d)); } catch (e) {}
-  _sysCards = _sysCards.filter(function(c){ return c.id !== id; });
-  _renderSysDeck();
+  _sysDismissedNow[id] = 1;
+  google.script.run
+    .withFailureHandler(function(){ /* the card is already gone on screen; the
+        next load will bring it back, which is the honest outcome if the write
+        did not land */ })
+    .processMovement('dismissSystemCard', _h({ id: id }));
+
+  // Animate it out first, THEN redraw. Redrawing immediately rebuilds the pile
+  // from scratch and the card simply blinks out of existence — the cards below
+  // jump into the gap with no motion at all, which is what made the deck feel
+  // like a list rather than a stack of paper.
+  var el = document.querySelector('[data-card-id="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"]');
+  var finish = function(){
+    _sysCards = _sysCards.filter(function(c){ return c.id !== id; });
+    _renderSysDeck();
+  };
+  if (!el){ finish(); return; }
+  el.classList.add('leaving');
+  setTimeout(finish, 300);
 }
 
 // A notification stays until somebody presses its ✕. It used to carry a
@@ -11330,9 +11449,8 @@ function _dismissSysCard(id){
 // backup a day that is a month of ignoring it, which is long enough to mean
 // nobody was ever going to read it.
 function _announceSystemActivity(){
-  var dismissed = _loadSysDismissed();
   _sysCards = (systemActivity || []).filter(function(a){
-    return a.at && !dismissed[a.at + '|' + a.action];
+    return a.at && !_sysDismissedNow[a.at + '|' + a.action];
   }).map(function(a){
     return { id: a.at + '|' + a.action, label: a.label, at: a.at, detail: a.detail, extra: a.extra };
   });
@@ -11348,7 +11466,7 @@ function _renderSysDeck(){
 
   // Newest painted last so it sits nearest the top of the pile.
   _sysDeckHtml = _sysCards.slice(0, 5).reverse().map(function(c){
-    return '<div class="deck-card sys-card" data-sys-open="' + _he(c.id) + '" title="Click for the full record">' +
+    return '<div class="deck-card sys-card" data-card-id="' + _he(c.id) + '" data-sys-open="' + _he(c.id) + '" title="Click for the full record">' +
       '<button class="sys-card-x" data-sys-x="' + _he(c.id) + '" title="Dismiss">✕</button>' +
       '<div class="sys-card-title">✓ ' + _he(c.label) + '</div>' +
       '<div class="sys-card-when">' + _he(_fmtWhen(c.at)) + '</div>' +
