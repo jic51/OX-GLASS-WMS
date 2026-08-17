@@ -40,6 +40,20 @@ here once they ship (the commit message is the record of what changed and why).
    La idea de fondo: se empieza por la pregunta correcta — *"¿de qué categoría
    quiero vigilar algo?"* — en vez de por una lista de cientos de materiales.
 
+6. **Iconos profesionales y logo de Acopio — EN PAUSA, a la espera de Jose.**
+   El ZIP de Streamline ya está (45 iconos, PNG 48×48 + 4 SVG) y las tres
+   propuestas de marca están dibujadas. Jose decide cuándo se hace y cuál se
+   usa; las dos van en la misma pasada porque comparten el mismo trabajo.
+
+7. **Copiar un sistema VIVO arrastra la lista de usuarios.** Jose copió el
+   archivo de OX a su Drive personal y su correo personal ya estaba dentro,
+   como WAREHOUSE, así que la copia nueva le daba menos permisos de los que
+   correspondían a su propio archivo. No es un fallo — es lo que una copia hace
+   — pero nadie lo espera. El wizard debería avisar cuando encuentra usuarios
+   heredados y ofrecer vaciar la lista y dejar solo al dueño. La plantilla
+   limpia ya resuelve el caso de un cliente; esto es para las copias que se
+   hacen entre archivos propios.
+
 ## Open decision — access when the customer has no Workspace domain
 
 The identification rule, verified in `getUserRole()`:

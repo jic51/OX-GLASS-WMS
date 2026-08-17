@@ -483,6 +483,20 @@
       100%      {transform:rotate(360deg)}
     }
     .spin-hg{display:inline-block;animation:hg-flip 2.6s ease-in-out infinite;will-change:transform}
+    /* ── SWITCH ──────────────────────────────────────────────────────────────
+       For settings that are ON or OFF and take effect immediately. A checkbox
+       would work, but a checkbox reads as "part of a form I still have to
+       submit", and this one acts the moment it moves. Built on a real
+       <input type="checkbox"> so the keyboard and screen readers get it free. */
+    .sw{position:relative;display:inline-flex;align-items:center;gap:.6rem;cursor:pointer;user-select:none}
+    .sw input{position:absolute;opacity:0;width:44px;height:24px;margin:0;cursor:pointer}
+    .sw-track{width:44px;height:24px;border-radius:999px;background:var(--border);transition:background .2s ease;flex:none;position:relative}
+    .sw-track::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.28);transition:transform .2s cubic-bezier(.22,.61,.36,1)}
+    .sw input:checked + .sw-track{background:var(--green)}
+    .sw input:checked + .sw-track::after{transform:translateX(20px)}
+    .sw input:focus-visible + .sw-track{box-shadow:0 0 0 3px rgba(59,125,216,.35)}
+    .sw input:disabled + .sw-track{opacity:.5;cursor:wait}
+    .sw-text{font-size:.85rem;font-weight:600}
     /* ── BUTTONS THAT ARE WORKING ────────────────────────────────────────────
        A real spinner, drawn in CSS from the button's own text colour, so the
        same rule works on a white button and on a red one. The ⏳ it replaces was
@@ -2328,7 +2342,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.70';
+var APP_VERSION = '9.71';
 var userRole = 'WAREHOUSE';
 var userEmail = '';
 var _lastUserName = '';    // display name on file, so the account menu can be repainted without it
@@ -2342,11 +2356,34 @@ var _SESSION_KEY   = 'oxwms_session_v3';
 var _sessionToken  = (function(){ try{ return localStorage.getItem(_SESSION_KEY)||''; }catch(e){return '';} })();
 // Injects the verified session token into any payload sent to processMovement.
 function _h(data){ return _sessionToken ? Object.assign({}, data||{}, {_sessionToken:_sessionToken}) : (data||{}); }
+// Errors that are not ours, and must never reach an admin's inbox.
+//
+// Browser extensions run their own code inside every page, and when theirs
+// fails the page hears about it. A crypto wallet extension threw "Failed to
+// connect to MetaMask" on Jose's browser and the app dutifully filed it as a
+// system error and emailed OX Glass about it — an alert, to a warehouse, about
+// a wallet nobody installed on purpose.
+//
+// The test is where the code CAME FROM, not what it says: anything whose stack
+// points at an extension is not ours. The name list is the second net, for
+// extensions that throw before there is a stack to read. Alerts that cry wolf
+// get filtered out by the person receiving them, which costs the real ones
+// their value — so this matters more than its size suggests.
+var _FOREIGN_ERROR_SOURCES = /chrome-extension:\/\/|moz-extension:\/\/|safari-extension:\/\/|extensions::/i;
+var _FOREIGN_ERROR_NAMES   = /metamask|ethereum provider|web3|coinbase wallet|phantom|solana|tronlink|binance chain|keplr|grammarly|lastpass|adblock/i;
+
+function _isForeignError(message, stack) {
+  if (_FOREIGN_ERROR_SOURCES.test(String(stack || ''))) return true;
+  if (_FOREIGN_ERROR_NAMES.test(String(message || ''))) return true;
+  return false;
+}
+
 // Fire-and-forget report of an unexpected client error to ERROR_LOG. Never
 // blocks or alarms the user if the report itself fails — logging is best-effort.
 function _reportClientError(action, message, stack) {
   try {
     if (!_sessionToken && userRole === 'NO_SESSION') return;
+    if (_isForeignError(message, stack)) return;
     google.script.run
       .withSuccessHandler(function(){})
       .withFailureHandler(function(){})
@@ -6673,8 +6710,8 @@ function _renderSystemTab() {
           _sysActRefHtml(a) +
         '</li>';
       }).join('') + '</ul>'
-    : '<p style="font-size:.78rem;color:var(--muted)">Nothing automatic has run yet. The daily backup runs at 2am ' +
-      'once it is switched on from the ' + _he(PRODUCT) + ' menu in the spreadsheet.</p>';
+    : '<p style="font-size:.78rem;color:var(--muted)">Nothing automatic has run yet. Switch the nightly backup on below ' +
+      'and the first one runs tonight at 2am.</p>';
 
   content.innerHTML =
     '<p style="font-size:.8rem;color:var(--muted);margin-bottom:1rem">System-wide maintenance — not specific to any one category.</p>' +
@@ -6692,6 +6729,10 @@ function _renderSystemTab() {
         '<span style="color:var(--muted);font-size:.75rem">Older movements stay accessible via "Load Older History".</span>' +
       '</div>' +
     '</div>' +
+    '<div class="field" style="margin-bottom:1.25rem">' +
+      '<label>Backups</label>' +
+      '<div id="backupBox" style="color:var(--muted);font-size:.78rem"><span class="spin-hg">⏳</span> Checking…</div>' +
+    '</div>' +
     '<div class="field">' +
       '<label>Stock totals</label>' +
       '<div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">' +
@@ -6699,6 +6740,81 @@ function _renderSystemTab() {
         '<span style="color:var(--muted);font-size:.75rem">Recalculates LIVE_STOCK / SITE_STOCK / WASTED_STOCK from the current movement history. Use this if a deleted or edited movement left stale numbers behind.</span>' +
       '</div>' +
     '</div>';
+
+  _loadBackupStatus();
+}
+
+// The nightly backup used to be reachable only from the spreadsheet menu, and
+// this very tab told people so — without offering any way to do it. An admin
+// who lives in the app could not see whether their data was being backed up at
+// all, which is a strange thing for a system to keep to itself.
+function _loadBackupStatus(){
+  var box = document.getElementById('backupBox');
+  if (!box) return;
+  google.script.run
+    .withSuccessHandler(function(st){ _drawBackupBox(st || {}); })
+    .withFailureHandler(function(e){
+      var b = document.getElementById('backupBox');
+      if (b) b.innerHTML = '<span style="color:var(--red)">Could not read the backup schedule: ' + _he(e.message||e) + '</span>';
+    })
+    .processMovement('getBackupStatus', _h({}));
+}
+
+function _drawBackupBox(st){
+  var box = document.getElementById('backupBox');
+  if (!box) return;
+  var on = !!st.enabled;
+  box.innerHTML =
+    '<label class="sw" style="margin-bottom:.5rem">' +
+      '<input type="checkbox" id="backupSw"' + (on ? ' checked' : '') + ' onchange="_toggleBackup(this)">' +
+      '<span class="sw-track"></span>' +
+      '<span class="sw-text" style="color:var(--text)">Back up automatically every night at 2am</span>' +
+    '</label>' +
+    '<div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-top:.35rem">' +
+      '<button id="btnBackupNow" class="btn btn-ghost btn-sm" onclick="_backupNow()">🗄 Back up now</button>' +
+      '<span style="color:var(--muted);font-size:.75rem">' +
+        (on
+          ? 'Copies are kept for ' + (st.retentionDays || 30) + ' days in a Drive folder called "' + _he(st.folder || '') + '", then deleted.'
+          : 'Nothing is being backed up on a schedule. Turn this on — it costs nothing and it is the only thing that gets your data back after a bad import or a deleted row.') +
+      '</span>' +
+    '</div>' +
+    // Deliberately separate from the switch: "back this up before I do
+    // something risky" and "back it up every night" are different decisions,
+    // and the menu version ran them together.
+    '<div style="color:var(--muted);font-size:.72rem;margin-top:.4rem">' +
+      '"Back up now" makes one extra copy immediately. It does not change the schedule.' +
+    '</div>';
+}
+
+function _toggleBackup(el){
+  var want = el.checked;
+  el.disabled = true;
+  google.script.run
+    .withSuccessHandler(function(res){
+      _drawBackupBox({ enabled: res && res.enabled, retentionDays: 30, folder: '' });
+      _loadBackupStatus();                       // re-read, so the text is the server's truth
+      showToast(want ? 'Nightly backup is on ✓' : 'Nightly backup turned off', want ? 'ok' : 'warn');
+    })
+    .withFailureHandler(function(e){
+      el.checked = !want; el.disabled = false;   // put the switch back where it was
+      showToast('Could not change it: ' + (e.message||e), 'err', 6000);
+    })
+    .processMovement('setBackupEnabled', _h({ enabled: want }));
+}
+
+function _backupNow(){
+  var btn = document.getElementById('btnBackupNow');
+  _btnBusy(btn, 'Backing up…');
+  google.script.run
+    .withSuccessHandler(function(res){
+      _btnDone(btn, true);
+      showToast('Backup created: ' + ((res && res.name) || 'done'), 'ok', 5000);
+    })
+    .withFailureHandler(function(e){
+      _btnReset(btn);
+      showToast('Backup failed: ' + (e.message||e), 'err', 6000);
+    })
+    .processMovement('runBackupOnDemand', _h({}));
 }
 
 // ── Bulk Import (CSV) ─────────────────────────────────────────────────────────
