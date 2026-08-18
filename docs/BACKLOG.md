@@ -313,8 +313,8 @@ plantilla, cero cambios de motor.
 - **Limpieza del error log** — HECHO en v9.64.
 
 ### Grandes (una semana o más)
-- **Permisos granulares por rol** — prerrequisito de los costos.
-- **Precios y costos** (ver arriba).
+- **Precios y costos** (ver arriba). Ya no está bloqueado — el prerrequisito
+  (permisos granulares) se resolvió en v9.76.
 - **Plantillas por industria** (ver arriba).
 - **QR / códigos de barras + impresión de etiquetas.**
 - **Sugerencias proactivas de calidad de datos** (ver más abajo).
