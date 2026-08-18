@@ -9,6 +9,15 @@
 // 2. THE TABS BEING CENTRED. "margin:0 auto" plus "margin-left:auto" makes
 //    three auto margins share the free space, which parks the tabs a third of
 //    the way along and LOOKS almost right. Only measuring catches it.
+// 3. THE CARD JUMPING TO CENTRE BEFORE IT GROWS. transform-origin was only
+//    set on the resting rule, so the instant the pile opened it fell back to
+//    the CSS default (dead centre) one frame before the scale transition even
+//    started — a corner-anchored card should never have its bottom-right
+//    corner move at all while it grows.
+// 4. CARDS VANISHING INSTEAD OF SHRINKING ON CLOSE. visibility:hidden is not
+//    on the transition list, so it used to switch on the very first frame of
+//    closing and hide the shrink it was supposed to show. Fixed with a
+//    delayed, zero-duration transition on visibility alone.
 //
 // Usage:  node tools/test-topbar-deck.js [path/to/Index_v3_fixed.html]
 
@@ -176,6 +185,45 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   });
   check('a leaving card animates its margin', eased.hasTransition, true);
   check('a leaving card fades out',           eased.opacity < 1, true);
+
+  // ── The origin must never move: the front card's bottom-right corner is
+  //    the anchor it grows from, so it must land in the exact same place at
+  //    rest and one frame into opening. Any difference is the "jump to
+  //    centre" bug back.
+  const cornerAt = async () => p.evaluate(() => {
+    const r = document.querySelector('[data-card-id="c"]').getBoundingClientRect();
+    return { x: Math.round(r.x + r.width), y: Math.round(r.y + r.height) };
+  });
+  const cornerRest = await cornerAt();
+  await deck.hover();
+  await wait(16);   // one frame — before the transition has moved anything
+  const cornerOpen1 = await cornerAt();
+  check('the corner does not jump when opening',
+    Math.abs(cornerRest.x - cornerOpen1.x) <= 1 && Math.abs(cornerRest.y - cornerOpen1.y) <= 1, true);
+  await p.mouse.move(10, 10);
+  await wait(900);
+
+  // ── Closing: a back card must stay visible while it shrinks, and only
+  //    disappear once its own (staggered) transition has actually finished —
+  //    not on the first frame of closing, which is what made cards vanish
+  //    instead of shrinking.
+  await deck.hover();
+  await wait(900);
+  await p.mouse.move(10, 10);
+  // 340ms clears the 280ms mouseleave grace period (nothing moves before
+  // that) and lands 60ms into the back card's own fade — mid-transition, not
+  // at its start or its end.
+  await wait(340);
+  const v0 = await p.evaluate(() => getComputedStyle(document.querySelector('[data-card-id="a"]')).visibility);
+  const o0 = await p.evaluate(() => parseFloat(getComputedStyle(document.querySelector('[data-card-id="a"]')).opacity));
+  check('a back card is still visible mid-close, not vanished already', v0, 'visible');
+  check('and is partway through fading, not fully faded yet', o0 > 0.3 && o0 < 1, true);
+  // Total time to hidden = the 280ms mouseleave grace period (closing has not
+  // even started yet at the 50ms mark above) + this card's own stagger delay
+  // + its shrink duration (110ms + 620ms). ~1300ms clears all of that.
+  await wait(1300);
+  const vEnd = await p.evaluate(() => getComputedStyle(document.querySelector('[data-card-id="a"]')).visibility);
+  check('the back card is hidden once its shrink has finished', vEnd, 'hidden');
 
   await browser.close();
   if (fails.length){ console.error('\nFAILED:\n  ' + fails.join('\n  ')); process.exit(1); }
