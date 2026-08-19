@@ -10,6 +10,7 @@ node tools/test-modal-shield.js
 node tools/test-button-states.js
 node tools/test-topbar-deck.js
 node tools/test-checkin.js
+node tools/test-pricing.js
 ```
 
 `tools/audit-responsive.js` is a tape measure, not a test — run it when layout
@@ -51,6 +52,15 @@ come back from — is invisible to both. Those get a browser test.
   milestones as ONE email not several, stays silent when the customer is
   actually using the app, stays silent with no SUPPORT_EMAIL configured, and
   backfills SETUP_COMPLETED_AT on a pre-existing install without a false alarm.
+- `test-pricing.js` — the weighted-average cost engine (addMovementsBatch_'s
+  pricing branch, saveAvgCostUpdates_, and their real dependencies), lifted
+  verbatim into a Node vm against fake in-memory sheets: bootstraps on a
+  material's first cost, blends by quantity on the next one, a blank cost
+  changes nothing, EXIT/WASTE always price from the average and ignore
+  whatever a client sends, an unpriced material gets a blank cost (never a
+  misleading 0), a purchase split across racks still blends correctly, cents
+  round properly, and the CONFIG write-back updates one row per material
+  rather than appending a duplicate on every entry.
 
 Both lift the real code out of `Index_v3_fixed.html` rather than keeping a copy,
 so they cannot quietly drift away from what ships.

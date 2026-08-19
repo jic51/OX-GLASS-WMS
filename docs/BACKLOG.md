@@ -200,6 +200,27 @@ Revisit when the first customer actually needs external access.
   that project is Jose's and is configured once for all customers, not one per
   customer copy. Moved to Features as real work.
 
+## Precios y costos — CORE construido en v9.78
+
+**Lo de abajo es el diseño original; lo que sigue ya está construido y
+verificado (20 aserciones en tools/test-pricing.js sobre el motor real).**
+
+Lo que YA existe: costo opcional en cada línea de ENTRY (visible solo con
+`canSeeCosts`), promedio ponderado recalculado y estampado por fila, EXIT/
+WASTE/TRANSFER siempre valorados desde el promedio del servidor — nunca de lo
+que mande el cliente —, y "Inventory Value" en el dashboard con el conteo
+honesto de "X de Y SKUs con precio".
+
+**Deliberadamente NO en esta pasada** — cada uno es su propio trabajo:
+- **Costo por proyecto** (suma de EXIT × costo, agrupado por proyecto).
+- **Desperdicio en dólares** (WASTE × costo, en el dashboard o un reporte).
+- **Alerta de cambio de precio** ("este proveedor cobró 18% más que la vez
+  pasada").
+- **Columna de costo en el CSV de Movements** y en el import masivo.
+- **Editar el costo de un movimiento ya guardado** — `modifyMovement` no toca
+  las columnas de costo todavía; corregir una entrada con precio mal tecleado
+  hoy no recalcula el promedio.
+
 ## Diseño pendiente — precios y costos en el flujo de datos
 
 **Decidido en principio: costo promedio ponderado, calculado en la ENTRADA,
