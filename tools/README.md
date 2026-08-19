@@ -19,6 +19,8 @@ node tools/test-backup-status.js
 node tools/test-backup-backfill.js
 node tools/test-tooltip-edge.js
 node tools/test-splash-notes.js
+node tools/test-account-tooltip.js
+node tools/test-favicon.js
 ```
 
 `tools/audit-responsive.js` is a tape measure, not a test — run it when layout
@@ -99,13 +101,16 @@ come back from — is invisible to both. Those get a browser test.
   green "N avail" figure fills qty with that number — in the EXIT rows, the
   TRANSFER row, and the single-field WASTE stock check. This is the one that
   actually clicks the menu open and reads the resulting form fields, not just
-  the HTML string that would build it. Also covers two data-integrity bugs
+  the HTML string that would build it. Also covers three data-integrity bugs
   Jose caught by using the app: an already-open drawer re-rendering (or
   auto-closing, if the rack is now empty) the moment fresh stock data lands
-  instead of keeping showing a material that already left, and the EXIT
+  instead of keeping showing a material that already left, the EXIT
   destination / single-material category fields actually resetting between
   two movements in a row instead of silently carrying over what was typed
-  into the PREVIOUS one.
+  into the PREVIOUS one, and the TRANSFER row's "avail" figure showing the
+  moment a rack is picked instead of staying blank until qty is typed —
+  which made the whole tap-to-fill-qty shortcut impossible on a row the Rack
+  Drawer had just pre-filled with a blank qty on purpose.
 - `test-backup-status.js` — the "Last backup" line in Settings → System
   (`_drawBackupBox`), lifted verbatim into a Node vm: hidden on a fresh
   install with nothing recorded yet, shown with the right relative time and a
@@ -130,13 +135,25 @@ come back from — is invisible to both. Those get a browser test.
   centred, and hovering back and forth leaves no stale edge class behind.
 - `test-splash-notes.js` — the loading screen's rotating phrases and manual
   reload fallback (SPLASH_NOTES / `_showSplashReload`), a Playwright run
-  using clock mocking to fast-forward through the real 2.5s rotation instead
-  of actually waiting ~13 seconds per run: starts on the first phrase,
+  using clock mocking to fast-forward through the real 3.5s rotation instead
+  of actually waiting ~18 seconds per run: starts on the first phrase,
   rotates through all of them in order, the last one says the wait is longer
   than expected and stays there instead of looping back to "Connecting…", a
   working Reload control appears only once the phrases run out (not before),
   and hiding the splash for a real successful load stops the rotation for
   good.
+- `test-account-tooltip.js` — the account button's tooltip
+  (`_setAccountIdentity`'s data-tip build), lifted verbatim into a Node vm:
+  shows the real name over the role (not the old static "Your account"),
+  honors a custom WAREHOUSE role label instead of the raw internal value,
+  falls back to email when there's no name on record, and confirms a name
+  with HTML-sensitive characters is safe by construction (CSS `attr()` is
+  never parsed as markup).
+- `test-favicon.js` — the browser-tab icon, real Playwright against the real
+  app: a real Acopio-branded icon from first paint instead of the generic
+  Apps Script one Jose was seeing, swaps to the company's own uploaded logo
+  the moment one exists (no second upload), and reverts to the default mark
+  if the logo is removed.
 
 All of these lift the real code out of `Index_v3_fixed.html` (or
 `Code_v3_fixed.gs`) rather than keeping a copy, so they cannot quietly drift

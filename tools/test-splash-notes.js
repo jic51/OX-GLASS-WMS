@@ -5,8 +5,8 @@
 // expected, and there should be a way out that doesn't require the user to
 // already know they should reload.
 //
-// Uses Playwright's clock mock to fast-forward through the real 2.5s
-// intervals instead of actually waiting ~13 seconds per run.
+// Uses Playwright's clock mock to fast-forward through the real 3.5s
+// intervals instead of actually waiting ~18 seconds per run.
 //
 // Usage:  node tools/test-splash-notes.js [path/to/Index_v3_fixed.html]
 
@@ -58,16 +58,16 @@ function check(label, cond) {
     document.getElementById('splashNote').textContent) === NOTES[0]);
 
   for (let i = 1; i < NOTES.length - 1; i++) {
-    await page.clock.fastForward(2600);
+    await page.clock.fastForward(3600);
     const text = await page.evaluate(() => document.getElementById('splashNote').textContent);
     check('after rotation ' + i + ', shows phrase ' + (i + 1) + ' of ' + NOTES.length, text === NOTES[i]);
   }
 
   console.log('\nScenario: the last phrase says the wait is longer than expected, and stays (no looping back to the first)');
-  await page.clock.fastForward(2600);
+  await page.clock.fastForward(3600);
   check('shows the final "taking longer than expected" phrase', await page.evaluate(() =>
     document.getElementById('splashNote').textContent) === NOTES[NOTES.length - 1]);
-  await page.clock.fastForward(2600);
+  await page.clock.fastForward(3600);
   check('stays on the final phrase — does not loop back to "Connecting…"', await page.evaluate(() =>
     document.getElementById('splashNote').textContent) === NOTES[NOTES.length - 1]);
 

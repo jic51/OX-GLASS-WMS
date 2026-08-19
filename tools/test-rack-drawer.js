@@ -146,6 +146,14 @@ async function closeMoveModal(page) {
     var row = document.querySelector('#transferRowsContainer .transfer-row');
     return row.querySelector('.tr-qty').value === '' && row.querySelector('.tr-dest').value === '';
   }));
+  check('"10 avail" shows immediately even though qty is still blank (Jose\'s report)', await page.evaluate(() => {
+    var chip = document.querySelector('#transferRowsContainer .transfer-row .exit-avail');
+    return chip.classList.contains('ok') && chip.textContent.indexOf('10') !== -1;
+  }));
+  await page.click('#transferRowsContainer .transfer-row .exit-avail');
+  await page.waitForTimeout(80);
+  check('tapping it fills the transfer row\'s qty', await page.evaluate(() =>
+    document.querySelector('#transferRowsContainer .transfer-row .tr-qty').value) === '10');
 
   await closeMoveModal(page);
 

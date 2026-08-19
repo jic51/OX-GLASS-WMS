@@ -5,6 +5,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Acopio — Warehouse Management</title>
+  <!-- Default tab icon — the Acopio mark (same one on the splash screen), a
+       navy tile with the stacked-layers glyph. Web apps served through Apps
+       Script otherwise fall back to a generic Apps Script icon, which is what
+       Jose was seeing. applyCompanyBranding() swaps this for the company's
+       own uploaded logo once one exists — see the c.logoId branch there. -->
+  <link rel="icon" id="appFavicon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%231B2A4A'/%3E%3Cpath d='M12 4L4 8l8 4 8-4-8-4zM4 15l8 4 8-4M4 11l8 4 8-4' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -1097,7 +1103,7 @@
     .tip{position:relative}
     .tip::after{content:attr(data-tip);position:absolute;left:50%;top:calc(100% + 8px);transform:translateX(-50%) translateY(-4px);
       background:var(--navy);color:#fff;font-size:.74rem;font-weight:600;line-height:1.45;letter-spacing:0;text-transform:none;
-      padding:.55rem .7rem;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.28);white-space:normal;width:max-content;max-width:240px;
+      padding:.55rem .7rem;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.28);white-space:pre-line;width:max-content;max-width:240px;
       opacity:0;pointer-events:none;transition:opacity .15s ease,transform .15s ease;z-index:60}
     .tip:hover::after,.tip:focus-visible::after{opacity:1;transform:translateX(-50%) translateY(0)}
     /* Centered-on-the-icon is wrong the moment the icon sits near either edge
@@ -1466,7 +1472,7 @@
          everything you can do to the app itself lives behind it, instead of
          being scattered across the topbar. -->
     <div class="acct-wrap" id="acctWrap">
-      <button class="acct-btn" id="acctBtn" onclick="toggleAccountMenu(event)" title="Your account">
+      <button class="acct-btn tip" id="acctBtn" onclick="toggleAccountMenu(event)" data-tip="Your account">
         <span id="acctInitials">·</span>
       </button>
       <div class="acct-menu" id="acctMenu">
@@ -2504,7 +2510,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.83';
+var APP_VERSION = '9.84';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -3303,6 +3309,9 @@ function getBase64(file){
 // copy can complete it — the backend enforces that (see getSetupState); this
 // side just renders what it is told.
 var PRODUCT = 'Acopio';
+// Read from the <link> itself rather than duplicating the data: URI as a
+// second literal — one source of truth for the default mark.
+var APP_FAVICON_DEFAULT = (document.getElementById('appFavicon') || {}).href || '';
 var _wizStep = 0;
 var _wizSkipped = {};
 // Set the moment setup succeeds, so the reload it kicks off doesn't race the
@@ -3876,6 +3885,7 @@ function applyCompanyBranding(c){
       logo.src = dataUrl;
       logo.alt = name || '';
       logo.style.display = '';
+      _setFavicon(dataUrl);
       // Kept for the next load's splash. Anything big enough to be worth
       // worrying about is left out: a logo that does not fit is simply not
       // remembered, and the splash falls back to the company name.
@@ -3886,8 +3896,17 @@ function applyCompanyBranding(c){
                                            // thumbnail would drop its transparency
   } else if (logo && !c.logoId){
     logo.style.display = 'none';
+    _setFavicon(APP_FAVICON_DEFAULT);
     try { localStorage.removeItem('acopio_brand_logo'); } catch (e) {}   // a removed logo must not linger on the splash
   }
+}
+
+// The company's own uploaded logo becomes the browser tab icon too, once
+// there is one — same file, no extra upload. Falls back to the default
+// Acopio mark when there isn't (or isn't yet) a company logo.
+function _setFavicon(href){
+  var link = document.getElementById('appFavicon');
+  if (link && href) link.href = href;
 }
 
 // ── Report a Problem (floating button) ──────────────────────────────────────
@@ -5133,7 +5152,15 @@ function validateTransferRows(){
     var dest = (row.querySelector('.tr-dest').value || '').trim().toUpperCase();
     var qty  = Math.max(0, parseInt(row.querySelector('.tr-qty').value) || 0);
     var chip = row.querySelector('.exit-avail');
-    if (!rack || qty <= 0){ chip.textContent = '—'; chip.className = 'exit-avail neutral'; return; }
+    // Available should show the moment a rack is picked — that's the whole
+    // point of the tap-to-fill-qty shortcut, which needs a number to tap
+    // BEFORE qty has anything in it. Requiring qty > 0 first made this show
+    // nothing until the user had already typed the number it was supposed to
+    // save them from typing (Jose's report: picking a rack from the map's
+    // Rack Drawer, which leaves qty blank on purpose, showed no "avail" at
+    // all until qty was filled by hand). qty only matters now for the
+    // over-limit warning below, not for whether anything shows at all.
+    if (!rack){ chip.textContent = '—'; chip.className = 'exit-avail neutral'; return; }
     // Locked-with-a-destination-list: this row's transfer will be rejected by the
     // backend unless the chosen destination is on the allow-list — warn early.
     var lock = _findLock(key, rack);
@@ -5148,7 +5175,7 @@ function validateTransferRows(){
     var avail = locs[rack] !== undefined ? locs[rack] : null;
     if (avail === null){
       chip.textContent = '? unknown rack'; chip.className = 'exit-avail neutral';
-    } else if (qty > avail){
+    } else if (qty > 0 && qty > avail){
       chip.textContent = '⚠ only ' + avail + ' avail'; chip.className = 'exit-avail warn';
     } else {
       chip.textContent = '✓ ' + avail + ' available';  chip.className = 'exit-avail ok'; chip.dataset.avail = avail;
@@ -12452,9 +12479,9 @@ var _splashTimer = null, _splashPct = 8;
 
 // A single "almost there" message read the same whether the load takes 3
 // seconds or 20 — a real wait deserves more than one sentence. Rotates every
-// 2.5s; the last one stays up and stops rotating rather than looping, since
-// repeating "taking longer than expected" over and over reads as broken, not
-// as still trying.
+// 3.5s (Jose: 2.5s read as too fast) — the last one stays up and stops
+// rotating rather than looping, since repeating "taking longer than
+// expected" over and over reads as broken, not as still trying.
 var SPLASH_NOTES = [
   'Connecting to your spreadsheet…',
   'Reading your inventory…',
@@ -12487,7 +12514,7 @@ var _splashNoteTimer = null, _splashNoteIdx = 0;
       return;
     }
     if (n) n.textContent = SPLASH_NOTES[_splashNoteIdx];
-  }, 2500);
+  }, 3500);
 })();
 
 function _showSplashReload(){
@@ -12933,7 +12960,15 @@ function _setAccountIdentity(name, email, role, stale){
   var btn = document.getElementById('acctBtn');
   var ini = document.getElementById('acctInitials');
   if (ini) ini.textContent = initials;
-  if (btn) btn.style.background = color;
+  if (btn) {
+    btn.style.background = color;
+    // Name over role, not "Your account" — the button already IS the
+    // account, saying so back is not information; who's signed in and as
+    // what is.
+    var tipName = (name && String(name).trim()) ? name : (email || '');
+    var tipRole = role ? _displayRole(role) : '';
+    btn.setAttribute('data-tip', tipRole ? (tipName + '\n' + tipRole) : tipName);
+  }
 
   var av = document.getElementById('acctAvatar');
   if (av){ av.textContent = initials; av.style.background = color; }
