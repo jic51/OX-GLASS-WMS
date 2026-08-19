@@ -9,6 +9,7 @@ node --check <Code_v3_fixed.gs copied to .js>
 node tools/test-modal-shield.js
 node tools/test-button-states.js
 node tools/test-topbar-deck.js
+node tools/test-checkin.js
 ```
 
 `tools/audit-responsive.js` is a tape measure, not a test — run it when layout
@@ -44,6 +45,12 @@ come back from — is invisible to both. Those get a browser test.
 - `audit-responsive.js` — opens the real app at six device sizes, on every tab,
   and reports sideways page scroll, controls too small for a thumb, anything
   past the right edge, and page errors. Screenshots land in ./audit/.
+- `test-checkin.js` — runCheckin_'s milestone bookkeeping (Code_v3_fixed.gs),
+  run in a Node vm with Apps Script's globals stubbed and time itself faked:
+  fires once per milestone, never twice, catches up a backlog of overdue
+  milestones as ONE email not several, stays silent when the customer is
+  actually using the app, stays silent with no SUPPORT_EMAIL configured, and
+  backfills SETUP_COMPLETED_AT on a pre-existing install without a false alarm.
 
 Both lift the real code out of `Index_v3_fixed.html` rather than keeping a copy,
 so they cannot quietly drift away from what ships.

@@ -334,3 +334,13 @@ plantilla, cero cambios de motor.
 
 ## Operational
 
+- **PENDIENTE — actualizar la Política de Privacidad.** v9.77 agregó el
+  check-in automático (día 3 / día 7 sin movimientos → un correo privado a
+  `SUPPORT_EMAIL`, nunca al cliente). No manda contenido del inventario, pero
+  sí manda nombre de empresa, correo del admin y un conteo — y eso sale del
+  Drive del cliente, lo cual la política actual dice que nunca pasa. Falta una
+  línea honesta en `docs/legal/PRIVACY-POLICY.md` antes de que esto llegue a
+  un cliente real. No es urgente hoy (cero clientes, `SUPPORT_EMAIL` vacío en
+  todo lado), pero si se activa antes de arreglar el texto, queda una promesa
+  rota por escrito.
+
