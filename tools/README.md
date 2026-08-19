@@ -14,6 +14,8 @@ node tools/test-pricing.js
 node tools/test-project-cost.js
 node tools/test-role-label.js
 node tools/test-waste-cost.js
+node tools/test-rack-drawer.js
+node tools/test-backup-status.js
 ```
 
 `tools/audit-responsive.js` is a tape measure, not a test — run it when layout
@@ -85,6 +87,27 @@ come back from — is invisible to both. Those get a browser test.
   nothing rather than NaN, no priced WASTE hides the tile instead of showing
   $0, a legacy DISPATCHED row normalizes to EXIT and stays excluded, and the
   tile never renders for a role without canSeeCosts.
+
+- `test-rack-drawer.js` — the redesigned Rack Drawer (Warehouse Map → click a
+  location), a full Playwright run against the real app: the photo section is
+  gone, the Exit/Transfer/Waste menu stays collapsed until a material name is
+  tapped, tapping Exit/Transfer/Waste opens the real movement modal with
+  category/name/source rack pre-filled and qty left blank, and tapping the
+  green "N avail" figure fills qty with that number — in the EXIT rows, the
+  TRANSFER row, and the single-field WASTE stock check. This is the one that
+  actually clicks the menu open and reads the resulting form fields, not just
+  the HTML string that would build it.
+- `test-backup-status.js` — the "Last backup" line in Settings → System
+  (`_drawBackupBox`), lifted verbatim into a Node vm: hidden on a fresh
+  install with nothing recorded yet, shown with the right relative time and a
+  working Drive link once there is one, an HTML-sensitive file name renders
+  escaped, and the line survives even with the nightly schedule turned off
+  (schedule and history are separate facts). The backend half — writing
+  LAST_BACKUP_AT/NAME/FILE_ID Script Properties instead of relying on
+  AUDIT_LOG's ~1500-row readable tail, which a busy install can scroll a
+  backup entry past in under a day even though the file is safe in Drive —
+  can't run outside real Apps Script/Drive and was verified by reading the
+  code instead.
 
 All of these lift the real code out of `Index_v3_fixed.html` (or
 `Code_v3_fixed.gs`) rather than keeping a copy, so they cannot quietly drift

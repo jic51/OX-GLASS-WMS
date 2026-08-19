@@ -61,6 +61,10 @@ vm.runInContext(
   extractFn('nt') + '\n' +
   extractFn('normMT') + '\n' +
   extractFn('_normKey') + '\n' +
+  extractFn('_he') + '\n' +
+  extractFn('_escAttr') + '\n' +
+  extractFn('_infoIc') + '\n' +
+  extractFn('_statLabel') + '\n' +
   extractFn('renderStats'),
   sandbox
 );

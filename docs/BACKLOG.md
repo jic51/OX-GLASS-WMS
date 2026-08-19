@@ -40,6 +40,24 @@ here once they ship (the commit message is the record of what changed and why).
    limpia ya resuelve el caso de un cliente; esto es para las copias que se
    hacen entre archivos propios.
 
+7. **Revisar el Rack Drawer (Warehouse Map) en teléfono / pantalla chica.**
+   Jose lo señaló al ver la v9.82 (el nuevo menú de acciones por material,
+   Exit/Transfer/Waste): algunas cosas se sobreponen y no se ven claras en
+   pantallas pequeñas. Nota suya, no diagnóstico — falta abrirlo de verdad en
+   un viewport angosto (o correr tools/audit-responsive.js sobre esta pantalla
+   específica) y ver qué se está encimando antes de tocar el layout.
+
+8. **Tracking de dispositivo/ubicación en movimientos y errores.** Jose quiere
+   saber no solo QUIÉN hizo un movimiento o disparó un error, sino DESDE DÓNDE
+   (qué dispositivo, posiblemente ubicación). Explícitamente para discutir
+   después — anotado a petición suya, sin diseño todavía. Preguntas reales
+   antes de construir nada: ¿qué señal existe realmente dentro del sandbox de
+   Apps Script (user agent del navegador vía JS, nada de geolocalización real
+   sin pedir permiso explícito al usuario)? ¿Se guarda por movimiento
+   (ARCHIVE) y por error (ERROR_LOG), o en un log aparte? ¿Es esto algo que un
+   cliente esperaría poder ver de sus propios empleados, o exclusivamente para
+   que Jose diagnostique soporte?
+
 ## Open decision — access when the customer has no Workspace domain
 
 The identification rule, verified in `getUserRole()`:

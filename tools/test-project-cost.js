@@ -58,6 +58,9 @@ vm.runInContext(
   extractFn('normMT') + '\n' +
   extractFn('stockBadge') + '\n' +
   extractFn('_he') + '\n' +
+  extractFn('_escAttr') + '\n' +
+  extractFn('_infoIc') + '\n' +
+  extractFn('_statLabel') + '\n' +
   extractFn('renderProjectView'),
   sandbox
 );
