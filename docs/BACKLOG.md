@@ -26,26 +26,12 @@ here once they ship (the commit message is the record of what changed and why).
    people actually reach for.
 
 
-5. **Rediseñar la ventana de Low-Stock Monitor.** Hoy es una parrilla de todos
-   los materiales de golpe. Como lo quiere Jose:
-   - El campo "Min" **deshabilitado** hasta que se marque su checkbox.
-   - Arriba, centradas, **solo las etiquetas de categoría** en gris (el mismo
-     gris de desactivado que ya usa la app), en orden alfabético.
-   - Al hacer clic en una categoría toma **su propio color** y aparecen debajo
-     sus materiales para marcar y ponerles mínimo. Se pueden activar varias.
-   - Al volver a hacer clic se desactiva, y **abajo solo quedan los materiales
-     con el checkbox marcado** (con el orden que tienen hoy, pero debajo del
-     grupo de categorías).
-
-   La idea de fondo: se empieza por la pregunta correcta — *"¿de qué categoría
-   quiero vigilar algo?"* — en vez de por una lista de cientos de materiales.
-
-6. **Iconos profesionales y logo de Acopio — EN PAUSA, a la espera de Jose.**
+5. **Iconos profesionales y logo de Acopio — EN PAUSA, a la espera de Jose.**
    El ZIP de Streamline ya está (45 iconos, PNG 48×48 + 4 SVG) y las tres
    propuestas de marca están dibujadas. Jose decide cuándo se hace y cuál se
    usa; las dos van en la misma pasada porque comparten el mismo trabajo.
 
-7. **Copiar un sistema VIVO arrastra la lista de usuarios.** Jose copió el
+6. **Copiar un sistema VIVO arrastra la lista de usuarios.** Jose copió el
    archivo de OX a su Drive personal y su correo personal ya estaba dentro,
    como WAREHOUSE, así que la copia nueva le daba menos permisos de los que
    correspondían a su propio archivo. No es un fallo — es lo que una copia hace
@@ -132,6 +118,38 @@ raíz, para cuando haya volumen que lo justifique.
   open/close, row insertion in Movements, the deck fan, and tab switches. One
   pass, one consistent set of durations/easings, rather than tuning them one at
   a time.
+- **Toast delay feels laggy — replace with inline spin → check at the point of
+  action (v9.80 feedback).** Jose's complaint: a toast showing up ~3 seconds
+  after an action (not staying 3 seconds — SHOWING UP 3 seconds late) reads as
+  the app being slow, even though it isn't broken. Root cause confirmed: that
+  gap is real `google.script.run` round-trip time to Apps Script (serialize →
+  dispatch to the sandboxed execution → run → serialize back), which routinely
+  runs 1-4s even for a trivial call — nothing in our code controls that, so it
+  cannot be "sped up" as asked.
+  What CAN change: give feedback the INSTANT the user acts, not after the
+  round trip. The infrastructure already exists — `_btnBusy(btn,label)` /
+  `_btnDone(btn,ok,then)` (v9.66, tools/test-button-states.js) already does
+  exactly this for the modal Save button: spinner the moment it's clicked,
+  green tick the moment the server confirms, held briefly before continuing.
+  What's missing is generalizing that pattern to spots that currently rely on
+  a toast alone with no local element to spin: the Permissions switches
+  (`_savePermSwitch` just disables the checkbox — no spinner), catalog rename/
+  merge, and anywhere else a save fires from something that isn't a `<button>`
+  with a text label to swap out. Needs a lighter variant of the busy/done pair
+  that works on a small inline element (a switch, a row) rather than a button
+  — spinner ring in place, swapped for a green check in the same spot, same
+  timing the toast used to use. Whether the toast disappears entirely once
+  this exists, or stays for messages that aren't tied to one specific control
+  (errors, multi-step results), is a decision for when this is actually built.
+- **Info icon should read as "this is info," not just smaller text — put it
+  BEFORE the label, not after (v9.80 feedback).** Right now (`_infoIc`,
+  shipped this version) the "i" badge sits after the label text, easy to miss
+  in the flow of reading. Leading it (`ⓘ Edit movements` instead of
+  `Edit movements ⓘ`) makes the affordance the first thing seen instead of an
+  afterthought. Applies everywhere `_infoIc` is used across the app (NOT the
+  Setup Wizard, which keeps its always-visible hints per the same v9.80
+  conversation — onboarding is the one place where visible guidance beats a
+  hover icon, since nobody knows what anything does yet).
 
 ## Idea to define — proactive data-quality suggestions
 
