@@ -127,29 +127,39 @@ raíz, para cuando haya volumen que lo justifique.
   runs 1-4s even for a trivial call — nothing in our code controls that, so it
   cannot be "sped up" as asked.
   What CAN change: give feedback the INSTANT the user acts, not after the
-  round trip. The infrastructure already exists — `_btnBusy(btn,label)` /
-  `_btnDone(btn,ok,then)` (v9.66, tools/test-button-states.js) already does
-  exactly this for the modal Save button: spinner the moment it's clicked,
-  green tick the moment the server confirms, held briefly before continuing.
-  What's missing is generalizing that pattern to spots that currently rely on
-  a toast alone with no local element to spin: the Permissions switches
-  (`_savePermSwitch` just disables the checkbox — no spinner), catalog rename/
-  merge, and anywhere else a save fires from something that isn't a `<button>`
-  with a text label to swap out. Needs a lighter variant of the busy/done pair
-  that works on a small inline element (a switch, a row) rather than a button
-  — spinner ring in place, swapped for a green check in the same spot, same
-  timing the toast used to use. Whether the toast disappears entirely once
-  this exists, or stays for messages that aren't tied to one specific control
-  (errors, multi-step results), is a decision for when this is actually built.
-- **Info icon should read as "this is info," not just smaller text — put it
-  BEFORE the label, not after (v9.80 feedback).** Right now (`_infoIc`,
-  shipped this version) the "i" badge sits after the label text, easy to miss
-  in the flow of reading. Leading it (`ⓘ Edit movements` instead of
-  `Edit movements ⓘ`) makes the affordance the first thing seen instead of an
-  afterthought. Applies everywhere `_infoIc` is used across the app (NOT the
-  Setup Wizard, which keeps its always-visible hints per the same v9.80
-  conversation — onboarding is the one place where visible guidance beats a
-  hover icon, since nobody knows what anything does yet).
+  round trip. **Corrected after checking the actual code (Jose caught my
+  first description being wrong):** the busy/done infrastructure
+  (`_btnBusy`/`_btnDone`, v9.66, tools/test-button-states.js) does NOT
+  uniformly show a tick on the button today. `submitMovement`'s single-material
+  path (`_doSubmit`, ~line 5644) does it right — `_btnDone(btn, true, function(){
+  closeModal(...) })` holds a ✓ on the button for 700ms before the window
+  closes, exactly the "don't vanish the instant you click Save" behavior this
+  item wants everywhere. But the multi-material ENTRY path (`_doMultiSubmit`,
+  ~line 6580 — Materials to Receive, the more commonly used flow) never got
+  the same treatment: it calls `_setModalBusy(...,false)` and `closeModal(...)`
+  immediately after the spinner, with no `_btnDone` in between, so the button
+  never shows a check at all — the ✅ the user sees is purely the toast's icon,
+  arriving 400ms later, off in a different part of the screen, after the
+  window is already gone. Fixing this item means: (1) wire `_doMultiSubmit` up
+  to `_btnDone` the same way `_doSubmit` already is, and (2) THEN decide
+  whether that's enough (submitMovement's pattern extended everywhere a
+  `<button>` exists) or whether non-button controls (the Permissions
+  switches — `_savePermSwitch` just disables the checkbox today, no spinner
+  at all — catalog rename/merge, etc.) also need a lighter inline spin→check
+  variant. Two different sizes of fix bundled under one complaint; scope
+  precisely once this is picked up.
+- **Info icon leading vs. trailing — refined rule (corrected same feedback
+  round).** NOT "always move it before the label" — Jose's actual rule:
+  where the underlying text is KEPT (an icon added alongside text that still
+  shows), the icon leads (`ⓘ` before the label), so it reads as "there's more
+  here" before the reader gets to the text. Where the text was REMOVED and
+  the icon is now the only way to see it (every `_infoIc()` use shipped in
+  v9.80 — Permissions' 4 switches + the role-label field, Company's 3 fields,
+  System's 2 fields), it stays exactly where it already is, trailing — no
+  code change needed there, all nine are correct as shipped. This rule only
+  bites the next time an icon is added next to text that stays visible, not
+  the ones already built. Applies everywhere `_infoIc` is used (NOT the Setup
+  Wizard, which keeps its always-visible hints per the same conversation).
 
 ## Idea to define — proactive data-quality suggestions
 
