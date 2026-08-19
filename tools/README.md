@@ -16,6 +16,9 @@ node tools/test-role-label.js
 node tools/test-waste-cost.js
 node tools/test-rack-drawer.js
 node tools/test-backup-status.js
+node tools/test-backup-backfill.js
+node tools/test-tooltip-edge.js
+node tools/test-splash-notes.js
 ```
 
 `tools/audit-responsive.js` is a tape measure, not a test — run it when layout
@@ -96,18 +99,44 @@ come back from — is invisible to both. Those get a browser test.
   green "N avail" figure fills qty with that number — in the EXIT rows, the
   TRANSFER row, and the single-field WASTE stock check. This is the one that
   actually clicks the menu open and reads the resulting form fields, not just
-  the HTML string that would build it.
+  the HTML string that would build it. Also covers two data-integrity bugs
+  Jose caught by using the app: an already-open drawer re-rendering (or
+  auto-closing, if the rack is now empty) the moment fresh stock data lands
+  instead of keeping showing a material that already left, and the EXIT
+  destination / single-material category fields actually resetting between
+  two movements in a row instead of silently carrying over what was typed
+  into the PREVIOUS one.
 - `test-backup-status.js` — the "Last backup" line in Settings → System
   (`_drawBackupBox`), lifted verbatim into a Node vm: hidden on a fresh
   install with nothing recorded yet, shown with the right relative time and a
   working Drive link once there is one, an HTML-sensitive file name renders
   escaped, and the line survives even with the nightly schedule turned off
-  (schedule and history are separate facts). The backend half — writing
-  LAST_BACKUP_AT/NAME/FILE_ID Script Properties instead of relying on
-  AUDIT_LOG's ~1500-row readable tail, which a busy install can scroll a
-  backup entry past in under a day even though the file is safe in Drive —
-  can't run outside real Apps Script/Drive and was verified by reading the
-  code instead.
+  (schedule and history are separate facts). Writing LAST_BACKUP_AT/NAME/
+  FILE_ID Script Properties on every backup (runBackupNow_) exists because
+  AUDIT_LOG's ~1500-row readable tail can scroll a backup entry past in under
+  a day on a busy install, even though the file is safe in Drive the whole
+  time.
+- `test-backup-backfill.js` — the one-time Drive backfill for installs that
+  were already backing up before LAST_BACKUP_AT existed (getBackupStatus /
+  _findMostRecentBackup_), lifted verbatim into a Node vm with DriveApp and
+  PropertiesService stubbed: picks the actual NEWEST of several existing
+  backup files (not first-in-list, not oldest), remembers what it found so
+  the next load never re-scans Drive, does nothing false on a genuinely fresh
+  install with no backups at all, and the trivial one-file case works too.
+- `test-tooltip-edge.js` — the shared .tip tooltip's edge-avoidance
+  (`_positionTip`), a Playwright run measuring real layout: an icon near the
+  left or right edge of the window gets the bubble anchored to that same
+  side instead of centred off past the viewport, one in the middle stays
+  centred, and hovering back and forth leaves no stale edge class behind.
+- `test-splash-notes.js` — the loading screen's rotating phrases and manual
+  reload fallback (SPLASH_NOTES / `_showSplashReload`), a Playwright run
+  using clock mocking to fast-forward through the real 2.5s rotation instead
+  of actually waiting ~13 seconds per run: starts on the first phrase,
+  rotates through all of them in order, the last one says the wait is longer
+  than expected and stays there instead of looping back to "Connecting…", a
+  working Reload control appears only once the phrases run out (not before),
+  and hiding the splash for a real successful load stops the rotation for
+  good.
 
 All of these lift the real code out of `Index_v3_fixed.html` (or
 `Code_v3_fixed.gs`) rather than keeping a copy, so they cannot quietly drift

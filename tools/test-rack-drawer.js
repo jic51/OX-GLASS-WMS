@@ -170,6 +170,72 @@ async function closeMoveModal(page) {
   await page.waitForTimeout(80);
   check('tapping it fills mQty', await page.evaluate(() => document.getElementById('mQty').value) === '10');
 
+  await closeMoveModal(page);
+
+  console.log('\nScenario: an open drawer re-renders in place when fresh data changes its material\'s qty');
+  await page.click('[data-action="open-rack"][data-rack="A1A"]');
+  await page.waitForTimeout(150);
+  check('starts showing 10 pcs', await page.evaluate(() =>
+    document.getElementById('rackDrawerBody').textContent.includes('10 pcs')));
+  await page.evaluate(() => {
+    window._applyData({
+      userRole: 'ADMIN', userEmail: 'jose@ox-glass.com', movements: [], reservations: [],
+      config: window.config,
+      stock: Object.assign({}, window.stockData, {
+        'WINDOW|||GLASS': Object.assign({}, window.stockData['WINDOW|||GLASS'], {
+          warehouseQty: 4, availableQty: 4, warehouseLocs: { 'A1A': 4 }
+        })
+      })
+    });
+  });
+  await page.waitForTimeout(150);
+  check('drawer stays open (rack still has stock)', await page.evaluate(() =>
+    document.getElementById('rackDrawer').classList.contains('open')));
+  check('now shows the updated 4 pcs, not the stale 10', await page.evaluate(() =>
+    document.getElementById('rackDrawerBody').textContent.includes('4 pcs') &&
+    !document.getElementById('rackDrawerBody').textContent.includes('10 pcs')));
+
+  console.log('\nScenario: an open drawer auto-closes when fresh data shows the rack now empty');
+  check('still open before the empty update', await page.evaluate(() =>
+    document.getElementById('rackDrawer').classList.contains('open')));
+  await page.evaluate(() => {
+    var stock = Object.assign({}, window.stockData);
+    var g = Object.assign({}, stock['WINDOW|||GLASS']);
+    g.warehouseQty = 0; g.availableQty = 0; g.warehouseLocs = {};
+    stock['WINDOW|||GLASS'] = g;
+    window._applyData({
+      userRole: 'ADMIN', userEmail: 'jose@ox-glass.com', movements: [], reservations: [],
+      config: window.config, stock: stock
+    });
+  });
+  await page.waitForTimeout(150);
+  check('drawer closed itself — nothing left to show', await page.evaluate(() =>
+    !document.getElementById('rackDrawer').classList.contains('open')));
+
+  console.log('\nScenario: EXIT destination does not leak into the next EXIT (Jose\'s report)');
+  await page.evaluate(() => window.openMoveModal('EXIT'));
+  await page.waitForTimeout(100);
+  await page.fill('#mExitDest', 'ALTA VISTA LOT 204');
+  check('destination typed for the first EXIT', await page.evaluate(() =>
+    document.getElementById('mExitDest').value) === 'ALTA VISTA LOT 204');
+  await closeMoveModal(page);
+  await page.evaluate(() => window.openMoveModal('EXIT'));
+  await page.waitForTimeout(100);
+  check('a fresh EXIT does not inherit the previous destination', await page.evaluate(() =>
+    document.getElementById('mExitDest').value) === '');
+  await closeMoveModal(page);
+
+  console.log('\nScenario: the single-material category select resets too (WASTE/TRANSFER/RETURN)');
+  await page.evaluate(() => { window.openMoveModal('WASTE'); document.getElementById('mType').value = 'SCREW'; });
+  await page.waitForTimeout(100);
+  check('category set to SCREW for this WASTE', await page.evaluate(() => document.getElementById('mType').value) === 'SCREW');
+  await closeMoveModal(page);
+  await page.evaluate(() => window.openMoveModal('WASTE'));
+  await page.waitForTimeout(100);
+  check('a fresh WASTE resets to the first category, not the leftover SCREW', await page.evaluate(() =>
+    document.getElementById('mType').value) === 'WINDOW');
+  await closeMoveModal(page);
+
   check('no page errors the whole run', pageErrors.length === 0);
   if (pageErrors.length) pageErrors.forEach(e => console.log('  PAGE ERROR:', e));
 

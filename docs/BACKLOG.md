@@ -58,6 +58,27 @@ here once they ship (the commit message is the record of what changed and why).
    cliente esperaría poder ver de sus propios empleados, o exclusivamente para
    que Jose diagnostique soporte?
 
+9. **Notificaciones en vivo para el admin de lo que hace el personal de
+   Warehouse, visibles en cualquier pestaña menos Movements.** Idea de Jose,
+   anotada a su pedido — sin diseñar todavía. Algo así: "Jose movió 4 WINDOW
+   de GLASS a B2B" aparece del lado izquierdo si el admin está en Dashboard o
+   Warehouse Map (no hace falta si ya está viendo Movements); clic en la
+   notificación lleva a esa fila en Movements & History y la resalta — mismo
+   mecanismo que `_showMovementRows`/`.row-spotlight` que ya usan las
+   tarjetas de "el sistema hizo esto solo" en Settings → System, así que la
+   parte de "llevar y resaltar" ya existe y solo hay que reutilizarla.
+   Preguntas reales antes de construir: ¿en tiempo real de verdad (empuje
+   desde el servidor) o solo cuando el navegador ya está haciendo un refresh
+   de todos modos (mismo patrón que `_refreshOpenRackDrawer`, v9.83 — sin
+   trigger nuevo, sin polling nuevo)? Apps Script no tiene push real hacia el
+   navegador sin algo como Firebase seguido por detrás, así que la opción
+   honesta y gratis es la segunda: la próxima vez que `_applyData` corra con
+   movimientos nuevos desde la última carga, comparar y armar las tarjetas de
+   ahí — no en tiempo real estricto, pero tampoco un sistema nuevo que
+   mantener. ¿Solo para movimientos de WAREHOUSE, o de cualquiera que no sea
+   el propio admin? ¿Se pueden descartar como las tarjetas de "el sistema
+   hizo esto solo"?
+
 ## Open decision — access when the customer has no Workspace domain
 
 The identification rule, verified in `getUserRole()`:
