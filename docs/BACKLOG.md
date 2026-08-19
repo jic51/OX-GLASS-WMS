@@ -40,14 +40,7 @@ here once they ship (the commit message is the record of what changed and why).
    limpia ya resuelve el caso de un cliente; esto es para las copias que se
    hacen entre archivos propios.
 
-7. **Revisar el Rack Drawer (Warehouse Map) en teléfono / pantalla chica.**
-   Jose lo señaló al ver la v9.82 (el nuevo menú de acciones por material,
-   Exit/Transfer/Waste): algunas cosas se sobreponen y no se ven claras en
-   pantallas pequeñas. Nota suya, no diagnóstico — falta abrirlo de verdad en
-   un viewport angosto (o correr tools/audit-responsive.js sobre esta pantalla
-   específica) y ver qué se está encimando antes de tocar el layout.
-
-8. **Tracking de dispositivo/ubicación en movimientos y errores.** Jose quiere
+7. **Tracking de dispositivo/ubicación en movimientos y errores.** Jose quiere
    saber no solo QUIÉN hizo un movimiento o disparó un error, sino DESDE DÓNDE
    (qué dispositivo, posiblemente ubicación). Explícitamente para discutir
    después — anotado a petición suya, sin diseño todavía. Preguntas reales
@@ -58,7 +51,7 @@ here once they ship (the commit message is the record of what changed and why).
    cliente esperaría poder ver de sus propios empleados, o exclusivamente para
    que Jose diagnostique soporte?
 
-9. **Notificaciones en vivo para el admin de lo que hace el personal de
+8. **Notificaciones en vivo para el admin de lo que hace el personal de
    Warehouse, visibles en cualquier pestaña menos Movements.** Idea de Jose,
    anotada a su pedido — sin diseñar todavía. Algo así: "Jose movió 4 WINDOW
    de GLASS a B2B" aparece del lado izquierdo si el admin está en Dashboard o

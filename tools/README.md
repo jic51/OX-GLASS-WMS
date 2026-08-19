@@ -21,6 +21,7 @@ node tools/test-tooltip-edge.js
 node tools/test-splash-notes.js
 node tools/test-account-tooltip.js
 node tools/test-favicon.js
+node tools/test-responsive-polish.js
 ```
 
 `tools/audit-responsive.js` is a tape measure, not a test — run it when layout
@@ -110,7 +111,14 @@ come back from — is invisible to both. Those get a browser test.
   into the PREVIOUS one, and the TRANSFER row's "avail" figure showing the
   moment a rack is picked instead of staying blank until qty is typed —
   which made the whole tap-to-fill-qty shortcut impossible on a row the Rack
-  Drawer had just pre-filled with a blank qty on purpose.
+  Drawer had just pre-filled with a blank qty on purpose. Also covers
+  switching type INSIDE an already-open modal (the Exit/Transfer/Return/
+  Waste bar at the top): Entry and Return stay hidden for the life of a Rack
+  Drawer material session (neither has a "from this exact rack" reading), and
+  switching between Exit/Transfer/Waste keeps the same material instead of
+  landing on an empty form — the two types keep completely separate fields
+  (exit-cat-1/exit-name-1 vs the shared mType/mName), so nothing carried over
+  on its own before this.
 - `test-backup-status.js` — the "Last backup" line in Settings → System
   (`_drawBackupBox`), lifted verbatim into a Node vm: hidden on a fresh
   install with nothing recorded yet, shown with the right relative time and a
@@ -154,6 +162,15 @@ come back from — is invisible to both. Those get a browser test.
   Apps Script one Jose was seeing, swaps to the company's own uploaded logo
   the moment one exists (no second upload), and reverts to the default mark
   if the logo is removed.
+- `test-responsive-polish.js` — three of Jose's screen-size reports, real
+  viewport geometry at real sizes (nothing here is knowable from source
+  alone): the topbar brand (logo/name/Acopio badge) stacks vertically and
+  left-aligned on a real screen with the version number gone from there
+  entirely, the SAME topbar stays the original row layout on a phone (only
+  large screens were asked for), the version tag is hidden everywhere either
+  way, the "not on your lists yet" bell panel measures out to two-thirds of
+  a phone's width instead of half, and the Rack Drawer measures out to
+  two-thirds instead of nearly the whole screen.
 
 All of these lift the real code out of `Index_v3_fixed.html` (or
 `Code_v3_fixed.gs`) rather than keeping a copy, so they cannot quietly drift

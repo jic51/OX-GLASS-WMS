@@ -90,6 +90,15 @@
     .nav button:hover{color:#fff;background:rgba(255,255,255,.08)}
     .nav button.active{background:var(--accent);color:#fff}
     .author-badge{background:rgba(0,0,0,.2);padding:4px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.1);font-size:.7rem;color:#a1b0cb;display:inline-flex;align-items:center;gap:5px}
+    /* Left-aligned identity stack on real screens — logo, company name, the
+       Acopio badge right under it, tight. Jose: this reads as a lockup, not
+       three separate things scattered in a row. Left as the existing row
+       layout below 769px — the small-screen topbar is cramped enough
+       already without stacking three lines of brand into it too. */
+    @media (min-width:769px){
+      .topbar-brand{flex-direction:column;align-items:flex-start;gap:3px}
+      .brand-mark{align-items:flex-start}
+    }
     /* ── LAYOUT ── */
     .container{max-width:1400px;margin:0 auto;padding:1.25rem;flex-grow:1;width:100%}
     .section{display:none}.section.active{display:block}
@@ -183,7 +192,11 @@
     .rack-card.rack-dim{opacity:.22}
     [data-theme="dark"] .map-letter-hdr{color:#cfe0ff}
     /* Rack Detail Drawer */
-    .rack-drawer{position:fixed;right:0;top:0;bottom:0;width:min(400px,100vw);background:var(--card);box-shadow:-6px 0 28px rgba(0,0,0,.18);z-index:500;transform:translateX(110%);transition:transform .25s ease;display:flex;flex-direction:column}
+    /* Jose: on a phone this was hitting the 100vw side of the min() and
+       covering almost the whole screen — capped at two-thirds of the
+       viewport instead, same as the "not on your lists" bell panel. Still
+       400px max on anything wider than a phone, unchanged from before. */
+    .rack-drawer{position:fixed;right:0;top:0;bottom:0;width:min(400px,66.667vw);background:var(--card);box-shadow:-6px 0 28px rgba(0,0,0,.18);z-index:500;transform:translateX(110%);transition:transform .25s ease;display:flex;flex-direction:column}
     .rack-drawer.open{transform:translateX(0)}
     .rack-drawer-hdr{background:var(--navy);color:#fff;padding:.85rem 1.1rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
     .rack-drawer-hdr h3{font-size:1rem;font-weight:700;margin:0}
@@ -1329,7 +1342,9 @@
     }
     @media (max-width:520px){
       .setup-nudge{left:12px;right:auto;width:calc(50vw - 18px);max-width:none}
-      .cfg-bell-panel{left:auto;right:12px;width:calc(50vw - 18px);max-width:none}
+      /* Jose: on his phone this read as too small at half the screen —
+         two-thirds instead, still right-anchored. */
+      .cfg-bell-panel{left:auto;right:12px;width:calc(66.667vw - 18px);max-width:none}
     }
     /* ── TOUCH ───────────────────────────────────────────────────────────────
        Measured across six real device widths, and the finding was the same at
@@ -2099,11 +2114,11 @@
 
     <!-- Move Type Selector -->
     <div class="modal-type-bar" id="moveTypeBar">
-      <button data-type="ENTRY"    onclick="setModalType('ENTRY')">↓ Entry</button>
-      <button data-type="EXIT"     onclick="setModalType('EXIT')">↑ Exit</button>
-      <button data-type="TRANSFER" onclick="setModalType('TRANSFER')">⇄ Transfer</button>
-      <button data-type="RETURN"   onclick="setModalType('RETURN')">↩ Return</button>
-      <button data-type="WASTE"    onclick="setModalType('WASTE')">✕ Waste</button>
+      <button data-type="ENTRY"    onclick="_moveTypeBarClick('ENTRY')">↓ Entry</button>
+      <button data-type="EXIT"     onclick="_moveTypeBarClick('EXIT')">↑ Exit</button>
+      <button data-type="TRANSFER" onclick="_moveTypeBarClick('TRANSFER')">⇄ Transfer</button>
+      <button data-type="RETURN"   onclick="_moveTypeBarClick('RETURN')">↩ Return</button>
+      <button data-type="WASTE"    onclick="_moveTypeBarClick('WASTE')">✕ Waste</button>
     </div>
 
     <!-- Stock Warning -->
@@ -2518,7 +2533,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.85';
+var APP_VERSION = '9.86';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -5258,6 +5273,12 @@ function openMoveModal(type){
     return;
   }
   currentMoveType = (type || 'ENTRY').toUpperCase();
+
+  // Every fresh open starts as a normal, unrestricted movement — the Rack
+  // Drawer flow (_rdwMoveFromDrawer) re-arms this right after this call
+  // returns, once it has its own material to prefill.
+  _rdwPrefillActive = null;
+  _syncMoveTypeBarForRdw();
 
   // Reset form
   // mExitDest used to be left out of this list — after two EXITs in a row the
@@ -10366,12 +10387,54 @@ function _toggleRdwActions(idx){
 // and source rack already filled in — only qty, destination and comments are
 // left for the user to type, per Jose's spec: tap a material in the rack
 // drawer instead of retyping what the app already knows.
+//
+// Set for the life of that one material's modal session: which material this
+// modal is about, so switching between EXIT/TRANSFER/WASTE inside the SAME
+// open modal (the type bar at the top) can re-apply the same prefill instead
+// of losing it — those three types keep completely separate fields
+// (exit-cat-1/exit-name-1 for EXIT, the shared mType/mName for TRANSFER and
+// WASTE), so switching between them with no data to carry over meant the
+// second type just showed empty. openMoveModal() clears this back to null on
+// every fresh, non-Rack-Drawer open.
+var _rdwPrefillActive = null;
+
 function _rdwMoveFromDrawer(type, idx){
   var item = _rdwItems[idx];
   if (!item) return;
   closeRackDrawer();
   openMoveModal(type);
-  setTimeout(function(){ _prefillMoveModalMaterial(type, item.category, item.name, item.rack); }, 300);
+  setTimeout(function(){
+    _rdwPrefillActive = { category: item.category, name: item.name, rack: item.rack };
+    _syncMoveTypeBarForRdw();
+    _prefillMoveModalMaterial(type, item.category, item.name, item.rack);
+  }, 300);
+}
+
+// A material tapped from a specific rack only ever makes sense leaving that
+// rack (EXIT), moving from it (TRANSFER), or being written off from it
+// (WASTE) — ENTRY (new stock in) and RETURN (coming back from a site, not a
+// rack) don't have a "from this exact rack+material" reading at all, so they
+// stay hidden while a Rack Drawer material is active instead of being two
+// dead ends that also happened to wipe the prefill if clicked.
+function _syncMoveTypeBarForRdw(){
+  var bar = document.getElementById('moveTypeBar');
+  if (!bar) return;
+  var restrict = !!_rdwPrefillActive;
+  bar.querySelectorAll('button').forEach(function(b){
+    var t = b.getAttribute('data-type');
+    b.style.display = (restrict && (t === 'ENTRY' || t === 'RETURN')) ? 'none' : '';
+  });
+}
+
+// Every click on the modal's own type bar (Entry/Exit/Transfer/Return/Waste)
+// goes through here instead of calling setModalType directly, so a Rack
+// Drawer material session survives switching between its three allowed
+// types instead of the second type opening blank.
+function _moveTypeBarClick(type){
+  setModalType(type);
+  if (_rdwPrefillActive) {
+    _prefillMoveModalMaterial(type, _rdwPrefillActive.category, _rdwPrefillActive.name, _rdwPrefillActive.rack);
+  }
 }
 
 function _prefillMoveModalMaterial(type, cat, name, rack){
@@ -13253,11 +13316,15 @@ document.addEventListener('visibilitychange', function(){
 });
 
 // ── Version tag — set by JS so we can confirm script is running ───────────────
+// Its real job was always the failure canary: "JS NOT LOADED" stays on
+// screen, in alarming red, for as long as this code never runs at all — that
+// part is untouched. Once it DOES run, the version number used to replace
+// that text in the topbar; Jose asked for it out of there (it's one click
+// away in the account menu — see acctFoot) rather than shown twice.
 (function(){
   var t = document.getElementById('jsVersionTag');
   if (!t) return;
-  t.textContent = 'v' + APP_VERSION;
-  t.className = 'ver-tag';       // the alarm styling was only for "never ran"
+  t.style.display = 'none';
 })();
 
 // A JavaScript error anywhere in the first render used to leave the splash up

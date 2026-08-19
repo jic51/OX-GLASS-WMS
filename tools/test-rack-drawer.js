@@ -244,6 +244,62 @@ async function closeMoveModal(page) {
     document.getElementById('mType').value) === 'WINDOW');
   await closeMoveModal(page);
 
+  console.log('\nScenario: switching type INSIDE the modal (Exit -> Transfer -> Waste) keeps the same material instead of losing it');
+  // A1A was emptied out by the two staleness scenarios above — restore the
+  // original stock so this scenario has a material to work with again.
+  await page.evaluate(() => {
+    window._applyData({
+      userRole: 'ADMIN', userEmail: 'jose@ox-glass.com', movements: [], reservations: [],
+      config: window.config, stock: window.__DATA.stock
+    });
+  });
+  await page.waitForTimeout(100);
+  await page.click('[data-action="open-rack"][data-rack="A1A"]');
+  await page.waitForTimeout(150);
+  await page.click('.rdw-name[data-idx="0"]');
+  await page.waitForTimeout(100);
+  await page.click('#rdw-actions-0 button[data-type="EXIT"]');
+  await page.waitForTimeout(400);
+  check('Entry and Return are hidden while a Rack Drawer material is active', await page.evaluate(() => {
+    var entry = document.querySelector('#moveTypeBar button[data-type="ENTRY"]');
+    var ret = document.querySelector('#moveTypeBar button[data-type="RETURN"]');
+    return getComputedStyle(entry).display === 'none' && getComputedStyle(ret).display === 'none';
+  }));
+  check('Exit, Transfer and Waste stay visible', await page.evaluate(() => {
+    return ['EXIT', 'TRANSFER', 'WASTE'].every(function (t) {
+      return getComputedStyle(document.querySelector('#moveTypeBar button[data-type="' + t + '"]')).display !== 'none';
+    });
+  }));
+
+  await page.click('#moveTypeBar button[data-type="TRANSFER"]');
+  await page.waitForTimeout(100);
+  check('switching to Transfer keeps the material (Jose\'s report: this used to go blank)', await page.evaluate(() =>
+    document.getElementById('mType').value === 'WINDOW' && document.getElementById('mName').value === 'GLASS' &&
+    document.querySelector('#transferRowsContainer .transfer-row .tr-rack').value === 'A1A'));
+
+  await page.click('#moveTypeBar button[data-type="WASTE"]');
+  await page.waitForTimeout(100);
+  check('switching to Waste also keeps the material', await page.evaluate(() =>
+    document.getElementById('mType').value === 'WINDOW' && document.getElementById('mName').value === 'GLASS' &&
+    document.getElementById('mSrc').value === 'A1A'));
+
+  await page.click('#moveTypeBar button[data-type="EXIT"]');
+  await page.waitForTimeout(100);
+  check('switching back to Exit keeps it a third time, not just once', await page.evaluate(() =>
+    document.getElementById('exit-cat-1').value === 'WINDOW' && document.getElementById('exit-name-1').value === 'GLASS' &&
+    document.querySelector('#exit-locs-1 .el-rack').value === 'A1A'));
+  await closeMoveModal(page);
+
+  console.log('\nScenario: a normal (non-Rack-Drawer) movement shows all five types again, not stuck restricted');
+  await page.evaluate(() => window.openMoveModal('EXIT'));
+  await page.waitForTimeout(100);
+  check('Entry and Return are visible again for a normal open', await page.evaluate(() => {
+    var entry = document.querySelector('#moveTypeBar button[data-type="ENTRY"]');
+    var ret = document.querySelector('#moveTypeBar button[data-type="RETURN"]');
+    return getComputedStyle(entry).display !== 'none' && getComputedStyle(ret).display !== 'none';
+  }));
+  await closeMoveModal(page);
+
   check('no page errors the whole run', pageErrors.length === 0);
   if (pageErrors.length) pageErrors.forEach(e => console.log('  PAGE ERROR:', e));
 
