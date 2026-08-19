@@ -13,6 +13,7 @@ node tools/test-checkin.js
 node tools/test-pricing.js
 node tools/test-project-cost.js
 node tools/test-role-label.js
+node tools/test-waste-cost.js
 ```
 
 `tools/audit-responsive.js` is a tape measure, not a test — run it when layout
@@ -76,6 +77,14 @@ come back from — is invisible to both. Those get a browser test.
   the `role-badge-warehouse` CSS class regardless of label text, the literal
   internal value never leaks once relabeled, and a label containing
   HTML-sensitive characters renders escaped rather than as live markup.
+
+- `test-waste-cost.js` — renderStats's "Waste Cost" dashboard tile, lifted
+  verbatim into a Node vm against synthetic movements: sums the cost STAMPED
+  on each WASTE row (never today's average — waste from last year must not
+  reprice itself), ENTRY/EXIT don't count, an uncosted WASTE row contributes
+  nothing rather than NaN, no priced WASTE hides the tile instead of showing
+  $0, a legacy DISPATCHED row normalizes to EXIT and stays excluded, and the
+  tile never renders for a role without canSeeCosts.
 
 All of these lift the real code out of `Index_v3_fixed.html` (or
 `Code_v3_fixed.gs`) rather than keeping a copy, so they cannot quietly drift
