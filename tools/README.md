@@ -11,6 +11,8 @@ node tools/test-button-states.js
 node tools/test-topbar-deck.js
 node tools/test-checkin.js
 node tools/test-pricing.js
+node tools/test-project-cost.js
+node tools/test-role-label.js
 ```
 
 `tools/audit-responsive.js` is a tape measure, not a test — run it when layout
@@ -62,5 +64,19 @@ come back from — is invisible to both. Those get a browser test.
   round properly, and the CONFIG write-back updates one row per material
   rather than appending a duplicate on every entry.
 
-Both lift the real code out of `Index_v3_fixed.html` rather than keeping a copy,
-so they cannot quietly drift away from what ships.
+- `test-project-cost.js` — renderProjectView's "Project Cost" tile, lifted
+  verbatim into a Node vm against synthetic movements: sums EXIT.totalCost only
+  (a RETURN or WASTE in the mix must not count), an uncosted EXIT contributes
+  nothing rather than NaN, no priced EXIT at all hides the tile instead of
+  showing $0, a legacy DISPATCHED row still normalizes to EXIT and counts, and
+  the tile never renders for a role without canSeeCosts.
+- `test-role-label.js` — the customizable WAREHOUSE-role display name
+  (`_displayRole`, `_roleBadge`), lifted verbatim into a Node vm: ADMIN and
+  VIEWER are never affected by a WAREHOUSE-only label, the badge still carries
+  the `role-badge-warehouse` CSS class regardless of label text, the literal
+  internal value never leaks once relabeled, and a label containing
+  HTML-sensitive characters renders escaped rather than as live markup.
+
+All of these lift the real code out of `Index_v3_fixed.html` (or
+`Code_v3_fixed.gs`) rather than keeping a copy, so they cannot quietly drift
+away from what ships.

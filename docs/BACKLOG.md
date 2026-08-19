@@ -200,7 +200,29 @@ Revisit when the first customer actually needs external access.
   that project is Jose's and is configured once for all customers, not one per
   customer copy. Moved to Features as real work.
 
-## Precios y costos — CORE construido en v9.78
+## Roles — 3 fijos + permisos desde v9.76, nombre del WAREHOUSE editable desde v9.79
+
+Siguen siendo 3 roles fijos internamente (ADMIN/WAREHOUSE/VIEWER — USERS_V3 y
+cada `role ===` en el código nunca cambian). Lo que SÍ es ajustable ahora:
+
+- **v9.76** — 4 interruptores (`canSeeCosts`, `canEditMovements`,
+  `canManageCatalog`, `canExportData`) que ensanchan lo que WAREHOUSE puede
+  hacer, uno por uno. Settings → Permissions.
+- **v9.79** — el ADMIN puede renombrar cómo se MUESTRA el rol WAREHOUSE en
+  toda la app (badges, menú de cuenta, formulario de usuarios) — "Supervisor",
+  "Manager", lo que ya use el cliente. Solo texto: no toca el valor guardado
+  ni ningún chequeo de permisos. Verificado en tools/test-role-label.js.
+
+**Un 4to tipo de rol de verdad (no solo un WAREHOUSE con más permisos) sigue
+sin construirse.** Exigiría rediseñar `requireAuth_`, cada chequeo de rol, los
+valores posibles en USERS_V3, el `<select>` de rol y la aplicación de permisos
+en todo el código — un rediseño real, no una extensión. El sistema de
+permisos ya construido cubre buena parte de lo que un 4to rol daría en la
+práctica (un WAREHOUSE con ciertos interruptores prendidos y otros no ya se
+comporta como un nivel distinto). Roles verdaderamente personalizados es
+trabajo legítimo para una versión futura, no para ahora.
+
+## Precios y costos — CORE construido en v9.78, costo por proyecto en v9.79
 
 **Lo de abajo es el diseño original; lo que sigue ya está construido y
 verificado (20 aserciones en tools/test-pricing.js sobre el motor real).**
@@ -208,11 +230,13 @@ verificado (20 aserciones en tools/test-pricing.js sobre el motor real).**
 Lo que YA existe: costo opcional en cada línea de ENTRY (visible solo con
 `canSeeCosts`), promedio ponderado recalculado y estampado por fila, EXIT/
 WASTE/TRANSFER siempre valorados desde el promedio del servidor — nunca de lo
-que mande el cliente —, y "Inventory Value" en el dashboard con el conteo
-honesto de "X de Y SKUs con precio".
+que mande el cliente —, "Inventory Value" en el dashboard con el conteo
+honesto de "X de Y SKUs con precio", y (v9.79) el tile "Project Cost" en
+Project View — suma de `EXIT.totalCost` para ese proyecto, verificado en
+tools/test-project-cost.js (RETURN/WASTE no cuentan, un EXIT sin costo no
+rompe la suma, sin ningún EXIT con precio el tile simplemente no aparece).
 
 **Deliberadamente NO en esta pasada** — cada uno es su propio trabajo:
-- **Costo por proyecto** (suma de EXIT × costo, agrupado por proyecto).
 - **Desperdicio en dólares** (WASTE × costo, en el dashboard o un reporte).
 - **Alerta de cambio de precio** ("este proveedor cobró 18% más que la vez
   pasada").
