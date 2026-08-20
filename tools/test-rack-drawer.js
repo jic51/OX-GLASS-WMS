@@ -103,6 +103,11 @@ async function closeMoveModal(page) {
 
   console.log('\nScenario: tapping Exit opens the movement modal pre-filled from this rack\'s material');
   await page.click('#rdw-actions-0 button[data-type="EXIT"]');
+  check('Entry and Return are ALREADY hidden the instant the click handler returns — no visible flash of all 5 buttons before narrowing to 3 (Jose\'s report)', await page.evaluate(() => {
+    var entry = document.querySelector('#moveTypeBar button[data-type="ENTRY"]');
+    var ret = document.querySelector('#moveTypeBar button[data-type="RETURN"]');
+    return getComputedStyle(entry).display === 'none' && getComputedStyle(ret).display === 'none';
+  }));
   await page.waitForTimeout(400);
   check('rack drawer closed', await page.evaluate(() => !document.getElementById('rackDrawer').classList.contains('open')));
   check('move modal open, EXIT type', await page.evaluate(() =>

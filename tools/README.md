@@ -23,6 +23,9 @@ node tools/test-account-tooltip.js
 node tools/test-favicon.js
 node tools/test-responsive-polish.js
 node tools/test-price-alert.js
+node tools/test-account-tooltip-delay.js
+node tools/test-bell-tooltip-collision.js
+node tools/test-rowmode-stable.js
 ```
 
 `tools/audit-responsive.js` is a tape measure, not a test — run it when layout
@@ -179,6 +182,28 @@ come back from — is invisible to both. Those get a browser test.
   no alert for a material with no cost history yet to compare against, no
   crash on a blank cost/name/zero, and an alert that actually clears once
   the number is corrected back toward the average rather than staying stuck.
+- `test-account-tooltip-delay.js` — the account button's 4-second hover
+  delay (Jose: unlike the instant info icons, this one is for someone who
+  lingers), a Playwright run reading the real computed `transition-delay`
+  Chromium will animate with (CSS transitions run on the compositor's own
+  clock, not page.clock's faked JS timers, so waiting 4 real seconds isn't
+  needed): 4s while hovering the account button, every other `.tip` tooltip
+  on the page stays instant (0s), and the tooltip is invisible at rest.
+- `test-bell-tooltip-collision.js` — the account tooltip vs. the
+  notification bell on a narrow phone, real geometry: below 720px the bell
+  sits directly under the avatar with the exact same 8px gap the tooltip
+  itself drops down by, so Jose caught the bell rendering right through the
+  tooltip's name/role text. Measures that the tooltip's top edge actually
+  clears the bell's bottom edge now, and that a wide desktop screen (no bell
+  stacked underneath) keeps the tooltip's normal, un-inflated offset.
+- `test-rowmode-stable.js` — the Movements table's Edit/Delete row-mode
+  toggle buttons, real Playwright clicks at three widths: clicking Edit (which
+  makes a hint sentence appear) must not move the buttons, the hint has to
+  render below them rather than beside them, and toggling Edit back off must
+  return to the exact same spot. Root cause was the hint sharing a flex line
+  with the "⚙ Columns" button above the table — long enough, it didn't fit and
+  shoved the whole row down to a new toolbar line. The row-mode bar now lives
+  on its own dedicated line from the start.
 
 All of these lift the real code out of `Index_v3_fixed.html` (or
 `Code_v3_fixed.gs`) rather than keeping a copy, so they cannot quietly drift

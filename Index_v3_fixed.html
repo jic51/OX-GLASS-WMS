@@ -1104,7 +1104,14 @@
     .rm-btn.on{background:var(--navy);border-color:var(--navy);color:#fff}
     .rm-btn.rm-del:hover{border-color:var(--red)}
     .rm-btn.rm-del.on{background:var(--red);border-color:var(--red);color:#fff}
-    .rm-hint{font-size:.74rem;color:var(--muted)}
+    /* flex-basis:100% forces the hint onto its own line the moment it has
+       text, instead of sitting beside the buttons and, once long enough,
+       widening the bar past what fits next to the "Columns" button beside
+       it — which was pushing Edit/Delete down to a whole new toolbar row
+       the instant a hint appeared. Text always renders below the buttons
+       now, and the buttons themselves stay put since the bar's own width
+       no longer grows with the hint's length. */
+    .rm-hint{font-size:.74rem;color:var(--muted);flex-basis:100%}
     .row-mode-bar.is-del .rm-hint{color:var(--red);font-weight:600}
     /* Only ever ADDS display:none — when the mode is on the rule stops matching
        and each control keeps whatever display it had. */
@@ -1135,6 +1142,13 @@
       padding:.55rem .7rem;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.28);white-space:pre-line;width:max-content;max-width:240px;
       opacity:0;pointer-events:none;transition:opacity .15s ease,transform .15s ease;z-index:60}
     .tip:hover::after,.tip:focus-visible::after{opacity:1;transform:translateX(-50%) translateY(0)}
+    /* The account button's own tooltip (name + role) waits 4s before showing
+       — Jose: unlike the info icons, this one is meant for someone who
+       lingers, not a quick glance, so it should not compete with the
+       instant tooltips everywhere else. Delay only on the way IN: leaving
+       still uses the base .tip::after transition above (no delay), so
+       dismissing it stays snappy. */
+    #acctBtn.tip:hover::after,#acctBtn.tip:focus-visible::after{transition-delay:4s}
     /* Centered-on-the-icon is wrong the moment the icon sits near either edge
        of the screen — the box (up to 240px wide) runs past it and gets cut
        off by the viewport. _positionTip (JS) measures the anchor against the
@@ -1347,6 +1361,12 @@
       .topbar-row2{display:flex;flex-wrap:nowrap}
       .topbar-row2 .nav{flex:1 1 auto;margin:0}
       .topbar-tools{flex-direction:column;gap:8px;align-items:center;margin-left:auto}
+      /* The account tooltip normally drops 8px below the avatar, but right
+         here the notification bell is stacked directly beneath it with that
+         same 8px gap — Jose caught the bell rendering right through the
+         tooltip's name/role text. Clearing the bell's own height (34px) plus
+         its gap pushes the tooltip safely below both instead. */
+      #acctBtn.tip::after{top:calc(100% + 46px)}
     }
     @media (max-width:520px){
       .setup-nudge{left:12px;right:auto;width:calc(50vw - 18px);max-width:none}
@@ -1720,8 +1740,15 @@
         </span>
         <button class="btn btn-primary btn-sm" id="btnColDone_mov" style="display:none" onclick="finishColEdit('mov')">Done</button>
         <button class="btn btn-ghost btn-sm" id="btnColReset_mov" style="display:none" onclick="resetColEdit('mov')">Reset</button>
-        <span id="rowModeSlot_mov"></span>
       </div>
+      <!-- On its own line, not sharing the "Columns" toolbar row above: Edit and
+           Delete used to sit beside "⚙ Columns" until the hint text below them
+           got long enough to not fit anymore, which shoved both buttons down
+           onto a whole new toolbar row the moment Jose clicked one — a
+           different top position every time (bug report). Giving this its own
+           row from the start means that row never happens; the buttons never
+           move again regardless of the hint's length. -->
+      <div id="rowModeSlot_mov"></div>
       <div class="table-wrapper" id="tableContainer" data-rowscope="mov"></div>
     </div>
   </div>
@@ -2541,7 +2568,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.87';
+var APP_VERSION = '9.88';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -10449,11 +10476,16 @@ function _rdwMoveFromDrawer(type, idx){
   if (!item) return;
   closeRackDrawer();
   openMoveModal(type);
-  setTimeout(function(){
-    _rdwPrefillActive = { category: item.category, name: item.name, rack: item.rack };
-    _syncMoveTypeBarForRdw();
-    _prefillMoveModalMaterial(type, item.category, item.name, item.rack);
-  }, 300);
+  // Same synchronous tick, not a setTimeout — openMoveModal's own
+  // setModalType() already finishes building every field it needs
+  // (exit-cat-1, mType, the transfer rows...) before it returns, so there is
+  // nothing left to wait for. The old delay was long enough that the type
+  // bar visibly showed all 5 buttons for a moment before narrowing to 3 —
+  // restricting it here instead, before the browser ever paints the modal,
+  // is what actually fixes that flash.
+  _rdwPrefillActive = { category: item.category, name: item.name, rack: item.rack };
+  _syncMoveTypeBarForRdw();
+  _prefillMoveModalMaterial(type, item.category, item.name, item.rack);
 }
 
 // A material tapped from a specific rack only ever makes sense leaving that

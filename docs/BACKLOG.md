@@ -72,6 +72,27 @@ here once they ship (the commit message is the record of what changed and why).
    el propio admin? ¿Se pueden descartar como las tarjetas de "el sistema
    hizo esto solo"?
 
+9. **Menú de hamburguesa en pantallas pequeñas.** Idea de Jose (v9.88): en vez
+   de las pestañas de navegación normales, un ícono de hamburguesa en móvil que
+   abre el menú; una vez elegida una pestaña, se muestra la hamburguesa junto
+   al nombre de la pestaña activa en vez de la fila completa de pestañas.
+   Explícitamente para una versión futura, no esta — sin diseñar todavía.
+
+10. **Tres reportes pendientes de imagen (v9.88) — Jose mencionó "imagen 1" a
+   "imagen 5" pero no llegaron adjuntas al mensaje.** Sin poder verlas no se
+   tocó nada de esto (regla: solo cambiar cuando hay 99%+ de certeza de lo que
+   pide). Pendiente de que Jose las reenvíe:
+   - Reducir una fila en la parte de arriba del header en pantallas grandes,
+     bajando logo/nombre/Acopio al nivel de las pestañas — pero que salte
+     arriba de las pestañas de nuevo al achicar la ventana.
+   - El nombre "ACOPIO" siempre debajo del nombre de la empresa, nunca a un
+     lado — puede que aplique en más anchos de pantalla que el breakpoint
+     actual (≥769px) donde ya se apila así.
+   - Una "ventana de menú" a 3/4 del ancho total en pantallas pequeñas — sin
+     la imagen no está claro si se refiere al menú de cuenta (`#acctMenu`) o a
+     otro elemento; no confundir con el bell panel / Rack Drawer, que ya están
+     en 2/3 desde v9.86.
+
 ## Open decision — access when the customer has no Workspace domain
 
 The identification rule, verified in `getUserRole()`:
