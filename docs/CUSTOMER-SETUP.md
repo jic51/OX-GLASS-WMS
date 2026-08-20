@@ -96,3 +96,10 @@ correct link"**.
 
 **Someone can't get in** — they must be on the user list (Settings → Directory),
 and signed in with the Google account that matches the email on that list.
+Being on the company's Google domain identifies you; it does not authorise you.
+Both are needed.
+
+**Someone without a company email can't get in** — people outside your Google
+domain (a personal Gmail, a contractor) need one extra setup step that is
+switched on separately. Ask whoever set the system up; the full workflow and
+troubleshooting is in `ACCESO-Y-LOGIN.md`.

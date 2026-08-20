@@ -105,6 +105,17 @@ No lo captures a mano: **Configuración → Importar**. Guarda tu archivo como
 **"Sign-in is not configured" / no me deja entrar**
 Casi siempre es tener varias cuentas de Google abiertas en el navegador. Abre
 una ventana de incógnito, entra solo con la cuenta dueña, y prueba de nuevo.
+Si le pasa a varias personas, o solo a las que usan correo personal, mira
+**`ACCESO-Y-LOGIN.md`** — ahí está el diagnóstico completo por síntoma.
+
+**Hay gente que trabaja con nosotros pero no tiene correo de la empresa**
+Necesitan un paso extra de configuración (una sola vez). Ver
+**`ACCESO-Y-LOGIN.md`**.
+
+**Republiqué la app y ahora los de correo personal no entran**
+Es la trampa más común: *Deploy → New deployment* crea una URL nueva y rompe
+el login externo. Se arregla registrando la URL nueva. Ver
+**`ACCESO-Y-LOGIN.md`**, sección "La trampa número uno".
 
 **Actualicé el código pero no veo los cambios**
 Publicar una versión nueva no es lo mismo que guardar. En el editor:
