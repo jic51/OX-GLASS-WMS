@@ -26,6 +26,7 @@ node tools/test-price-alert.js
 node tools/test-account-tooltip-delay.js
 node tools/test-bell-tooltip-collision.js
 node tools/test-rowmode-stable.js
+node tools/test-header-merge.js
 ```
 
 `tools/audit-responsive.js` is a tape measure, not a test — run it when layout
@@ -204,6 +205,16 @@ come back from — is invisible to both. Those get a browser test.
   with the "⚙ Columns" button above the table — long enough, it didn't fit and
   shoved the whole row down to a new toolbar line. The row-mode bar now lives
   on its own dedicated line from the start.
+- `test-header-merge.js` — the topbar header compaction (v9.89, from Jose's
+  annotated screenshot): on a wide screen the brand block (logo/company name/
+  Acopio badge) sits beside the tabs instead of in its own mostly-empty row
+  above them; below 769px nothing changes, row1 still jumps above row2 same
+  as before. Real Playwright geometry at seven widths, checking that the
+  last tab never overlaps the avatar or the bell — the actual bug this
+  guards against, since a longer company name than "OX Glass" needs more
+  room before the merge fits than a shorter one does, so the CSS uses
+  flex-wrap (content-driven) rather than a second hardcoded breakpoint that
+  only happens to work for one name's length.
 
 All of these lift the real code out of `Index_v3_fixed.html` (or
 `Code_v3_fixed.gs`) rather than keeping a copy, so they cannot quietly drift

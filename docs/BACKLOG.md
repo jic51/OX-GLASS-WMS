@@ -11,7 +11,8 @@ here once they ship (the commit message is the record of what changed and why).
    /copy link, and copy it once himself to see what a customer sees. See
    docs/MASTER-TEMPLATE.md.
 2. **Polish the wizard's Copy button animation** — the checkmark transition works
-   now, but the in/out timing still feels abrupt.
+   now, but the in/out timing still feels abrupt. Jose (v9.89): leave it for
+   later, not urgent.
 3. **Polish the company logo placement** in the topbar — it renders, but the
    sizing/position isn't what Jose wants yet. Jose says it is fine for now —
    waiting on him to say what he actually wants there.
@@ -23,7 +24,7 @@ here once they ship (the commit message is the record of what changed and why).
    the first asks "what do I chase today", the second asks "how solid is my
    plan". Same mechanism, so it is a small piece of work; worth doing once the
    flexible dates have been used for a while and it is clear which grouping
-   people actually reach for.
+   people actually reach for. Jose (v9.89): maybe version 2, not this one.
 
 
 5. **Iconos profesionales y logo de Acopio — EN PAUSA, a la espera de Jose.**
@@ -78,20 +79,11 @@ here once they ship (the commit message is the record of what changed and why).
    al nombre de la pestaña activa en vez de la fila completa de pestañas.
    Explícitamente para una versión futura, no esta — sin diseñar todavía.
 
-10. **Tres reportes pendientes de imagen (v9.88) — Jose mencionó "imagen 1" a
-   "imagen 5" pero no llegaron adjuntas al mensaje.** Sin poder verlas no se
-   tocó nada de esto (regla: solo cambiar cuando hay 99%+ de certeza de lo que
-   pide). Pendiente de que Jose las reenvíe:
-   - Reducir una fila en la parte de arriba del header en pantallas grandes,
-     bajando logo/nombre/Acopio al nivel de las pestañas — pero que salte
-     arriba de las pestañas de nuevo al achicar la ventana.
-   - El nombre "ACOPIO" siempre debajo del nombre de la empresa, nunca a un
-     lado — puede que aplique en más anchos de pantalla que el breakpoint
-     actual (≥769px) donde ya se apila así.
-   - Una "ventana de menú" a 3/4 del ancho total en pantallas pequeñas — sin
-     la imagen no está claro si se refiere al menú de cuenta (`#acctMenu`) o a
-     otro elemento; no confundir con el bell panel / Rack Drawer, que ya están
-     en 2/3 desde v9.86.
+10. **Nombre "Acopio" con hipervínculo (v9.89, pedido nuevo de Jose).** Debe
+    apuntar a la página de Acopio, y al hacer clic mostrar una confirmación
+    ("estás saliendo de Acopio, ¿deseas continuar?") antes de navegar.
+    Bloqueado en un solo dato: **falta la URL real de destino** — nunca se
+    debe inventar una URL, así que esto espera a que Jose la mande.
 
 ## Open decision — access when the customer has no Workspace domain
 

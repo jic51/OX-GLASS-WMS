@@ -2,12 +2,18 @@
 // geometry — not knowable from source alone, only from an actual render at
 // an actual size:
 //   1. The topbar brand (logo/name/Acopio badge) stacks vertically and
-//      left-aligned on real screens, with the version number gone from
-//      there entirely (still one click away in the account menu).
+//      left-aligned on EVERY screen size (v9.89: Jose was emphatic — Acopio
+//      must sit under the company name, never beside it, on a phone too,
+//      not just large screens like the first cut of this shipped with),
+//      with the version number gone from there entirely (still one click
+//      away in the account menu).
 //   2. The "not on your lists yet" bell panel is 2/3 of the screen width on
 //      a phone, not half.
 //   3. The Rack Drawer is 2/3 of the screen width on a phone, not almost
 //      the whole screen.
+//   4. The account menu (name/role/settings dropdown) is 3/4 of the screen
+//      width on a phone — wider than the other two on purpose (Jose's own
+//      distinction, v9.89), not nearly the whole screen either.
 //
 // Usage:  node tools/test-responsive-polish.js [path/to/Index_v3_fixed.html]
 
@@ -70,14 +76,14 @@ function check(label, cond) {
     await page.close();
   }
 
-  console.log('\nScenario: small screen (375px, a phone) — brand stays the original row layout (Jose only asked for large screens)');
+  console.log('\nScenario: small screen (375px, a phone) — brand stacks too (v9.89: Acopio must sit under the company name on every screen size, never beside it)');
   {
     const page = await browser.newPage({ viewport: { width: 375, height: 700 } });
     page.on('pageerror', e => pageErrors.push(e.message));
     await page.goto('file://' + f);
     await page.waitForTimeout(700);
-    check('topbar-brand stays a row on a phone, not stacked', await page.evaluate(() =>
-      getComputedStyle(document.querySelector('.topbar-brand')).flexDirection) === 'row');
+    check('topbar-brand stacks on a phone too, not a row', await page.evaluate(() =>
+      getComputedStyle(document.querySelector('.topbar-brand')).flexDirection) === 'column');
     check('version tag is hidden here too — universal, not just large screens', await page.evaluate(() =>
       getComputedStyle(document.getElementById('jsVersionTag')).display) === 'none');
 
@@ -102,6 +108,17 @@ function check(label, cond) {
     check('drawer is open', await page.evaluate(() => document.getElementById('rackDrawer').classList.contains('open')));
     check('width is close to two-thirds of the screen (' + drawerW.toFixed(0) + 'px), not ~375px (nearly the whole screen)',
       Math.abs(drawerW - twoThirds) < 40);
+
+    console.log('\nScenario: small screen — the account menu is 3/4 of the width, wider than the bell panel/Rack Drawer\'s 2/3 on purpose');
+    await page.evaluate(() => closeRackDrawer());
+    await page.waitForTimeout(150);
+    await page.click('#acctBtn');
+    await page.waitForTimeout(150);
+    const menuW = await page.evaluate(() => document.getElementById('acctMenu').getBoundingClientRect().width);
+    const threeQuarters = 375 * 0.75;
+    check('menu is open', await page.evaluate(() => document.getElementById('acctMenu').classList.contains('open')));
+    check('width is close to three-quarters of the 375px screen (' + menuW.toFixed(0) + 'px vs ~' + threeQuarters.toFixed(0) + 'px), not two-thirds (~' + twoThirds.toFixed(0) + 'px)',
+      Math.abs(menuW - threeQuarters) < 40);
     await page.close();
   }
 
