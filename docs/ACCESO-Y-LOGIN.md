@@ -5,6 +5,10 @@ entrar. Todo lo de aquí está verificado contra el código real
 (`getUserRole()`, `oauthCfg_()`, `redirectUri_()`, `handleOAuthCallback_()`),
 no es de memoria.
 
+> **¿Estás por instalar en casa de un cliente?** Este documento explica el
+> POR QUÉ. Para los pasos en orden, la lista de verificación previa y qué
+> hacer si algo falla en campo, usa **`RUNBOOK-INSTALACION.md`**.
+
 ---
 
 ## Lo único que hay que entender: son DOS puertas, no una

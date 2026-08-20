@@ -265,6 +265,96 @@ raíz, para cuando haya volumen que lo justifique.
   the ones already built. Applies everywhere `_infoIc` is used (NOT the Setup
   Wizard, which keeps its always-visible hints per the same conversation).
 
+## Cycle count / conteo físico — idea de Jose (v9.91), diseño propuesto
+
+**El problema real:** un cliente quiere revisar si lo que está físicamente en
+la bodega coincide con lo que dice la app, y corregir las diferencias. Hoy no
+hay ninguna forma de hacerlo.
+
+**La idea original de Jose:** recorrer ubicación por ubicación dando check a
+lo que encuentra; al final se compara lo marcado contra lo no marcado y se
+muestra la lista de lo NO encontrado, con todos los datos del material
+(cantidad, ubicación, fecha de recepción, movimientos desde el ENTRY) para
+buscarlo bien; si de verdad no está, se elimina o se corrige.
+
+**Lo que está bien de esa idea y hay que conservar:**
+- **Recorrer por UBICACIÓN, no por lista de materiales.** Es exactamente como
+  se cuenta en la vida real (uno se para frente a un rack, no busca un
+  material por toda la bodega). Buen instinto.
+- **"Búscalo bien antes de darlo por perdido"** con el historial completo del
+  material a la vista. Esto es genuinamente valioso y ningún sistema barato lo
+  hace. Los movimientos ya existen en ARCHIVE, así que sale casi gratis.
+
+**Lo que yo cambiaría, en orden de importancia:**
+
+1. **El check binario es el hueco más grande.** La diferencia más común NO es
+   "desapareció" — es "debería haber 40 y hay 37". Un checkbox no puede
+   expresar eso. Cada línea necesita un campo de cantidad contada.
+   **Recomendación: conteo a ciegas (blind count) por defecto** — que la
+   persona escriba lo que ve SIN ver primero lo que la app esperaba. Mostrar
+   el número esperado sesga fuertemente hacia confirmarlo ("sí, se ve más o
+   menos igual") y es la razón número uno por la que los conteos salen
+   limpios y el inventario sigue mal. Es barato de construir y es lo que más
+   mejora la exactitud. Con un interruptor para apagarlo.
+
+2. **NUNCA borrar ni editar el historial. Escribir un ajuste.** Esto no es
+   preferencia, es forzado por la arquitectura: el stock NO se guarda en
+   ningún lado, se recalcula reproduciendo cada movimiento
+   (`calculateStock()`), y los costos van estampados por fila. Borrar un
+   ENTRY reescribe el pasado y cambia retroactivamente el promedio ponderado
+   y todo lo que dependa de él. El resultado correcto de un conteo es un
+   movimiento NUEVO que dice "el día D contamos y ajustamos de 40 a 37,
+   motivo X".
+   **Recomendación: un 6º tipo de movimiento, `ADJUST`/`COUNT`.** Hoy solo
+   existen ENTRY, EXIT, TRANSFER, RETURN, WASTE. Se podría reusar WASTE para
+   los faltantes, pero WASTE significa "dañado/consumido", que es mentira si
+   fue un error de captura — y sobre todo **WASTE no puede expresar un
+   SOBRANTE** (encontrar más de lo esperado, que pasa seguido cuando algo se
+   guardó en el rack equivocado). Registrar un sobrante como ENTRY inventa
+   una compra que nunca ocurrió y corrompe el costo promedio, justo contra la
+   regla de "nunca inventar un costo" que ya está en este documento. Costo del
+   6º tipo: tocar `calculateStock`, la validación de `addMovementsBatch_`, los
+   badges/filtros del frontend y el motor de costos.
+
+3. **Un conteo es una SESIÓN, no un momento.** Contar una bodega toma horas o
+   días y suele hacerlo más de una persona. Necesita guardarse y poder
+   retomarse: quién lo empezó, qué fecha, qué racks cubre, cuánto lleva
+   avanzado. Sin esto, un refresh del navegador borra todo el trabajo y nadie
+   va a terminar un conteo nunca.
+
+4. **Hace falta un botón de "encontré algo que no está en esta lista".**
+   Sutileza que la versión original se pierde: si solo muestras "lo que la app
+   cree que hay en A1A" para palomear, **es imposible descubrir un material
+   que físicamente está en A1A pero la app cree que está en otro lado**. Y
+   encontrar stock mal ubicado es una de las cosas para las que existe un
+   conteo físico.
+
+5. **El entregable es el reporte de variaciones.** Al terminar: lista de
+   diferencias con esperado / contado / delta, **el valor en dólares del
+   delta** (los costos ya existen desde v9.78), y un clic para aceptar y
+   escribir el ajuste. Guardar el registro del conteo permite después ver "en
+   este material siempre salimos cortos" — que es como se detecta un robo o
+   un proceso roto.
+
+6. **Control de alcance.** Todos piden "contar toda la bodega" y nadie lo
+   termina. La práctica real es conteo cíclico ABC: lo caro y lo que más se
+   mueve se cuenta seguido, el resto rara vez. La app ya tiene costos e
+   historial de movimientos, así que podría SUGERIR qué contar. Pero para una
+   v1, basta con "elige unos racks y cuéntalos".
+
+**Propuesta de alcance para una v1 realmente construible:** sesión de conteo
+guardada → elegir racks → recorrer rack por rack escribiendo cantidades a
+ciegas → botón de "encontré algo más" → reporte de variaciones con valor en
+dólares → aceptar y escribir movimientos `ADJUST`. El panel de detalle con el
+historial del material (la mejor parte de la idea de Jose) va en el reporte de
+variaciones, que es donde de verdad se usa: cuando ya sabes que hay una
+diferencia y necesitas entender por qué.
+
+**Sin decidir todavía:** ¿quién puede hacer un conteo (WAREHOUSE, o solo
+ADMIN)? ¿aceptar los ajustes necesita permiso aparte, dado que mueven dinero?
+¿se congela el rack mientras se cuenta, o se permite que alguien haga un
+movimiento a media sesión (y entonces la variación se calcula contra qué)?
+
 ## Idea to define — proactive data-quality suggestions
 
 Jose's idea: the app notices gaps and inconsistencies and offers to fix them,
