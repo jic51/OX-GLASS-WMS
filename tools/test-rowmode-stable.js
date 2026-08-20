@@ -15,6 +15,13 @@ const { chromium } = require('playwright');
 const SRC = process.argv[2] || path.join(__dirname, '..', 'Index_v3_fixed.html');
 let html = fs.readFileSync(SRC, 'utf8');
 
+// Matching the real APP_VERSION, not a literal 'test' string, so the
+// version-mismatch banner never appears — at some widths it's tall enough
+// to sit over the topbar and block Playwright's clicks, a distraction from
+// what this file is actually testing.
+const versionMatch = html.match(/var APP_VERSION\s*=\s*'([^']+)'/);
+const APP_VERSION = versionMatch ? versionMatch[1] : 'test';
+
 const stub = `<script>
 window.google=window.google||{}; window.google.charts=window.google.charts||{load:function(){},setOnLoadCallback:function(){}};
 Object.assign(window.google,{script:{run:new Proxy({},{get(t,k){
@@ -27,7 +34,7 @@ Object.assign(window.google,{script:{run:new Proxy({},{get(t,k){
   };
 }})}});
 window.__DATA={ userRole:'ADMIN', userEmail:'jose@ox-glass.com', userName:'Jose Castro',
- serverVersion:'test', company:{name:'OX Glass LLC.',domain:'ox-glass.com',logo:''},
+ serverVersion:'${APP_VERSION}', company:{name:'OX Glass LLC.',domain:'ox-glass.com',logo:''},
  movements:[{rowIdx:2,moveType:'ENTRY',dateRec:'2026-08-01',category:'WINDOW',name:'GLASS',qty:10,unit:'pcs',destLoc:'A1A',timestamp:'2026-08-01 10:00',userEmail:'jose@ox-glass.com'}],
  stock:{ 'WINDOW|||GLASS': { name:'GLASS', category:'WINDOW', unit:'pcs', warehouseQty:10, siteQty:0,
    availableQty:10, wastedQty:0, reservedQty:0, matId:'WINDOW|||GLASS', warehouseLocs:{ 'A1A': 10 }, status:'OK' } },

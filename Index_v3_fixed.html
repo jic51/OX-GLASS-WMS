@@ -103,21 +103,35 @@
          full-width row above the tabs, leaving that whole row mostly empty
          space to the right of it. Bringing it down to sit beside the tabs
          instead removes that row entirely on a screen with room to spare.
-         .topbar-row2's own internal grid (nav centred, tools right-aligned)
-         is untouched — it just now sizes against the space left over after
-         the brand block, rather than the full topbar width. Narrower than
-         this, row1 stays exactly where it always was, above row2 — Jose's
-         own words, it still "jumps above the tabs" the moment the window
-         shrinks past this same breakpoint. */
-      /* flex-wrap, not a second fixed breakpoint: a longer company name (a
-         future customer, not just OX Glass) needs more room before row2 fits
-         beside it than a short one does. Letting the row wrap on its own
-         content, rather than guessing one pixel width that happens to work
-         for "PRODUCTION OX GLASS", is what makes row2 actually jump back
-         above the tabs exactly when it stops fitting — for any name. */
-      .topbar{flex-direction:row;flex-wrap:wrap;align-items:center;gap:.4rem 1.25rem}
-      .topbar-row1{flex-shrink:0}
-      .topbar-row2{flex:1 1 auto}
+         Below this breakpoint the merge never even attempts — row1 stays
+         exactly where it always was, above row2. Whether it ACTUALLY merges
+         above this breakpoint is JS's call, not this media query's — see
+         .topbar.merged below and _syncBrandWidth's fit check, since a
+         longer company name (a future customer, not just "OX Glass") needs
+         more room before it fits beside five tabs than a short one does. */
+      /* Jose also caught the tabs landing off-centre once brand shared the
+         row — reasonable: sizing row2 against "whatever's left after
+         brand" made its own centred nav track the MIDDLE OF THAT LEFTOVER
+         SPACE, not the middle of the page, and brand (logo+name+Acopio) is
+         never the same width as the avatar cluster on the right. Taking
+         row1 out of flow with position:absolute is what actually fixes it:
+         row2 goes back to spanning the full topbar width — the exact same
+         box test-topbar-deck.js already measures as centred at
+         1024/1440px — with brand floated on top of its left edge instead
+         of eating into it. min-height on .topbar reserves room for
+         brand's tallest case (logo + name + Acopio stacked) since it no
+         longer contributes to the topbar's own flow height once it's out
+         of flow. */
+      .topbar.merged{position:relative;min-height:74px;gap:.4rem 1.25rem}
+      .topbar.merged .topbar-row1{position:absolute;left:1.5rem;top:50%;transform:translateY(-50%);z-index:1}
+      /* row2 itself stays full-width (unpadded) so its centring math is
+         still exactly "middle of the page" — the fix isn't in row2's box,
+         it's in giving column 1 the SAME minimum width as brand actually
+         needs, via --brand-w (see _syncBrandWidth). Column 3 gets that same
+         minimum for free since both share one minmax() — which is exactly
+         what keeps them equal and nav centred, the same reason column 1 was
+         an empty spacer matching column 3's width in the first place. */
+      .topbar.merged .topbar-row2{grid-template-columns:minmax(var(--brand-w,180px),1fr) minmax(0,auto) minmax(var(--brand-w,180px),1fr)}
     }
     /* ── LAYOUT ── */
     .container{max-width:1400px;margin:0 auto;padding:1.25rem;flex-grow:1;width:100%}
@@ -2596,7 +2610,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.90';
+var APP_VERSION = '9.91';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -3978,6 +3992,7 @@ function applyCompanyBranding(c){
       try {
         if (dataUrl.length < 400000) localStorage.setItem('acopio_brand_logo', dataUrl);
       } catch (e) {}
+      _syncBrandWidth();   // the logo arrives async and changes brand's width
     }, 'full');                            // full file: a logo is already tiny, and the
                                            // thumbnail would drop its transparency
   } else if (logo && !c.logoId){
@@ -3985,6 +4000,7 @@ function applyCompanyBranding(c){
     _setFavicon(APP_FAVICON_DEFAULT);
     try { localStorage.removeItem('acopio_brand_logo'); } catch (e) {}   // a removed logo must not linger on the splash
   }
+  _syncBrandWidth();
 }
 
 // The company's own uploaded logo becomes the browser tab icon too, once
@@ -3993,6 +4009,43 @@ function applyCompanyBranding(c){
 function _setFavicon(href){
   var link = document.getElementById('appFavicon');
   if (link && href) link.href = href;
+}
+
+// The header-merge layout (≥769px) takes the brand block out of flow with
+// position:absolute so the tabs stay mathematically centred on the page —
+// see .topbar-row1's rule — but that means .topbar-row2 has to be told by
+// hand how much room to leave for it, since an out-of-flow element no
+// longer pushes anything over on its own. Brand's width varies with the
+// company name and whether a logo is showing, so this is measured, not
+// guessed: a static number that happened to fit "OX Glass" would just be
+// the same off-centre bug again for a longer name.
+//
+// Whether the merge actually HAPPENS is also decided here, not by the
+// media query alone: forcing it on and then checking whether the tabs
+// wrapped is the only way to know it really fits, for the same reason a
+// fixed pixel breakpoint keeps being wrong — this is a measure-then-verify
+// pass, not a guess, exactly like _positionTip's edge avoidance elsewhere
+// in this file.
+function _syncBrandWidth(){
+  var brandEl = document.querySelector('.topbar-brand');
+  var topbarEl = document.querySelector('.topbar');
+  if (!brandEl || !topbarEl) return;
+  document.documentElement.style.setProperty('--brand-w', brandEl.getBoundingClientRect().width + 'px');
+
+  if (window.innerWidth < 769) { topbarEl.classList.remove('merged'); return; }
+  topbarEl.classList.add('merged');
+  var buttons = document.querySelectorAll('.topbar-row2 .nav button');
+  var wrapped = false;
+  if (buttons.length > 1) {
+    var firstTop = buttons[0].getBoundingClientRect().top;
+    buttons.forEach(function(b){
+      if (Math.abs(b.getBoundingClientRect().top - firstTop) > 2) wrapped = true;
+    });
+  }
+  // A tab spilling onto its own line under the rest, inside what was
+  // supposed to be one merged row, means there wasn't really room for the
+  // merge — fall back to the original two full-width rows instead.
+  if (wrapped) topbarEl.classList.remove('merged');
 }
 
 // ── Report a Problem (floating button) ──────────────────────────────────────
@@ -10068,6 +10121,7 @@ window.addEventListener('resize', function(){
     if (panel) panel.classList.remove('show');
   }
 });
+window.addEventListener('resize', _debounce(_syncBrandWidth, 150));
 
 function toggleCfgBell(e){
   if (e) e.stopPropagation();
@@ -12755,6 +12809,11 @@ document.addEventListener('DOMContentLoaded', function(){
   // First thing, before any window can be opened: nothing behind an open
   // window may be clicked, tabbed into or scrolled.
   _initModalShield();
+
+  // Before the real company name arrives, so the header-merge decision
+  // (see _syncBrandWidth) already has something to measure instead of
+  // defaulting to "not merged" for the first paint.
+  _syncBrandWidth();
 
   // Nav
   _safeOn('btn-dashboard','click', function(){ showTab('dashboard','btn-dashboard'); });

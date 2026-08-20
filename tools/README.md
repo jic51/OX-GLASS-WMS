@@ -212,12 +212,19 @@ come back from — is invisible to both. Those get a browser test.
   annotated screenshot): on a wide screen the brand block (logo/company name/
   Acopio badge) sits beside the tabs instead of in its own mostly-empty row
   above them; below 769px nothing changes, row1 still jumps above row2 same
-  as before. Real Playwright geometry at seven widths, checking that the
-  last tab never overlaps the avatar or the bell — the actual bug this
-  guards against, since a longer company name than "OX Glass" needs more
-  room before the merge fits than a shorter one does, so the CSS uses
-  flex-wrap (content-driven) rather than a second hardcoded breakpoint that
-  only happens to work for one name's length.
+  as before. v9.91: Jose then caught the tabs landing off-centre once
+  merged, since row2 was centring its nav against "whatever space brand
+  left over," not the middle of the page. Fixed by taking brand out of flow
+  (position:absolute) so row2 goes back to spanning the full width — with
+  column 1 given the same measured width as brand actually needs
+  (`--brand-w` / `_syncBrandWidth`) so it can float over it without
+  overlapping the first tab — and by deciding whether to merge at all in JS
+  (force it on, check if a tab wrapped, revert if so) rather than a fixed
+  breakpoint that only happens to work for one company name's length. Real
+  Playwright geometry at seven widths: the last tab never overlaps the
+  avatar or the bell, brand never overlaps the tabs, and — the actual v9.91
+  bug — the tabs' centre matches the real page centre exactly when merged,
+  not just centred in the leftover space next to brand.
 
 All of these lift the real code out of `Index_v3_fixed.html` (or
 `Code_v3_fixed.gs`) rather than keeping a copy, so they cannot quietly drift

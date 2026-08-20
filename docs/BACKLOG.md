@@ -13,6 +13,16 @@ here once they ship (the commit message is the record of what changed and why).
 2. **Polish the wizard's Copy button animation** — the checkmark transition works
    now, but the in/out timing still feels abrupt. Jose (v9.89): leave it for
    later, not urgent.
+
+2b. **Splash screen phrase rotation — explicitly for the NEXT version (Jose,
+    v9.90), not this one.** Two changes to the rotating phrases under the
+    logo on the loading screen: (1) add half a second to how long each
+    phrase stays up before rotating to the next; (2) change the transition
+    itself — not a plain fade, the current phrase should slide up and fade
+    out while the next one slides up into place from below, instead of
+    just disappearing/appearing in place. tools/test-splash-notes.js covers
+    the rotation today and will need updating for both once this is picked
+    up.
 3. **Polish the company logo placement** in the topbar — it renders, but the
    sizing/position isn't what Jose wants yet. Jose says it is fine for now —
    waiting on him to say what he actually wants there.
@@ -74,57 +84,53 @@ here once they ship (the commit message is the record of what changed and why).
    usuarios") cubre el caso a costo cero. Se puede revisar si empieza a
    pasar de verdad con clientes reales.
 
-7. **Tracking de dispositivo/ubicación en movimientos y errores.** Jose
-   (v9.90) aclaró el objetivo: no es ubicación geográfica — es saber DE QUÉ
+7. **Tracking de dispositivo/ubicación en movimientos y errores — alcance
+   decidido (v9.90).** No es ubicación geográfica — es saber DE QUÉ
    DISPOSITIVO y CON QUÉ CUENTA ocurrió un error o un problema, para poder
-   dar soporte. La cuenta ya se guarda hoy (`userEmail` en ARCHIVE y en
-   ERROR_LOG); lo que falta es el dispositivo/navegador. Mi recomendación:
-   esto es razonable y NO es invasivo — es el mismo tipo de dato que
-   cualquier sitio web ya registra (navegador, sistema operativo), disponible
-   vía `navigator.userAgent` en JS, sin pedir permiso al usuario, muy
-   distinto de geolocalización real. Sí sugeriría acotarlo: capturarlo en
-   `ERROR_LOG` (que es exactamente para diagnóstico de soporte) tiene
-   sentido inmediato; agregarlo a CADA movimiento normal (Entry/Exit/etc.)
-   es mucho menos claro que aporte algo — nadie necesita saber "desde Chrome
-   en Android" en cada salida de material, y ensancha ARCHIVE sin beneficio
-   obvio. Empezar solo por ERROR_LOG y ver si de verdad hace falta más
-   parece el camino más barato y honesto.
+   dar soporte. Jose confirmó el caso de uso exacto: poder decirle a un
+   cliente "el dispositivo #### con la cuenta de JOSE CASTRO causó este
+   error varias veces, en estas ocasiones" — para que el cliente decida qué
+   hacer. La cuenta ya se guarda hoy (`userEmail` en ARCHIVE y en
+   ERROR_LOG); falta el dispositivo/navegador, capturable vía
+   `navigator.userAgent` en JS sin pedir permiso (nada que ver con
+   geolocalización real). Acotado a `ERROR_LOG` — no a cada movimiento
+   normal, que no necesita este dato y solo agranda ARCHIVE sin beneficio.
+   Sin construir todavía.
 
-8b. **Notificaciones en vivo para el admin — Jose (v9.90) no recuerda el
-    alcance exacto, pidió que se lo recordemos.** Lo único que está anotado
-    por escrito (ver el punto de abajo, "Notificaciones en vivo para el
-    admin de lo que hace el personal de Warehouse") es la idea B: una
-    tarjeta tipo "Jose movió 4 WINDOW de GLASS a B2B" apareciendo del lado
-    izquierdo cuando el admin está en otra pestaña, con clic para saltar a
-    esa fila en Movements & History. La idea A que Jose menciona ahora —
-    un aviso al final del turno sobre movimientos que otros usuarios dejaron
-    sin proyecto/supplier/etc. — no está anotada en ningún lado de este
-    documento; puede ser una conversación distinta (se parece más a
-    "Sugerencias proactivas de calidad de datos", más abajo, pero esa idea
-    tampoco tiene un timing de "fin de turno" escrito). No inventamos cuál
-    de las dos es la que quiere — falta que Jose confirme si es una, la
-    otra, o ambas.
-
-8. **Notificaciones en vivo para el admin de lo que hace el personal de
-   Warehouse, visibles en cualquier pestaña menos Movements.** Idea de Jose,
-   anotada a su pedido — sin diseñar todavía. Algo así: "Jose movió 4 WINDOW
-   de GLASS a B2B" aparece del lado izquierdo si el admin está en Dashboard o
-   Warehouse Map (no hace falta si ya está viendo Movements); clic en la
-   notificación lleva a esa fila en Movements & History y la resalta — mismo
-   mecanismo que `_showMovementRows`/`.row-spotlight` que ya usan las
-   tarjetas de "el sistema hizo esto solo" en Settings → System, así que la
-   parte de "llevar y resaltar" ya existe y solo hay que reutilizarla.
-   Preguntas reales antes de construir: ¿en tiempo real de verdad (empuje
-   desde el servidor) o solo cuando el navegador ya está haciendo un refresh
-   de todos modos (mismo patrón que `_refreshOpenRackDrawer`, v9.83 — sin
-   trigger nuevo, sin polling nuevo)? Apps Script no tiene push real hacia el
-   navegador sin algo como Firebase seguido por detrás, así que la opción
-   honesta y gratis es la segunda: la próxima vez que `_applyData` corra con
-   movimientos nuevos desde la última carga, comparar y armar las tarjetas de
-   ahí — no en tiempo real estricto, pero tampoco un sistema nuevo que
-   mantener. ¿Solo para movimientos de WAREHOUSE, o de cualquiera que no sea
-   el propio admin? ¿Se pueden descartar como las tarjetas de "el sistema
-   hizo esto solo"?
+8. **Notificaciones en vivo para el admin — Jose confirmó (v9.90): son
+   AMBAS ideas, no una sola.**
+   - **Idea A — tarjeta al momento.** "Jose movió 4 WINDOW de GLASS a B2B"
+     aparece del lado izquierdo si el admin está en Dashboard o Warehouse
+     Map (no hace falta si ya está viendo Movements); clic en la
+     notificación lleva a esa fila en Movements & History y la resalta —
+     mismo mecanismo que `_showMovementRows`/`.row-spotlight` que ya usan
+     las tarjetas de "el sistema hizo esto solo" en Settings → System, así
+     que la parte de "llevar y resaltar" ya existe y solo hay que
+     reutilizarla. Preguntas reales antes de construir: ¿en tiempo real de
+     verdad (empuje desde el servidor) o solo cuando el navegador ya está
+     haciendo un refresh de todos modos (mismo patrón que
+     `_refreshOpenRackDrawer`, v9.83 — sin trigger nuevo, sin polling
+     nuevo)? Apps Script no tiene push real hacia el navegador sin algo
+     como Firebase detrás, así que la opción honesta y gratis es la
+     segunda: la próxima vez que `_applyData` corra con movimientos nuevos
+     desde la última carga, comparar y armar las tarjetas de ahí. ¿Solo
+     para movimientos de WAREHOUSE, o de cualquiera que no sea el propio
+     admin? ¿Se pueden descartar como las tarjetas de "el sistema hizo esto
+     solo"?
+   - **Idea B — resumen de fin de día.** Cuando alguien de Warehouse deja
+     un Entry o movimiento sin supplier/proyecto/etc., aparece la tarjeta
+     de la idea A al lado. Si esa persona NO la corrige (o le pone "Not
+     now"), al final del día se le avisa al admin con TODO lo que quedó
+     sin corregir esa jornada, en un solo resumen. Jose no está seguro de
+     si originalmente esto se había decidido como correo o como
+     notificación dentro de la app — **falta confirmar el canal** antes de
+     diseñar. Se parece en mecánica a "Sugerencias proactivas de calidad de
+     datos" (más abajo, la deck de sugerencias ya construida) pero con un
+     timing distinto (fin de día, no al momento) y un destinatario distinto
+     (el admin sobre el trabajo de otros, no la persona que hizo el
+     movimiento). Sin diseñar todavía — ni el canal, ni el disparador exacto
+     de "fin de día" (¿hora fija? ¿cierre de turno?), ni si se agrupa por
+     persona o por tipo de dato faltante.
 
 9. **Menú de hamburguesa en pantallas pequeñas.** Idea de Jose (v9.88): en vez
    de las pestañas de navegación normales, un ícono de hamburguesa en móvil que
@@ -487,38 +493,29 @@ plantilla, cero cambios de motor.
 
 ### Medianos (dos a cuatro sesiones)
 - **Rediseñar el Low-Stock Monitor** — HECHO en v9.74.
-- **Sincronización entre ventanas abiertas — Jose quiere hacerlo (v9.90), pero
-  primero quiere saber exactamente cómo funcionaría y cuáles son los
-  riesgos reales.** Apps Script no tiene push real hacia el navegador, así
-  que la única forma honesta es sondeo (polling): cada N segundos, una
-  llamada barata (`getVersionStamp` o similar — NO recargar todos los datos,
-  solo un número/hash que cambia cuando algo cambió) le pregunta al
-  servidor "¿cambió algo desde la última vez?", y solo si la respuesta es sí
-  se dispara una recarga real de datos.
-  Riesgos concretos, no teóricos:
-  - **Cuota de ejecución de Apps Script.** Cada llamada, aunque sea barata,
-    consume una ejecución de las cuotas diarias de Google (Consumer:
-    20,000/día; Workspace: mucho más alto, pero no infinito). Con varias
-    pestañas abiertas por varios usuarios, sondear cada 5-10s puede sumar
-    miles de llamadas por día por cliente. Hay que elegir el intervalo con
-    cuidado (¿15s? ¿30s?) y APAGARLO cuando la pestaña está en segundo
-    plano (`document.visibilityState`) — si no, cada pestaña olvidada
-    abierta sigue gastando cuota para siempre.
-  - **Falsos "cambió algo" en cascada.** Si el hash que se compara es
-    demasiado general (por ejemplo, cambia con CUALQUIER escritura de
-    cualquier usuario), cada pestaña abierta recarga sus datos completos
-    cada vez que alguien más hace un movimiento — en una bodega activa con
-    3-4 personas trabajando a la vez, eso puede volverse una recarga
-    constante, no ocasional.
-  - **Qué se sincroniza realmente.** ¿Solo el stock/movimientos (lo más
-    importante), o también configuración, usuarios, permisos? Sincronizar
-    de más complica sin necesidad; sincronizar de menos deja la razón
-    original del pedido (dos personas viendo números distintos al mismo
-    tiempo) sin resolver del todo.
-  - **Qué pasa si la recarga interrumpe algo que el usuario está haciendo**
-    — por ejemplo, a mitad de llenar un formulario de Entry. Recargar stock
-    de fondo está bien; recargar y perder lo que alguien estaba escribiendo
-    no. Hay que decidir si la sync se pausa mientras un modal está abierto.
+- **Sincronización entre ventanas abiertas — Jose quiere hacerlo (v9.90).
+  Decidido en la conversación, sin construir todavía:**
+  - Sondeo (polling), no push real — Apps Script no lo tiene. Cada N
+    segundos, una llamada barata (`getVersionStamp` o similar — NO recarga
+    todos los datos, solo un número/hash) pregunta "¿cambió algo desde la
+    última vez?"; solo si la respuesta es sí se dispara una actualización.
+  - **Se apaga con la pestaña en segundo plano** (`document.visibilityState`)
+    — decidido, para no gastar cuota de ejecución en pestañas olvidadas
+    abiertas. Intervalo exacto (¿15s? ¿30s?) por definir al construirlo.
+  - **Enfocado en stock y movimientos únicamente** — decidido. Usuarios,
+    config y permisos NO se sincronizan en vivo; se actualizan solos la
+    próxima vez que esa pestaña recargue la página normalmente.
+  - **La actualización NO puede ser una recarga completa de la página, ni de
+    todas las pestañas.** Decidido, y es la parte que más cambia el diseño
+    original: cuando algo cambia, solo se actualiza el dato puntual que
+    cambió (el número, el nombre, el material específico) en la pestaña
+    donde el usuario está activo ahora mismo — nunca todas las pestañas
+    abiertas, y nunca la página completa. Esto es bastante más trabajo que
+    un simple "recargar stock de fondo": hace falta que el servidor pueda
+    decir QUÉ cambió puntualmente (no solo "algo cambió"), y que el
+    frontend sepa parchar solo esa celda/número en el DOM sin re-renderizar
+    toda la tabla — evita perder lo que alguien esté escribiendo a medio
+    llenar en un formulario de Entry, que era la preocupación original.
 - **Limpieza del error log** — HECHO en v9.64.
 
 ### Grandes (una semana o más)

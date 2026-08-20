@@ -4,12 +4,18 @@
 // above them. Below 769px nothing changes — it still "jumps above the
 // tabs" exactly like before, his own words.
 //
-// The tricky part isn't the merge itself, it's that it must never overlap:
-// a longer company name than "OX Glass" needs more room before row2 fits
-// beside it, so this uses flex-wrap (content-driven) rather than a second
-// hardcoded breakpoint that only happens to work for one name's length.
-// That's also why this is a real browser test and not something read from
-// the CSS source — wrapping behavior depends on actual rendered text width.
+// v9.91: Jose then caught the tabs sitting off-centre once merged — sizing
+// row2 against "whatever's left after brand" centred nav in the middle of
+// THAT LEFTOVER SPACE, not the middle of the page. Fixed by taking row1 out
+// of flow (position:absolute) so row2 goes back to spanning the full width,
+// with column 1 given the same measured minimum width as brand actually
+// needs (--brand-w / _syncBrandWidth) so it can float on top without
+// colliding with the first tab. Whether the merge happens at all is also
+// JS's call now — forced on, then checked for wrapping, then reverted if it
+// didn't fit — rather than a fixed breakpoint that only happens to work for
+// one company name's length. All of this depends on actual rendered text
+// width, which is exactly why this is a real browser test and not
+// something read from the CSS source.
 //
 // Usage:  node tools/test-header-merge.js [path/to/Index_v3_fixed.html]
 
@@ -70,18 +76,21 @@ function rectsOverlap(a, b) {
         const el = document.getElementById(id);
         rects[id] = el ? el.getBoundingClientRect() : null;
       });
+      const nav = document.querySelector('.topbar-row2 .nav').getBoundingClientRect();
       return {
         rects,
         row1: document.querySelector('.topbar-row1').getBoundingClientRect(),
         row2: document.querySelector('.topbar-row2').getBoundingClientRect(),
+        navCenter: nav.left + nav.width / 2,
+        merged: document.querySelector('.topbar').classList.contains('merged'),
       };
     });
 
     // Same flex line, not necessarily same top (row1's 3 stacked lines are
     // taller than row2's single line, and align-items:center on .topbar
     // centers the shorter one within it rather than top-aligning both).
-    const merged = geo.row1.top < geo.row2.bottom && geo.row2.top < geo.row1.bottom;
-    console.log('  (brand and tabs are ' + (merged ? 'merged onto one line' : 'on separate lines') + ')');
+    const onSameLine = geo.row1.top < geo.row2.bottom && geo.row2.top < geo.row1.bottom;
+    console.log('  (brand and tabs are ' + (onSameLine ? 'merged onto one line' : 'on separate lines') + ', .merged class: ' + geo.merged + ')');
 
     check('the last tab (Incoming) and the avatar never overlap',
       !rectsOverlap(geo.rects['btn-incoming'], geo.rects['acctBtn']));
@@ -91,9 +100,16 @@ function rectsOverlap(a, b) {
     }
     check('the company name and the Acopio badge never overlap each other',
       !rectsOverlap(geo.rects['appTitle'], geo.rects['poweredByBadge']));
+    check('brand (logo/name/Acopio) and the tabs never overlap each other, merged or not',
+      !rectsOverlap(geo.row1, geo.rects['btn-incoming']));
+
+    if (geo.merged) {
+      check('the tabs are centred on the actual PAGE (' + geo.navCenter.toFixed(1) + 'px vs page centre ' + (w / 2).toFixed(1) + 'px), not just centred in the space left over after brand',
+        Math.abs(geo.navCenter - w / 2) < 2);
+    }
 
     if (w < 769) {
-      check('below 769px, brand stays on its own row above the tabs (unchanged behavior)', !merged);
+      check('below 769px, brand stays on its own row above the tabs (unchanged behavior)', !onSameLine && !geo.merged);
     }
 
     await page.close();
