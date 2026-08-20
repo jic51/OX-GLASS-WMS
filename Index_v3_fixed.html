@@ -2610,7 +2610,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.91';
+var APP_VERSION = '9.92';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -7321,6 +7321,11 @@ function _renderSystemTab() {
   // The scheduled jobs already ran and already logged; this is the first place
   // the app has ever shown it. Answers "is this thing actually backing up?"
   // without anyone having to open the Sheet and read AUDIT_LOG by hand.
+  //
+  // Deliberately NOT filtered by `dismissed`, unlike the corner deck. Pressing
+  // ✕ on a backup notice means "I have read this", not "this never happened" —
+  // conflating the two is what emptied this list out and made it claim nothing
+  // automatic had ever run, directly above a "Last backup: today" line.
   var actHtml = (systemActivity && systemActivity.length)
     ? '<ul class="sysact-list">' + systemActivity.map(function(a){
         return '<li id="sysact-' + _he(_sysActId(a)) + '"><span class="sysact-dot">✓</span>' +
@@ -12561,8 +12566,14 @@ function _dismissSysCard(id){
 // backup a day that is a month of ignoring it, which is long enough to mean
 // nobody was ever going to read it.
 function _announceSystemActivity(){
+  // a.dismissed is the server's answer (this person pressed ✕ on a previous
+  // load); _sysDismissedNow is the same-session mirror so a card just
+  // dismissed cannot flicker back before the next load. The deck wants
+  // neither — Settings → System, which reads the same list, deliberately
+  // shows both (see _renderSystemTab): a notice is something you dismiss,
+  // a maintenance record is not.
   _sysCards = (systemActivity || []).filter(function(a){
-    return a.at && !_sysDismissedNow[a.at + '|' + a.action];
+    return a.at && !a.dismissed && !_sysDismissedNow[a.at + '|' + a.action];
   }).map(function(a){
     return { id: a.at + '|' + a.action, label: a.label, at: a.at, detail: a.detail, extra: a.extra };
   });

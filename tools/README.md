@@ -27,6 +27,7 @@ node tools/test-account-tooltip-delay.js
 node tools/test-bell-tooltip-collision.js
 node tools/test-rowmode-stable.js
 node tools/test-header-merge.js
+node tools/test-sysactivity-dismiss.js
 ```
 
 `tools/audit-responsive.js` is a tape measure, not a test — run it when layout
@@ -208,6 +209,19 @@ come back from — is invisible to both. Those get a browser test.
   with the "⚙ Columns" button above the table — long enough, it didn't fit and
   shoved the whole row down to a new toolbar line. The row-mode bar now lives
   on its own dedicated line from the start.
+- `test-sysactivity-dismiss.js` — that dismissing a system notice does NOT
+  erase it from the maintenance record (`getSystemActivity` + both its
+  consumers), backend lifted verbatim into a Node vm with the Sheets API
+  stubbed. Settings → System said "Nothing automatic has run yet" directly
+  above a "Last backup: today at 2:13 AM" line that was perfectly true —
+  both read one list, but the corner deck is a NOTICE you press ✕ on and
+  Settings → System is a RECORD that has to keep saying the backup ran, and
+  dismissed rows were being dropped at the source. Checks that all six
+  nightly backups come back with four of them dismissed, that they are
+  flagged rather than missing, that each keeps its Drive link either way,
+  that the deck's limit is still spent on live cards instead of being
+  starved by old dismissals, and that the two consumers genuinely disagree
+  — deck filters on `dismissed`, Settings does not.
 - `test-header-merge.js` — the topbar header compaction (v9.89, from Jose's
   annotated screenshot): on a wide screen the brand block (logo/company name/
   Acopio badge) sits beside the tabs instead of in its own mostly-empty row
