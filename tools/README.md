@@ -125,12 +125,22 @@ come back from — is invisible to both. Those get a browser test.
   landing on an empty form — the two types keep completely separate fields
   (exit-cat-1/exit-name-1 vs the shared mType/mName), so nothing carried over
   on its own before this.
-- `test-backup-status.js` — the "Last backup" line in Settings → System
+- `test-backup-status.js` — the backup box in Settings → System
   (`_drawBackupBox`), lifted verbatim into a Node vm: hidden on a fresh
   install with nothing recorded yet, shown with the right relative time and a
   working Drive link once there is one, an HTML-sensitive file name renders
   escaped, and the line survives even with the nightly schedule turned off
-  (schedule and history are separate facts). Writing LAST_BACKUP_AT/NAME/
+  (schedule and history are separate facts). Also covers the v9.93 full list
+  — Jose asked what a customer does when they want YESTERDAY's backup, and
+  the answer was "go hunting in Drive", since only the newest was ever
+  linked. Every backup is now reachable, collapsed behind a count so ~30
+  near-identical rows do not take over the tab, escaped in the list too, not
+  offered at all when there is only one, and absent without crashing on an
+  install whose server has not been redeployed yet. The list is built from
+  the Drive folder (`listBackups_`) rather than AUDIT_LOG on purpose: the
+  folder says what still EXISTS, so a backup the customer deleted stops
+  being listed instead of being listed with a link that lands on Drive's
+  "unable to open the file at this time". Writing LAST_BACKUP_AT/NAME/
   FILE_ID Script Properties on every backup (runBackupNow_) exists because
   AUDIT_LOG's ~1500-row readable tail can scroll a backup entry past in under
   a day on a busy install, even though the file is safe in Drive the whole

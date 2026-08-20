@@ -82,5 +82,68 @@ sandbox.document = makeDocument();
 sandbox._drawBackupBox({ enabled: false, retentionDays: 30, folder: '', lastBackupAt: iso, lastBackupName: 'Manual backup', lastBackupFileId: 'z' });
 check('"Last backup" still shown even with the schedule off', sandbox.document.box.innerHTML.indexOf('Last backup') !== -1);
 
+// ── The full list (v9.93) ──────────────────────────────────────────────────
+// Jose: "what if the customer wants YESTERDAY's backup — do they have to go
+// hunting in Drive?" They did: only the newest one was ever linked. The list
+// now comes from the backup folder itself (listBackups_), not AUDIT_LOG, so
+// what is listed is what still exists.
+function threeBackups() {
+  return [
+    { id: 'f3', name: 'OX — Backup 2026-08-20_0213', at: '2026-08-20T08:13:00.000Z' },
+    { id: 'f2', name: 'OX — Backup 2026-08-19_0213', at: '2026-08-19T08:13:00.000Z' },
+    { id: 'f1', name: 'OX — Backup 2026-08-18_0213', at: '2026-08-18T08:13:00.000Z' }
+  ];
+}
+
+console.log('\nScenario: several backups in Drive — every one of them is reachable, not just the newest');
+sandbox.document = makeDocument();
+sandbox._drawBackupBox({
+  enabled: true, retentionDays: 30, folder: 'Acopio Backups',
+  lastBackupAt: '2026-08-20T08:13:00.000Z', lastBackupName: 'OX — Backup 2026-08-20_0213', lastBackupFileId: 'f3',
+  backups: threeBackups()
+});
+const html3 = sandbox.document.box.innerHTML;
+check('the collapsed "All backups" section appears', html3.indexOf('All backups in Drive') !== -1);
+check('it says how many there are', html3.indexOf('All backups in Drive (3)') !== -1);
+check('YESTERDAY\'s backup is linked, which is the whole point', html3.indexOf('https://drive.google.com/file/d/f2/view') !== -1);
+check('so is the one before it', html3.indexOf('https://drive.google.com/file/d/f1/view') !== -1);
+check('and the newest', html3.indexOf('https://drive.google.com/file/d/f3/view') !== -1);
+check('starts collapsed — 30 near-identical rows must not take over the tab',
+  html3.indexOf('<details') !== -1 && html3.indexOf('open>') === -1);
+
+console.log('\nScenario: a backup name with HTML-sensitive characters is escaped in the LIST too, not just the last-backup line');
+sandbox.document = makeDocument();
+sandbox._drawBackupBox({
+  enabled: true, retentionDays: 30, folder: 'f',
+  lastBackupAt: iso, lastBackupName: 'ok', lastBackupFileId: 'a',
+  backups: [
+    { id: 'a', name: 'ok', at: iso },
+    { id: 'b', name: '<script>alert(1)</script>', at: iso }
+  ]
+});
+const html4 = sandbox.document.box.innerHTML;
+check('no live script tag from a file name', html4.indexOf('<script>') === -1);
+check('escaped form present instead', html4.indexOf('&lt;script&gt;') !== -1);
+
+console.log('\nScenario: only one backup exists — no point offering a list of one');
+sandbox.document = makeDocument();
+sandbox._drawBackupBox({
+  enabled: true, retentionDays: 30, folder: 'f',
+  lastBackupAt: iso, lastBackupName: 'only', lastBackupFileId: 'a',
+  backups: [{ id: 'a', name: 'only', at: iso }]
+});
+check('no "All backups" section for a single backup',
+  sandbox.document.box.innerHTML.indexOf('All backups in Drive') === -1);
+
+console.log('\nScenario: an older install whose server has not been redeployed yet sends no list at all');
+sandbox.document = makeDocument();
+sandbox._drawBackupBox({
+  enabled: true, retentionDays: 30, folder: 'f',
+  lastBackupAt: iso, lastBackupName: 'x', lastBackupFileId: 'a'
+});
+const html5 = sandbox.document.box.innerHTML;
+check('does not crash on a missing backups array', html5.indexOf('Last backup') !== -1);
+check('and simply omits the list', html5.indexOf('All backups in Drive') === -1);
+
 console.log('\nbackup status: ' + (fail === 0 ? 'ok' : (fail + ' FAILED')));
 process.exit(fail === 0 ? 0 : 1);

@@ -265,42 +265,6 @@ raíz, para cuando haya volumen que lo justifique.
   the ones already built. Applies everywhere `_infoIc` is used (NOT the Setup
   Wizard, which keeps its always-visible hints per the same conversation).
 
-## Lista de backups leída de Drive, no de AUDIT_LOG (pregunta de Jose, v9.92)
-
-v9.92 arregló la causa inmediata de que la lista de backups desapareciera
-(las notificaciones descartadas también borraban el historial). Pero Jose
-hizo dos preguntas que apuntan a un problema de fondo que ese arreglo NO
-resuelve:
-
-> "¿Qué pasa si el cliente quiere ver el backup de ayer? ¿Tiene que buscarlo
-> en el Drive? ¿Y qué pasa si mueve algo y luego la app no puede leerlo?"
-
-Tiene razón en las dos. Hoy la lista se arma leyendo `AUDIT_LOG`, y eso
-tiene dos límites reales:
-
-1. **La cola de ~1500 filas se puede acabar.** En una instalación con mucho
-   movimiento, `ADD_MOVEMENT` empuja los `BACKUP_CREATED` fuera del rango
-   legible en menos de un día. El backup sigue seguro en Drive, pero la app
-   deja de saber que existió. (Por esto existe `LAST_BACKUP_AT` como Script
-   Property — pero eso solo cubre el ÚLTIMO, no la lista.)
-2. **AUDIT_LOG dice lo que pasó, no lo que hay.** Si alguien borra o mueve
-   un backup en Drive, la app lo sigue listando y el link da error. La lista
-   miente.
-
-**Propuesta: armar la lista listando los archivos de la carpeta de backups
-en Drive.** Esa carpeta ES la fuente de verdad — siempre exacta, nunca se
-sale de rango, y si el cliente borró uno, desaparece de la lista solo,
-que es el comportamiento honesto. El patrón ya existe:
-`_findMostRecentBackup_()` ya escanea Drive para el backfill de
-`getBackupStatus`, así que es extender algo construido, no inventar.
-
-Costo/consideraciones antes de hacerlo: es una llamada a Drive por carga de
-la pestaña System (no en cada carga de la app — solo al abrir Settings →
-System, donde ya se llama `getBackupStatus`). Y hay que decidir qué hacer
-con los eventos que NO son backups (`AUTO_REPAIR_MATID` y demás), que
-seguirían viniendo de AUDIT_LOG: probablemente la sección se parte en dos —
-"Backups" (de Drive) y "Otras acciones automáticas" (de AUDIT_LOG).
-
 ## Cycle count / conteo físico — idea de Jose (v9.91), diseño propuesto
 
 **El problema real:** un cliente quiere revisar si lo que está físicamente en
