@@ -413,6 +413,14 @@
     .mat-line-lbl-sm{font-size:.7rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;display:block;margin-bottom:.3rem}
     .mat-line-grid .field input,.mat-line-grid .field select{padding:.5rem .65rem;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:.84rem;width:100%}
     .mat-line-grid .field input:focus,.mat-line-grid .field select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(59,125,216,.15)}
+    /* Price-change alert on ENTRY's Unit Cost — "this supplier charged 18%
+       more than last time", the exact thing a manager only notices weeks
+       later otherwise. Same shape as the stock-check warning elsewhere in
+       this modal, so it reads as "the app is telling you something", not
+       as a validation error. */
+    .mat-cost-alert{font-size:.78rem;padding:.4rem .6rem;border-radius:6px;margin:-.15rem 0 .5rem}
+    .mat-cost-alert.warn{background:#FEF3C7;color:var(--yellow)}
+    .mat-cost-alert.info{background:#DBEAFE;color:var(--accent2)}
     .mat-loc-box{background:#F0FDF4;border:1px solid #BBF7D0;border-radius:6px;padding:.55rem .7rem;margin-top:.35rem}
     /* Freezes a modal while its save is in flight — blocks EVERY click anywhere in
        the overlay (header, X, click-outside-to-close, a second click on Save) and
@@ -2533,7 +2541,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.86';
+var APP_VERSION = '9.87';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -5849,12 +5857,12 @@ function _matLineTpl(n){
     '<div class="mat-line-grid">' +
       '<div class="field">' +
         '<label class="mat-line-lbl-sm">Category</label>' +
-        '<select id="mat-cat-' + n + '" onchange="updateMatLineNameList(' + n + ')">' + catOpts + '</select>' + _catHelperHtml() +
+        '<select id="mat-cat-' + n + '" onchange="updateMatLineNameList(' + n + ');_checkPriceChange(' + n + ')">' + catOpts + '</select>' + _catHelperHtml() +
       '</div>' +
       '<div class="field" style="grid-column:span 1;position:relative">' +
         '<label class="mat-line-lbl-sm">Name / Description</label>' +
         '<input type="text" id="mat-name-' + n + '" placeholder="Type material name..." autocomplete="off"' +
-        ' oninput="_checkIncomingSuggest(' + n + ', this)">' +
+        ' oninput="_checkIncomingSuggest(' + n + ', this);_checkPriceChange(' + n + ')">' +
         '<div class="inc-suggest-box" id="inc-suggest-' + n + '" style="display:none"></div>' +
       '</div>' +
       '<div class="field">' +
@@ -5870,9 +5878,11 @@ function _matLineTpl(n){
       (_canSeeCosts() ?
       '<div class="field">' +
         '<label class="mat-line-lbl-sm">Unit Cost <span style="text-transform:none;opacity:.7">(optional)</span></label>' +
-        '<input type="number" id="mat-cost-' + n + '" min="0" step="0.01" placeholder="$0.00">' +
+        '<input type="number" id="mat-cost-' + n + '" min="0" step="0.01" placeholder="$0.00" oninput="_checkPriceChange(' + n + ')">' +
       '</div>' : '') +
     '</div>' +
+    (_canSeeCosts() ?
+      '<div class="mat-cost-alert" id="mat-cost-alert-' + n + '" style="display:none"></div>' : '') +
     '<div class="mat-loc-box">' +
       '<div style="display:flex;gap:.4rem;margin-bottom:.25rem">' +
         '<span style="flex:2;font-size:.68rem;font-weight:600;color:var(--muted);text-transform:uppercase">Rack / Location</span>' +
@@ -6049,6 +6059,40 @@ function _stockMatchesFor(typed, cat){
     .slice(0, 5);
 }
 
+// "This supplier charged 18% more than last time" — cheap to compute (the
+// average is already sitting in config.avgCost, sent on every load) and
+// exactly the kind of thing that otherwise only shows up weeks later, once
+// someone happens to eyeball a report. Flags BOTH directions — a price drop
+// worth knowing about too, not just increases — even though Jose's own
+// example was an increase.
+var PRICE_CHANGE_ALERT_PCT = 15;
+
+function _checkPriceChange(n){
+  var alertEl = document.getElementById('mat-cost-alert-' + n);
+  if (!alertEl) return;   // canSeeCosts is off — the field, and this alert, don't exist
+  var costEl = document.getElementById('mat-cost-' + n);
+  var catEl  = document.getElementById('mat-cat-' + n);
+  var nameEl = document.getElementById('mat-name-' + n);
+  if (!costEl || !catEl || !nameEl) return;
+
+  var cost = parseFloat(costEl.value);
+  var name = (nameEl.value || '').trim();
+  if (!name || isNaN(cost) || cost <= 0) { alertEl.style.display = 'none'; return; }
+
+  var matId = _normKey(catEl.value) + '|||' + _normKey(name);
+  var prior = config.avgCost && config.avgCost[matId];
+  if (!prior || !prior.avg) { alertEl.style.display = 'none'; return; }   // nothing to compare against yet
+
+  var pctChange = ((cost - prior.avg) / prior.avg) * 100;
+  if (Math.abs(pctChange) < PRICE_CHANGE_ALERT_PCT) { alertEl.style.display = 'none'; return; }
+
+  var higher = pctChange > 0;
+  alertEl.className = 'mat-cost-alert ' + (higher ? 'warn' : 'info');
+  alertEl.innerHTML = (higher ? '⚠️ ' : 'ℹ️ ') + Math.abs(Math.round(pctChange)) + '% ' + (higher ? 'higher' : 'lower') +
+    ' than the average on record ($' + prior.avg.toFixed(2) + ' → $' + cost.toFixed(2) + ')';
+  alertEl.style.display = '';
+}
+
 function _checkIncomingSuggest(n, inputEl){
   var typed = (inputEl.value || '').trim().toLowerCase();
   var box = document.getElementById('inc-suggest-' + n);
@@ -6113,6 +6157,7 @@ function _clickStockMatchSuggest(el) {
   if (nameEl) nameEl.value = name;
   var box = document.getElementById('inc-suggest-' + n);
   if (box) box.style.display = 'none';
+  _checkPriceChange(n);   // programmatic value, so oninput never fired on its own
 }
 
 // Safe bridge: reads data-n and data-inc-id from the clicked element
@@ -6152,6 +6197,7 @@ function _applyIncomingSuggest(n, incId){
   // Hide box
   var box = document.getElementById('inc-suggest-' + n);
   if (box) box.style.display = 'none';
+  _checkPriceChange(n);   // programmatic value, so oninput never fired on its own
 }
 
 // Fill shared ENTRY form fields from any data source (only overwrites empty fields)

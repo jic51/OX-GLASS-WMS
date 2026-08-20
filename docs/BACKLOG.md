@@ -282,7 +282,7 @@ práctica (un WAREHOUSE con ciertos interruptores prendidos y otros no ya se
 comporta como un nivel distinto). Roles verdaderamente personalizados es
 trabajo legítimo para una versión futura, no para ahora.
 
-## Precios y costos — CORE en v9.78, costo por proyecto y desperdicio en v9.79/v9.80
+## Precios y costos — CORE en v9.78, costo por proyecto y desperdicio en v9.79/v9.80, alerta de precio en v9.87
 
 **Lo de abajo es el diseño original; lo que sigue ya está construido y
 verificado (20 aserciones en tools/test-pricing.js sobre el motor real).**
@@ -294,15 +294,22 @@ que mande el cliente —, "Inventory Value" en el dashboard con el conteo
 honesto de "X de Y SKUs con precio", (v9.79) el tile "Project Cost" en
 Project View — suma de `EXIT.totalCost` para ese proyecto, verificado en
 tools/test-project-cost.js (RETURN/WASTE no cuentan, un EXIT sin costo no
-rompe la suma, sin ningún EXIT con precio el tile simplemente no aparece) — y
+rompe la suma, sin ningún EXIT con precio el tile simplemente no aparece),
 (v9.80) el tile "Waste Cost" en el dashboard — suma de `WASTE.totalCost`
 estampado (nunca recalculado del promedio de hoy), verificado en
 tools/test-waste-cost.js con el mismo patrón honesto: sin ningún WASTE con
-precio, el tile no aparece en vez de mostrar $0.
+precio, el tile no aparece en vez de mostrar $0 — y (v9.87) la alerta de
+cambio de precio en ENTRY: al escribir un Unit Cost que difiere ≥15% del
+promedio en `config.avgCost` para ese material, aparece un aviso inline
+justo debajo del campo ("20% higher/lower than the average on record —
+$20.00 → $24.00"). Avisa en ambas direcciones, no solo subidas (una bajada
+también es información útil). 15% es el umbral elegido — el ejemplo de Jose
+fue 18%, ajustable si en la práctica suena demasiado o muy poco sensible.
+Verificado en tools/test-price-alert.js (21 aserciones): no avisa dentro del
+umbral, no avisa sin promedio previo que comparar, no avisa con costo o
+nombre vacíos, y el aviso se limpia solo si el número se corrige.
 
 **Deliberadamente NO en esta pasada** — cada uno es su propio trabajo:
-- **Alerta de cambio de precio** ("este proveedor cobró 18% más que la vez
-  pasada").
 - **Columna de costo en el CSV de Movements** y en el import masivo.
 - **Editar el costo de un movimiento ya guardado** — `modifyMovement` no toca
   las columnas de costo todavía; corregir una entrada con precio mal tecleado

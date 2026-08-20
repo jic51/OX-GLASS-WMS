@@ -22,6 +22,7 @@ node tools/test-splash-notes.js
 node tools/test-account-tooltip.js
 node tools/test-favicon.js
 node tools/test-responsive-polish.js
+node tools/test-price-alert.js
 ```
 
 `tools/audit-responsive.js` is a tape measure, not a test — run it when layout
@@ -171,6 +172,13 @@ come back from — is invisible to both. Those get a browser test.
   way, the "not on your lists yet" bell panel measures out to two-thirds of
   a phone's width instead of half, and the Rack Drawer measures out to
   two-thirds instead of nearly the whole screen.
+- `test-price-alert.js` — the ENTRY price-change alert (`_checkPriceChange`),
+  lifted verbatim into a Node vm: no alert inside the ±15% threshold (noise,
+  not a real change), warns on a real increase and informs on a real
+  decrease with the right percentage and dollar figures in each direction,
+  no alert for a material with no cost history yet to compare against, no
+  crash on a blank cost/name/zero, and an alert that actually clears once
+  the number is corrected back toward the average rather than staying stuck.
 
 All of these lift the real code out of `Index_v3_fixed.html` (or
 `Code_v3_fixed.gs`) rather than keeping a copy, so they cannot quietly drift
