@@ -1,10 +1,13 @@
-// Verifies the account tooltip no longer collides with the notification bell
-// on a narrow phone — Jose caught the bell rendering right through the
-// tooltip's "Jose Castro / ADMIN" text. Below 720px the topbar stacks the
-// bell directly under the avatar with only an 8px gap, the exact same offset
-// the tooltip itself drops down by, so without the fix the two land on top
-// of each other. This measures real geometry (bounding rects), which is the
-// only way to know the two boxes actually clear each other.
+// Verifies the account tooltip vs. the notification bell on a narrow phone.
+// Below 720px the topbar stacks the bell directly under the avatar with
+// only an 8px gap, the exact same offset the tooltip drops down by, so the
+// bell used to render right through the tooltip's "Jose Castro / ADMIN"
+// text. v9.88 fixed that by pushing the tooltip down past the bell; Jose
+// (v9.90) asked for the tooltip back at its natural spot instead — most
+// people won't hold the hover long enough to read one shoved down into the
+// page — so now the bell itself fades out while the tooltip is up, in sync
+// with the same 4s delay the tooltip already waits on, and returns the
+// instant the hover ends.
 //
 // Usage:  node tools/test-bell-tooltip-collision.js [path/to/Index_v3_fixed.html]
 
@@ -50,7 +53,7 @@ function check(label, cond) {
   const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || undefined });
   const pageErrors = [];
 
-  console.log('\nScenario: narrow phone (375px) — bell has an unregistered item to show, account tooltip forced open');
+  console.log('\nScenario: narrow phone (375px) — bell has an unregistered item to show');
   {
     const page = await browser.newPage({ viewport: { width: 375, height: 700 } });
     page.on('pageerror', e => pageErrors.push(e.message));
@@ -61,48 +64,50 @@ function check(label, cond) {
       _pendingCfgAdds = [{ type: 'supplier', value: 'ACME GLASS' }];
       if (typeof _syncCfgBell === 'function') _syncCfgBell();
     });
-    // bypass the real 4s hover delay for this geometry check — force the tooltip visible
-    await page.addStyleTag({ content: '#acctBtn.tip::after{opacity:1 !important;transform:translateX(-50%) translateY(0) !important;transition:none !important;}' });
+
+    const before = await page.evaluate(() => getComputedStyle(document.getElementById('cfgBellBtn')).opacity);
+    check('bell starts fully visible (' + before + ')', before === '1');
+
     await page.hover('#acctBtn');
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(200);
+    const duringDelay = await page.evaluate(() => getComputedStyle(document.getElementById('cfgBellBtn')).opacity);
+    check('bell still visible right after hovering (still inside the 4s delay, ' + duringDelay + ')', duringDelay === '1');
 
-    const rects = await page.evaluate(() => ({
-      bell: document.getElementById('cfgBellBtn').getBoundingClientRect(),
-      acct: document.getElementById('acctBtn').getBoundingClientRect(),
-    }));
-    check('bell is actually visible (has real size)', rects.bell.width > 0 && rects.bell.height > 0);
+    // real wall-clock wait — this is a CSS transition-delay tied to :hover,
+    // driven by the compositor's own clock, not a JS timer page.clock could
+    // fast-forward.
+    await page.waitForTimeout(4200);
+    const afterDelay = await page.evaluate(() => getComputedStyle(document.getElementById('cfgBellBtn')).opacity);
+    check('bell has faded out once the tooltip would be showing (' + afterDelay + ')', parseFloat(afterDelay) < 0.05);
 
-    // The tooltip box's top edge in real page coordinates: acctBtn's own
-    // bottom, plus whatever `top: calc(100% + Npx)` resolved to beyond 100%.
-    const tipTopPx = await page.evaluate(() => {
-      const acct = document.getElementById('acctBtn');
-      const r = acct.getBoundingClientRect();
-      const cs = getComputedStyle(acct, '::after');
-      // cs.top is already the resolved calc() in px, relative to acctBtn's own box
-      return r.top + parseFloat(cs.top);
-    });
-    check('tooltip\'s top edge (' + tipTopPx.toFixed(1) + 'px) is at or below the bell\'s bottom edge (' + rects.bell.bottom.toFixed(1) + 'px) — no overlap',
-      tipTopPx >= rects.bell.bottom - 1);
+    const pe = await page.evaluate(() => getComputedStyle(document.getElementById('cfgBellBtn')).pointerEvents);
+    check('a faded-out bell cannot still eat a stray tap (pointer-events: ' + pe + ')', pe === 'none');
+
+    await page.mouse.move(10, 10);
+    await page.waitForTimeout(150);
+    const afterLeave = await page.evaluate(() => getComputedStyle(document.getElementById('cfgBellBtn')).opacity);
+    check('bell is back the instant the hover ends (' + afterLeave + ')', afterLeave === '1');
 
     check('no page errors', pageErrors.length === 0);
     if (pageErrors.length) pageErrors.forEach(e => console.log('  PAGE ERROR:', e));
     await page.close();
   }
 
-  console.log('\nScenario: wide desktop (1280px) — bell is hidden entirely, tooltip stays at its normal 8px offset (fix is scoped to the collision, not a global change)');
+  console.log('\nScenario: wide desktop (1280px) — bell is hidden entirely up here (the corner deck takes over), so hovering the avatar must not touch it at all');
   {
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    page.on('pageerror', e => pageErrors.push('1280px: ' + e.message));
     await page.goto('file://' + f);
     await page.waitForTimeout(300);
-    const tipTop = await page.evaluate(() =>
-      parseFloat(getComputedStyle(document.getElementById('acctBtn'), '::after').top));
-    // The phone-only rule adds 46px on top of the normal offset (100% + 8px);
-    // on a wide screen where there is no bell to clear, that rule must not
-    // apply — the gap should be nowhere near that inflated size.
-    check('tooltip offset on a wide screen (' + tipTop + 'px) is nowhere near the phone-only 46px clearance, i.e. the fix stayed scoped to the narrow layout',
-      tipTop < 44);
+    await page.hover('#acctBtn');
+    await page.waitForTimeout(300);
+    const display = await page.evaluate(() => getComputedStyle(document.getElementById('cfgBellBtn')).display);
+    check('bell stays display:none on a wide screen regardless of hovering the avatar (' + display + ')', display === 'none');
     await page.close();
   }
+
+  check('no page errors overall', pageErrors.length === 0);
+  if (pageErrors.length) pageErrors.forEach(e => console.log('  PAGE ERROR:', e));
 
   await browser.close();
   console.log('\nbell/tooltip collision: ' + (fail === 0 ? 'ok' : (fail + ' FAILED')));

@@ -1384,12 +1384,17 @@
       .topbar-row2{display:flex;flex-wrap:nowrap}
       .topbar-row2 .nav{flex:1 1 auto;margin:0}
       .topbar-tools{flex-direction:column;gap:8px;align-items:center;margin-left:auto}
-      /* The account tooltip normally drops 8px below the avatar, but right
-         here the notification bell is stacked directly beneath it with that
-         same 8px gap — Jose caught the bell rendering right through the
-         tooltip's name/role text. Clearing the bell's own height (34px) plus
-         its gap pushes the tooltip safely below both instead. */
-      #acctBtn.tip::after{top:calc(100% + 46px)}
+      /* v9.88 pushed the tooltip down to clear the bell here; Jose (v9.90)
+         asked for it back at its natural spot instead — most people won't
+         hold the hover long enough to read a tooltip shoved down into the
+         page below. The actual problem was never the position, it was that
+         the bell rendered THROUGH the tooltip's text. Fading the bell out
+         while the tooltip is up removes that fight outright, timed to the
+         same 4s delay the tooltip itself already waits on so nothing here
+         needs a second number to stay in sync. pointer-events:none with it
+         so an invisible bell can't still eat a stray tap underneath. */
+      .topbar-tools:has(#acctBtn.tip:hover) #cfgBellBtn,
+      .topbar-tools:has(#acctBtn.tip:focus-visible) #cfgBellBtn{opacity:0;pointer-events:none;transition:opacity .15s ease 4s}
     }
     @media (max-width:520px){
       .setup-nudge{left:12px;right:auto;width:calc(50vw - 18px);max-width:none}
@@ -2591,7 +2596,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.89';
+var APP_VERSION = '9.90';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for

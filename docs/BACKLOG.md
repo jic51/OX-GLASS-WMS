@@ -26,31 +26,84 @@ here once they ship (the commit message is the record of what changed and why).
    flexible dates have been used for a while and it is clear which grouping
    people actually reach for. Jose (v9.89): maybe version 2, not this one.
 
+4b. **Incoming — this week's orders on the visible calendar, editable from
+    there (v9.90).** Right now the calendar just shows dots/markers; Jose
+    wants the week's actual orders to appear ON it, and be editable,
+    modifiable, and markable as received directly from that view instead of
+    only from the list.
+
+4c. **Incoming — receive a material and create the ENTRY from that same
+    window, in one motion (v9.90). Needs real discussion before building.**
+    Jose's own flag: OX Glass itself is an example of a business that often
+    doesn't know exactly WHAT is arriving or WHEN — so an Entry built
+    straight from an Incoming record risks getting made with wrong or
+    incomplete information (category, quantity, unit cost) if the order
+    itself was vague. Questions to settle first: does this only activate
+    for orders with solid data already, and fall back to the normal
+    open-ended Entry form otherwise? Does receiving partially (less than
+    ordered) need its own path? Is the Incoming record's data ever
+    authoritative over what's actually counted in at the dock, or always
+    just a starting point the person receiving can freely change?
+
 
 5. **Iconos profesionales y logo de Acopio — EN PAUSA, a la espera de Jose.**
    El ZIP de Streamline ya está (45 iconos, PNG 48×48 + 4 SVG) y las tres
    propuestas de marca están dibujadas. Jose decide cuándo se hace y cuál se
    usa; las dos van en la misma pasada porque comparten el mismo trabajo.
 
-6. **Copiar un sistema VIVO arrastra la lista de usuarios.** Jose copió el
-   archivo de OX a su Drive personal y su correo personal ya estaba dentro,
-   como WAREHOUSE, así que la copia nueva le daba menos permisos de los que
-   correspondían a su propio archivo. No es un fallo — es lo que una copia hace
-   — pero nadie lo espera. El wizard debería avisar cuando encuentra usuarios
-   heredados y ofrecer vaciar la lista y dejar solo al dueño. La plantilla
-   limpia ya resuelve el caso de un cliente; esto es para las copias que se
-   hacen entre archivos propios.
+6. **Copiar un sistema VIVO arrastra la lista de usuarios — Jose (v9.90) no
+   cree que haga falta resolver esto; en discusión.** Su argumento: los
+   clientes van a descargar la plantilla limpia y usarla, no van a copiar el
+   código de un cliente existente para usarlo por su cuenta — y si alguien
+   lo hace de todos modos, eso es un problema legal de ellos, no nuestro.
+   Mi lectura, para que decidamos con el caso real en mente en vez del
+   caso que suena a robo: el escenario que originó este punto NO fue nadie
+   copiando el sistema de un tercero — fue Jose copiando SU PROPIO archivo
+   ya en uso (a su Drive personal), algo que cualquier dueño de un Sheet
+   puede hacer con "Hacer una copia" de Google en dos clics, sin pasar por
+   nosotros ni por el wizard. Un cliente real puede hacer exactamente lo
+   mismo por razones legítimas — abrir una segunda bodega, sacar un
+   respaldo antes de un cambio grande, armar una copia de prueba — y esa
+   copia hereda TODOS los usuarios y roles del archivo original. El riesgo
+   no es robo de propiedad intelectual; es que un empleado que ya no
+   debería tener acceso (o que nunca debió tenerlo en esa bodega nueva)
+   termine con acceso real a datos que no le corresponden, sin que nadie lo
+   note. Es un riesgo real pero pequeño y poco frecuente. Recomendación: no
+   vale la pena construir UI para esto ahora — una línea en la guía de
+   configuración ("si copias tu propio archivo, revisa la lista de
+   usuarios") cubre el caso a costo cero. Se puede revisar si empieza a
+   pasar de verdad con clientes reales.
 
-7. **Tracking de dispositivo/ubicación en movimientos y errores.** Jose quiere
-   saber no solo QUIÉN hizo un movimiento o disparó un error, sino DESDE DÓNDE
-   (qué dispositivo, posiblemente ubicación). Explícitamente para discutir
-   después — anotado a petición suya, sin diseño todavía. Preguntas reales
-   antes de construir nada: ¿qué señal existe realmente dentro del sandbox de
-   Apps Script (user agent del navegador vía JS, nada de geolocalización real
-   sin pedir permiso explícito al usuario)? ¿Se guarda por movimiento
-   (ARCHIVE) y por error (ERROR_LOG), o en un log aparte? ¿Es esto algo que un
-   cliente esperaría poder ver de sus propios empleados, o exclusivamente para
-   que Jose diagnostique soporte?
+7. **Tracking de dispositivo/ubicación en movimientos y errores.** Jose
+   (v9.90) aclaró el objetivo: no es ubicación geográfica — es saber DE QUÉ
+   DISPOSITIVO y CON QUÉ CUENTA ocurrió un error o un problema, para poder
+   dar soporte. La cuenta ya se guarda hoy (`userEmail` en ARCHIVE y en
+   ERROR_LOG); lo que falta es el dispositivo/navegador. Mi recomendación:
+   esto es razonable y NO es invasivo — es el mismo tipo de dato que
+   cualquier sitio web ya registra (navegador, sistema operativo), disponible
+   vía `navigator.userAgent` en JS, sin pedir permiso al usuario, muy
+   distinto de geolocalización real. Sí sugeriría acotarlo: capturarlo en
+   `ERROR_LOG` (que es exactamente para diagnóstico de soporte) tiene
+   sentido inmediato; agregarlo a CADA movimiento normal (Entry/Exit/etc.)
+   es mucho menos claro que aporte algo — nadie necesita saber "desde Chrome
+   en Android" en cada salida de material, y ensancha ARCHIVE sin beneficio
+   obvio. Empezar solo por ERROR_LOG y ver si de verdad hace falta más
+   parece el camino más barato y honesto.
+
+8b. **Notificaciones en vivo para el admin — Jose (v9.90) no recuerda el
+    alcance exacto, pidió que se lo recordemos.** Lo único que está anotado
+    por escrito (ver el punto de abajo, "Notificaciones en vivo para el
+    admin de lo que hace el personal de Warehouse") es la idea B: una
+    tarjeta tipo "Jose movió 4 WINDOW de GLASS a B2B" apareciendo del lado
+    izquierdo cuando el admin está en otra pestaña, con clic para saltar a
+    esa fila en Movements & History. La idea A que Jose menciona ahora —
+    un aviso al final del turno sobre movimientos que otros usuarios dejaron
+    sin proyecto/supplier/etc. — no está anotada en ningún lado de este
+    documento; puede ser una conversación distinta (se parece más a
+    "Sugerencias proactivas de calidad de datos", más abajo, pero esa idea
+    tampoco tiene un timing de "fin de turno" escrito). No inventamos cuál
+    de las dos es la que quiere — falta que Jose confirme si es una, la
+    otra, o ambas.
 
 8. **Notificaciones en vivo para el admin de lo que hace el personal de
    Warehouse, visibles en cualquier pestaña menos Movements.** Idea de Jose,
@@ -433,11 +486,39 @@ plantilla, cero cambios de motor.
   lógica nueva, pero son varias pantallas.
 
 ### Medianos (dos a cuatro sesiones)
-- **Rediseñar el Low-Stock Monitor** (ver arriba).
-- **Sincronización entre ventanas abiertas.** Apps Script no tiene push, así
-  que es sondeo: un `getVersionStamp` barato cada N segundos y recargar solo si
-  cambió. El costo es cuota de ejecución, así que el intervalo hay que
-  elegirlo con cuidado y apagarlo con la pestaña en segundo plano.
+- **Rediseñar el Low-Stock Monitor** — HECHO en v9.74.
+- **Sincronización entre ventanas abiertas — Jose quiere hacerlo (v9.90), pero
+  primero quiere saber exactamente cómo funcionaría y cuáles son los
+  riesgos reales.** Apps Script no tiene push real hacia el navegador, así
+  que la única forma honesta es sondeo (polling): cada N segundos, una
+  llamada barata (`getVersionStamp` o similar — NO recargar todos los datos,
+  solo un número/hash que cambia cuando algo cambió) le pregunta al
+  servidor "¿cambió algo desde la última vez?", y solo si la respuesta es sí
+  se dispara una recarga real de datos.
+  Riesgos concretos, no teóricos:
+  - **Cuota de ejecución de Apps Script.** Cada llamada, aunque sea barata,
+    consume una ejecución de las cuotas diarias de Google (Consumer:
+    20,000/día; Workspace: mucho más alto, pero no infinito). Con varias
+    pestañas abiertas por varios usuarios, sondear cada 5-10s puede sumar
+    miles de llamadas por día por cliente. Hay que elegir el intervalo con
+    cuidado (¿15s? ¿30s?) y APAGARLO cuando la pestaña está en segundo
+    plano (`document.visibilityState`) — si no, cada pestaña olvidada
+    abierta sigue gastando cuota para siempre.
+  - **Falsos "cambió algo" en cascada.** Si el hash que se compara es
+    demasiado general (por ejemplo, cambia con CUALQUIER escritura de
+    cualquier usuario), cada pestaña abierta recarga sus datos completos
+    cada vez que alguien más hace un movimiento — en una bodega activa con
+    3-4 personas trabajando a la vez, eso puede volverse una recarga
+    constante, no ocasional.
+  - **Qué se sincroniza realmente.** ¿Solo el stock/movimientos (lo más
+    importante), o también configuración, usuarios, permisos? Sincronizar
+    de más complica sin necesidad; sincronizar de menos deja la razón
+    original del pedido (dos personas viendo números distintos al mismo
+    tiempo) sin resolver del todo.
+  - **Qué pasa si la recarga interrumpe algo que el usuario está haciendo**
+    — por ejemplo, a mitad de llenar un formulario de Entry. Recargar stock
+    de fondo está bien; recargar y perder lo que alguien estaba escribiendo
+    no. Hay que decidir si la sync se pausa mientras un modal está abierto.
 - **Limpieza del error log** — HECHO en v9.64.
 
 ### Grandes (una semana o más)

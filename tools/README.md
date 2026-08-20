@@ -191,12 +191,15 @@ come back from — is invisible to both. Those get a browser test.
   needed): 4s while hovering the account button, every other `.tip` tooltip
   on the page stays instant (0s), and the tooltip is invisible at rest.
 - `test-bell-tooltip-collision.js` — the account tooltip vs. the
-  notification bell on a narrow phone, real geometry: below 720px the bell
-  sits directly under the avatar with the exact same 8px gap the tooltip
-  itself drops down by, so Jose caught the bell rendering right through the
-  tooltip's name/role text. Measures that the tooltip's top edge actually
-  clears the bell's bottom edge now, and that a wide desktop screen (no bell
-  stacked underneath) keeps the tooltip's normal, un-inflated offset.
+  notification bell on a narrow phone: below 720px the bell sits directly
+  under the avatar with the exact same 8px gap the tooltip drops down by,
+  so Jose caught the bell rendering right through the tooltip's name/role
+  text. v9.88 pushed the tooltip down to clear it; Jose (v9.90) wanted it
+  back at its natural position instead, so now the bell fades out while the
+  tooltip is up — timed to the same 4s hover delay, back instantly the
+  moment the hover ends, and inert to taps while invisible
+  (pointer-events:none). A wide screen, where the bell doesn't exist at all
+  (the corner deck takes over), is unaffected by hovering the avatar.
 - `test-rowmode-stable.js` — the Movements table's Edit/Delete row-mode
   toggle buttons, real Playwright clicks at three widths: clicking Edit (which
   makes a hint sentence appear) must not move the buttons, the hint has to
