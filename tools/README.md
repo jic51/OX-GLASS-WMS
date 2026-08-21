@@ -28,6 +28,7 @@ node tools/test-bell-tooltip-collision.js
 node tools/test-rowmode-stable.js
 node tools/test-header-merge.js
 node tools/test-sysactivity-dismiss.js
+node tools/test-morning-arrived.js
 ```
 
 `tools/audit-responsive.js` is a tape measure, not a test — run it when layout
@@ -219,6 +220,18 @@ come back from — is invisible to both. Those get a browser test.
   with the "⚙ Columns" button above the table — long enough, it didn't fit and
   shoved the whole row down to a new toolbar line. The row-mode bar now lives
   on its own dedicated line from the start.
+- `test-morning-arrived.js` — the "Mark arrived →" shortcut on the morning
+  popup's cards (v9.94), showMorningPopup lifted verbatim into a Node vm and
+  its markup read back. Checks the RULES rather than the styling: an ADMIN
+  gets it, WAREHOUSE and VIEWER never do (same gate as the Incoming table's
+  own edit pencil), it is not offered on a delivery already marked Arrived,
+  it IS offered on later-this-week rows since deliveries turn up early, and
+  an item id containing a quote cannot break out of the attribute. Also
+  asserts what the handler must NOT do: it re-checks the role instead of
+  trusting that the button was hidden, and it never calls the server — it
+  opens the item's own edit window with Arrived pre-selected and the person
+  still presses Save, because a delivery marked received by one stray tap is
+  worse than one extra click.
 - `test-sysactivity-dismiss.js` — that dismissing a system notice does NOT
   erase it from the maintenance record (`getSystemActivity` + both its
   consumers), backend lifted verbatim into a Node vm with the Sheets API
