@@ -265,6 +265,87 @@ raíz, para cuando haya volumen que lo justifique.
   the ones already built. Applies everywhere `_infoIc` is used (NOT the Setup
   Wizard, which keeps its always-visible hints per the same conversation).
 
+## Proteger el código — pregunta de Jose (v9.95), respuesta honesta
+
+**Realidad de partida:** el código se entrega como fuente dentro del proyecto
+de Apps Script del cliente. Puede leerlo, copiarlo y modificarlo. **No existe
+ninguna forma de impedirlo** — no hay DRM en Apps Script. Cualquier propuesta
+que empiece por "que no lo puedan copiar" es falsa.
+
+Lo que sí es posible, de más a menos recomendable:
+
+1. **Marca de origen (watermark) — RECOMENDADO, barato.** Un identificador
+   único por instalación, generado en el primer arranque y guardado en Script
+   Properties, más una constante de producto/versión ya presente. No impide
+   copiar; sirve para **demostrar** de dónde salió una copia si algún día hace
+   falta. Costo: casi cero. Ya existe media pieza (`APP_VERSION`, `PRODUCT`).
+2. **Aviso de copyright + Términos de servicio — RECOMENDADO.** Ya hay
+   `legal/TERMS-OF-SERVICE.md`. Para este modelo de negocio, esta es la
+   protección real: no es técnica, es legal.
+3. **Verificación de licencia contra un servidor de Jose ("llamar a casa") —
+   NO recomendado.** Técnicamente se puede (`UrlFetchApp`). Tres problemas
+   serios: (a) el cliente puede simplemente borrar esas líneas, es fuente
+   abierta ante sus ojos; (b) crea un punto único de falla — si el servidor de
+   Jose se cae, **todos los clientes que pagan** se quedan sin app; (c) un
+   interruptor remoto que puede apagar la bodega de alguien es exactamente el
+   tipo de cosa que destruye la confianza del cliente. El daño esperado supera
+   al beneficio.
+4. **Mover la lógica valiosa a un servidor propio — efectivo pero cambia el
+   producto.** Es lo único que de verdad protege: si el cálculo vive en un
+   servidor de Jose, copiar el script no copia la lógica. Pero destruye el
+   argumento de venta actual (tus datos en TU Drive, sin depender de nadie),
+   agrega hosting, y convierte esto en otro producto.
+
+**Sobre "el código usa nuestras claves":** cierto que `OAUTH_CLIENT_ID` y
+`OAUTH_CLIENT_SECRET` son de Jose, pero no sirven como palanca — solo
+habilitan el login de gente fuera del dominio, y quien copiara el sistema
+puede crear su propio cliente OAuth en 20 minutos. No es protección.
+
+**El punto que importa más que todo lo anterior:** lo que se vende no es el
+código, es el servicio — actualizaciones, soporte, instalación. Quien copie
+el archivo se queda con una foto congelada, sin arreglos ni mejoras. Eso ya
+es la protección más fuerte que tiene este modelo, y no hay que construir
+nada para tenerla.
+
+## Tarjeta de reenganche para clientes que dejaron de pagar — idea de Jose (v9.95)
+
+**La idea:** cada ~6 meses, una sola vez, mostrar una tarjeta tipo "no te
+pierdas las mejoras — acopio.com / service@acopio.com" con link al listado de
+novedades y correcciones. Descartable, visualmente distinta de las tarjetas
+normales, y en otro lugar, para no ser molesta.
+
+**Lo que está bien:** la restricción que Jose se puso solo — poco frecuente,
+descartable, sin bloquear nada — es exactamente lo que separa un recordatorio
+útil de spam dentro de una herramienta que el cliente pagó.
+
+**El problema de diseño, y cómo evitarlo:** la app **no sabe quién paga**. No
+hay estado de licencia ni suscripción en ningún lado, y tampoco sabe si
+existe una versión más nueva — el banner de "version mismatch" solo compara
+Code.gs contra Index.html DENTRO de una instalación, no contra la última
+versión publicada. Averiguar cualquiera de las dos cosas exige llamar a un
+servidor de Jose, con todos los problemas del punto 3 de la sección de
+arriba.
+
+**Propuesta: hacerlo por tiempo, no por licencia.** Guardar en Script
+Properties la fecha de instalación (ya existe `SETUP_COMPLETED_AT`, usado por
+el check-in) y mostrar la tarjeta cuando hayan pasado 6 meses desde la última
+vez que se mostró. Sin red, sin estado de pago, sin poder equivocarse. El
+texto no afirma que haya algo nuevo — invita a ir a ver, que es justo lo que
+Jose describió.
+
+**Decisiones antes de construir:**
+- **Solo ADMIN.** Un trabajador de bodega no puede comprar nada; para él es
+  publicidad pura.
+- **Dónde.** Jose pidió que no sea el deck normal. Settings → System es el
+  lugar más honesto (donde ya se habla del estado del sistema), pero se ve
+  poco. Alternativa: una franja discreta bajo el header, solo para admin.
+- **"Descartar" tiene que durar.** En Script Properties, no en localStorage —
+  descartarla en la computadora y que reaparezca en el teléfono la convierte
+  en lo que se quería evitar.
+- **BLOQUEADO:** acopio.com no existe todavía, y el listado de novedades
+  tampoco. Sin esos dos, no hay a dónde mandar a nadie. Va después de la
+  landing.
+
 ## Cycle count / conteo físico — idea de Jose (v9.91), diseño propuesto
 
 **El problema real:** un cliente quiere revisar si lo que está físicamente en

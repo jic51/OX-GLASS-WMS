@@ -128,14 +128,55 @@ vm.runInContext('var _sysCards;' + announce, fe);
 vm.runInContext('_announceSystemActivity()', fe);
 check('deck shows only the two undismissed backups (got ' + fe._sysCards.length + ')', fe._sysCards.length === 2);
 
-// The Settings tab builds from `systemActivity` directly with no dismissed
-// filter — assert that in the source, since _renderSystemTab writes a large
-// innerHTML blob that is not worth reconstructing a DOM for.
+// The Settings tab builds its list with no dismissed filter — asserted in the
+// source, since _renderSystemTab writes a large innerHTML blob that is not
+// worth reconstructing a DOM for.
 const tabSrc = extractFn(HTML, '_renderSystemTab');
-const listExpr = tabSrc.slice(tabSrc.indexOf('var actHtml'), tabSrc.indexOf('content.innerHTML'));
-check('Settings → System maps systemActivity without filtering on dismissed',
-  /systemActivity\s*&&\s*systemActivity\.length/.test(listExpr) && !/dismissed/.test(listExpr.replace(/\/\/[^\n]*/g, '')));
+const listExpr = tabSrc.slice(tabSrc.indexOf('var sysActs'), tabSrc.indexOf('content.innerHTML'));
+const listCode = listExpr.replace(/\/\/[^\n]*/g, '');   // strip comments before matching
+check('Settings → System does not filter on dismissed', !/dismissed/.test(listCode));
 check('...and the deck DOES filter on it', /!a\.dismissed/.test(announce));
+
+// ── One thing in one place (v9.95) ─────────────────────────────────────────
+// Jose: "if they're the same, why do we have two areas?" They were. Backups
+// now live only in the backup box below, which reads the Drive folder — the
+// authoritative copy — instead of being listed twice with the AUDIT_LOG
+// version, which goes stale and links to files that may no longer exist.
+console.log('\nScenario: backups are listed once, in the backup box — not also in "what the system did on its own"');
+check('Settings → System filters BACKUP_CREATED out of the activity list',
+  /BACKUP_CREATED/.test(listCode) && /filter\(/.test(listCode));
+
+// Prove it on real data rather than only in the source: the fixture is six
+// backups and nothing else, so the Settings list must come out empty.
+const feFilter = vm.createContext({ systemActivity: out, console: console });
+vm.runInContext(
+  'var sysActs = (systemActivity || []).filter(function(a){ return a.action !== "BACKUP_CREATED"; });',
+  feFilter
+);
+check('a System tab whose only activity is backups shows an empty list, not six duplicates',
+  vm.runInContext('sysActs.length', feFilter) === 0);
+
+const repair = { at: '2026-08-21T10:00:00.000Z', action: 'AUTO_REPAIR_MATID', label: 'Movements re-linked', detail: 'rows 12', dismissed: false };
+const feMixed = vm.createContext({ systemActivity: out.concat([repair]), console: console });
+vm.runInContext(
+  'var sysActs = (systemActivity || []).filter(function(a){ return a.action !== "BACKUP_CREATED"; });',
+  feMixed
+);
+check('a non-backup repair still shows there — the section is not simply switched off',
+  vm.runInContext('sysActs.length', feMixed) === 1 &&
+  vm.runInContext('sysActs[0].action', feMixed) === 'AUTO_REPAIR_MATID');
+
+// The old empty state read "Nothing automatic has run yet. Switch the nightly
+// backup on below and the first one runs tonight at 2am" — which, now that
+// backups are not counted here, would be the same contradiction Jose caught,
+// just relocated: it would say nothing had run on an install backing up every
+// night. Pointing at the backup section is fine; claiming to be the place
+// backups appear is not.
+const emptyState = tabSrc.slice(tabSrc.indexOf('Nothing so far'), tabSrc.indexOf('content.innerHTML'));
+check('the empty state no longer tells you to switch the nightly backup on',
+  !/switch the nightly backup/i.test(emptyState));
+check('...and instead sends you to where backups actually are',
+  /own section below/i.test(emptyState));
 
 console.log('\nsystem activity vs dismissal: ' + (fail === 0 ? 'ok' : (fail + ' FAILED')));
 process.exit(fail === 0 ? 0 : 1);

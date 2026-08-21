@@ -29,6 +29,30 @@ De la respuesta salen tres caminos:
 **Si necesitas Cloud Console, ten el cliente OAuth abierto en una pestaña
 antes de empezar.** No lo dejes para el final con el cliente mirándote.
 
+### Y una pregunta más, si el cliente tiene Workspace
+
+> "¿Tu equipo puede abrir apps hechas con Google Apps Script? ¿O tu
+> administrador de Google Workspace tiene restricciones sobre qué apps de
+> terceros se pueden usar?"
+
+Un dominio de Workspace puede tener políticas que **bloquean las apps de Apps
+Script** para sus usuarios. Si ese es el caso, la app no abre para su
+personal **por más que todo lo nuestro esté perfecto** — no es OAuth, no es
+la lista de usuarios, no es el despliegue, y no hay nada que podamos arreglar
+desde el código. Lo tiene que destrabar el administrador del dominio del
+cliente.
+
+Esto es una **pregunta de calificación previa a la venta**, no un problema
+técnico a resolver en el sitio: si el dominio bloquea Apps Script y el admin
+no está dispuesto a cambiarlo, esa empresa no puede usar el producto tal como
+está hoy.
+
+**Cómo se distingue de los demás problemas:** si el usuario ve un error de
+**Google** (página no encontrada, "unable to open the file") nunca llegó a la
+app — es despliegue o política de dominio. Si ve una pantalla **de Acopio**
+(el botón "Sign in with Google", o "acceso denegado"), la app sí corrió y el
+problema es de identificación o de lista de usuarios.
+
 El detalle de por qué funciona así está en `ACCESO-Y-LOGIN.md`. Este runbook
 solo te dice qué hacer.
 

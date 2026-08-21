@@ -2631,7 +2631,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '9.94';
+var APP_VERSION = '9.95';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -7339,16 +7339,21 @@ function _movRowIndexAt(i){ return _movRenderedRows[i]; }
 function _renderSystemTab() {
   var content = document.getElementById('settingsTabContent');
   var months = String((_settingsData && _settingsData.archiveCutoffMonths) || 12);
-  // The scheduled jobs already ran and already logged; this is the first place
-  // the app has ever shown it. Answers "is this thing actually backing up?"
-  // without anyone having to open the Sheet and read AUDIT_LOG by hand.
+  // Everything the app did on its own EXCEPT backups. Backups have their own
+  // section below, built from the Drive folder itself, and listing them twice
+  // was worse than pointless: this copy is the unreliable one — read from
+  // AUDIT_LOG, whose readable tail a busy install scrolls past in under a
+  // day, and which keeps advertising backups the customer has since deleted
+  // with links that land on Drive's "unable to open the file". Jose asked why
+  // there were two areas showing the same thing; this is the answer.
   //
   // Deliberately NOT filtered by `dismissed`, unlike the corner deck. Pressing
-  // ✕ on a backup notice means "I have read this", not "this never happened" —
+  // ✕ on a notice means "I have read this", not "this never happened" —
   // conflating the two is what emptied this list out and made it claim nothing
   // automatic had ever run, directly above a "Last backup: today" line.
-  var actHtml = (systemActivity && systemActivity.length)
-    ? '<ul class="sysact-list">' + systemActivity.map(function(a){
+  var sysActs = (systemActivity || []).filter(function(a){ return a.action !== 'BACKUP_CREATED'; });
+  var actHtml = (sysActs.length)
+    ? '<ul class="sysact-list">' + sysActs.map(function(a){
         return '<li id="sysact-' + _he(_sysActId(a)) + '"><span class="sysact-dot">✓</span>' +
           '<span class="sysact-label">' + _he(a.label) + '</span>' +
           '<span class="sysact-when">' + _he(_fmtWhen(a.at)) + '</span>' +
@@ -7356,8 +7361,11 @@ function _renderSystemTab() {
           _sysActRefHtml(a) +
         '</li>';
       }).join('') + '</ul>'
-    : '<p style="font-size:.78rem;color:var(--muted)">Nothing automatic has run yet. Switch the nightly backup on below ' +
-      'and the first one runs tonight at 2am.</p>';
+    // No longer mentions backups: they are not counted here any more, so
+    // "nothing has run" next to a nightly backup that plainly did run would
+    // be the same contradiction in a new place.
+    : '<p style="font-size:.78rem;color:var(--muted)">Nothing so far. Repairs the app makes on its own — ' +
+      'a movement re-linked to the right material, an archive run — get listed here. Backups have their own section below.</p>';
 
   content.innerHTML =
     '<p style="font-size:.8rem;color:var(--muted);margin-bottom:1rem">System-wide maintenance — not specific to any one category.</p>' +
