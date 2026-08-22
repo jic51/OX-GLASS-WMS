@@ -69,10 +69,19 @@ día normal: editar un movimiento guardado, y renombrar una categoría (que
 reescribe la celda Categoría de cada fila del archive — ese lo encontró la
 prueba, no la lectura a mano).
 
+**Paso 1 aplicado en v10.0:** los dos que un admin toca de verdad —editar un
+movimiento guardado y renombrar una categoría— ya toman el candado, vía un
+ayudante compartido `withStockLock_`. `addMovementsBatch_` **no se tocó**: el
+camino más crítico sigue exactamente como estaba.
+
+De paso se corrigió el diseño: no hace falta un candado reentrante. Como
+`refreshDerivedSheets_` se llama desde *dentro* de cada camino de riesgo,
+candar el de afuera cubre al de adentro solo. Detalle en `CONCURRENCIA.md`.
+
 Falta:
-1. **Aplicar el arreglo** — un candado reentrante compartido, propuesto con
-   código en `CONCURRENCIA.md`. No hecho porque toca el camino más crítico
-   del producto y hay que decidirlo con calma.
+1. **Los cinco caminos restantes** — `manageMaterial`, `mergeConfigValues`,
+   `mergeLocations`, `refreshDerivedSheets_`, `menuNormalizeStatus`. De menos a
+   menos frecuentes. Se van haciendo de a poco, probando entre paso y paso.
 2. **La prueba en vivo** — tres o cuatro navegadores contra una copia
    desplegada, guardando del mismo material a la vez, y contar a mano. Ningún
    test desde fuera puede sustituirla.
@@ -118,8 +127,8 @@ Igual que arriba: es de las primeras cosas que pregunta un jefe de bodega.
 
 **Orden fijado por Jose (v9.97):**
 
-1. ~~Prueba de concurrencia~~ ✅ auditada — falta aplicar el arreglo
-   (candado reentrante, propuesto en `CONCURRENCIA.md`) y la prueba en vivo
+1. ~~Prueba de concurrencia~~ ✅ auditada · paso 1 del arreglo aplicado (v10.0)
+   — faltan los cinco caminos menos frecuentes y la prueba en vivo
 2. **Página de novedades** — destraba el hipervínculo de "Acopio" en la app,
    la tarjeta de reenganche y el argumento del soporte mensual. El contenido
    ya está escrito: los mensajes de commit de cada versión.

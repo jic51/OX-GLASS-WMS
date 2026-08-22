@@ -10,7 +10,13 @@ Ejecutable: `node tools/test-concurrency.js`
 **Guardar movimientos —lo que más se hace y lo más peligroso— está bien
 protegido.** Ese camino ya estaba pensado para esto y está bien hecho.
 
-**Hay siete caminos más que también cambian el stock y NO están protegidos.**
+**Hay siete caminos más que también cambian el stock y NO estaban protegidos.**
+Dos de ellos —los dos que un admin toca de verdad en un día normal— ya lo están
+desde v10.0. Los otros cinco siguen abiertos, y son cada vez menos frecuentes.
+
+*(Lo de abajo se escribió con los siete abiertos; se conserva tal cual porque
+explica el problema. Lo aplicado está al final, en "El arreglo".)*
+
 Ninguno es tan frecuente como guardar un movimiento, pero varios son cosas que
 un admin hace en un día normal, y el daño sería silencioso.
 
@@ -44,8 +50,8 @@ Ordenados por riesgo real, no por gravedad teórica:
 
 | Camino | Qué hace | Qué tan seguido |
 |---|---|---|
-| `modifyMovement` | Editar un movimiento guardado (cantidad, categoría, nombre — todo cambia el stock) | **Un admin, cualquier día** |
-| `updateConfig` | **Renombrar una categoría reescribe la celda Categoría de CADA fila del archive** | Ocasional, y toca todo |
+| ~~`modifyMovement`~~ ✅ v10.0 | Editar un movimiento guardado (cantidad, categoría, nombre — todo cambia el stock) | **Un admin, cualquier día** |
+| ~~`updateConfig`~~ ✅ v10.0 | **Renombrar una categoría reescribe la celda Categoría de CADA fila del archive** | Ocasional, y toca todo |
 | `manageMaterial` | Renombrar / fusionar / borrar un material — reescribe muchas filas | Ocasional |
 | `mergeConfigValues` | Fusionar categorías o proyectos | Poco frecuente |
 | `mergeLocations` | Fusionar ubicaciones | Poco frecuente |
@@ -64,52 +70,78 @@ salida. Los dos leen el estado, los dos escriben. **No hay error, no hay
 aviso, los dos ven "guardado ✓"** — y el número queda mal hasta que alguien
 vaya a contar físicamente. Ese silencio es el problema, no la colisión.
 
-### Un matiz importante sobre `refreshDerivedSheets_`
+### Un matiz importante sobre `refreshDerivedSheets_` — y una corrección
 
 Se llama **desde dentro** de `addMovementsBatch_`, que ya tiene el candado. O
-sea que en el camino más frecuente **sí está protegido**. El riesgo está en
-las otras cuatro llamadas, fuera del guardado.
+sea que en el camino más frecuente **sí está protegido**.
 
-Y esto condiciona el arreglo: **no se le puede poner un `waitLock` normal o se
-bloquearía a sí mismo.** Hace falta un candado reentrante.
+Antes escribí aquí que esto obligaba a un candado reentrante. **Es al revés**, y
+vale la pena decirlo claro porque cambió el arreglo entero:
+
+`refreshDerivedSheets_` se llama desde **dentro** de `modifyMovement`,
+`manageMaterial`, `mergeConfigValues`, `mergeLocations` y `addMovementsBatch_`.
+Como la llamada va anidada dentro del que llama, **poner el candado en el de
+afuera ya cubre al de adentro, gratis**. Lo que sí rompería es darle a
+`refreshDerivedSheets_` un `waitLock` propio: ahí sí se bloquearía a sí mismo.
+
+Resultado: no hace falta ninguna maquinaria de reentrancia, y el paso 3 se hace
+casi solo con los pasos 1 y 2. El candado quedó siendo diez líneas en vez de
+veinte, sin un contador de profundidad que mantener.
 
 ---
 
-## El arreglo propuesto — sin construir, esperando aprobación
+## El arreglo — paso 1 aplicado en v10.0
 
-Un solo ayudante, reentrante, y que todos los caminos lo usen:
+Un solo ayudante, sin reentrancia (ver la corrección de arriba), y que los
+caminos que faltaban lo usen:
 
 ```javascript
-var _archiveLockDepth = 0;   // por ejecución: Apps Script aísla cada request
-
-function withArchiveLock_(fn) {
-  if (_archiveLockDepth > 0) {            // ya lo tenemos en esta ejecución
-    _archiveLockDepth++;
-    try { return fn(); } finally { _archiveLockDepth--; }
-  }
+function withStockLock_(fn) {
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(15000)) {
-    throw new Error('System busy — someone else is saving right now. Try again in a moment.');
+    throw new Error('System busy — someone else is saving right now. Please try again in a moment.');
   }
-  _archiveLockDepth++;
   try { return fn(); }
-  finally { _archiveLockDepth--; try { lock.releaseLock(); } catch (e) {} }
+  finally { try { lock.releaseLock(); } catch (e) {} }
 }
 ```
 
-Y migrar **también** `addMovementsBatch_` y `archiveOldMovements` a usarlo, para
-que toda toma de candado pase por un solo lugar y la reentrancia se lleve la
-cuenta de forma consistente. Si `addMovementsBatch_` sigue usando
-`LockService` directo, `refreshDerivedSheets_` no sabría que ya está tomado.
+Dos reglas para usarlo, escritas también en el código: no llamarlo desde algo
+que ya tiene el candado, y no envolver un bloque que llame a
+`archiveOldMovements` — ese toma este mismo candado y lo encontraría tomado.
 
-**Riesgo del arreglo, honestamente:** toca el camino más crítico del producto
-(guardar movimientos). Un error ahí es peor que el problema que resuelve. Por
-eso está propuesto y no hecho.
+**Lo hecho en v10.0 (paso 1):**
 
-**Orden sugerido, del más valioso al menos:**
-1. `modifyMovement` y `updateConfig` — los dos que un admin toca de verdad
+- `modifyMovement` se partió en dos. La comprobación de permisos se queda
+  afuera (un VIEWER debe recibir un "no" sin hacer cola por el candado) y todo
+  lo que toca la hoja se movió a `modifyMovementLocked_`, dentro del candado.
+  Se partió en vez de reindentar 140 líneas de lógica ya auditada: así el
+  `diff` muestra el candado y nada más.
+- En `updateConfig` se envolvió **solo** el bloque de renombrar categoría, no
+  la función entera, por la segunda regla de arriba: la rama de
+  `archiveCutoffMonths` llama a `archiveOldMovements`. (Esa rama hace `return`
+  antes de llegar al renombrado, así que los dos nunca corren en la misma
+  ejecución — pero el bloque queda acotado igual, para que siga siendo cierto
+  si mañana alguien mueve un `return`.)
+- `addMovementsBatch_` **no se tocó.** Sigue con su `waitLock(8000)` de
+  siempre. El camino más crítico del producto queda exactamente como estaba y
+  como estaba probado.
+
+`tools/test-concurrency.js` verifica que `modifyMovementLocked_` **solo** se
+alcanza desde dentro de `withStockLock_` — contando paréntesis, no confiando en
+el sufijo del nombre. Si alguien lo llama desde fuera del candado, la prueba
+falla.
+
+**Qué es lo peor que puede pasar con este arreglo:** que a alguien le salga
+"System busy — please try again" cuando un admin está renombrando una categoría
+grande. Nunca pérdida de datos: el que no consigue el candado no escribe nada.
+Y Apps Script suelta el candado cuando termina la ejecución, así que ni un bug
+que se saltara el `releaseLock` podría dejarlo tomado más allá de esa petición.
+
+**Lo que falta, en orden:**
 2. `manageMaterial`, `mergeConfigValues`, `mergeLocations`
-3. `refreshDerivedSheets_` (necesita la reentrancia, por eso va después)
+3. `refreshDerivedSheets_` — ya cubierto de forma transitiva en los caminos
+   que importan; queda decidir si vale la pena para las llamadas sueltas
 4. `menuNormalizeStatus` — casi simbólico
 
 ---

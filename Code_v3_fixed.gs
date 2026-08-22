@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.99';
+var APP_VERSION = '10.0';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -1899,6 +1899,37 @@ function processMovementInner_(ss, action, data, auth) {
 //
 // `movements` = array of normalized movement objects (same shape _addMovement
 // accepts). Each row may carry its own docGroups/files/notifyRecipients/forceSubmit.
+// ─── THE STOCK LOCK ──────────────────────────────────────────────────────────
+// One door, one person at a time.
+//
+// Stock is not a stored number — it is replayed from the movement archive. So
+// anything that reads the archive, works out a new value and writes it back is
+// a read-modify-write, and two of those overlapping silently lose one of the
+// two changes: both executions read "100", both write "90", and 20 units left
+// the building while the system says 10 did. Nobody sees an error. That is the
+// whole danger — not the collision, the silence.
+//
+// Deliberately NOT re-entrant, because it does not need to be. Every risky
+// path calls refreshDerivedSheets_ from INSIDE itself, so locking the outer
+// call covers the inner one for free. Re-entrancy machinery guarding a case
+// that does not arise would be more moving parts, not fewer.
+//
+// Two rules for using it: never call it from something that already holds the
+// lock, and never wrap a block that calls archiveOldMovements — that takes
+// this same lock and would find it held.
+//
+// Apps Script releases a script lock when the execution ends, so even a bug
+// that skipped releaseLock could only hold others up until this request
+// finishes, never permanently.
+function withStockLock_(fn) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(15000)) {
+    throw new Error('System busy — someone else is saving right now. Please try again in a moment.');
+  }
+  try { return fn(); }
+  finally { try { lock.releaseLock(); } catch (e) {} }
+}
+
 function addMovementsBatch_(ss, archive, movements, auth) {
   var EMPTY = { status: 'success', firstRowIdx: null, rowCount: 0, fileError: null, emailError: null, availableByMat: {} };
   if (!movements || !movements.length) return EMPTY;
@@ -6678,17 +6709,29 @@ function updateConfig(data, auth) {
       }
     }
     if (!renamed) throw new Error('"' + val + '" not found in ' + data.type + '.');
-    // Also rename in MASTER_ARCHIVE_V3 when renaming a category
+    // Also rename in MASTER_ARCHIVE_V3 when renaming a category.
+    //
+    // This reads as a settings change and is anything but: it walks the WHOLE
+    // archive rewriting the Category cell of every matching row — thousands of
+    // writes on a real installation, with the floor still saving movements
+    // throughout. It was the last unlocked stock-writer found, and it was
+    // found by tools/test-concurrency.js rather than by reading the code,
+    // precisely because it does not look like one.
+    //
+    // Only THIS block takes the lock, not the whole of updateConfig: the
+    // archiveCutoffMonths branch above calls archiveOldMovements, which takes
+    // the same lock and would find it already held.
     if (data.type === 'categories') {
-      var archive = ss.getSheetByName(SHEETS.ARCHIVE);
-      if (archive) {
+      withStockLock_(function () {
+        var archive = ss.getSheetByName(SHEETS.ARCHIVE);
+        if (!archive) return;
         var aData = archive.getDataRange().getValues();
         for (var j = 1; j < aData.length; j++) {
           if (String(aData[j][AC.CATEGORY] || '').trim().toUpperCase() === val.toUpperCase()) {
             archive.getRange(j + 1, AC.CATEGORY + 1).setValue(sheetSafe_(nv.toUpperCase()));
           }
         }
-      }
+      });
     }
 
   } else if (data.op === 'delete') {
@@ -7144,6 +7187,16 @@ function parseIncomingEmail(data, auth) {
 //
 // ─── MODIFY MOVEMENT ────────────────────────────────────────────────────────
 // Admin only. Updates a row in MASTER_ARCHIVE_V3, logs to AUDIT_LOG, emails admin.
+// Editing a saved movement changes stock — quantity, category and name all
+// feed the totals — so it is a read-modify-write on the archive and belongs
+// behind the same door as saving one. It went years without it: an admin
+// correcting yesterday's exit while the floor recorded a new one could lose
+// one of the two changes, with both people seeing "saved ✓".
+//
+// Split in two so the lock wraps the work without re-indenting 140 lines of
+// audited logic: the auth checks stay out here (they should refuse a VIEWER
+// without ever queueing for the lock), everything that touches the sheet goes
+// inside.
 function modifyMovement(data, auth) {
   // Was flatly ADMIN-only. Now: ADMIN always, or WAREHOUSE if the admin has
   // switched on "Edit movements" for their role in Settings → Permissions —
@@ -7151,7 +7204,10 @@ function modifyMovement(data, auth) {
   // refuses it before the permission is even checked.
   auth = requireAuth_('WRITE');
   requirePerm_(auth, 'canEditMovements');
+  return withStockLock_(function () { return modifyMovementLocked_(data, auth); });
+}
 
+function modifyMovementLocked_(data, auth) {
   var rowIdx = parseInt(data.rowIdx || 0);
   if (rowIdx < 2) throw new Error('Invalid row index.');
 

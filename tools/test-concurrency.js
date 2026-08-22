@@ -46,8 +46,52 @@ function bodyOf(name) {
 }
 function takesLock(name) {
   const b = bodyOf(name) || '';
-  return /waitLock\(|tryLock\(/.test(b);
+  // withStockLock_ is the shared helper (v10.0). A path that calls it is as
+  // protected as one that takes the lock by hand.
+  return /waitLock\(|tryLock\(|withStockLock_\(/.test(b);
 }
+// Some work was split out of a wrapper so the lock could be taken without
+// re-indenting a hundred lines of audited logic — modifyMovement now holds the
+// door and modifyMovementLocked_ does the work. The helper writes to the
+// archive and takes no lock of its own, so the guard below would report it as
+// a brand-new hole in the fix that just closed it.
+//
+// The `Locked_` suffix is NOT taken on faith. This finds every caller of the
+// helper and checks that EVERY call site sits inside a withStockLock_ callback
+// — by matching parentheses, not by hoping a regex lands on the right line. If
+// someone later calls modifyMovementLocked_ from outside the lock, this stops
+// returning true and the guard fires, which is the entire point of it.
+function lockRegions(body) {
+  const out = [];
+  let i = 0;
+  while ((i = body.indexOf('withStockLock_(', i)) !== -1) {
+    let depth = 0, j = i + 'withStockLock_'.length;
+    for (; j < body.length; j++) {
+      if (body[j] === '(') depth++;
+      else if (body[j] === ')') { depth--; if (depth === 0) { j++; break; } }
+    }
+    out.push([i, j]);
+    i = j;
+  }
+  return out;
+}
+function lockedByCaller(name) {
+  const callers = FUNCS.map(f => f.name).filter(c =>
+    c !== name && new RegExp('\\b' + name + '\\s*\\(').test(bodyOf(c) || ''));
+  if (!callers.length) return false;           // nobody calls it — not covered
+  return callers.every(c => {
+    const b = bodyOf(c) || '';
+    const regions = lockRegions(b);
+    const call = new RegExp('\\b' + name + '\\s*\\(', 'g');
+    let m, seen = false;
+    while ((m = call.exec(b))) {
+      seen = true;
+      if (!regions.some(([s, e]) => m.index > s && m.index < e)) return false;
+    }
+    return seen;
+  });
+}
+
 // A path that can change what the stock numbers come out as. Merely MENTIONING
 // the archive is not enough — updateConfig reads it and writes only to CONFIG,
 // and counting that as a stock writer buries the real ones in noise. So this
@@ -84,7 +128,10 @@ console.log('\n═══ PART 1 — real source: who holds the lock ═══');
 console.log('\nThe two paths that were designed for this, and still are');
 [
   ['addMovementsBatch_', 'saving movements'],
-  ['archiveOldMovements', 'moving old rows to ARCHIVE_HISTORY']
+  ['archiveOldMovements', 'moving old rows to ARCHIVE_HISTORY'],
+  // Step 1 of the fix (v10.0) — the two an admin touches on an ordinary day
+  ['modifyMovement', 'editing a saved movement'],
+  ['updateConfig', 'renaming a category, which rewrites every matching archive row']
 ].forEach(([fn, what]) => {
   check(fn + ' takes the script lock (' + what + ')', takesLock(fn));
 });
@@ -102,21 +149,23 @@ console.log('\nThe two paths that were designed for this, and still are');
     /finally\s*\{[^}]*releaseLock\(\)/s.test(b));
 }
 
+// The wrapper split has to be airtight, or the fix is worse than the gap: the
+// helper looks protected while a second caller walks straight past the door.
+check('modifyMovementLocked_ is only ever reached from inside withStockLock_ — every call site, checked by matching parens',
+  lockedByCaller('modifyMovementLocked_'));
+check('...and it really is the part that writes to the archive, so the lock is around the writes and not just around the auth checks',
+  mutatesStock('modifyMovementLocked_'));
+
 console.log('\nThe paths that change stock and do NOT hold it — the gap');
 // Named individually rather than derived, so that fixing one, or adding a
 // sixth, both force this list to be updated by hand instead of quietly
 // passing.
 const KNOWN_GAPS = {
-  modifyMovement:      'editing a saved movement (qty/category/name all change stock)',
   manageMaterial:      'rename / merge / delete a material — rewrites many archive rows',
   mergeConfigValues:   'merging categories or projects — rewrites archive rows',
   mergeLocations:      'merging locations — rewrites archive rows',
   refreshDerivedSheets_: 'rewriting LIVE_STOCK / SITE_STOCK / WASTED_STOCK',
-  menuNormalizeStatus: 'the one-off Status clean-up from the Sheet menu — owner-run and rare, but it does rewrite the archive',
-  // Found by this test, not by reading the code: renaming a category walks the
-  // whole archive rewriting the Category cell of every matching row. It reads
-  // as a settings change, which is exactly why it was missed by eye.
-  updateConfig:        'renaming a category — rewrites the Category cell on every archive row that used it'
+  menuNormalizeStatus: 'the one-off Status clean-up from the Sheet menu — owner-run and rare, but it does rewrite the archive'
 };
 Object.keys(KNOWN_GAPS).forEach(fn => {
   check('KNOWN GAP — ' + fn + ' still has no lock (' + KNOWN_GAPS[fn] + ')', !takesLock(fn));
@@ -129,7 +178,9 @@ Object.keys(KNOWN_GAPS).forEach(fn => {
     // ensure* helpers only create a sheet and its header row
     .filter(n => !/^ensure/.test(n))
     // this one writes into a BACKUP COPY, never the live file
-    .filter(n => n !== 'writeConfigSnapshot_');
+    .filter(n => n !== 'writeConfigSnapshot_')
+    // covered by a wrapper that takes the lock — verified, not assumed
+    .filter(n => !lockedByCaller(n));
   const unexpected = unlocked.filter(n => !KNOWN_GAPS[n]);
   check('no NEW unlocked stock-writer has appeared since this list was written' +
         (unexpected.length ? ' — found: ' + unexpected.join(', ') : ''),
@@ -140,12 +191,18 @@ Object.keys(KNOWN_GAPS).forEach(fn => {
     fixed.length === 0);
 }
 
-// refreshDerivedSheets_ is called from INSIDE addMovementsBatch_, which already
-// holds the lock. Any fix has to survive that or it deadlocks on itself.
+// refreshDerivedSheets_ is called from INSIDE the paths that hold the lock.
+// This was first read the wrong way round — as proof that any fix needed a
+// re-entrant lock. It is the opposite: because the call is nested inside the
+// caller, locking the caller already covers it, and giving refreshDerivedSheets_
+// a plain waitLock of its own is what would deadlock. Step 3 of the fix is
+// therefore mostly already done by steps 1 and 2, for free.
 {
-  const b = bodyOf('addMovementsBatch_') || '';
-  check('refreshDerivedSheets_ is called from inside the locked save — so any fix for it must be re-entrant, not a second plain waitLock',
-    /refreshDerivedSheets_\(/.test(b));
+  const callers = ['addMovementsBatch_', 'modifyMovementLocked_'];
+  callers.forEach(c => {
+    check(c + ' calls refreshDerivedSheets_ from inside itself, so the lock it holds covers that rewrite too — no second lock, and no re-entrancy machinery',
+      /refreshDerivedSheets_\(/.test(bodyOf(c) || ''));
+  });
 }
 
 console.log('\n═══ PART 2 — a MODEL of what those gaps do ═══');
