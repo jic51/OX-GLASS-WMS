@@ -45,9 +45,21 @@ Ordenado por lo que más duele:
 | `SESSION_SECRET` | Se recrea solo. Todos vuelven a iniciar sesión una vez. |
 | `SUPPORT_EMAIL` | Los reportes solo van al admin del cliente, no a nosotros. |
 
-**Antes de necesitar esto:** guarda una foto o un export de las Script
-Properties de cada cliente en tu propio archivo de soporte. Sin eso, una
-restauración es reconstruir la configuración a mano y adivinando.
+### ⚠️ Corrección — dónde NO debe guardarse esta copia
+
+En una conversación se sugirió que Jose guardara una copia de las Script
+Properties de cada cliente en su propio archivo de soporte. **Eso está mal y
+queda descartado.** Contradice de frente la promesa central del producto —
+"tus datos no salen de tu Drive, nosotros no recibimos nada" — y además
+metería el `OAUTH_CLIENT_SECRET`, que es de Jose y es compartido entre todos
+los clientes, en un archivo suelto.
+
+**La copia tiene que vivir en el Drive del propio cliente.** Ver la mejora
+propuesta al final de este documento: la instantánea se escribe dentro de cada
+backup, en el Drive del cliente, y nunca sale de ahí.
+
+Mientras eso no esté construido, la recuperación se hace con las ayudas que ya
+existen en el código (Paso 2), no guardando datos de clientes por fuera.
 
 ---
 
@@ -121,20 +133,35 @@ la próxima emergencia.
 
 ---
 
-## Mejora propuesta (sin construir — pendiente de decisión)
+## Mejora propuesta (sin construir — pendiente de tu aprobación)
 
-Que `runBackupNow_` escriba una instantánea de las Script Properties **dentro
-de la copia de backup**, en una hoja aparte. Así el Paso 2 pasa de
-"reconstruir a mano y adivinando" a "copiar de esta hoja".
+**Que el backup se lleve la configuración consigo, dentro del Drive del
+cliente.** Es la respuesta correcta a "¿cómo guardamos esto si no debemos
+tener acceso a los datos del cliente?": no lo guardamos nosotros — lo guarda
+él, en su propio archivo, automáticamente.
 
-Qué habría que decidir antes:
-- **Los secretos.** `OAUTH_CLIENT_SECRET` y `GEMINI_API_KEY` quedarían
-  legibles para cualquiera que pueda abrir el archivo de backup — que es más
-  gente que la que puede ver las Script Properties del proyecto vivo. La
-  propuesta sería **excluirlos**, junto con `SESSION_SECRET` (se recrea solo)
-  y `WMS_SESSIONS` (efímero), y anotar en la hoja que esos cuatro se vuelven
-  a poner a mano.
-- Que la hoja se escriba **en la copia, nunca en el archivo vivo**.
+**Cómo:** `runBackupNow_` escribe una pestaña extra en **la copia de backup**
+(nunca en el archivo vivo) con una fila por Script Property. El Paso 2 pasa de
+"reconstruir adivinando" a "copiar de esta pestaña".
 
-Esto convierte el backup en algo que de verdad restaura un sistema, en vez de
-solo los datos.
+**Qué se incluye:** todo lo que es del cliente y es doloroso perder —
+`FOLDER_PREFIX` y `FOLDER_PREFIX_HISTORY` (los adjuntos), `COMPANY_*`,
+`WMS_MONITORED_MATERIALS`, `COLUMN_PREFS`, `ROLE_PERMS_WAREHOUSE`,
+`WAREHOUSE_ROLE_LABEL`, `WEB_APP_URL`, `ARCHIVE_CUTOFF`, `OAUTH_CLIENT_ID`.
+
+**Qué se excluye, y por qué cada uno:**
+
+| Propiedad | Por qué no |
+|---|---|
+| `OAUTH_CLIENT_SECRET` | **No es del cliente, es de Jose, y es el mismo para todos.** Ponerlo en un archivo del Drive de cada cliente lo expone a mucha más gente. Se vuelve a poner a mano. |
+| `GEMINI_API_KEY` | Es una llave de pago del cliente. Que la vuelva a pegar él, deliberadamente. |
+| `SESSION_SECRET` | Se recrea solo. Copiarlo solo alarga su vida sin ganar nada. |
+| `WMS_SESSIONS` | Efímero, no significa nada al día siguiente. |
+
+La pestaña lleva una nota arriba diciendo cuáles cuatro faltan y por qué, para
+que quien restaure no crea que están todos.
+
+**Efecto secundario que vale la pena:** el cliente termina con su propia
+configuración respaldada todas las noches, en su Drive, sin que nosotros
+tengamos nada. Es más honesto Y más robusto que la alternativa que se había
+sugerido.
