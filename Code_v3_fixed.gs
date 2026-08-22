@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.97';
+var APP_VERSION = '9.98';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -443,10 +443,33 @@ function doGet(e) {
   if (e && e.parameter && e.parameter.code && e.parameter.state) {
     return handleOAuthCallback_(e.parameter.code, e.parameter.state);
   }
-  return HtmlService.createHtmlOutputFromFile('Index')
+  var out = HtmlService.createHtmlOutputFromFile('Index')
     .setTitle((companySettings_().name || 'Warehouse') + ' — ' + PRODUCT_NAME)
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+
+  // THE TAB ICON HAS TO BE SET HERE, NOT IN THE PAGE.
+  //
+  // v9.84 shipped a `<link rel="icon">` swap inside Index (_setFavicon) and it
+  // was wrong — Jose ran two installations for weeks and both kept Apps
+  // Script's generic icon. The reason is the same sandbox that already
+  // defeated inline PDFs and direct file requests: what Index renders is an
+  // IFRAME on googleusercontent.com, and a browser tab takes its icon from
+  // the TOP-LEVEL document, which belongs to Google. Nothing the page does to
+  // its own <head> can reach it. setTitle works precisely because it is this
+  // same server-side call, applied to the outer page — which is why the tab
+  // says the company name while the icon never changed.
+  //
+  // setFaviconUrl needs a URL Google itself can fetch, so it cannot be a
+  // data: URI and cannot be a private Drive file. It reads a Script Property
+  // so an installation can be pointed at the Acopio mark, or at the
+  // customer's own, without a code change. Unset simply leaves Google's
+  // default — the behaviour everyone has today.
+  var favicon = String(PropertiesService.getScriptProperties().getProperty('FAVICON_URL') || '').trim();
+  if (/^https:\/\//i.test(favicon)) {
+    try { out.setFaviconUrl(favicon); } catch (e) { Logger.log('setFaviconUrl: ' + e.message); }
+  }
+  return out;
 }
 
 // ─── PRIVATE DOCUMENT ACCESS ──────────────────────────────────────────────
@@ -5754,6 +5777,9 @@ var PROPERTY_GUIDE = [
     lost:'Staff are asked to sign in with Google instead of being recognised.' },
   { key:'COMPANY_LOGO_ID', sev:'COSMETIC',
     what:'Your logo.', lost:'No logo. Upload it again in Settings › Company.' },
+  { key:'FAVICON_URL', sev:'COSMETIC',
+    what:'The browser-tab icon. Must be a PUBLIC https:// image — Google fetches it itself, so a private Drive file or a data: URI will not work. Unset means Google\'s own default icon.',
+    lost:'The tab shows the generic Apps Script icon again. Nothing else changes.' },
   { key:'ROLE_PERMS_WAREHOUSE', sev:'OPTIONAL',
     what:'Extra permissions an admin turned on for the WAREHOUSE role (Settings → Permissions).',
     lost:'Nothing missing — absent just means every toggle is at its default.' },
