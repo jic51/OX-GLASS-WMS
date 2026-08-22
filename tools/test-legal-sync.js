@@ -1,0 +1,98 @@
+// Keeps the legal texts in legal/*.md and the copies embedded in the app
+// (LEGAL_DOCS in Index_v3_fixed.html) from drifting apart.
+//
+// WHY THIS EXISTS: the drift already happened once and it mattered. v9.77
+// added the setup check-in, which emails us the company name, the admin's
+// address and a couple of counts — while the privacy policy in both places
+// still said we receive nothing at all. A promise broken in writing is worse
+// than a missing feature, and nothing in the toolchain could see it, because
+// a stale sentence is perfectly valid HTML and perfectly valid Markdown.
+//
+// The .md file is the source of truth (its own header says so); the copy
+// inside the app exists because every customer runs their own copy with
+// nowhere to link out to.
+//
+// This does not diff the prose word for word — the two are deliberately
+// different formats. It checks the things that actually go wrong: the same
+// "last updated" date, the same section headings, and that specific
+// disclosures a customer relies on are present in BOTH.
+//
+// Usage:  node tools/test-legal-sync.js
+
+const fs = require('fs'), path = require('path');
+const ROOT = path.join(__dirname, '..');
+const HTML = fs.readFileSync(path.join(ROOT, 'Index_v3_fixed.html'), 'utf8');
+
+let ok = 0, fail = 0;
+function check(label, cond) {
+  if (cond) { ok++; console.log('  ok  ', label); }
+  else { fail++; console.log('  FAIL ', label); }
+}
+
+// Pull one entry out of the LEGAL_DOCS object literal.
+function appDoc(key) {
+  const start = HTML.indexOf(key + ':', HTML.indexOf('LEGAL_DOCS'));
+  if (start === -1) throw new Error('LEGAL_DOCS entry not found: ' + key);
+  const open = HTML.indexOf('`', start);
+  const close = HTML.indexOf('`', open + 1);
+  return HTML.slice(open + 1, close);
+}
+
+const docs = [
+  { key: 'privacy', file: 'legal/PRIVACY-POLICY.md', label: 'Privacy Policy' },
+  { key: 'terms',   file: 'legal/TERMS-OF-SERVICE.md', label: 'Terms of Service' }
+];
+
+for (const d of docs) {
+  console.log('\n' + d.label);
+  const md = fs.readFileSync(path.join(ROOT, d.file), 'utf8');
+  const app = appDoc(d.key);
+
+  const mdDate = (md.match(/\*\*Last updated:\*\*\s*(.+)/) || [])[1];
+  const appDate = (app.match(/<strong>Last updated:<\/strong>\s*([^<]+)</) || [])[1];
+  check('both carry a "Last updated" date', !!mdDate && !!appDate);
+  check('the dates match (' + String(mdDate).trim() + ' vs ' + String(appDate).trim() + ')',
+    String(mdDate).trim() === String(appDate).trim());
+
+  // Numbered section headings must line up one for one.
+  const mdHeads = (md.match(/^## \d+\..+$/gm) || []).map(h => h.replace(/^## /, '').trim());
+  const appHeads = (app.match(/<h3>\d+\..*?<\/h3>/g) || [])
+    .map(h => h.replace(/<\/?h3>/g, '').replace(/<[^>]+>/g, '').trim());
+  check('same number of numbered sections (' + mdHeads.length + ' vs ' + appHeads.length + ')',
+    mdHeads.length === appHeads.length && mdHeads.length > 0);
+  mdHeads.forEach((h, i) => {
+    if (appHeads[i] !== undefined && appHeads[i] !== h) {
+      check('section ' + (i + 1) + ' matches — md "' + h + '" vs app "' + appHeads[i] + '"', false);
+    }
+  });
+  if (mdHeads.every((h, i) => appHeads[i] === h)) check('every section heading matches, in order', true);
+}
+
+// Specific promises a customer relies on. These are the sentences that go
+// stale when a feature ships and nobody re-reads the policy.
+console.log('\nDisclosures that must appear in BOTH copies');
+const md = fs.readFileSync(path.join(ROOT, 'legal/PRIVACY-POLICY.md'), 'utf8');
+const app = appDoc('privacy');
+
+const musts = [
+  ['the setup check-in is disclosed at all', /check-in/i],
+  ['...and says it sends without being asked', /without you asking/i],
+  ['...and names exactly what it sends', /company name/i],
+  ['...and says it stops once a movement is recorded', /stops permanently/i],
+  ['...and says nothing sends with no support address configured', /never sends at all/i],
+  ['the AI add-on is still disclosed', /Gemini/],
+  ['the "no analytics" promise is still there', /analytics/i]
+];
+for (const [label, re] of musts) {
+  const inMd = re.test(md), inApp = re.test(app);
+  check(label + (inMd && inApp ? '' : ' — md:' + inMd + ' app:' + inApp), inMd && inApp);
+}
+
+// The absolute claim that was false. It must not come back in either copy.
+console.log('\nClaims that must NOT reappear');
+const tooAbsolute = /produces nothing about your business, because we hold nothing/i;
+check('no "a subpoena produces nothing because we hold nothing" in the .md', !tooAbsolute.test(md));
+check('...nor in the app copy', !tooAbsolute.test(app));
+
+console.log('\nlegal sync: ' + (fail === 0 ? 'ok' : (fail + ' FAILED')));
+process.exit(fail === 0 ? 0 : 1);

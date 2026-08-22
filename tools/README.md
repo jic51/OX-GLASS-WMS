@@ -29,10 +29,16 @@ node tools/test-rowmode-stable.js
 node tools/test-header-merge.js
 node tools/test-sysactivity-dismiss.js
 node tools/test-morning-arrived.js
+node tools/test-legal-sync.js
 ```
 
-`tools/audit-responsive.js` is a tape measure, not a test — run it when layout
-changes, read the numbers, fix what they show, run it again.
+`tools/audit-responsive.js` and `tools/test-scale.js` are tape measures, not
+tests — run them when the thing they measure changes, read the numbers, fix
+what they show, run again. `audit-responsive.js` measures layout at six device
+sizes; `test-scale.js` measures how calculateStock() behaves as one
+installation's archive grows (it was linear to 100k movements when last run,
+which answered "does the stock engine have a ceiling?" — no — and pointed the
+remaining scale risk at Sheets I/O and concurrency instead).
 
 The browser tests need `npm install playwright` once; Chromium is already on
 the machine (`/opt/pw-browsers/chromium-*/chrome-linux/chrome`, override with
@@ -220,6 +226,16 @@ come back from — is invisible to both. Those get a browser test.
   with the "⚙ Columns" button above the table — long enough, it didn't fit and
   shoved the whole row down to a new toolbar line. The row-mode bar now lives
   on its own dedicated line from the start.
+- `test-legal-sync.js` — keeps `legal/*.md` and the copies embedded in the app
+  (LEGAL_DOCS) from drifting apart. The drift already happened once and it
+  mattered: v9.77 shipped the setup check-in, which emails us the company
+  name and the admin's address, while both copies of the privacy policy still
+  said we receive nothing at all. Nothing in the toolchain could see it — a
+  stale sentence is valid HTML and valid Markdown. Checks matching
+  "last updated" dates and numbered section headings in both, that specific
+  disclosures a customer relies on appear in BOTH copies, and that the one
+  claim that was actually false ("a subpoena produces nothing, because we
+  hold nothing") cannot come back.
 - `test-morning-arrived.js` — the "Mark arrived →" shortcut on the morning
   popup's cards (v9.94), showMorningPopup lifted verbatim into a Node vm and
   its markup read back. Checks the RULES rather than the styling: an ADMIN

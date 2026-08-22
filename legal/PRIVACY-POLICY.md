@@ -4,7 +4,7 @@
 
 # Privacy Policy — Acopio
 
-**Last updated:** 6 August 2026
+**Last updated:** 21 August 2026
 
 Acopio is warehouse-management software provided by Jose Castro ("we", "us").
 This policy explains what happens to data when you use it.
@@ -16,7 +16,7 @@ of this document short.
 
 ## 1. Where your data lives — and who holds it
 
-**Acopio does not host your data. We never receive a copy of it.**
+**Acopio does not host your business data. We never receive a copy of it.**
 
 Acopio runs entirely inside **your own Google account**. When you install it, a
 Google Sheet and a Google Apps Script project are created **in your Google
@@ -34,8 +34,10 @@ Practically, this means:
   systems.
 - If you stop paying us, your data does not go anywhere. It stays in your Drive
   and your spreadsheet keeps working.
-- A subpoena served on us produces nothing about your business, because we hold
-  nothing.
+- A subpoena served on us produces nothing about your inventory, because we hold
+  none of it. The only business information we may hold is your company name and
+  your administrator's email address, and only in the one case described in
+  section 3 — the setup check-in.
 
 Your data is governed by **your** agreement with Google (Google Workspace Terms
 or the Google Terms of Service, as applicable to your account).
@@ -65,9 +67,8 @@ Two notes on scope:
 
 ## 3. What we collect
 
-**In normal operation: nothing.**
-
-Two features send data to us, and only when you choose to use them:
+**We never receive your inventory data.** Three things can send us something
+else, and they are listed here in full.
 
 1. **"Report a problem" (the 🐞 button).** When you submit a report, the message
    you typed, any screenshots you attach, your email address and your app
@@ -77,6 +78,20 @@ Two features send data to us, and only when you choose to use them:
 2. **Support you initiate.** If you email us for help and include a file, a
    screenshot or spreadsheet access, we see what you send us. We use it to
    resolve your issue and nothing else, and we do not retain copies afterwards.
+3. **The setup check-in — the one thing that sends without you asking.** If, and
+   only if, your installation was configured with a support address, the
+   software emails us once at 3 days and once at 7 days after setup **when no
+   inventory movement has been recorded at all**. It is there so a customer who
+   got stuck during setup hears from us instead of quietly giving up.
+
+   That email contains exactly four things: **your company name, your
+   administrator's email address, how many users are registered, and how many
+   days it has been since setup.** Nothing else — no inventory, no materials,
+   no suppliers, no prices, no documents.
+
+   It stops permanently as soon as a single movement is recorded, and it never
+   sends more than those two messages. If your installation has no support
+   address configured, it never sends at all.
 
 We do not use analytics, tracking pixels, advertising identifiers or session
 recording. We do not sell, rent or share data — we have none to sell.
