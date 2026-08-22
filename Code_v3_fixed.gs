@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '9.96';
+var APP_VERSION = '9.97';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -44,7 +44,10 @@ var SHEETS = {
   CONFIG: 'CONFIG',
   AUDIT: 'AUDIT_LOG',
   ERRORS: 'ERROR_LOG',
-  ARCHIVE_HISTORY: 'ARCHIVE_HISTORY'
+  ARCHIVE_HISTORY: 'ARCHIVE_HISTORY',
+  // Only ever created inside a BACKUP COPY, never in the live file — see
+  // writeConfigSnapshot_.
+  CONFIG_SNAPSHOT: 'ACOPIO_CONFIG_SNAPSHOT'
 };
 
 // Column map matches the ACTUAL sheet structure (19 columns, 0-indexed):
@@ -2690,6 +2693,17 @@ function runBackupNow_() {
       copyFile.moveTo(folder);                   // ours now, so this is allowed
     }
 
+    // The copy carries the configuration with it. Without this a restore
+    // brings back every movement and NONE of the settings — Script
+    // Properties belong to the Apps Script project, not to the spreadsheet,
+    // so a copy is born with them empty. The one that hurts is FOLDER_PREFIX:
+    // without it every photo and document ever attached silently stops
+    // opening, because the app looks in a folder that is not where they are.
+    // Written into the COPY only, never the live file, and into the
+    // customer's own Drive — we never hold any of it.
+    try { writeConfigSnapshot_(copyFile.getId()); }
+    catch (eSnap) { Logger.log('config snapshot: ' + eSnap.message); }  // a backup without it still beats no backup
+
     pruneOldBackups_(folder);
 
     auditLog_(ss, 'BACKUP_CREATED', 'system', copyName, '', copyFile.getId());
@@ -2722,6 +2736,58 @@ function runBackupNow_() {
 
 // Deletes backups older than the retention window. Runs every time a new
 // backup is made, so retention stays enforced without a separate trigger.
+// Four properties are deliberately left OUT of the snapshot, each for its
+// own reason. Keeping this as a named list rather than a comment means the
+// next person to add a property has to decide which side it falls on.
+var SNAPSHOT_EXCLUDE = {
+  // Not the customer's secret — it is ours, and it is the SAME one across
+  // every installation. Copying it into a file in each customer's Drive
+  // spreads it to far more people than can read the live script's settings.
+  OAUTH_CLIENT_SECRET: 'Ours, not yours, and shared across installations — re-enter it by hand.',
+  // The customer's own paid key. Let them paste it back deliberately.
+  GEMINI_API_KEY: 'A paid key of yours — paste it back yourself.',
+  // Regenerates itself on first use. Copying it only extends its life.
+  SESSION_SECRET: 'Recreated automatically. Everyone signs in once more.',
+  // Meaningless by tomorrow.
+  WMS_SESSIONS: 'Who was signed in at the time. Not worth restoring.'
+};
+
+// Writes every Script Property worth restoring into a sheet inside the
+// backup copy. See RESTAURAR-UN-BACKUP.md for the procedure that reads it.
+function writeConfigSnapshot_(copyFileId) {
+  var props = PropertiesService.getScriptProperties().getProperties();
+  var rows = [];
+  Object.keys(props).sort().forEach(function (k) {
+    if (SNAPSHOT_EXCLUDE[k]) return;
+    rows.push([k, String(props[k])]);
+  });
+
+  var copy  = SpreadsheetApp.openById(copyFileId);
+  var sheet = copy.getSheetByName(SHEETS.CONFIG_SNAPSHOT) || copy.insertSheet(SHEETS.CONFIG_SNAPSHOT);
+  sheet.clear();
+
+  var header = [
+    ['ACOPIO — CONFIGURATION SNAPSHOT', 'Taken ' + new Date().toISOString()],
+    ['Restoring? Copy these into the new copy\'s Script Properties BEFORE anything else.', ''],
+    ['FOLDER_PREFIX goes first — without it, attachments do not open.', ''],
+    ['', ''],
+    ['NOT included, on purpose — put these back by hand:', ''],
+  ];
+  Object.keys(SNAPSHOT_EXCLUDE).forEach(function (k) {
+    header.push(['  ' + k, SNAPSHOT_EXCLUDE[k]]);
+  });
+  header.push(['', '']);
+  header.push(['PROPERTY', 'VALUE']);
+
+  var all = header.concat(rows.length ? rows : [['(nothing stored yet)', '']]);
+  sheet.getRange(1, 1, all.length, 2).setValues(all);
+  sheet.getRange(1, 1, 1, 2).setFontWeight('bold');
+  sheet.getRange(header.length, 1, 1, 2).setFontWeight('bold');
+  sheet.setColumnWidth(1, 260);
+  sheet.setColumnWidth(2, 620);
+  return rows.length;
+}
+
 function pruneOldBackups_(folder) {
   var cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - BACKUP_RETENTION_DAYS);

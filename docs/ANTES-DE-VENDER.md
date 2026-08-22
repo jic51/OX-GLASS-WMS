@@ -106,16 +106,20 @@ Igual que arriba: es de las primeras cosas que pregunta un jefe de bodega.
 
 ## Orden sugerido
 
-1. Política de Privacidad ✅
-2. **Verificar "In production" en el consent screen** — es un interruptor y
-   evita que el login externo caduque solo cada 7 días
-3. Restaurar un backup de prueba **(lo más barato y de mayor riesgo real)**
-4. Prueba de escala ✅ — motor medido y lineal; falta la parte de Sheets
-5. Plantilla maestra limpia
-6. Landing + página de novedades
-7. Decidir el cobro
-8. Prueba de concurrencia
-9. Conteo cíclico y códigos de barras (esto ya es producto, no lanzamiento)
+**Orden fijado por Jose (v9.97):**
 
-Los tres primeros son baratos y son riesgo real si un cliente los descubre
-antes que nosotros.
+1. **Prueba de concurrencia** — 3–4 personas guardando a la vez. Responde la
+   pregunta más peligrosa que tenemos y se puede simular sin cliente real.
+2. **Página de novedades** — destraba el hipervínculo de "Acopio" en la app,
+   la tarjeta de reenganche y el argumento del soporte mensual. El contenido
+   ya está escrito: los mensajes de commit de cada versión.
+3. **Mostrar cuánto espacio queda** en Settings → System — convierte el techo
+   del Sheet en un problema visible con años de anticipación.
+4. Restaurar un backup de prueba
+5. Verificar "In production" en el consent screen
+6. Plantilla maestra limpia
+7. Decidir el cobro
+8. Conteo cíclico y códigos de barras (producto, no lanzamiento)
+
+Ya hechos: Política de Privacidad ✅ · prueba de escala del motor ✅ ·
+landing ✅

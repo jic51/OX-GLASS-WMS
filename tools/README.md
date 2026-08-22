@@ -30,6 +30,7 @@ node tools/test-header-merge.js
 node tools/test-sysactivity-dismiss.js
 node tools/test-morning-arrived.js
 node tools/test-legal-sync.js
+node tools/test-config-snapshot.js
 ```
 
 `tools/audit-responsive.js` and `tools/test-scale.js` are tape measures, not
@@ -226,6 +227,18 @@ come back from — is invisible to both. Those get a browser test.
   with the "⚙ Columns" button above the table — long enough, it didn't fit and
   shoved the whole row down to a new toolbar line. The row-mode bar now lives
   on its own dedicated line from the start.
+- `test-config-snapshot.js` — the configuration snapshot written into every
+  backup copy (`writeConfigSnapshot_`), lifted verbatim into a Node vm with
+  SpreadsheetApp and PropertiesService stubbed. A backup copies the
+  SPREADSHEET, but Script Properties belong to the Apps Script project, so a
+  restored copy used to come back with every movement and no configuration —
+  worst of all FOLDER_PREFIX, without which every attachment silently stops
+  opening. Checks the properties that must be carried AND, just as hard, the
+  four that must never be: OAUTH_CLIENT_SECRET above all, since it is ours
+  rather than the customer's and identical across every installation. Also
+  that all four are still NAMED so whoever restores knows what is missing,
+  that a fresh install says so instead of writing an empty grid, and that the
+  snapshot opens the copy by id and never touches the live spreadsheet.
 - `test-legal-sync.js` — keeps `legal/*.md` and the copies embedded in the app
   (LEGAL_DOCS) from drifting apart. The drift already happened once and it
   mattered: v9.77 shipped the setup check-in, which emails us the company
