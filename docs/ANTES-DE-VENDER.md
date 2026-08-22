@@ -40,7 +40,16 @@ Sin landing no hay a dónde mandar a nadie, y bloquea también el hipervínculo
 del nombre "Acopio" dentro de la app y la tarjeta de reenganche. Ver
 `docs/LANDING.md`.
 
-### 5. Cómo se cobra
+### 5. Verificar que el consent screen esté "In production"
+
+Un cliente OAuth en modo **Testing** limita a 100 usuarios y **las
+autorizaciones caducan a los 7 días** — el login externo se rompería solo cada
+semana. Acopio solo pide scopes básicos (`email`, `profile`), que se pueden
+publicar sin verificación de Google. Es un interruptor, no un trámite: Cloud
+Console → OAuth consent screen → confirmar **"In production"**. Detalle en
+`docs/PLAN-5-ANIOS.md`.
+
+### 6. Cómo se cobra
 
 Ni decidido ni construido. Para los primeros clientes, factura manual está
 bien — pero hay que decidir el mecanismo y que la instalación no dependa de
@@ -50,7 +59,7 @@ que Jose recuerde cobrar.
 
 ## Importantes — no bloquean la primera venta, sí la décima
 
-### 6. Prueba de concurrencia
+### 7. Prueba de concurrencia
 
 Lo que la literatura señala como el punto de quiebre de las hojas de cálculo
 como inventario **no es el rendimiento, son los conflictos de edición
@@ -58,26 +67,26 @@ simultánea**. Acopio escribe desde el servidor y no desde la hoja, lo que
 ayuda mucho, pero nadie ha probado 3–4 personas guardando movimientos a la
 vez. Es exactamente lo que hace una bodega en la mañana.
 
-### 7. Límite de 6 minutos por ejecución
+### 8. Límite de 6 minutos por ejecución
 
 Una importación grande o una reconstrucción de stock podría chocar contra el
 techo de Apps Script. No probado. El motor de stock ya se midió y es lineal
 (`tools/test-scale.js`), así que el sospechoso es la lectura/escritura de
 Sheets, no el cálculo.
 
-### 8. Onboarding manual por cliente
+### 9. Onboarding manual por cliente
 
 El paso de OAuth en Cloud Console (~5 min) es tolerable con 5 clientes y
 molesto con 50. Las alternativas están evaluadas en `BACKLOG.md` (sección
 *"Open decision — external sign-in for customers"*). No hace falta resolverlo
 para vender; sí para crecer.
 
-### 9. Conteo cíclico (cycle count)
+### 10. Conteo cíclico (cycle count)
 
 Diseñado en `BACKLOG.md`, sin construir. Todo sistema de inventario serio lo
 tiene, y es la primera pregunta de un comprador con experiencia.
 
-### 10. Códigos de barras / QR + etiquetas
+### 11. Códigos de barras / QR + etiquetas
 
 Igual que arriba: es de las primeras cosas que pregunta un jefe de bodega.
 
@@ -98,13 +107,15 @@ Igual que arriba: es de las primeras cosas que pregunta un jefe de bodega.
 ## Orden sugerido
 
 1. Política de Privacidad ✅
-2. Restaurar un backup de prueba **(el más barato y el de mayor riesgo real)**
-3. Prueba de escala ✅ — motor medido y lineal; falta la parte de Sheets
-4. Plantilla maestra limpia
-5. Landing + página de novedades
-6. Decidir el cobro
-7. Prueba de concurrencia
-8. Conteo cíclico y códigos de barras (esto ya es producto, no lanzamiento)
+2. **Verificar "In production" en el consent screen** — es un interruptor y
+   evita que el login externo caduque solo cada 7 días
+3. Restaurar un backup de prueba **(lo más barato y de mayor riesgo real)**
+4. Prueba de escala ✅ — motor medido y lineal; falta la parte de Sheets
+5. Plantilla maestra limpia
+6. Landing + página de novedades
+7. Decidir el cobro
+8. Prueba de concurrencia
+9. Conteo cíclico y códigos de barras (esto ya es producto, no lanzamiento)
 
 Los tres primeros son baratos y son riesgo real si un cliente los descubre
 antes que nosotros.
