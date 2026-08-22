@@ -31,6 +31,7 @@ node tools/test-sysactivity-dismiss.js
 node tools/test-morning-arrived.js
 node tools/test-legal-sync.js
 node tools/test-config-snapshot.js
+node tools/test-concurrency.js
 ```
 
 `tools/audit-responsive.js` and `tools/test-scale.js` are tape measures, not
@@ -227,6 +228,19 @@ come back from — is invisible to both. Those get a browser test.
   with the "⚙ Columns" button above the table — long enough, it didn't fit and
   shoved the whole row down to a new toolbar line. The row-mode bar now lives
   on its own dedicated line from the start.
+- `test-concurrency.js` — which write paths take the script lock, and what it
+  costs when they do not. Two halves, deliberately labelled as different kinds
+  of evidence: Part 1 is FACT read out of Code_v3_fixed.gs (who locks, whether
+  the archive read happens inside the lock, whether it is released in a
+  finally); Part 2 is a MODEL of read-modify-write showing a lost update with
+  and without the lock — it does not execute addMovementsBatch_, which needs
+  real Sheets. Neither proves a live installation survives four people at
+  once; that still needs a deployed copy and several browsers. It earned its
+  place immediately by finding a seventh unlocked stock-writer that reading
+  the code by eye had cleared: renaming a category rewrites the Category cell
+  of every matching archive row, which reads as a settings change. The
+  known-gap list is spelled out by hand so that fixing one, or adding a new
+  one, both force it to be updated rather than quietly passing.
 - `test-config-snapshot.js` — the configuration snapshot written into every
   backup copy (`writeConfigSnapshot_`), lifted verbatim into a Node vm with
   SpreadsheetApp and PropertiesService stubbed. A backup copies the

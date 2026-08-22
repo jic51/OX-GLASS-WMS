@@ -59,13 +59,23 @@ que Jose recuerde cobrar.
 
 ## Importantes — no bloquean la primera venta, sí la décima
 
-### 7. Prueba de concurrencia
+### 7. ~~Prueba de concurrencia~~ ✅ AUDITADA (v9.99) — quedan dos cosas
 
-Lo que la literatura señala como el punto de quiebre de las hojas de cálculo
-como inventario **no es el rendimiento, son los conflictos de edición
-simultánea**. Acopio escribe desde el servidor y no desde la hoja, lo que
-ayuda mucho, pero nadie ha probado 3–4 personas guardando movimientos a la
-vez. Es exactamente lo que hace una bodega en la mañana.
+`tools/test-concurrency.js` y `docs/CONCURRENCIA.md`. Resultado: **guardar
+movimientos —lo más frecuente y lo más peligroso— está bien protegido**, con
+la lectura dentro del candado y liberación en `finally`. Pero hay **siete
+caminos más que cambian el stock sin candado**, y dos los toca un admin en un
+día normal: editar un movimiento guardado, y renombrar una categoría (que
+reescribe la celda Categoría de cada fila del archive — ese lo encontró la
+prueba, no la lectura a mano).
+
+Falta:
+1. **Aplicar el arreglo** — un candado reentrante compartido, propuesto con
+   código en `CONCURRENCIA.md`. No hecho porque toca el camino más crítico
+   del producto y hay que decidirlo con calma.
+2. **La prueba en vivo** — tres o cuatro navegadores contra una copia
+   desplegada, guardando del mismo material a la vez, y contar a mano. Ningún
+   test desde fuera puede sustituirla.
 
 ### 8. Límite de 6 minutos por ejecución
 
@@ -108,8 +118,8 @@ Igual que arriba: es de las primeras cosas que pregunta un jefe de bodega.
 
 **Orden fijado por Jose (v9.97):**
 
-1. **Prueba de concurrencia** — 3–4 personas guardando a la vez. Responde la
-   pregunta más peligrosa que tenemos y se puede simular sin cliente real.
+1. ~~Prueba de concurrencia~~ ✅ auditada — falta aplicar el arreglo
+   (candado reentrante, propuesto en `CONCURRENCIA.md`) y la prueba en vivo
 2. **Página de novedades** — destraba el hipervínculo de "Acopio" en la app,
    la tarjeta de reenganche y el argumento del soporte mensual. El contenido
    ya está escrito: los mensajes de commit de cada versión.
