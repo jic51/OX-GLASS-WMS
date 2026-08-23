@@ -34,6 +34,7 @@ node tools/test-config-snapshot.js
 node tools/test-concurrency.js
 node tools/test-category-rename.js
 node tools/test-cfg-rename-reload.js
+node tools/test-space-usage.js
 ```
 
 `tools/audit-responsive.js` and `tools/test-scale.js` are tape measures, not
@@ -270,6 +271,18 @@ come back from — is invisible to both. Those get a browser test.
   must NOT — `_applyCfgChangeLocally` exists so that entering ten categories
   is not ten round trips. Runs the real function in a vm with the browser
   stubbed.
+- `test-space-usage.js` — the storage indicator's ESTIMATE, which is the only
+  part of it that can lie. The bar reports a fact; the projection is where a
+  wrong number either panics a customer with fifteen years of room or
+  reassures one with nine months. Runs the real `spaceEstimate_` in a vm
+  against fake timestamp columns, holding both failure modes shut: the opening
+  inventory (hundreds of movements in three days) must not set the pace, and a
+  rising pace must BRACKET a second figure rather than compound into a curve.
+  It earned its place immediately by catching an off-by-one — `age <= 90`
+  made the recent window 91 days wide, so every steady installation measured
+  as growing 1% and would have been shown a "if your pace keeps growing"
+  sentence that meant nothing. Fixed with strict bounds plus a 15% floor
+  below which volume is treated as weather, not a trend.
 - `test-config-snapshot.js` — the configuration snapshot written into every
   backup copy (`writeConfigSnapshot_`), lifted verbatim into a Node vm with
   SpreadsheetApp and PropertiesService stubbed. A backup copies the

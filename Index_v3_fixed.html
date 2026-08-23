@@ -1270,6 +1270,18 @@
     .sim-group:last-child{margin-bottom:0}
     .sim-opt{display:flex;align-items:center;gap:.45rem;font-size:.8rem;color:var(--text);padding:.15rem 0;cursor:pointer}
     .sim-acts{display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap}
+    /* Storage bar. The percentage sits ON the bar rather than beside it, so
+       the one number that matters is where the eye already is. Centred over
+       the whole track, not over the filled part, so it stays readable at 2%
+       and at 98% alike. */
+    .space-bar{position:relative;height:22px;border-radius:11px;background:var(--bg);
+               border:1px solid var(--border);overflow:hidden}
+    .space-bar-fill{position:absolute;inset:0 auto 0 0;transition:width .5s ease}
+    .space-bar-pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+                   font-size:.72rem;font-weight:700;color:var(--text);
+                   /* The label crosses both the filled and empty halves, so it
+                      needs to stay legible against either. */
+                   text-shadow:0 0 3px var(--card),0 0 3px var(--card),0 0 2px var(--card)}
     .sysact-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.3rem}
     .sysact-list li{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.45rem .6rem;font-size:.78rem}
     .sysact-dot{color:var(--green);font-weight:800}
@@ -2631,7 +2643,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '10.4';
+var APP_VERSION = '10.5';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -7388,6 +7400,12 @@ function _renderSystemTab() {
       '<label>Backups</label>' +
       '<div id="backupBox" style="color:var(--muted);font-size:.78rem"><span class="spin-hg">⏳</span> Checking…</div>' +
     '</div>' +
+    '<div class="field" style="margin-bottom:1.25rem">' +
+      '<label style="display:flex;align-items:center;gap:.4rem">Storage ' +
+        _infoIc('Google caps a spreadsheet at 10 million cells across all its tabs. This is how much of that your file uses.') +
+      '</label>' +
+      '<div id="spaceBox" style="color:var(--muted);font-size:.78rem"><span class="spin-hg">⏳</span> Measuring…</div>' +
+    '</div>' +
     '<div class="field">' +
       '<label style="display:flex;align-items:center;gap:.4rem">Stock totals ' +
         _infoIc('Recalculates every stock total from the current movement history. Use this if a deleted or edited movement left stale numbers behind.') +
@@ -7398,6 +7416,82 @@ function _renderSystemTab() {
     '</div>';
 
   _loadBackupStatus();
+  _loadSpaceUsage();
+}
+
+// ── How full the spreadsheet is ──────────────────────────────────────────────
+// A Google spreadsheet stops at 10 million cells across all tabs, and Acopio
+// spends 22 of them per movement. Most customers will never come close; a busy
+// warehouse gets there in a few years, and that is the customer paying the most
+// and shouting the loudest. A number on its own ("1,847,322 cells") means
+// nothing to anyone — a bar at 18% is understood without explanation.
+function _loadSpaceUsage(){
+  var box = document.getElementById('spaceBox');
+  if (!box) return;
+  google.script.run
+    .withSuccessHandler(function(st){ _drawSpaceBox(st || {}); })
+    .withFailureHandler(function(e){
+      var b = document.getElementById('spaceBox');
+      if (b) b.innerHTML = '<span style="color:var(--red)">Could not measure the file: ' + _he(e.message||e) + '</span>';
+    })
+    .processMovement('getSpaceUsage', _h({}));
+}
+
+function _fmtInt(n){ return Math.round(Number(n)||0).toLocaleString('en-US'); }
+
+// Rounded to whole years, and never below 1. "6.83 years" invites a trust the
+// number has not earned; "~7 years" says what it actually knows.
+function _fmtYears(y){
+  if (!isFinite(y)) return null;
+  if (y < 1) return 'under a year';
+  if (y > 50) return 'over 50 years';
+  return '~' + Math.round(y) + (Math.round(y) === 1 ? ' year' : ' years');
+}
+
+function _drawSpaceBox(st){
+  var box = document.getElementById('spaceBox');
+  if (!box) return;
+  var pct = Math.max(0, Math.min(100, Number(st.pct) || 0));
+  // Green below 60, amber to 85, red above. By PERCENTAGE, not by the
+  // estimate: how full the file is, is a fact; how long it has left is a
+  // projection, and a projection should not be what turns the bar red.
+  var color = pct >= 85 ? 'var(--red)' : (pct >= 60 ? 'var(--yellow)' : 'var(--green)');
+  // One decimal below 10% so an early install sees 1.8% instead of a bar that
+  // reads 2% for its first two years.
+  var shown = pct < 10 ? pct.toFixed(1) : String(Math.round(pct));
+
+  var e = st.estimate;
+  var line;
+  if (!e) {
+    line = 'No movements recorded yet.';
+  } else if (e.tooEarly) {
+    line = 'Time estimate available after 60 days of use (' + e.daysOfUse + ' so far) — the first weeks are mostly the opening inventory, which would make any projection wrong.';
+  } else if (e.idle) {
+    line = 'No movements in the last 90 days, so there is no pace to project from.';
+  } else {
+    var y = _fmtYears(e.years);
+    line = 'At about ' + (e.perDay < 1 ? e.perDay.toFixed(1) : Math.round(e.perDay)) +
+           ' movements a day, room for ' + y;
+    var g = _fmtYears(e.yearsIfGrowing);
+    if (g && g !== y) line += ' — or ' + g + ' if your pace keeps growing like it did last year';
+    line += '.';
+  }
+
+  box.innerHTML =
+    '<div class="space-bar" role="img" aria-label="' + _he(shown + '% of the spreadsheet used') + '">' +
+      '<div class="space-bar-fill" style="width:' + pct.toFixed(2) + '%;background:' + color + '"></div>' +
+      '<span class="space-bar-pct">' + _he(shown) + '% used</span>' +
+    '</div>' +
+    '<div style="margin-top:.45rem">' + _fmtInt(st.cellsUsed) + ' of ' + _fmtInt(st.cellLimit) +
+      ' cells · ' + _fmtInt(st.movements) + ' movements · ' + _he(String(st.tabs || 0)) + ' tabs</div>' +
+    '<div style="margin-top:.25rem">' + _he(line) + '</div>' +
+    (pct >= 60
+      ? '<div style="margin-top:.45rem;color:' + (pct >= 85 ? 'var(--red)' : 'var(--yellow)') + '">' +
+        (pct >= 85
+          ? '⚠ Getting close to the limit. Contact support to move older movements into a separate archive file before it fills.'
+          : 'Worth planning ahead: past 85% we should move older movements into a separate archive file.') +
+        '</div>'
+      : '');
 }
 
 // The nightly backup used to be reachable only from the spreadsheet menu, and

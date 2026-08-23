@@ -126,7 +126,7 @@ bien en vez de a las carreras con un cliente enojado.
 
 ---
 
-## El indicador de espacio — diseño (idea de Jose)
+## El indicador de espacio — ✅ CONSTRUIDO EN v10.5 (idea de Jose)
 
 Prioridad 3 en la lista de Jose. Su idea, y estoy de acuerdo:
 
@@ -167,3 +167,24 @@ asusta sin razón es peor que no tener estimado:
 
 Con eso el indicador dice la verdad tanto para el taller que nunca va a llegar
 como para la operación intensa que sí.
+
+
+### Lo construido en v10.5
+
+`getSpaceUsage` (servidor) + la barra en Settings → System. Cuenta
+`getMaxRows × getMaxColumns` de **todas** las pestañas, porque Google limita
+celdas de la CUADRÍCULA, no las llenas: contar solo las llenas le prometería al
+cliente un espacio que no tiene.
+
+El estimado salió tal como se diseñó arriba: ritmo de los últimos 90 días,
+nada antes de 60 días de uso, redondeado a años, y el crecimiento solo como
+segundo escenario acotado.
+
+**Y apareció un detalle que la prueba encontró y yo no:** con `age <= 90` la
+ventana reciente medía 91 días y la anterior 90, así que **toda** instalación
+estable se medía creciendo un 1% y habría visto la frase "o ~7 años si tu ritmo
+sigue creciendo" sin que significara nada. Arreglado con límites estrictos y un
+piso del 15%: por debajo de eso, el volumen de una bodega es clima, no
+tendencia.
+
+Guardado por `tools/test-space-usage.js`.

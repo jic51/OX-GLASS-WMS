@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '10.4';
+var APP_VERSION = '10.5';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -1937,6 +1937,7 @@ function processMovementInner_(ss, action, data, auth) {
   if (action === 'runBackupOnDemand') return runBackupOnDemand(data, auth);
   if (action === 'logClientError')  return logClientError(data, auth);
   if (action === 'loadOlderHistory') return loadOlderHistory(auth);
+  if (action === 'getSpaceUsage')   return getSpaceUsage(auth);
   throw new Error('Unknown action: ' + action);
 }
 
@@ -2931,6 +2932,140 @@ function backupEnabled_() {
     }
   } catch (e) { Logger.log('backupEnabled_: ' + e.message); }
   return false;
+}
+
+// ─── HOW FULL IS THE SPREADSHEET ────────────────────────────────────────────
+// Google caps a spreadsheet at 10 million cells ACROSS ALL TABS. Acopio uses
+// 22 columns per movement, so the practical ceiling is roughly 250,000–300,000
+// movements once CONFIG, USERS, AUDIT_LOG, the derived sheets and
+// ARCHIVE_HISTORY have taken their share — and things get slow well before
+// that, around 100,000 rows.
+//
+// Most customers will never come close. A busy warehouse at 300 movements a
+// day gets there in about three and a half years, and that customer is the one
+// paying the most and shouting the loudest. This turns an invisible ceiling
+// into a visible one with years of warning, which is the cheap half of the
+// answer; the expensive half (closing a period into a separate file) is
+// designed in docs/CUANDO-SE-LLENE-EL-SHEET.md and not built.
+//
+// NOTE ON WHAT GOOGLE COUNTS: the limit is on GRID cells, not filled ones. A
+// tab with 1,000 blank rows still spends 1,000 × its column count. So this
+// multiplies getMaxRows by getMaxColumns rather than counting data — reporting
+// only filled cells would tell the customer they have room they do not have.
+var SHEET_CELL_LIMIT = 10000000;
+
+function getSpaceUsage(auth) {
+  auth = requireAuth_('ADMIN');
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheets = ss.getSheets();
+  var cellsUsed = 0, biggest = null;
+  for (var i = 0; i < sheets.length; i++) {
+    var c = sheets[i].getMaxRows() * sheets[i].getMaxColumns();
+    cellsUsed += c;
+    if (!biggest || c > biggest.cells) biggest = { name: sheets[i].getName(), cells: c };
+  }
+
+  var archive = ss.getSheetByName(SHEETS.ARCHIVE);
+  var history = ss.getSheetByName(SHEETS.ARCHIVE_HISTORY);
+  var liveRows = archive ? Math.max(0, archive.getLastRow() - 1) : 0;
+  var histRows = history ? Math.max(0, history.getLastRow() - 1) : 0;
+
+  return {
+    cellsUsed:  cellsUsed,
+    cellLimit:  SHEET_CELL_LIMIT,
+    pct:        Math.min(100, (cellsUsed / SHEET_CELL_LIMIT) * 100),
+    tabs:       sheets.length,
+    biggestTab: biggest,
+    movements:  liveRows + histRows,
+    estimate:   spaceEstimate_(archive, history, cellsUsed)
+  };
+}
+
+// The estimate, with the two guards that keep it from lying.
+//
+// 1. THE FIRST MONTHS LIE. Loading the opening inventory puts hundreds of
+//    movements in a few days. Projecting from that tells a workshop with
+//    fifteen years of room that it fills in eight months. So the rate is
+//    measured over the LAST 90 DAYS, which drops the initial load on its own
+//    without a special case, and nothing is shown at all before 60 days of
+//    use.
+// 2. EXTRAPOLATING GROWTH COMPOUNDS. A 12% rise in one quarter projected
+//    forward five years produces an absurd number; a real warehouse's curve
+//    flattens and the formula does not know that. So growth is used only to
+//    BRACKET a second scenario — "~7 years, or ~5 if the pace keeps
+//    growing" — never to draw a curve.
+//
+// Returns null when there is not enough history to say anything honest, and
+// the caller says so rather than filling the space with a guess.
+function spaceEstimate_(archive, history, cellsUsed) {
+  var DAY = 86400000, now = Date.now();
+
+  // Oldest movement anywhere: history first, since that is where old rows go.
+  var oldest = null;
+  [history, archive].forEach(function (sh) {
+    if (oldest !== null || !sh || sh.getLastRow() < 2) return;
+    var t = sh.getRange(2, AC.TIMESTAMP + 1).getValue();
+    var d = t instanceof Date ? t.getTime() : Date.parse(t);
+    if (!isNaN(d)) oldest = d;
+  });
+  if (oldest === null) return null;
+
+  var daysOfUse = (now - oldest) / DAY;
+  if (daysOfUse < 60) return { tooEarly: true, daysOfUse: Math.floor(daysOfUse) };
+
+  // One column read, not the whole sheet. Only the live archive is needed:
+  // the cutoff is at least 6 months, so the last 180 days are all in here.
+  if (!archive || archive.getLastRow() < 2) return null;
+  var stamps = archive.getRange(2, AC.TIMESTAMP + 1, archive.getLastRow() - 1, 1).getValues();
+  var recent = 0, previous = 0;
+  for (var i = 0; i < stamps.length; i++) {
+    var v = stamps[i][0];
+    var ms = v instanceof Date ? v.getTime() : Date.parse(v);
+    if (isNaN(ms)) continue;
+    // Strictly less-than on both, so the two windows are exactly 90 days each.
+    // With <= the recent window quietly covered 91 days and every steady
+    // installation looked like it was growing 1% — which is how the "growing"
+    // sentence would have shown up on screens that had no business seeing it.
+    var age = (now - ms) / DAY;
+    if (age < 90) recent++;
+    else if (age < 180) previous++;
+  }
+
+  // Divide by the days actually available, so an installation at 70 days is
+  // not made to look half as busy as it is by a fixed 90-day denominator.
+  var window1 = Math.min(90, daysOfUse);
+  var perDay  = recent / window1;
+  if (perDay <= 0) return { idle: true, daysOfUse: Math.floor(daysOfUse) };
+
+  var remaining = Math.max(0, SHEET_CELL_LIMIT - cellsUsed);
+  var years = remaining / (perDay * AC_WIDTH * 365);
+
+  // The faster scenario, only when there is a real second window to compare
+  // against and the pace rose by enough to mean something.
+  //
+  // GROWTH_FLOOR exists because a warehouse's month-to-month volume is noisy:
+  // a couple of percent either way is weather, not a trend, and offering "or
+  // ~7 years if your pace keeps growing" against "~7 years" is a sentence that
+  // says nothing while sounding like a warning. Below the floor there is one
+  // number, which is the honest answer.
+  var GROWTH_FLOOR = 15;
+  var yearsIfGrowing = null, growthPct = null;
+  if (daysOfUse >= 180 && previous > 0) {
+    var prevPerDay = previous / 90;
+    var rise = (perDay - prevPerDay) / prevPerDay;
+    if (rise * 100 >= GROWTH_FLOOR) {
+      growthPct = rise * 100;
+      yearsIfGrowing = remaining / (perDay * (1 + rise) * AC_WIDTH * 365);
+    }
+  }
+
+  return {
+    perDay: perDay,
+    years: years,
+    yearsIfGrowing: yearsIfGrowing,
+    growthPct: growthPct,
+    daysOfUse: Math.floor(daysOfUse)
+  };
 }
 
 function getBackupStatus(auth) {

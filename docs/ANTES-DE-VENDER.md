@@ -139,8 +139,10 @@ Igual que arriba: es de las primeras cosas que pregunta un jefe de bodega.
 2. **Página de novedades** — destraba el hipervínculo de "Acopio" en la app,
    la tarjeta de reenganche y el argumento del soporte mensual. El contenido
    ya está escrito: los mensajes de commit de cada versión.
-3. **Mostrar cuánto espacio queda** en Settings → System — convierte el techo
-   del Sheet en un problema visible con años de anticipación.
+3. ~~**Mostrar cuánto espacio queda** en Settings → System~~ ✅ HECHO (v10.5)
+   — barra verde/ámbar/roja con el porcentaje encima, celdas, movimientos y
+   pestañas, y un estimado de años restantes con las dos guardas de
+   `CUANDO-SE-LLENE-EL-SHEET.md`. Aviso al 60%, alerta al 85%.
 4. Restaurar un backup de prueba
 5. Verificar "In production" en el consent screen
 6. Plantilla maestra limpia
