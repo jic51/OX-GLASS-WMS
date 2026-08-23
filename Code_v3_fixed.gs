@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '10.0';
+var APP_VERSION = '10.1';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -6649,6 +6649,47 @@ function mergeConfigValues(data, auth) {
   return { status: 'success', rowsChanged: rowsChanged, removed: removed, into: into };
 }
 
+// Rewrites the Category column of one archive-shaped sheet in ONE round trip.
+//
+// It used to be a setValue() per matching row — one network call to Google per
+// row. On a real archive that is minutes, and it showed: the button gave no
+// feedback, so it got clicked again, and the second click reported
+// '"IGU" not found in categories' for a rename that had in fact worked.
+//
+// Worse, minutes of work meant a real chance of hitting the 6-minute execution
+// ceiling PART WAY THROUGH, leaving half the archive renamed and half not —
+// one category silently split in two. Read once, change in memory, write once
+// removes that failure mode entirely: either the whole column lands or none
+// of it does.
+//
+// The cost of the bulk write is that untouched cells get their own value
+// written back. That is safe here and only here: this app never writes a
+// formula (there is no setFormula anywhere in this file), the column holds
+// plain text, and setValues does not disturb formatting. It also writes
+// nothing at all when nothing matched.
+//
+// Guarded by tools/test-category-rename.js, which runs this exact function
+// over a fake column and asserts that every non-matching cell comes out
+// byte-identical — because the flip side of one big write is that a mistake
+// lands everywhere at once instead of slowly.
+function renameCategoryColumn_(sheet, oldVal, newValStored) {
+  if (!sheet) return 0;
+  var last = sheet.getLastRow();
+  if (last < 2) return 0;
+  var range = sheet.getRange(2, AC.CATEGORY + 1, last - 1, 1);
+  var colVals = range.getValues();
+  var want = String(oldVal || '').trim().toUpperCase();
+  var changed = 0;
+  for (var i = 0; i < colVals.length; i++) {
+    if (String(colVals[i][0] || '').trim().toUpperCase() === want) {
+      colVals[i][0] = newValStored;
+      changed++;
+    }
+  }
+  if (changed) range.setValues(colVals);
+  return changed;
+}
+
 function updateConfig(data, auth) {
   // Split gate, not a single ADMIN wall any more. archiveCutoffMonths is a
   // system-wide retention setting — stays ADMIN-only, unconditionally, same as
@@ -6702,9 +6743,19 @@ function updateConfig(data, auth) {
     if (!val) throw new Error('Current value required for rename.');
     if (!nv)  throw new Error('New value required for rename.');
     var renamed = 0;
+    // Uppercased, like every other write to this list. It was the one path
+    // that stored the value exactly as typed: _cfgAdd uppercases in the
+    // browser, the wizard uppercases, the chip inputs uppercase, and the
+    // archive rewrite below uppercases — so renaming a category to
+    // "IGU (isolated glass unit)" put THAT in CONFIG and
+    // "IGU (ISOLATED GLASS UNIT)" in the archive, and the two stopped
+    // matching each other. Found by renaming a real category for the first
+    // time, in production, which is exactly where a mismatch like this
+    // finally shows up.
+    var nvStored = sheetSafe_(nv.toUpperCase());
     for (var i = 1; i < rows.length; i++) {
       if (String(rows[i][col] || '').trim().toUpperCase() === val.toUpperCase()) {
-        cfg.getRange(i + 1, col + 1).setValue(sheetSafe_(nv));
+        cfg.getRange(i + 1, col + 1).setValue(nvStored);
         renamed++;
       }
     }
@@ -6723,14 +6774,29 @@ function updateConfig(data, auth) {
     // the same lock and would find it already held.
     if (data.type === 'categories') {
       withStockLock_(function () {
-        var archive = ss.getSheetByName(SHEETS.ARCHIVE);
-        if (!archive) return;
-        var aData = archive.getDataRange().getValues();
-        for (var j = 1; j < aData.length; j++) {
-          if (String(aData[j][AC.CATEGORY] || '').trim().toUpperCase() === val.toUpperCase()) {
-            archive.getRange(j + 1, AC.CATEGORY + 1).setValue(sheetSafe_(nv.toUpperCase()));
-          }
-        }
+        // BOTH sheets. The rename used to touch MASTER_ARCHIVE_V3 only, and
+        // refreshDerivedSheets_ reads the archive and ARCHIVE_HISTORY
+        // concatenated — so the first time archiveOldMovements moved rows out,
+        // one category would have silently split into two materials: the
+        // recent rows under the new name, the old ones under the old. Nobody
+        // had hit it yet only because no installation has filled up.
+        var n  = renameCategoryColumn_(ss.getSheetByName(SHEETS.ARCHIVE), val, nvStored);
+        n     += renameCategoryColumn_(ensureArchiveHistorySheet_(ss), val, nvStored);
+
+        // LIVE_STOCK / SITE_STOCK / WASTED_STOCK are a cache of the archive,
+        // and every screen in the app reads the cache, not the archive. Without
+        // this the rename was invisible until somebody happened to save a
+        // movement — the category list showed the new name while the whole
+        // inventory still showed the old one.
+        //
+        // It also repairs the MatIDs. A material's id is built from its
+        // category, so renaming the category makes every stored MatID stale;
+        // refreshDerivedSheets_ recomputes and rewrites them as it goes.
+        //
+        // Inside the lock on purpose: the rewrite above and the rebuild are one
+        // operation, and a save landing between them would be replayed against
+        // a half-renamed archive.
+        if (n) refreshDerivedSheets_(ss);
       });
     }
 

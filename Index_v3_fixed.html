@@ -2631,7 +2631,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '10.0';
+var APP_VERSION = '10.1';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -8576,7 +8576,11 @@ function _cfgSaveRename(tab, i) {
   var oldV = li ? li.dataset.val : '';
   var inp  = document.getElementById('cfgInp-'+tab+'-'+i);
   var newV = inp ? inp.value.trim() : '';
-  if (!newV || newV === oldV) { _cfgCancelEdit(tab, i); return; }
+  // Uppercased for the same reason _cfgAdd does it, and so the list patched
+  // locally shows exactly what the server stored — not a mixed-case copy that
+  // only corrects itself on the next full load.
+  newV = newV.toUpperCase();
+  if (!newV || newV === oldV.toUpperCase()) { _cfgCancelEdit(tab, i); return; }
   _cfgCall({ type: tab, op: 'rename', value: oldV, newValue: newV });
 }
 
@@ -8610,13 +8614,42 @@ function _cfgAdd(tab) {
 // "Loading…", then rebuilt the whole list — seconds of churn to show one new
 // row. The server call is the only part that has to happen; the browser already
 // knows exactly what changed.
+// One catalog edit at a time, and say so while it runs.
+//
+// Renaming a category rewrites every matching row in the archive and then
+// rebuilds the stock cache. That is fast now, but never instant — and this
+// button used to give no sign it was working. The natural thing to do with a
+// button that appears to have done nothing is press it again, and the second
+// press asked the server to rename a value the first press had already
+// renamed, so it came back '"IGU" not found in categories' — a red error for
+// an operation that had actually succeeded. That is a worse outcome than
+// waiting, and it was the app's fault, not the user's.
+var _cfgBusy = false;
+function _cfgSetBusy(on) {
+  _cfgBusy = on;
+  var scope = document.getElementById('settingsTabContent');
+  if (!scope) return;
+  var btns = scope.querySelectorAll('.cfg-btn, .cfg-add-row button');
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].disabled = on;
+    btns[i].style.opacity = on ? '.5' : '';
+    btns[i].style.cursor  = on ? 'wait' : '';
+  }
+}
 function _cfgCall(payload, onDone) {
+  if (_cfgBusy) return;              // the guard itself; the greying-out is only the explanation
+  _cfgSetBusy(true);
+  _settingMsg('Saving…', 'info');
+  function done() { _cfgSetBusy(false); }
   google.script.run
     .withSuccessHandler(function() {
+      done();
       if (onDone) onDone();
-      _applyCfgChangeLocally(payload);
+      _applyCfgChangeLocally(payload);   // re-renders the tab, rebuilding the buttons enabled
+      _settingMsg('Saved ✓', 'ok');
     })
     .withFailureHandler(function(e){
+      done();
       var msg = (e && e.message) || String(e);
       // A duplicate is not a failure worth a red banner — the value is on the
       // list, which is what was asked for.

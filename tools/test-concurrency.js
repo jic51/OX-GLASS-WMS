@@ -156,6 +156,13 @@ check('modifyMovementLocked_ is only ever reached from inside withStockLock_ —
 check('...and it really is the part that writes to the archive, so the lock is around the writes and not just around the auth checks',
   mutatesStock('modifyMovementLocked_'));
 
+// renameCategoryColumn_ takes the sheet as an ARGUMENT, so mutatesStock() —
+// which only recognises handles bound from getSheetByName — cannot see that it
+// writes to the archive. It is a genuine blind spot in the detector, so this
+// one is asserted by hand rather than left to the guard below.
+check('renameCategoryColumn_ is only ever reached from inside withStockLock_ — the detector cannot see this one, so it is checked by name',
+  lockedByCaller('renameCategoryColumn_'));
+
 console.log('\nThe paths that change stock and do NOT hold it — the gap');
 // Named individually rather than derived, so that fixing one, or adding a
 // sixth, both force this list to be updated by hand instead of quietly

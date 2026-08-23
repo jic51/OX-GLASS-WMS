@@ -162,3 +162,56 @@ Eso sigue necesitando una prueba en vivo: una copia desplegada, tres o cuatro
 navegadores, todos guardando movimientos del mismo material al mismo tiempo, y
 después contar a mano. Es la prueba que falta, y ahora al menos se sabe qué
 mirar.
+
+---
+
+## v10.1 — lo que salió al probar el paso 1 en producción
+
+Jose probó las dos cosas que v10.0 tocó. **Editar un movimiento: bien.**
+**Renombrar una categoría: cuatro bugs**, ninguno del candado, todos viejos.
+Era la primera vez que se renombraba una categoría de verdad.
+
+Vale la pena anotarlo porque es el argumento entero a favor de ir paso a paso:
+el candado funcionó, y lo que encontró la prueba fue todo lo demás.
+
+**1. CONFIG y el archive guardaban nombres distintos.**
+`updateConfig` escribía en CONFIG el texto tal cual se tecleó y en el archive
+el mismo texto en mayúsculas. Todos los demás caminos —el wizard, agregar,
+los chips— pasan a mayúsculas. Renombrar era el único que no, así que la
+categoría quedaba como `IGU (isolated glass unit)` en el catálogo y
+`IGU (ISOLATED GLASS UNIT)` en los movimientos, y dejaban de encontrarse.
+
+**2. No se refrescaban las hojas derivadas.**
+Toda pantalla de la app lee `LIVE_STOCK`, no el archive. Renombrar reescribía
+el archive y nunca reconstruía la caché, así que el cambio era invisible hasta
+que alguien guardara un movimiento. De paso, el MatID de un material se
+construye con su categoría: al renombrar, todos los MatID quedaban viejos.
+`refreshDerivedSheets_` los repara, pero solo si se ejecuta.
+
+**3. Escribía celda por celda.**
+Un `setValue` por fila = un viaje de red a Google por fila. Minutos en un
+archive real. Y con v10.1 eso importa el doble, porque ahora ese bucle corre
+**dentro del candado**: mientras dura, todo el mundo recibe "System busy". Fue
+el único punto donde v10.0 empeoró algo. Ahora lee la columna, la cambia en
+memoria y la escribe de una sola vez — dos viajes, sin importar el tamaño.
+
+Eso elimina además un modo de falla que no habíamos visto: minutos de trabajo
+significaban una posibilidad real de chocar contra el techo de 6 minutos **a
+mitad de camino**, dejando medio archive renombrado. Una categoría partida en
+dos, en silencio. Con escritura en bloque, o entra toda la columna o no entra
+nada.
+
+**4. El botón no se bloqueaba.**
+Como tardaba minutos y no avisaba nada, se clicaba otra vez. El segundo intento
+buscaba el nombre viejo, que ya no estaba, y devolvía
+`"IGU" not found in categories` — un error rojo para una operación que **sí
+había funcionado**. Ahora se desactiva mientras la llamada está en vuelo y
+muestra "Saving…".
+
+**Y una quinta que no había dado la cara todavía:** el renombrado solo tocaba
+`MASTER_ARCHIVE_V3`, nunca `ARCHIVE_HISTORY`. Como `refreshDerivedSheets_` lee
+las dos concatenadas, al primer archivado la misma categoría se habría partido
+en dos materiales: las filas nuevas con el nombre nuevo, las viejas con el
+viejo. Nadie lo había pegado solo porque ningún archive se ha llenado aún.
+
+Todo esto lo cuida ahora `tools/test-category-rename.js`.

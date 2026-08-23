@@ -32,6 +32,7 @@ node tools/test-morning-arrived.js
 node tools/test-legal-sync.js
 node tools/test-config-snapshot.js
 node tools/test-concurrency.js
+node tools/test-category-rename.js
 ```
 
 `tools/audit-responsive.js` and `tools/test-scale.js` are tape measures, not
@@ -241,6 +242,22 @@ come back from — is invisible to both. Those get a browser test.
   of every matching archive row, which reads as a settings change. The
   known-gap list is spelled out by hand so that fixing one, or adding a new
   one, both force it to be updated rather than quietly passing.
+- `test-category-rename.js` — the bulk Category-column rewrite
+  (`renameCategoryColumn_`), lifted verbatim into a Node vm and run against a
+  fake Sheet that records every round trip. Written because v10.1 replaced a
+  setValue-per-row loop with one setValues, and that trade moves the risk: a
+  mistake no longer corrupts rows slowly, it corrupts the whole column at
+  once. So the assertion that matters is not "did the right cells change" but
+  "did every OTHER cell come out byte-identical" — plus IGUANA surviving a
+  rename of IGU, an empty cell staying empty, and a no-match rename writing
+  nothing at all. It also reads the CALL SITE, because a correct helper
+  pointed at one sheet is still a bug: renaming has to touch ARCHIVE_HISTORY
+  as well as the archive (refreshDerivedSheets_ reads the two concatenated, so
+  renaming only one splits a category into two materials the first time old
+  rows are archived), rebuild the derived sheets afterwards, and write CONFIG
+  from the same uppercased value the archive gets. That last one is the bug
+  that started it: the catalog held "IGU (isolated glass unit)" while the
+  movements held "IGU (ISOLATED GLASS UNIT)".
 - `test-config-snapshot.js` — the configuration snapshot written into every
   backup copy (`writeConfigSnapshot_`), lifted verbatim into a Node vm with
   SpreadsheetApp and PropertiesService stubbed. A backup copies the
