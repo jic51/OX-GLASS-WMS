@@ -123,3 +123,47 @@ bien en vez de a las carreras con un cliente enojado.
 - [Sheetgo — cómo resolver el límite de 10M celdas](https://www.sheetgo.com/blog/spreadsheets-tips/google-sheets-cell-limit/)
 - [Row Zero — límites de filas, columnas y tamaño](https://rowzero.com/blog/google-sheets-limits)
 - [10XSheets — cuántas filas aguanta Google Sheets](https://www.10xsheets.com/blog/google-sheets-row-limit/)
+
+---
+
+## El indicador de espacio — diseño (idea de Jose)
+
+Prioridad 3 en la lista de Jose. Su idea, y estoy de acuerdo:
+
+- **Una barra que se va llenando**, verde cuando hay espacio y roja cuando se
+  acaba, con **el porcentaje usado en el centro**.
+- Debajo, **un estimado de cuánto falta para llenarla**.
+
+La barra es claramente lo correcto: un número suelto ("1.847.322 celdas") no le
+dice nada a nadie; una barra al 18% se entiende sin explicación.
+
+### Sobre el estimado de tiempo — con cuidado
+
+Jose propone calcular el promedio de movimientos por día **y además el
+crecimiento de ese promedio desde el día 1**, para proyectar mejor. La idea es
+buena pero tiene dos trampas que hay que esquivar, porque un estimado que
+asusta sin razón es peor que no tener estimado:
+
+1. **Los primeros meses mienten.** La carga inicial del inventario mete cientos
+   de movimientos en pocos días. Proyectar con eso da "se llena en 8 meses"
+   cuando la verdad son quince años.
+2. **Extrapolar un crecimiento compone.** Si el promedio subió 12% en un
+   trimestre y se proyecta ese 12% hacia adelante, a cinco años da un número
+   absurdo. La curva real de una bodega se aplana; la fórmula no lo sabe.
+
+**Lo que haría en su lugar:**
+
+- Calcular el ritmo sobre los **últimos 90 días**, no sobre toda la historia.
+  Eso descarta la carga inicial solo, sin reglas especiales.
+- **No mostrar ningún estimado hasta tener 60 días de uso.** Antes de eso, la
+  barra sola y una línea: *"Estimate available after 60 days of use."*
+- Mostrarlo redondeado y en la unidad honesta: **"~7 years at your current
+  pace"**, no "6.83 años". La precisión falsa invita a confiar de más.
+- Usar el crecimiento **solo para elegir entre dos escenarios**, no para una
+  proyección exponencial: *"~7 years — or ~5 if your pace keeps growing like
+  the last year."* Dos números acotados, no una curva.
+- El color por porcentaje, no por el estimado: verde <60%, ámbar 60–85%,
+  rojo >85%. Y a partir del 60%, la tarjeta de aviso al admin.
+
+Con eso el indicador dice la verdad tanto para el taller que nunca va a llegar
+como para la operación intensa que sí.

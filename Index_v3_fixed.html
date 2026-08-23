@@ -2631,7 +2631,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '10.1';
+var APP_VERSION = '10.2';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -8695,6 +8695,27 @@ function _applyCfgChangeLocally(p) {
   if (p.op === 'add') {
     var box = document.getElementById('cfgNewVal');
     if (box) { box.value = ''; box.focus(); }
+  }
+
+  // Renaming a CATEGORY is the one catalog edit that rewrites the movements
+  // themselves, so it is the one where patching locally is not enough.
+  //
+  // Everything else on this screen only adds or removes a value from a list,
+  // and the browser genuinely does know what changed. A category rename does
+  // not: the server rewrote the Category cell of every archive row and rebuilt
+  // the stock cache, while `movements` and `oldMovements` in this tab still
+  // hold the OLD name. The filter dropdown gets the new name from the catalog
+  // and renderMovements() compares it against rows that still say the old one,
+  // so filtering by the renamed category returned NOTHING until the page was
+  // reloaded by hand. Found in production, v10.1.
+  //
+  // It is also more than the visible text: a material's MatID is built from
+  // its category, so a rename leaves every MatID this tab is holding stale.
+  // Patching four arrays and hoping to catch every derived field is more code
+  // and more ways to be subtly wrong than simply asking the server again.
+  // Renaming a category happens a few times a year; correct beats instant.
+  if (p.type === 'categories' && p.op === 'rename' && typeof loadDataFromGoogle === 'function') {
+    loadDataFromGoogle(true, true);   // skipCache, quiet — no spinner over the whole app
   }
 }
 

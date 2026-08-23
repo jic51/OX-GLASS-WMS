@@ -33,6 +33,7 @@ node tools/test-legal-sync.js
 node tools/test-config-snapshot.js
 node tools/test-concurrency.js
 node tools/test-category-rename.js
+node tools/test-cfg-rename-reload.js
 ```
 
 `tools/audit-responsive.js` and `tools/test-scale.js` are tape measures, not
@@ -258,6 +259,17 @@ come back from — is invisible to both. Those get a browser test.
   from the same uppercased value the archive gets. That last one is the bug
   that started it: the catalog held "IGU (isolated glass unit)" while the
   movements held "IGU (ISOLATED GLASS UNIT)".
+- `test-cfg-rename-reload.js` — the browser half of the same bug, and the one
+  the server fix did not cover. v10.1 renamed the category correctly
+  everywhere on the server; the tab still held movement rows saying the old
+  name while the filter dropdown had already been patched to the new one, so
+  filtering by a renamed category returned an empty table until the page was
+  reloaded by hand. The fix is one line, which is exactly the kind of thing a
+  later refactor drops silently, so both halves are asserted: a category
+  rename MUST reload (skipCache + quiet), and add / delete / a project rename
+  must NOT — `_applyCfgChangeLocally` exists so that entering ten categories
+  is not ten round trips. Runs the real function in a vm with the browser
+  stubbed.
 - `test-config-snapshot.js` — the configuration snapshot written into every
   backup copy (`writeConfigSnapshot_`), lifted verbatim into a Node vm with
   SpreadsheetApp and PropertiesService stubbed. A backup copies the
