@@ -2643,7 +2643,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '10.5';
+var APP_VERSION = '10.6';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -8131,6 +8131,16 @@ function _wireLocMerge(){
               bar.innerHTML = ''; bar.classList.remove('show');
               _redrawLocGroups();
               refreshDropdowns();
+              // The patches above fix the LISTS. They cannot fix the stock,
+              // which is where a location merge actually shows: the Warehouse
+              // Map and the location column read the derived totals, and the
+              // server has just rebuilt those. Without this the merged rack
+              // went on sitting in the map with its old contents until the page
+              // was reloaded by hand — Jose merged A5C into A6C, saw the map
+              // still showing both, and only a manual refresh put the 227 units
+              // in one place. Same fix, same reason, as the category rename in
+              // v10.2.
+              loadDataFromGoogle(true, true);   // skipCache, quiet
             })
             .withFailureHandler(function(e){
               btn.disabled = false; btn.textContent = 'Merge';
@@ -8276,6 +8286,12 @@ function _wireManualMerge(tab, label){
               showToast('Merged ✓ — ' + res.rowsChanged + ' movement(s) updated.', 'ok', 5000);
               _applyMergeLocally(tab, from, into);
               bar.innerHTML = ''; bar.classList.remove('show');
+              // Same reason as the location merge below: the local patch fixes
+              // the catalog list, but the movements and the project/supplier
+              // totals were rewritten server-side and the derived sheets
+              // rebuilt. Ask for them rather than trying to reproduce the
+              // rebuild in the browser.
+              loadDataFromGoogle(true, true);   // skipCache, quiet
             })
             .withFailureHandler(function(e){
               btn.disabled = false; btn.textContent = 'Merge';
@@ -8940,15 +8956,48 @@ function _matMergeConfirm(name, cat, nvTrimmed){
 // does NOT have to happen is the app blinking: the list on screen and the
 // movements already loaded are patched immediately, and the server refresh
 // runs underneath without the loading state.
+// The refresh was already here and correct. What was missing was any sign that
+// anything was happening: Jose renamed a material, the button did nothing
+// visible for a few seconds, and there was no way to tell whether to wait or
+// click again. That is the same complaint that produced the duplicate-rename
+// error on the Categories tab, arriving from a different screen — a slow
+// operation with a silent button invites a second press, and a second press is
+// where the damage is.
 function _matCall(payload) {
+  if (_matBusy) return;
+  _matSetBusy(true);
   google.script.run
     .withSuccessHandler(function(res) {
+      _matSetBusy(false);
       _applyMatChangeLocally(payload);
       showToast('Done ✓ — ' + (res.updated || res.merged || 1) + ' row(s) updated.', 'ok');
       loadDataFromGoogle(true, true);   // skipCache, quiet
     })
-    .withFailureHandler(function(e){ _settingMsg('Error: '+(e.message||e), 'error'); })
+    .withFailureHandler(function(e){
+      _matSetBusy(false);
+      _settingMsg('Error: '+(e.message||e), 'error');
+    })
     .processMovement('manageMaterial', _h(payload));
+}
+
+var _matBusy = false;
+function _matSetBusy(on) {
+  _matBusy = on;
+  var scope = document.getElementById('settingsTabContent');
+  if (scope) {
+    var btns = scope.querySelectorAll('button');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].disabled = on;
+      btns[i].style.opacity = on ? '.5' : '';
+      btns[i].style.cursor  = on ? 'wait' : '';
+    }
+  }
+  // Says what is happening AND roughly how long, because "Saving…" on
+  // something that rewrites every matching row in the archive and then
+  // rebuilds the stock totals is not the same promise as "Saving…" on a
+  // one-cell edit.
+  if (on) _settingMsg('Updating every matching movement and rebuilding stock totals — this can take a few seconds…', 'info');
+  else    _settingMsg('Done ✓', 'ok');
 }
 
 function _applyMatChangeLocally(p){

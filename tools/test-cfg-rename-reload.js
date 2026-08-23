@@ -137,5 +137,51 @@ console.log('\n═══ and the screen has to SAY which tabs carry the rename �
     /Renaming a location updates the list only/.test(body));
 }
 
+console.log('\n═══ every path that rewrites movements must refresh, and must say it is working ═══\n');
+
+// One bug, found three times on three screens. The server rewrites archive
+// rows and rebuilds the stock cache; the browser keeps showing what it loaded
+// earlier. It was caught on the Categories tab (v10.2), then on the Materials
+// tab and the location merge (v10.6) — Jose merged A5C into A6C and the
+// Warehouse Map went on showing both racks until he reloaded the page by hand.
+//
+// Asserted as a group so the next path of this kind is added to the list
+// rather than discovered by a customer.
+{
+  // Anchored per path rather than by the server action name: manageMaterial is
+  // called from two different screens, and searching for the action found the
+  // Movements-tab delete first — which was already correct, so the test failed
+  // on working code. Both call sites are listed instead.
+  const paths = [
+    ['function _matCall(',              'renaming, re-filing or merging a material (Settings → Materials)'],
+    ['function _doDeleteMovementRow(',  'deleting a saved movement (Movements tab)'],
+    ["'mergeConfigValues'",             'merging two spellings of a project or supplier'],
+    ["'mergeLocations'",                'merging two locations']
+  ];
+  paths.forEach(([anchor, what]) => {
+    const at = HTML.indexOf(anchor);
+    // The handler sits before the .processMovement line for the action anchors
+    // and after it for the function anchors, so look both ways.
+    const seg = HTML.slice(Math.max(0, at - 2500), at + 2000);
+    check(what + ' refreshes from the server afterwards — the local patch fixes the lists, not the stock',
+      at !== -1 && /loadDataFromGoogle\(true/.test(seg));
+  });
+}
+
+// The other half of the same complaint: a slow button that shows nothing
+// invites a second press, and a second press is where the damage is. That is
+// exactly how the Categories tab produced a red '"IGU" not found' error for a
+// rename that had worked.
+{
+  const at = HTML.indexOf("function _matCall(");
+  const seg = HTML.slice(at, at + 1800);
+  check('the Materials tab refuses a second call while one is in flight',
+    /if \(_matBusy\) return;/.test(seg));
+  check('...and greys the buttons and says what it is doing, on success AND on failure',
+    (seg.match(/_matSetBusy\(false\)/g) || []).length >= 2 && /_matSetBusy\(true\)/.test(seg));
+  check('...with a message that matches the actual wait, not a generic "Saving…" borrowed from a one-cell edit',
+    /rebuilding stock totals/.test(HTML));
+}
+
 console.log('\ncfg-rename-reload: ' + (fail === 0 ? 'ok' : (fail + ' FAILED')));
 process.exit(fail === 0 ? 0 : 1);

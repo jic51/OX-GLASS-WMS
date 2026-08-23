@@ -98,3 +98,59 @@ Necesita un despliegue real. El procedimiento es mirar:
 Si no cambia, el sospechoso es la URL: Google tiene que poder descargarla sin
 sesión. Pruébala pegándola en una ventana de incógnito — si ahí no carga la
 imagen, tampoco va a cargar para Google.
+
+---
+
+## v10.6 — lo que se investigó, y por qué queda parado
+
+Jose desplegó v10.4 y v10.5 con `ACOPIO_FAVICON_URL` apuntando a un PNG suyo
+en Drive, confirmado público (se abre en incógnito). **La pestaña no cambia.**
+
+### Lo que dice la documentación
+
+`HtmlOutput.setFaviconUrl(iconUrl)` es el método soportado, y la documentación
+es explícita en un punto: **las etiquetas `<link rel="icon">` puestas dentro
+del HTML de Apps Script se ignoran.** O sea que el camino del servidor es el
+único, y es el que estamos usando — sobre el objeto `HtmlOutput`, antes de
+devolverlo.
+
+Existe además un reporte antiguo en el Issue Tracker de Google titulado
+*"Allow standalone web-app script to set its favicon"* (issue 36756649). **No
+pude abrirlo** —el proxy de la sesión bloquea `issuetracker.google.com`— así
+que no sé si está resuelto, abierto o cerrado como "no se va a arreglar". Lo
+anoto como pista, no como conclusión.
+
+### El dato que más pesa, y que sale de nuestra propia app
+
+**`setTitle()` SÍ funciona.** La pestaña muestra el nombre de la empresa. Es un
+método hermano, del mismo objeto, aplicado a la misma página de nivel superior.
+
+Eso descarta la explicación más cómoda ("Google no deja tocar la página de
+arriba"): sí deja, y lo demuestra el título todos los días. Lo que queda por
+distinguir es si Google **no inserta** la etiqueta del favicon, o si la inserta
+y **el navegador no consigue cargar la imagen**.
+
+### La comprobación que lo decide, sin adivinar
+
+En la app desplegada, F12 → **Elements**, y mirar el `<head>` del documento
+**de nivel superior** (no el del iframe), buscando `<link rel="icon"`:
+
+- **Si la etiqueta está** con nuestra URL → `setFaviconUrl` funciona, y el
+  problema es la imagen. Drive es mal anfitrión para esto: `lh3` y
+  `uc?export=view` responden con redirecciones y límites de tasa, y un
+  navegador que no recibe bytes de imagen limpios se queda con el icono por
+  defecto sin decir nada. Se arregla con un `.png` servido directo desde
+  acopio.com.
+- **Si la etiqueta NO está** → Google no la aplica en despliegues `/exec`, y
+  entonces no se puede. Se documenta y se cierra el tema.
+
+Segunda comprobación, complementaria: pestaña **Network**, filtrar por `lh3` —
+ver si el navegador siquiera pide la imagen y con qué responde.
+
+### Recomendación mientras tanto
+
+**Parar aquí.** Aunque Drive llegara a funcionar, sigue siendo el anfitrión
+equivocado para un recurso que cada carga de cada cliente va a pedir. La
+solución de verdad es un `.png` en acopio.com, y acopio.com ya está en la lista
+de bloqueantes por otras tres razones. El código está listo y probado: el día
+que exista el dominio, es **una línea**.
