@@ -78,10 +78,17 @@ De paso se corrigió el diseño: no hace falta un candado reentrante. Como
 `refreshDerivedSheets_` se llama desde *dentro* de cada camino de riesgo,
 candar el de afuera cubre al de adentro solo. Detalle en `CONCURRENCIA.md`.
 
+**Paso 2 aplicado en v10.4:** `manageMaterial`, `mergeConfigValues` y
+`mergeLocations` ya toman el candado. Revisarlos destapó cuatro bugs viejos en
+`manageMaterial` —escritura celda por celda, cero reconstrucción de las hojas
+derivadas, ARCHIVE_HISTORY sin tocar y MatID viejos— que se arreglaron junto
+con el candado, porque poner candado sobre un bucle lento es la regresión que
+ya habíamos arreglado en v10.1.
+
 Falta:
-1. **Los cinco caminos restantes** — `manageMaterial`, `mergeConfigValues`,
-   `mergeLocations`, `refreshDerivedSheets_`, `menuNormalizeStatus`. De menos a
-   menos frecuentes. Se van haciendo de a poco, probando entre paso y paso.
+1. **Los dos caminos restantes** — `refreshDerivedSheets_` (ya cubierto de
+   forma transitiva donde importa) y `menuNormalizeStatus` (lo corre el dueño
+   desde el menú, rarísimo).
 2. **La prueba en vivo** — tres o cuatro navegadores contra una copia
    desplegada, guardando del mismo material a la vez, y contar a mano. Ningún
    test desde fuera puede sustituirla.
@@ -127,8 +134,8 @@ Igual que arriba: es de las primeras cosas que pregunta un jefe de bodega.
 
 **Orden fijado por Jose (v9.97):**
 
-1. ~~Prueba de concurrencia~~ ✅ auditada · paso 1 del arreglo aplicado (v10.0)
-   — faltan los cinco caminos menos frecuentes y la prueba en vivo
+1. ~~Prueba de concurrencia~~ ✅ auditada · pasos 1 y 2 aplicados (v10.0/v10.4)
+   — quedan dos caminos casi simbólicos y **la prueba en vivo**
 2. **Página de novedades** — destraba el hipervínculo de "Acopio" en la app,
    la tarjeta de reenganche y el argumento del soporte mensual. El contenido
    ya está escrito: los mensajes de commit de cada versión.

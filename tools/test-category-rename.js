@@ -41,29 +41,51 @@ function extractFn(name) {
 }
 
 const AC_MATCH = /var AC = \{[\s\S]*?\};/.exec(GS);
+const AC_W_MATCH = /var AC_WIDTH = \d+;/.exec(GS);
 const sandbox = { console };
 vm.createContext(sandbox);
-vm.runInContext(AC_MATCH[0] + '\n' + extractFn('renameCategoryColumn_'), sandbox);
-const renameCategoryColumn_ = sandbox.renameCategoryColumn_;
-const AC = sandbox.AC;
+vm.runInContext([
+  AC_MATCH[0], AC_W_MATCH[0],
+  extractFn('rewriteArchiveColumn_'),     // the engine
+  extractFn('renameCategoryColumn_')      // the category caller, a thin wrapper over it
+].join('\n'), sandbox);
+const { renameCategoryColumn_, rewriteArchiveColumn_, AC, AC_WIDTH } = sandbox;
 
-// ── A fake Sheet, only as much as the function actually uses ────────────────
-// Records every write so the test can assert not just the values but how many
-// round trips it took — the whole point of the change.
+// ── A fake Sheet, only as much as the functions actually use ────────────────
+// Full-width rows, because rewriteArchiveColumn_ reads the WHOLE row: the
+// callers that matter decide from columns other than the one they write
+// (rename a material = match category AND name, write name). Records every
+// round trip so the test can assert not just the values but the number of
+// calls — which is the entire point of the bulk rewrite.
 function makeSheet(categoryColumn) {
-  const rows = categoryColumn.map(v => [v]);
+  const rows = categoryColumn.map(v => {
+    const r = new Array(AC_WIDTH).fill('');
+    r[AC.CATEGORY] = v;
+    return r;
+  });
   const calls = { getValues: 0, setValues: 0, setValue: 0 };
   return {
     _rows: rows,
     _calls: calls,
+    _col: c => rows.map(r => r[c]),
     getLastRow: () => rows.length + 1,       // +1 for the header row
+    getLastColumn: () => AC_WIDTH,
     getRange(startRow, startCol, numRows, numCols) {
-      if (startRow !== 2) throw new Error('expected the read to skip the header row, got startRow=' + startRow);
-      if (startCol !== AC.CATEGORY + 1) throw new Error('wrote to the wrong column: ' + startCol);
-      if (numRows !== rows.length || numCols !== 1) throw new Error('unexpected range size');
+      if (startRow !== 2) throw new Error('expected reads/writes to skip the header row, got startRow=' + startRow);
+      if (numRows !== rows.length) throw new Error('unexpected range height: ' + numRows);
       return {
-        getValues() { calls.getValues++; return rows.map(r => [r[0]]); },   // copy, like the real API
-        setValues(v) { calls.setValues++; for (let i = 0; i < v.length; i++) rows[i][0] = v[i][0]; },
+        getValues() {
+          calls.getValues++;
+          // A copy, like the real API — mutating what getValues returned must
+          // not silently reach the sheet, or a "bulk write" that never wrote
+          // would still pass.
+          return rows.map(r => r.slice(startCol - 1, startCol - 1 + numCols));
+        },
+        setValues(v) {
+          calls.setValues++;
+          for (let i = 0; i < v.length; i++)
+            for (let j = 0; j < numCols; j++) rows[i][startCol - 1 + j] = v[i][j];
+        },
         setValue() { calls.setValue++; }
       };
     }
@@ -79,7 +101,7 @@ console.log('\n═══ the transform ═══\n');
   ];
   const sheet = makeSheet(before.slice());
   const n = renameCategoryColumn_(sheet, 'IGU', 'IGU (ISOLATED GLASS UNIT)');
-  const after = sheet._rows.map(r => r[0]);
+  const after = sheet._col(AC.CATEGORY);
 
   check('renamed the 4 rows that were IGU — including the lowercase one and the one with stray spaces, because the archive has both',
     n === 4);
@@ -152,6 +174,60 @@ console.log('\n═══ the callers — both sheets, and the cache rebuilt afte
     /var nvStored = sheetSafe_\(nv\.toUpperCase\(\)\);/.test(body) &&
     /setValue\(nvStored\)/.test(body) &&
     /renameCategoryColumn_\([\s\S]{0,80}?,\s*val,\s*nvStored\)/.test(body));
+}
+
+console.log('\n═══ manageMaterial: matching on one column, writing another ═══\n');
+
+// The case that makes rewriteArchiveColumn_ hand the WHOLE row to `decide`
+// rather than just the target column. Renaming a material matches on category
+// AND name and writes the name; if it matched only on the name it would rename
+// every "GE SILPRUF" in the building instead of the one the admin was looking
+// at. Two categories with the same material name is not a corner case — it is
+// the normal state of a glass shop's catalog.
+{
+  const sheet = makeSheet(['WINDOW', 'SCREEN', 'WINDOW', 'MIRROR']);
+  const names = ['GE SILPRUF', 'GE SILPRUF', 'RAIN BUSTER', 'GE SILPRUF'];
+  sheet._rows.forEach((r, i) => { r[AC.NAME] = names[i]; });
+
+  const n = rewriteArchiveColumn_(sheet, AC.NAME, row =>
+    (String(row[AC.CATEGORY]).toUpperCase() === 'WINDOW' &&
+     String(row[AC.NAME]).toUpperCase() === 'GE SILPRUF') ? 'GE SILPRUF NT' : null);
+
+  const after = sheet._col(AC.NAME);
+  check('renamed only the row that matched BOTH category and name', n === 1 && after[0] === 'GE SILPRUF NT');
+  check('the SAME material name under a different category was left alone — matching on the written column only would have renamed it too',
+    after[1] === 'GE SILPRUF' && after[3] === 'GE SILPRUF');
+  check('a different material in the same category was left alone', after[2] === 'RAIN BUSTER');
+  check('and the Category column was not touched at all by a write aimed at Name',
+    sheet._col(AC.CATEGORY).join('|') === 'WINDOW|SCREEN|WINDOW|MIRROR');
+}
+
+// Reading manageMaterial itself. The helper being right is no help if the
+// caller only points it at one sheet or forgets the rebuild — which is exactly
+// what it did before v10.4: rename, changeCategory and merge wrote cell by cell
+// and NEVER called refreshDerivedSheets_, so renaming a material appeared to do
+// nothing until somebody saved a movement.
+{
+  const start = GS.indexOf('function manageMaterialLocked_(');
+  const body  = GS.slice(start, GS.indexOf('\nfunction ', start + 10));
+
+  check('manageMaterial rewrites both MASTER_ARCHIVE_V3 and ARCHIVE_HISTORY, through one helper used by every op',
+    /rewriteArchiveColumn_\(archive, col, decide\)/.test(body) &&
+    /rewriteArchiveColumn_\(ensureArchiveHistorySheet_\(ss\), col, decide\)/.test(body));
+
+  const ops = ['rename', 'changeCategory', 'merge'];
+  ops.forEach(op => {
+    const i = body.indexOf("op === '" + op + "'");
+    const next = ops.map(o => body.indexOf("op === '" + o + "'")).filter(x => x > i);
+    const seg = body.slice(i, next.length ? Math.min.apply(null, next) : body.indexOf("op === 'deleteRow'"));
+    check(op + ' rebuilds the derived sheets — without it the change is invisible on every screen until someone saves a movement',
+      /refreshDerivedSheets_\(ss\)/.test(seg));
+    check('...and ' + op + ' writes in bulk, with no setValue-per-row left behind',
+      !/\.setValue\(/.test(seg));
+  });
+
+  check('deleting a row logs the FULL row width (AC_WIDTH), not the hardcoded 19 that silently dropped PM and both cost columns from the record of a deletion',
+    /getRange\(rowIdx, 1, 1, AC_WIDTH\)/.test(body));
 }
 
 console.log('\ncategory-rename: ' + (fail === 0 ? 'ok' : (fail + ' FAILED')));

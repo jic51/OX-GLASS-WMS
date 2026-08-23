@@ -75,7 +75,19 @@ function lockRegions(body) {
   }
   return out;
 }
-function lockedByCaller(name) {
+// Transitive on purpose. rewriteArchiveColumn_ is called by
+// manageMaterialLocked_, which is itself only reached from inside the lock —
+// so it IS protected, but not by a withStockLock_ that appears in its caller's
+// own body. Checking one hop only would report it as a hole and the guard would
+// cry wolf on correct code, which is how a guard stops being read.
+//
+// `seen` guards against a cycle: two helpers calling each other would otherwise
+// recurse forever, and a cycle with no lock anywhere in it must come out FALSE
+// rather than accidentally true.
+function lockedByCaller(name, seen) {
+  seen = seen || {};
+  if (seen[name]) return false;
+  seen[name] = true;
   const callers = FUNCS.map(f => f.name).filter(c =>
     c !== name && new RegExp('\\b' + name + '\\s*\\(').test(bodyOf(c) || ''));
   if (!callers.length) return false;           // nobody calls it — not covered
@@ -83,12 +95,15 @@ function lockedByCaller(name) {
     const b = bodyOf(c) || '';
     const regions = lockRegions(b);
     const call = new RegExp('\\b' + name + '\\s*\\(', 'g');
-    let m, seen = false;
+    let m, allInside = true, sawCall = false;
     while ((m = call.exec(b))) {
-      seen = true;
-      if (!regions.some(([s, e]) => m.index > s && m.index < e)) return false;
+      sawCall = true;
+      if (!regions.some(([s, e]) => m.index > s && m.index < e)) allInside = false;
     }
-    return seen;
+    if (!sawCall) return false;
+    if (allInside) return true;
+    // Not wrapped here — but this caller may itself only run under the lock.
+    return takesLock(c) || lockedByCaller(c, seen);
   });
 }
 
@@ -131,7 +146,11 @@ console.log('\nThe two paths that were designed for this, and still are');
   ['archiveOldMovements', 'moving old rows to ARCHIVE_HISTORY'],
   // Step 1 of the fix (v10.0) — the two an admin touches on an ordinary day
   ['modifyMovement', 'editing a saved movement'],
-  ['updateConfig', 'renaming a category, which rewrites every matching archive row']
+  ['updateConfig', 'renaming a category, which rewrites every matching archive row'],
+  // Step 2 (v10.4) — the catalog surgery an admin does every few months
+  ['manageMaterial', 'renaming, merging, recategorising or deleting a material'],
+  ['mergeConfigValues', 'merging two spellings of a project or supplier'],
+  ['mergeLocations', 'merging two locations, which moves stock between them']
 ].forEach(([fn, what]) => {
   check(fn + ' takes the script lock (' + what + ')', takesLock(fn));
 });
@@ -163,15 +182,20 @@ check('...and it really is the part that writes to the archive, so the lock is a
 check('renameCategoryColumn_ is only ever reached from inside withStockLock_ — the detector cannot see this one, so it is checked by name',
   lockedByCaller('renameCategoryColumn_'));
 
+// Step 2 (v10.4) uses the same wrapper split, for the same reason: the auth
+// check belongs outside the lock so an unauthorised caller is refused without
+// queueing, and the sheet work belongs inside.
+['manageMaterialLocked_', 'mergeConfigValuesLocked_', 'mergeLocationsLocked_', 'rewriteArchiveColumn_'].forEach(fn => {
+  check(fn + ' is only ever reached from inside withStockLock_ — every call site, checked by matching parens',
+    lockedByCaller(fn));
+});
+
 console.log('\nThe paths that change stock and do NOT hold it — the gap');
 // Named individually rather than derived, so that fixing one, or adding a
 // sixth, both force this list to be updated by hand instead of quietly
 // passing.
 const KNOWN_GAPS = {
-  manageMaterial:      'rename / merge / delete a material — rewrites many archive rows',
-  mergeConfigValues:   'merging categories or projects — rewrites archive rows',
-  mergeLocations:      'merging locations — rewrites archive rows',
-  refreshDerivedSheets_: 'rewriting LIVE_STOCK / SITE_STOCK / WASTED_STOCK',
+  refreshDerivedSheets_: 'rewriting LIVE_STOCK / SITE_STOCK / WASTED_STOCK — but see below: every caller that matters now holds the lock while calling it, so a lock of its own would deadlock rather than help',
   menuNormalizeStatus: 'the one-off Status clean-up from the Sheet menu — owner-run and rare, but it does rewrite the archive'
 };
 Object.keys(KNOWN_GAPS).forEach(fn => {

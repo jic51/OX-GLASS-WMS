@@ -52,9 +52,9 @@ Ordenados por riesgo real, no por gravedad teórica:
 |---|---|---|
 | ~~`modifyMovement`~~ ✅ v10.0 | Editar un movimiento guardado (cantidad, categoría, nombre — todo cambia el stock) | **Un admin, cualquier día** |
 | ~~`updateConfig`~~ ✅ v10.0 | **Renombrar una categoría reescribe la celda Categoría de CADA fila del archive** | Ocasional, y toca todo |
-| `manageMaterial` | Renombrar / fusionar / borrar un material — reescribe muchas filas | Ocasional |
-| `mergeConfigValues` | Fusionar categorías o proyectos | Poco frecuente |
-| `mergeLocations` | Fusionar ubicaciones | Poco frecuente |
+| ~~`manageMaterial`~~ ✅ v10.4 | Renombrar / fusionar / borrar un material — reescribe muchas filas | Ocasional |
+| ~~`mergeConfigValues`~~ ✅ v10.4 | Fusionar categorías o proyectos | Poco frecuente |
+| ~~`mergeLocations`~~ ✅ v10.4 | Fusionar ubicaciones | Poco frecuente |
 | `refreshDerivedSheets_` | Reescribe LIVE_STOCK / SITE_STOCK / WASTED_STOCK | **Constante** (pero ver abajo) |
 | `menuNormalizeStatus` | Limpieza única del Status desde el menú | Rarísimo, lo corre el dueño |
 
@@ -139,7 +139,7 @@ Y Apps Script suelta el candado cuando termina la ejecución, así que ni un bug
 que se saltara el `releaseLock` podría dejarlo tomado más allá de esa petición.
 
 **Lo que falta, en orden:**
-2. `manageMaterial`, `mergeConfigValues`, `mergeLocations`
+2. ~~`manageMaterial`, `mergeConfigValues`, `mergeLocations`~~ ✅ v10.4
 3. `refreshDerivedSheets_` — ya cubierto de forma transitiva en los caminos
    que importan; queda decidir si vale la pena para las llamadas sueltas
 4. `menuNormalizeStatus` — casi simbólico
@@ -215,3 +215,73 @@ en dos materiales: las filas nuevas con el nombre nuevo, las viejas con el
 viejo. Nadie lo había pegado solo porque ningún archive se ha llenado aún.
 
 Todo esto lo cuida ahora `tools/test-category-rename.js`.
+
+---
+
+## v10.4 — paso 2, y lo que apareció al revisarlo
+
+Los tres que faltaban ya toman el candado: `manageMaterial`,
+`mergeConfigValues` y `mergeLocations`. Mismo patrón que el paso 1 — la
+validación y los permisos quedan afuera (a un no-admin se le dice que no sin
+hacerlo esperar por el candado) y todo lo que toca la hoja va adentro.
+
+**Pero revisarlos para ponerles el candado destapó lo de siempre**, y esta vez
+lo dije antes de mirar: son de la misma familia que el renombrado de categoría
+y habían derivado igual.
+
+### `mergeConfigValues` y `mergeLocations` estaban bien
+
+Ya escribían en bloque y ya reconstruían las hojas derivadas. Lo único que les
+faltaba, además del candado, era **ARCHIVE_HISTORY**. Sin eso, al primer
+archivado una ubicación fusionada reaparece: las filas viejas siguen nombrando
+el lugar que ya no existe, y `refreshDerivedSheets_` lee las dos hojas juntas.
+
+### `manageMaterial` estaba peor de lo que estaba `updateConfig`
+
+Cuatro problemas, todos anteriores al candado:
+
+1. **`setValue` por fila** en `rename`, `changeCategory` y `merge`. Lo mismo
+   que hacía el renombrado de categoría: minutos, y riesgo real de morir a
+   mitad de camino dejando un material partido en dos.
+2. **Nunca llamaba a `refreshDerivedSheets_`.** Solo `deleteRow` lo hacía. O
+   sea que **renombrar un material no se veía en ninguna pantalla** hasta que
+   alguien guardara un movimiento. Exactamente el bug que Jose encontró con las
+   categorías, esperando aquí para que lo encontrara un cliente.
+3. **ARCHIVE_HISTORY sin tocar**, igual que los otros dos.
+4. **`changeCategory` cambia el MatID** de un material (el id se construye con
+   categoría+nombre). Sin la reconstrucción, todos los MatID guardados quedaban
+   viejos.
+
+**Se arreglaron junto con el candado, no después, y por una razón concreta:
+ponerle candado a un bucle lento es exactamente la regresión que acabábamos de
+arreglar en v10.1.** Un candado sobre algo que tarda minutos deja a toda la
+bodega con "System busy" mientras dura.
+
+### De paso: el registro de una fila borrada estaba incompleto
+
+`deleteRow` leía `getRange(rowIdx, 1, 1, 19)` con el 19 escrito a mano. La fila
+creció a 22 columnas cuando se agregaron los precios, así que el registro de
+auditoría de un movimiento borrado venía perdiendo el PM y las dos columnas de
+costo. El registro de un borrado es justo donde eso no se puede permitir. Ahora
+usa `AC_WIDTH`, que existe precisamente para esto.
+
+### Un solo motor para todas las reescrituras
+
+Los cinco caminos pasan ahora por `rewriteArchiveColumn_(sheet, col, decide)`:
+lee una vez, decide en memoria, escribe una vez. `decide` recibe **la fila
+completa**, no solo la columna que se va a escribir, porque los casos que
+importan deciden con otras columnas: renombrar un material compara categoría Y
+nombre y escribe el nombre. Comparando solo por la columna escrita, renombrar
+"GE SILPRUF" en WINDOW lo renombraría también en SCREEN — y dos categorías con
+el mismo nombre de material no es un caso raro, es el estado normal del
+catálogo de una vidriería. Hay una prueba para exactamente eso.
+
+### La prueba se defendió sola, otra vez
+
+Al mover los tres a la lista de protegidos, `test-concurrency.js` falló cuatro
+veces seguidas hasta que la lista de huecos conocidos se actualizó a mano — que
+es para lo que está. Y `lockedByCaller` tuvo que volverse **transitiva**:
+`rewriteArchiveColumn_` no está dentro de un `withStockLock_` en el cuerpo de
+quien lo llama, pero quien lo llama sí corre siempre bajo el candado. Mirando
+un solo salto, la prueba habría marcado código correcto como agujero — y una
+prueba que grita en falso deja de leerse.
