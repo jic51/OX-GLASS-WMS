@@ -721,3 +721,47 @@ plantilla, cero cambios de motor.
   todo lado), pero si se activa antes de arreglar el texto, queda una promesa
   rota por escrito.
 
+
+## Icono de pestaña por cliente ("Nivel 2") — aplazado a propósito en v10.3
+
+**Lo que SÍ quedó (v10.3):** un solo icono de Acopio para todas las
+instalaciones, en `ACOPIO_FAVICON_URL`. Cero acción del cliente. La constante
+está **vacía todavía** porque `setFaviconUrl` necesita una URL pública que los
+servidores de Google puedan pedir sin credenciales, y Acopio aún no tiene casa
+pública. Vacío = el comportamiento de hoy, sin estados a medias. Encenderlo es
+cambiar **una línea**: `acopio.com/favicon.png`, o un PNG cuadrado en el Drive
+**de Jose** compartido "cualquiera con el enlace"
+(`https://drive.google.com/uc?export=view&id=ID`) — el Drive del cliente no se
+toca, así que no se publica nada de él.
+
+Decisión de Jose: *"hagamos así por ahora, si sale otra mejor opción en el
+futuro lo cambiamos, sino lo dejamos así para siempre."* Y es la decisión
+comercialmente correcta además de la barata: cada pestaña abierta en cada
+bodega mostrando el icono de Acopio es la diferencia entre parecer un producto
+y parecer una hoja de cálculo.
+
+**Lo aplazado — el icono propio de cada cliente.** No es una línea, es una
+feature:
+
+1. **Hay que publicar un archivo del Drive del cliente.** El logo ya vive ahí
+   (`COMPANY_LOGO_ID`), pero dentro de la app se muestra porque **el servidor
+   lee el archivo privado y manda los bytes**. Un favicon no puede: lo pide el
+   navegador desde la página de Google, sin permisos. Hace falta
+   `setSharing(ANYONE_WITH_LINK, VIEW)` sobre un archivo del cliente — con
+   consentimiento explícito, nunca en silencio.
+2. **Falla sola en empresas grandes.** Muchos Google Workspace prohíben
+   compartir fuera de la organización. El `setSharing` falla justo con los
+   clientes que más pagan. Hay que detectarlo, caer al icono de Acopio y
+   **decírselo**, no dejarlo mudo.
+3. **Un logo ancho en 16 píxeles es una mancha.** Por eso va junto con pedir
+   **dos** logos, no tres, explicando para qué sirve cada uno:
+
+   | Logo | Dónde se usa | Obligatorio |
+   |---|---|---|
+   | Horizontal (el que ya se pide) | Barra superior, PDFs, correos | Sí |
+   | Cuadrado | Pestaña del navegador, y mañana icono de app móvil | No — si falta, se usa el de Acopio |
+
+   El tercero (monocromo) solo importa para impresión, y ahí no estamos.
+
+`FAVICON_URL` sigue existiendo y gana sobre todo lo demás, así que un cliente
+que insista hoy se resuelve con una Script Property mientras tanto.

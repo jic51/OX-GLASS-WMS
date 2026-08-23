@@ -33,7 +33,25 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '10.2';
+var APP_VERSION = '10.3';
+
+// The browser-tab icon every installation gets unless it sets FAVICON_URL.
+// See the note in doGet for why one shared mark rather than each customer's
+// own logo.
+//
+// ⚠ STILL EMPTY, ON PURPOSE. setFaviconUrl needs a URL Google's own servers can
+// fetch without credentials, and Acopio does not have a public home yet. Empty
+// falls straight through the https check below, so the tab keeps the Apps
+// Script icon exactly as it does today — no half-working state, no broken
+// image.
+//
+// To switch it on, this is the ONE line to change. Either works:
+//   • acopio.com/favicon.png once the domain exists (the intended home), or
+//   • a square PNG in JOSE'S OWN Drive, shared "anyone with the link", as
+//     https://drive.google.com/uc?export=view&id=FILE_ID — no customer Drive
+//     is involved, so nothing of theirs is published. Good enough to ship
+//     today and to replace later.
+var ACOPIO_FAVICON_URL = '';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',
@@ -465,7 +483,26 @@ function doGet(e) {
   // so an installation can be pointed at the Acopio mark, or at the
   // customer's own, without a code change. Unset simply leaves Google's
   // default — the behaviour everyone has today.
+  // Decided with Jose (v10.3): the DEFAULT is Acopio's own mark, the same on
+  // every installation, and no customer ever touches it. The earlier plan —
+  // upload a square PNG, publish it, build a Drive URL, paste it into Script
+  // Properties — was a to-do list, not a feature. No customer would do it, and
+  // Jose did not want to ask them to.
+  //
+  // One mark for everyone is also the better product decision, not a
+  // concession: every tab open in every warehouse showing the Acopio icon is
+  // the difference between looking like a product and looking like a
+  // spreadsheet.
+  //
+  // Per-customer icons are deliberately deferred (BACKLOG: "Level 2"). Doing
+  // it properly means publishing a file out of the customer's own Drive, which
+  // needs explicit consent AND fails silently on Workspace domains that forbid
+  // link-sharing — a whole feature, not a line.
+  //
+  // FAVICON_URL still wins when set, so a customer who wants their own is one
+  // property away and nothing here has to change.
   var favicon = String(PropertiesService.getScriptProperties().getProperty('FAVICON_URL') || '').trim();
+  if (!favicon) favicon = ACOPIO_FAVICON_URL;
   if (/^https:\/\//i.test(favicon)) {
     try { out.setFaviconUrl(favicon); } catch (e) { Logger.log('setFaviconUrl: ' + e.message); }
   }
@@ -6690,6 +6727,36 @@ function renameCategoryColumn_(sheet, oldVal, newValStored) {
   return changed;
 }
 
+// ─── WHY ONLY CATEGORIES ARE REWRITTEN INTO THE ARCHIVE ─────────────────────
+// Renaming a category rewrites every matching movement. Renaming a supplier, a
+// project or a location does not. That asymmetry looks like an oversight and
+// is not — it is the design, and it is written down here because the next
+// person to notice it (this file's own author included) will otherwise
+// "fix" it.
+//
+// A CATEGORY is a CLASSIFICATION. "WINDOW" describes what the thing IS, and
+// that did not stop being true because the spelling was corrected. Renaming
+// IGU to "IGU (ISOLATED GLASS UNIT)" says nothing new about the glass; it
+// tidies up how it is written. Carrying it into the archive is right.
+//
+// There is also no choice about it: stock is grouped by category+name, so a
+// category renamed in the catalog but not in the archive splits one material
+// into two and THE NUMBERS COME OUT WRONG. Categories must carry.
+//
+// A SUPPLIER, a PROJECT and a LOCATION are HISTORICAL FACTS. Who we bought it
+// from, which job it left for, which rack it sat in — each was true under the
+// name in use on that day. Rack A3B was called A3B until yesterday; saying
+// January's material sat in "B7C" is not a correction, it is false.
+//
+// The practical half of the argument, which is the half that settles it:
+// supplier and project names are printed on PDFs and emails that have already
+// been sent. A customer comparing an old PDF against the screen and finding
+// they disagree does not conclude "somebody renamed something" — they conclude
+// the system cannot be trusted. An inventory system sells traceability;
+// rewriting the past is the one thing it must not do.
+//
+// The Settings screen now says which is which, per tab, so a customer meets
+// this rule before renaming rather than after — see _renderSettingsTab.
 function updateConfig(data, auth) {
   // Split gate, not a single ADMIN wall any more. archiveCutoffMonths is a
   // system-wide retention setting — stays ADMIN-only, unconditionally, same as

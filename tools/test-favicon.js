@@ -94,6 +94,38 @@ function check(label, cond) {
   if (pageErrors.length) pageErrors.forEach(e => console.log('  PAGE ERROR:', e));
 
   await browser.close();
-  console.log('\nfavicon (in-page link only — the TAB is set server-side, see header): ' + (fail === 0 ? 'ok' : (fail + ' FAILED')));
+
+  // ── The server-side path, read out of the source ──────────────────────────
+  // This is the half that actually sets the browser tab. It cannot be executed
+  // from here — it needs a live deployment — so what follows checks the WIRING,
+  // and says so. Per the lesson in the header: this proves the chain is
+  // connected, not that a tab icon appears.
+  console.log('\n── the server-side chain (wiring only — NOT proof of a tab icon) ──');
+  const GS = fs.readFileSync(path.join(__dirname, '..', 'Code_v3_fixed.gs'), 'utf8');
+  const dgStart = GS.indexOf('function doGet(');
+  const doGet = GS.slice(dgStart, GS.indexOf('\nfunction ', dgStart + 10));
+
+  check('doGet reads FAVICON_URL first, so a customer who wants their own icon still overrides everything',
+    /getProperty\('FAVICON_URL'\)/.test(doGet));
+  check('...and falls back to ACOPIO_FAVICON_URL, the one mark every installation shares by default',
+    /if \(!favicon\) favicon = ACOPIO_FAVICON_URL;/.test(doGet));
+  check('...and only calls setFaviconUrl for an https URL, so an empty default leaves the tab exactly as it is today instead of half-set',
+    /https:\\\/\\\//.test(doGet) && /out\.setFaviconUrl\(favicon\)/.test(doGet));
+  check('...inside a try/catch, because a bad URL must not take the whole app down on load',
+    /try \{ out\.setFaviconUrl\(favicon\); \} catch/.test(doGet));
+
+  // Asserts the CURRENT state rather than a URL. The day Jose fills it in, the
+  // note below changes to the one that matters: go look at a real tab.
+  const declared = /var ACOPIO_FAVICON_URL = '([^']*)';/.exec(GS);
+  check('ACOPIO_FAVICON_URL is declared', !!declared);
+  if (declared && declared[1] === '') {
+    console.log('  note   ACOPIO_FAVICON_URL is still EMPTY — the tab icon is off by design until Acopio has a public URL. Nothing here claims otherwise.');
+  } else if (declared) {
+    check('ACOPIO_FAVICON_URL is https — Google will not fetch anything else',
+      /^https:\/\//i.test(declared[1]));
+    console.log('  note   ACOPIO_FAVICON_URL is set. This test STILL cannot see a browser tab: open a deployed app and look at it.');
+  }
+
+  console.log('\nfavicon (in-page link + server wiring — the TAB itself needs a real deployment, see header): ' + (fail === 0 ? 'ok' : (fail + ' FAILED')));
   process.exit(fail === 0 ? 0 : 1);
 })();

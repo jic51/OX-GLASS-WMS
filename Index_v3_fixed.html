@@ -2631,7 +2631,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '10.2';
+var APP_VERSION = '10.3';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -7736,7 +7736,21 @@ function _renderSettingsTab(tab) {
   }).join('');
 
   content.innerHTML =
-    '<p style="font-size:.8rem;color:var(--muted);margin-bottom:.75rem">Manage '+label.toLowerCase()+'s. Renaming a category updates all existing movements automatically.' +
+    // One sentence used to serve all four tabs: "Renaming a category updates
+    // all existing movements automatically." True on Categories, FALSE on the
+    // other three — the app was telling people it would do something it does
+    // not do. And the difference is not an oversight, it is the design (see
+    // the note above updateConfig in Code.gs): a category is a CLASSIFICATION
+    // and correcting its spelling does not change what a 2024 window was,
+    // while a supplier, a project and a location are HISTORICAL FACTS. Who we
+    // bought from, which job it went to and which rack it sat in were true
+    // under the name in use at the time, and those names are already printed
+    // on PDFs and emails that went out. Rewriting them would make the app
+    // disagree with paperwork the customer is holding.
+    '<p style="font-size:.8rem;color:var(--muted);margin-bottom:.75rem">Manage '+label.toLowerCase()+'s. ' +
+      (tab === 'categories'
+        ? 'Renaming a category updates all existing movements automatically.'
+        : 'Renaming updates the list only — existing movements keep the name they were recorded with.') +
       (mergeable ? ' Tick two or more to merge them by hand.' : '') + '</p>' +
     (mergeable ? _renderSimilarGroups(tab, items, label) : '') +
     (mergeable ? '<div class="cfg-pickbar" id="cfgPickBar"></div>' : '') +
@@ -7801,6 +7815,10 @@ function _renderLocationsTab(){
       '<p style="font-size:.8rem;color:var(--muted);margin:0;flex:1">' +
         'Drag a location into a group to file it there. Grouping is for organising only — every location still counts toward stock, ' +
         'and the Warehouse Map shows these same groups.' +
+        // Said here for the same reason it is said on the other catalog tabs:
+        // where a thing WAS is a fact about the past, and renaming the rack
+        // today cannot make January's material have sat somewhere else.
+        '<br>Renaming a location updates the list only — existing movements keep the name they were recorded with.' +
         '<br><b>Dragging needs a mouse</b> — on a phone this list is read-only for now.' +
       '</p>' +
       '<div class="loc-plus-wrap">' +

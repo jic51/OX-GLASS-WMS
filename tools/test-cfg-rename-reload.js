@@ -109,5 +109,33 @@ console.log('\n═══ it must not break where the function is not defined ═
     sandbox._settingsData.categories.indexOf('FLASHING PAPER') !== -1 && calls.reload.length === 0);
 }
 
+console.log('\n═══ and the screen has to SAY which tabs carry the rename ═══\n');
+
+// The same sentence used to serve all four catalog tabs: "Renaming a category
+// updates all existing movements automatically." True on Categories, false on
+// the other three — the app was promising something it does not do. The
+// asymmetry is deliberate (a category is a classification; a supplier, project
+// and location are historical facts, already printed on PDFs that went out),
+// which is exactly why the screen has to be honest about it rather than leave
+// a customer to find out after renaming.
+{
+  const start = HTML.indexOf('function _renderSettingsTab(');
+  const body  = HTML.slice(start, HTML.indexOf('\nfunction ', start + 10));
+
+  check('the copy branches on the tab instead of one sentence for all four',
+    /tab === 'categories'/.test(body));
+  check('Categories still promises the rename carries into the movements',
+    /Renaming a category updates all existing movements automatically\./.test(body));
+  check('the other three say the opposite, plainly, instead of the old claim',
+    /Renaming updates the list only — existing movements keep the name they were recorded with\./.test(body));
+}
+
+{
+  const start = HTML.indexOf('function _renderLocationsTab(');
+  const body  = HTML.slice(start, HTML.indexOf('\nfunction ', start + 10));
+  check('the Locations tab, which renders its own header and so misses the branch above, says it too',
+    /Renaming a location updates the list only/.test(body));
+}
+
 console.log('\ncfg-rename-reload: ' + (fail === 0 ? 'ok' : (fail + ' FAILED')));
 process.exit(fail === 0 ? 0 : 1);
