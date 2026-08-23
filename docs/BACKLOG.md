@@ -23,6 +23,28 @@ here once they ship (the commit message is the record of what changed and why).
     just disappearing/appearing in place. tools/test-splash-notes.js covers
     the rotation today and will need updating for both once this is picked
     up.
+2c. **Botón de correo en la alerta de stock bajo** — idea de Jose (v10.6).
+    En la barra de alertas del dashboard (`⚠ Below Minimum (N)` / `Zero
+    Stock`), un botón que mande un correo ya redactado con **la lista de
+    materiales por debajo del mínimo o en cero**: nombre, categoría, cuánto
+    queda, cuál es el mínimo y —si está en Incoming— cuánto viene y para
+    cuándo.
+
+    El caso de uso es diario: el jefe de bodega ve la alerta y tiene que
+    avisarle a compras o al PM. Hoy eso es mirar la pantalla y escribir el
+    correo a mano, que es donde se pierde o se escribe mal.
+
+    Los datos ya están calculados en `renderStats` (`belowMin`, `zeroItems`),
+    así que el trabajo real es el formato del mensaje y dos decisiones que hay
+    que hablar antes de construir:
+    - **¿A quién va?** Un destinatario fijo en Settings, el Directory, o
+      elegirlo en el momento.
+    - **¿Lo envía la app o el usuario?** `MailApp` (como ya hacen los avisos de
+      movimientos) deja registro y no depende del correo del empleado;
+      `mailto:` abre su cliente con todo prellenado y le deja revisar y editar
+      antes de mandar. No es lo mismo y conviene decidirlo, no elegirlo por
+      descuido.
+
 3. **Polish the company logo placement** in the topbar — it renders, but the
    sizing/position isn't what Jose wants yet. Jose says it is fine for now —
    waiting on him to say what he actually wants there.
