@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '10.6';
+var APP_VERSION = '10.7';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -43,34 +43,45 @@ var APP_VERSION = '10.6';
 // file is published, so nothing of theirs becomes public. It moves to
 // acopio.com/favicon.png once the domain exists; this line is the only change.
 //
-// lh3.googleusercontent.com/d/ID rather than drive.google.com/uc?export=view:
-// the uc form answers with an HTML interstitial rather than image bytes often
-// enough that it is not worth relying on for something a browser fetches
-// unauthenticated.
+// ─── THE `#.png` ON THE END IS LOAD-BEARING. DO NOT TIDY IT AWAY. ───────────
+// The docs spell out the rule in one clause that is easy to read past:
 //
-// ⚠ TWO THINGS HERE ARE UNVERIFIED, AND SAYING SO IS THE POINT.
+//   iconUrl — "The URL of the favicon image, WITH THE IMAGE EXTENSION
+//              indicating the image type."
 //
-// This session's network cannot reach drive.google.com (the proxy answers 403
-// for every form of the URL), so nothing here has been confirmed by fetching
-// it. Specifically:
-//   1. Whether this file is really shared "anyone with the link". If it is
-//      not, Google returns a sign-in page instead of an image and the tab
-//      falls back to the Apps Script icon — the state we are in today, so the
-//      failure is harmless but silent.
-//   2. Whether this is the SQUARE file. Jose sent three links alongside three
-//      images and this is the second of each; the mapping is an assumption
-//      about the order, not something checked. A wide logo squeezed into
-//      16 pixels is a smear, so it matters.
+// Google decides the image type from how the URL ENDS, not from what the
+// server sends back. A Drive URL ends in a file id, so there is no extension
+// to read and the icon is rejected — Apps Script issue 36756649 comment #22
+// reports the exact message, "The favicon icon image type is not supported",
+// for precisely this case, and comment #23 gives the fix used here: append a
+// fragment so the URL ends in the extension.
 //
-// Both are settled by the same one-minute check, in an INCOGNITO window (a
-// normal window uses Jose's own Google session and would load a private file
-// happily, proving nothing): open the URL. An image that appears is public;
-// the image that appears tells you which of the three it is.
+// A fragment is the right tool because browsers never send it to the server.
+// Google reads ".png" off the end; Drive receives the identical request it
+// received before. Nothing about the image changes — only what Google can tell
+// about it.
 //
-// After the favicon episode, an unverified claim gets labelled rather than
-// stated. See tools/test-favicon.js — it checks this chain is wired and says
-// plainly that wiring is not a tab icon.
-var ACOPIO_FAVICON_URL = 'https://lh3.googleusercontent.com/d/1pvA5GEBHLkJMIx6SYpvoL0WscfRXyBsB';
+// Two versions of this were deployed with no extension and no icon appeared,
+// which is consistent with the rule above and was the missing piece rather
+// than proof that the whole approach was impossible. setTitle() working on the
+// same object was always the sign that Apps Script CAN reach the outer page.
+//
+// lh3.googleusercontent.com/d/ID is kept over drive.google.com/uc?export=view
+// because Jose confirmed this exact URL renders an image in an incognito
+// window — so it is public and it serves image bytes to a browser. That is the
+// half already proven; the extension is the half that was missing.
+//
+// ⚠ STILL UNVERIFIED: this is not the SQUARE logo. Jose sent three links with
+// three images and confirmed the second is not the square one. The wrong shape
+// squeezed into 16 pixels is a smear, so this has to be swapped for the square
+// file's id — but it is left in place deliberately for now, because ANY icon
+// appearing proves the mechanism, and swapping the id afterwards is trivial.
+// The id is the only thing that changes.
+//
+// Long term this moves to acopio.com/favicon.png: a plain file at a plain URL
+// needs none of the above, and Drive is a poor host for something every
+// customer fetches on every load.
+var ACOPIO_FAVICON_URL = 'https://lh3.googleusercontent.com/d/1pvA5GEBHLkJMIx6SYpvoL0WscfRXyBsB#.png';
 
 var SHEETS = {
   ARCHIVE: 'MASTER_ARCHIVE_V3',

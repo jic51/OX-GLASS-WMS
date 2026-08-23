@@ -121,9 +121,28 @@ function check(label, cond) {
   if (declared && declared[1] === '') {
     console.log('  note   ACOPIO_FAVICON_URL is still EMPTY — the tab icon is off by design until Acopio has a public URL. Nothing here claims otherwise.');
   } else if (declared) {
+    const url = declared[1];
     check('ACOPIO_FAVICON_URL is https — Google will not fetch anything else',
-      /^https:\/\//i.test(declared[1]));
-    console.log('  note   ACOPIO_FAVICON_URL is set. This test STILL cannot see a browser tab: open a deployed app and look at it.');
+      /^https:\/\//i.test(url));
+
+    // THE RULE THAT COST TWO DEPLOYS. The docs say the URL must carry "the
+    // image extension indicating the image type", and Google reads that off
+    // the END OF THE URL rather than off what the server returns. A Drive link
+    // ends in a file id, so there is nothing to read and the icon is dropped —
+    // Apps Script issue 36756649 comment #22 reports the exact error for this
+    // case. A fragment fixes it without changing the request, since browsers
+    // never send a fragment to the server.
+    //
+    // This is asserted rather than left to a comment because it is invisible:
+    // the URL looks perfectly correct without it, the app does not error, and
+    // the only symptom is a tab icon that quietly never changes.
+    check('...and ENDS in an image extension, which is what Google reads to decide the image type — a bare Drive id has none and the icon is silently dropped',
+      /\.(png|ico|jpg|jpeg|gif|svg)$/i.test(url));
+    if (/googleusercontent\.com|drive\.google\.com|docs\.google\.com/.test(url)) {
+      check('...supplied as a #fragment for a Drive-hosted URL, so Google can read the type while Drive still receives the request it expects',
+        /#\.(png|ico|jpg|jpeg|gif|svg)$/i.test(url));
+    }
+    console.log('  note   ACOPIO_FAVICON_URL is set and well-formed. This test STILL cannot see a browser tab: open a deployed app and look at it.');
   }
 
   console.log('\nfavicon (in-page link + server wiring — the TAB itself needs a real deployment, see header): ' + (fail === 0 ? 'ok' : (fail + ' FAILED')));

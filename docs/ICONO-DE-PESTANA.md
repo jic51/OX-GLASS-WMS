@@ -147,9 +147,63 @@ En la app desplegada, F12 → **Elements**, y mirar el `<head>` del documento
 Segunda comprobación, complementaria: pestaña **Network**, filtrar por `lh3` —
 ver si el navegador siquiera pide la imagen y con qué responde.
 
-### Recomendación mientras tanto
+### ⚠ RESUELTO — v10.7. La causa era una cláusula de la documentación
 
-**Parar aquí.** Aunque Drive llegara a funcionar, sigue siendo el anfitrión
+Jose abrió el hilo del Issue Tracker que yo no pude leer, y ahí está todo.
+
+**El feature existe y funciona** desde diciembre de 2015 (`setFaviconUrl`,
+issue 36756649 marcado como Fixed). No es que Google no lo permita.
+
+**La causa de nuestro fallo está en una cláusula de la documentación que es
+fácil de leer por encima:**
+
+> `iconUrl` — *"The URL of the favicon image, **with the image extension
+> indicating the image type**."*
+
+**Google decide el tipo de imagen por cómo TERMINA la URL**, no por lo que
+responde el servidor. Una URL de Drive termina en un id de archivo, así que no
+hay extensión que leer y el icono se descarta.
+
+El comentario **#22** del hilo (2017) reporta exactamente eso, con el mensaje
+literal: *"The favicon icon image type is not supported"*, preguntando qué pasa
+cuando el favicon está en Google Drive.
+
+El comentario **#23** (2018) da el arreglo, que es el que aplicamos:
+
+```javascript
+.setFaviconUrl("https://docs.google.com/uc?id=XXXXXXXX#.ico")
+```
+
+**Añadir un fragmento al final.** Y es la herramienta correcta, no un truco
+sucio: los navegadores **nunca envían el fragmento al servidor**. Google lee
+`.png` del final de la cadena; Drive recibe exactamente la misma petición que
+recibía antes. No cambia nada de la imagen — solo lo que Google puede deducir
+de ella.
+
+En v10.7 la constante quedó así:
+
+```
+https://lh3.googleusercontent.com/d/1pvA5GEB…#.png
+```
+
+Se conserva `lh3` en vez de `uc?export=view` porque Jose ya confirmó que esa
+URL exacta muestra la imagen en una ventana de incógnito: o sea que es pública
+y sí entrega bytes de imagen a un navegador. Esa mitad ya estaba probada; la
+extensión era la que faltaba.
+
+`tools/test-favicon.js` ahora exige la extensión, porque es un fallo invisible:
+la URL se ve perfectamente correcta sin ella, la app no da ningún error, y el
+único síntoma es una pestaña que calladamente nunca cambia.
+
+**Dos apuntes más del hilo, por si aparecen:**
+- Comentarios #17 y #19 (2016): avisos de *mixed content* porque Google
+  envolvía la URL en `http://www.google.com/url?q=…`. Se reportó aparte
+  (issue 36764429). Si reaparece, es eso y no nosotros.
+- Sigue pendiente cambiar el id por el del logo **cuadrado**.
+
+### Recomendación de fondo, que no cambia
+
+**Esto sigue siendo un parche sobre el anfitrión equivocado.** Aunque Drive llegara a funcionar, sigue siendo el anfitrión
 equivocado para un recurso que cada carga de cada cliente va a pedir. La
 solución de verdad es un `.png` en acopio.com, y acopio.com ya está en la lista
 de bloqueantes por otras tres razones. El código está listo y probado: el día
