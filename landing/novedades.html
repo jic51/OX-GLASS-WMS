@@ -1,0 +1,259 @@
+<title>Novedades de Acopio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap">
+
+<style>
+  /* Same tokens as index.html, on purpose: this page is reached from inside
+     the app and from the footer of the landing, and it should read as the same
+     product both times. Light-only for the same reason the landing is. */
+  :root {
+    --ground:#F0F2F5; --surface:#FFFFFF; --sunk:#E7EAEF;
+    --ink:#1A1A2E; --steel:#6B7280; --line:#E5E7EB;
+    --rack:#1B2A4A; --rack-2:#2C3E6B;
+    --accent:#3B7DD8; --accent-ink:#1E52A0;
+    --amber:#D97706; --amber-wash:#FEF3C7;
+    --good:#059669; --radius:10px; --max:820px;
+    --step--1: clamp(.78rem,.76rem + .1vw,.84rem);
+    --step-0:  clamp(1rem,.97rem + .16vw,1.09rem);
+    --step-1:  clamp(1.15rem,1.05rem + .4vw,1.35rem);
+    --step-2:  clamp(1.4rem,1.2rem + .8vw,1.9rem);
+    --step-3:  clamp(2rem,1.6rem + 1.8vw,3rem);
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);
+       font:400 var(--step-0)/1.65 Inter,"DM Sans",system-ui,-apple-system,sans-serif;
+       -webkit-font-smoothing:antialiased}
+  h1,h2,h3{font-family:Archivo,"Helvetica Neue",Arial,sans-serif;margin:0;
+           letter-spacing:-.02em;text-wrap:balance}
+  a{color:var(--accent-ink)}
+
+  .wrap{max-width:var(--max);margin:0 auto;padding:0 1.25rem}
+
+  header.top{background:var(--rack);color:#fff;padding:3.5rem 0 3rem}
+  header.top h1{font-size:var(--step-3);color:#fff;margin-bottom:.6rem}
+  header.top p{margin:0;color:#C9D3E6;max-width:46ch}
+  .home{display:inline-block;margin-bottom:1.6rem;color:#9FB4D8;
+        text-decoration:none;font-size:var(--step--1);letter-spacing:.04em;
+        text-transform:uppercase;font-weight:600}
+  .home:hover{color:#fff}
+
+  main{padding:2.5rem 0 4rem}
+
+  /* One month per block, newest first. The month is the anchor a customer
+     scans for — "what changed since I last looked" is a question about time,
+     not about version numbers. */
+  .month{margin-bottom:2.5rem}
+  .month > h2{font-size:var(--step-2);margin-bottom:.25rem}
+  .month > .sub{color:var(--steel);font-size:var(--step--1);margin:0 0 1.25rem}
+
+  .entry{background:var(--surface);border:1px solid var(--line);
+         border-radius:var(--radius);padding:1.1rem 1.25rem;margin-bottom:.75rem}
+  .entry h3{font-size:var(--step-1);margin-bottom:.35rem}
+  .entry p{margin:0;color:#3F4756}
+  .entry p + p{margin-top:.5rem}
+
+  /* Three kinds of change, colour-coded, because a customer reads this page
+     with one of three questions: what can I do now, what stopped being
+     broken, and is anyone still working on this. */
+  .tag{display:inline-block;font:600 var(--step--1)/1 Inter,sans-serif;
+       padding:.3rem .55rem;border-radius:999px;margin-bottom:.55rem;
+       letter-spacing:.02em}
+  .tag.new{background:#E3EEFC;color:var(--accent-ink)}
+  .tag.fix{background:#E8F6F0;color:#046C4E}
+  .tag.safe{background:var(--amber-wash);color:#92400E}
+
+  .ver{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:var(--step--1);
+       color:var(--steel);float:right;margin-left:1rem}
+
+  footer{border-top:1px solid var(--line);padding:2rem 0 3rem;
+         color:var(--steel);font-size:var(--step--1)}
+  footer a{color:var(--steel)}
+
+  @media (max-width:520px){ .ver{float:none;display:block;margin:0 0 .3rem} }
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <a class="home" href="es.html">← Acopio</a>
+    <h1>Novedades</h1>
+    <p>Cada cambio que llega a tu instalación, del más reciente al más antiguo.
+       El soporte y las actualizaciones son la misma suscripción: cuando algo de
+       aquí sale, ya lo tienes.</p>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="month">
+    <h2>Agosto 2026</h2>
+    <p class="sub">Seguridad con varias personas a la vez, y las herramientas de catálogo terminadas bien.</p>
+
+    <div class="entry">
+      <span class="ver">v10.0 – v10.4</span>
+      <span class="tag safe">Seguridad</span>
+      <h3>Dos personas pueden cambiar lo mismo a la vez sin que se pierda uno de los dos cambios</h3>
+      <p>El stock se calcula a partir de tu historial de movimientos, así que
+         cualquier cambio que lo lea, lo ajuste y lo vuelva a escribir puede
+         chocar con otro que ocurra en el mismo segundo — y el fallo era
+         silencioso: los dos veían "guardado" y el número quedaba mal.</p>
+      <p>Guardar un movimiento ya estaba protegido. Ahora también lo están editar
+         un movimiento guardado, renombrar una categoría, renombrar o fusionar un
+         material, y fusionar proyectos, proveedores o ubicaciones. Si dos
+         cambios llegan a encontrarse, al segundo se le pide reintentar en un
+         momento en vez de pisar al primero.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v10.5</span>
+      <span class="tag new">Nuevo</span>
+      <h3>Ve cuánto espacio le queda a tu archivo</h3>
+      <p>Settings → System muestra una barra con cuánto de tu hoja está usado y
+         aproximadamente cuántos años de espacio quedan a tu ritmo actual. El
+         estimado se mide sobre tus últimos 90 días y no aparece hasta que tengas
+         60 días de historial: las primeras semanas son sobre todo la carga
+         inicial del inventario, y proyectar desde ahí sería equivocado.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v10.1 – v10.6</span>
+      <span class="tag fix">Corregido</span>
+      <h3>Renombrar una categoría ahora actualiza todo, al instante</h3>
+      <p>Renombrar una categoría actualiza cada movimiento que la usaba, tanto los
+         recientes como los archivados, y toda la app muestra el nombre nuevo de
+         inmediato en vez de después de recargar. El mismo arreglo llegó a
+         fusionar ubicaciones, proyectos y proveedores.</p>
+      <p>Renombrar tardaba minutos en una bodega con mucho historial y sin ninguna
+         señal de que estaba trabajando. Ahora tarda segundos, y el botón dice
+         qué está haciendo.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v10.3</span>
+      <span class="tag fix">Corregido</span>
+      <h3>Settings te dice qué renombrados alcanzan a tu historial</h3>
+      <p>Renombrar una <em>categoría</em> actualiza tus movimientos existentes.
+         Renombrar un proveedor, un proyecto o una ubicación no — esos son el
+         registro de lo que era cierto en su momento, y ya están impresos en
+         papeles que salieron. Cada pestaña dice cuál de los dos casos es, en vez
+         de una sola frase que solo era cierta en una.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v9.93 – v9.95</span>
+      <span class="tag new">Nuevo</span>
+      <h3>Todas las copias de seguridad, en un solo lugar</h3>
+      <p>Settings → System lista cada copia que realmente existe en tu carpeta de
+         Drive, leída de Drive mismo. Además, ahora cada copia lleva dentro una
+         instantánea de tu configuración, así que restaurar una recupera tus
+         ajustes y no solo tus datos.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v9.94</span>
+      <span class="tag new">Nuevo</span>
+      <h3>Marca una entrega como recibida desde el aviso de la mañana</h3>
+      <p>La tarjeta "Llega hoy" te lleva directo al lugar exacto para registrarlo.
+         Solo administradores.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v9.87</span>
+      <span class="tag new">Nuevo</span>
+      <h3>Un aviso cuando un precio se mueve</h3>
+      <p>Si escribes un costo unitario bastante distinto de lo que venías pagando,
+         la app te lo dice antes de guardar, para que un error de tecleo no se
+         convierta calladamente en tu costo promedio.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v9.78 – v9.81</span>
+      <span class="tag new">Nuevo</span>
+      <h3>Costos: cuánto vale tu inventario, por proyecto y en desperdicio</h3>
+      <p>Costo promedio ponderado, opcional. Escribe lo que pagaste al entrar y la
+         app lleva el promedio, muestra cuánto costó lo que salió a cada
+         proyecto, y le pone cifra en dólares al desperdicio. Cada costo va
+         detrás de su propio permiso: quien registra movimientos no tiene por qué
+         ver dinero.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v9.76 – v9.79</span>
+      <span class="tag new">Nuevo</span>
+      <h3>Decide qué puede hacer el rol de bodega — y cómo se llama</h3>
+      <p>Los permisos ahora son interruptores y no un muro fijo: dale al rol de
+         bodega la capacidad de editar movimientos o administrar el catálogo si
+         así funciona tu taller. Y si en tu empresa se llaman Recepción o Patio,
+         renombra el rol para que coincida.</p>
+    </div>
+  </section>
+
+  <section class="month">
+    <h2>Antes</h2>
+    <p class="sub">Las bases, antes de las versiones de arriba.</p>
+
+    <div class="entry">
+      <span class="ver">v9.82</span>
+      <span class="tag new">Nuevo</span>
+      <h3>El cajón de rack, rehecho</h3>
+      <p>Toca una ubicación en el Mapa de Bodega y actúa sobre lo que hay dentro
+         —salida, traslado o desperdicio— con el material, la categoría y el rack
+         de origen ya puestos. Toca la cifra "available" para llenar la
+         cantidad.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v9.73</span>
+      <span class="tag fix">Corregido</span>
+      <h3>Usable con el pulgar</h3>
+      <p>Una pasada completa por cada pantalla en tamaños de teléfono y tableta:
+         nada se sale del borde, nada es demasiado chico para tocar, ninguna
+         pantalla se desplaza de lado. Una bodega no se maneja desde un
+         escritorio.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v9.74</span>
+      <span class="tag new">Nuevo</span>
+      <h3>Alertas de stock mínimo que de verdad configuras</h3>
+      <p>Elige qué materiales importan y cuál es su mínimo. El tablero te dice qué
+         está por debajo y qué llegó a cero.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v9.71</span>
+      <span class="tag new">Nuevo</span>
+      <h3>Copias de seguridad que corres y revisas desde la app</h3>
+      <p>Enciende la copia nocturna, corre una ahora, y mira cuándo fue la última
+         — sin abrir la hoja de cálculo ni el editor de scripts.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v9.61</span>
+      <span class="tag new">Nuevo</span>
+      <h3>Pega un correo del proveedor y saca las entregas esperadas</h3>
+      <p>Pega la confirmación que te mandaron y la app extrae qué viene, cuánto y
+         cuándo — a la lista de Incoming, para que lo revises antes de
+         guardar.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v9.58</span>
+      <span class="tag new">Nuevo</span>
+      <h3>Un chequeo de salud para la parte que no se ve</h3>
+      <p>Un solo comando que revisa la mitad de una instalación que nadie mira
+         —carpetas, permisos, tareas programadas—, repara lo que puede sin
+         riesgo, y te dice claramente qué falta.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="wrap">
+  <p>Acopio — Sistema de Gestión de Bodega.
+     <a href="es.html">Inicio</a> ·
+     <a href="changelog.html">English</a></p>
+  <p>Las actualizaciones llegan a tu instalación como parte de tu suscripción
+     de soporte. Hay cambios anteriores a los listados aquí; esta página empieza
+     donde el producto se volvió algo digno de entregarle a alguien más.</p>
+</footer>

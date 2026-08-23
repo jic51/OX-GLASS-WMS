@@ -133,10 +133,23 @@ la próxima emergencia.
 
 ---
 
-## Mejora propuesta (sin construir — pendiente de tu aprobación)
+## ✅ CONSTRUIDO EN v9.97 — el backup se lleva la configuración consigo
 
-**Que el backup se lleve la configuración consigo, dentro del Drive del
-cliente.** Es la respuesta correcta a "¿cómo guardamos esto si no debemos
+> **Este documento decía "sin construir". Ya no lo está**, y eso cambia el
+> Paso 2: en cualquier backup hecho con v9.97 o posterior, la configuración
+> está DENTRO de la copia, en una pestaña llamada
+> `ACOPIO_CONFIG_SNAPSHOT`. El Paso 2 pasa de "reconstruir adivinando" a
+> "copiar de esa pestaña".
+>
+> Los backups hechos ANTES de v9.97 no la tienen. Para esos, sigue valiendo
+> el Paso 2 tal como está escrito arriba.
+>
+> Implementado como `writeConfigSnapshot_`, guardado por
+> `tools/test-config-snapshot.js`. La pestaña solo se escribe dentro de la
+> COPIA, nunca en el archivo vivo.
+
+**La idea, que sigue siendo la correcta:** que el backup se lleve la
+configuración consigo, dentro del Drive del cliente. Es la respuesta correcta a "¿cómo guardamos esto si no debemos
 tener acceso a los datos del cliente?": no lo guardamos nosotros — lo guarda
 él, en su propio archivo, automáticamente.
 

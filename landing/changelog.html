@@ -1,0 +1,254 @@
+<title>Acopio Changelog</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap">
+
+<style>
+  /* Same tokens as index.html, on purpose: this page is reached from inside
+     the app and from the footer of the landing, and it should read as the same
+     product both times. Light-only for the same reason the landing is. */
+  :root {
+    --ground:#F0F2F5; --surface:#FFFFFF; --sunk:#E7EAEF;
+    --ink:#1A1A2E; --steel:#6B7280; --line:#E5E7EB;
+    --rack:#1B2A4A; --rack-2:#2C3E6B;
+    --accent:#3B7DD8; --accent-ink:#1E52A0;
+    --amber:#D97706; --amber-wash:#FEF3C7;
+    --good:#059669; --radius:10px; --max:820px;
+    --step--1: clamp(.78rem,.76rem + .1vw,.84rem);
+    --step-0:  clamp(1rem,.97rem + .16vw,1.09rem);
+    --step-1:  clamp(1.15rem,1.05rem + .4vw,1.35rem);
+    --step-2:  clamp(1.4rem,1.2rem + .8vw,1.9rem);
+    --step-3:  clamp(2rem,1.6rem + 1.8vw,3rem);
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);
+       font:400 var(--step-0)/1.65 Inter,"DM Sans",system-ui,-apple-system,sans-serif;
+       -webkit-font-smoothing:antialiased}
+  h1,h2,h3{font-family:Archivo,"Helvetica Neue",Arial,sans-serif;margin:0;
+           letter-spacing:-.02em;text-wrap:balance}
+  a{color:var(--accent-ink)}
+
+  .wrap{max-width:var(--max);margin:0 auto;padding:0 1.25rem}
+
+  header.top{background:var(--rack);color:#fff;padding:3.5rem 0 3rem}
+  header.top h1{font-size:var(--step-3);color:#fff;margin-bottom:.6rem}
+  header.top p{margin:0;color:#C9D3E6;max-width:46ch}
+  .home{display:inline-block;margin-bottom:1.6rem;color:#9FB4D8;
+        text-decoration:none;font-size:var(--step--1);letter-spacing:.04em;
+        text-transform:uppercase;font-weight:600}
+  .home:hover{color:#fff}
+
+  main{padding:2.5rem 0 4rem}
+
+  /* One month per block, newest first. The month is the anchor a customer
+     scans for — "what changed since I last looked" is a question about time,
+     not about version numbers. */
+  .month{margin-bottom:2.5rem}
+  .month > h2{font-size:var(--step-2);margin-bottom:.25rem}
+  .month > .sub{color:var(--steel);font-size:var(--step--1);margin:0 0 1.25rem}
+
+  .entry{background:var(--surface);border:1px solid var(--line);
+         border-radius:var(--radius);padding:1.1rem 1.25rem;margin-bottom:.75rem}
+  .entry h3{font-size:var(--step-1);margin-bottom:.35rem}
+  .entry p{margin:0;color:#3F4756}
+  .entry p + p{margin-top:.5rem}
+
+  /* Three kinds of change, colour-coded, because a customer reads this page
+     with one of three questions: what can I do now, what stopped being
+     broken, and is anyone still working on this. */
+  .tag{display:inline-block;font:600 var(--step--1)/1 Inter,sans-serif;
+       padding:.3rem .55rem;border-radius:999px;margin-bottom:.55rem;
+       letter-spacing:.02em}
+  .tag.new{background:#E3EEFC;color:var(--accent-ink)}
+  .tag.fix{background:#E8F6F0;color:#046C4E}
+  .tag.safe{background:var(--amber-wash);color:#92400E}
+
+  .ver{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:var(--step--1);
+       color:var(--steel);float:right;margin-left:1rem}
+
+  footer{border-top:1px solid var(--line);padding:2rem 0 3rem;
+         color:var(--steel);font-size:var(--step--1)}
+  footer a{color:var(--steel)}
+
+  @media (max-width:520px){ .ver{float:none;display:block;margin:0 0 .3rem} }
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <a class="home" href="index.html">← Acopio</a>
+    <h1>What's new</h1>
+    <p>Every change that reaches your installation, newest first. Support and
+       updates are the same subscription — when something here ships, you get it.</p>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="month">
+    <h2>August 2026</h2>
+    <p class="sub">Safety under load, and the catalog tools finished properly.</p>
+
+    <div class="entry">
+      <span class="ver">v10.0 – v10.4</span>
+      <span class="tag safe">Safety</span>
+      <h3>Two people can change the same thing at once without losing one of them</h3>
+      <p>Stock is worked out from your movement history, so any change that reads
+         it, adjusts it and writes it back can collide with another one happening
+         at the same second — and the old failure was silent: both people saw
+         "saved", and the number was quietly wrong.</p>
+      <p>Saving a movement was already protected. Now editing a saved movement,
+         renaming a category, renaming or merging a material, and merging
+         projects, suppliers or locations are too. If two changes ever do meet,
+         the second one is told to try again in a moment instead of overwriting
+         the first.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v10.5</span>
+      <span class="tag new">New</span>
+      <h3>See how much room your file has left</h3>
+      <p>Settings → System now shows a bar with how much of your spreadsheet is
+         used, and roughly how many years of room is left at your current pace.
+         The estimate is measured over your last 90 days and doesn't appear until
+         you have 60 days of history — your first weeks are mostly the opening
+         inventory, and projecting from those would be wrong.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v10.1 – v10.6</span>
+      <span class="tag fix">Fixed</span>
+      <h3>Renaming a category now updates everything, straight away</h3>
+      <p>Renaming a category updates every movement that used it, both the recent
+         ones and the archived ones, and the whole app shows the new name
+         immediately instead of after a reload. The same fix reached merging
+         locations, projects and suppliers.</p>
+      <p>Renaming used to take minutes on a busy warehouse with no sign it was
+         working. It now takes seconds, and the button says what it is doing.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v10.3</span>
+      <span class="tag fix">Fixed</span>
+      <h3>Settings says which renames carry into your history</h3>
+      <p>Renaming a <em>category</em> updates your existing movements. Renaming a
+         supplier, project or location does not — those are records of what was
+         true at the time, and they're already printed on paperwork that went
+         out. Every tab now says which one it is, instead of one sentence that
+         was only true on one of them.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v9.93 – v9.95</span>
+      <span class="tag new">New</span>
+      <h3>Every backup, listed in one place</h3>
+      <p>Settings → System lists every backup that actually exists in your Drive
+         folder, read from Drive itself. Backups also now carry a copy of your
+         configuration inside them, so restoring one brings back your settings
+         and not just your data.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v9.94</span>
+      <span class="tag new">New</span>
+      <h3>Mark a delivery as arrived from the morning popup</h3>
+      <p>The "Arriving today" card now takes you straight to the right place to
+         record it. Admins only.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v9.87</span>
+      <span class="tag new">New</span>
+      <h3>A warning when a price moves</h3>
+      <p>Enter a unit cost noticeably different from what you have been paying and
+         the app says so before you save, so a typo in a purchase price doesn't
+         quietly become your average cost.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v9.78 – v9.81</span>
+      <span class="tag new">New</span>
+      <h3>Costs: what your stock is worth, per project and in waste</h3>
+      <p>Optional weighted-average costing. Enter what you paid on the way in and
+         the app tracks the average, shows the cost of what has gone out to each
+         project, and puts a dollar figure on waste. Every cost is behind its own
+         permission — the people recording movements don't have to see money.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v9.76 – v9.79</span>
+      <span class="tag new">New</span>
+      <h3>Decide what the warehouse role can do — and what to call it</h3>
+      <p>Permissions are now switches rather than a fixed wall: give the warehouse
+         role the ability to edit movements or manage the catalog if that is how
+         your shop runs. And if you call them Receivers or Yard, rename the role
+         to match.</p>
+    </div>
+  </section>
+
+  <section class="month">
+    <h2>Earlier</h2>
+    <p class="sub">The foundations, before the versions above.</p>
+
+    <div class="entry">
+      <span class="ver">v9.82</span>
+      <span class="tag new">New</span>
+      <h3>The rack drawer, rebuilt</h3>
+      <p>Tap a location on the Warehouse Map and act on what's in it — exit,
+         transfer or waste — with the material, category and source rack already
+         filled in. Tap the "available" figure to fill the quantity.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v9.73</span>
+      <span class="tag fix">Fixed</span>
+      <h3>Usable with a thumb</h3>
+      <p>A full pass over every screen at phone and tablet sizes: nothing runs off
+         the edge, nothing is too small to tap, no screen scrolls sideways. A
+         warehouse is not run from a desk.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v9.74</span>
+      <span class="tag new">New</span>
+      <h3>Low-stock alerts you actually set up</h3>
+      <p>Choose which materials matter and what the minimum is. The dashboard
+         tells you what is below it and what has hit zero.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v9.71</span>
+      <span class="tag new">New</span>
+      <h3>Backups you can run and check from inside the app</h3>
+      <p>Turn the nightly backup on, run one now, and see when the last one
+         happened — without opening the spreadsheet or the script editor.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v9.61</span>
+      <span class="tag new">New</span>
+      <h3>Paste a supplier email, get the expected deliveries</h3>
+      <p>Paste the confirmation you were sent and the app pulls out what is
+         coming, how much, and when — into the Incoming list, for you to check
+         before saving.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v9.58</span>
+      <span class="tag new">New</span>
+      <h3>A health check for the parts you can't see</h3>
+      <p>One command that inspects the half of an installation nobody looks at —
+         folders, permissions, scheduled jobs — repairs what it safely can, and
+         tells you plainly what is missing.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="wrap">
+  <p>Acopio — Warehouse Management System.
+     <a href="index.html">Home</a> ·
+     <a href="novedades.html">Español</a></p>
+  <p>Updates reach your installation as part of your support subscription.
+     Older changes than the ones listed here exist; this page starts where the
+     product became something worth handing to someone else.</p>
+</footer>
