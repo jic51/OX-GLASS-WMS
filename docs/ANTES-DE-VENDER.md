@@ -132,7 +132,25 @@ Igual que arriba: es de las primeras cosas que pregunta un jefe de bodega.
 
 ## Orden sugerido
 
-**Orden fijado por Jose (v9.97):**
+**Orden fijado por Jose (v10.9) — lo siguiente a construir, en este orden:**
+
+1. **Plantillas por industria** — la que más mueve la aguja del negocio, no del
+   producto: baja la instalación de 3 h a ~1 h, y por lo tanto multiplica
+   cuántos clientes caben antes de tener que contratar. Ver
+   `PRECIOS-Y-COMPETENCIA.md`, sección "la conclusión que vale más que el
+   precio".
+2. **Botón de correo en la alerta de stock bajo** (`BACKLOG.md` 2c) — chico, y
+   resuelve algo que un jefe de bodega hace todos los días.
+3. **Códigos de barras / QR + etiquetas** — lo que más pide un comprador con
+   experiencia, y lo que sostiene subir a $59–$69.
+4. **Conteo cíclico** — el otro que pregunta ese mismo comprador.
+
+Anotadas después de esas cuatro: grupos en Directory (`BACKLOG.md` 2d) y la
+calculadora de costo por caja/pallet (2e).
+
+---
+
+**Orden anterior, fijado por Jose (v9.97):**
 
 1. ~~Prueba de concurrencia~~ ✅ auditada · pasos 1 y 2 aplicados (v10.0/v10.4)
    — quedan dos caminos casi simbólicos y **la prueba en vivo**

@@ -45,6 +45,57 @@ here once they ship (the commit message is the record of what changed and why).
       antes de mandar. No es lo mismo y conviene decidirlo, no elegirlo por
       descuido.
 
+2d. **Grupos en Directory, como en Locations** — idea de Jose (v10.9).
+    Hoy el Directory es una lista plana de nombres y correos. Jose quiere lo
+    mismo que se hizo con las ubicaciones: **crear grupos y arrastrar los
+    contactos a cada uno** (Compras, PMs, Choferes, Proveedores…).
+
+    El para qué no es organizar la libreta — es el paso siguiente: **al
+    guardar un movimiento, elegir destinatarios POR GRUPO** en vez de tildar
+    seis nombres uno por uno. "Avísale a Compras" es una acción; "avísale a
+    Kim, Madeline, Joe, Joe, Adam y Terry" es una lista que alguien va a
+    teclear mal.
+
+    Lo bueno: la mitad ya existe. `_renderLocationsTab` tiene el arrastrar,
+    los grupos, el orden guardado y el archivar-en-vez-de-borrar, y ese
+    patrón se traslada. Lo que hay que decidir antes de construir:
+    - ¿Un contacto puede estar en varios grupos? (Yo diría **sí** — un PM
+      también es alguien a quien se le avisa de una salida.)
+    - ¿El grupo se guarda como una columna más en el Directory, igual que
+      `locationTypes` en CONFIG?
+    - Al elegir un grupo en el correo de notificación, ¿se congela la lista de
+      correos en ese momento o se resuelve el grupo cada vez? (Yo: **resolver
+      cada vez**, para que agregar a alguien a Compras lo incluya sin tocar
+      nada más.)
+
+2e. **Costo por caja / por pallet — que la app haga la cuenta** — idea de Jose
+    (v10.9). Hoy el campo dice `Unit Cost` y espera el costo de UNA unidad de
+    stock. El problema real: **el cliente casi nunca sabe ese número.** Sabe
+    lo que le facturaron — $120 la caja, $600 el pallet — y la división la
+    hace de cabeza, mal, o no la hace.
+
+    Diseño propuesto, en dos piezas separadas a propósito:
+
+    **(a) La etiqueta sigue a la unidad.** Si la unidad es Box, el campo dice
+    `Cost per Box`, no `Unit Cost`. Cero matemática nueva, y quita la
+    ambigüedad de raíz: hoy nadie sabe si "unit cost" significa la unidad de
+    stock o la unidad de compra.
+
+    **(b) Una calculadora opcional al lado.** Un enlace del tipo *"solo sé el
+    precio por caja/pallet"* que pide dos números —precio del paquete, y
+    cuántas unidades de stock trae— y **llena el campo de costo con el
+    resultado, mostrando la cuenta**. `$120 ÷ 24 = $5.00 por unidad`.
+
+    **La regla que no se negocia:** lo que se GUARDA sigue siendo el costo por
+    unidad de stock. Todo el motor de costos —promedio ponderado, costo por
+    proyecto, costo del desperdicio— depende de eso. La calculadora es una
+    calculadora, no un modelo de datos nuevo. Así el riesgo es casi cero.
+
+    Pendiente de las respuestas de Jose (ver la conversación de v10.9):
+    ¿la conversión se recuerda por material?; ¿se guarda además lo que pagó
+    por el paquete?; y ¿hay que agregar `PALLET` y `CASE` a la lista de
+    unidades, que hoy es UNIT/BOX/SET/ROLL/SHEET/LF?
+
 3. **Polish the company logo placement** in the topbar — it renders, but the
    sizing/position isn't what Jose wants yet. Jose says it is fine for now —
    waiting on him to say what he actually wants there.
