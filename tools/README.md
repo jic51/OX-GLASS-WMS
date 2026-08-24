@@ -38,6 +38,7 @@ node tools/test-space-usage.js
 node tools/test-ai-key.js
 node tools/test-brand-corner.js
 node tools/test-terms-checkbox.js
+node tools/test-entry-autofill.js
 node tools/build-fingerprint.js --check
 ```
 
@@ -323,6 +324,19 @@ come back from — is invisible to both. Those get a browser test.
   react to another cell, react to B14 on a different tab (B14 exists on every
   sheet), or throw on a malformed event and put a red error marker on the
   customer's file.
+- `test-entry-autofill.js` — picking a material that already exists out of
+  "📦 Already In Stock" on the ENTRY form. Two halves of one bug, both of
+  which looked like nothing happening rather than like an error: the pick
+  filled only the NAME, and everything that did autofill wrote into the SHARED
+  fields at the bottom of the form — which only exist while "All materials
+  share the same Supplier / GC / Project / PM…" is ticked. Untick it and each
+  line grows its own set with different ids, so the autofill was writing into
+  five boxes that were hidden at the time. The happy path worked perfectly,
+  which is why it survived. Covers both checkbox states, that it fills the
+  RIGHT line out of several, that anything already typed is never overwritten,
+  that a material with no history fills nothing rather than guessing, that the
+  GENERIC placeholder project is not offered as though it were real, and that
+  the most recent movement wins.
 - `test-config-snapshot.js` — the configuration snapshot written into every
   backup copy (`writeConfigSnapshot_`), lifted verbatim into a Node vm with
   SpreadsheetApp and PropertiesService stubbed. A backup copies the
