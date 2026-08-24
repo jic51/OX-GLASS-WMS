@@ -153,6 +153,21 @@ here once they ship (the commit message is the record of what changed and why).
     Mi recomendación: **(a)**, porque el bloqueo de (b) no tiene fecha y esto
     es consentimiento. Falta el visto bueno de Jose por la copia extra.
 
+2i. **Los Incoming SIN FECHA deben salir TODOS los días** — pedido de Jose
+    (v11.5), y subrayado: *"todos los días todos los días"*.
+
+    Hoy el aviso de la mañana muestra lo que llega **hoy**. Un pedido sin fecha
+    no llega ningún día en particular, así que **no aparece nunca** — y es
+    justamente el que más fácil se olvida, porque no hay nada en el calendario
+    que lo recuerde. El sistema ya distingue cuatro clases de fecha (exacta,
+    ventana, aproximada, desconocida) precisamente porque forzar una fecha
+    inventada es peor que no tener fecha; lo que falta es que `unknown` tenga
+    su propio lugar en la pantalla de la mañana.
+
+    Es chico y de valor diario. Regla: mientras un Incoming siga sin fecha y
+    sin recibirse, sale en el aviso de la mañana **cada día**, en su propio
+    grupo ("No date — chase these") y no mezclado con los de hoy.
+
 2g. **"Report a problem" tarda 4–5 segundos en dejar escribir** — reportado por
     Jose (v11.1). **Causa NO encontrada todavía.** Lo que sí se hizo y lo que
     se descartó, para que la próxima vuelta empiece con evidencia:

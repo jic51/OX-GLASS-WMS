@@ -2672,7 +2672,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.4';
+var APP_VERSION = '11.5';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -2684,7 +2684,7 @@ var APP_VERSION = '11.4';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '35870a4d';
+var APP_BUILD = 'c8876a9a';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -6065,9 +6065,34 @@ async function submitMovement(){
 var _matLineIdx = 0;
 
 function _matLineUnitOpts(){
+  // PALLET, CASE and BAG added in v11.5 (Jose): a shop that receives by the
+  // pallet and a bakery that receives by the sack were both being asked to
+  // pick from a list that had no word for what they actually count.
   return '<option value="UNIT">Unit</option><option value="BOX">Box</option>' +
-         '<option value="SET">Set</option><option value="ROLL">Roll</option>' +
-         '<option value="SHEET">Sheet</option><option value="LF">LF</option>';
+         '<option value="CASE">Case</option><option value="PALLET">Pallet</option>' +
+         '<option value="BAG">Bag</option><option value="SET">Set</option>' +
+         '<option value="ROLL">Roll</option><option value="SHEET">Sheet</option>' +
+         '<option value="LF">LF</option>';
+}
+
+// The cost field's label, in the unit the person is actually looking at.
+// "Unit Cost" next to a dropdown reading "Box" cannot be read correctly: it is
+// either the cost of the box or of one unit inside it, and the two differ by
+// however many fit in a box. Naming the unit removes the question.
+var _UNIT_WORDS = {
+  UNIT:'Unit', BOX:'Box', CASE:'Case', PALLET:'Pallet', BAG:'Bag',
+  SET:'Set', ROLL:'Roll', SHEET:'Sheet', LF:'Linear Foot'
+};
+function _costLabelFor(unit){
+  var w = _UNIT_WORDS[String(unit || 'UNIT').toUpperCase()];
+  return w ? ('Cost per ' + w) : 'Unit Cost';
+}
+function _syncCostLabel(n){
+  var sel = document.getElementById('mat-unit-' + n);
+  var lbl = document.getElementById('mat-cost-lbl-' + n);
+  if (!sel || !lbl) return;
+  lbl.innerHTML = _he(_costLabelFor(sel.value)) +
+    ' <span style="text-transform:none;opacity:.7">(optional)</span>';
 }
 
 function _matLineTpl(n){
@@ -6094,7 +6119,7 @@ function _matLineTpl(n){
       '</div>' +
       '<div class="field">' +
         '<label class="mat-line-lbl-sm">Unit</label>' +
-        '<select id="mat-unit-' + n + '">' + _matLineUnitOpts() + '</select>' +
+        '<select id="mat-unit-' + n + '" onchange="_syncCostLabel(' + n + ')">' + _matLineUnitOpts() + '</select>' +
       '</div>' +
       // Optional, and hidden entirely from anyone without canSeeCosts — not
       // just left blank for them, since a field they cannot use but can see
@@ -6104,7 +6129,14 @@ function _matLineTpl(n){
       // someone to type a number that the save would just ignore.
       (_canSeeCosts() ?
       '<div class="field">' +
-        '<label class="mat-line-lbl-sm">Unit Cost <span style="text-transform:none;opacity:.7">(optional)</span></label>' +
+        // The label follows the unit. "Unit Cost" beside a dropdown that says
+        // "Box" is genuinely ambiguous — is that the cost of a box, or of one
+        // unit inside it? Nobody can tell, and the answer decides whether the
+        // number is right or twelve times wrong. Saying "Cost per Box" removes
+        // the question instead of documenting it. _syncCostLabel keeps it in
+        // step when the unit is changed.
+        '<label class="mat-line-lbl-sm" id="mat-cost-lbl-' + n + '">' + _costLabelFor('UNIT') +
+          ' <span style="text-transform:none;opacity:.7">(optional)</span></label>' +
         '<input type="number" id="mat-cost-' + n + '" min="0" step="0.01" placeholder="$0.00" oninput="_checkPriceChange(' + n + ')">' +
       '</div>' : '') +
     '</div>' +

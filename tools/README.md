@@ -39,6 +39,7 @@ node tools/test-ai-key.js
 node tools/test-brand-corner.js
 node tools/test-terms-checkbox.js
 node tools/test-entry-autofill.js
+node tools/test-packs.js
 node tools/build-fingerprint.js --check
 ```
 
@@ -337,6 +338,25 @@ come back from — is invisible to both. Those get a browser test.
   that a material with no history fills nothing rather than guessing, that the
   GENERIC placeholder project is not offered as though it were real, and that
   the most recent movement wins.
+- `test-packs.js` — the packs data layer (MATERIAL_PACKS), the half of the
+  units feature that ships before any of it is visible. Runs `packMath_`,
+  `packKey_`, `roundQty_`, `readPacks_`, `saveMaterialPack` and
+  `deleteMaterialPack` in a Node vm against a fake spreadsheet. The arithmetic
+  cases are worked out BY HAND, not copied from the output — a test that
+  asserts whatever the code happens to print is not a test, and this one
+  caught my own error first (I had written 0.4083 for 45/110.23, which is
+  0.4082). Covers the floating-point trap that makes inventory drift
+  (0.1 + 0.2 stored as 0.30000000000000004 and never reconciling), a factor or
+  price of zero or a negative returning null instead of an Infinity that would
+  reach a sheet, and a material carrying several packs at once (a pallet of
+  360 tubes AND a box of 12). It also pins the refusals, which are the rows
+  that would look like they changed something while changing nothing: a pack
+  of exactly 1, a pack size that is not a number, a hand-edited sheet row with
+  a blank size — skipped rather than defaulted to 1, because a silent 1 makes
+  "12 boxes" quietly mean 12 units. Just as hard, it asserts what the
+  packs layer must NOT touch: `calculateStock`, `refreshDerivedSheets_` and
+  `addMovementsBatch_` still contain no reference to packs, so stock is still
+  replayed exactly as before and this release cannot move a number.
 - `test-config-snapshot.js` — the configuration snapshot written into every
   backup copy (`writeConfigSnapshot_`), lifted verbatim into a Node vm with
   SpreadsheetApp and PropertiesService stubbed. A backup copies the
