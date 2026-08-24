@@ -114,8 +114,7 @@ here once they ship (the commit message is the record of what changed and why).
     sacar en cualquier unidad después (riesgo alto)— y quedan cuatro
     decisiones abiertas. Todo en el documento.
 
-2f. **La esquina de la marca: logo, nombre de empresa y la insignia "Acopio"**
-    — pedido de Jose (v11.1) con captura. Tres cosas en el mismo rincón:
+2f. ~~**La esquina de la marca**~~ ✅ HECHO (v11.2). Lo pedido y lo entregado:
 
     - **La insignia "Acopio" se sale de la franja azul** y toca el borde
       blanco. Tiene que quedar **dentro**, sin rozar el filo. Si hay que

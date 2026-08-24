@@ -36,6 +36,7 @@ node tools/test-category-rename.js
 node tools/test-cfg-rename-reload.js
 node tools/test-space-usage.js
 node tools/test-ai-key.js
+node tools/test-brand-corner.js
 node tools/build-fingerprint.js --check
 ```
 
@@ -297,6 +298,18 @@ come back from — is invisible to both. Those get a browser test.
   is treated as an unconfigured setting rather than a failure — NO_AI_KEY is a
   marker the browser turns into an explanation with a button, not a red
   error.
+- `test-brand-corner.js` — the logo / company name / "Acopio" badge lockup,
+  and the test a screenshot cannot be: it MEASURES the badge's bottom edge
+  against the navy strip's bottom edge and fails on overlap, rather than on
+  looking wrong to somebody. Runs three real logo shapes (wide, square, tall)
+  because the bug was shape-dependent — the merged topbar takes the brand
+  block out of flow so the tabs centre on the page, which is right and was
+  measured, but an out-of-flow block cannot tell its container how tall it is,
+  and min-height:74px held only while the logo was a fixed 26px. Also asserts
+  no shape collapses under 18px in either axis (a tall logo at a fixed height
+  is an unreadable sliver), that --brand-h is measured rather than hardcoded,
+  and that the company name uses a different face from the rest of the app
+  without waiting on a font server to render.
 - `test-config-snapshot.js` — the configuration snapshot written into every
   backup copy (`writeConfigSnapshot_`), lifted verbatim into a Node vm with
   SpreadsheetApp and PropertiesService stubbed. A backup copies the
