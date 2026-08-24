@@ -114,6 +114,45 @@ here once they ship (the commit message is the record of what changed and why).
     sacar en cualquier unidad después (riesgo alto)— y quedan cuatro
     decisiones abiertas. Todo en el documento.
 
+2f. **La esquina de la marca: logo, nombre de empresa y la insignia "Acopio"**
+    — pedido de Jose (v11.1) con captura. Tres cosas en el mismo rincón:
+
+    - **La insignia "Acopio" se sale de la franja azul** y toca el borde
+      blanco. Tiene que quedar **dentro**, sin rozar el filo. Si hay que
+      achicarla, se achica.
+    - **El logo de la empresa está pegado a la barra del navegador.** Necesita
+      aire arriba. Hoy se ve improvisado y debería verse profesional.
+    - **El logo hay que tratarlo según su forma.** Un logo cuadrado, uno
+      horizontal y uno vertical no se pueden meter en la misma caja: el que se
+      escale por ancho aplasta a los otros dos. Hay que medir la proporción al
+      cargarlo y encajarlo con la regla que le toque.
+    - **Una tipografía distinta para el nombre de la empresa**, para que se
+      note que es el nombre del cliente y no una etiqueta más de la interfaz.
+      Nada llamativo — que se note diferente y se vea serio.
+
+2g. **"Report a problem" tarda 4–5 segundos en dejar escribir** — reportado por
+    Jose (v11.1). **Causa NO encontrada todavía.** Lo que sí se hizo y lo que
+    se descartó, para que la próxima vuelta empiece con evidencia:
+
+    - **Medido en aislamiento: 17 ms** desde el clic hasta que el textarea es
+      interactivo. La ventana en sí no carga nada, y no hace ninguna llamada
+      al servidor al abrirse. El problema no está en el código del modal.
+    - **Hipótesis probada y DESCARTADA:** que `html.modal-open{overflow:hidden}`
+      quitara la barra de scroll y forzara un reflow de la página entera con
+      sus 579 filas. Medido en una página de 600 filas: **0.4 ms**, y con
+      `scrollbar-gutter:stable` 0.3 ms. No es eso. (Vale anotarlo: iba a
+      "arreglarlo" y habría sido un cambio inútil sobre una causa inventada.)
+    - **Hecho en v11.1:** el cursor entra solo en el campo de texto al abrir.
+      Es una mejora por sí sola, y además sirve de sonda — si con eso todavía
+      hay que esperar, entonces el hilo principal está ocupado y no es un
+      problema de foco.
+
+    **Lo que falta es una medición en la instalación real de Jose**, porque el
+    entorno de producción tiene lo que la prueba no: el iframe de Apps Script,
+    3.300 movimientos y dos gráficos de Google. Receta, 30 segundos: F12 →
+    pestaña **Performance** → grabar → clic en "Report a problem" → parar. La
+    barra larga del flame chart trae el nombre de la función que bloquea.
+
 3. **Polish the company logo placement** in the topbar — it renders, but the
    sizing/position isn't what Jose wants yet. Jose says it is fine for now —
    waiting on him to say what he actually wants there.

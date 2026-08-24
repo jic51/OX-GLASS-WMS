@@ -49,7 +49,8 @@ entrar y sacar, nunca una segunda contabilidad.
 - Sale 3 cajas → salen **36 tubos**
 - Sale 5 tubos → salen **5 tubos**
 - Quedan **319 tubos**, que la app puede mostrar además como *"26 cajas y 7
-  tubos"*
+  tubos"* — y con la harina igual: *"5 sacos y 40 kg"* (decisión de Jose,
+  v11.1). Es la forma en que la gente cuenta de verdad cuando va al estante
 
 Un solo número, una sola verdad. Todo lo demás es presentación.
 
@@ -172,7 +173,55 @@ necesita para poder construirse bien.**
 3. **¿Los factores admiten decimales?** El saco de 110.23 lb dice que sí.
    Pero decimales en cantidades de inventario traen redondeos, y hay que
    decidir con cuántos dígitos se guarda.
-4. **¿Qué unidad ve el que solo mira?** El dashboard de hoy dice "5,357 units".
+4. **Las plantillas de industria traen su propia lista de unidades.** Jose
+   (v11.1): a las tres propuestas —vidriería, ferretería, repuestos— falta
+   agregar **una tienda de comestibles / panadería**, que almacena distinto:
+   sacos, bolsas, kilos, libras, cajas. Es la que obliga a que las unidades
+   sean configurables de verdad y no una lista fija nuestra.
+
+5. **¿Qué unidad ve el que solo mira?** El dashboard de hoy dice "5,357 units".
    Con unidades base distintas por material, esa suma deja de significar algo.
    Probablemente haya que quitarla o cambiarla — y eso es una decisión de
    producto, no técnica.
+
+
+---
+
+## Corregir un factor mal tecleado — decisión de Jose (v11.1)
+
+Escribí arriba que *"la historia no se reescribe"*, y Jose puso el matiz que
+faltaba: **el cliente ya puede editar movimientos, así que también tiene que
+poder corregir cuántos tubos traía esa caja si se equivocó al teclearlo.**
+
+Tiene razón, y las dos cosas conviven porque no son lo mismo:
+
+- **No reescribir la historia** = si el proveedor CAMBIA el empaque de 12 a 10
+  tubos, las filas viejas se quedan con 12, porque a 12 llegaron.
+- **Corregir un error** = si el usuario tecleó 12 donde eran 11, eso nunca fue
+  cierto y hay que poder arreglarlo.
+
+La diferencia no la puede adivinar el sistema. **La sabe la persona.** Así que
+el trabajo del sistema no es impedirlo — es asegurarse de que quien lo hace
+sepa exactamente lo que está haciendo.
+
+**Cómo se ve, según Jose:**
+
+1. En la ventana de edición, una **caja de advertencia naranja claro** que
+   explique que ese número afecta a las cantidades ya guardadas.
+2. Al cambiar el número, un **cuadro de confirmación** antes de seguir:
+
+   > **Estás cambiando las unidades por caja de SEALANT/CAULK.**
+   > Antes: **12** · Ahora: **11**
+   > ¿Es correcto?
+
+3. Confirmado, la edición sigue su curso normal.
+
+Es el mismo criterio que ya usa el resto de la app en las cosas con
+consecuencias: no se bloquea a nadie, se le pone el número viejo y el nuevo
+delante y se le pide que mire. Y como toda edición, queda en el registro de
+auditoría con quién y cuándo.
+
+**Y esto vuelve a decir por qué el factor viaja EN cada fila:** solo teniendo
+el factor guardado en el movimiento se puede mostrar el "antes: 12" de ese
+cuadro. Si el factor viviera únicamente en la ficha del material, ese número ya
+se habría perdido en el momento de cambiarlo.
