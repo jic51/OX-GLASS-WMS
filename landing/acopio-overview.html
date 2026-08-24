@@ -1,0 +1,495 @@
+<title>Acopio en Detalle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap">
+
+<style>
+  /* Tokens lifted from the app (Index_v3_fixed.html :root) via landing/index.html,
+     so this document, the shopfront and the product read as one thing to
+     anyone who sees two of them in the same week.
+
+     Amber keeps the meaning it has INSIDE the app — low stock, pay attention —
+     and is used here only on what is not built yet. The one warm colour on the
+     page carries information rather than decoration. */
+  :root {
+    --ground:#F0F2F5; --surface:#FFFFFF; --sunk:#E7EAEF;
+    --ink:#1A1A2E; --steel:#6B7280; --line:#E5E7EB;
+    --rack:#1B2A4A; --rack-2:#2C3E6B;
+    --accent:#3B7DD8; --accent-ink:#1E52A0;
+    --amber:#D97706; --amber-ink:#92400E; --amber-wash:#FEF3C7;
+    --good:#059669; --good-wash:#E8F6F0;
+    --radius:10px; --max:900px;
+    --step--1: clamp(.79rem,.77rem + .1vw,.85rem);
+    --step-0:  clamp(1rem,.97rem + .16vw,1.08rem);
+    --step-1:  clamp(1.13rem,1.05rem + .35vw,1.3rem);
+    --step-2:  clamp(1.35rem,1.18rem + .7vw,1.8rem);
+    --step-3:  clamp(1.9rem,1.5rem + 1.7vw,2.9rem);
+    --step-4:  clamp(2.4rem,1.8rem + 2.8vw,4rem);
+  }
+  /* Light-only and deliberate, matching the landing: this is a document that
+     gets sent to people, and it should look the same to all of them rather
+     than change character with the reader's laptop. Every colour is painted
+     explicitly, so the page never borrows a host background. */
+  *,*::before,*::after{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);
+       font:400 var(--step-0)/1.65 Inter,"DM Sans",system-ui,-apple-system,sans-serif;
+       -webkit-font-smoothing:antialiased}
+  h1,h2,h3,h4{font-family:Archivo,"Helvetica Neue",Arial,sans-serif;margin:0;
+              letter-spacing:-.02em;text-wrap:balance}
+  p{margin:0}
+  a{color:var(--accent-ink)}
+  strong{font-weight:600}
+
+  .wrap{max-width:var(--max);margin:0 auto;padding:0 1.4rem}
+  .prose{max-width:68ch}
+
+  /* ── Cover ───────────────────────────────────────────────────────────── */
+  header.cover{background:var(--rack);color:#fff;padding:4.5rem 0 3.75rem}
+  .eyebrow{font:600 var(--step--1)/1 "IBM Plex Mono",ui-monospace,monospace;
+           letter-spacing:.14em;text-transform:uppercase;color:#8FA8D4;
+           margin-bottom:1.1rem}
+  header.cover h1{font-size:var(--step-4);color:#fff;line-height:1.02;margin-bottom:1.1rem}
+  header.cover .lede{font-size:var(--step-1);color:#D3DCEC;max-width:54ch;line-height:1.5}
+
+  /* The four numbers that answer "what is this, commercially" before any
+     prose does. Numbered nothing — these are facts, not a sequence. */
+  .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+         gap:1px;background:rgba(255,255,255,.14);margin-top:2.75rem;
+         border:1px solid rgba(255,255,255,.14);border-radius:var(--radius);
+         overflow:hidden}
+  .facts div{background:var(--rack);padding:1.1rem 1.15rem}
+  .facts dt{font:600 var(--step--1)/1.3 Inter,sans-serif;color:#8FA8D4;
+            letter-spacing:.03em;margin-bottom:.35rem}
+  .facts dd{margin:0;font:600 var(--step-1)/1.25 Archivo,sans-serif;color:#fff;
+            font-variant-numeric:tabular-nums}
+
+  /* ── Sections ────────────────────────────────────────────────────────── */
+  main{padding:3.25rem 0 1rem}
+  section{margin-bottom:3.5rem}
+  .kicker{font:600 var(--step--1)/1 "IBM Plex Mono",ui-monospace,monospace;
+          letter-spacing:.14em;text-transform:uppercase;color:var(--accent-ink);
+          margin-bottom:.7rem}
+  section > h2{font-size:var(--step-3);margin-bottom:.9rem;line-height:1.1}
+  section > .prose > p + p{margin-top:.9rem}
+  section > .prose > p{color:#39404F}
+
+  .pull{border-left:3px solid var(--accent);padding:.15rem 0 .15rem 1.15rem;
+        margin:1.6rem 0;font-size:var(--step-1);line-height:1.5;color:var(--ink);
+        max-width:60ch}
+
+  /* ── Capability groups ───────────────────────────────────────────────── */
+  /* Organised by what a person DOES, not by module. A warehouse manager does
+     not think "movements subsystem"; he thinks "something came in". */
+  .cap{background:var(--surface);border:1px solid var(--line);
+       border-radius:var(--radius);padding:1.35rem 1.5rem;margin-bottom:1rem}
+  .cap h3{font-size:var(--step-1);margin-bottom:.2rem}
+  .cap .who{font:500 var(--step--1)/1.4 Inter,sans-serif;color:var(--steel);
+            margin-bottom:.9rem}
+  .cap ul{margin:0;padding-left:1.15rem}
+  .cap li{margin-bottom:.45rem;color:#39404F}
+  .cap li:last-child{margin-bottom:0}
+  .cap li b{color:var(--ink);font-weight:600}
+
+  /* ── Roadmap ─────────────────────────────────────────────────────────── */
+  .tier{margin-bottom:1.75rem}
+  .tier h3{font-size:var(--step-1);display:flex;align-items:baseline;gap:.6rem;
+           margin-bottom:.15rem}
+  .tier .cost{font:500 var(--step--1)/1 "IBM Plex Mono",ui-monospace,monospace;
+              color:var(--steel);letter-spacing:.02em}
+  .tier > p{color:var(--steel);font-size:var(--step--1);margin-bottom:.8rem}
+  .tier ul{margin:0;padding-left:1.15rem}
+  .tier li{margin-bottom:.5rem;color:#39404F}
+  .tier li b{color:var(--ink);font-weight:600}
+
+  .flag{display:inline-block;font:600 var(--step--1)/1 Inter,sans-serif;
+        padding:.28rem .5rem;border-radius:999px;letter-spacing:.02em;
+        vertical-align:.05em}
+  .flag.now{background:var(--good-wash);color:#046C4E}
+  .flag.next{background:#E3EEFC;color:var(--accent-ink)}
+  .flag.later{background:var(--amber-wash);color:var(--amber-ink)}
+
+  /* The honest section gets a visibly different ground. Burying limits in the
+     same card style as the features is how a deck loses an investor twice:
+     once when they find the limit, once when they realise it was hidden. */
+  .honest{background:var(--sunk);border:1px solid var(--line);
+          border-radius:var(--radius);padding:1.75rem}
+  .honest h3{font-size:var(--step-1);margin:1.25rem 0 .3rem}
+  .honest h3:first-of-type{margin-top:0}
+  .honest p{color:#39404F;max-width:66ch}
+
+  table{width:100%;border-collapse:collapse;font-size:var(--step--1);
+        background:var(--surface);border:1px solid var(--line);
+        border-radius:var(--radius);overflow:hidden}
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  th,td{text-align:left;padding:.7rem .85rem;border-bottom:1px solid var(--line);
+        vertical-align:top}
+  th{background:var(--sunk);font:600 var(--step--1)/1.3 Inter,sans-serif;
+     white-space:nowrap}
+  tr:last-child td{border-bottom:none}
+  td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+
+  footer{border-top:1px solid var(--line);margin-top:1rem;padding:2rem 0 3.5rem;
+         color:var(--steel);font-size:var(--step--1)}
+  footer p + p{margin-top:.5rem}
+
+  :where(a,button):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<header class="cover">
+  <div class="wrap">
+    <p class="eyebrow">Sistema de gestión de bodega</p>
+    <h1>Acopio</h1>
+    <p class="lede">Un almacén completo que corre dentro de la cuenta de Google
+      del propio cliente. Sus datos nunca tocan un servidor nuestro — y por eso
+      no tenemos servidores que operar.</p>
+
+    <dl class="facts">
+      <div><dt>Mercado</dt><dd>PyME con bodega</dd></div>
+      <div><dt>Precio</dt><dd>$400 + $39/mes</dd></div>
+      <div><dt>Costo de servidor</dt><dd>$0</dd></div>
+      <div><dt>Estado</dt><dd>En producción</dd></div>
+    </dl>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section>
+    <p class="kicker">El problema</p>
+    <h2>Nadie sabe qué hay, dónde está, ni quién se lo llevó</h2>
+    <div class="prose">
+      <p>Una bodega pequeña o mediana se lleva en hojas de cálculo sueltas, en un
+        cuaderno, o en la cabeza del encargado. Funciona hasta que alguien
+        pregunta cuánto queda de un material y hay tres respuestas distintas.</p>
+      <p>Lo que sigue es predecible: se compra material que ya estaba, se promete
+        a un cliente algo que no hay, y cada trimestre alguien pasa dos días
+        contando a mano para descubrir que las cifras nunca cuadraron.</p>
+      <p>Los sistemas que resuelven esto existen y son buenos. También cobran
+        <strong>por usuario</strong>, viven en el servidor del proveedor, y
+        piden una migración que la empresa de veinte personas no va a hacer.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">El modelo</p>
+    <h2>El cliente copia un archivo. Eso es toda la instalación.</h2>
+    <div class="prose">
+      <p>Acopio es una aplicación web completa que vive dentro de una hoja de
+        Google. El cliente hace <em>"Hacer una copia"</em>, corre un asistente de
+        cinco minutos, y tiene su sistema funcionando en su propio Google Drive,
+        bajo su propia cuenta.</p>
+      <p>Esa decisión de arquitectura es también el argumento de venta, y hay
+        tres consecuencias que valen más que cualquier función:</p>
+    </div>
+
+    <div class="pull">
+      <strong>No hay servidores.</strong> Ningún costo de infraestructura por
+      cliente, nada que escalar, nada que se caiga a las 3 de la mañana. El
+      margen de un cliente adicional es prácticamente el precio completo.
+    </div>
+    <div class="pull">
+      <strong>No hay brecha de datos posible.</strong> No tenemos los datos de
+      nadie. Una orden judicial contra nosotros no produce nada del negocio del
+      cliente, porque no está en nuestras manos.
+    </div>
+    <div class="pull">
+      <strong>El cliente es dueño de su sistema.</strong> Si deja de pagarnos,
+      su archivo sigue siendo suyo y sigue abriendo. Eso quita la objeción más
+      común de una PyME: <em>"¿y si estos desaparecen?"</em>
+    </div>
+
+    <div class="prose">
+      <p>Además, el cliente ya tiene Google. No hay cuenta nueva, no hay
+        contraseña nueva, no hay app que instalar. Entra con el mismo correo con
+        el que ya trabaja.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Qué puede hacer el usuario</p>
+    <h2>Lo que la aplicación hace hoy, en producción</h2>
+    <div class="prose" style="margin-bottom:1.5rem">
+      <p>Todo lo de abajo está construido y en uso real. Agrupado por lo que una
+        persona hace en un día, no por cómo está organizado el código.</p>
+    </div>
+
+    <div class="cap">
+      <h3>Registrar lo que entra, sale y se mueve</h3>
+      <p class="who">Lo hace el personal de bodega, casi siempre desde el teléfono</p>
+      <ul>
+        <li><b>Cinco tipos de movimiento:</b> entrada, salida, traslado entre
+          ubicaciones, devolución y merma. Cada uno pide lo que necesita y nada
+          más.</li>
+        <li><b>Varios materiales en un solo registro.</b> Una entrega con doce
+          renglones se captura una vez, no doce.</li>
+        <li><b>Fotos y documentos adjuntos.</b> Se sube la foto de la placa
+          dañada o el PDF de la factura y queda pegado a ese movimiento para
+          siempre, guardado en el Drive del cliente.</li>
+        <li><b>Cada movimiento lleva su contexto:</b> orden de compra, contrato,
+          proyecto, proveedor, quién lo recibió, ubicación de origen y destino,
+          comentarios.</li>
+        <li><b>Editar o borrar un movimiento guardado</b> — con permiso, y cada
+          cambio queda en el registro de auditoría con quién y cuándo.</li>
+      </ul>
+    </div>
+
+    <div class="cap">
+      <h3>Saber en cualquier momento qué hay y dónde está</h3>
+      <p class="who">Lo mira el jefe de bodega, el dueño y quien cotiza</p>
+      <ul>
+        <li><b>Tablero con el estado del inventario:</b> cuántos materiales
+          distintos, cuántas unidades en bodega, cuánto salió a obra, cuántos
+          proyectos activos, cuánto hay en cero y cuánto se ha desperdiciado.</li>
+        <li><b>Tabla de inventario vivo</b> con búsqueda, filtros por categoría y
+          estado, y <b>columnas que cada empresa renombra u oculta</b> — porque
+          lo que aquí es "rack" en otra bodega es "estante".</li>
+        <li><b>Mapa de bodega:</b> las ubicaciones dibujadas como están en la
+          vida real, agrupadas por zona, mostrando cuánto hay en cada una.</li>
+        <li><b>Cajón de rack:</b> tocas una ubicación en el mapa y actúas sobre
+          lo que hay dentro —sacar, trasladar, dar de baja— con el material y el
+          origen ya llenos. Tocas la cifra disponible y llena la cantidad.</li>
+        <li><b>Historial completo</b> de cada movimiento, filtrable y exportable
+          a CSV.</li>
+      </ul>
+    </div>
+
+    <div class="cap">
+      <h3>No quedarse sin material sin darse cuenta</h3>
+      <p class="who">Es la función que más rápido paga el sistema</p>
+      <ul>
+        <li><b>Mínimos por material.</b> Se elige qué materiales importan y
+          cuánto es "poco" para cada uno.</li>
+        <li><b>Alertas en el tablero:</b> qué está por debajo del mínimo y qué
+          llegó a cero, visible al abrir.</li>
+        <li><b>Entregas esperadas.</b> Se registra lo que viene antes de que
+          llegue, y el sistema distingue entre una fecha exacta, una ventana de
+          días, un aproximado y "no se sabe" — porque forzar una fecha inventada
+          es peor que no tener fecha.</li>
+        <li><b>Pegar el correo del proveedor</b> y que el sistema extraiga qué
+          viene, cuánto y cuándo, para revisarlo antes de guardar.</li>
+        <li><b>Aviso de la mañana</b> con lo que llega hoy, y un atajo para
+          marcarlo como recibido en el lugar exacto.</li>
+        <li><b>Reservas:</b> apartar material para un proyecto sin sacarlo
+          todavía de bodega.</li>
+      </ul>
+    </div>
+
+    <div class="cap">
+      <h3>Saber cuánto cuesta todo esto</h3>
+      <p class="who">Opcional, y detrás de su propio permiso</p>
+      <ul>
+        <li><b>Costo promedio ponderado.</b> Se escribe lo que se pagó al entrar
+          y el sistema lleva el promedio solo. Es el método que usa la
+          contabilidad seria, calculado en el servidor y no en el navegador.</li>
+        <li><b>Costo por proyecto:</b> cuánto dinero en material se llevó cada
+          obra.</li>
+        <li><b>Desperdicio en dólares</b>, no en unidades — que es el número que
+          hace que un dueño cambie un proceso.</li>
+        <li><b>Alerta de cambio de precio:</b> si se escribe un costo muy
+          distinto del habitual, el sistema avisa antes de guardar, para que un
+          error de tecleo no se vuelva el costo promedio.</li>
+        <li><b>Los costos son un permiso aparte.</b> Quien registra movimientos
+          no tiene por qué ver dinero.</li>
+      </ul>
+    </div>
+
+    <div class="cap">
+      <h3>Mantener el catálogo limpio con el tiempo</h3>
+      <p class="who">Trabajo de administrador, cada pocos meses</p>
+      <ul>
+        <li><b>Categorías, proyectos, proveedores y ubicaciones</b> —
+          agregar, renombrar, borrar.</li>
+        <li><b>Fusionar duplicados.</b> "CLIFTON BUILDING" y "CLIFTONBLDG" son
+          el mismo trabajo; se fusionan y el historial queda coherente.</li>
+        <li><b>Materiales:</b> renombrar, fusionar dos que eran el mismo, mover
+          uno de categoría, borrar una fila equivocada.</li>
+        <li><b>Ubicaciones organizadas</b> en grupos, ordenadas arrastrando, y
+          archivadas en vez de borradas — porque cada movimiento pasado nombra
+          una ubicación y borrarla dejaría el historial apuntando a nada.</li>
+        <li><b>Importar desde CSV</b> el inventario que la empresa ya tenía.</li>
+        <li><b>Una regla que el sistema respeta:</b> renombrar una
+          <em>categoría</em> corrige todos los movimientos, porque es una
+          clasificación. Renombrar un <em>proveedor, proyecto o ubicación</em> no
+          — esos son el registro de lo que era cierto ese día, y ya están
+          impresos en papeles que salieron.</li>
+      </ul>
+    </div>
+
+    <div class="cap">
+      <h3>Decidir quién puede hacer qué</h3>
+      <p class="who">Lo configura el dueño una vez</p>
+      <ul>
+        <li><b>Tres roles:</b> administrador, bodega y consulta.</li>
+        <li><b>Permisos como interruptores, no como muro fijo:</b> se le puede
+          dar al rol de bodega la capacidad de editar movimientos o administrar
+          el catálogo si así funciona esa empresa.</li>
+        <li><b>El rol de bodega se renombra</b> — si en esa empresa se llaman
+          "Recepción" o "Patio", eso es lo que dice la pantalla.</li>
+        <li><b>Entra gente de fuera del dominio</b> de la empresa cuando hace
+          falta, con su cuenta de Google.</li>
+        <li><b>Registro de auditoría</b> de todo lo que cambia: quién, qué,
+          cuándo.</li>
+      </ul>
+    </div>
+
+    <div class="cap">
+      <h3>Que el sistema se cuide solo</h3>
+      <p class="who">Invisible cuando funciona, y ese es el punto</p>
+      <ul>
+        <li><b>Respaldo automático cada noche</b> al Drive del cliente, más uno a
+          demanda. Todos los respaldos existentes se listan dentro de la app,
+          leídos de Drive.</li>
+        <li><b>Cada respaldo lleva dentro la configuración del sistema</b>, no
+          solo los datos — porque restaurar y descubrir que los adjuntos ya no
+          abren es peor que no tener respaldo.</li>
+        <li><b>Archivado automático</b> de movimientos viejos a una pestaña
+          aparte, para que el sistema no se ponga lento con los años.</li>
+        <li><b>Indicador de espacio:</b> cuánto lleva usado el archivo y
+          aproximadamente cuántos años le quedan al ritmo actual.</li>
+        <li><b>Chequeo de salud</b> que revisa la mitad invisible de la
+          instalación, repara lo que puede sin riesgo, y dice claro qué falta.</li>
+        <li><b>Protección contra cambios simultáneos:</b> si dos personas tocan
+          lo mismo en el mismo segundo, al segundo se le pide reintentar en vez
+          de pisar al primero en silencio.</li>
+        <li><b>Registro de errores</b> visible para el administrador.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Lo que todavía no hace</p>
+    <h2>Los huecos, dichos antes de que los encuentres</h2>
+    <div class="honest">
+      <h3>Códigos de barras y etiquetas</h3>
+      <p>No existen todavía. Es de las primeras cosas que pregunta un jefe de
+        bodega con experiencia, y está en el plan como pieza grande.</p>
+
+      <h3>Conteo cíclico</h3>
+      <p>El proceso de contar físicamente una parte del inventario cada semana y
+        cuadrarlo contra el sistema. Diseñado, sin construir. Todo sistema de
+        inventario serio lo tiene.</p>
+
+      <h3>No funciona sin internet</h3>
+      <p>Verificado, no supuesto: la plataforma de Google no permite servir esta
+        aplicación fuera de línea. Una bodega con señal mala en el fondo va a
+        notarlo. No lo prometemos.</p>
+
+      <h3>Cada instalación se hace a mano</h3>
+      <p>Unos cinco minutos de configuración por cliente, más el registro de
+        acceso externo cuando hace falta. Es tolerable con diez clientes y
+        molesto con cincuenta. Hay alternativas evaluadas; no está resuelto.</p>
+
+      <h3>Hay un techo de tamaño</h3>
+      <p>Una hoja de Google admite diez millones de celdas. Para una bodega
+        normal son entre diez y veinte años; para una operación de quinientos
+        movimientos diarios son unos dos. La solución —cerrar el período y pasar
+        el histórico a un archivo aparte, dejando el saldo de apertura— está
+        diseñada y no construida, y la app ya avisa con años de anticipación.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Lo planeado</p>
+    <h2>Qué sigue, y qué cuesta cada cosa</h2>
+
+    <div class="tier">
+      <h3><span class="flag now">Semanas</span> Pulido y utilidades</h3>
+      <p>Trabajo pequeño y cierto. Nada de esto cambia la propuesta de valor;
+        todo mejora la primera impresión.</p>
+      <ul>
+        <li><b>Botón de correo en la alerta de stock bajo</b> — abre el correo
+          con la lista de lo que falta ya redactada, para que el encargado la
+          revise y la mande a compras.</li>
+        <li><b>Iconos profesionales</b> en vez de emojis, y un icono propio para
+          cuando se agrega la app a la pantalla del teléfono.</li>
+        <li><b>Columna de costo en la exportación</b> y edición del costo de un
+          movimiento ya guardado.</li>
+        <li><b>Menú compacto</b> en pantallas de teléfono.</li>
+      </ul>
+    </div>
+
+    <div class="tier">
+      <h3><span class="flag next">Meses</span> Producto</h3>
+      <p>Funciones que un comprador nota y que sostienen una subida de precio.</p>
+      <ul>
+        <li><b>Códigos de barras y QR, con impresión de etiquetas.</b> La pieza
+          que más se pide. Convierte el registro de un movimiento en escanear en
+          vez de escribir, y elimina la fuente principal de error.</li>
+        <li><b>Conteo cíclico:</b> el sistema propone qué contar, la persona
+          cuenta, y el ajuste queda registrado con su motivo.</li>
+        <li><b>Sincronización entre ventanas abiertas</b> — que dos personas
+          mirando el mismo tablero vean lo mismo sin recargar.</li>
+        <li><b>Visor de documentos dentro de la app</b>, en vez de abrir Drive
+          en otra pestaña.</li>
+        <li><b>Plantillas por industria</b> — que un taller de vidrio, una
+          ferretería y un almacén de repuestos arranquen con su propio catálogo
+          en vez de una hoja en blanco. Es lo que acorta la instalación de una
+          hora a diez minutos, y por eso importa para crecer.</li>
+      </ul>
+    </div>
+
+    <div class="tier">
+      <h3><span class="flag later">Cuando lo pida un cliente</span> Expansión</h3>
+      <p>Cada uno abre un mercado que hoy no podemos atender.</p>
+      <ul>
+        <li><b>Caducidad por lote (FEFO).</b> Prerrequisito absoluto de
+          cualquier cliente de alimentos, farmacia o químicos. Sin esto, esos
+          sectores no son conversables.</li>
+        <li><b>Cierre de período con archivo histórico aparte.</b> Levanta el
+          techo de tamaño y de paso hace el sistema más rápido para siempre,
+          porque el stock deja de recalcularse desde el principio de los
+          tiempos.</li>
+        <li><b>Sugerencias de calidad de datos</b> — que el sistema detecte solo
+          los duplicados y las cifras raras en vez de esperar a que alguien las
+          note.</li>
+        <li><b>Multi-bodega:</b> operaciones separadas bajo una misma empresa.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">La economía</p>
+    <h2>Por qué el número funciona</h2>
+    <div class="prose" style="margin-bottom:1.4rem">
+      <p>El precio se fijó comparando contra lo que el mercado cobra hoy. La
+        diferencia estructural es que ellos cobran por usuario y nosotros no —
+        y una bodega tiene más de dos personas.</p>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>Producto</th><th>Precio</th><th>Modelo</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Sortly Advanced</td><td class="num">$29–$49/mes</td><td>Plano</td></tr>
+          <tr><td>Sortly Ultra</td><td class="num">$89/mes</td><td>Plano</td></tr>
+          <tr><td>Zoho Inventory</td><td class="num">$29–$99/mes</td><td>Plano</td></tr>
+          <tr><td>inFlow</td><td class="num">~$110/mes</td><td><b>Por usuario</b> (2 usuarios)</td></tr>
+          <tr><td>Rango típico PyME</td><td class="num">$50–$300/mes</td><td>Varios</td></tr>
+          <tr style="background:var(--good-wash)">
+            <td><b>Acopio</b></td><td class="num"><b>$400 + $39/mes</b></td>
+            <td><b>Plano, usuarios ilimitados</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="prose" style="margin-top:1.4rem">
+      <p>La instalación de $400 cubre trabajo real —configurar, capacitar,
+        registrar accesos— y es lo que la industria ya cobra por onboarding. Los
+        $39 mensuales compran soporte y todas las actualizaciones.</p>
+      <p><strong>El costo marginal de un cliente adicional es esencialmente
+        cero:</strong> corre en la infraestructura de Google pagada por el
+        propio cliente. Lo que no escala automáticamente es la instalación
+        manual y el soporte — y esos son exactamente los dos puntos que el plan
+        de producto está atacando.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="wrap">
+  <p>Acopio — Sistema de Gestión de Bodega. Construido por Jose Castro.</p>
+  <p>Este documento describe funciones construidas y en producción, y separa
+    explícitamente lo planeado de lo existente. No contiene proyecciones de
+    ingresos ni clientes de ejemplo.</p>
+</footer>
