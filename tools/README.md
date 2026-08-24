@@ -37,6 +37,7 @@ node tools/test-cfg-rename-reload.js
 node tools/test-space-usage.js
 node tools/test-ai-key.js
 node tools/test-brand-corner.js
+node tools/test-terms-checkbox.js
 node tools/build-fingerprint.js --check
 ```
 
@@ -310,6 +311,18 @@ come back from — is invisible to both. Those get a browser test.
   is an unreadable sliver), that --brand-h is measured rather than hardcoded,
   and that the company name uses a different face from the rest of the app
   without waiting on a font server to render.
+- `test-terms-checkbox.js` — the consent checkbox on the "👉 START HERE"
+  sheet, run in a Node vm against a fake sheet that remembers what was
+  CLEARED rather than merely overwritten. It exists because Jose found the one
+  surface whose only job is recording agreement recording the opposite:
+  un-ticking the box left "Accepted 8/24/2026, 2:30:03 PM" and the next-step
+  line sitting there, a page claiming a consent that had just been visibly
+  withdrawn. onEdit returned early on anything that was not TRUE, so the
+  un-tick was never handled — easy to write and easy to miss, because the
+  happy path looks perfect. Also covers what a SIMPLE trigger must never do:
+  react to another cell, react to B14 on a different tab (B14 exists on every
+  sheet), or throw on a malformed event and put a red error marker on the
+  customer's file.
 - `test-config-snapshot.js` — the configuration snapshot written into every
   backup copy (`writeConfigSnapshot_`), lifted verbatim into a Node vm with
   SpreadsheetApp and PropertiesService stubbed. A backup copies the

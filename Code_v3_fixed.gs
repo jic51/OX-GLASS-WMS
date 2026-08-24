@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '11.2';
+var APP_VERSION = '11.3';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -45,7 +45,7 @@ var APP_VERSION = '11.2';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'a4d2df73';
+var APP_BUILD = '7b4c28f4';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -5566,7 +5566,22 @@ function onEdit(e) {
     var sh = e.range.getSheet();
     if (sh.getName() !== START_HERE_SHEET) return;
     if (e.range.getA1Notation() !== TERMS_CHECKBOX_CELL) return;
-    if (e.range.getValue() !== true) return;
+
+    // Un-ticking has to undo what ticking wrote. It used to only handle the
+    // TRUE case, so clearing the box left "Accepted 8/24/2026, 2:30:03 PM" and
+    // the next-step line sitting there — a sheet claiming someone accepted
+    // terms they had just visibly declined. On a page whose entire job is
+    // recording consent, that is the one thing it must not get wrong.
+    if (e.range.getValue() !== true) {
+      sh.getRange(TERMS_STAMP_CELL).clearContent();
+      // Back to the grey prompt rather than an empty panel — the line explains
+      // what the box is for, and someone who unticked it is exactly the person
+      // who needs that sentence again.
+      sh.getRange(TERMS_NEXT_CELL)
+        .setValue(TERMS_PROMPT)
+        .setFontWeight('normal').setFontColor(SH_MUTED);
+      return;
+    }
 
     sh.getRange(TERMS_STAMP_CELL).setValue('Accepted ' + new Date().toLocaleString());
     sh.getRange(TERMS_NEXT_CELL)
@@ -5591,6 +5606,10 @@ var TERMS_CHECKBOX_CELL = 'B14';
 var TERMS_LABEL_CELL    = 'C14';
 var TERMS_STAMP_CELL    = 'C15';
 var TERMS_NEXT_CELL     = 'C16';
+// One constant for the grey prompt, because it is written in two places now —
+// when the panel is first drawn, and again when somebody unticks the box. Two
+// copies of the same sentence is how they drift apart.
+var TERMS_PROMPT = 'Tick the box above to continue.';
 
 // Google's own colours are the only ones a spreadsheet can be styled with, so
 // this borrows the app's palette rather than inventing a second one.
@@ -5675,7 +5694,7 @@ function createStartHereSheet_(ss) {
   // as a grey prompt so somebody who never ticks the box still sees what the
   // box is for.
   sh.setRowHeight(16, 32);
-  put(TERMS_NEXT_CELL, 'Tick the box above to continue.',
+  put(TERMS_NEXT_CELL, TERMS_PROMPT,
       { size: 11, color: SH_MUTED, bg: '#EFF4FB', wrap: true });
   sh.setRowHeight(17, 8);
 

@@ -129,6 +129,30 @@ here once they ship (the commit message is the record of what changed and why).
       note que es el nombre del cliente y no una etiqueta más de la interfaz.
       Nada llamativo — que se note diferente y se vea serio.
 
+2h. **Enlaces a los Términos y a la Privacidad en la hoja de bienvenida** —
+    pedido de Jose (v11.3). Hoy la casilla dice *"I accept the Terms of Service
+    and Privacy Policy"* y **no hay forma de leerlos antes de aceptar**. Pedir
+    consentimiento sobre un texto que no se puede abrir no es aceptable en la
+    única pantalla del producto cuyo trabajo es registrar un acuerdo.
+
+    **El problema no es poner el hipervínculo, es a dónde apunta.** Antes de la
+    instalación el cliente no tiene la app desplegada, así que el enlace a
+    Settings → Legal no le sirve. Y acopio.com todavía no existe: **inventar
+    una URL ya me costó una vez y no se repite**. Dos opciones reales:
+
+    - **(a) El texto viaja en el archivo.** Una pestaña más en la plantilla
+      (`📄 TERMS & PRIVACY`) con los dos documentos, y los dos nombres de C14
+      enlazados a ella con un `#gid`. **Es la única que es cierta antes de que
+      exista el dominio**, funciona sin conexión a nada nuestro, y encaja con
+      la promesa del producto: todo vive en su archivo. El costo: una TERCERA
+      copia del texto legal, que habría que sumar a `tools/test-legal-sync.js`
+      para que no derive de las otras dos.
+    - **(b) Esperar a acopio.com** y enlazar a las páginas públicas. Más
+      limpio, sin copias, y **bloqueado** hasta que exista el dominio.
+
+    Mi recomendación: **(a)**, porque el bloqueo de (b) no tiene fecha y esto
+    es consentimiento. Falta el visto bueno de Jose por la copia extra.
+
 2g. **"Report a problem" tarda 4–5 segundos en dejar escribir** — reportado por
     Jose (v11.1). **Causa NO encontrada todavía.** Lo que sí se hizo y lo que
     se descartó, para que la próxima vuelta empiece con evidencia:
