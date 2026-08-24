@@ -208,3 +208,24 @@ equivocado para un recurso que cada carga de cada cliente va a pedir. La
 solución de verdad es un `.png` en acopio.com, y acopio.com ya está en la lista
 de bloqueantes por otras tres razones. El código está listo y probado: el día
 que exista el dominio, es **una línea**.
+
+
+---
+
+## ✅ FUNCIONA — confirmado en producción (v10.9)
+
+Jose desplegó v10.9 y **el logo de Acopio aparece en la pestaña**. Con eso se
+cierra la pregunta que quedó abierta tres versiones:
+
+**`setFaviconUrl` SÍ se honra en una web app desplegada en `/exec`.** Todo lo
+que parecía "quizá Google no lo soporta" era la extensión que faltaba en la
+URL, y nada más. La sospecha estaba mal orientada; el comentario #22 del hilo
+del Issue Tracker tenía la respuesta desde 2017.
+
+**v11.0** cambia al logo de fondo transparente. Es lo correcto para un icono de
+pestaña: se apoya limpio tanto sobre la barra clara como sobre la oscura,
+mientras que un cuadro blanco enseña sus bordes en una de las dos.
+
+Sigue en pie que el destino final es `acopio.com/favicon.png` — un archivo
+normal en una URL normal no necesita nada de esto, y Drive es mal anfitrión
+para algo que cada cliente pide en cada carga.

@@ -91,10 +91,39 @@ here once they ship (the commit message is the record of what changed and why).
     proyecto, costo del desperdicio— depende de eso. La calculadora es una
     calculadora, no un modelo de datos nuevo. Así el riesgo es casi cero.
 
-    Pendiente de las respuestas de Jose (ver la conversación de v10.9):
-    ¿la conversión se recuerda por material?; ¿se guarda además lo que pagó
-    por el paquete?; y ¿hay que agregar `PALLET` y `CASE` a la lista de
-    unidades, que hoy es UNIT/BOX/SET/ROLL/SHEET/LF?
+    **Decidido por Jose (v11.0): NADA se recuerda ni se supone. Se le pregunta
+    al cliente cada vez.**
+
+    > *"No podemos dar por sentado algo que no depende de nosotros, se le
+    > pregunta al cliente, eso debe darlo el cliente/usuario."*
+
+    Yo había propuesto recordar la conversión por material —"GE SILPRUF
+    siempre viene 24 por caja"— y tenía razón en descartarlo. Ese número no es
+    nuestro: el proveedor cambia el empaque, un lote llega distinto, y la app
+    estaría afirmando con confianza algo que nadie verificó. Un dato inventado
+    con cara de dato bueno es peor que preguntar dos números.
+
+    Y el mismo principio cierra las otras dos preguntas que quedaban abiertas,
+    sin necesidad de otra ronda:
+
+    - **¿Guardar además lo que pagó por el paquete?** No. Sería una columna
+      nueva que nadie pidió, para conservar un dato del que la app no puede
+      responder. Se guarda el costo por unidad de stock, que es lo que el
+      motor de costos usa.
+    - **¿Agregar `PALLET` y `CASE` a las unidades de stock?** No hace falta, y
+      esa es la elegancia de la calculadora: el "paquete" es solo un número
+      que el usuario teclea, no una unidad que nosotros tengamos que prever.
+      Quien compra por pallet escribe cuántas unidades trae y ya. Agregar
+      PALLET a la lista de unidades de stock es una pregunta aparte, del día
+      que alguien de verdad quiera contar su inventario en pallets.
+
+    **Queda entonces así de simple:** dos campos, una división, el resultado a
+    la vista, y nada memorizado entre movimientos.
+
+    **Un riesgo anotado, fuera de alcance para la primera versión:** ¿qué pasa
+    si alguien cambia la unidad de un material que YA tiene stock y costo
+    promedio —de Unit a Box, con 500 unidades a $5? Hoy ese caso no existe y
+    sería la parte peligrosa. No tocarlo aquí.
 
 3. **Polish the company logo placement** in the topbar — it renders, but the
    sizing/position isn't what Jose wants yet. Jose says it is fine for now —
