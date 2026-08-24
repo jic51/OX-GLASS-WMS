@@ -2643,7 +2643,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '10.7';
+var APP_VERSION = '10.8';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -7406,6 +7406,12 @@ function _renderSystemTab() {
       '</label>' +
       '<div id="spaceBox" style="color:var(--muted);font-size:.78rem"><span class="spin-hg">⏳</span> Measuring…</div>' +
     '</div>' +
+    '<div class="field" style="margin-bottom:1.25rem">' +
+      '<label style="display:flex;align-items:center;gap:.4rem">Document reader (AI) ' +
+        _infoIc('Reads a pasted supplier email and pulls out what is arriving, how much and when. It runs on your own Google AI key — Google bills the usage to you, not to us.') +
+      '</label>' +
+      '<div id="aiBox" style="color:var(--muted);font-size:.78rem"><span class="spin-hg">⏳</span> Checking…</div>' +
+    '</div>' +
     '<div class="field">' +
       '<label style="display:flex;align-items:center;gap:.4rem">Stock totals ' +
         _infoIc('Recalculates every stock total from the current movement history. Use this if a deleted or edited movement left stale numbers behind.') +
@@ -7417,6 +7423,112 @@ function _renderSystemTab() {
 
   _loadBackupStatus();
   _loadSpaceUsage();
+  _loadAiStatus();
+}
+
+// ── The AI key, set from inside the app ─────────────────────────────────────
+// Until now the only way to switch the document reader on was to open the Apps
+// Script editor and add a Script Property with the exact right name. That is a
+// developer's instruction printed inside a warehouse app, and it is why the
+// feature was off everywhere it shipped.
+//
+// The key itself never comes back from the server — only whether one exists
+// and its last four characters, which is enough to recognise which key you
+// pasted and useless to anybody else.
+function _loadAiStatus(){
+  var box = document.getElementById('aiBox');
+  if (!box) return;
+  google.script.run
+    .withSuccessHandler(function(st){ _drawAiBox(st || {}); })
+    .withFailureHandler(function(e){
+      var b = document.getElementById('aiBox');
+      if (b) b.innerHTML = '<span style="color:var(--red)">Could not read the AI setting: ' + _he(e.message||e) + '</span>';
+    })
+    .processMovement('getAiStatus', _h({}));
+}
+
+function _drawAiBox(st){
+  var box = document.getElementById('aiBox');
+  if (!box) return;
+  box.innerHTML = st.configured
+    ? '<div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">' +
+        '<span style="color:var(--green);font-weight:700">● On</span>' +
+        '<span>Key ending ' + _he(st.hint) + ' · model ' + _he(st.model || '') + '</span>' +
+        '<button class="btn btn-ghost btn-sm" onclick="_aiShowForm()">Replace key</button>' +
+        '<button class="btn btn-ghost btn-sm" onclick="_aiRemoveKey()">Remove</button>' +
+      '</div>'
+    : '<div>' +
+        '<div style="margin-bottom:.5rem">Off. Add a Google AI key to turn on reading supplier emails.</div>' +
+        '<button class="btn btn-primary btn-sm" onclick="_aiShowForm()">Add key</button>' +
+      '</div>';
+}
+
+function _aiShowForm(){
+  var box = document.getElementById('aiBox');
+  if (!box) return;
+  box.innerHTML =
+    '<div style="display:flex;flex-direction:column;gap:.5rem;max-width:520px">' +
+      '<div>Get a free key at <b>aistudio.google.com</b> → "Get API key". ' +
+         'It stays on this system and Google bills any usage to you, not to us.</div>' +
+      // type=password so a key does not sit readable on a screen in a warehouse
+      // where anyone walking past can see it.
+      '<input type="password" id="aiKeyInp" placeholder="Paste the key here" autocomplete="off" ' +
+        'style="padding:.45rem .6rem;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text)">' +
+      '<div style="display:flex;gap:.5rem;flex-wrap:wrap">' +
+        '<button class="btn btn-primary btn-sm" id="aiSaveBtn" onclick="_aiSaveKey()">Check and save</button>' +
+        '<button class="btn btn-ghost btn-sm" onclick="_loadAiStatus()">Cancel</button>' +
+      '</div>' +
+      '<div id="aiMsg" style="color:var(--muted)"></div>' +
+    '</div>';
+  var inp = document.getElementById('aiKeyInp');
+  if (inp) inp.focus();
+}
+
+function _aiSaveKey(){
+  var inp = document.getElementById('aiKeyInp');
+  var msg = document.getElementById('aiMsg');
+  var btn = document.getElementById('aiSaveBtn');
+  var key = inp ? inp.value.trim() : '';
+  if (!key) { if (inp) inp.focus(); return; }
+  // The server spends one real call on the key before saving it, so this wait
+  // is a second or two and worth saying out loud — a wrong key that saves
+  // silently fails days later in front of somebody trying to read an email.
+  if (msg) { msg.style.color = 'var(--muted)'; msg.textContent = 'Checking the key with Google…'; }
+  _btnBusy(btn, 'Checking…');
+  google.script.run
+    .withSuccessHandler(function(){
+      if (inp) inp.value = '';
+      showToast('Document reader is on.', 'ok');
+      _loadAiStatus();
+    })
+    .withFailureHandler(function(e){
+      _btnDone(btn, false);   // false = no tick, just give the button back
+      if (msg) { msg.style.color = 'var(--red)'; msg.textContent = (e && e.message) || String(e); }
+    })
+    .processMovement('setAiKey', _h({ key: key }));
+}
+
+// From the "Read an email" screen straight to the setting that turns it on,
+// landing on the System tab rather than dropping the person at the front door
+// of Settings to go hunting.
+function _aiSetupFromEmail(){
+  closeModal('emailImportOverlay');
+  _settingsTab = 'system';
+  openSettingsModal();
+}
+
+function _aiRemoveKey(){
+  _showConfirm({
+    icon:'🔑', danger:true, title:'Remove the AI key?',
+    message:'Reading supplier emails will stop working until a key is added again. Nothing else is affected.',
+    confirmText:'Remove',
+    onConfirm: function(){
+      google.script.run
+        .withSuccessHandler(function(){ showToast('Key removed.', 'ok'); _loadAiStatus(); })
+        .withFailureHandler(function(e){ showToast('Could not remove it: ' + (e.message||e), 'err', 6000); })
+        .processMovement('setAiKey', _h({ remove: true }));
+    }
+  });
 }
 
 // ── How full the spreadsheet is ──────────────────────────────────────────────
@@ -11876,7 +11988,29 @@ function runEmailImport(){
     })
     .withFailureHandler(function(err){
       btn.disabled = false; btn.textContent = 'Read it';
-      status.textContent = (err && err.message ? err.message : String(err)).replace(/^Error:\s*/i, '');
+      var msg = (err && err.message ? err.message : String(err)).replace(/^Error:\s*/i, '');
+      // A feature that was never switched on is not a broken feature, and it
+      // should not look like one. The server sends NO_AI_KEY as a marker; this
+      // turns it into an explanation and a way forward, in the tone of an
+      // unconfigured setting rather than a failure. An admin gets the button;
+      // anybody else gets told who to ask, because sending a warehouse hand to
+      // a settings screen they cannot open is its own dead end.
+      if (msg === 'NO_AI_KEY') {
+        var admin = (userRole === 'ADMIN');
+        status.innerHTML =
+          '<div style="line-height:1.5">' +
+            '<b>Reading emails is not switched on yet.</b><br>' +
+            'It needs a free Google AI key, added once. The key stays on this ' +
+            'system and Google bills any usage to you, not to us.' +
+            (admin
+              ? '<br><button class="btn btn-primary btn-sm" style="margin-top:.55rem" ' +
+                'onclick="_aiSetupFromEmail()">Set it up</button>'
+              : '<br><span style="color:var(--muted)">Ask an admin to turn it on in Settings → System.</span>') +
+            '<div style="color:var(--muted);margin-top:.5rem">You can still add what is arriving by hand.</div>' +
+          '</div>';
+        return;
+      }
+      status.textContent = msg;
     })
     .processMovement('parseIncomingEmail', _h({ text: text }));
 }

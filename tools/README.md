@@ -35,6 +35,7 @@ node tools/test-concurrency.js
 node tools/test-category-rename.js
 node tools/test-cfg-rename-reload.js
 node tools/test-space-usage.js
+node tools/test-ai-key.js
 ```
 
 `tools/audit-responsive.js` and `tools/test-scale.js` are tape measures, not
@@ -283,6 +284,18 @@ come back from — is invisible to both. Those get a browser test.
   as growing 1% and would have been shown a "if your pace keeps growing"
   sentence that meant nothing. Fixed with strict bounds plus a 15% floor
   below which volume is treated as weather, not a trend.
+- `test-ai-key.js` — the Gemini key, now settable from Settings → System
+  instead of the Apps Script editor. The feature is small; the failure modes
+  are not, so both are held shut here: the key must never come back to the
+  BROWSER (getAiStatus returns configured + the last four characters and
+  nothing else) and must never reach a SHEET (the audit log records that a key
+  was set, never the key — that tab is openable by anyone with the file).
+  Also asserts the reason the save is deliberately slow: it spends one real
+  call verifying the key BEFORE storing it, a rejected key is not stored, and
+  a rejected REPLACEMENT leaves the working one alone. And that a missing key
+  is treated as an unconfigured setting rather than a failure — NO_AI_KEY is a
+  marker the browser turns into an explanation with a button, not a red
+  error.
 - `test-config-snapshot.js` — the configuration snapshot written into every
   backup copy (`writeConfigSnapshot_`), lifted verbatim into a Node vm with
   SpreadsheetApp and PropertiesService stubbed. A backup copies the

@@ -66,7 +66,77 @@ no está comparando software — está aguantando un problema.
 
 ---
 
-## Precio recomendado
+## ✅ PRECIO DECIDIDO (v10.8) — un producto, con complementos
+
+Jose revisó una propuesta de tres planes (Esencial / Profesional / Avanzado) y
+la descartamos por una razón estructural, no de gusto:
+
+**El tiering por FUNCIONES no se puede hacer cumplir en esta arquitectura.** El
+código corre dentro de la cuenta de Google del cliente; puede abrir el editor
+de Apps Script. Un "plan sin módulo de costos" es un interruptor que él mismo
+puede voltear. Y construir ese bloqueo cuesta ingeniería real, triplica lo que
+hay que probar en cada versión, y hace que cada reporte de bug empiece con
+"¿en qué plan estás?".
+
+Se cobra, entonces, por lo que **sí** es exigible: lo que consume tiempo de
+Jose o tiene un costo real detrás.
+
+### Base
+| | |
+|---|---|
+| Instalación | **$500**, una sola vez |
+| Suscripción | **$49/mes** o **$490/año** (2 meses gratis) |
+
+### Complementos
+| | Instalación | Mensual |
+|---|---|---|
+| Bodega adicional | +$250 | +$25 |
+| Soporte prioritario (4 h hábiles, WhatsApp) | — | +$20 |
+| Lector de correos gestionado (llave nuestra) | — | +$15 |
+| Migración de su histórico | $300–$800 | — |
+| Capacitación extra, por sesión | $150 | — |
+
+**Precio fundador — los primeros 3 clientes:** $39/mes congelado para siempre,
+a cambio de permiso para usar su nombre y sus números. No es bajar el precio,
+es comprar material de venta.
+
+**El lector de correos** es el único complemento que corresponde a una función,
+y solo porque tiene un costo real detrás: necesita una llave de API de Gemini.
+Si la pone el cliente (v10.8 lo permite desde Settings → System), es gratis. Si
+la ponemos y administramos nosotros, se cobra.
+
+**Cuándo subir a $59–$69:** cuando existan códigos de barras y conteo cíclico.
+
+### Errores corregidos de la propuesta de tres planes
+
+1. Trataba como "por crear" el lector de correos, el costo promedio ponderado y
+   el archivado automático. **Los tres están en producción** (v9.61, v9.78, y
+   el archivado desde antes). Eso invalidaba su consejo de "vender el mapa de
+   ruta" con esas funciones.
+2. La suma estaba mal: 60/20/20 sobre 100 clientes da **$5,300/mes**, no
+   $4,900.
+3. "Margen operativo del 95%" es cierto solo si el tiempo de Jose vale $0. Con
+   las horas de `PLAN-5-ANIOS.md`, el margen real del Año 3 ronda el **52%**.
+
+### La conclusión que vale más que el precio
+
+El cuello de botella son horas, no dinero. Y eso invierte la intuición:
+
+| | Ingreso/mes | Carga |
+|---|---|---|
+| 100 clientes a $39 | $3,900 | ~16 h/semana |
+| 50 clientes a $79 | $3,950 | **~8 h/semana** |
+
+**Cuando el límite son horas, el precio es la palanca, no el volumen.** Y
+"plantillas por industria" deja de ser una función bonita: es la que baja la
+instalación de 3 h a 1 h y por lo tanto la que multiplica cuántos clientes
+caben antes de contratar. Vale más, en dinero, que cualquier ajuste de precio.
+
+Ver `LICENCIA-E-INTEGRIDAD.md` para qué pasa cuando dejan de pagar.
+
+---
+
+## Precio anterior (v9.96) — se conserva por el razonamiento
 
 - **Instalación: $400, una sola vez.** Es trabajo real — instalar, configurar,
   capacitar, y OAuth si hace falta. Coincide con lo que la industria ya cobra

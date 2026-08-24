@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '10.7';
+var APP_VERSION = '10.8';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -824,6 +824,76 @@ function geminiModels_() {
 
 function geminiUrl_(model, apiKey) {
   return 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + apiKey;
+}
+
+// ─── THE AI KEY, SET FROM INSIDE THE APP ────────────────────────────────────
+// The document reader runs on the customer's own Gemini key, billed to them by
+// Google. Until now the only way to supply one was: open the Apps Script
+// editor, find Project Settings, add a Script Property with the exact right
+// name. That is a developer's instruction printed inside a warehouse app, and
+// it is why the feature was effectively off everywhere.
+//
+// The key NEVER travels back to the browser. getAiStatus returns whether one
+// exists and its last four characters, which is enough for a person to
+// recognise which key they pasted and useless to anyone else.
+function getAiStatus(auth) {
+  auth = requireAuth_('ADMIN');
+  var k = String(PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY') || '').trim();
+  return {
+    configured: !!k,
+    hint: k ? ('…' + k.slice(-4)) : '',
+    model: geminiModel_()
+  };
+}
+
+function setAiKey(data, auth) {
+  auth = requireAuth_('ADMIN');
+  var ss  = SpreadsheetApp.getActiveSpreadsheet();
+  var key = String((data && data.key) || '').trim();
+  var p   = PropertiesService.getScriptProperties();
+
+  if (data && data.remove) {
+    p.deleteProperty('GEMINI_API_KEY');
+    auditLog_(ss, 'AI_KEY', auth.email, 'GEMINI_API_KEY', 'remove', '');
+    return { status: 'success', configured: false };
+  }
+
+  if (!key) throw new Error('Paste your key first.');
+  // Cheap shape check before spending a network call. Google's keys start
+  // AIza and are around 39 characters; a pasted URL or an email address is the
+  // usual mistake and this catches it without pretending to validate.
+  if (/\s/.test(key)) throw new Error('That has a space in it — paste just the key, nothing around it.');
+  if (key.length < 20) throw new Error('That looks too short to be an API key.');
+
+  // Actually USE it once before saving. A key that is wrong, expired, or has
+  // the Generative Language API switched off fails identically to no key at
+  // all — days later, in front of somebody trying to read an email. Better to
+  // find out here, in the one place where the person can still fix it.
+  var probe;
+  try {
+    probe = geminiFetch_({
+      contents: [{ parts: [{ text: 'Reply with the single word: ok' }] }],
+      generationConfig: { maxOutputTokens: 5 }
+    }, key);
+  } catch (e) {
+    throw new Error('Could not reach Google to check the key: ' + e.message);
+  }
+
+  var code = probe.getResponseCode();
+  if (code !== 200) {
+    var why = 'Google rejected that key (HTTP ' + code + ').';
+    if (code === 400 || code === 403) {
+      why += '\n\nThe usual causes: the key was copied incompletely, or the ' +
+             '"Generative Language API" is not enabled on the Google project ' +
+             'the key belongs to.';
+    }
+    throw new Error(why);
+  }
+
+  p.setProperty('GEMINI_API_KEY', key);
+  // Never the key itself, not even partially, into a sheet anyone can open.
+  auditLog_(ss, 'AI_KEY', auth.email, 'GEMINI_API_KEY', 'set', 'verified against Google');
+  return { status: 'success', configured: true, hint: '…' + key.slice(-4) };
 }
 
 // One call, trying each model until one answers. Returns the HTTPResponse of
@@ -1949,6 +2019,8 @@ function processMovementInner_(ss, action, data, auth) {
   if (action === 'logClientError')  return logClientError(data, auth);
   if (action === 'loadOlderHistory') return loadOlderHistory(auth);
   if (action === 'getSpaceUsage')   return getSpaceUsage(auth);
+  if (action === 'getAiStatus')     return getAiStatus(auth);
+  if (action === 'setAiKey')        return setAiKey(data, auth);
   throw new Error('Unknown action: ' + action);
 }
 
@@ -7438,12 +7510,12 @@ function parseIncomingEmail(data, auth) {
   if (text.length > 12000) text = text.substring(0, 12000);
 
   var apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
-  if (!apiKey) throw new Error(
-    'This needs a Gemini API key, which has not been set up on this system.\n\n' +
-    'An admin adds it once: Apps Script editor → ⚙ Project Settings → Script Properties\n' +
-    'Property: GEMINI_API_KEY   Value: a key from aistudio.google.com\n\n' +
-    'The key is yours and the usage is billed to you by Google, not by us.'
-  );
+  // NO_AI_KEY is a marker, not a sentence. This is not a failure — the feature
+  // is simply switched off — so the browser catches this exact string and
+  // shows an explanation with a button that turns it on, instead of the red
+  // error a broken thing gets. What used to be here was four lines of Apps
+  // Script editor instructions, printed inside a warehouse app.
+  if (!apiKey) throw new Error('NO_AI_KEY');
 
   // The customer's own categories and units, so the answer lands on the lists
   // this installation actually uses instead of inventing new ones.
