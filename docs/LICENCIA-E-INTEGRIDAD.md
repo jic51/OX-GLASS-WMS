@@ -167,11 +167,29 @@ Eso es más fuerte que cualquier cosa incrustable, y no hay que construir nada.
 ### ✅ Construido en v10.9
 
 **Etiquetas de release en git.** Cada versión desde v1.0 hasta hoy tiene su tag
-(`v10.9`, `v10.8`, …). La comparación es un comando:
+(`v10.9`, `v10.8`, … 126 en total). La comparación es un comando:
 
 ```
 git show v10.9:Code_v3_fixed.gs | diff - <el archivo del cliente>
 ```
+
+⚠️ **Los tags NO están en GitHub.** El permiso de la sesión que los creó está
+acotado a la rama de trabajo y responde 403 sobre `refs/tags/*`. En vez de
+dejarlo como "algún día Jose los sube" —que es como un procedimiento de
+verificación deja de funcionar en silencio— **los tags se derivan, no se
+guardan**:
+
+```
+bash tools/tag-releases.sh
+```
+
+El mensaje de cada commit de release ya empieza con `vN.N — `, así que el mapa
+de versión a commit está en la historia misma y el script lo reconstruye en
+cualquier clon, en un comando. Es idempotente: correrlo después de cada
+publicación solo agrega el nuevo. Probado en un clon limpio: 126 tags
+recreados, y `git show v10.8:Code_v3_fixed.gs` devuelve el archivo correcto.
+
+Que falten en el remoto deja de importar.
 
 **Huella de build visible.** `APP_BUILD` en los dos archivos, mostrado en el
 pie del menú de cuenta junto a la versión:
