@@ -2643,7 +2643,19 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '10.8';
+var APP_VERSION = '10.9';
+// Build fingerprint — a short hash of the two shipped files, written by
+// tools/build-fingerprint.js and shown next to the version in the app.
+//
+// It DETECTS drift, it does not prevent it. Nothing inside a copy running in
+// the customer's own account can stop them editing it. What this buys: it
+// tells "they are behind" apart from "they changed it", it lets Jose ask
+// "what does your footer say?" instead of asking for the file, and it makes
+// concealing an edit a deliberate act rather than an accident — which is the
+// part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
+//
+// Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
+var APP_BUILD = '98fe9346';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -12800,7 +12812,7 @@ function loadDataFromGoogle(skipCache, quiet){
         _announceSystemActivity();
         lastLoadTime = Date.now();
         setConnStatus('online');
-        _checkVersionMatch(data.serverVersion);
+        _checkVersionMatch(data.serverVersion, data.serverBuild);
         _setAccountIdentity(data.userName, userEmail, userRole, false);
         if (data.activeUsers) renderActiveUsers(data.activeUsers);
         applyRoleUI();
@@ -12912,9 +12924,16 @@ function _applyWarehouseRoleLabel(){
 
 // Warn if the backend (Code.gs) and this page (Index.html) were not deployed
 // together. A mismatch is the usual cause of "feature X silently doesn't work".
-function _checkVersionMatch(serverVersion) {
+function _checkVersionMatch(serverVersion, serverBuild) {
   var existing = document.getElementById('versionMismatchBanner');
-  if (!serverVersion || serverVersion === APP_VERSION) {
+  var verBad   = serverVersion && serverVersion !== APP_VERSION;
+  // The build catches what the version number cannot: two files from DIFFERENT
+  // releases that happen to carry the same version, which is what a
+  // half-finished paste produces. Only checked when BOTH sides are actually
+  // stamped, so an unstamped build never raises a false alarm.
+  var buildBad = !verBad && APP_BUILD && serverBuild && serverBuild !== APP_BUILD;
+
+  if (!verBad && !buildBad) {
     if (existing) existing.remove();
     return;
   }
@@ -12924,11 +12943,14 @@ function _checkVersionMatch(serverVersion) {
   bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#b45309;' +
     'color:#fff;font-size:.8rem;font-weight:600;text-align:center;padding:8px 36px;' +
     'box-shadow:0 2px 8px rgba(0,0,0,.3)';
-  bar.innerHTML = '⚠ Version mismatch — App v' + APP_VERSION + ' vs Server v' + serverVersion +
+  bar.innerHTML = (verBad
+      ? '⚠ Version mismatch — App v' + APP_VERSION + ' vs Server v' + serverVersion
+      : '⚠ These two files are from different builds — App ' + APP_BUILD + ' vs Server ' + serverBuild) +
     '. Redeploy BOTH files (Code.gs and Index.html) with a <b>New version</b>. ' +
     '<span style="cursor:pointer;text-decoration:underline" onclick="this.parentNode.remove()">dismiss</span>';
   document.body.appendChild(bar);
-  console.warn('VERSION MISMATCH: frontend=' + APP_VERSION + ' backend=' + serverVersion);
+  console.warn('MISMATCH: frontend=' + APP_VERSION + '/' + APP_BUILD +
+               ' backend=' + serverVersion + '/' + serverBuild);
 }
 
 // ── Toast Notifications ───────────────────────────────────────────────────────
@@ -13677,7 +13699,12 @@ function _setAccountIdentity(name, email, role, stale){
   }
 
   var foot = document.getElementById('acctFoot');
-  if (foot) foot.textContent = (_companyName ? _companyName + ' · ' : '') + PRODUCT + ' v' + APP_VERSION;
+  // The build goes next to the version, quietly. It is not for the customer —
+  // it is so Jose can ask "what does this line say?" and know exactly which
+  // bytes they are running, without asking anyone to open the script editor or
+  // send a file. Shown only once it has actually been stamped.
+  if (foot) foot.textContent = (_companyName ? _companyName + ' · ' : '') + PRODUCT + ' v' + APP_VERSION +
+                               (APP_BUILD ? ' · build ' + APP_BUILD : '');
 }
 
 function renderActiveUsers(users){

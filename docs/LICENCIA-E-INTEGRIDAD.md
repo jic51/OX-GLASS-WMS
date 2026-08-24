@@ -164,22 +164,49 @@ Eso es más fuerte que cualquier cosa incrustable, y no hay que construir nada.
 4. Sale una de tres respuestas: **idéntico**, **diferente en estas líneas**, o
    **es otra versión distinta de la que dice**.
 
-**Lo que hace falta para que esto sea sólido, y sí hay que construirlo:**
+### ✅ Construido en v10.9
 
-- **Una etiqueta de release por versión en git.** Hoy las versiones se
-  identifican por el mensaje de commit. Un tag `v10.8` hace la comparación
-  inequívoca y de un solo comando.
-- **Una huella visible en la app.** No para *impedir* la manipulación —eso no
-  se puede— sino para **hacer visible la deriva**: un `APP_BUILD` con el hash
-  corto del commit, mostrado junto a la versión en el pie. Sirve para tres
-  cosas honestas:
-  - Jose pregunta *"¿qué dice tu pie de página?"* y sabe en qué versión están
-    sin pedir el archivo.
-  - Distingue *"están atrasados"* de *"lo tocaron"*, que son dos conversaciones
-    completamente distintas.
-  - Convierte la manipulación en un **acto deliberado**: para ocultarla hay que
-    editar también la huella, y eso ya no es "le movimos algo", es esconderlo.
-    Eso importa legalmente.
+**Etiquetas de release en git.** Cada versión desde v1.0 hasta hoy tiene su tag
+(`v10.9`, `v10.8`, …). La comparación es un comando:
+
+```
+git show v10.9:Code_v3_fixed.gs | diff - <el archivo del cliente>
+```
+
+**Huella de build visible.** `APP_BUILD` en los dos archivos, mostrado en el
+pie del menú de cuenta junto a la versión:
+
+> `PRODUCTION OX GLASS · Acopio v10.9 · build 98fe9346`
+
+Es un **sha256 del contenido de los dos archivos**, no del commit — porque la
+pregunta que se hace no es "¿de dónde salió?" sino "¿son estos los bytes que
+mandamos?". La línea `APP_BUILD` se blanquea antes de calcular, para que el
+valor no se persiga a sí mismo.
+
+**La herramienta:** `tools/build-fingerprint.js`
+
+```
+node tools/build-fingerprint.js --stamp                       antes de publicar
+node tools/build-fingerprint.js --check                       verifica este repo
+node tools/build-fingerprint.js --check <su.gs> <su.html>      verifica un cliente
+```
+
+Da una de cuatro respuestas: **idéntico**, **modificado** (con el hash real
+frente al declarado, y el comando de diff), **los dos archivos son de versiones
+distintas** (el caso de pegar uno solo), o **traen sellos distintos**.
+
+Probado contra una modificación real de una línea: el hash cambió de `98fe9346`
+a `e404bb2c`.
+
+**Además, la app se autodetecta:** si Code.gs e Index.html traen sellos
+distintos, sale el banner de versión aunque el número de versión coincida. Eso
+atrapa el caso más frecuente de todos, que no es manipulación sino pegar un
+archivo y olvidar el otro.
+
+**Lo que esto NO es, otra vez:** el algoritmo vive en `tools/` y nunca viaja al
+cliente. Eso es **oscuridad, no seguridad**: encarece falsificar un sello,
+no lo hace imposible. Sirve para *detectar* y para *establecer intención*, no
+para impedir.
 
 **Lo que NO hay que hacer:** llamar a esto "protección anticopia". No lo es, y
 prometerlo es la clase de cosa que se descubre en el peor momento.

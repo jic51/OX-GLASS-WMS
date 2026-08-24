@@ -36,6 +36,7 @@ node tools/test-category-rename.js
 node tools/test-cfg-rename-reload.js
 node tools/test-space-usage.js
 node tools/test-ai-key.js
+node tools/build-fingerprint.js --check
 ```
 
 `tools/audit-responsive.js` and `tools/test-scale.js` are tape measures, not

@@ -48,6 +48,11 @@ const sandbox = {
   console: console,
   PRODUCT: 'Acopio',
   APP_VERSION: '9.84',
+  // The footer line prints the build fingerprint beside the version (v10.9).
+  // Left EMPTY on purpose: an unstamped build has to show the version alone
+  // rather than a dangling " · build ", and this is the one place that branch
+  // gets exercised.
+  APP_BUILD: '',
   _companyName: '',
   _lastUserName: '',
   _initialsFor: function () { return 'JC'; },

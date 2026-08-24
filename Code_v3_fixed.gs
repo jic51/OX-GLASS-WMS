@@ -33,7 +33,19 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '10.8';
+var APP_VERSION = '10.9';
+// Build fingerprint — a short hash of the two shipped files, written by
+// tools/build-fingerprint.js and shown next to the version in the app.
+//
+// It DETECTS drift, it does not prevent it. Nothing inside a copy running in
+// the customer's own account can stop them editing it. What this buys: it
+// tells "they are behind" apart from "they changed it", it lets Jose ask
+// "what does your footer say?" instead of asking for the file, and it makes
+// concealing an edit a deliberate act rather than an accident — which is the
+// part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
+//
+// Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
+var APP_BUILD = '98fe9346';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -1482,6 +1494,7 @@ function getInitialData(sessionToken) {
 
     return {
       serverVersion:      APP_VERSION,
+      serverBuild:        APP_BUILD,
       company:            publicCompany_(),
       systemActivity:     (function(){ try { return getSystemActivity(30, _auth.email); } catch (e) { return []; } })(),
       columnPrefs:        columnPrefs_(),
