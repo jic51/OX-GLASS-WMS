@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '11.14';
+var APP_VERSION = '11.15';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -45,7 +45,7 @@ var APP_VERSION = '11.14';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '1b70b00c';
+var APP_BUILD = '3b92eb98';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -3215,13 +3215,39 @@ var SNAPSHOT_EXCLUDE = {
   // Regenerates itself on first use. Copying it only extends its life.
   SESSION_SECRET: 'Recreated automatically. Everyone signs in once more.',
   // Meaningless by tomorrow.
-  WMS_SESSIONS: 'Who was signed in at the time. Not worth restoring.'
+  WMS_SESSIONS: 'Who was signed in at the time. Not worth restoring.',
+  // ── The backup's own bookkeeping ──
+  // Jose spotted these on the first snapshot he read: LAST_BACKUP_SNAPSHOT
+  // said "FAILED", in a tab that had plainly just been written, because the
+  // snapshot is taken BEFORE the current run records its own outcome — so it
+  // always carried the PREVIOUS run's result. Confusing in the calmest
+  // circumstances, and this document exists to be read during an emergency.
+  //
+  // They are excluded rather than made accurate, because putting them back
+  // would be wrong even if they were: they describe the OLD installation's
+  // backup history. A restored copy that claims a backup ran last Tuesday is
+  // asserting something about itself that never happened, and the System tab
+  // would show a green last-backup line for a file that has never been backed
+  // up at all.
+  LAST_BACKUP_AT:       'The old file\'s backup history — not this copy\'s. Press Backup Now once restored.',
+  LAST_BACKUP_NAME:     'Same.',
+  LAST_BACKUP_FILE_ID:  'Same — and the link would point at the old file.',
+  LAST_BACKUP_SNAPSHOT: 'Same.'
 };
 
-// Writes every Script Property worth restoring into a sheet inside the
-// backup copy. See RESTAURAR-UN-BACKUP.md for the procedure that reads it.
-// Writes the configuration into the LIVE spreadsheet, so that the copy taken
-// immediately afterwards carries it.
+// Properties whose old value is actively WRONG in a restored copy, because
+// restoring creates a new Apps Script project with a new deployment.
+//
+// Copying these across is worse than leaving them blank: the app would hold a
+// URL that opens the file you are replacing.
+var SNAPSHOT_REPLACE_AFTER_DEPLOY = {
+  WEB_APP_URL:        'REPLACE after Deploy → New deployment: paste the NEW /exec address, not this one.',
+  OAUTH_REDIRECT_URI: 'REPLACE with the new /exec address, and register it in the OAuth client too.'
+};
+
+// Writes every Script Property worth restoring into the LIVE spreadsheet, so
+// that the copy taken immediately afterwards carries it. See
+// RESTAURAR-UN-BACKUP.md for the procedure that reads it.
 //
 // It used to take a file id and call SpreadsheetApp.openById on the finished
 // copy. That could never work, and never did: the manifest declares
@@ -3242,34 +3268,61 @@ var SNAPSHOT_EXCLUDE = {
 // file, where it would be one more tab among eighteen.
 function writeConfigSnapshot_(ss) {
   var props = PropertiesService.getScriptProperties().getProperties();
+
+  // What each property IS, in a third column. A bare name-and-value list means
+  // reading it correctly depends on already knowing what the names mean, and
+  // this document is read exactly once — during an emergency, possibly by
+  // somebody who has never seen it. Jose's own first read is the evidence: he
+  // saw WAREHOUSE_ROLE_LABEL = SUPERVISOR and reasonably concluded his account
+  // had the wrong role, when it is the display NAME chosen for the warehouse
+  // role and has nothing to do with who he is.
+  var guide = {};
+  try {
+    for (var g = 0; g < PROPERTY_GUIDE.length; g++) guide[PROPERTY_GUIDE[g].key] = PROPERTY_GUIDE[g];
+  } catch (eG) { /* the list is optional context, never a reason to lose the snapshot */ }
+
+  function noteFor(key) {
+    if (SNAPSHOT_REPLACE_AFTER_DEPLOY[key]) return '⚠ ' + SNAPSHOT_REPLACE_AFTER_DEPLOY[key];
+    // FOLDER_* is one entry per company name the installation has had, so the
+    // keys are generated and cannot be listed one by one.
+    if (/^FOLDER_/.test(key) && !guide[key]) {
+      return 'Drive folder id for attachments under that company name. Restore as-is.';
+    }
+    var g = guide[key];
+    return g ? g.what : '';
+  }
+
   var rows = [];
   Object.keys(props).sort().forEach(function (k) {
     if (SNAPSHOT_EXCLUDE[k]) return;
-    rows.push([k, String(props[k])]);
+    rows.push([k, String(props[k]), noteFor(k)]);
   });
 
   var sheet = ss.getSheetByName(SHEETS.CONFIG_SNAPSHOT) || ss.insertSheet(SHEETS.CONFIG_SNAPSHOT);
   sheet.clear();
 
   var header = [
-    ['ACOPIO — CONFIGURATION SNAPSHOT', 'Taken ' + new Date().toISOString()],
-    ['Restoring? Copy these into the new copy\'s Script Properties BEFORE anything else.', ''],
-    ['FOLDER_PREFIX goes first — without it, attachments do not open.', ''],
-    ['', ''],
-    ['NOT included, on purpose — put these back by hand:', ''],
+    ['ACOPIO — CONFIGURATION SNAPSHOT', 'Taken ' + new Date().toISOString(), ''],
+    ['Restoring? Copy these into the new copy\'s Script Properties BEFORE anything else.', '', ''],
+    ['FOLDER_PREFIX goes first — without it, attachments do not open.', '', ''],
+    ['Anything marked ⚠ must NOT be copied as-is — read the note beside it.', '', ''],
+    ['', '', ''],
+    ['NOT included, on purpose — put these back by hand:', '', ''],
   ];
   Object.keys(SNAPSHOT_EXCLUDE).forEach(function (k) {
-    header.push(['  ' + k, SNAPSHOT_EXCLUDE[k]]);
+    header.push(['  ' + k, SNAPSHOT_EXCLUDE[k], '']);
   });
-  header.push(['', '']);
-  header.push(['PROPERTY', 'VALUE']);
+  header.push(['', '', '']);
+  header.push(['PROPERTY', 'VALUE', 'WHAT IT IS']);
 
-  var all = header.concat(rows.length ? rows : [['(nothing stored yet)', '']]);
-  sheet.getRange(1, 1, all.length, 2).setValues(all);
-  sheet.getRange(1, 1, 1, 2).setFontWeight('bold');
-  sheet.getRange(header.length, 1, 1, 2).setFontWeight('bold');
+  var all = header.concat(rows.length ? rows : [['(nothing stored yet)', '', '']]);
+  sheet.getRange(1, 1, all.length, 3).setValues(all);
+  sheet.getRange(1, 1, 1, 3).setFontWeight('bold');
+  sheet.getRange(header.length, 1, 1, 3).setFontWeight('bold');
+  sheet.getRange(1, 3, all.length, 1).setWrap(true).setFontColor('#6B7280');
   sheet.setColumnWidth(1, 260);
-  sheet.setColumnWidth(2, 620);
+  sheet.setColumnWidth(2, 480);
+  sheet.setColumnWidth(3, 520);
   return rows.length;
 }
 
