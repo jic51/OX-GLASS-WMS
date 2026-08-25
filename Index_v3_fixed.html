@@ -472,6 +472,37 @@
     .mat-line-hdr .mat-line-lbl{font-size:.82rem;font-weight:700;color:var(--navy)}
     .mat-line-remove{background:var(--red-bg);color:var(--red);border:none;border-radius:5px;padding:3px 9px;cursor:pointer;font-size:.82rem;font-weight:700;transition:.15s;line-height:1}
     .mat-line-remove:hover{background:var(--red);color:#fff}
+    /* ── The last "×" is never shown ──
+       removeMatLine / removeExitMatLine / removeLocRowMat / removeExitLocRowMat
+       all refuse to delete the only remaining row — the form must always have
+       one material and one location. So the button was there, red, and did
+       nothing when pressed. A control that looks live and ignores you is worse
+       than no control: it teaches people not to trust the buttons.
+
+       Done in CSS rather than JavaScript on purpose. :only-child is recomputed
+       by the browser on every add and remove, so it cannot fall out of step
+       with the DOM the way a _syncRemoveButtons() call would the first time
+       somebody adds a row from a path that forgot to call it.
+
+       Two different hides, for two different jobs. The MATERIAL button sits at
+       the right end of its own header, so display:none lets the "1 unit" badge
+       close up the gap. The LOCATION button is a COLUMN — the header above it
+       reserves 24-28px for it — so it is hidden with visibility, which keeps
+       the column width and leaves rack and qty exactly where they were. Using
+       display:none there would widen the inputs of a one-row list and make it
+       stop lining up with its own header. */
+    #multiMatContainer   .mat-line:only-child      .mat-line-remove{display:none}
+    #multiExitContainer  .exit-mat-line:only-child .exit-mat-remove{display:none}
+    .mat-locs-container .loc-row:only-child      .btn-remove-loc{visibility:hidden}
+    .exit-locs-container .exit-loc-row:only-child .el-rm{visibility:hidden}
+    /* .btn-remove-loc's base rule says "transition:.15s" with no property
+       named, which means ALL of them — visibility included. So adding a second
+       rack row left the first row's × invisible for ~150ms while the discrete
+       visibility transition ran, right at the moment the person is looking to
+       see whether anything happened. Confining the transition to the two
+       properties it was written for keeps the hover fade and makes the button
+       appear the instant it becomes usable. */
+    .mat-locs-container .loc-row .btn-remove-loc{transition-property:background,color}
     .mat-line-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.5rem}
     .mat-line-lbl-sm{font-size:.7rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;display:block;margin-bottom:.3rem}
     .mat-line-grid .field input,.mat-line-grid .field select{padding:.5rem .65rem;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:.84rem;width:100%}
@@ -2672,7 +2703,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.5';
+var APP_VERSION = '11.6';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -2684,7 +2715,7 @@ var APP_VERSION = '11.5';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'c8876a9a';
+var APP_BUILD = 'c3f793db';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -6159,8 +6190,13 @@ function _matLineTpl(n){
         '<div class="field"><label class="mat-line-lbl-sm">GC</label><input type="text" id="mat-gc-' + n + '"></div>' +
         '<div class="field"><label class="mat-line-lbl-sm">PO#</label><input type="text" id="mat-po-' + n + '"></div>' +
         '<div class="field"><label class="mat-line-lbl-sm">Project / Client</label><input type="text" id="mat-proj-' + n + '" list="projList" data-cfg-new="projects"></div>' +
-        '<div class="field"><label class="mat-line-lbl-sm">PM</label><input type="text" id="mat-pm-' + n + '" list="pmNameList" placeholder="Name of project manager"></div>' +
+        // Received By before PM, and the PM label spelled out in full — the
+        // same order and the same words as the shared block at the bottom of
+        // the form. These two blocks are the SAME six questions; a checkbox
+        // that reorders and renames them makes the person re-read a form they
+        // had already learned.
         '<div class="field"><label class="mat-line-lbl-sm">Received By</label><input type="text" id="mat-resp-' + n + '"></div>' +
+        '<div class="field"><label class="mat-line-lbl-sm">PM (Project Manager)</label><input type="text" id="mat-pm-' + n + '" list="pmNameList" placeholder="Name of project manager"></div>' +
       '</div>' +
       '<div class="field" style="margin-top:.4rem"><label class="mat-line-lbl-sm">Comments</label><textarea id="mat-comm-' + n + '" rows="2" placeholder="Notes, dimensions, instructions..."></textarea></div>' +
     '</div>' +
@@ -6586,21 +6622,25 @@ function addExitMatLine(){
           '<div class="inc-suggest-box" id="exit-suggest-'+n+'" style="display:none"></div>'+
         '</div>'+
       '</div>'+
-      // Per-material destination — only shown when "same destination for all" is OFF.
-      '<div class="field exit-per-mat-dest" id="exit-destfield-'+n+'" style="display:none;margin-bottom:.5rem">'+
-        '<label>Destination (Project / Site / Address)</label>'+
-        '<input type="text" id="exit-dest-'+n+'" list="projList" placeholder="Project name, site, address…">'+
-      '</div>'+
       '<div class="exit-loc-hdr">'+
         '<span style="flex:2">Rack / Location</span>'+
         '<span style="flex:1">Qty to Take</span>'+
         '<span style="flex:1.4">Available</span>'+
         '<span style="width:24px"></span>'+
       '</div>'+
-      '<div id="exit-locs-'+n+'"></div>'+
+      '<div class="exit-locs-container" id="exit-locs-'+n+'"></div>'+
       '<div class="exit-mat-foot">'+
         '<button type="button" class="btn-add-exit-loc" onclick="addExitLocRowMat('+n+')">+ Add Location</button>'+
         '<button type="button" class="btn-autofill-exit" onclick="autoFillExitMatRows('+n+')" title="Auto-fill racks from stock data">↗ Auto-fill Racks</button>'+
+      '</div>'+
+      // Per-material destination — only shown when "same destination for all"
+      // is OFF, and placed BELOW the racks so that ticking the checkbox moves
+      // this one field out to the shared slot directly underneath without
+      // anything above it shifting. Above the racks it pushed the whole
+      // location block down, so the same form looked like two different forms.
+      '<div class="field exit-per-mat-dest" id="exit-destfield-'+n+'" style="display:none;margin-top:.5rem">'+
+        '<label>Destination (Project / Site / Address)</label>'+
+        '<input type="text" id="exit-dest-'+n+'" list="projList" placeholder="Project name, site, address…">'+
       '</div>'+
     '</div>';
   container.appendChild(wrap.firstChild);

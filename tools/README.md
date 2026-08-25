@@ -40,6 +40,7 @@ node tools/test-brand-corner.js
 node tools/test-terms-checkbox.js
 node tools/test-entry-autofill.js
 node tools/test-packs.js
+node tools/test-form-symmetry.js
 node tools/build-fingerprint.js --check
 ```
 
@@ -357,6 +358,28 @@ come back from — is invisible to both. Those get a browser test.
   packs layer must NOT touch: `calculateStock`, `refreshDerivedSheets_` and
   `addMovementsBatch_` still contain no reference to packs, so stock is still
   replayed exactly as before and this release cannot move a number.
+- `test-form-symmetry.js` — a browser test for the rule that a checkbox may
+  MOVE fields but must not rewrite the form around them. ENTRY's "All
+  materials share the same…" and EXIT's "All materials go to the same
+  destination" each swap a shared block for a per-material one, and both had
+  drifted: ENTRY's per-material block asked "PM" where the shared block asks
+  "PM (Project Manager)" and put it before Received By instead of after;
+  EXIT's per-material Destination sat ABOVE the rack list, so ticking the box
+  shoved every rack row up or down. Neither is an error — each screen looks
+  fine alone, and only somebody toggling the checkbox and watching the form
+  rearrange itself would ever see it, which is why both survived. The EXIT
+  half is measured, not read: it snapshots positions relative to the top of
+  the material box (so scrolling between snapshots cannot fake a result) and
+  asserts the rack list starts at the same offset either way. Also guards the
+  "×" rule — the delete button is hidden on the last material and the last
+  location, because all four remove functions refuse to delete it and it was
+  a red button that did nothing when pressed. It asserts the column widths
+  are unchanged when that button hides, which is the reason the location
+  buttons use `visibility` and the material ones use `display`. Writing it
+  caught a third bug nobody had reported: `.btn-remove-loc` carries
+  `transition:.15s` with no property named — meaning `all`, visibility
+  included — so adding a second rack row left the first row's × invisible for
+  ~150ms at exactly the moment you look to see whether anything happened.
 - `test-config-snapshot.js` — the configuration snapshot written into every
   backup copy (`writeConfigSnapshot_`), lifted verbatim into a Node vm with
   SpreadsheetApp and PropertiesService stubbed. A backup copies the

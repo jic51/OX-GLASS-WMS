@@ -374,6 +374,35 @@ raíz, para cuando haya volumen que lo justifique.
 
 ## Polish pass (do at the end, after the functional work)
 
+- **2j — TRANSFER / RETURN / WASTE do not follow the ENTRY/EXIT layout
+  (Jose, v11.6). PROPOSED, WAITING ON JOSE'S ANSWER.** Two differences he
+  spotted:
+  1. **The date is not first.** ENTRY and EXIT show DATE alone at the top,
+     then everything else. The other three show Category, Name, **Date**,
+     Qty, Unit — the date buried third. This is an accident, not a decision:
+     all five share one "Core Fields" grid, and ENTRY/EXIT only *look* right
+     because they hide the four fields that come before the date.
+  2. **No coloured box around the material.** ENTRY has the grey/green
+     material box, EXIT the pink one, each matching its tab. TRANSFER,
+     RETURN and WASTE have loose fields on the modal background.
+
+  Proposed fix (minimal, no behaviour change): lift the date field into its
+  own row above the grid — ENTRY/EXIT are unaffected because the date is the
+  only thing they show there either way — then wrap the remaining core
+  fields plus that type's location fields in one `.move-mat-box`, tinted
+  blue / purple / yellow to match the tab, and hidden for ENTRY/EXIT which
+  have their own boxes already.
+
+  Open question for Jose: does that box get a header (a "Material" label,
+  and possibly a qty badge like the other two) or is it just a tinted
+  container?
+
+  **Related, NOT proposed and deliberately out of this item:** TRANSFER,
+  RETURN and WASTE are still *single-material* forms. Making them
+  multi-material like ENTRY/EXIT is the bigger asymmetry underneath this
+  one, and a much larger job — it touches the save path, not just layout.
+  Worth deciding separately.
+
 - **Scrollbars look bad.** Jose dislikes the default side scrollbar. Do NOT
   hide it outright: the bar is the only cue that a long Movements table or
   Settings list continues below, and removing it hides that from warehouse
