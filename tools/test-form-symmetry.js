@@ -355,6 +355,146 @@ const NORM = s => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
     trRows.left === 1);
   check('TRANSFER: ...so the lone row shows no × either', trRows.oneX === false);
 
+  // ─────── opening is blank, switching carries, the cursor is always in Name ───────
+  //
+  // Jose's rule, in his words: "al cambiar de un tipo de movimiento sí se debe
+  // llevar la información que fue escrita, pero al abrir la ventana de
+  // movimientos no debe haber ningún dato escrito, ni siquiera '0' en qty,
+  // también cuando se pasa de un movimiento a otro el cursor siempre aparece
+  // dentro de name."
+  console.log('\n═══ a fresh open shows nothing typed ═══\n');
+
+  const TYPES = ['ENTRY', 'EXIT', 'TRANSFER', 'RETURN', 'WASTE'];
+
+  for (const type of TYPES) {
+    // A real fresh open, from a clean page — reusing the same page would let a
+    // previous screen's state pass for a clean one, which is the exact bug.
+    await page.goto('file://' + f);
+    await page.waitForTimeout(450);
+    await page.evaluate(t => openMoveModal(t), type);
+    await page.waitForTimeout(350);
+
+    const st = await page.evaluate(() => {
+      const vis = el => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+      const dirty = [];
+      document.querySelectorAll('#moveOverlay input, #moveOverlay textarea').forEach(el => {
+        if (el.type === 'checkbox' || el.type === 'radio' || el.type === 'date') return;
+        // The document group's name ("Invoice") is a LABEL for an attachment
+        // slot, not a value that can be saved as stock. It is exempted here on
+        // purpose and flagged to Jose rather than quietly cleared: emptying it
+        // would make somebody name the group every single time they attach a
+        // photo, which is a cost his rule was not aimed at. If he wants it
+        // blank too, delete this line and the default in resetDocBuilder.
+        if (el.classList.contains('doc-group-name')) return;
+        if (!vis(el)) return;
+        if (String(el.value || '').trim() !== '') dirty.push((el.id || el.className) + '=' + el.value);
+      });
+      return {
+        dirty,
+        focus: document.activeElement ? (document.activeElement.id || document.activeElement.tagName) : null,
+        commLabel: (document.getElementById('commLabel') || {}).textContent
+      };
+    });
+
+    const wantFocus = type === 'ENTRY' ? 'mat-name-1' : (type === 'EXIT' ? 'exit-name-1' : 'mName');
+    console.log('  ' + type.padEnd(9) + ' focus=' + st.focus +
+                '  dirty=' + (st.dirty.length ? st.dirty.join(',') : 'none'));
+
+    check(type + ': not one visible box has anything typed in it on a fresh open',
+      st.dirty.length === 0);
+    check(type + ': the cursor is already in Name — nothing to click before typing',
+      st.focus === wantFocus);
+  }
+
+  console.log('\n═══ switching type carries the material, and keeps the cursor in Name ═══\n');
+
+  // Every ordered pair, because the bug Jose found was pair-specific: RETURN→
+  // WASTE worked, ENTRY→EXIT lost everything, and EXIT→TRANSFER lost only the
+  // quantity. Checking one pair would have "passed" before any of this.
+  const setMaterial = async (type, name, qty) => {
+    await page.evaluate(([t, nm, q]) => {
+      const fire = el => { el.dispatchEvent(new Event('input', { bubbles: true })); };
+      if (t === 'ENTRY') {
+        document.getElementById('mat-name-1').value = nm;
+        const lq = document.querySelector('#mat-locs-1 .loc-qty'); lq.value = q; fire(lq);
+        syncMatLineQty(1);
+      } else if (t === 'EXIT') {
+        document.getElementById('exit-name-1').value = nm;
+        const eq = document.querySelector('#exit-locs-1 .el-qty'); eq.value = q; fire(eq);
+      } else if (t === 'TRANSFER') {
+        document.getElementById('mName').value = nm;
+        const tq = document.querySelector('#transferRowsContainer .tr-qty'); tq.value = q; fire(tq);
+      } else {
+        document.getElementById('mName').value = nm;
+        const mq = document.getElementById('mQty'); mq.value = q; fire(mq);
+      }
+    }, [type, name, qty]);
+  };
+
+  let pairFails = 0;
+  for (const from of TYPES) {
+    const got = [];
+    for (const to of TYPES) {
+      if (to === from) continue;
+      await page.evaluate(t => openMoveModal(t), from);
+      await page.waitForTimeout(260);
+      await setMaterial(from, 'MM210', 12);
+      await page.evaluate(t => _moveTypeBarClick(t), to);
+      await page.waitForTimeout(350);
+
+      const r = await page.evaluate(t => {
+        const v = id => (document.getElementById(id) || {}).value || '';
+        const sum = sel => { let n = 0; document.querySelectorAll(sel).forEach(i => n += parseFloat(i.value) || 0); return n; };
+        let name = '', qty = 0;
+        if (t === 'ENTRY') { name = v('mat-name-1'); qty = sum('#mat-locs-1 .loc-qty'); }
+        else if (t === 'EXIT') { name = v('exit-name-1'); qty = sum('#exit-locs-1 .el-qty'); }
+        else if (t === 'TRANSFER') { name = v('mName'); qty = sum('#transferRowsContainer .tr-qty'); }
+        else { name = v('mName'); qty = parseFloat(v('mQty')) || 0; }
+        return { name, qty,
+          focus: document.activeElement ? (document.activeElement.id || document.activeElement.tagName) : null };
+      }, to);
+
+      const wantFocus = to === 'ENTRY' ? 'mat-name-1' : (to === 'EXIT' ? 'exit-name-1' : 'mName');
+      const ok = r.name === 'MM210' && r.qty === 12 && r.focus === wantFocus;
+      if (!ok) { pairFails++; got.push(to + '(' + r.name + '/' + r.qty + '/' + r.focus + ')'); }
+      else got.push(to + '✓');
+    }
+    console.log('  from ' + from.padEnd(9) + '→ ' + got.join('  '));
+  }
+  check('every one of the 20 type switches carries name AND quantity, and leaves the cursor in Name',
+    pairFails === 0);
+
+  console.log('\n═══ the colour is on the location box, not the whole material ═══\n');
+
+  for (const type of ['EXIT', 'TRANSFER', 'RETURN', 'WASTE']) {
+    await page.evaluate(t => openMoveModal(t), type);
+    await page.waitForTimeout(300);
+
+    const c = await page.evaluate(t => {
+      const bg = el => el ? getComputedStyle(el).backgroundColor : null;
+      const mat = t === 'EXIT' ? document.querySelector('#multiExitContainer .exit-mat-line')
+                               : document.getElementById('moveMatBox');
+      const loc = t === 'EXIT' ? document.querySelector('.exit-loc-box')
+                               : document.getElementById('moveLocBox');
+      return { mat: bg(mat), loc: bg(loc),
+               entryMat: 'rgb(248, 250, 252)' };   // ENTRY's neutral .mat-line
+    }, type);
+
+    console.log('  ' + type.padEnd(9) + ' material=' + c.mat + '  location=' + c.loc);
+    check(type + ': the material box is the same neutral grey ENTRY uses', c.mat === c.entryMat);
+    check(type + ': ...and the movement colour is on the location box instead',
+      c.loc && c.loc !== c.mat && c.loc !== 'rgba(0, 0, 0, 0)');
+  }
+
+  // WASTE renames the comments label; nothing used to rename it back.
+  await page.evaluate(() => openMoveModal('WASTE'));
+  await page.waitForTimeout(250);
+  await page.evaluate(() => _moveTypeBarClick('RETURN'));
+  await page.waitForTimeout(250);
+  const lbl = await page.evaluate(() => document.getElementById('commLabel').textContent);
+  check('a RETURN opened after a WASTE asks for Comments, not for a "Reason for Waste"',
+    /^Comments$/i.test((lbl || '').trim()));
+
   check('no page errors', pageErrors.length === 0);
   if (pageErrors.length) pageErrors.forEach(e => console.log('  PAGE ERROR:', e));
 
