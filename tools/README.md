@@ -42,6 +42,8 @@ node tools/test-entry-autofill.js
 node tools/test-packs.js
 node tools/test-form-symmetry.js
 node tools/test-pack-prompt.js
+node tools/test-start-here.js
+node tools/sync-legal.js --check
 node tools/build-fingerprint.js --check
 ```
 
@@ -359,6 +361,28 @@ come back from — is invisible to both. Those get a browser test.
   packs layer must NOT touch: `calculateStock`, `refreshDerivedSheets_` and
   `addMovementsBatch_` still contain no reference to packs, so stock is still
   replayed exactly as before and this release cannot move a number.
+- `test-start-here.js` — the very first screen a customer ever sees, actually
+  RUN. `createStartHereSheet_` draws the welcome panel, the consent checkbox
+  and (v11.12) the two tabs holding the Terms and the Privacy Policy plus the
+  links into them; it executes once, on first open, before anything else in
+  the product exists. That makes it the worst possible place for an untested
+  throw — a half-drawn sheet, no app, no wizard, and nothing saying why. It
+  was also the least-covered code in the file: `test-terms-checkbox.js` covers
+  what happens when the box is TICKED, and nothing covered the drawing, so
+  `node --check` was the only thing that had ever looked at it. Runs the real
+  functions in a Node vm against a fake spreadsheet: both documents get a tab
+  with their text and their "last updated" date, running twice replaces the
+  tab instead of stacking a second one, and the consent sentence stays one
+  sentence with exactly two links — each pointing at the gid of the right tab,
+  which is the silent failure here, because a link to the wrong tab still
+  looks like a working link.
+- `sync-legal.js` — not a test, a generator, but `--check` runs with the
+  suite. There are now THREE copies of the legal text: `legal/*.md` (source of
+  truth), `LEGAL_DOCS` in the app, and the two spreadsheet tabs the customer
+  reads before ticking the consent box. The third is generated rather than
+  hand-maintained, because the drift this guards against has already happened
+  once (see `test-legal-sync.js`) and a third hand-kept copy would have made
+  it likelier, not less.
 - `test-form-symmetry.js` — a browser test for the rule that a checkbox may
   MOVE fields but must not rewrite the form around them. ENTRY's "All
   materials share the same…" and EXIT's "All materials go to the same
