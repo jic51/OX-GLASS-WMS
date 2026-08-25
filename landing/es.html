@@ -168,6 +168,15 @@
   .card .v { font: 800 var(--step-3)/1 Archivo, sans-serif; font-variant-numeric: tabular-nums; letter-spacing: -.03em; margin-top: .9rem; }
   .card .v small { font: 500 var(--step-0)/1 Inter, "DM Sans", sans-serif; color: rgba(255,255,255,.62); letter-spacing: 0; }
   .card .d { color: rgba(255,255,255,.74); margin-top: .9rem; font-size: var(--step-0); }
+  /* The multi-warehouse card is an invitation, not a third price, so it spans
+     the full row instead of squeezing the two real prices into thirds. On one
+     column (below 720px) grid-column:1/-1 is already the whole row, so this
+     needs no separate mobile rule. */
+  .card-wide { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: .6rem 1.4rem; }
+  .card-wide .k { flex: 0 0 auto; }
+  .card-wide .v-sm { font: 800 var(--step-1)/1 Archivo, sans-serif; letter-spacing: -.02em; }
+  .card-wide .d { flex: 1 1 32ch; margin-top: 0; }
+  .card-wide a { color: #fff; text-underline-offset: .2em; }
   .price-note { margin-top: 2rem; color: rgba(255,255,255,.74); max-width: 60ch; }
   .price-note strong { color: #fff; }
 
@@ -278,7 +287,7 @@
 
 <header class="wrap hero">
   <div>
-    <h1>Sabe qué hay en el rack <em>sin ir a mirar.</em></h1>
+    <h1>Conoce qué hay en el rack <em>sin ir a mirar.</em></h1>
     <p class="lede">Acopio convierte tu Google Sheets en un sistema de bodega de verdad: entradas, salidas, ubicaciones, costos y alertas de stock bajo. Lo instalamos y configuramos contigo.</p>
     <div class="cta-row">
       <a class="btn" href="#contact">Agenda una demo de 20 minutos</a>
@@ -363,7 +372,7 @@
   <div class="split">
     <div>
       <h2 class="h2">Hecho por alguien que maneja una bodega.</h2>
-      <p class="sub">Acopio nació como el sistema de la bodega de un taller de vidrio, y todos los días sigue moviendo una. Todo lo que hay aquí existe porque un turno real lo necesitó.</p>
+      <p class="sub">Acopio nació como el sistema de la bodega de un taller de instalación de ventanas, y todos los días se lo sigue utilizando. Todo lo que hay aquí existe porque un turno real lo necesitó.</p>
       <ul class="checklist" style="margin-top:2rem">
         <li><div><strong>Entradas, salidas, traslados, devoluciones y desperdicio</strong> — cada movimiento ligado a una persona, un trabajo y un rack.</div></li>
         <li><div><strong>Stock por ubicación</strong>, para que "dónde está" tenga respuesta antes de que alguien camine.</div></li>
@@ -395,15 +404,15 @@
     <div class="proof-row">
       <div class="proof-item">
         <div class="n">Todos los días</div>
-        <p class="l">Acopio mueve la bodega de OX Glass, en producción, desde 2026 — la misma versión que reciben los clientes.</p>
+        <p class="l">Acopio mueve una bodega real de instalación de ventanas, en producción, desde 2026 — la misma versión que reciben los clientes.</p>
       </div>
       <div class="proof-item">
-        <div class="n" id="verCount">96</div>
+        <div class="n" id="verCount">133</div>
         <p class="l">Versiones publicadas hasta hoy. Cada arreglo y mejora va incluido en el soporte — mira <a href="#">las novedades</a>.</p>
       </div>
       <div class="proof-item">
-        <div class="n" id="userCount">—</div>
-        <p class="l" id="userCountLabel">Bodegas usando Acopio. Cuenta instalaciones reales y se queda vacío hasta que las haya.</p>
+        <div class="n" id="userCount">1</div>
+        <p class="l" id="userCountLabel">Bodega usando Acopio hoy: la nuestra, una bodega de instalación de ventanas. Este número cuenta instalaciones reales y sube solo cuando las hay.</p>
       </div>
     </div>
   </div>
@@ -451,13 +460,18 @@
     <div class="price-grid">
       <div class="card rise">
         <div class="k">Instalación — una vez</div>
-        <div class="v">$400</div>
+        <div class="v">$500</div>
         <p class="d">Instalación, configuración con tus propias categorías y racks, tu equipo cargado, y capacitación. Contigo, en una llamada.</p>
       </div>
       <div class="card rise">
         <div class="k">Soporte y actualizaciones</div>
-        <div class="v">$39 <small>/ mes</small></div>
-        <p class="d">O $390 al año — dos meses gratis. Cada mejora y arreglo va incluido; no hay una versión superior que comprar después.</p>
+        <div class="v">$49 <small>/ mes</small></div>
+        <p class="d">O $490 al año — dos meses gratis. Cada mejora y arreglo va incluido; no hay una versión superior que comprar después.</p>
+      </div>
+      <div class="card rise card-wide">
+        <div class="k">¿Más de una bodega?</div>
+        <div class="v-sm">Hablemos.</div>
+        <p class="d">Si manejas dos o más bodegas o sucursales, escríbenos antes de contratar: hay precio por bodega adicional y casi siempre podemos mejorar la oferta. <a href="#contact">Cuéntanos cuántas son</a>.</p>
       </div>
     </div>
     <p class="price-note"><strong>Sin cobro por usuario, nunca.</strong> Un equipo de dos y uno de veinte pagan lo mismo. Los sistemas comparables cobran entre $30 y $150 por persona al mes, y ahí es donde el costo deja de ser chico sin que te des cuenta.</p>
@@ -475,7 +489,7 @@
           <div class="av">JC</div>
           <div>
             <b>Jose Castro</b>
-            <span>Fundador · Jefe de Bodega, OX Glass</span>
+            <span>Fundador · Jefe de Bodega en un taller de instalación de ventanas</span>
           </div>
         </div>
       </div>

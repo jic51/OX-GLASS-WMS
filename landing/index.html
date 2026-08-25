@@ -168,6 +168,15 @@
   .card .v { font: 800 var(--step-3)/1 Archivo, sans-serif; font-variant-numeric: tabular-nums; letter-spacing: -.03em; margin-top: .9rem; }
   .card .v small { font: 500 var(--step-0)/1 Inter, "DM Sans", sans-serif; color: rgba(255,255,255,.62); letter-spacing: 0; }
   .card .d { color: rgba(255,255,255,.74); margin-top: .9rem; font-size: var(--step-0); }
+  /* The multi-warehouse card is an invitation, not a third price, so it spans
+     the full row instead of squeezing the two real prices into thirds. On one
+     column (below 720px) grid-column:1/-1 is already the whole row, so this
+     needs no separate mobile rule. */
+  .card-wide { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: .6rem 1.4rem; }
+  .card-wide .k { flex: 0 0 auto; }
+  .card-wide .v-sm { font: 800 var(--step-1)/1 Archivo, sans-serif; letter-spacing: -.02em; }
+  .card-wide .d { flex: 1 1 32ch; margin-top: 0; }
+  .card-wide a { color: #fff; text-underline-offset: .2em; }
   .price-note { margin-top: 2rem; color: rgba(255,255,255,.74); max-width: 60ch; }
   .price-note strong { color: #fff; }
 
@@ -363,7 +372,7 @@
   <div class="split">
     <div>
       <h2 class="h2">Built by someone who runs a warehouse.</h2>
-      <p class="sub">Acopio started as the system for a glass shop's own floor, and it still runs one every day. Everything here exists because a real shift needed it.</p>
+      <p class="sub">Acopio started as the system for a window-installation shop's own floor, and it is still in use every day. Everything here exists because a real shift needed it.</p>
       <ul class="checklist" style="margin-top:2rem">
         <li><div><strong>In, out, transfers, returns and waste</strong> — every movement tied to a person, a job and a rack.</div></li>
         <li><div><strong>Stock by rack location</strong>, so "where is it" has an answer before anyone walks.</div></li>
@@ -395,15 +404,15 @@
     <div class="proof-row">
       <div class="proof-item">
         <div class="n">Every day</div>
-        <p class="l">Acopio has run OX Glass's own warehouse floor, in production, since 2026 — the same build customers get.</p>
+        <p class="l">Acopio has run a real window-installation warehouse floor, in production, since 2026 — the same build customers get.</p>
       </div>
       <div class="proof-item">
-        <div class="n" id="verCount">96</div>
+        <div class="n" id="verCount">133</div>
         <p class="l">Releases shipped so far. Every fix and improvement is included in support — see <a href="#">what's new</a>.</p>
       </div>
       <div class="proof-item">
-        <div class="n" id="userCount">—</div>
-        <p class="l" id="userCountLabel">Warehouses running Acopio. This counts real installations and stays blank until there are some.</p>
+        <div class="n" id="userCount">1</div>
+        <p class="l" id="userCountLabel">Warehouse running Acopio today: our own, a window-installation shop. This number counts real installations and only goes up when there are some.</p>
       </div>
     </div>
   </div>
@@ -451,13 +460,18 @@
     <div class="price-grid">
       <div class="card rise">
         <div class="k">Setup — once</div>
-        <div class="v">$400</div>
+        <div class="v">$500</div>
         <p class="d">Installation, configuration on your own categories and racks, your team loaded, and training. Done with you on a call.</p>
       </div>
       <div class="card rise">
         <div class="k">Support &amp; updates</div>
-        <div class="v">$39 <small>/ month</small></div>
-        <p class="d">Or $390 a year — two months free. Every improvement and fix is included; there's no upgrade to buy later.</p>
+        <div class="v">$49 <small>/ month</small></div>
+        <p class="d">Or $490 a year — two months free. Every improvement and fix is included; there's no upgrade to buy later.</p>
+      </div>
+      <div class="card rise card-wide">
+        <div class="k">More than one warehouse?</div>
+        <div class="v-sm">Let's talk.</div>
+        <p class="d">If you run two or more warehouses or locations, get in touch before you sign up: there is a rate for each additional warehouse, and we can usually do better on the whole. <a href="#contact">Tell us how many.</a></p>
       </div>
     </div>
     <p class="price-note"><strong>No charge per user, ever.</strong> A crew of two and a crew of twenty pay the same. Comparable systems bill $30–$150 per person per month, which is where the cost quietly stops being small.</p>
@@ -475,7 +489,7 @@
           <div class="av">JC</div>
           <div>
             <b>Jose Castro</b>
-            <span>Founder · Warehouse Manager, OX Glass</span>
+            <span>Founder · Warehouse Manager at a window-installation shop</span>
           </div>
         </div>
       </div>
