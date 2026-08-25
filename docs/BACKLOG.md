@@ -372,6 +372,26 @@ actualización se cobra como parte del soporte mensual (opción 2 de las tres qu
 se discutieron). El Marketplace queda como la inversión que resolvería esto de
 raíz, para cuando haya volumen que lo justifique.
 
+## Preguntas abiertas para Jose (v11.9)
+
+- **¿El nombre "Invoice" del grupo de documentos debe venir vacío?** La regla de
+  Jose (v11.8) es que al abrir un movimiento no haya ningún dato escrito. El
+  único campo que sigue trayendo texto es el nombre del grupo de documentos,
+  que llega como "Invoice". Es una ETIQUETA para el adjunto, no un valor que
+  pueda convertirse en stock, y vaciarlo obligaría a nombrar el grupo a mano
+  cada vez que se sube una foto. Exceptuado a propósito en
+  tools/test-form-symmetry.js, con la nota de cómo quitarlo si Jose dice que sí.
+
+- **¿Un costo de 0 debe registrarse como $0.00 o ignorarse?** Hoy el backend
+  acepta `enteredCost >= 0` para ENTRY, así que un 0 escrito a mano se guarda
+  como $0.00 y **entra al promedio ponderado**, bajándolo. Puede ser
+  deliberado (una muestra gratis es algo real que registrar) o puede ser
+  alguien que tecleó 0 sin pensar. `packMath_` toma la decisión CONTRARIA para
+  el precio del paquete: 0 no da costo, porque "gratis" y "no lo escribieron"
+  son afirmaciones distintas. Las dos mitades no están de acuerdo entre sí y
+  conviene que una gane. No lo cambié porque nadie lo pidió y cambiaría cómo se
+  guardan movimientos que ya funcionan.
+
 ## Polish pass (do at the end, after the functional work)
 
 - **2j — TRANSFER / RETURN / WASTE now follow the ENTRY/EXIT layout. DONE in

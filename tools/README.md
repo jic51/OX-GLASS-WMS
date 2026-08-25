@@ -41,6 +41,7 @@ node tools/test-terms-checkbox.js
 node tools/test-entry-autofill.js
 node tools/test-packs.js
 node tools/test-form-symmetry.js
+node tools/test-pack-prompt.js
 node tools/build-fingerprint.js --check
 ```
 
