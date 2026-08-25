@@ -1,7 +1,11 @@
 # Restaurar un backup — procedimiento, y lo que el backup NO trae
 
-> **Estado: el procedimiento está escrito y auditado contra el código. NADIE
-> lo ha ejecutado todavía de principio a fin en una instalación real.**
+> **Estado (v11.13): Jose está ejecutando el simulacro por primera vez.**
+> Pasos 0 y 1 confirmados en producción — el backup se crea y aparece en la
+> carpeta. El Paso 2 ya destapó un problema real: la pestaña del snapshot no
+> se llamaba como decían estas instrucciones, y si su escritura fallaba nadie
+> se enteraba. Ambas cosas corregidas. El resto del procedimiento sigue sin
+> ejecutarse de principio a fin.
 > Hacerlo una vez, en una copia de prueba, es la tarea pendiente más
 > importante antes de vender. Un backup que nunca se restauró no es un
 > backup; es un archivo.
@@ -85,9 +89,24 @@ el nombre real del sistema del cliente.
 
 ### Paso 2 — Volver a poner las Script Properties
 
+**La pestaña se llama `ACOPIO_CONFIG_SNAPSHOT`.** No se llama "snapshot" ni
+"configuración": está al final de la lista de pestañas de la copia, y con
+muchas pestañas es fácil pasarla por alto. La escribe **el sistema solo**,
+dentro de cada backup — no hay nada que copiar a mano de antemano.
+
+> Jose la buscó por el nombre equivocado durante el primer simulacro de
+> restauración (v11.13), porque las instrucciones decían "la pestaña del
+> snapshot" sin dar el nombre. Ahora la app también lo dice: en
+> **Settings → System**, debajo de "Last backup", aparece
+> *"✓ Includes your settings — N saved in the ACOPIO_CONFIG_SNAPSHOT tab"*.
+
+**Si esa línea NO aparece, o aparece en naranja**, la copia tiene tus datos
+pero no tu configuración, y hay que reconstruirla a mano con las ayudas del
+final de este paso. Antes de v11.13 ese fallo era invisible.
+
 Abre la copia → **Extensiones → Apps Script** → ⚙️ **Project Settings** →
 **Script Properties**, y vuelve a crear las del cuadro de arriba con los
-valores que guardaste en el Paso 0.
+valores de esa pestaña.
 
 **El orden importa: `FOLDER_PREFIX` primero.** Si no se pone, los adjuntos no
 abren y el síntoma no dice por qué.

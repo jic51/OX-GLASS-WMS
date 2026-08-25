@@ -155,5 +155,42 @@ const src = extractFn('writeConfigSnapshot_');
 check('opens the copy by id rather than using the active spreadsheet',
   /SpreadsheetApp\.openById\(copyFileId\)/.test(src) && !/getActiveSpreadsheet/.test(src));
 
+// ── A snapshot that fails must not fail quietly ─────────────────────────────
+//
+// Writing the snapshot is deliberately allowed to fail without killing the
+// backup — a copy of the data still beats no copy. But until v11.13 it failed
+// into Logger.log alone, which nobody reads, so the ONE thing that makes a
+// backup restorable could stop working while every backup afterwards looked
+// perfectly healthy in Drive AND in the app. You would find out during the
+// emergency: the only moment it is too late.
+//
+// Jose hit the near-miss while doing the first real restore drill — he could
+// not find the snapshot tab, and there was no way from inside the app to tell
+// "it is there and you are looking in the wrong place" from "it never ran".
+console.log('\nWhen the snapshot cannot be written');
+{
+  const GS = fs.readFileSync(path.join(__dirname, '..', 'Code_v3_fixed.gs'), 'utf8');
+  const body = GS.slice(GS.indexOf('function runBackupNow_'),
+                        GS.indexOf('function ', GS.indexOf('function runBackupNow_') + 10));
+
+  check('the backup still completes — a snapshot problem never costs you the copy',
+    /catch\s*\(eSnap\)/.test(body) && !/throw eSnap/.test(body));
+  check('the failure is written to the Error Log, not just to Logger',
+    /logError_\([^)]*\n?[^)]*writeConfigSnapshot/.test(body) || /logError_\(ss, 'WARN'[\s\S]{0,120}writeConfigSnapshot/.test(body));
+  check('...and remembered, so the app can say so afterwards',
+    /LAST_BACKUP_SNAPSHOT/.test(body));
+  check('...saying explicitly that a restore would mean re-entering the properties by hand',
+    /re-entering the Script Properties by hand/.test(body));
+
+  const st = GS.slice(GS.indexOf('function getBackupStatus'), GS.indexOf('function listBackups_'));
+  check('getBackupStatus hands that state to the app', /lastBackupSnapshot/.test(st));
+
+  const HTML = fs.readFileSync(path.join(__dirname, '..', 'Index_v3_fixed.html'), 'utf8');
+  check('the System tab warns when the last backup carries data but not settings',
+    /snap-warn/.test(HTML) && /NOT your settings/.test(HTML));
+  check('...and confirms it by NAME when it worked, so nobody hunts for the wrong tab',
+    /ACOPIO_CONFIG_SNAPSHOT/.test(HTML));
+}
+
 console.log('\nconfig snapshot: ' + (fail === 0 ? 'ok' : (fail + ' FAILED')));
 process.exit(fail === 0 ? 0 : 1);
