@@ -332,6 +332,70 @@ const readLabel = page => page.evaluate(() =>
   check('with no packs at all it says so plainly, instead of looking like unfinished setup',
     /never will be/i.test(empty) && /one at a time/i.test(empty));
 
+  console.log('\n═══ answering and walking away still counts as answering ═══\n');
+
+  // Jose: "¿qué pasa si el cliente no da clic en Add?" Before this, the answer
+  // was: nothing is remembered and they have to type it again next time — safe,
+  // but a way to answer and be ignored.
+  await setLine(page, 'HARDWARE', 'WALKED AWAY THING', 'BOX', null);
+  const walked = await page.evaluate(async () => {
+    const h = document.getElementById('mat-pack-note-1');
+    const inp = h.querySelector('.pack-qty');
+    inp.focus(); inp.value = 8;
+    inp.blur();                                  // never presses the button
+    await new Promise(r => setTimeout(r, 300));
+    return { factor: _packFactor('HARDWARE', 'WALKED AWAY THING', 'BOX'),
+             line: (document.getElementById('mat-pack-note-1').textContent || '')
+                     .replace(/\s+/g, ' ').trim(),
+             sends: window.__saved.slice(-1)[0] };
+  });
+  console.log('    → ' + walked.line);
+  check('typing 8 and leaving the field saves it — the number typed IS the answer',
+    walked.factor === 8 && walked.sends && Number(walked.sends.perPack) === 8);
+  check('...and the line switches to the remembered state so it is visible that it landed',
+    /8 units per box/.test(walked.line));
+
+  // A CHANGE is excluded on purpose: it alters costs already being computed.
+  await setLine(page, 'HARDWARE', 'MM210', 'BOX', null);
+  const changeWalk = await page.evaluate(async () => {
+    document.querySelector('#mat-pack-note-1 .pack-change').click();
+    const h = document.getElementById('mat-pack-note-1');
+    const inp = h.querySelector('.pack-qty');
+    const before = window.__saved.length;
+    inp.focus(); inp.value = 99; inp.blur();
+    await new Promise(r => setTimeout(r, 300));
+    return { saved: window.__saved.length > before,
+             factor: _packFactor('HARDWARE', 'MM210', 'BOX') };
+  });
+  check('CHANGING an existing factor is never committed by walking away — it keeps the two-press warning',
+    changeWalk.saved === false && changeWalk.factor !== 99);
+
+  // Jose's other point, measured rather than assumed: the shown value has to
+  // follow the factor without a page refresh.
+  await setLine(page, 'HARDWARE', 'MM210', 'BOX', 120);
+  const live = await page.evaluate(async () => {
+    const read = () => (document.getElementById('mat-pack-math-1').textContent || '')
+                         .replace(/\s+/g, ' ').trim();
+    const before = read();
+    const wasFactor = _packFactor('HARDWARE', 'MM210', 'BOX');
+    document.querySelector('#mat-pack-note-1 .pack-change').click();
+    const h = document.getElementById('mat-pack-note-1');
+    h.querySelector('.pack-qty').value = 10;
+    h.querySelector('.pack-save').click();      // warns
+    h.querySelector('.pack-save').click();      // commits
+    await new Promise(r => setTimeout(r, 250));
+    return { before, after: read(), wasFactor };
+  });
+  console.log('    ' + live.before + '  →  ' + live.after);
+  // Expectations computed from the factor as it actually is at this point,
+  // not from the fixture: earlier blocks in this file deliberately change
+  // MM210's box factor, and my first version of this check assumed 12 and
+  // failed on a live update that was working perfectly.
+  check('changing units-per-box updates the per-unit value live, with no page refresh',
+    live.before !== live.after &&
+    live.before.indexOf('$' + (Math.round((120 / live.wasFactor) * 10000) / 10000) + ' per unit') !== -1 &&
+    live.after.indexOf('$12 per unit') !== -1);
+
   check('no page errors', pageErrors.length === 0);
   if (pageErrors.length) pageErrors.forEach(e => console.log('  PAGE ERROR:', e));
 

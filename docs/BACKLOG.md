@@ -372,6 +372,25 @@ actualización se cobra como parte del soporte mensual (opción 2 de las tres qu
 se discutieron). El Marketplace queda como la inversión que resolvería esto de
 raíz, para cuando haya volumen que lo justifique.
 
+## Resuelta en v11.11 — el factor que se escribe y no se guarda
+
+Jose: *"debemos definir qué pasa si el cliente no da clic en 'ADD' el número de
+unidades por box"*, y propuso una tarjeta recordatoria.
+
+Se hizo algo más simple que resuelve el problema en vez de recordarlo: **salir
+del campo guarda un factor NUEVO**. Escribir 12 en una casilla que pregunta
+"how many units?" ES la respuesta; pedir además un clic solo creaba una forma
+de contestar y ser ignorado. La línea cambia enseguida a "12 units per box
+[edit]", así que se ve que quedó.
+
+**Cambiar** un factor que ya existe queda excluido a propósito: eso altera
+costos que ya se están calculando, así que conserva la advertencia de dos
+pulsaciones y nunca se guarda por irse del campo.
+
+Si aun así Jose quiere la tarjeta, el mecanismo (`_typedCfgAdds` /
+`_recomputeCfgDeck`) ya existe y es media hora — pero con esto ya no hay nada
+que recordar.
+
 ## Resueltas en v11.10 — y lo que Jose decidió
 
 - **Nombre del grupo de documentos:** "Invoice" → **"Document"**. Jose: el grupo
@@ -390,6 +409,50 @@ raíz, para cuando haya volumen que lo justifique.
   **Sigue abierto, chico:** `packMath_` (precio del paquete) toma la decisión
   contraria — 0 no da costo. Las dos mitades aún no coinciden, pero ahora la
   que puede hacer daño avisa.
+
+## ANTES DE COBRARLE A NADIE — política de soporte y de devoluciones
+
+Pedido de Jose (v11.11). Hoy no está escrito en ninguna parte **qué incluye**
+el soporte de $49/mes y qué no, ni qué pasa si alguien quiere su dinero de
+vuelta. Eso no puede quedar en una conversación: es lo primero que se discute
+cuando un cliente está molesto, y para entonces ya es tarde para definirlo.
+
+Hay que dejar por escrito, en el mismo documento que firma:
+
+- **Qué SÍ incluye** el mensual: arreglos de errores, todas las versiones
+  nuevas, preguntas de uso por correo, y en qué plazo se responde.
+- **Qué NO incluye y se cobra aparte**: migración de datos históricos,
+  capacitación adicional, cambios hechos a la medida de ese cliente, recuperar
+  datos que ellos borraron, y arreglar el archivo si lo modificaron por su
+  cuenta (esto último ya está en docs/LICENCIA-E-INTEGRIDAD.md y hay que
+  enlazarlo).
+- **Devoluciones**: si se devuelve la instalación de $500 y bajo qué
+  condiciones, cuánto dura ese plazo, y qué pasa con el mensual ya cobrado.
+- **Qué pasa al dejar de pagar** — ya decidido con Jose (v10.8): la app sigue
+  funcionando, no se apaga nada; lo que se pierde es el soporte y las
+  versiones nuevas.
+
+## Cómo distinguir dos camiones el mismo día — problema abierto
+
+Jose (v11.11), y es un problema real, no un detalle: si un Incoming es
+**una fila por material** y el camión es **un grupo de filas del mismo día**,
+entonces dos entregas del MISMO proveedor el MISMO día se mezclan y no hay
+forma de saber qué vino en cuál.
+
+Jose ya escribió la respuesta sin darse cuenta: el campo **"What were you
+told?"** en el que él pone *"Window Truck 8/24/26"*. Eso ES el nombre de la
+entrega. La propuesta:
+
+- Ese texto se convierte en el **identificador del grupo**. Dos camiones el
+  mismo día del mismo proveedor se distinguen porque uno dice "Window Truck" y
+  el otro "Glass Truck" — y si alguien no escribe nada, el grupo se llama por
+  proveedor y fecha, como hoy.
+- En Incoming las filas se **agrupan bajo ese título**, con un botón de
+  "llegó todo" para el grupo entero y la casilla por material para cuando
+  falta una caja.
+- Nadie tiene que aprender un concepto nuevo: ya lo estaba escribiendo.
+
+No construido todavía — va junto con los varios materiales por Incoming.
 
 ## Pendiente grande — varios materiales en "Add Expected Material"
 
