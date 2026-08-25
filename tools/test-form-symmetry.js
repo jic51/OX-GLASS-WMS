@@ -237,6 +237,124 @@ const NORM = s => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
   check('ENTRY: hiding the last × kept the column widths',
     entryX.rows.length === 2 && entryX.rows[0] === entryX.rows[1]);
 
+  // ──────────────── TRANSFER / RETURN / WASTE follow the same shape ────────────────
+  console.log('\n═══ all five screens open the same way: date first, material in a box ═══\n');
+
+  const TINT = { TRANSFER: 'mm-transfer', RETURN: 'mm-return', WASTE: 'mm-waste' };
+
+  for (const type of ['TRANSFER', 'RETURN', 'WASTE']) {
+    await page.evaluate(() => { closeMoveModalGuarded(); });
+    await page.waitForTimeout(150);
+    await page.evaluate(t => openMoveModal(t), type);
+    await page.waitForTimeout(300);
+
+    const g = await page.evaluate(() => {
+      const box  = document.getElementById('moveMatBox');
+      const date = document.getElementById('moveDateGrid');
+      const vis  = el => el && getComputedStyle(el).display !== 'none';
+      // Every field the modal is actually showing, top to bottom on screen —
+      // the order a person reads, not the order of the source.
+      const order = [...document.querySelectorAll("#moveOverlay .field")]
+        .filter(f => vis(f) && f.offsetParent !== null)
+        .map(f => {
+          const lb = f.querySelector('label');
+          return (lb ? lb.textContent : '').replace(/\s+/g, ' ').trim();
+        })
+        .filter(Boolean);
+      return {
+        dateShown: vis(date),
+        boxShown:  vis(box),
+        tint: box ? [...box.classList].filter(c => c.startsWith('mm-')) : [],
+        firstLabel: order[0] || null,
+        // Is the material box below the date row and above the "who did it"
+        // fields, i.e. in the same slot ENTRY and EXIT put theirs?
+        dateAboveBox: date.getBoundingClientRect().bottom <= box.getBoundingClientRect().top + 1,
+        boxAboveResp: box.getBoundingClientRect().bottom <=
+                      document.getElementById('mRespFieldWrap').getBoundingClientRect().top + 1,
+        // The category/name fields must be INSIDE the box, not beside it.
+        catInBox:  box.contains(document.getElementById('mCatField')),
+        nameInBox: box.contains(document.getElementById('mNameField')),
+        locInBox:  box.contains(document.getElementById('singleLocGrid')),
+        trInBox:   box.contains(document.getElementById('multiTransferSection')),
+        hdr: (document.querySelector('#moveMatBox .move-mat-lbl') || {}).textContent,
+        badge: (document.getElementById('moveMatTotal') || {}).textContent
+      };
+    });
+
+    console.log('  ' + type + ': first field "' + g.firstLabel + '", tint ' + JSON.stringify(g.tint) +
+                ', header "' + g.hdr + '", badge ' + g.badge);
+
+    check(type + ': the date is the first field on the screen, as in ENTRY and EXIT',
+      g.dateShown && /^date/i.test(g.firstLabel || ''));
+    check(type + ': the material sits in its own box', g.boxShown);
+    check(type + ': the box is tinted to match its tab', JSON.stringify(g.tint) === JSON.stringify([TINT[type]]));
+    check(type + ': the box carries a header and a quantity badge',
+      (g.hdr || '').trim() === 'Material' && g.badge !== undefined);
+    check(type + ': the box comes after the date and before "who did it"',
+      g.dateAboveBox && g.boxAboveResp);
+    check(type + ': category and name are INSIDE the box, not loose beside it',
+      g.catInBox && g.nameInBox);
+    check(type + ': the location fields are in the box too — half a form in a box is worse than none',
+      type === 'TRANSFER' ? g.trInBox : g.locInBox);
+  }
+
+  // The badge has to track the number that will actually be saved, and that is
+  // a different field on TRANSFER than on the other two.
+  console.log('\n═══ the badge counts what will be recorded ═══\n');
+
+  await page.evaluate(() => { closeMoveModalGuarded(); });
+  await page.waitForTimeout(150);
+  await page.evaluate(() => openMoveModal('WASTE'));
+  await page.waitForTimeout(250);
+  const wasteBadge = await page.evaluate(() => {
+    const q = document.getElementById('mQty');
+    q.value = 7; q.dispatchEvent(new Event('input'));
+    return document.getElementById('moveMatTotal').textContent;
+  });
+  check('WASTE: typing 7 in Quantity puts 7 on the badge', wasteBadge === '7');
+
+  await page.evaluate(() => { closeMoveModalGuarded(); });
+  await page.waitForTimeout(150);
+  await page.evaluate(() => openMoveModal('TRANSFER'));
+  await page.waitForTimeout(250);
+  const trBadge = await page.evaluate(() => {
+    addTransferRow(); addTransferRow();
+    const qs = [...document.querySelectorAll('#transferRowsContainer .tr-qty')];
+    qs[0].value = 120; qs[0].dispatchEvent(new Event('input'));
+    qs[1].value = 180; qs[1].dispatchEvent(new Event('input'));
+    return { badge: document.getElementById('moveMatTotal').textContent,
+             qtyFieldShown: getComputedStyle(document.getElementById('mQtyField')).display !== 'none' };
+  });
+  check('TRANSFER: the badge SUMS the rows (120 + 180 = 300), because that is what gets saved',
+    trBadge.badge === '300');
+  check('TRANSFER: ...and it is not reading the Quantity box, which this screen hides and ignores',
+    trBadge.qtyFieldShown === false);
+
+  // TRANSFER was the one list that DID delete its last row, leaving a transfer
+  // with nothing to transfer — caught by looking at the screen, not by a test.
+  const trRows = await page.evaluate(() => {
+    const c = document.getElementById('transferRowsContainer');
+    const shown = () => {
+      const el = c.querySelector('.transfer-row .btn-remove-loc');
+      return el ? getComputedStyle(el).visibility !== 'hidden' : null;
+    };
+    const many = { n: c.querySelectorAll('.transfer-row').length, x: shown() };
+    // Delete down past the last row and see whether it holds the line.
+    let guard = 0;
+    while (c.querySelectorAll('.transfer-row').length && guard++ < 10) {
+      const btn = c.querySelector('.transfer-row .btn-remove-loc');
+      removeTransferRow(btn);
+      if (c.querySelectorAll('.transfer-row').length === 1) break;
+    }
+    const btn = c.querySelector('.transfer-row .btn-remove-loc');
+    removeTransferRow(btn);   // the one that used to empty the list
+    return { many, left: c.querySelectorAll('.transfer-row').length, oneX: shown() };
+  });
+  check('TRANSFER: several rows all show their ×', trRows.many.n > 1 && trRows.many.x === true);
+  check('TRANSFER: the last row cannot be deleted — a transfer with no rows is not a transfer',
+    trRows.left === 1);
+  check('TRANSFER: ...so the lone row shows no × either', trRows.oneX === false);
+
   check('no page errors', pageErrors.length === 0);
   if (pageErrors.length) pageErrors.forEach(e => console.log('  PAGE ERROR:', e));
 

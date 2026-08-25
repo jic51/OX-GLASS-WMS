@@ -84,7 +84,7 @@
   /* ── Masthead ─────────────────────────────────────────────────────── */
   .masthead { padding-block: 1.6rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
   .brand { font: 800 1.3rem/1 Archivo, sans-serif; letter-spacing: -.03em; display: flex; align-items: center; gap: .55rem; }
-  .brand .mark { width: 30px; height: 25px; flex: none; }
+  .brand .mark { width: 30px; height: 30px; flex: none; object-fit: contain; }
   .masthead nav { display: flex; gap: 1.5rem; font-size: var(--step--1); }
   .masthead nav a { color: var(--steel); text-decoration: none; }
   .masthead nav a:hover { color: var(--ink); }
@@ -263,16 +263,17 @@
 
 <div class="wrap masthead">
   <div class="brand">
-    <svg class="mark" viewBox="0 0 32 26" fill="none" stroke="currentColor" stroke-width="1.9"
-         stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
-      <!-- three elongated crates, stacked, each drawn as a front face plus a
-           top face so the stack reads as depth rather than as bars -->
-      <path d="M3 19.5 L16 23.5 L29 19.5 L29 16.5 L16 20.5 L3 16.5 Z"></path>
-      <path d="M3 16.5 L16 20.5 L29 16.5 L16 12.5 Z"></path>
-      <path d="M5 12 L16 15.4 L27 12 L27 9.4 L16 12.8 L5 9.4 Z"></path>
-      <path d="M5 9.4 L16 12.8 L27 9.4 L16 6 Z"></path>
-      <path d="M8 5.2 L16 7.6 L24 5.2 L16 2.8 Z"></path>
-    </svg>
+    <!-- The real Acopio mark, out of Jose's Drive — the same file the app
+         serves as its browser-tab icon (ACOPIO_FAVICON_URL in Code.gs), so the
+         page and the product show one logo rather than two.
+
+         NOTE for when acopio.com goes up: this hotlinks Google's CDN, which
+         means the header depends on that Drive file staying shared. Copy the
+         file next to this page and make the src relative before launch — a
+         landing page whose logo is one permission change away from a broken
+         image is not a landing page you want to leave unattended. -->
+    <img class="mark" src="https://lh3.googleusercontent.com/d/1taYWwdJzwbArrSVjtTideDrJyNOyenOq=s160"
+         alt="" width="30" height="30" loading="eager" decoding="async">
     Acopio
   </div>
   <nav>
