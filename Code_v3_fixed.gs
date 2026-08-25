@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '11.15';
+var APP_VERSION = '11.16';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -45,7 +45,7 @@ var APP_VERSION = '11.15';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '3b92eb98';
+var APP_BUILD = 'c2fbb8bd';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -2194,9 +2194,33 @@ function addMovementsBatch_(ss, archive, movements, auth) {
       var name = normalizeString(d.name);
       if (!cat || !name) throw new Error('Category and Name are required.');
 
+      var matId = getMaterialId(cat, name);
+
       var proj = d.isGeneric ? 'GENERIC' : normalizeString(d.project || '');
       if (!proj && mt === 'ENTRY') proj = 'GENERIC';
-      var matId = getMaterialId(cat, name);
+
+      // A TRANSFER moves material from one rack to another INSIDE the same
+      // warehouse. Nothing about that changes which job it belongs to, so a
+      // transfer keeps the project the material already had.
+      //
+      // It used to be stamped 'GENERIC', and Jose found the result in his own
+      // history: BS10 received for "PAT BS 10", then transferred C2A → A5A,
+      // and the two rows stopped looking like the same material's story.
+      //
+      // The form never asked — the project field is HIDDEN for TRANSFER — so
+      // 'GENERIC' was not something anybody typed. It was the app inventing an
+      // assertion about work it had never been told, which is the one thing a
+      // movement log must not do.
+      //
+      // Only TRANSFER changes here. EXIT, RETURN and WASTE keep exactly the
+      // behaviour they had: they are movements OUT of, or back into, stock,
+      // where "which project" is a different question with a different answer,
+      // and quietly changing them was not what was asked for. Noted in
+      // docs/BACKLOG.md instead.
+      if (mt === 'TRANSFER' && (!proj || proj === 'GENERIC')) {
+        var carried = snapshot[matId];
+        proj = (carried && carried.project && carried.project !== 'GENERIC') ? carried.project : '';
+      }
 
       // Locations: uppercase+trim for storage (special chars preserved), but use
       // normalizeString as the in-memory key so lookups match the snapshot.
@@ -2440,7 +2464,18 @@ function buildStockSnapshot_(archiveValues) {
       mt = 'EXIT';
     } else { mt = rawMT; }
 
-    var s = snap[matId] || (snap[matId] = { wh: 0, site: 0, locs: {} });
+    var s = snap[matId] || (snap[matId] = { wh: 0, site: 0, locs: {}, project: '' });
+    // The job this material is currently associated with — last real one wins,
+    // the same rule calculateStock() uses. GENERIC is not a project; it is the
+    // word for "in stock, unassigned", so it never overwrites a real one.
+    //
+    // Added for TRANSFER, which needs to CARRY the project rather than invent
+    // one (see addMovementsBatch_). The snapshot tracked quantities and racks
+    // and nothing else, so the first version of that fix would have quietly
+    // found undefined here and written a blank — better than a lie, but not
+    // the fix, and it would have looked like it worked.
+    var rowProj = normalizeString(row[AC.PROJECT] || '');
+    if (rowProj && rowProj !== 'GENERIC') s.project = rowProj;
     applyMovementToSnapshot_(s, mt, qty, normalizeString(row[AC.SRC_LOC] || ''), normalizeString(row[AC.DEST_LOC] || ''));
   }
   for (var k in snap) {
@@ -8358,6 +8393,15 @@ function modifyMovementLocked_(data, auth) {
       ? String(parseFloat(data[key]) || 0)
       : String(data[key] || '').trim();
     if (NORMALIZE_ON_WRITE[key]) newStr = NORMALIZE_ON_WRITE[key](newStr);
+    // The edit form deliberately shows GENERIC as an EMPTY project box, since
+    // GENERIC is the app's word for "in stock, unassigned" and not the name of
+    // anybody's job. Re-derive it here, or simply opening an ENTRY and saving
+    // an unrelated change would blank the project and log it as an edit the
+    // person never made.
+    if (key === 'project' && !newStr &&
+        String(rowVals[AC.MOVETYPE] || '').toUpperCase() === 'ENTRY') {
+      newStr = 'GENERIC';
+    }
     if (oldStr !== newStr) {
       origVals[f.label] = oldStr;
       changes.push(f.label + ': "' + oldStr + '" → "' + newStr + '"');
