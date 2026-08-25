@@ -80,21 +80,27 @@ function run(props) {
     },
     setColumnWidth: function (c, w) { written.widths[c] = w; }
   };
+  const liveSs = {
+    getSheetByName: function () { return null; },          // forces the insert path
+    insertSheet: function (n) { written.created = n; return sheet; },
+    deleteSheet: function () { written.deleted = true; }
+  };
   const ctx = vm.createContext({
     console: console,
     Logger: { log: function () {} },
     PropertiesService: { getScriptProperties: function () { return { getProperties: function () { return props; } }; } },
+    // The spreadsheet the script is bound to — the ONLY one it may open under
+    // `spreadsheets.currentonly`. The old mock offered openById instead, which
+    // is precisely the call the real runtime refuses; a stub that grants a
+    // permission production denies does not test the code, it hides it.
     SpreadsheetApp: {
-      openById: function () {
-        return {
-          getSheetByName: function () { return null; },          // forces the insert path
-          insertSheet: function (n) { written.created = n; return sheet; }
-        };
-      }
-    }
+      flush: function () {},
+      getActiveSpreadsheet: function () { return liveSs; }
+    },
+    _live: null
   });
   vm.runInContext(extractVar('SHEETS') + '\n' + extractVar('SNAPSHOT_EXCLUDE') + '\n' + extractFn('writeConfigSnapshot_'), ctx);
-  const count = vm.runInContext('writeConfigSnapshot_("copyid")', ctx);
+  const count = vm.runInContext('writeConfigSnapshot_(SpreadsheetApp.getActiveSpreadsheet())', ctx);
   return { written: written, count: count, ctx: ctx };
 }
 
@@ -148,12 +154,49 @@ const onlyFlat = onlySecret.written.values.map(function (r2) { return r2.join(' 
 check('still leaks nothing', onlyFlat.indexOf('GOCSPX-x') === -1);
 check('and reports zero properties copied', onlySecret.count === 0);
 
-// The live file must never gain this sheet — the snapshot is written by id,
-// against the copy runBackupNow_ just made.
-console.log('\nScenario: the live spreadsheet is never touched');
+// ── The assertion that was exactly backwards ───────────────────────────────
+//
+// This block used to check that writeConfigSnapshot_ calls
+// SpreadsheetApp.openById on the finished copy — and it passed, every time,
+// for months. It was pinning the one thing that makes the feature IMPOSSIBLE:
+// the manifest declares `spreadsheets.currentonly`, so the copy is a
+// spreadsheet this script may never open. Every backup from v9.97 to v11.13
+// carried the data and none of the settings.
+//
+// The mock is what made it possible to be so wrong so confidently. It handed
+// the code an openById that the real runtime forbids, so the test proved the
+// code does what it was written to do, and nothing about whether that could
+// work. A stub that grants a permission production denies is worse than no
+// test: it converts an unknown into a false certainty.
+//
+// So the check now runs in the other direction, and the manifest is part of it.
+console.log('\nScenario: it only touches the spreadsheet the scopes allow');
 const src = extractFn('writeConfigSnapshot_');
-check('opens the copy by id rather than using the active spreadsheet',
-  /SpreadsheetApp\.openById\(copyFileId\)/.test(src) && !/getActiveSpreadsheet/.test(src));
+const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'appsscript.json'), 'utf8'));
+const scopes = manifest.oauthScopes || [];
+const narrow = scopes.indexOf('https://www.googleapis.com/auth/spreadsheets.currentonly') !== -1;
+const broad  = scopes.indexOf('https://www.googleapis.com/auth/spreadsheets') !== -1;
+
+check('the manifest still asks only for the CONTAINER spreadsheet', narrow && !broad);
+check('...so the snapshot must not try to open any other spreadsheet by id',
+  !/openById/.test(src));
+check('it writes into the spreadsheet it was handed', /ss\.getSheetByName|ss\.insertSheet/.test(src));
+
+// And the ordering that makes the copy inherit it.
+{
+  const GS2 = fs.readFileSync(path.join(__dirname, '..', 'Code_v3_fixed.gs'), 'utf8');
+  const run = GS2.slice(GS2.indexOf('function runBackupNow_'),
+                        GS2.indexOf('function ', GS2.indexOf('function runBackupNow_') + 10));
+  check('the snapshot is written BEFORE the copy is taken — otherwise the copy cannot contain it',
+    run.indexOf('writeConfigSnapshot_(ss)') < run.indexOf('makeCopy'));
+  check('...and flushed, so the copy cannot race the write',
+    run.indexOf('SpreadsheetApp.flush()') > run.indexOf('writeConfigSnapshot_(ss)') &&
+    run.indexOf('SpreadsheetApp.flush()') < run.indexOf('makeCopy'));
+  check('the tab is removed from the LIVE file afterwards — it belongs in the backup',
+    /deleteSheet\(live\)/.test(run));
+  check('...in a finally, so a failed copy cannot leave it behind either',
+    /finally\s*\{[\s\S]{0,400}deleteSheet\(live\)/.test(run));
+}
 
 // ── A snapshot that fails must not fail quietly ─────────────────────────────
 //

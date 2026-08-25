@@ -1,5 +1,26 @@
 # Restaurar un backup — procedimiento, y lo que el backup NO trae
 
+> ## ⚠️ SI TIENES BACKUPS ANTERIORES A v11.14, NO TIENEN LA CONFIGURACIÓN
+>
+> El simulacro de Jose (v11.13) destapó que `writeConfigSnapshot_` **nunca
+> funcionó en producción**. Llamaba a `SpreadsheetApp.openById` sobre la copia
+> terminada, y el manifiesto declara `spreadsheets.currentonly`, que da acceso
+> a la hoja contenedora **y a ninguna otra**. El error se tragaba en un
+> `Logger.log` que nadie lee, así que desde v9.97 hasta v11.13 **todos los
+> backups salieron con los datos y sin los ajustes**, y se veían perfectamente
+> sanos.
+>
+> **Arreglado en v11.14** escribiendo la pestaña en la hoja VIVA justo antes de
+> copiar, para que la copia la herede — sin pedir un permiso más amplio, que
+> era la otra salida y la equivocada.
+>
+> **Qué hacer si ya tienes backups viejos:** no sirve de nada recuperarlos.
+> Actualiza a v11.14, haz un **Backup Now**, y confirma en Settings → System
+> que dice *"✓ Includes your settings"*. Ese es tu primer backup restaurable.
+> Los anteriores siguen teniendo todos los movimientos, que es lo más difícil
+> de reconstruir; lo que les falta son las Script Properties, y esas se pueden
+> volver a poner a mano con el cuadro de más abajo.
+>
 > **Estado (v11.13): Jose está ejecutando el simulacro por primera vez.**
 > Pasos 0 y 1 confirmados en producción — el backup se crea y aparece en la
 > carpeta. El Paso 2 ya destapó un problema real: la pestaña del snapshot no
