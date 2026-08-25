@@ -62,6 +62,10 @@ html = html.replace('</head>', stub + '</head>');
 const f = path.join(os.tmpdir(), 'acopio-pack-prompt.html');
 fs.writeFileSync(f, html);
 
+function _expectedPackRows(){
+  return Object.keys(PACKS).reduce((n, k) => n + PACKS[k].packs.length, 0) + 1; // +1: the one saved during the test
+}
+
 let ok = 0, fail = 0;
 function check(label, cond) {
   if (cond) { ok++; console.log('  ok  ', label); }
@@ -165,8 +169,22 @@ const readLabel = page => page.evaluate(() =>
   await setLine(page, 'HARDWARE', 'MM210', 'BOX', null);
   st = await noteState();
   console.log('    → ' + st.text);
-  check('a known box states it quietly instead of asking again',
-    st.shown && /known/.test(st.cls) && /= 12 units/.test(st.text));
+  check('a known box states it quietly instead of asking again — "12 units per box [edit]"',
+    st.shown && /known/.test(st.cls) && /12 units per box/.test(st.text) && /edit/.test(st.text));
+
+  // Jose's flow: [edit] turns the same line back into the question, in place,
+  // with the current number already in the box and the button reading Save.
+  const edited = await page.evaluate(() => {
+    document.querySelector('#mat-pack-note-1 .pack-change').click();
+    const h = document.getElementById('mat-pack-note-1');
+    return { cls: h.className,
+             text: (h.textContent || '').replace(/\s+/g, ' ').trim(),
+             prefilled: h.querySelector('.pack-qty').value,
+             btn: h.querySelector('.pack-save').textContent.trim() };
+  });
+  check('[edit] reopens the question in the SAME line, prefilled, with a Save button',
+    /ask/.test(edited.cls) && /how many units/i.test(edited.text) &&
+    edited.prefilled === '12' && /^save$/i.test(edited.btn));
 
   console.log('\n═══ saving, and the warning before a factor is changed ═══\n');
 
@@ -230,17 +248,89 @@ const readLabel = page => page.evaluate(() =>
   await setLine(page, 'HARDWARE', 'MM210', 'BOX', 121);
   const math = await page.evaluate(() => {
     const el = document.getElementById('mat-pack-math-1');
+    const ic = el.querySelector('.info-ic');
     return { shown: getComputedStyle(el).display !== 'none',
-             text: (el.textContent || '').replace(/\s+/g, ' ').trim() };
+             text: (el.textContent || '').replace(/\s+/g, ' ').trim(),
+             tip: ic ? ic.getAttribute('data-tip') : null };
   });
   console.log('    → ' + math.text);
   // 121 / 11 = 11 exactly, using the factor the previous block just changed.
-  check('the arithmetic is on screen before it is recorded',
-    math.shown && /121\.00 per box/.test(math.text) && /\$11 per unit/.test(math.text));
+  // Jose: the full sentence was too long for a line under a field. The result
+  // is what shows; the working lives behind the "i".
+  // The "i" badge renders as the letter i inside the element, so the visible
+  // text is "i$11 per unit". What matters is that the WORKING is not on it.
+  check('the LINE shows only the result — "$11 per unit", no division on it',
+    math.shown && /\$11 per unit/.test(math.text) && !/÷/.test(math.text));
+  check('...and the working is in the tooltip, not on the line',
+    math.tip && /121\.00 per box/.test(math.tip) && /÷ 11 units/.test(math.tip));
 
   await setLine(page, 'WINDOW', 'JJF 109', 'UNIT', 250);
   check('...and no line at all when there is nothing to convert',
     await page.evaluate(() => getComputedStyle(document.getElementById('mat-pack-math-1')).display === 'none'));
+
+  console.log('\n═══ "we don\'t know the cost" is BLANK, not zero ═══\n');
+
+  const zeroHint = async (v) => {
+    await page.evaluate(x => {
+      const c = document.getElementById('mat-cost-1');
+      c.value = x; c.dispatchEvent(new Event('input', { bubbles: true }));
+    }, v);
+    await page.waitForTimeout(80);
+    return page.evaluate(() => {
+      const el = document.getElementById('mat-cost-zero-1');
+      return { shown: getComputedStyle(el).display !== 'none',
+               text: (el.textContent || '').replace(/\s+/g, ' ').trim() };
+    });
+  };
+
+  await setLine(page, 'WINDOW', 'JJF 109', 'UNIT', null);
+  let z = await zeroHint('');
+  check('a blank cost says nothing — that is the normal way to record "cost unknown"', z.shown === false);
+
+  z = await zeroHint('0');
+  console.log('    → ' + z.text);
+  check('a typed 0 warns that it records FREE and pulls the average down',
+    z.shown && /free/i.test(z.text) && /average/i.test(z.text));
+  check('...and points at the blank box as the way to say "not known"',
+    /empty|clear/i.test(z.text));
+
+  z = await zeroHint('250');
+  check('a real cost says nothing', z.shown === false);
+
+  console.log('\n═══ every factor in one place (Settings → Materials) ═══\n');
+
+  const panel = await page.evaluate(() => {
+    // Render the panel straight into a detached host, the same call the tab makes.
+    const host = document.createElement('div');
+    host.id = 'packsPanel';
+    document.body.appendChild(host);
+    _renderPacksPanel();
+    const rows = [...host.querySelectorAll('.packs-row')].map(r =>
+      (r.textContent || '').replace(/\s+/g, ' ').trim());
+    return { count: (host.querySelector('.packs-count') || {}).textContent,
+             rows, title: (host.querySelector('.packs-title') || {}).textContent };
+  });
+  console.log('    ' + panel.rows.join('\n    '));
+  check('the panel lists every remembered factor, one row each',
+    panel.rows.length === _expectedPackRows() && panel.count === String(_expectedPackRows()));
+  check('...each row naming the material and the factor',
+    panel.rows.some(r => /MM210/.test(r) && /per box/.test(r)) &&
+    panel.rows.some(r => /MM210/.test(r) && /per pallet/.test(r)));
+  check('...under a heading that says what these numbers are',
+    /units per box/i.test(panel.title || ''));
+
+  const empty = await page.evaluate(() => {
+    const saved = window.materialPacks;
+    window.materialPacks = {};
+    _renderPacksPanel();
+    const host = document.getElementById('packsPanel');
+    const txt = (host.querySelector('.packs-empty') || {}).textContent || '';
+    window.materialPacks = saved;
+    return txt.replace(/\s+/g, ' ').trim();
+  });
+  console.log('    (empty) ' + empty);
+  check('with no packs at all it says so plainly, instead of looking like unfinished setup',
+    /never will be/i.test(empty) && /one at a time/i.test(empty));
 
   check('no page errors', pageErrors.length === 0);
   if (pageErrors.length) pageErrors.forEach(e => console.log('  PAGE ERROR:', e));

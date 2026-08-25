@@ -372,25 +372,48 @@ actualización se cobra como parte del soporte mensual (opción 2 de las tres qu
 se discutieron). El Marketplace queda como la inversión que resolvería esto de
 raíz, para cuando haya volumen que lo justifique.
 
-## Preguntas abiertas para Jose (v11.9)
+## Resueltas en v11.10 — y lo que Jose decidió
 
-- **¿El nombre "Invoice" del grupo de documentos debe venir vacío?** La regla de
-  Jose (v11.8) es que al abrir un movimiento no haya ningún dato escrito. El
-  único campo que sigue trayendo texto es el nombre del grupo de documentos,
-  que llega como "Invoice". Es una ETIQUETA para el adjunto, no un valor que
-  pueda convertirse en stock, y vaciarlo obligaría a nombrar el grupo a mano
-  cada vez que se sube una foto. Exceptuado a propósito en
-  tools/test-form-symmetry.js, con la nota de cómo quitarlo si Jose dice que sí.
+- **Nombre del grupo de documentos:** "Invoice" → **"Document"**. Jose: el grupo
+  guarda lo que sea que se adjunte, y bautizarlo con el nombre de un solo tipo
+  de papel hace que los demás parezcan fuera de lugar.
 
-- **¿Un costo de 0 debe registrarse como $0.00 o ignorarse?** Hoy el backend
-  acepta `enteredCost >= 0` para ENTRY, así que un 0 escrito a mano se guarda
-  como $0.00 y **entra al promedio ponderado**, bajándolo. Puede ser
-  deliberado (una muestra gratis es algo real que registrar) o puede ser
-  alguien que tecleó 0 sin pensar. `packMath_` toma la decisión CONTRARIA para
-  el precio del paquete: 0 no da costo, porque "gratis" y "no lo escribieron"
-  son afirmaciones distintas. Las dos mitades no están de acuerdo entre sí y
-  conviene que una gane. No lo cambié porque nadie lo pidió y cambiaría cómo se
-  guardan movimientos que ya funcionan.
+- **Costo de 0 — cómo se maneja.** Jose: *"hay cosas que no sabemos cuánto
+  cuestan (la mayoría de las cosas en OX), así que no le vamos a poner costos
+  si no sabemos el valor real"*. O sea: el caso común no es un 0, es **dejarlo
+  en blanco**, y eso ya funcionaba bien (no se registra costo, el promedio no
+  se toca, el reporte lo muestra sin precio en vez de gratis).
+  Lo que se agregó es que un **0 escrito** deje de ser silencioso: avisa que se
+  va a registrar como GRATIS y que arrastra el promedio hacia abajo, y señala
+  la casilla vacía como la forma de decir "no lo sabemos". No se bloquea: una
+  muestra gratis es algo real que registrar.
+  **Sigue abierto, chico:** `packMath_` (precio del paquete) toma la decisión
+  contraria — 0 no da costo. Las dos mitades aún no coinciden, pero ahora la
+  que puede hacer daño avisa.
+
+## Pendiente grande — varios materiales en "Add Expected Material"
+
+Pedido de Jose (v11.10). Hoy el modal de Incoming recibe **un solo material**:
+una categoría, un nombre, una cantidad, una unidad, un supplier, un PO, un PM.
+Jose quiere lo mismo que tiene ENTRY: **varias líneas de material, con la
+casilla de "todos comparten el mismo supplier / proyecto / categoría…"** para
+poder separarlos cuando no lo comparten.
+
+Por qué no se hizo junto con lo demás: no es diseño, es la **forma de los
+datos**. Un Incoming hoy es una fila con un material; esto lo convierte en una
+fila con N materiales, y hay que decidir antes de escribir código:
+
+- ¿Cada material es **su propia fila** de Incoming (y entonces "el camión del
+  8/24" es un grupo de filas que hay que poder marcar como llegado junto), o
+  **una fila con varios materiales dentro**?
+  Yo diría **filas separadas con un id de grupo**: marcar llegada por material
+  es lo que pasa de verdad (llega el camión y falta una caja), y el dashboard y
+  el popup de la mañana ya cuentan filas.
+- Al convertir un Incoming en ENTRY, ¿se abre el formulario con **todas** las
+  líneas cargadas?
+- El extractor de IA (AI Extract) ya lee una hoja de carga con varios
+  materiales — hoy tiene que aplanarlos a uno. Esto es justamente lo que le
+  faltaba.
 
 ## Polish pass (do at the end, after the functional work)
 
