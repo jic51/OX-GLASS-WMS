@@ -728,7 +728,53 @@ ADMIN)? ¿aceptar los ajustes necesita permiso aparte, dado que mueven dinero?
 ¿se congela el rack mientras se cuenta, o se permite que alguien haga un
 movimiento a media sesión (y entonces la variación se calcula contra qué)?
 
-## Idea to define — proactive data-quality suggestions
+## LA LIMPIEZA DE DATOS — Jose ya dijo que sí (v11.17). Falta decidir CÓMO.
+
+Jose preguntó: *"¿la app no ha encontrado nada últimamente que corregir?
+¿construimos la parte donde está constantemente buscando cosas que corregir?"*
+
+**Respuesta honesta: no, nunca se construyó.** Lo único que existe es
+`_findSimilarMaterial`, y solo se dispara **mientras se escribe** un nombre en
+el formulario. Nada revisa los datos que ya están guardados. Por eso no
+encuentra nada: no está mirando.
+
+Lo que Jose pidió, en sus palabras: *"revisar todos los nombres parecidos, los
+nombres de proyectos parecidos, las destinations y sugerir que se las corrija,
+también buscar palabras mal escritas, y arreglar movimientos según el id,
+porque si tienen el mismo id es porque son el mismo material."*
+
+**Ya hay media pieza construida (v11.17):** al editar un movimiento, los campos
+vacíos se llenan desde el historial del mismo material y se marcan como
+sugerencia. Eso es la versión MANUAL de "arreglar movimientos según el id" —
+un movimiento a la vez, con la persona decidiendo. El barrido automático es la
+misma idea aplicada a todo el archivo de una vez.
+
+### Lo que hay que decidir ANTES de construir
+Equivocarse aquí hace la app fastidiosa, y una app fastidiosa se apaga y no se
+vuelve a encender.
+
+- **¿Qué se revisa?** Cuatro familias, y no son igual de seguras:
+  1. **Huecos** (mismo MatID, unos con supplier y otros sin) — la más segura,
+     porque la respuesta ya está en los datos del propio cliente.
+  2. **Nombres de material parecidos** — ya hay matcher. Riesgo: `JJF 109` y
+     `JJF 110` son cosas distintas y se parecen muchísimo.
+  3. **Proyectos y destinos parecidos** (`BS10` vs `PAT BS 10`) — el caso que
+     Jose vio. Aquí NO se puede fusionar solo: puede que sean dos trabajos.
+  4. **Palabras mal escritas** — la más difícil de todas. Sin un diccionario
+     del rubro, "mal escrito" y "así se llama" son indistinguibles.
+- **¿Cuándo aparece?** Al guardar es lo más útil y lo más molesto. Un barrido
+  diario con un resumen es lo más llevadero.
+- **¿Quién lo ve?** Solo ADMIN, probablemente: fusionar materiales cambia el
+  stock.
+- **¿Qué hace "Después"?** Nunca más para esa fila entierra problemas reales;
+  volver en una semana fastidia.
+- **UN TECHO.** Una instalación que importa un año de historia generaría miles
+  de tarjetas de golpe. Hace falta un límite y una pantalla de "revisar todo",
+  no un mazo de tarjetas.
+- **Nada se aplica solo.** Fusionar dos materiales mueve stock. Toda sugerencia
+  se propone; nadie la ejecuta sin que una persona la acepte.
+
+## Idea original (superada por lo de arriba) — proactive data-quality suggestions
 
 Jose's idea: the app notices gaps and inconsistencies and offers to fix them,
 each as a card with two choices — "no supplier on the entry for X — add it?",

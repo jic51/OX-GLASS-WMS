@@ -44,6 +44,7 @@ node tools/test-form-symmetry.js
 node tools/test-pack-prompt.js
 node tools/test-start-here.js
 node tools/test-transfer-project.js
+node tools/test-edit-gaps.js
 node tools/sync-legal.js --check
 node tools/build-fingerprint.js --check
 ```

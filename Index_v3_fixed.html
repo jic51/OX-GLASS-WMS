@@ -593,6 +593,15 @@
     .packs-name{font-weight:600;font-size:.84rem;flex:1;min-width:8rem}
     .packs-fact{font-size:.8rem;color:var(--muted);white-space:nowrap}
     /* Does the latest backup carry the SETTINGS, or only the data? */
+    /* A value the app SUGGESTED, not one the row holds. It has to look
+       different, or the form would be asserting things about this movement
+       that are not recorded anywhere — the same mistake as the GENERIC that
+       started this. Amber, left bar, and it goes plain the moment it is
+       edited by hand. */
+    .em-suggested{background:#FFFBEB !important;border-color:#FDE68A !important;
+                  box-shadow:inset 3px 0 0 #F59E0B}
+    .em-gap-note{font-size:.76rem;background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;
+                 border-radius:6px;padding:.5rem .7rem;margin-top:.75rem;line-height:1.5}
     .snap-ok{font-size:.73rem;color:var(--green);margin-top:.2rem}
     .snap-warn{font-size:.75rem;background:#FEF3C7;color:var(--yellow);font-weight:600;
                border-radius:6px;padding:.4rem .6rem;margin-top:.35rem;line-height:1.45}
@@ -2344,6 +2353,10 @@
       </div>
     </div>
 
+    <!-- Says which boxes were empty on the row and were filled from this
+         material's own history. Hidden unless at least one was. -->
+    <div id="emGapNote" class="em-gap-note" style="display:none"></div>
+
     <!-- Reason — required -->
     <div class="edit-reason-box">
       <label>⚠️ Reason for modification (required)</label>
@@ -2834,7 +2847,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.16';
+var APP_VERSION = '11.17';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -2846,7 +2859,7 @@ var APP_VERSION = '11.16';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'c2fbb8bd';
+var APP_BUILD = '2eca4a99';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -14745,6 +14758,90 @@ var _editMovRowIdx = 0;
 var _editMovOrigCategory = '';
 var _editMovOrigName = '';
 
+// ── Editing should not be lazy ───────────────────────────────────────────────
+//
+// Jose: "al editar un material toda la información de ese material se muestre
+// en la ventana de edición, toda, para que solo pueda modificar lo que quiero
+// y no preocuparme por volver a llenar la demás información."
+//
+// The form already had every editable field. The problem is upstream: a
+// TRANSFER or a WASTE is SAVED with supplier, GC, PO and PM empty, because
+// those boxes are hidden on those screens. Open one to edit and you are
+// looking at five blanks for a material whose supplier the app has known all
+// along — and you either retype them or leave the history uneven, which is
+// exactly what Jose is seeing when he searches.
+//
+// So: fill the blanks from the same material's own history, most recent value
+// wins, and NEVER overwrite anything the row already has.
+//
+// The critical part is that these are marked. A suggestion that looks
+// identical to a stored value would make the form assert things about this row
+// that are not recorded — the same class of mistake as the GENERIC that
+// started all this. They are tinted, and a line says how many there are and
+// that they only become real if you save.
+var _EDIT_GAP_FIELDS = [
+  { id: 'em_supplier',    key: 'supplier'    },
+  { id: 'em_gc',          key: 'gc'          },
+  { id: 'em_po',          key: 'po'          },
+  { id: 'em_project',     key: 'project'     },
+  { id: 'em_pm',          key: 'pm'          },
+  { id: 'em_responsible', key: 'responsible' }
+];
+
+function _clearEditGapMarks() {
+  _EDIT_GAP_FIELDS.forEach(function(f){
+    var el = document.getElementById(f.id);
+    if (el) el.classList.remove('em-suggested');
+  });
+  var note = document.getElementById('emGapNote');
+  if (note) { note.style.display = 'none'; note.textContent = ''; }
+}
+
+function _fillEditGapsFromHistory(mov) {
+  _clearEditGapMarks();
+  var nameUp = String(mov.name || '').trim().toUpperCase();
+  var catNt  = nt(mov.category || '');
+  if (!nameUp) return;
+
+  // Most recent first, and never this row itself.
+  var found = {};
+  for (var i = movements.length - 1; i >= 0; i--) {
+    var m = movements[i];
+    if (m.rowIdx === mov.rowIdx) continue;
+    if (String(m.name || '').trim().toUpperCase() !== nameUp) continue;
+    if (catNt && nt(m.category) !== catNt) continue;
+    _EDIT_GAP_FIELDS.forEach(function(f){
+      if (found[f.key]) return;
+      var v = String(m[f.key] || '').trim();
+      if (!v || v === 'GENERIC') return;   // GENERIC is a placeholder, not a job
+      found[f.key] = v;
+    });
+  }
+
+  var filled = [];
+  _EDIT_GAP_FIELDS.forEach(function(f){
+    var el = document.getElementById(f.id);
+    if (!el) return;
+    if (String(el.value || '').trim() !== '') return;   // the row's own value always wins
+    if (!found[f.key]) return;
+    el.value = found[f.key];
+    el.classList.add('em-suggested');
+    // Touch it and it stops being a suggestion — it is yours now. `once`
+    // rather than a bare listener, so re-opening the dialog does not stack a
+    // new handler on the same box every time.
+    el.addEventListener('input', function(){ el.classList.remove('em-suggested'); }, { once: true });
+    filled.push(f.key);
+  });
+
+  var note = document.getElementById('emGapNote');
+  if (note && filled.length) {
+    note.style.display = '';
+    note.textContent = '✦ ' + filled.length + ' field' + (filled.length > 1 ? 's were' : ' was') +
+      ' empty on this row and filled from this material\'s own history (' + filled.join(', ') +
+      '). Nothing is recorded until you save. Clear any you do not want.';
+  }
+}
+
 function openEditMovModal(rowIdx) {
   var mov = null;
   for (var i = 0; i < movements.length; i++) {
@@ -14802,6 +14899,8 @@ function openEditMovModal(rowIdx) {
     var el = document.getElementById(id);
     if (el) el.value = fmap[id] !== undefined ? fmap[id] : '';
   });
+
+  _fillEditGapsFromHistory(mov);
 
   document.getElementById('em_reason').value = '';
   document.getElementById('btnSaveEditMov').disabled  = false;
