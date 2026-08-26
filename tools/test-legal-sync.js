@@ -174,7 +174,17 @@ console.log('\nWhat the support and refund promises actually say');
     ['unused whole months of an annual are refunded', /whole months you have not yet used are refunded/i],
     ['a defect we cannot fix in 30 days refunds the period', /30 days of you reporting it/i],
     ['what is charged separately is listed', /charged separately/i],
-    ['cancelling never switches the software off', /no way to switch it off/i]
+    ['cancelling never switches the software off', /no way to switch it off/i],
+    // Not /payable within 10 days/: the phrase carries bold in the .md and
+    // <strong> in the app, so the words are separated by markup in two of the
+    // three copies. Matching the part that is plain text in all of them.
+    ['invoices say when they are payable', /within 10 days/i],
+    ['a failed payment PAUSES support rather than the software', /support and new versions/i],
+    ['...and the software is never switched off over money', /Nothing is switched off, at any point/i],
+    ['...and data is never held hostage for payment', /never withhold your data to get paid/i],
+    ['...with no reconnection fee once it is settled', /no reconnection fee/i],
+    ['coming back after leaving means current prices', /treated as a new customer/i],
+    ['...and no promotional or founding rate returns', /does not come back/i]
   ];
   for (const [label, re] of promises) {
     const missing = all.filter(([, text]) => !re.test(text)).map(([name]) => name);

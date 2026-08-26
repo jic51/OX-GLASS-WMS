@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '11.19';
+var APP_VERSION = '11.20';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -45,7 +45,7 @@ var APP_VERSION = '11.19';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'ed72e4b6';
+var APP_BUILD = 'de396b74';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -6121,6 +6121,26 @@ var LEGAL_SHEET_TEXT = {
     ["sub","Add-ons"],
     ["p",""],
     ["p","Add-ons follow the subscription: cancel one and it stops at the end of the current period, under the same rules as above."],
+    ["p",""],
+    ["sub","How you are billed"],
+    ["p",""],
+    ["p","We invoice you by email, to the address you give us, on each renewal date. Invoices are payable within 10 days."],
+    ["p",""],
+    ["p","Prices are in US dollars and do not include any tax that may apply where you are; if tax applies, it is added to the invoice."],
+    ["p",""],
+    ["sub","If a payment does not go through"],
+    ["p",""],
+    ["p","Nothing is switched off, at any point. We could not do it if we wanted to — the software is in your Google account."],
+    ["p",""],
+    ["p","What actually happens:"],
+    ["p",""],
+    ["p","1. Day 10 after the invoice — if it is unpaid, we email you. Payments fail for boring reasons and this is usually the end of it. 2. Day 30 — if it is still unpaid, support and new versions pause until the account is settled. You keep using the software and you keep every bit of your data. 3. We never withhold your data to get paid. It is not ours to withhold, and export stays available whatever the state of your account."],
+    ["p",""],
+    ["p","Settle the invoice and support and updates resume immediately, with no reconnection fee."],
+    ["p",""],
+    ["sub","Coming back after leaving"],
+    ["p",""],
+    ["p","If you cancel and later want to return, you are treated as a new customer: current prices, and any promotional or founding rate you previously had does not come back. That includes the setup fee if the installation has to be done again."],
     ["p",""],
     ["head","10. Termination"],
     ["p",""],

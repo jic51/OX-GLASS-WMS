@@ -2847,7 +2847,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.19';
+var APP_VERSION = '11.20';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -2859,7 +2859,7 @@ var APP_VERSION = '11.19';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'ed72e4b6';
+var APP_BUILD = 'de396b74';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -14554,6 +14554,20 @@ var LEGAL_DOCS = {
 <p>Refunds are issued by the method you paid with, within 10 business days of being agreed.</p>
 <h4>Add-ons</h4>
 <p>Add-ons follow the subscription: cancel one and it stops at the end of the current period, under the same rules as above.</p>
+<h4>How you are billed</h4>
+<p>We invoice you by email, to the address you give us, on each renewal date. Invoices are payable <strong>within 10 days</strong>.</p>
+<p>Prices are in US dollars and do not include any tax that may apply where you are; if tax applies, it is added to the invoice.</p>
+<h4>If a payment does not go through</h4>
+<p>Nothing is switched off, at any point. We could not do it if we wanted to — the software is in your Google account.</p>
+<p>What actually happens:</p>
+<ol>
+<li><strong>Day 10 after the invoice</strong> — if it is unpaid, we email you. Payments fail for boring reasons and this is usually the end of it.</li>
+<li><strong>Day 30</strong> — if it is still unpaid, support and new versions <strong>pause</strong> until the account is settled. You keep using the software and you keep every bit of your data.</li>
+<li><strong>We never withhold your data to get paid.</strong> It is not ours to withhold, and export stays available whatever the state of your account.</li>
+</ol>
+<p>Settle the invoice and support and updates resume immediately, with no reconnection fee.</p>
+<h4>Coming back after leaving</h4>
+<p>If you cancel and later want to return, you are treated as a new customer: current prices, and any promotional or founding rate you previously had does not come back. That includes the setup fee if the installation has to be done again.</p>
 <h3>10. Termination</h3>
 <p>We may terminate your licence if you materially breach these terms and do not fix it within 30 days of written notice. On termination your right to support and updates ends. <strong>Your installation and your data are unaffected</strong> — we have no mechanism to remove them, and would not use one if we had it.</p>
 <h3>11. Changes to these terms</h3>

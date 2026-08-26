@@ -205,6 +205,39 @@ being agreed.
 Add-ons follow the subscription: cancel one and it stops at the end of the
 current period, under the same rules as above.
 
+### How you are billed
+
+We invoice you by email, to the address you give us, on each renewal date.
+Invoices are payable **within 10 days**.
+
+Prices are in US dollars and do not include any tax that may apply where you
+are; if tax applies, it is added to the invoice.
+
+### If a payment does not go through
+
+Nothing is switched off, at any point. We could not do it if we wanted to —
+the software is in your Google account.
+
+What actually happens:
+
+1. **Day 10 after the invoice** — if it is unpaid, we email you. Payments
+   fail for boring reasons and this is usually the end of it.
+2. **Day 30** — if it is still unpaid, support and new versions **pause**
+   until the account is settled. You keep using the software and you keep
+   every bit of your data.
+3. **We never withhold your data to get paid.** It is not ours to withhold,
+   and export stays available whatever the state of your account.
+
+Settle the invoice and support and updates resume immediately, with no
+reconnection fee.
+
+### Coming back after leaving
+
+If you cancel and later want to return, you are treated as a new customer:
+current prices, and any promotional or founding rate you previously had does
+not come back. That includes the setup fee if the installation has to be done
+again.
+
 ## 10. Termination
 
 We may terminate your licence if you materially breach these terms and do not

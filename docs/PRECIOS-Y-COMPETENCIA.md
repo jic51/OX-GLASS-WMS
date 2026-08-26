@@ -100,6 +100,12 @@ Jose o tiene un costo real detrás.
 a cambio de permiso para usar su nombre y sus números. No es bajar el precio,
 es comprar material de venta.
 
+**Congelado mientras NO se vayan.** Jose (v11.20): quien cancela y regresa
+vuelve como cliente nuevo — precios vigentes, sin precio fundador y sin los
+beneficios que tenía, incluida la instalación si hay que rehacerla. Está en la
+sección 9 de los Términos, no solo aquí, porque es de las cosas que se
+discuten y hay que poder señalarlas.
+
 **El lector de correos** es el único complemento que corresponde a una función,
 y solo porque tiene un costo real detrás: necesita una llave de API de Gemini.
 Si la pone el cliente (v10.8 lo permite desde Settings → System), es gratis. Si

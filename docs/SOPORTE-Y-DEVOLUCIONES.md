@@ -117,7 +117,33 @@ Eso ya estaba decidido (v10.8) y ahora está escrito en la sección 9 y en la 10
 
 ---
 
-## 6. Casos que van a aparecer, y qué contestar
+## 6. Facturación — lo que dice el contrato
+
+Ya está en los Términos, sección 9:
+
+- Se factura **por correo**, a la dirección que ellos den, en cada fecha de
+  renovación. **Pagadero en 10 días.**
+- Precios en dólares, sin impuestos incluidos; si aplican, se suman a la
+  factura.
+- **Si un pago no entra:**
+  - **Día 10** → correo de aviso. Los pagos fallan por razones aburridas y
+    ahí termina casi siempre.
+  - **Día 30** → **se pausan** el soporte y las versiones nuevas hasta que se
+    ponga al día. **La app sigue funcionando** y conservan todos sus datos.
+  - **Nunca se retienen sus datos para cobrar.** No son nuestros para
+    retenerlos, y la exportación queda disponible pase lo que pase.
+- Al pagar, soporte y versiones vuelven de inmediato, **sin cargo de
+  reconexión**.
+
+### Volver después de irse
+
+**Quien se va y regresa, vuelve como cliente nuevo.** Precios vigentes, y
+ningún precio promocional o fundador que hubiera tenido regresa con él —
+incluida la instalación, si hay que hacerla otra vez. Decisión de Jose.
+
+---
+
+## 7. Casos que van a aparecer, y qué contestar
 
 **"Instalaste ayer y ya no lo quiero. Devuélvanme todo."**
 El mensual sí (está dentro de 14 días). La instalación no: ese trabajo se hizo
@@ -145,13 +171,44 @@ entregaste o no.
 
 ---
 
-## 7. Lo que falta decidir
+## 8. Lo que falta decidir — y es tuyo, no mío
 
-- **Facturación.** No hay proceso: cómo se cobra, con qué, y qué pasa si un
-  pago falla. Los Términos dicen "según lo acordado por escrito al comprar",
-  lo cual es correcto pero no es un proceso.
-- **Un correo de bienvenida** que repita esto en dos frases. `WELCOME-EMAIL.md`
-  existe pero no menciona soporte ni devoluciones.
-- **Precio fundador.** Los primeros 3 clientes pagan $39 congelado. Falta
-  escribir qué pasa si uno de ellos cancela y vuelve: ¿recupera el precio
-  fundador? Yo diría que no.
+### **CON QUÉ cobras.** Esto es lo único que sigue sin resolver.
+
+El contrato ya funciona con cualquier método; lo que falta es elegirlo. **No
+voy a inventar un proveedor**, así que aquí están las opciones reales con lo
+que de verdad cuestan y lo que de verdad implican. Averigua las comisiones
+vigentes antes de decidir — cambian, y lo que yo recuerde no sirve.
+
+| Opción | A favor | En contra |
+|---|---|---|
+| **Factura manual + transferencia / cheque** | Comisión cero. Empiezas hoy. | Tú persigues cada pago. Se vuelve insostenible pasando ~10 clientes |
+| **Zelle / transferencia bancaria** | Sin comisión, inmediato, normal entre empresas en EE. UU. | Sin cobro recurrente: alguien tiene que acordarse **cada mes** |
+| **Stripe (u otro procesador)** | Cobro **recurrente automático**, reintentos, recibos, cancelación limpia | Comisión por transacción; hay que dar de alta la empresa |
+| **PayPal / Wise** | Fácil de abrir, sirve fuera de EE. UU. | Comisión mayor; peor imagen para B2B |
+
+**Mi recomendación, y por qué:** con los primeros 2 o 3 clientes, **factura
+manual**. Con tan pocos, automatizar cuesta más tiempo del que ahorra, y vas a
+querer hablar con cada uno igual. **En cuanto llegues a 5, mueve el mensual a
+cobro recurrente automático** — no por la comisión, sino porque el modo de
+fallar de la facturación manual es que TÚ te olvidas, y un cliente al que no
+le cobraste tres meses es una conversación mucho peor que un 3% de comisión.
+
+**Lo que hay que verificar antes de cobrarle a nadie**, y no lo puedo hacer
+yo:
+
+1. **A nombre de quién factura** — ¿persona natural o una LLC? Cambia los
+   impuestos y cambia quién responde si algo sale mal.
+2. **Si hay que cobrar impuesto sobre las ventas** de software en Utah, y en
+   el estado del cliente. Los Términos ya dicen que los precios no lo
+   incluyen, así que el contrato está cubierto; lo que falta es saber si
+   aplica.
+3. **Qué lleva una factura** para que el cliente pueda deducirla: tu nombre o
+   el de la empresa, dirección, número de factura, fecha, concepto, período.
+
+### Lo demás ya está resuelto
+
+- ~~Correo de bienvenida~~ ✅ reescrito (v11.20): entusiasmo primero, qué
+  compraron, qué viene, y los tres enlaces que van a necesitar otra vez.
+- ~~Precio fundador al volver~~ ✅ decidido por Jose y escrito en la sección 9
+  de los Términos: nadie recupera precio ni beneficios.

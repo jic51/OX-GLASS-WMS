@@ -433,6 +433,33 @@ pago falla), mencionar soporte y devoluciones en `WELCOME-EMAIL.md`, y decidir
 si un cliente fundador que cancela recupera su precio al volver (yo diría que
 no).
 
+## Landing en un solo archivo con botón ES/EN — pedido de Jose (v11.20)
+
+Hoy son **dos archivos** (`landing/es.html` y `landing/index.html`) con el
+mismo diseño y el texto traducido. Jose: un solo archivo con un botón que
+cambie todo el idioma, "así no necesitamos nada más" — un solo archivo que
+alojar, un solo lugar donde corregir un precio.
+
+Y ese es el argumento más fuerte, no la comodidad: **hoy cada cambio hay que
+hacerlo dos veces**. Ya pasó — los precios, el correo de contacto, el contador
+de versiones y el logo se cambiaron dos veces cada uno. La próxima vez que se
+haga solo en uno, la página en inglés va a estar vendiendo otro precio.
+
+**Cómo lo haría:** un solo `index.html`. Cada trozo de texto traducible lleva
+un `data-i18n="clave"`, y un objeto con las dos versiones. El botón cambia
+`lang` en `<html>`, reescribe los textos y guarda la elección en
+`localStorage`. Sin librerías, sin build, sigue siendo un archivo suelto.
+
+**Lo que hay que cuidar:**
+- **El idioma inicial.** `navigator.language` acierta casi siempre; el botón
+  manda por encima y se recuerda.
+- **`<html lang>` tiene que cambiar de verdad**, no solo el texto: es lo que
+  usan Google y los lectores de pantalla.
+- **El `<title>` y la descripción** también son texto traducible.
+- **Una prueba que recorra las dos claves** y falle si a alguna le falta la
+  traducción. Ese es el modo de fallar real: se agrega una frase en inglés,
+  se olvida el español, y la página queda mitad y mitad sin que nadie lo note.
+
 ## Cómo distinguir dos camiones el mismo día — problema abierto
 
 Jose (v11.11), y es un problema real, no un detalle: si un Incoming es
