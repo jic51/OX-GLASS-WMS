@@ -53,9 +53,14 @@ function toLines(md) {
     // of truth…") is addressed to us, not to the customer.
     if (/^>\s/.test(s)) return;
 
+    // Deepest first. Matching `#` before `###` would leave a bare "## " on the
+    // front of every sub-heading, which is exactly what the customer's copy of
+    // the Terms said the first time section 5 grew sub-headings: the literal
+    // hash marks, printed in a legal document.
     let kind = 'p';
-    if (/^#\s/.test(s))       { kind = 'title';  s = s.replace(/^#\s+/, ''); }
-    else if (/^##\s/.test(s)) { kind = 'head';   s = s.replace(/^##\s+/, ''); }
+    if (/^###\s/.test(s))      { kind = 'sub';    s = s.replace(/^###\s+/, ''); }
+    else if (/^##\s/.test(s))  { kind = 'head';   s = s.replace(/^##\s+/, ''); }
+    else if (/^#\s/.test(s))   { kind = 'title';  s = s.replace(/^#\s+/, ''); }
     else if (/^\s*[-*]\s/.test(s)) { kind = 'li'; s = s.replace(/^\s*[-*]\s+/, ''); }
 
     s = s.replace(/\*\*(.+?)\*\*/g, '$1')      // bold
@@ -101,7 +106,7 @@ function block() {
     BEGIN,
     '// Source of truth: legal/TERMS-OF-SERVICE.md and legal/PRIVACY-POLICY.md.',
     '// DO NOT EDIT THIS BLOCK BY HAND — edit the .md and re-run the generator.',
-    '// Each line is [kind, text]; kind is "title", "head", "li" or "p".',
+    '// Each line is [kind, text]; kind is "title", "head", "sub", "li" or "p".',
     'var LEGAL_SHEET_TEXT = {',
     '  terms: [',
     '    ' + enc(terms),

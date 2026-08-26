@@ -160,10 +160,19 @@ console.log('\n═══ the legal tabs are actually built ═══\n');
 
   const flat = written.length ? written[0].values.map(r => r[0]).join('\n') : '';
   check('...starting with the title', /Terms of Service — Acopio/.test(flat));
-  check('...and carrying the "last updated" date the customer needs to compare',
-    /Last updated: 6 August 2026/.test(flat));
-  check('...and the section headings, not just the preamble',
-    /What you are buying/.test(flat) && /Payment and cancellation/.test(flat));
+  // Read from the SOURCE, never typed here. The first version hard-coded
+  // "6 August 2026" and the heading "Payment and cancellation", and both broke
+  // the day the Terms were updated — a test failing because the document it
+  // guards was edited teaches everyone to ignore it. What matters is that the
+  // sheet copy matches legal/*.md, not that it equals a string I typed once.
+  const MD = fs.readFileSync(path.join(__dirname, '..', 'legal', 'TERMS-OF-SERVICE.md'), 'utf8');
+  const mdDate = (/\*\*Last updated:\*\*\s*(.+)/.exec(MD) || [])[1].trim();
+  const mdHeads = (MD.match(/^##\s+(.+)$/gm) || []).map(h => h.replace(/^##\s+/, '').trim());
+
+  check('...and carrying the "last updated" date from the source (' + mdDate + ')',
+    flat.indexOf('Last updated: ' + mdDate) !== -1);
+  check('...and EVERY section heading the .md has (' + mdHeads.length + ' of them)',
+    mdHeads.length > 5 && mdHeads.every(h => flat.indexOf(h) !== -1));
 
   const pw = S._log.filter(e => e.values && e.sheet === S.PRIVACY_SHEET);
   const pflat = pw.length ? pw[0].values.map(r => r[0]).join('\n') : '';

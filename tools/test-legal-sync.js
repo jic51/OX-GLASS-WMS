@@ -146,5 +146,54 @@ check('...and "Privacy Policy" to its tab',
 check('the tabs are created before the link is built — a gid does not exist until the tab does',
   GS.indexOf('createLegalSheets_(ss);') < GS.indexOf('sheetLink_(ss, TERMS_SHEET)'));
 
+// ── Support and refund promises, in every copy ─────────────────────────────
+//
+// These are the sentences a customer quotes back when they are unhappy, so
+// they must be identical in the .md, in the app and in the spreadsheet tab —
+// and they must not contradict what is being sold.
+console.log('\nWhat the support and refund promises actually say');
+{
+  const mdTerms  = fs.readFileSync(path.join(ROOT, 'legal/TERMS-OF-SERVICE.md'), 'utf8');
+  const appTerms = appDoc('terms');
+  const sheetTerms = gsBlock.slice(gsBlock.indexOf('terms:'), gsBlock.indexOf('privacy:'));
+  // Whitespace-collapsed before matching. The .md hard-wraps at ~80 columns
+  // for readable diffs, so a sentence can straddle a newline that the app and
+  // the sheet copies do not have — the first run of this failed on "not when
+  // the problem will be\nsolved" and would have had me editing a document that
+  // was already correct.
+  const flat = t => String(t).replace(/\s+/g, ' ');
+  const all = [['the .md', flat(mdTerms)], ['the app', flat(appTerms)],
+               ['the sheet tab', flat(sheetTerms)]];
+
+  const promises = [
+    ['response time is committed, not "best effort"', /within one business day/i],
+    ['...and says it is a REPLY, not a fix', /not when the problem will be solved/i],
+    ['the setup fee is refundable before the work is done', /Before that work has been done, it is fully refundable/i],
+    ['...and not after', /Once the work has been performed, it is not refundable/i],
+    ['the 14-day monthly refund window is stated', /within 14 days/i],
+    ['unused whole months of an annual are refunded', /whole months you have not yet used are refunded/i],
+    ['a defect we cannot fix in 30 days refunds the period', /30 days of you reporting it/i],
+    ['what is charged separately is listed', /charged separately/i],
+    ['cancelling never switches the software off', /no way to switch it off/i]
+  ];
+  for (const [label, re] of promises) {
+    const missing = all.filter(([, text]) => !re.test(text)).map(([name]) => name);
+    check(label + (missing.length ? ' — missing from ' + missing.join(', ') : ''), missing.length === 0);
+  }
+
+  // The paid add-on promises FOUR business hours. If base support promised the
+  // same or better, the add-on would have nothing to sell — and a customer who
+  // noticed would be right to feel sold something they already had.
+  check('base support is SLOWER than the priority add-on, or the add-on is selling nothing',
+    /one business day/i.test(flat(mdTerms)) && /four business hours/i.test(flat(mdTerms)));
+
+  // The sub-headings added here are the first `###` in either document, and
+  // the generator only knew `#` and `##` — so the customer's copy printed the
+  // literal hash marks inside a legal document.
+  check('no raw Markdown hash marks reached the customer copy', !/###/.test(gsBlock));
+  check('...and the sub-headings survived as something the sheet can style',
+    /"sub","What your subscription includes"/.test(gsBlock));
+}
+
 console.log('\nlegal sync: ' + (fail === 0 ? 'ok' : (fail + ' FAILED')));
 process.exit(fail === 0 ? 0 : 1);

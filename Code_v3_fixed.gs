@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '11.18';
+var APP_VERSION = '11.19';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -45,7 +45,7 @@ var APP_VERSION = '11.18';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'dce3517d';
+var APP_BUILD = 'ed72e4b6';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -5974,12 +5974,12 @@ var PRIVACY_SHEET = '📄 Privacy Policy';
 // ─── BEGIN GENERATED LEGAL TEXT — node tools/sync-legal.js ───
 // Source of truth: legal/TERMS-OF-SERVICE.md and legal/PRIVACY-POLICY.md.
 // DO NOT EDIT THIS BLOCK BY HAND — edit the .md and re-run the generator.
-// Each line is [kind, text]; kind is "title", "head", "li" or "p".
+// Each line is [kind, text]; kind is "title", "head", "sub", "li" or "p".
 var LEGAL_SHEET_TEXT = {
   terms: [
     ["title","Terms of Service — Acopio"],
     ["p",""],
-    ["p","Last updated: 6 August 2026"],
+    ["p","Last updated: 26 August 2026"],
     ["p",""],
     ["p","These terms govern your use of Acopio, warehouse-management software provided by Jose Castro (\"we\", \"us\"). By installing or using it, you agree to them. If you are agreeing on behalf of a company, you confirm you are authorised to do so."],
     ["p",""],
@@ -6014,11 +6014,44 @@ var LEGAL_SHEET_TEXT = {
     ["p",""],
     ["head","5. Support and updates"],
     ["p",""],
-    ["p","While your licence is active:"],
+    ["sub","What your subscription includes"],
+    ["p",""],
+    ["li","•   Every new version, for as long as your licence is active. There is no"],
+    ["p","  higher tier to buy later: improvements and fixes are the subscription."],
     ["li","•   Bug fixes and security updates, delivered as files for you to install."],
-    ["li","•   Support by email during business hours, on a best-effort basis."],
+    ["li","•   Questions about how to use it, by email."],
+    ["li","•   Help reading your own data when something does not add up — for example"],
+    ["p","  working out why a stock figure looks wrong."],
+    ["p",""],
+    ["sub","How fast we answer"],
+    ["p",""],
+    ["p","We answer support email within one business day, Monday to Friday, excluding United States public holidays, on Mountain Time."],
+    ["p",""],
+    ["p","That is when we will have replied to you, not when the problem will be solved. How long a fix takes depends on what it is, and we will not pretend otherwise: you will get a real answer about what is happening and what happens next."],
+    ["p",""],
+    ["p","In practice most email is answered much sooner. One business day is what we are willing to be held to."],
+    ["p",""],
+    ["p","If you need a faster commitment, priority support is available as a paid add-on: four business hours, with a direct channel."],
+    ["p",""],
+    ["sub","What is NOT included, and is charged separately"],
+    ["p",""],
+    ["p","These are quoted before any work starts. Nothing is ever charged without your written agreement first."],
+    ["p",""],
+    ["li","•   Importing your existing history from spreadsheets or another system."],
+    ["li","•   Training beyond the session included with installation, whether for new"],
+    ["p","  staff or a refresher."],
+    ["li","•   Changes built specifically for you — a report, a field, a screen that"],
+    ["p","  only your company needs."],
+    ["li","•   Recovering data you deleted, where recovery is possible at all."],
+    ["li","•   Repairing an installation whose code was modified. The software is"],
+    ["p","  licensed, not sold, and only we may modify it (see section 4). If a copy has been changed, putting it right is billable work, and we may decline it."],
+    ["li","•   A second or subsequent warehouse."],
+    ["p",""],
+    ["sub","What you have to do"],
     ["p",""],
     ["p","Installing updates is your responsibility. Because the software lives in your account, we cannot push a fix to you — including a security fix. We will tell you an update matters; applying it is your call and your action."],
+    ["p",""],
+    ["p","Support depends on your file being reachable. We cannot help with a problem we cannot see. If diagnosing something requires looking at your spreadsheet, we will ask, and you decide."],
     ["p",""],
     ["p","We do not commit to any specific new feature, or to any timeline for one, unless we have agreed it with you in writing."],
     ["p",""],
@@ -6055,9 +6088,39 @@ var LEGAL_SHEET_TEXT = {
     ["p",""],
     ["p","It is a convenience, not a guarantee. It protects against ordinary mistakes — a bad edit, a deleted row. It does not protect against your Google account being deleted, suspended or compromised, because the backups live in that same account. If your data is critical, keep an independent copy outside Google. Verifying that your backups exist and work is your responsibility."],
     ["p",""],
-    ["head","9. Payment and cancellation"],
+    ["head","9. Payment, cancellation and refunds"],
     ["p",""],
-    ["p","Fees, billing period and any add-on pricing are as agreed in writing when you purchase. Cancel any time; cancellation ends future billing and ends support and updates at the end of the paid period. Fees already paid are not refundable except where required by law."],
+    ["p","Fees, billing period and any add-on pricing are as agreed in writing when you purchase."],
+    ["p",""],
+    ["sub","Cancelling"],
+    ["p",""],
+    ["p","Cancel any time. Cancellation ends future billing, and support and updates end when the period you have already paid for runs out."],
+    ["p",""],
+    ["p","Your installation keeps working. It is in your Google account and we have no way to switch it off, and would not use one if we had it. What stops is support and new versions — not the software, and not your access to your own data. See section 10."],
+    ["p",""],
+    ["sub","The setup fee"],
+    ["p",""],
+    ["p","The one-time setup fee covers work we perform: installing, configuring the system to your categories and racks, loading your team, and training you."],
+    ["p",""],
+    ["li","•   Before that work has been done, it is fully refundable. If you change"],
+    ["p","  your mind before we install, you get all of it back."],
+    ["li","•   Once the work has been performed, it is not refundable, because it has"],
+    ["p","  been delivered. That holds even if you then cancel the subscription."],
+    ["p",""],
+    ["sub","The subscription"],
+    ["p",""],
+    ["li","•   Monthly: if you cancel within 14 days of a charge, that month is"],
+    ["p","  refunded in full. After 14 days the month is not refunded, and you keep support and updates until it ends."],
+    ["li","•   Annual: whole months you have not yet used are refunded. Months already"],
+    ["p","  begun are not."],
+    ["li","•   If the fault is ours: if a defect makes the software unusable for its"],
+    ["p","  purpose and we have not fixed it within 30 days of you reporting it, the current period is refunded in full whatever the dates say. You should not pay for a month in which it did not work."],
+    ["p",""],
+    ["p","Refunds are issued by the method you paid with, within 10 business days of being agreed."],
+    ["p",""],
+    ["sub","Add-ons"],
+    ["p",""],
+    ["p","Add-ons follow the subscription: cancel one and it stops at the end of the current period, under the same rules as above."],
     ["p",""],
     ["head","10. Termination"],
     ["p",""],
@@ -6213,6 +6276,7 @@ function createLegalSheets_(ss) {
         var cell = sh.getRange(idx + 2, 2);
         if (l[0] === 'title')      cell.setFontSize(18).setFontWeight('bold').setFontColor(SH_NAVY);
         else if (l[0] === 'head')  cell.setFontSize(13).setFontWeight('bold').setFontColor(SH_ACCENT);
+        else if (l[0] === 'sub')   cell.setFontSize(11).setFontWeight('bold').setFontColor(SH_NAVY);
         else                       cell.setFontSize(11).setFontColor('#374151');
       });
 

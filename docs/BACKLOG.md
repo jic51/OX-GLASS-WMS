@@ -410,27 +410,28 @@ que recordar.
   contraria — 0 no da costo. Las dos mitades aún no coinciden, pero ahora la
   que puede hacer daño avisa.
 
-## ANTES DE COBRARLE A NADIE — política de soporte y de devoluciones
+## ✅ HECHO (v11.19) — política de soporte y de devoluciones
 
-Pedido de Jose (v11.11). Hoy no está escrito en ninguna parte **qué incluye**
-el soporte de $49/mes y qué no, ni qué pasa si alguien quiere su dinero de
-vuelta. Eso no puede quedar en una conversación: es lo primero que se discute
-cuando un cliente está molesto, y para entonces ya es tarde para definirlo.
+Escrita donde obliga: **secciones 5 y 9 de los Términos**, que es lo que el
+cliente acepta. `docs/SOPORTE-Y-DEVOLUCIONES.md` es la versión de trabajo para
+Jose, con los casos que van a aparecer y qué contestar.
 
-Hay que dejar por escrito, en el mismo documento que firma:
+Decisiones de Jose: la instalación **no se devuelve una vez hecha** (sí antes
+de hacerla); el mensual **sí se devuelve**, según caso y fecha.
 
-- **Qué SÍ incluye** el mensual: arreglos de errores, todas las versiones
-  nuevas, preguntas de uso por correo, y en qué plazo se responde.
-- **Qué NO incluye y se cobra aparte**: migración de datos históricos,
-  capacitación adicional, cambios hechos a la medida de ese cliente, recuperar
-  datos que ellos borraron, y arreglar el archivo si lo modificaron por su
-  cuenta (esto último ya está en docs/LICENCIA-E-INTEGRIDAD.md y hay que
-  enlazarlo).
-- **Devoluciones**: si se devuelve la instalación de $500 y bajo qué
-  condiciones, cuánto dura ese plazo, y qué pasa con el mensual ya cobrado.
-- **Qué pasa al dejar de pagar** — ya decidido con Jose (v10.8): la app sigue
-  funcionando, no se apaga nada; lo que se pierde es el soporte y las
-  versiones nuevas.
+Propuesta mía, convertida en números aplicables porque "depende" no se puede
+poner en un contrato: 14 días para el mensual, meses enteros no usados en el
+anual, y devolución del período si un defecto nuestro no se arregla en 30 días.
+
+**Tiempo de respuesta: un día hábil**, y Jose había propuesto 2–3 horas. Le
+dije que no por tres razones, y la tercera es la que decide: el complemento de
+soporte prioritario ya vende **4 horas hábiles** por +$20/mes. Un soporte base
+de 2 horas deja ese complemento sin nada que vender.
+
+**Falta todavía:** el proceso de facturación (con qué se cobra, qué pasa si un
+pago falla), mencionar soporte y devoluciones en `WELCOME-EMAIL.md`, y decidir
+si un cliente fundador que cancela recupera su precio al volver (yo diría que
+no).
 
 ## Cómo distinguir dos camiones el mismo día — problema abierto
 
