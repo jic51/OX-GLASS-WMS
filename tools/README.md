@@ -47,6 +47,8 @@ node tools/test-transfer-project.js
 node tools/test-edit-gaps.js
 node tools/test-incoming.js
 node tools/test-incoming-delete.js
+node tools/test-adjust.js
+node tools/test-adjust-form.js
 node tools/sync-legal.js --check
 node tools/build-fingerprint.js --check
 ```
@@ -494,6 +496,33 @@ come back from — is invisible to both. Those get a browser test.
   never reaches the server, that "already gone" ends green, that a real
   failure still ends red with the window left open to retry, and that the
   button is never latched shut afterwards.
+
+- `test-adjust.js` — the ADJUST movement type (v11.22), the count that
+  disagreed with the record. WASTE is material that existed and was lost —
+  it has a cost and belongs to a job. ADJUST says the RECORD is wrong: no
+  cost, no project, a required reason, and it can go UP as easily as down.
+  Keeping them apart is not tidiness — a miscount filed as waste turns the
+  company's waste figure into "waste plus bookkeeping errors". Most of this
+  file is about the real risk in the change, which was not the feature but
+  AGREEMENT: four separate functions turn movements into stock, and if one
+  of them has never heard of ADJUST its numbers drift from the other three
+  and the symptom is a rack quietly reading wrong weeks later. It checks all
+  four know the type AND handle both directions, runs the real snapshot
+  builder over an archive containing adjustments, and pins what the writer
+  refuses (no direction, no reason, a downward adjust bigger than the rack
+  holds — reported as "the count went stale", never as "insufficient stock",
+  which would be nonsense on a correction whose premise is that the stock
+  figure is wrong).
+- `test-adjust-form.js` — the same screen's live arithmetic in a real
+  browser: type a count, and on every keystroke it has to say which way the
+  correction goes, how big it is, and what it is NOT. The delta line has
+  words in it because somebody reaching for Adjust when they mean Waste has
+  exactly one chance to notice before the row is written. Also the two
+  distinctions a static check cannot make: a count of ZERO is an answer
+  ("the shelf is empty") while an empty box is not, and a rack the app has
+  never seen the material in reads 0 the same as an empty one — far more
+  often a typo than a discovery, so the screen says so out loud instead of
+  quietly inventing stock.
 
 All of these lift the real code out of `Index_v3_fixed.html` (or
 `Code_v3_fixed.gs`) rather than keeping a copy, so they cannot quietly drift

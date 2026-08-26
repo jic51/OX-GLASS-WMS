@@ -481,16 +481,44 @@ día son ~15 versiones de trabajo y después hay que alimentarlo en cada
 release. Si no se va a alimentar, es mejor despublicarlo que dejarlo mintiendo.
 El precio de "Acopio en Detalle" hay que arreglarlo pase lo que pase.
 
-## El botón "Adjust" — falta decidir qué hace (Jose, v11.21)
+## ✅ HECHO (v11.22) — el botón "Adjust"
 
 Jose: "DEBEMOS PONER EL BOTÓN DE ADJUST… NO RECUERDO QUÉ EXACTAMENTE HARÁ
-DIFERENTE A WASTE". Propuesta pendiente de aprobación en el mensaje de v11.21.
-Resumen: **WASTE es material que existió y se perdió** (tiene costo, sale del
-proyecto, se descuenta del inventario). **ADJUST es el conteo que no cuadra**
-—el sistema dice 40, el rack tiene 38— y no significa que se hayan roto dos:
-significa que el registro está mal. Costo cero, motivo obligatorio, y su
-propio tipo de movimiento para que "cuánto desperdiciamos" no se contamine
-con "cuánto nos equivocamos anotando".
+DIFERENTE A WASTE". Propuesto en v11.21, aprobado ("ASI ESTA BIEN"), construido
+en v11.22.
+
+**La línea, que es lo único que importa de este tipo de movimiento:**
+
+- **WASTE = material que existió y se perdió.** Tiene costo, se le carga al
+  proyecto, y "cuánto desperdiciamos" es una pregunta real sobre él.
+- **ADJUST = el conteo no cuadra.** El sistema dice 40, el rack tiene 38. Eso
+  **no** significa que se rompieron dos: significa que **el registro está mal**.
+  Costo cero, sin proyecto, motivo obligatorio, y **puede subir el stock**,
+  cosa que Waste nunca hace.
+
+Si un error de conteo se registra como Waste, la cifra de desperdicio de la
+empresa pasa a ser "desperdicio + errores de anotación", y son dos problemas
+distintos con dos soluciones distintas.
+
+**Cómo se pide:** no se escribe la diferencia, se escribe **lo que contaste**.
+La app ya sabe lo que ella creía y saca la resta. Quien está parado frente al
+rack tiene "38" en la cabeza, no "menos 2", y pedir la resta es pedir una
+operación que se puede invertir sin darse cuenta.
+
+**Dónde vive la dirección:** en **cuál de las dos columnas de rack** se llena
+— Source si el conteo salió corto, Destination si salió largo. Es la misma
+gramática que ya usan los otros tipos (ENTRY escribe DEST, EXIT y WASTE
+escriben SRC, TRANSFER escribe las dos). La alternativa era una cantidad
+negativa, y habría metido un número negativo en cada suma, badge, gráfico y
+exportación de la app.
+
+**El riesgo real de este cambio no era la feature, era el ACUERDO:** hay
+**cuatro** funciones que convierten movimientos en stock. Si una no conoce
+ADJUST, sus números se separan de las otras tres y el síntoma aparece semanas
+después como un rack que lee mal sin apuntar a nada. `tools/test-adjust.js`
+vigila que las cuatro sepan, y que las cuatro manejen **las dos direcciones**.
+
+`tools/test-adjust.js` y `tools/test-adjust-form.js`.
 
 ## Landing en un solo archivo con botón ES/EN — pedido de Jose (v11.20)
 
