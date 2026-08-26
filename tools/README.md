@@ -45,6 +45,8 @@ node tools/test-pack-prompt.js
 node tools/test-start-here.js
 node tools/test-transfer-project.js
 node tools/test-edit-gaps.js
+node tools/test-incoming.js
+node tools/test-incoming-delete.js
 node tools/sync-legal.js --check
 node tools/build-fingerprint.js --check
 ```
@@ -471,6 +473,27 @@ come back from — is invisible to both. Those get a browser test.
   avatar or the bell, brand never overlaps the tabs, and — the actual v9.91
   bug — the tabs' centre matches the real page centre exactly when merged,
   not just centred in the leftover space next to brand.
+
+- `test-incoming.js` — the two halves of an expected delivery that disagreed
+  with each other (v11.21, both from one screenshot Jose sent). `addIncoming`
+  hard-coded `'Pending'` in its `appendRow` and never read `data.status`,
+  while `updateIncoming` honoured it — so a delivery entered as already
+  Arrived, or cancelled on the spot, saved as Pending and needed a second
+  edit to stick. Both now go through one `incomingStatus_`, which is what
+  stops them drifting apart again, and the test also compares the three
+  states it accepts against the three options the dropdown actually offers.
+  The rest of the file pins the delete guard's shape, including that an
+  error which is a bare string still reads properly.
+- `test-incoming-delete.js` — the same guard, running. Jose pressed Delete
+  twice because the first press changed nothing on screen (the window stays
+  open until the server answers), and the second press hit a row already
+  removed: `Incoming item not found`, in red, for a delete that had worked.
+  A written check can see the guard exists; only a running page can be asked
+  whether the sequence still produces an error. Holds the server's answer
+  open to inspect the in-flight window, then checks that the second press
+  never reaches the server, that "already gone" ends green, that a real
+  failure still ends red with the window left open to retry, and that the
+  button is never latched shut afterwards.
 
 All of these lift the real code out of `Index_v3_fixed.html` (or
 `Code_v3_fixed.gs`) rather than keeping a copy, so they cannot quietly drift

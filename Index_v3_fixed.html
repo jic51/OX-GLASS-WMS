@@ -2847,7 +2847,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.20';
+var APP_VERSION = '11.21';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -2859,7 +2859,7 @@ var APP_VERSION = '11.20';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'de396b74';
+var APP_BUILD = '2e2318f7';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -12884,14 +12884,33 @@ function deleteIncomingItem() {
     onConfirm: function(){ _doDeleteIncomingItem(id); }
   });
 }
+// The window stays open while the row is being deleted, so the Delete button is
+// still under the finger that just pressed it — and with no spinner there was
+// nothing on screen to say the first press had done anything. The second press
+// then hit a row the server had already removed and reported "Incoming item not
+// found", which reads as a failure for a delete that worked.
 function _doDeleteIncomingItem(id){
+  var btn = document.getElementById('btnDeleteIncoming');
+  if (btn && btn.disabled) return;   // already in flight
+  _btnBusy(btn, 'Deleting…');
   google.script.run
-    .withSuccessHandler(function(){
-      closeModal('incomingOverlay');
-      loadDataFromGoogle(true); // skipCache
+    .withSuccessHandler(function(){ _incomingDeleted(btn); })
+    .withFailureHandler(function(err){
+      var msg = (err && err.message) ? String(err.message) : String(err || '');
+      // The row is gone — a second press, or somebody else deleted it first.
+      // That is the state that was asked for, so report it as done.
+      if (msg.indexOf('Incoming item not found') !== -1){ _incomingDeleted(btn); return; }
+      _btnReset(btn);
+      showToast('Error: ' + msg, 'err', 5000);
     })
-    .withFailureHandler(function(err){ showToast('Error: ' + err.message, 'err', 5000); })
     .processMovement('deleteIncoming', _h({ id: id }));
+}
+function _incomingDeleted(btn){
+  _btnDone(btn, true, function(){
+    closeModal('incomingOverlay');
+    showToast('Expected delivery deleted.', 'ok');
+  });
+  loadDataFromGoogle(true); // skipCache
 }
 
 // ── Read an email into expected deliveries ──────────────────────────────────

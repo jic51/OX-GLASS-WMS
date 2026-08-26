@@ -433,6 +433,65 @@ pago falla), mencionar soporte y devoluciones en `WELCOME-EMAIL.md`, y decidir
 si un cliente fundador que cancela recupera su precio al volver (yo diría que
 no).
 
+## ✅ HECHO (v11.21) — los dos defectos de Incoming que Jose fotografió
+
+**El Status se tiraba a la basura al crear.** `addIncoming` escribía
+`'Pending'` fijo y nunca leía `data.status`, mientras que `updateIncoming` sí
+lo respetaba. Una entrega registrada como Arrived —o anulada en el momento—
+se guardaba Pending y había que editarla otra vez. Las dos mitades pasan ahora
+por `incomingStatus_`, que es lo que impide que vuelvan a separarse.
+
+**Borrar no decía nada y no se bloqueaba.** La ventana se queda abierta hasta
+que el servidor contesta, así que el botón seguía bajo el dedo y sin ningún
+cambio en pantalla. El segundo clic llegaba a una fila ya borrada:
+`Incoming item not found`, en rojo, por un borrado que había funcionado.
+Ahora el botón se deshabilita con spinner, el segundo clic no sale del
+navegador, "no encontrado" termina en verde, y un error de verdad sigue
+dejando la ventana abierta para reintentar.
+
+`tools/test-incoming.js` y `tools/test-incoming-delete.js`.
+
+**Visto de paso, no tocado:** la caja Quantity de Incoming abre con un `1`
+escrito (`<input id="incQty" … value="1">`). Es exactamente lo que Jose mandó
+quitar de las ventanas de movimientos en v11.7 ("al abrir la ventana no debe
+haber ningún dato escrito, ni siquiera '0' en qty"). No lo cambié porque no lo
+pidió para esta ventana y un cambio no pedido en un formulario es cómo se
+rompe algo que funcionaba; dice él y se quita en dos líneas.
+
+## Documentos publicados — qué es cada uno y cuál está desactualizado (v11.21)
+
+Jose preguntó por la lista de artifacts. Auditada contra las fuentes del repo:
+
+| Publicado | Fuente en el repo | Estado |
+|---|---|---|
+| **Acopio** (×2, 22 ago) | `landing/index.html`, `landing/es.html` | Precios al día ($500 / $49 / $490). Se van a rehacer igual con el botón ES/EN |
+| **Acopio en Detalle** (24 ago) | `landing/acopio-overview.html` | **Desactualizado: dice $400 y $39/mes.** El archivo del repo también — la fuente nunca se actualizó cuando subimos el precio |
+| **Acopio Changelog** (23 ago) | `landing/changelog.html` | Se detiene en **v10.6**. Faltan ~15 versiones |
+| **Novedades de Acopio** (23 ago) | `landing/novedades.html` | Igual: se detiene en v10.6 |
+| **Acopio Marks** (17 ago) | — (sin fuente en el repo) | Documento de trabajo (las marcas/logos que se compararon), no es para clientes |
+
+**Por qué pasó:** los artifacts son copias publicadas, no ventanas al repo. Se
+actualizan cuando alguien los vuelve a publicar, y nada avisa cuando el
+contenido que reflejan cambió. El precio subió en `landing/*.html` pero
+`acopio-overview.html` quedó fuera de ese cambio, y el changelog dejó de
+alimentarse en v10.6.
+
+**Qué falta decidir (de Jose):** el changelog público, ¿se mantiene? Ponerlo al
+día son ~15 versiones de trabajo y después hay que alimentarlo en cada
+release. Si no se va a alimentar, es mejor despublicarlo que dejarlo mintiendo.
+El precio de "Acopio en Detalle" hay que arreglarlo pase lo que pase.
+
+## El botón "Adjust" — falta decidir qué hace (Jose, v11.21)
+
+Jose: "DEBEMOS PONER EL BOTÓN DE ADJUST… NO RECUERDO QUÉ EXACTAMENTE HARÁ
+DIFERENTE A WASTE". Propuesta pendiente de aprobación en el mensaje de v11.21.
+Resumen: **WASTE es material que existió y se perdió** (tiene costo, sale del
+proyecto, se descuenta del inventario). **ADJUST es el conteo que no cuadra**
+—el sistema dice 40, el rack tiene 38— y no significa que se hayan roto dos:
+significa que el registro está mal. Costo cero, motivo obligatorio, y su
+propio tipo de movimiento para que "cuánto desperdiciamos" no se contamine
+con "cuánto nos equivocamos anotando".
+
 ## Landing en un solo archivo con botón ES/EN — pedido de Jose (v11.20)
 
 Hoy son **dos archivos** (`landing/es.html` y `landing/index.html`) con el

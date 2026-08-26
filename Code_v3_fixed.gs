@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '11.20';
+var APP_VERSION = '11.21';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -45,7 +45,7 @@ var APP_VERSION = '11.20';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'de396b74';
+var APP_BUILD = '2e2318f7';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -8150,6 +8150,21 @@ function incomingDateCell_(ymd) {
   return ymd ? new Date(String(ymd) + 'T12:00:00') : '';
 }
 
+// The three states the Status dropdown offers. add and update used to disagree:
+// addIncoming hard-coded 'Pending' and threw the form's value away, so a
+// delivery entered as already Arrived (or cancelled on the spot) came back
+// Pending and had to be edited a second time to stick. One function answers for
+// both now, and anything unrecognised falls back to Pending rather than writing
+// a status that no filter in the app matches.
+var INCOMING_STATUSES = ['Pending', 'Arrived', 'Cancelled'];
+function incomingStatus_(v) {
+  var s = String(v || '').trim().toLowerCase();
+  for (var i = 0; i < INCOMING_STATUSES.length; i++) {
+    if (INCOMING_STATUSES[i].toLowerCase() === s) return INCOMING_STATUSES[i];
+  }
+  return 'Pending';
+}
+
 function addIncoming(data) {
   var auth = getUserRole(data && data._sessionToken);
   if (auth.role !== 'ADMIN') throw new Error('Admin only.');
@@ -8170,7 +8185,7 @@ function addIncoming(data) {
     sheetSafe_(String(data.supplier || '')),
     sheetSafe_(String(data.po       || '')),
     sheetSafe_(String(data.notes    || '')),
-    'Pending',
+    incomingStatus_(data.status),
     auth.email,
     new Date(),
     sheetSafe_(String(data.pm       || '')),
@@ -8219,7 +8234,7 @@ function updateIncoming(data) {
         sheetSafe_(String(data.supplier || '')),
         sheetSafe_(String(data.po       || '')),
         sheetSafe_(String(data.notes    || '')),
-        sheetSafe_(String(data.status   || 'Pending')),
+        incomingStatus_(data.status),
         values[i][10],          // preserve addedBy
         values[i][11],          // preserve addedAt
         sheetSafe_(String(data.pm || '')),  // PM — Project Manager
