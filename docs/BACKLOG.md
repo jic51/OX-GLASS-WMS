@@ -137,7 +137,7 @@ here once they ship (the commit message is the record of what changed and why).
 
     **El problema no es poner el hipervínculo, es a dónde apunta.** Antes de la
     instalación el cliente no tiene la app desplegada, así que el enlace a
-    Settings → Legal no le sirve. Y acopio.com todavía no existe: **inventar
+    Settings → Legal no le sirve. Y acopio.net todavía no existe: **inventar
     una URL ya me costó una vez y no se repite**. Dos opciones reales:
 
     - **(a) El texto viaja en el archivo.** Una pestaña más en la plantilla
@@ -147,7 +147,7 @@ here once they ship (the commit message is the record of what changed and why).
       la promesa del producto: todo vive en su archivo. El costo: una TERCERA
       copia del texto legal, que habría que sumar a `tools/test-legal-sync.js`
       para que no derive de las otras dos.
-    - **(b) Esperar a acopio.com** y enlazar a las páginas públicas. Más
+    - **(b) Esperar a acopio.net** y enlazar a las páginas públicas. Más
       limpio, sin copias, y **bloqueado** hasta que exista el dominio.
 
     Mi recomendación: **(a)**, porque el bloqueo de (b) no tiene fecha y esto
@@ -602,7 +602,7 @@ nada para tenerla.
 ## Tarjeta de reenganche para clientes que dejaron de pagar — idea de Jose (v9.95)
 
 **La idea:** cada ~6 meses, una sola vez, mostrar una tarjeta tipo "no te
-pierdas las mejoras — acopio.com / service@acopio.com" con link al listado de
+pierdas las mejoras — acopio.net / service@acopio.net" con link al listado de
 novedades y correcciones. Descartable, visualmente distinta de las tarjetas
 normales, y en otro lugar, para no ser molesta.
 
@@ -634,7 +634,7 @@ Jose describió.
 - **"Descartar" tiene que durar.** En Script Properties, no en localStorage —
   descartarla en la computadora y que reaparezca en el teléfono la convierte
   en lo que se quería evitar.
-- **BLOQUEADO:** acopio.com no existe todavía, y el listado de novedades
+- **BLOQUEADO:** acopio.net no existe todavía, y el listado de novedades
   tampoco. Sin esos dos, no hay a dónde mandar a nadie. Va después de la
   landing.
 
@@ -1067,7 +1067,7 @@ instalaciones, en `ACOPIO_FAVICON_URL`. Cero acción del cliente. La constante
 está **vacía todavía** porque `setFaviconUrl` necesita una URL pública que los
 servidores de Google puedan pedir sin credenciales, y Acopio aún no tiene casa
 pública. Vacío = el comportamiento de hoy, sin estados a medias. Encenderlo es
-cambiar **una línea**: `acopio.com/favicon.png`, o un PNG cuadrado en el Drive
+cambiar **una línea**: `acopio.net/favicon.png`, o un PNG cuadrado en el Drive
 **de Jose** compartido "cualquiera con el enlace"
 (`https://drive.google.com/uc?export=view&id=ID`) — el Drive del cliente no se
 toca, así que no se publica nada de él.

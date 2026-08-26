@@ -33,7 +33,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '11.17';
+var APP_VERSION = '11.18';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -45,7 +45,7 @@ var APP_VERSION = '11.17';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '2eca4a99';
+var APP_BUILD = 'dce3517d';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -53,7 +53,7 @@ var APP_BUILD = '2eca4a99';
 //
 // This is the SQUARE stacked-boxes mark, out of Jose's own Drive — no customer
 // file is published, so nothing of theirs becomes public. It moves to
-// acopio.com/favicon.png once the domain exists; this line is the only change.
+// acopio.net/favicon.png once the domain exists; this line is the only change.
 //
 // ─── THE `#.png` ON THE END IS LOAD-BEARING. DO NOT TIDY IT AWAY. ───────────
 // The docs spell out the rule in one clause that is easy to read past:
@@ -92,7 +92,7 @@ var APP_BUILD = '2eca4a99';
 // choice for a tab icon: it sits cleanly on light and dark browser chrome
 // alike, where a white square would show its edges on one of the two.
 //
-// Long term this moves to acopio.com/favicon.png: a plain file at a plain URL
+// Long term this moves to acopio.net/favicon.png: a plain file at a plain URL
 // needs none of the above, and Drive is a poor host for something every
 // customer fetches on every load.
 var ACOPIO_FAVICON_URL = 'https://lh3.googleusercontent.com/d/1taYWwdJzwbArrSVjtTideDrJyNOyenOq#.png';

@@ -34,7 +34,7 @@ dejan de abrir**.
 Hacerlo una vez en una copia de prueba. Un backup que nunca se restauró no es
 un backup.
 
-### 4. acopio.com y la página de novedades
+### 4. acopio.net y la página de novedades
 
 Sin landing no hay a dónde mandar a nadie, y bloquea también el hipervínculo
 del nombre "Acopio" dentro de la app y la tarjeta de reenganche. Ver

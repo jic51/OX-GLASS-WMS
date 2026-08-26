@@ -267,7 +267,7 @@
          serves as its browser-tab icon (ACOPIO_FAVICON_URL in Code.gs), so the
          page and the product show one logo rather than two.
 
-         NOTE for when acopio.com goes up: this hotlinks Google's CDN, which
+         NOTE for when acopio.net goes up: this hotlinks Google's CDN, which
          means the header depends on that Drive file staying shared. Copy the
          file next to this page and make the src relative before launch — a
          landing page whose logo is one permission change away from a broken
@@ -408,7 +408,7 @@
         <p class="l">Acopio has run a real window-installation warehouse floor, in production, since 2026 — the same build customers get.</p>
       </div>
       <div class="proof-item">
-        <div class="n" id="verCount">133</div>
+        <div class="n" id="verCount">144</div>
         <p class="l">Releases shipped so far. Every fix and improvement is included in support — see <a href="#">what's new</a>.</p>
       </div>
       <div class="proof-item">
@@ -513,7 +513,10 @@
     <div>
       <h2 class="h2">Twenty minutes, and we'll both know.</h2>
       <p class="sub">There's no signup button on purpose. Every installation needs a short conversation first — how your team's email is set up decides how we install it, and getting that wrong is hard to undo. So we do it with you.</p>
-      <p class="sub" style="margin-top:1.4rem">Or write directly: <a href="mailto:hello@acopio.com">hello@acopio.com</a></p>
+      <!-- Jose owns acopio.net (bought v11.18). This stays a real, working
+     inbox until hello@acopio.net actually receives mail — a published
+     address that bounces loses the customer without anyone finding out. -->
+      <p class="sub" style="margin-top:1.4rem">Or write directly: <a href="mailto:joseisrael5101@gmail.com">joseisrael5101@gmail.com</a></p>
     </div>
     <form id="lead">
       <label>Your name
@@ -572,7 +575,7 @@
       'Company: ' + f.company.value + '\n' +
       'Email: ' + f.email.value + '\n\n' +
       'How they track inventory today:\n' + f.how.value + '\n';
-    window.location.href = 'mailto:hello@acopio.com'
+    window.location.href = 'mailto:joseisrael5101@gmail.com'
       + '?subject=' + encodeURIComponent('Acopio demo request — ' + f.company.value)
       + '&body=' + encodeURIComponent(body);
   });

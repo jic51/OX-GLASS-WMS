@@ -63,7 +63,7 @@ está hoy — el ícono de Google — que es exactamente lo que todos ven ahora,
 que no empeora nada.
 
 **Falta:** un lugar público donde vivir el ícono de Acopio. Lo natural es
-`acopio.com/favicon.png` cuando exista la landing. Mientras tanto, un archivo
+`acopio.net/favicon.png` cuando exista la landing. Mientras tanto, un archivo
 de Drive marcado como público también sirve.
 
 **Decisión pendiente de Jose — el ícono por cliente.** Para que cada cliente
@@ -140,7 +140,7 @@ En la app desplegada, F12 → **Elements**, y mirar el `<head>` del documento
   `uc?export=view` responden con redirecciones y límites de tasa, y un
   navegador que no recibe bytes de imagen limpios se queda con el icono por
   defecto sin decir nada. Se arregla con un `.png` servido directo desde
-  acopio.com.
+  acopio.net.
 - **Si la etiqueta NO está** → Google no la aplica en despliegues `/exec`, y
   entonces no se puede. Se documenta y se cierra el tema.
 
@@ -205,7 +205,7 @@ la URL se ve perfectamente correcta sin ella, la app no da ningún error, y el
 
 **Esto sigue siendo un parche sobre el anfitrión equivocado.** Aunque Drive llegara a funcionar, sigue siendo el anfitrión
 equivocado para un recurso que cada carga de cada cliente va a pedir. La
-solución de verdad es un `.png` en acopio.com, y acopio.com ya está en la lista
+solución de verdad es un `.png` en acopio.net, y acopio.net ya está en la lista
 de bloqueantes por otras tres razones. El código está listo y probado: el día
 que exista el dominio, es **una línea**.
 
@@ -226,6 +226,6 @@ del Issue Tracker tenía la respuesta desde 2017.
 pestaña: se apoya limpio tanto sobre la barra clara como sobre la oscura,
 mientras que un cuadro blanco enseña sus bordes en una de las dos.
 
-Sigue en pie que el destino final es `acopio.com/favicon.png` — un archivo
+Sigue en pie que el destino final es `acopio.net/favicon.png` — un archivo
 normal en una URL normal no necesita nada de esto, y Drive es mal anfitrión
 para algo que cada cliente pide en cada carga.
