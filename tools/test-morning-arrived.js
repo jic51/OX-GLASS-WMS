@@ -148,15 +148,22 @@ console.log('\nScenario: the layout Jose drew');
 // which is what made two deliveries read as one.
 check('the category gets a line of its own, above everything',
   admin.indexOf('inc-item-cat') !== -1);
-check('...then the quantity, in front of the name', admin.indexOf('inc-item-qty') !== -1);
-check('...then whatever was noted about it', admin.indexOf('inc-item-meta') !== -1);
-check('...and the status sits at the bottom, beside the button',
-  admin.indexOf('inc-item-foot') !== -1);
+check('the name and the quantity are two columns, not one wrapping line',
+  admin.indexOf('inc-item-main') !== -1 && admin.indexOf('inc-item-side') !== -1);
+check('...with whatever was noted under the name', admin.indexOf('inc-item-meta') !== -1);
 {
+  // Jose's second sketch: quantity across from the name on the right, status
+  // under the quantity. The DOM order IS the visual order here — the side
+  // column is a flex column — so checking it is checking the layout.
   const cat  = admin.indexOf('inc-item-cat');
+  const main = admin.indexOf('inc-item-main');
+  const side = admin.indexOf('inc-item-side');
   const qty  = admin.indexOf('inc-item-qty');
-  const foot = admin.indexOf('inc-item-foot');
-  check('and they come in that order, not merely all present', cat < qty && qty < foot);
+  const stat = admin.indexOf('inc-status-', side);
+  check('category, then the name column, then the quantity column',
+    cat < main && main < side);
+  check('...and inside that column the quantity comes first, the status under it',
+    qty < stat);
 }
 // One delivery, one shape, wherever it is drawn.
 check('the week cards use the same renderer rather than a second copy of it',
@@ -170,7 +177,27 @@ check('...which asks the same "what is left of this week" as the automatic one',
   /_thisWeeksDeliveries\(/.test(extractFn('checkMorningPopup')));
 check('...and says so plainly when there is nothing left this week',
   /Nothing expected for the rest of this week/.test(reopen));
-check('a button on the Incoming screen calls it', /onclick="openWeekSchedule\(\)"/.test(src));
+// Jose: "el botón debería estar en un lugar donde todos tengan acceso sin
+// tener que ir a la pantalla de incoming." The account menu is on every screen.
+{
+  const menu = src.slice(src.indexOf('<div class="acct-actions">'),
+                         src.indexOf('</div>', src.indexOf('id="acctSwitch"')));
+  check('it is in the account menu, reachable from any screen',
+    /onclick="closeAccountMenu\(\);openWeekSchedule\(\)"/.test(menu));
+  // Everyone in the warehouse needs to know what is arriving. The Mark arrived
+  // buttons inside the popup stay admin-only, so a warehouse user reads the
+  // list and cannot change it.
+  const btn = menu.slice(menu.indexOf('id="btnWeekSchedule"') - 60,
+                         menu.indexOf('id="btnWeekSchedule"') + 160);
+  check('...with no role gate and not hidden by default, unlike Settings',
+    btn.indexOf('display:none') === -1);
+  check('...while the Mark arrived button inside it is still ADMIN only',
+    /userRole === 'ADMIN'/.test(extractFn('_incItemHtml')));
+  // Only the onclick, not `function openWeekSchedule(){` — counting bare
+  // `openWeekSchedule()` counted the definition as a second button.
+  check('and it is gone from the Incoming toolbar, where it only reached one screen',
+    (src.match(/onclick="[^"]*openWeekSchedule\(\)/g) || []).length === 1);
+}
 const refresh = extractFn('_refreshMorningPopup');
 check('an open popup redraws itself when the data behind it changes',
   /classList\.contains\('show'\)/.test(refresh) && /showMorningPopup\(/.test(refresh));

@@ -189,6 +189,20 @@ console.log('\n═══ the same thing, written two ways ═══\n');
     of(res, 'spelling', 'project').length === 0);
 }
 
+{
+  // The exact pair from Jose's screenshot. Same letters, different case — and
+  // the sweep must both FIND it and be able to apply it. It found it and then
+  // refused its own finding, which is the worst of both.
+  const res = scan([
+    row({ name: 'A', src: 'SWEETWATER - SPRING CANYON 2' }),
+    row({ name: 'A', src: 'Sweetwater - SPRING CANYON 2' })
+  ]);
+  const f = of(res, 'spelling', 'rack');
+  check('two spellings that differ only in CASE are found as one finding', f.length === 1);
+  check('...with both of them named, so the survivor is a real choice',
+    f.length === 1 && f[0].spellings.length === 2);
+}
+
 console.log('\n═══ a movement missing what its siblings have ═══\n');
 
 {
@@ -370,6 +384,28 @@ console.log('\n═══ applying, and what it refuses ═══\n');
     /mergeLocationsLocked_/.test(apply));
   check('a "have a look" finding cannot be applied at all',
     /not something the app can apply/.test(extractFn('applyDataQualityFixLocked_')));
+
+  // Jose pressed "Merge them" on
+  //   SWEETWATER - SPRING CANYON 2  ·  Sweetwater - SPRING CANYON 2
+  // and got "Nothing to merge — that is already the only spelling", from a
+  // sweep that had just found the two itself.
+  //
+  // The filter that drops the survivor from the merge list was uppercasing
+  // both sides, copied from the Settings merge where you genuinely cannot
+  // merge a value into itself. Here it deleted the commonest finding there is:
+  // same letters, different case. A difference of case is a real difference in
+  // what is stored.
+  check('two spellings that differ ONLY in case can still be merged',
+    /return v && v !== keep;/.test(apply) && !/v\.toUpperCase\(\) !== keep\.toUpperCase\(\)/.test(apply));
+  check('...while a byte-for-byte repeat of the survivor is still dropped',
+    /v !== keep/.test(apply));
+
+  // Same merge, in the locations path: the survivor's own row is removed with
+  // the others (its uppercase is in `wanted`) and re-added — and re-adding it
+  // as a bare RACK would move a location out of the group it was filed under.
+  const locs = codeOnly(extractFn('mergeLocationsLocked_'));
+  check('a case-only location merge keeps the survivor in its own group',
+    /intoType/.test(locs) && /types\.push\(intoType \|\| 'RACK'\)/.test(locs));
   check('the whole apply is inside the stock lock',
     /withStockLock_/.test(codeOnly(extractFn('applyDataQualityFix'))));
   check('...and is ADMIN only', /requireAuth_\('ADMIN'\)/.test(extractFn('applyDataQualityFix')));

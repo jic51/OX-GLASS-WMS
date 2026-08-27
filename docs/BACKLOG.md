@@ -589,11 +589,40 @@ arriba; luego **cuántos** y **qué** en una línea; luego lo que se anotó; aba
 estado y la única acción. **Un solo renderizador (`_incItemHtml`) para las
 tarjetas y el aviso** — tener dos es como se separaron.
 
-*Decisión que tomé y conviene revisar:* la categoría conserva su pastilla de
-color en vez del texto plano del boceto, porque ese color es el mismo que la
-categoría tiene en todas las demás pantallas y está haciendo trabajo — uno
-encuentra MIRROR en una tarjeta por el color antes de leer una palabra. Si lo
-prefieres en texto plano es una línea.
+*Decisión que tomé:* la categoría conserva su pastilla de color en vez del texto
+plano del boceto, porque ese color es el mismo que la categoría tiene en todas
+las demás pantallas y está haciendo trabajo — uno encuentra MIRROR en una
+tarjeta por el color antes de leer una palabra.
+
+## ✅ HECHO (v11.26) — el merge que se negaba a sí mismo, y dos ajustes de Jose
+
+**1. "Nothing to merge — that is already the only spelling", sobre dos
+ortografías que el barrido acababa de encontrar él mismo.** Jose lo vio en
+`SWEETWATER - SPRING CANYON 2 · Sweetwater - SPRING CANYON 2`.
+
+El filtro que quita al superviviente de la lista a fusionar comparaba en
+mayúsculas — copiado del merge de Settings, donde tiene sentido (no puedes
+fusionar un valor consigo mismo). Aquí borraba **el hallazgo más común que
+existe**: las mismas letras con distinta caja. Una diferencia de mayúsculas es
+una diferencia real en lo que está guardado, y normalizarla es un merge como
+cualquier otro. Ahora solo se descarta una repetición byte por byte.
+
+Y en el camino de ubicaciones, un merge que solo cambia la caja borra también la
+fila del superviviente (su versión en mayúsculas está en `wanted`) y la vuelve a
+agregar — como `RACK` pelado, sacando la ubicación del grupo en el que alguien
+la había archivado. Ahora **recuerda su grupo**.
+
+**2. La presentación, segundo boceto:** el nombre a la izquierda y **la cantidad
+enfrente, a la derecha**, con el estado debajo de la cantidad. Dos columnas en
+vez de cuatro líneas apiladas, y el punto es el borde derecho: **cada cantidad
+debajo de la anterior, cada estado debajo del anterior.** Se ve lo que falta por
+recibir sin leer un solo nombre de material.
+
+**3. "This week's arrivals" se movió al menú del avatar**, sin filtro de rol.
+Jose: "el botón debería estar en un lugar donde todos tengan acceso sin tener
+que ir a la pantalla de incoming." Los botones **"Mark arrived" dentro del aviso
+siguen siendo solo de ADMIN**, así que quien es de bodega lee la lista y no la
+puede cambiar.
 
 ## Comentarios sobre un material, sin editar el movimiento — idea de Jose (v11.23)
 
