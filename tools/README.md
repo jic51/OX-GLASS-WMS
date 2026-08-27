@@ -49,6 +49,7 @@ node tools/test-incoming.js
 node tools/test-incoming-delete.js
 node tools/test-adjust.js
 node tools/test-adjust-form.js
+node tools/test-data-quality.js
 node tools/check-changelog.js
 node tools/sync-legal.js --check
 node tools/build-fingerprint.js --check
@@ -525,6 +526,19 @@ come back from — is invisible to both. Those get a browser test.
   often a typo than a discovery, so the screen says so out loud instead of
   quietly inventing stock.
 
+- `test-data-quality.js` — the sweep that finally looks at what is already
+  saved (v11.23). Jose asked why the app had stopped finding things to
+  correct; it never started, because the only checker that existed ran while
+  somebody TYPED a name. Most of this file is about what the sweep REFUSES to
+  say, because its output invites a destructive action: merging two materials
+  moves stock. The pair that decides whether the whole feature is trustworthy
+  is `BS10` vs `BS 10` (the same window — must be found) against `JJF 109` vs
+  `JJF 110` (two products — must never be offered as a merge, not even as a
+  "have a look"). It runs the real scan over a fake archive, and also pins the
+  refusals: two suppliers on record means no proposal at all, an EXIT with no
+  job is left alone, GC/PO/PM are never bulk-filled, GENERIC is never a
+  project to merge into, and the whole apply path goes through the merge
+  functions the Settings screens already use.
 - `check-changelog.js` — not a test; a guard against rot. Both public
   changelog pages sat at v10.6 while the app shipped v11.22 — fifteen versions
   of silence on a page whose whole promise is "every change that reaches your

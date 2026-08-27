@@ -176,8 +176,14 @@ console.log('\n═══ the legal tabs are actually built ═══\n');
 
   const pw = S._log.filter(e => e.values && e.sheet === S.PRIVACY_SHEET);
   const pflat = pw.length ? pw[0].values.map(r => r[0]).join('\n') : '';
-  check('the Privacy Policy tab is built too, with its own text',
-    /Privacy Policy — Acopio/.test(pflat) && /Last updated: 21 August 2026/.test(pflat));
+  // Read from the source, exactly like the Terms date above. Hard-coded, this
+  // assertion failed the day the policy was legitimately updated: it was
+  // pinning a calendar date instead of the thing it cares about, which is that
+  // the sheet copy carries the SAME date as the .md it was generated from.
+  const PMD = fs.readFileSync(path.join(__dirname, '..', 'legal', 'PRIVACY-POLICY.md'), 'utf8');
+  const pDate = ((/\*\*Last updated:\*\*\s*(.+)/.exec(PMD) || [])[1] || '').trim();
+  check('the Privacy Policy tab is built too, with its own text and its own date (' + pDate + ')',
+    /Privacy Policy — Acopio/.test(pflat) && !!pDate && pflat.indexOf('Last updated: ' + pDate) !== -1);
 
   check('each tab offers the way back',
     S._log.some(e => e.sheet === S.TERMS_SHEET && /Back to/.test(String(e.value || ''))));

@@ -117,23 +117,61 @@ Eso ya estaba decidido (v10.8) y ahora está escrito en la sección 9 y en la 10
 
 ---
 
-## 6. Facturación — lo que dice el contrato
+## 6. Facturación — Stripe, decidido por Jose (v11.23)
 
 Ya está en los Términos, sección 9:
 
-- Se factura **por correo**, a la dirección que ellos den, en cada fecha de
-  renovación. **Pagadero en 10 días.**
-- Precios en dólares, sin impuestos incluidos; si aplican, se suman a la
-  factura.
+- Se cobra **con tarjeta, a través de Stripe**. La tarjeta va a Stripe y se
+  queda en Stripe; **nosotros nunca vemos ni guardamos el número**. Eso también
+  quedó escrito en la Privacidad (sección 5, sub-encargados).
+- **La instalación** se cobra una vez, al contratarla.
+- **La suscripción** se cobra **sola en cada fecha de renovación** —mensual o
+  anual— hasta que cancelen. Stripe les manda recibo de cada cobro.
+- Precios en dólares, sin impuestos incluidos; si aplican, se suman al cobro.
+- **Si una empresa no puede pagar con tarjeta**, lo dice antes de la
+  instalación y se acuerda otra forma por escrito. Esa puerta está abierta a
+  propósito: en B2B hay empresas que solo pagan contra factura con orden de
+  compra, y perder una venta por eso sería tonto.
 - **Si un pago no entra:**
-  - **Día 10** → correo de aviso. Los pagos fallan por razones aburridas y
-    ahí termina casi siempre.
+  - **Stripe reintenta solo** los días siguientes y les avisa cada vez. Ahí
+    termina casi siempre.
+  - **Día 10 desde el primer cobro fallido** → correo personal tuyo. No se deja
+    que dependa de que ellos noten un recibo que nunca llegó.
   - **Día 30** → **se pausan** el soporte y las versiones nuevas hasta que se
     ponga al día. **La app sigue funcionando** y conservan todos sus datos.
   - **Nunca se retienen sus datos para cobrar.** No son nuestros para
     retenerlos, y la exportación queda disponible pase lo que pase.
 - Al pagar, soporte y versiones vuelven de inmediato, **sin cargo de
   reconexión**.
+
+### Por qué Stripe desde el primer cliente es la decisión correcta
+
+Yo había recomendado factura manual para los primeros 2 o 3. Jose decidió
+Stripe desde el principio, y pesa más que la comisión una sola razón: **el modo
+de fallar de la factura manual es que TÚ te olvidas.** Un cliente al que no le
+cobraste tres meses es una conversación mucho peor —y una pérdida mayor— que
+el porcentaje de cada cobro. Y el contrato ya queda escrito para cobro
+recurrente, así que no hay que reescribirlo al llegar al quinto cliente.
+
+**Lo que hay que montar en Stripe antes del primer cobro.** Esto es tuyo, no lo
+puedo hacer yo, y **no voy a inventar comisiones ni pantallas**: verifica cada
+cosa en tu propio panel.
+
+1. **Dos productos:** `Instalación` (pago único) y `Suscripción` (recurrente),
+   este último con **dos precios**: mensual y anual.
+2. **Los complementos como precios aparte** — bodega adicional, soporte
+   prioritario, lector de correos. Así la factura dice qué compraron.
+3. **Recibos automáticos por correo**, activados. Es lo que hace que el cliente
+   no tenga que pedirte nada.
+4. **Reintentos automáticos y avisos de cobro fallido**, activados. Los
+   Términos ya dicen que existen, así que tienen que existir.
+5. **El portal de cliente**, si lo activas, les deja cambiar la tarjeta solos.
+   Vale la pena: una tarjeta vencida es casi toda la cobranza que vas a tener.
+
+**Lo que sigue sin resolver, porque no es de Stripe:** a nombre de quién
+facturas (persona natural o LLC), y si hay que cobrar impuesto sobre las ventas
+de software en Utah y en el estado del cliente. Averígualo antes del primer
+cobro.
 
 ### Volver después de irse
 
@@ -173,41 +211,28 @@ entregaste o no.
 
 ## 8. Lo que falta decidir — y es tuyo, no mío
 
-### **CON QUÉ cobras.** Esto es lo único que sigue sin resolver.
+**Ya no falta el método de cobro.** Jose decidió **Stripe desde el primer
+cliente** (v11.23); está en la sección 6 de este documento, en la sección 9 de
+los Términos y en la sección 5 de la Privacidad.
 
-El contrato ya funciona con cualquier método; lo que falta es elegirlo. **No
-voy a inventar un proveedor**, así que aquí están las opciones reales con lo
-que de verdad cuestan y lo que de verdad implican. Averigua las comisiones
-vigentes antes de decidir — cambian, y lo que yo recuerde no sirve.
+**Lo que sigue faltando, y no lo puedo hacer yo:**
 
-| Opción | A favor | En contra |
-|---|---|---|
-| **Factura manual + transferencia / cheque** | Comisión cero. Empiezas hoy. | Tú persigues cada pago. Se vuelve insostenible pasando ~10 clientes |
-| **Zelle / transferencia bancaria** | Sin comisión, inmediato, normal entre empresas en EE. UU. | Sin cobro recurrente: alguien tiene que acordarse **cada mes** |
-| **Stripe (u otro procesador)** | Cobro **recurrente automático**, reintentos, recibos, cancelación limpia | Comisión por transacción; hay que dar de alta la empresa |
-| **PayPal / Wise** | Fácil de abrir, sirve fuera de EE. UU. | Comisión mayor; peor imagen para B2B |
-
-**Mi recomendación, y por qué:** con los primeros 2 o 3 clientes, **factura
-manual**. Con tan pocos, automatizar cuesta más tiempo del que ahorra, y vas a
-querer hablar con cada uno igual. **En cuanto llegues a 5, mueve el mensual a
-cobro recurrente automático** — no por la comisión, sino porque el modo de
-fallar de la facturación manual es que TÚ te olvidas, y un cliente al que no
-le cobraste tres meses es una conversación mucho peor que un 3% de comisión.
-
-**Lo que hay que verificar antes de cobrarle a nadie**, y no lo puedo hacer
-yo:
-
-1. **A nombre de quién factura** — ¿persona natural o una LLC? Cambia los
-   impuestos y cambia quién responde si algo sale mal.
-2. **Si hay que cobrar impuesto sobre las ventas** de software en Utah, y en
-   el estado del cliente. Los Términos ya dicen que los precios no lo
-   incluyen, así que el contrato está cubierto; lo que falta es saber si
-   aplica.
-3. **Qué lleva una factura** para que el cliente pueda deducirla: tu nombre o
-   el de la empresa, dirección, número de factura, fecha, concepto, período.
+1. **A nombre de quién facturas** — ¿persona natural o una LLC? Cambia los
+   impuestos y cambia quién responde si algo sale mal. Es también lo que hay
+   que poner en la cuenta de Stripe.
+2. **Si hay que cobrar impuesto sobre las ventas** de software en Utah, y en el
+   estado del cliente. Los Términos ya dicen que los precios no lo incluyen,
+   así que el contrato está cubierto; lo que falta es saber si aplica. Stripe
+   tiene una función para esto — si la usas, verifica tú cómo se configura, no
+   por lo que yo recuerde.
+3. **Qué lleva un recibo o factura** para que el cliente lo pueda deducir: tu
+   nombre o el de la empresa, dirección, número, fecha, concepto, período.
 
 ### Lo demás ya está resuelto
 
+- ~~Con qué cobras~~ ✅ **Stripe**, decidido por Jose (v11.23). Ver sección 6,
+  incluida la lista de lo que hay que montar en el panel antes del primer
+  cobro.
 - ~~Correo de bienvenida~~ ✅ reescrito (v11.20): entusiasmo primero, qué
   compraron, qué viene, y los tres enlaces que van a necesitar otra vez.
 - ~~Precio fundador al volver~~ ✅ decidido por Jose y escrito en la sección 9

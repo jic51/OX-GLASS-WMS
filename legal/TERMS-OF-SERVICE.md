@@ -4,7 +4,7 @@
 
 # Terms of Service — Acopio
 
-**Last updated:** 26 August 2026
+**Last updated:** 27 August 2026
 
 These terms govern your use of Acopio, warehouse-management software provided by
 Jose Castro ("we", "us"). By installing or using it, you agree to them. If you
@@ -207,28 +207,40 @@ current period, under the same rules as above.
 
 ### How you are billed
 
-We invoice you by email, to the address you give us, on each renewal date.
-Invoices are payable **within 10 days**.
+Payment is taken by card through **Stripe**, our payment processor.
 
-Prices are in US dollars and do not include any tax that may apply where you
-are; if tax applies, it is added to the invoice.
+- **Your card details go to Stripe, not to us.** They are stored by Stripe
+  under Stripe's own terms and security. We never see, hold or store your card
+  number.
+- **The setup fee** is charged once, when the installation is booked.
+- **The subscription** is then charged **automatically on each renewal date** —
+  monthly or annually, whichever you chose — until you cancel. Stripe emails
+  you a receipt for every charge.
+- **Prices are in US dollars** and do not include any tax that may apply where
+  you are; if tax applies, it is added to the charge.
+- **If your company cannot pay by card**, tell us before the installation and
+  we will agree an alternative in writing.
 
 ### If a payment does not go through
 
 Nothing is switched off, at any point. We could not do it if we wanted to —
 the software is in your Google account.
 
-What actually happens:
+Card payments fail for boring reasons — an expired card, a bank declining a
+recurring charge. What actually happens:
 
-1. **Day 10 after the invoice** — if it is unpaid, we email you. Payments
-   fail for boring reasons and this is usually the end of it.
-2. **Day 30** — if it is still unpaid, support and new versions **pause**
+1. **Stripe retries the charge automatically** over the following days and
+   emails you each time. This is usually the end of it.
+2. **Day 10 after the first failed charge** — if it is still unpaid, we email
+   you personally, so it does not come down to you noticing a receipt that
+   never arrived.
+3. **Day 30** — if it is still unpaid, support and new versions **pause**
    until the account is settled. You keep using the software and you keep
    every bit of your data.
-3. **We never withhold your data to get paid.** It is not ours to withhold,
+4. **We never withhold your data to get paid.** It is not ours to withhold,
    and export stays available whatever the state of your account.
 
-Settle the invoice and support and updates resume immediately, with no
+Settle the account and support and updates resume immediately, with no
 reconnection fee.
 
 ### Coming back after leaving

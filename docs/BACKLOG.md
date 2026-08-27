@@ -16,11 +16,11 @@ here once they ship (the commit message is the record of what changed and why).
    y ahí hay que decidir si un Incoming sin cantidad se permite o se bloquea
    como el resto de los formularios).
 
-1. **Clean master template Sheet** — tooling shipped in v9.30 (Advanced →
-   Erase everything / Check if clean). Remaining work is Jose's and cannot be
-   done from code: rename the Apps Script project, share as Viewer, hand out the
-   /copy link, and copy it once himself to see what a customer sees. See
-   docs/MASTER-TEMPLATE.md.
+1. ~~**Clean master template Sheet**~~ ✅ **Hecho — Jose (v11.23):** "la
+   plantilla ya está lista y la actualizo con cada nuevo código que me das."
+   Queda por confirmar una sola cosa cuando tenga tiempo: **copiarla él mismo
+   una vez** para ver lo que ve un cliente en su primer minuto. Es la única
+   parte que no se puede verificar desde adentro. Ver docs/MASTER-TEMPLATE.md.
 2. **Polish the wizard's Copy button animation** — the checkmark transition works
    now, but the in/out timing still feels abrupt. Jose (v9.89): leave it for
    later, not urgent.
@@ -554,6 +554,71 @@ vigila que las cuatro sepan, y que las cuatro manejen **las dos direcciones**.
 
 `tools/test-adjust.js` y `tools/test-adjust-form.js`.
 
+## Comentarios sobre un material, sin editar el movimiento — idea de Jose (v11.23)
+
+Jose, textual: *"sé que tenemos comentarios en cada movimiento pero para añadir
+un comentario se debe editar todo el movimiento… solo la persona editando puede
+hacerlo. Debemos dejar que cualquier persona en bodega agregue comentarios sin
+necesidad de editar el movimiento."*
+
+**El problema es real y es de permisos, no de pantallas.** El campo Comments
+vive en la fila del movimiento. Escribir ahí significa `updateMovementRow`, que
+pide permiso de edición, exige un motivo del cambio, manda correo al
+administrador y queda en la bitácora de auditoría — todo correcto para
+*corregir un registro*, y todo desproporcionado para *dejar una nota*. El
+resultado es que nadie deja notas.
+
+**Lo que Jose describió, en su orden:**
+
+- En el tablero, al hacer clic en un material (la fila que se expande,
+  `toggleStockDetail`), **una sección nueva al lado** que muestra el **último
+  comentario**.
+- Al hacer clic en esa sección se abre una **ventana emergente** con scroll:
+  nombre y correo de quien escribió, el comentario y la fecha.
+- **Botón para añadir** en el encabezado de esa ventana.
+- **La ventana se cierra al tocar afuera solo si no hay nada escrito.** (Buen
+  detalle, y ya hay precedente en la app: `closeMoveModalGuarded`.)
+
+### Lo que hay que decidir antes de construir
+
+- **El hilo es del MATERIAL, no del movimiento.** Eso es lo que dice el diseño
+  de Jose: la sección vive donde se hace clic a un material. Es una decisión
+  importante y buena, porque significa **no tocar el archivo de movimientos**:
+  un almacén nuevo (`COMMENTS_V3`: id, matId, texto, autor, correo, fecha,
+  borrado) en vez de escribir en una columna que ya tiene dueño. El campo
+  Comments del movimiento se queda como está, para lo que siempre fue: lo que
+  se dijo de **ese** movimiento.
+- **Quién puede escribir:** cualquiera que pueda registrar movimientos
+  (WAREHOUSE y ADMIN). Ese es el punto entero.
+- **Quién puede borrar:** el autor y el ADMIN. Nadie edita el comentario de
+  otro; un hilo que se puede reescribir no sirve como registro.
+- **¿Se editan los propios?** Yo diría que no, o solo por unos minutos. Un
+  comentario es lo que alguien dijo ese día.
+- **Techo:** el último comentario en la fila, y la ventana con scroll y
+  paginado si el hilo es largo — la misma disciplina que el historial.
+- **¿Notifica a alguien?** Empezar sin notificación. Añadir correos a algo que
+  todavía nadie usa es cómo se construye una función que la gente apaga.
+
+## Lo que está en manos de Jose — estado al v11.23
+
+- ✅ **Plantilla maestra** — lista, y la actualiza con cada versión. Falta solo
+  copiarla él una vez para ver lo que ve un cliente.
+- ✅ **Con qué se cobra** — **Stripe**, desde el primer cliente. Escrito en los
+  Términos §9, en la Privacidad §5 y en `SOPORTE-Y-DEVOLUCIONES.md` §6, con la
+  lista de lo que hay que montar en el panel antes del primer cobro.
+- 🔄 **Ensayo de restauración** — en curso. Deploy → New deployment, 🩺 Check, y
+  la prueba de adjuntos que demuestra que `FOLDER_PREFIX` volvió. Ver
+  `RESTAURAR-UN-BACKUP.md`.
+- ⏳ **Prueba de concurrencia en vivo** — aplazada: Jose (v11.23) necesita
+  encontrar 3 o 4 personas que le ayuden. **No sirve la misma cuenta en varios
+  navegadores** — Apps Script serializa por usuario, así que esa prueba pasa
+  siempre y no prueba nada. Lo que hay que ver es a cuatro personas distintas
+  guardando movimientos del mismo material al mismo tiempo. `test-concurrency.js`
+  cubre la lógica; esto cubre la plataforma.
+- ⏳ **Pantalla de consentimiento "In production"** en Google Cloud Console.
+- ⏳ **A nombre de quién se factura**, e impuesto sobre las ventas en Utah y en
+  el estado del cliente.
+
 ## Landing en un solo archivo con botón ES/EN — pedido de Jose (v11.20)
 
 Hoy son **dos archivos** (`landing/es.html` y `landing/index.html`) con el
@@ -877,7 +942,49 @@ ADMIN)? ¿aceptar los ajustes necesita permiso aparte, dado que mueven dinero?
 ¿se congela el rack mientras se cuenta, o se permite que alguien haga un
 movimiento a media sesión (y entonces la variación se calcula contra qué)?
 
-## LA LIMPIEZA DE DATOS — Jose ya dijo que sí (v11.17). Falta decidir CÓMO.
+## ✅ HECHO (v11.23) — el barrido de calidad de datos
+
+Construido en Settings → System → **"Check my data"**. Las decisiones que
+estaban abiertas, resueltas y por qué:
+
+- **¿Cuándo aparece?** Solo cuando se presiona. Un barrido que interrumpe al
+  guardar es lo que la gente apaga, y un resumen diario se vuelve algo que
+  ignorar. Y de paso elimina un subsistema entero: **sin fastidio no
+  solicitado no hay nada que descartar**, así que no hay estado de "recuérdame
+  después" que guardar, que equivocar, ni que perder en una restauración.
+- **¿Quién lo ve?** ADMIN, las dos puntas (escanear y aplicar).
+- **¿Qué revisa?** Tres familias, y **no tienen la misma confianza** — eso es
+  lo que hace peligrosa esta función si se finge lo contrario:
+  1. **"Escrito de dos formas"** (casi certeza). Dos textos distintos cuya
+     clave *aplastada* —sin espacios ni puntuación— es la misma. `BS10` y
+     `BS 10` colapsan; `JJF 109` y `JJF 110` **no**, porque sus dígitos
+     difieren. Materiales, proyectos, proveedores y racks.
+  2. **"Le falta lo que sus hermanos tienen"** (alta). Agrupado por MatID, que
+     es la regla de Jose. **Solo proveedor y el proyecto de los TRANSFER**
+     viejos. GC, PO y PM tienen el mismo hueco y **quedan fuera a propósito**:
+     una orden de compra es de una entrega y un contratista es de una obra;
+     copiarlos en masa haría que la app afirme algo que nadie le dijo.
+  3. **"Échale un ojo"** (adivinanza, **sin botón**). Errores de tecleo —
+     distancia de edición de uno o dos caracteres, con los dígitos iguales.
+     `CLIFTON BUILDING` vs `CLIFTON BULIDING` sí; `GE SILPRUF SEALANT` vs
+     `GE SILPRUF SEALER` no, porque compartir palabras es lo que hace una
+     familia de productos.
+- **UN TECHO.** 150 hallazgos, los más grandes primero, y la pantalla **dice
+  cuántos quedaron fuera**. Un primer barrido sobre un año importado produce
+  miles.
+- **Nada se aplica solo**, y cada fusión pasa por la función que ya existía
+  para ese tipo de valor — la misma que llaman las pantallas de Settings, ya
+  con candado, ya reescribiendo los dos archivos. Dos caminos para fusionar un
+  material significaría que el menos usado es el roto.
+
+`tools/test-data-quality.js` (60 comprobaciones).
+
+**Lo que NO se construyó, y por qué:** un diccionario del rubro para "palabras
+mal escritas" de verdad. Sin él, "mal escrito" y "así se llama" son
+indistinguibles, y la familia 3 es lo más lejos que se puede llegar
+honestamente.
+
+## Diseño original (superado por lo de arriba) — LA LIMPIEZA DE DATOS
 
 Jose preguntó: *"¿la app no ha encontrado nada últimamente que corregir?
 ¿construimos la parte donde está constantemente buscando cosas que corregir?"*

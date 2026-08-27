@@ -4,7 +4,7 @@
 
 # Privacy Policy — Acopio
 
-**Last updated:** 21 August 2026
+**Last updated:** 27 August 2026
 
 Acopio is warehouse-management software provided by Jose Castro ("we", "us").
 This policy explains what happens to data when you use it.
@@ -67,7 +67,7 @@ Two notes on scope:
 
 ## 3. What we collect
 
-**We never receive your inventory data.** Three things can send us something
+**We never receive your inventory data.** Four things can send us something
 else, and they are listed here in full.
 
 1. **"Report a problem" (the 🐞 button).** When you submit a report, the message
@@ -93,6 +93,10 @@ else, and they are listed here in full.
    sends more than those two messages. If your installation has no support
    address configured, it never sends at all.
 
+4. **Paying us.** Your billing details — name, email, company, billing address
+   — reach us through Stripe so we know who paid for what. **Your card number
+   does not**: it goes to Stripe and stays there. See section 5.
+
 We do not use analytics, tracking pixels, advertising identifiers or session
 recording. We do not sell, rent or share data — we have none to sell.
 
@@ -107,10 +111,20 @@ This feature is off unless you turn it on.
 
 ## 5. Sub-processors
 
-We use none for your business data, because we do not process it.
+**For your business data: none, because we do not process it.**
 
 Google is not our sub-processor — Google is **your** provider, under your own
 agreement with them.
+
+**For billing: Stripe.** Paying us means Stripe processes your billing details
+— the name and email on the account, your company name and billing address, and
+your card. **Your card number goes to Stripe and is held by Stripe; it never
+reaches us.** Stripe is a payment processor under its own privacy policy at
+[stripe.com/privacy](https://stripe.com/privacy).
+
+This is the one place a third party sees anything of yours because of us, and
+it sees only what is needed to take a payment. **It has nothing to do with your
+inventory**, which stays in your Google account and is never sent anywhere.
 
 ## 6. Retention and deletion
 

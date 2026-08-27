@@ -81,10 +81,23 @@ const musts = [
   ['...and says it stops once a movement is recorded', /stops permanently/i],
   ['...and says nothing sends with no support address configured', /never sends at all/i],
   ['the AI add-on is still disclosed', /Gemini/],
-  ['the "no analytics" promise is still there', /analytics/i]
+  ['the "no analytics" promise is still there', /analytics/i],
+  // The one that carries actual legal weight from v11.23 onward. Taking
+  // payment through Stripe makes Stripe a sub-processor, and an undisclosed
+  // sub-processor is a real problem under GDPR — not a documentation tidiness
+  // issue. It has to be named where a customer would look for it.
+  ['Stripe is named as a sub-processor', /Stripe/],
+  ['...and the policy still says the INVENTORY has no sub-processor',
+    /none, because we do not process it/i],
+  ['...and says the card number never reaches us', /never\s+reaches us/i]
 ];
+// Whitespace is collapsed before matching. The .md is hard-wrapped at 80
+// columns and the app copy is one long line per paragraph, so any phrase long
+// enough to be worth asserting will be split by a newline in one copy and not
+// the other — which is how the first version of the card-number check reported
+// a promise as missing from a file it was sitting in.
 for (const [label, re] of musts) {
-  const inMd = re.test(md), inApp = re.test(app);
+  const inMd = re.test(md.replace(/\s+/g, ' ')), inApp = re.test(app.replace(/\s+/g, ' '));
   check(label + (inMd && inApp ? '' : ' — md:' + inMd + ' app:' + inApp), inMd && inApp);
 }
 
@@ -175,10 +188,19 @@ console.log('\nWhat the support and refund promises actually say');
     ['a defect we cannot fix in 30 days refunds the period', /30 days of you reporting it/i],
     ['what is charged separately is listed', /charged separately/i],
     ['cancelling never switches the software off', /no way to switch it off/i],
-    // Not /payable within 10 days/: the phrase carries bold in the .md and
-    // <strong> in the app, so the words are separated by markup in two of the
-    // three copies. Matching the part that is plain text in all of them.
-    ['invoices say when they are payable', /within 10 days/i],
+    // Billing became Stripe in v11.23, Jose's decision, and these three lines
+    // replaced "invoices are payable within 10 days" — a promise that was true
+    // of email invoicing and is now false. A test that pins a superseded
+    // promise fails the honest change and passes the dishonest one, which is
+    // the opposite of its job.
+    //
+    // Each regex avoids the words carrying bold in the .md and <strong> in the
+    // app: markup separates them in two of the three copies.
+    ['the processor is named, not left as "we take a card"', /through .{0,20}Stripe/i],
+    ['the card is held by Stripe and NOT by us — the sentence a customer looks for',
+      /never see, hold or store your card number/i],
+    ['the subscription says it charges itself, so no renewal is a surprise',
+      /charged .{0,80}on each renewal date/i],
     ['a failed payment PAUSES support rather than the software', /support and new versions/i],
     ['...and the software is never switched off over money', /Nothing is switched off, at any point/i],
     ['...and data is never held hostage for payment', /never withhold your data to get paid/i],

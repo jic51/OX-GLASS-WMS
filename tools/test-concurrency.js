@@ -84,10 +84,19 @@ function lockRegions(body) {
 // `seen` guards against a cycle: two helpers calling each other would otherwise
 // recurse forever, and a cycle with no lock anywhere in it must come out FALSE
 // rather than accidentally true.
+//
+// It is a PATH, not one shared set, and the difference is not academic. It used
+// to be a single object handed down every branch, so the first branch to visit
+// a function poisoned it for all the later ones. v11.23 added a function that
+// calls THREE different `Locked_` helpers; the first resolved correctly, and
+// the second and third were then reported as unlocked purely because the shared
+// set already held their common caller. Correct code, guard crying wolf — the
+// exact failure the transitive check above exists to prevent. Each branch now
+// carries its own copy, so a name is visited at most once per path and cycles
+// still terminate.
 function lockedByCaller(name, seen) {
   seen = seen || {};
   if (seen[name]) return false;
-  seen[name] = true;
   const callers = FUNCS.map(f => f.name).filter(c =>
     c !== name && new RegExp('\\b' + name + '\\s*\\(').test(bodyOf(c) || ''));
   if (!callers.length) return false;           // nobody calls it — not covered
@@ -103,7 +112,9 @@ function lockedByCaller(name, seen) {
     if (!sawCall) return false;
     if (allInside) return true;
     // Not wrapped here — but this caller may itself only run under the lock.
-    return takesLock(c) || lockedByCaller(c, seen);
+    const path = Object.assign({}, seen);
+    path[name] = true;
+    return takesLock(c) || lockedByCaller(c, path);
   });
 }
 
