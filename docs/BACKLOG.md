@@ -553,6 +553,48 @@ vigila que las cuatro sepan, y que las cuatro manejen **las dos direcciones**.
 
 `tools/test-adjust.js` y `tools/test-adjust-form.js`.
 
+## ✅ HECHO (v11.25) — las entregas esperadas, cuatro cosas que Jose fotografió
+
+**1. La categoría desaparecía al abrir una entrega.** Abrió una entrega de IGU
+desde el aviso de la mañana y la casilla Category estaba VACÍA, en un registro
+cuya etiqueta decía IGU una línea más arriba.
+
+La causa raíz no estaba en la ventana: **renombrar una categoría reescribía el
+archivo y dejaba `INCOMING_V3` intacto.** Jose había renombrado la categoría a
+"IGU (ISOLATED GLASS UNIT)"; la fila de la entrega seguía diciendo "IGU",
+ninguna opción del desplegable decía "IGU", y **un `<select>` al que se le da un
+valor que no tiene no selecciona nada, en silencio** — y Guardar habría escrito
+esa nada de vuelta. Ahora el renombrado alcanza también las entregas
+(`renameIncomingCategory_`), y como red de seguridad para todas las otras formas
+de perder una categoría (borrada, importada, editada a mano en la hoja) la
+ventana compara sin distinguir mayúsculas y, si de verdad no está en la lista,
+**la agrega en vez de tirarla**, marcada como "(not on your list)".
+
+**2. El aviso ya no se cierra al marcar el primer material.** Jose: "luego de
+seleccionar el primer material y dar clic en recibido, la ventana se cierra y no
+hay otra forma de reabrirla más que actualizar la página completa." Es una lista
+que se recorre —tres entregas en la mañana son tres viajes— y cerrarla tras la
+primera obligaba a recargar la app. La ventana de edición se abre encima, y el
+aviso **se redibuja solo** cuando el guardado aterriza.
+
+**3. Y hay forma de volver a abrirlo:** botón **"☀️ This week's schedule"** en
+la cabecera de Incoming. Antes solo aparecía una vez por carga de página.
+
+**4. El botón "Mark arrived" está en cada material** de las tarjetas de la
+semana, no solo dentro del aviso — el aviso sale una vez al día y las tarjetas
+están siempre en pantalla.
+
+**Y la presentación, en el orden que Jose dibujó:** categoría en su propia línea
+arriba; luego **cuántos** y **qué** en una línea; luego lo que se anotó; abajo el
+estado y la única acción. **Un solo renderizador (`_incItemHtml`) para las
+tarjetas y el aviso** — tener dos es como se separaron.
+
+*Decisión que tomé y conviene revisar:* la categoría conserva su pastilla de
+color en vez del texto plano del boceto, porque ese color es el mismo que la
+categoría tiene en todas las demás pantallas y está haciendo trabajo — uno
+encuentra MIRROR en una tarjeta por el color antes de leer una palabra. Si lo
+prefieres en texto plano es una línea.
+
 ## Comentarios sobre un material, sin editar el movimiento — idea de Jose (v11.23)
 
 Jose, textual: *"sé que tenemos comentarios en cada movimiento pero para añadir

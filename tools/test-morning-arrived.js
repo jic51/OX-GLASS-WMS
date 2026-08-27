@@ -68,7 +68,8 @@ function run(role) {
   // count says "qty not stated" instead of "0 UNIT" is one of the things this
   // card has to get right, and a stub would only prove the stub works.
   vm.runInContext(extractFn('_he') + '\n' + extractFn('_escAttr') + '\n' +
-                  extractFn('_incQtyText') + '\n' + extractFn('showMorningPopup'), sandbox);
+                  extractFn('_incQtyText') + '\n' + extractFn('_incFirstDocUrl') + '\n' +
+                  extractFn('_incItemHtml') + '\n' + extractFn('showMorningPopup'), sandbox);
   vm.runInContext('showMorningPopup(' + JSON.stringify(items) + ', ' + JSON.stringify(TODAY) + ')', sandbox);
   return box.innerHTML;
 }
@@ -117,7 +118,8 @@ const sb = {
 };
 vm.createContext(sb);
 vm.runInContext(extractFn('_he') + '\n' + extractFn('_escAttr') + '\n' +
-                extractFn('_incQtyText') + '\n' + extractFn('showMorningPopup'), sb);
+                extractFn('_incQtyText') + '\n' + extractFn('_incFirstDocUrl') + '\n' +
+                extractFn('_incItemHtml') + '\n' + extractFn('showMorningPopup'), sb);
 vm.runInContext('showMorningPopup(' + JSON.stringify(nasty) + ', ' + JSON.stringify(TODAY) + ')', sb);
 check('the quote is escaped, no injected onclick survives',
   box.innerHTML.indexOf('onclick="alert(1)') === -1 && box.innerHTML.indexOf('&quot;') !== -1);
@@ -136,6 +138,45 @@ check('switches to the Incoming tab first, so the modal is not floating over the
 check('pre-selects Arrived so it is one click plus Save', /=\s*'Arrived'/.test(handler));
 check('handles the item having been deleted since the popup was drawn',
   /if \(!item\)/.test(handler));
+
+check('the popup is NOT closed — it is a list you work down, and closing it after\n       the first delivery left no way back but reloading the app',
+  handler.indexOf('closeMorningPopup') === -1);
+
+console.log('\nScenario: the layout Jose drew');
+// Category on its own line, then how many and what, then the note, then the
+// state and the one action. The old row put all of it on one wrapping line,
+// which is what made two deliveries read as one.
+check('the category gets a line of its own, above everything',
+  admin.indexOf('inc-item-cat') !== -1);
+check('...then the quantity, in front of the name', admin.indexOf('inc-item-qty') !== -1);
+check('...then whatever was noted about it', admin.indexOf('inc-item-meta') !== -1);
+check('...and the status sits at the bottom, beside the button',
+  admin.indexOf('inc-item-foot') !== -1);
+{
+  const cat  = admin.indexOf('inc-item-cat');
+  const qty  = admin.indexOf('inc-item-qty');
+  const foot = admin.indexOf('inc-item-foot');
+  check('and they come in that order, not merely all present', cat < qty && qty < foot);
+}
+// One delivery, one shape, wherever it is drawn.
+check('the week cards use the same renderer rather than a second copy of it',
+  /_incItemHtml\(item, \{ showDate: false \}\)/.test(src));
+
+console.log('\nScenario: the way back into the popup');
+const reopen = extractFn('openWeekSchedule');
+check('there is a function to reopen it at all', !!reopen);
+check('...which asks the same "what is left of this week" as the automatic one',
+  /_thisWeeksDeliveries\(/.test(reopen) &&
+  /_thisWeeksDeliveries\(/.test(extractFn('checkMorningPopup')));
+check('...and says so plainly when there is nothing left this week',
+  /Nothing expected for the rest of this week/.test(reopen));
+check('a button on the Incoming screen calls it', /onclick="openWeekSchedule\(\)"/.test(src));
+const refresh = extractFn('_refreshMorningPopup');
+check('an open popup redraws itself when the data behind it changes',
+  /classList\.contains\('show'\)/.test(refresh) && /showMorningPopup\(/.test(refresh));
+check('...and nothing happens when it is closed', /return;/.test(refresh));
+check('the redraw is wired to the Incoming render, which runs after a save',
+  /_refreshMorningPopup\(\);/.test(extractFn('renderIncoming')));
 
 console.log('\nmorning "mark arrived": ' + (fail === 0 ? 'ok' : (fail + ' FAILED')));
 process.exit(fail === 0 ? 0 : 1);

@@ -168,10 +168,59 @@ console.log('\n═══ the Quantity box opens empty, and an empty one means "n
   // somebody plans around, and nobody claimed it.
   check('a quantity of zero is never printed as a number',
     /function _incQtyText/.test(HTML) && /qty not stated/.test(HTML));
+  // Three, not the four there were: the week cards and the morning popup used to
+  // draw a delivery twice and now share _incItemHtml. Collapsing them was the
+  // point, so the number going DOWN here is the change working.
   const uses = (HTML.match(/_incQtyText\(/g) || []).length;
-  check('every place that showed "N UNIT" goes through it (' + uses + ' call sites)', uses >= 4);
+  check('every place that shows a quantity goes through it (' + uses + ' call sites)', uses >= 3);
   check('...and the one column that shows just the number shows a dash instead',
     /Number\(item\.qty\) > 0 \? item\.qty : '—'/.test(HTML));
+}
+
+console.log('\n═══ the category of a delivery cannot go missing ═══\n');
+
+// Jose opened an IGU delivery from the morning popup and the Category box was
+// EMPTY — on a record whose badge said IGU one line above.
+//
+// Root cause: he had renamed the category to "IGU (ISOLATED GLASS UNIT)". The
+// rename rewrote the archive and left INCOMING_V3 alone, so the row still said
+// "IGU", no <option> said "IGU" any more, and a <select> handed a value it does
+// not have selects nothing — in silence. Save then writes that nothing back.
+{
+  // Anchored on a line only the CONFIG rename has: `data.op === 'rename'`
+  // appears earlier in the file for a different kind of rename, and indexOf
+  // finds that one.
+  const rename = GS.slice(GS.indexOf('var nvStored = sheetSafe_(nv.toUpperCase());'),
+                          GS.indexOf("} else if (data.op === 'delete')",
+                                     GS.indexOf('var nvStored = sheetSafe_(nv.toUpperCase());')));
+  check('renaming a category now reaches the expected deliveries too',
+    /renameIncomingCategory_\(ss, val, nvStored\)/.test(rename));
+  check('...alongside the archive and its history, in the same lock',
+    /renameCategoryColumn_/.test(rename) && rename.indexOf('renameIncomingCategory_') > rename.indexOf('withStockLock_'));
+
+  const mover = extractFn('renameIncomingCategory_');
+  check('it matches without caring about case, like every other rename here',
+    /toUpperCase\(\)/.test(mover));
+  check('...writes the column in ONE round trip, not a call per row',
+    /setValues\(/.test(mover) && !/setValue\(/.test(mover));
+  check('...and does nothing at all when there are no deliveries',
+    /if \(last < 2\) return 0;/.test(mover));
+}
+
+{
+  // The guard for every OTHER way a category can go missing: deleted from
+  // Settings, imported, edited by hand in the sheet.
+  const set = HTML.slice(HTML.indexOf('function _incSetCategory('),
+                         HTML.indexOf('function _incQtyText('));
+  check('the edit window matches the stored category case-insensitively',
+    /toUpperCase\(\) === want\.toUpperCase\(\)/.test(set));
+  check('...and when it is genuinely not on the list, adds it rather than dropping it',
+    /createElement\('option'\)/.test(set));
+  check('...labelled, because a category nobody can pick is worth knowing about',
+    /not on your list/.test(set));
+  check('opening a delivery goes through it instead of assigning .value blind',
+    /_incSetCategory\(item\.category\)/.test(HTML) &&
+    !/getElementById\('incCategory'\)\.value = item\.category/.test(HTML));
 }
 
 console.log('\nincoming: ' + (fail === 0 ? 'ok (' + ok + ' checks)' : fail + ' FAILED'));
