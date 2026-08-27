@@ -50,6 +50,7 @@ node tools/test-incoming-delete.js
 node tools/test-adjust.js
 node tools/test-adjust-form.js
 node tools/test-data-quality.js
+node tools/test-landing-i18n.js
 node tools/check-changelog.js
 node tools/sync-legal.js --check
 node tools/build-fingerprint.js --check
@@ -539,6 +540,18 @@ come back from — is invisible to both. Those get a browser test.
   job is left alone, GC/PO/PM are never bulk-filled, GENERIC is never a
   project to merge into, and the whole apply path goes through the merge
   functions the Settings screens already use.
+- `test-landing-i18n.js` — the landing page, now one file in two languages
+  (v11.24). What it guards is not the toggle: it is that the two languages
+  cannot drift. `landing/index.html` and `landing/es.html` were the same 582
+  lines twice, and that is not a hypothetical cost — the published "Acopio en
+  Detalle" sat at last quarter's price for weeks because one file was updated
+  and another was not. So: every marked element has a Spanish string, every
+  Spanish string is still attached to something, switching there and back
+  returns the English page byte-identical, and **the prices read the same in
+  both**, because a number is not a translation. Also the two things a static
+  check cannot see — the language button is visible and thumb-sized at 375px
+  (the nav it would naturally live in is hidden there), and the page still
+  opens, in English, when `localStorage` throws.
 - `check-changelog.js` — not a test; a guard against rot. Both public
   changelog pages sat at v10.6 while the app shipped v11.22 — fifteen versions
   of silence on a page whose whole promise is "every change that reaches your

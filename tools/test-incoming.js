@@ -137,5 +137,42 @@ console.log('\n═══ deleting says something, and cannot be pressed twice �
     /id="btnDeleteIncoming"[^>]*onclick="deleteIncomingItem\(\)"/.test(HTML));
 }
 
+console.log('\n═══ the Quantity box opens empty, and an empty one means "not stated" ═══\n');
+
+{
+  // Jose's rule from v11.7 — "al abrir la ventana no debe haber ningún dato
+  // escrito, ni siquiera '0' en qty" — reached the five movement windows and
+  // missed this one. It matters more here: a delivery booked from an attached
+  // load sheet often genuinely has no count until the truck arrives.
+  const box = HTML.slice(HTML.indexOf('<input type="number" id="incQty"'),
+                         HTML.indexOf('>', HTML.indexOf('<input type="number" id="incQty"')) + 1);
+  check('the markup no longer ships a 1 in the box', !/value="1"/.test(box));
+  check('...and zero is allowed, since a delivery with no count is a real state',
+    /min="0"/.test(box));
+
+  const open = HTML.slice(HTML.indexOf('// Defaults for new'),
+                          HTML.indexOf('// Defaults for new') + 900);
+  check('opening it fresh leaves the box blank', /getElementById\('incQty'\)\.value\s*=\s*'';/.test(open));
+
+  // Reopening a saved record must show what the record says, not a helpful 1.
+  // The `|| 1` that used to be here is how a delivery nobody counted comes
+  // back as a delivery of one.
+  const edit = HTML.slice(HTML.indexOf("document.getElementById('incDateMode').value = item.dateMode"),
+                          HTML.indexOf("document.getElementById('incUnit').value     = item.unit"));
+  check('editing one shows blank rather than inventing a 1',
+    /\(Number\(item\.qty\) > 0\) \? item\.qty : ''/.test(edit));
+}
+
+{
+  // Four places print an incoming's quantity. "0 UNIT" would be a figure
+  // somebody plans around, and nobody claimed it.
+  check('a quantity of zero is never printed as a number',
+    /function _incQtyText/.test(HTML) && /qty not stated/.test(HTML));
+  const uses = (HTML.match(/_incQtyText\(/g) || []).length;
+  check('every place that showed "N UNIT" goes through it (' + uses + ' call sites)', uses >= 4);
+  check('...and the one column that shows just the number shows a dash instead',
+    /Number\(item\.qty\) > 0 \? item\.qty : '—'/.test(HTML));
+}
+
 console.log('\nincoming: ' + (fail === 0 ? 'ok (' + ok + ' checks)' : fail + ' FAILED'));
 process.exit(fail === 0 ? 0 : 1);

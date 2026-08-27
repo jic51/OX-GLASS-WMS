@@ -37,7 +37,12 @@ const items = [
   { id: 'inc_2', category: 'GLASS', name: 'Already here', qty: 4, unit: 'UNIT',
     status: 'Arrived', estDate: TODAY, dateMode: 'exact', notes: '' },
   { id: 'inc_3', category: 'GLASS', name: 'Later this week', qty: 9, unit: 'UNIT',
-    status: 'Pending', estDate: '2026-08-22', dateMode: 'exact', notes: '' }
+    status: 'Pending', estDate: '2026-08-22', dateMode: 'exact', notes: '' },
+  // Booked from an attached load sheet: real, arriving today, and nobody has
+  // said how many yet. Since v11.24 the Quantity box opens blank, so this is
+  // now an ordinary state rather than an odd one.
+  { id: 'inc_4', category: 'GLASS', name: 'Truck from Amsco', qty: 0, unit: 'UNIT',
+    status: 'Pending', estDate: TODAY, dateMode: 'exact', notes: '' }
 ];
 
 function run(role) {
@@ -59,7 +64,11 @@ function run(role) {
     }
   };
   vm.createContext(sandbox);
-  vm.runInContext(extractFn('_he') + '\n' + extractFn('_escAttr') + '\n' + extractFn('showMorningPopup'), sandbox);
+  // _incQtyText is lifted in rather than stubbed: whether a delivery with no
+  // count says "qty not stated" instead of "0 UNIT" is one of the things this
+  // card has to get right, and a stub would only prove the stub works.
+  vm.runInContext(extractFn('_he') + '\n' + extractFn('_escAttr') + '\n' +
+                  extractFn('_incQtyText') + '\n' + extractFn('showMorningPopup'), sandbox);
   vm.runInContext('showMorningPopup(' + JSON.stringify(items) + ', ' + JSON.stringify(TODAY) + ')', sandbox);
   return box.innerHTML;
 }
@@ -75,6 +84,10 @@ check('offered on the rest of the week too, not only today (a delivery can turn 
   admin.indexOf('data-id="inc_3"') !== -1);
 check('the card still shows the status badge alongside it',
   admin.indexOf('inc-status-pending') !== -1);
+check('a delivery with a real count still shows it', admin.indexOf('61 UNIT') !== -1);
+// "0 UNIT" is a figure somebody plans around, and nobody claimed it.
+check('a delivery nobody has counted says so instead of claiming zero',
+  admin.indexOf('qty not stated') !== -1 && admin.indexOf('0 UNIT') === -1);
 
 console.log('\nScenario: a WAREHOUSE user opens the same popup');
 const wh = run('WAREHOUSE');
@@ -103,7 +116,8 @@ const sb = {
   } }
 };
 vm.createContext(sb);
-vm.runInContext(extractFn('_he') + '\n' + extractFn('_escAttr') + '\n' + extractFn('showMorningPopup'), sb);
+vm.runInContext(extractFn('_he') + '\n' + extractFn('_escAttr') + '\n' +
+                extractFn('_incQtyText') + '\n' + extractFn('showMorningPopup'), sb);
 vm.runInContext('showMorningPopup(' + JSON.stringify(nasty) + ', ' + JSON.stringify(TODAY) + ')', sb);
 check('the quote is escaped, no injected onclick survives',
   box.innerHTML.indexOf('onclick="alert(1)') === -1 && box.innerHTML.indexOf('&quot;') !== -1);

@@ -2227,7 +2227,7 @@
       </div>
       <div class="field">
         <label>Quantity</label>
-        <input type="number" id="incQty" min="1" value="1">
+        <input type="number" id="incQty" min="0" placeholder="How many">
       </div>
       <div class="field">
         <label>Unit</label>
@@ -2937,7 +2937,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.23';
+var APP_VERSION = '11.24';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -2949,7 +2949,7 @@ var APP_VERSION = '11.23';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'e3cac46c';
+var APP_BUILD = '204b6c38';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -7201,7 +7201,7 @@ function _checkIncomingSuggest(n, inputEl){
         var safeId   = _escAttr(item.id);
         var safeName = _escAttr(item.name);
         var safeCat  = _escAttr(item.category || '?');
-        var safeMeta = item.qty + ' ' + item.unit + (item.supplier ? ' · ' + _escAttr(item.supplier) : '') + ' — ' + item.estDate;
+        var safeMeta = _escAttr(_incQtyText(item)) + (item.supplier ? ' · ' + _escAttr(item.supplier) : '') + ' — ' + item.estDate;
         return '<div class="inc-suggest-item" data-n="' + n + '" data-inc-id="' + safeId + '"' +
           ' onmousedown="_clickIncomingSuggest(this);return false;">' +
           '<span class="inc-tag">' + safeCat + '</span>' +
@@ -13085,7 +13085,7 @@ function renderIncomingWeekGrid() {
       ? day.items.map(function(item) {
           return '<div class="day-item">' +
             catBadge(item.category) + ' ' +
-            '<span style="font-weight:600">' + item.qty + ' ' + item.unit + '</span> ' +
+            '<span style="font-weight:600">' + _he(_incQtyText(item)) + '</span> ' +
             '<span>' + _he(item.name) + '</span>' +
             (item.docLink ? ' <a href="javascript:void(0)" data-action="preview-media" data-url="'+_he(_incFirstDocUrl(item.docLink))+'" data-label="'+_he(item.name)+'" title="Attached document" onclick="event.stopPropagation()">📎</a>' : '') +
             (item.notes ? '<div style="color:var(--muted);font-size:.7rem;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">' + _he(item.notes) + '</div>' : '') +
@@ -13177,7 +13177,7 @@ function _incRowHtml(item){
       '<td>' + statusBadge + '</td>' +
       '<td>' + catBadge(item.category) + '</td>' +
       '<td><strong>' + _he(item.name) + '</strong></td>' +
-      '<td style="font-weight:700">' + item.qty + '</td>' +
+      '<td style="font-weight:700">' + (Number(item.qty) > 0 ? item.qty : '—') + '</td>' +
       '<td style="color:var(--muted);font-size:.78rem">' + _he(item.unit) + '</td>' +
       '<td>' + (function(){
         var du = _incFirstDocUrl(item.docLink);
@@ -13206,7 +13206,10 @@ function openIncomingModal(id) {
     document.getElementById('incStatus').value   = item.status  || 'Pending';
     document.getElementById('incCategory').value = item.category|| '';
     document.getElementById('incName').value     = item.name    || '';
-    document.getElementById('incQty').value      = item.qty     || 1;
+    // No `|| 1`: a delivery booked with no quantity is stored as 0, and
+    // showing it as 1 would put a number in front of somebody that the record
+    // does not contain — which is how they save it back as a real 1.
+    document.getElementById('incQty').value      = (Number(item.qty) > 0) ? item.qty : '';
     document.getElementById('incUnit').value     = item.unit    || 'UNIT';
     document.getElementById('incSupplier').value = item.supplier|| '';
     document.getElementById('incPO').value       = item.po      || '';
@@ -13222,7 +13225,12 @@ function openIncomingModal(id) {
     document.getElementById('incStatus').value   = 'Pending';
     document.getElementById('incCategory').value = '';
     document.getElementById('incName').value     = '';
-    document.getElementById('incQty').value      = 1;
+    // Blank, like every other window in the app since v11.7. Jose's rule: "al
+    // abrir la ventana no debe haber ningún dato escrito, ni siquiera '0' en
+    // qty." This window was the one left out of that pass — and a "1" nobody
+    // typed is worse here than elsewhere, because an expected delivery booked
+    // from an attached load sheet often genuinely has no count yet.
+    document.getElementById('incQty').value      = '';
     document.getElementById('incUnit').value     = 'UNIT';
     document.getElementById('incSupplier').value = '';
     document.getElementById('incPO').value       = '';
@@ -13352,6 +13360,18 @@ function saveIncomingItem() {
   } else {
     _send();
   }
+}
+
+// A quantity of zero on an expected delivery means "nobody has said how many
+// yet" — not "none are coming". Since v11.24 the Quantity box opens blank, and
+// a delivery booked from an attached load sheet very often has no count at
+// all until the truck is there.
+//
+// So it is never printed as a number. "0 UNIT" states something nobody
+// claimed, and it is the kind of wrong figure people plan around.
+function _incQtyText(item){
+  var q = Number(item && item.qty) || 0;
+  return q > 0 ? (q + ' ' + (item && item.unit ? item.unit : 'UNIT')) : 'qty not stated';
 }
 
 // ── Incoming attachment helpers ───────────────────────────────────────────────
@@ -13661,7 +13681,7 @@ function showMorningPopup(items, todayStr) {
       '<div style="flex:1;min-width:0">' +
         '<div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;margin-bottom:.15rem">' +
           catBadge(item.category) +
-          '<span class="morning-item-name">' + item.qty + ' ' + _he(item.unit) + ' — ' + _he(item.name) + '</span>' +
+          '<span class="morning-item-name">' + _he(_incQtyText(item)) + ' — ' + _he(item.name) + '</span>' +
         '</div>' +
         '<div class="morning-item-meta">' +
           (!_incOnDay(item, todayStr) ? _he(_incDateLabel(item)) + (item.notes ? ' · ' : '') : '') +

@@ -5,16 +5,15 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
-0. **Quitar el `1` prellenado de Quantity en Incoming** — Jose lo apuntó para
-   después (v11.22): "ANÓTALO PARA DESPUÉS EN LA LISTA, QUE ES LO QUE SIGUE".
-   `<input id="incQty" … value="1">` en `Index_v3_fixed.html`. Es exactamente lo
-   que mandó quitar de las ventanas de movimientos en v11.7 ("al abrir la
-   ventana no debe haber ningún dato escrito, ni siquiera '0' en qty") y esta
-   ventana quedó fuera de aquel cambio. Dos líneas: quitar el `value="1"` y
-   revisar que guardar con la caja vacía siga mandando la cantidad correcta
-   (`Number(document.getElementById('incQty').value) || 0`, así que vacío = 0 —
-   y ahí hay que decidir si un Incoming sin cantidad se permite o se bloquea
-   como el resto de los formularios).
+0. ~~**Quitar el `1` prellenado de Quantity en Incoming**~~ ✅ **Hecho
+   (v11.24).** La caja abre vacía, como las cinco ventanas de movimientos desde
+   la v11.7. **La decisión que faltaba —si una entrega sin cantidad se permite—
+   es que SÍ:** una entrega registrada desde una hoja de carga adjunta muchas
+   veces no tiene número hasta que llega el camión, y ese es justo el flujo que
+   la app ofrece ("adjunta el PDF en vez de escribir cada material"). Se guarda
+   como 0, y **0 nunca se imprime como número**: los cuatro lugares que decían
+   "0 UNIT" dicen ahora "qty not stated", y la columna que muestra solo la cifra
+   muestra "—". Un 0 es una cifra alrededor de la cual la gente planifica.
 
 1. ~~**Clean master template Sheet**~~ ✅ **Hecho — Jose (v11.23):** "la
    plantilla ya está lista y la actualizo con cada nuevo código que me das."
@@ -619,32 +618,43 @@ resultado es que nadie deja notas.
 - ⏳ **A nombre de quién se factura**, e impuesto sobre las ventas en Utah y en
   el estado del cliente.
 
-## Landing en un solo archivo con botón ES/EN — pedido de Jose (v11.20)
+## ✅ HECHO (v11.24) — la landing en un solo archivo con botón ES/EN
 
-Hoy son **dos archivos** (`landing/es.html` y `landing/index.html`) con el
-mismo diseño y el texto traducido. Jose: un solo archivo con un botón que
-cambie todo el idioma, "así no necesitamos nada más" — un solo archivo que
-alojar, un solo lugar donde corregir un precio.
+`landing/acopio.html` reemplaza a `landing/index.html` y `landing/es.html`, que
+eran **las mismas 582 líneas dos veces**. El inglés vive en el marcado (la
+página se lee y se indexa con JavaScript apagado) y el español es un
+diccionario de 109 claves al final, enganchado por `data-i18n` en cada elemento
+—`data-i18n-attr` para un atributo como un placeholder—.
 
-Y ese es el argumento más fuerte, no la comodidad: **hoy cada cambio hay que
-hacerlo dos veces**. Ya pasó — los precios, el correo de contacto, el contador
-de versiones y el logo se cambiaron dos veces cada uno. La próxima vez que se
-haga solo en uno, la página en inglés va a estar vendiendo otro precio.
+**Generado una sola vez a partir de los dos archivos, no retecleado.** Los dos
+estaban alineados línea por línea, así que la fusión fue mecánica; retipear 100
+líneas de texto de venta a mano es exactamente cómo un precio termina bien en
+un idioma y mal en el otro — que es lo que ya pasó con "Acopio en Detalle".
 
-**Cómo lo haría:** un solo `index.html`. Cada trozo de texto traducible lleva
-un `data-i18n="clave"`, y un objeto con las dos versiones. El botón cambia
-`lang` en `<html>`, reescribe los textos y guarda la elección en
-`localStorage`. Sin librerías, sin build, sigue siendo un archivo suelto.
+**Decisiones:**
+- **El botón vive FUERA de `<nav>`.** El nav es `display:none` bajo 640px, y un
+  botón de idioma que un teléfono no puede ver no es un botón de idioma. Con
+  `min-height:38px`, porque a `.4rem` de padding salía de 28px — un control al
+  que se apunta, no uno que se golpea.
+- **El idioma inicial:** una elección explícita manda para siempre; si no la
+  hay, decide `navigator.language`. Si `localStorage` lanza (ventana privada,
+  navegador que bloquea datos de sitio) la página abre en inglés en vez de no
+  abrir.
+- **Una clave que falte deja el inglés en pie.** Una página a medio traducir es
+  fea; una en blanco está rota.
+- **El correo que arma el formulario también cambia de idioma.** Quien llena un
+  formulario en español no debería mandar un correo en inglés.
 
-**Lo que hay que cuidar:**
-- **El idioma inicial.** `navigator.language` acierta casi siempre; el botón
-  manda por encima y se recuerda.
-- **`<html lang>` tiene que cambiar de verdad**, no solo el texto: es lo que
-  usan Google y los lectores de pantalla.
-- **El `<title>` y la descripción** también son texto traducible.
-- **Una prueba que recorra las dos claves** y falle si a alguna le falta la
-  traducción. Ese es el modo de fallar real: se agrega una frase en inglés,
-  se olvida el español, y la página queda mitad y mitad sin que nadie lo note.
+`tools/test-landing-i18n.js` — y lo que vigila de verdad no es el botón, es que
+**los dos idiomas no se puedan separar**: cada elemento marcado tiene su
+cadena, cada cadena sigue enganchada a algo, ir y volver devuelve el inglés
+exacto, y **los precios se leen igual en los dos**, porque un número no es una
+traducción.
+
+**Pendiente de Jose:** los dos artifacts publicados de la landing (dos
+"Acopio") ahora son uno solo. Hay que republicar uno con el archivo nuevo y
+retirar el otro — no lo hago yo a ciegas porque publicar sobre el equivocado
+dejaría viva la página vieja en español.
 
 ## Cómo distinguir dos camiones el mismo día — problema abierto
 
