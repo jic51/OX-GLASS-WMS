@@ -87,7 +87,168 @@
 
   <section class="month">
     <h2>Agosto 2026</h2>
-    <p class="sub">Seguridad con varias personas a la vez, y las herramientas de catálogo terminadas bien.</p>
+    <p class="sub">Las ventanas de movimiento rehechas como una sola, los
+       paquetes, respaldos que se llevan tu configuración — y los Términos
+       diciendo claro qué cubre el soporte.</p>
+
+    <div class="entry">
+      <span class="ver">v11.22</span>
+      <span class="tag new">Nuevo</span>
+      <h3>Corregir un conteo no es lo mismo que registrar merma</h3>
+      <p>La app dice 40 y en el rack hay 38. Eso no significa que se rompieron
+         dos: significa que el <em>registro</em> está mal, y anotarlo como merma
+         convertiría tu cifra de desperdicio en "desperdicio más errores de
+         conteo". Son dos problemas distintos con dos soluciones distintas.</p>
+      <p><b>Adjust</b> es un tipo de movimiento propio, en la ventana de
+         movimientos y en el cajón del rack. Escribes lo que <em>contaste</em>, no
+         la diferencia —la app sabe lo que ella creía y hace la resta— y te dice
+         qué va a pasar antes de guardar. No cuesta nada, no pertenece a ningún
+         proyecto, exige un motivo, y puede subir el stock igual que bajarlo.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.21</span>
+      <span class="tag fix">Corregido</span>
+      <h3>Una entrega esperada conserva el estado que le pusiste</h3>
+      <p>Registrar una entrega como <em>Arrived</em>, o anularla en el momento, la
+         guardaba igual como <em>Pending</em> y había que editarla una segunda
+         vez para que pegara. Crear y editar no estaban de acuerdo sobre el mismo
+         campo; ahora los dos pasan por el mismo lugar.</p>
+      <p>Borrar una tampoco decía nada mientras trabajaba, así que dar clic otra
+         vez era lo razonable — y el segundo clic llegaba a una fila ya borrada y
+         mostraba un error por un borrado que sí había funcionado. Ahora el botón
+         muestra que está trabajando, el segundo clic se ignora, y una entrega
+         que ya no está termina en éxito.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.17</span>
+      <span class="tag new">Nuevo</span>
+      <h3>Editar un movimiento llena lo que la app ya sabe</h3>
+      <p>Un traslado o una merma se guardan con proveedor, contrato, orden de
+         compra y proyecto vacíos, porque esas casillas están ocultas en esas
+         pantallas. Al abrir uno para corregir algo te encontrabas cinco huecos
+         de un material cuyo proveedor la app conocía desde siempre.</p>
+      <p>Esas casillas llegan llenas desde el historial de ese mismo material,
+         del más reciente al más antiguo — y cada una que se sugiere queda
+         marcada, para que siempre veas qué valores están registrados en ese
+         movimiento y cuáles te está ofreciendo la app. Lo que la fila ya tiene
+         no se toca nunca.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.16</span>
+      <span class="tag fix">Corregido</span>
+      <h3>Un traslado ya no inventa un proyecto</h3>
+      <p>Mover material entre dos racks no es un cambio de obra, pero al traslado
+         se le estampaba GENERIC —la palabra de la app para "en bodega, sin
+         asignar"— porque la casilla de proyecto está oculta en esa pantalla y
+         nadie la llenaba. Al filtrar el historial de un material, la misma obra
+         parecía dos historias distintas.</p>
+      <p>Un traslado conserva ahora la obra que el material ya tenía, y la app no
+         afirma nada que no se le haya dicho.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.13 – v11.15</span>
+      <span class="tag safe">Seguridad</span>
+      <h3>Tu respaldo se lleva tu configuración — y avisa cuando no puede</h3>
+      <p>Un respaldo copia tu hoja, pero una parte de la instalación vive fuera de
+         ella. Restaurar una copia sin esa parte se ve bien hasta que un adjunto
+         se niega a abrir, meses después, sin nada que apunte al porqué.</p>
+      <p>Cada respaldo lleva ahora dentro una pestaña con exactamente qué hay que
+         reponer y para qué sirve cada cosa, en palabras normales — incluidas las
+         pocas que hay que reemplazar con valores nuevos después de restaurar en
+         vez de copiarlas. Si no se puede escribir, el respaldo lo dice en el
+         momento en lugar de verse completo.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.12</span>
+      <span class="tag new">Nuevo</span>
+      <h3>Los Términos y la Privacidad se pueden leer antes de aceptarlos</h3>
+      <p>La casilla de consentimiento te pedía aceptar dos documentos que no
+         tenías cómo abrir. Los dos viven ahora en pestañas propias dentro de tu
+         propio archivo, enlazadas desde la casilla misma, y se quedan ahí
+         después — así la versión que aceptaste es siempre la versión que puedes
+         volver a leer.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.5 – v11.11</span>
+      <span class="tag new">Nuevo</span>
+      <h3>La app recuerda cuántas unidades vienen en una caja</h3>
+      <p>La primera vez que recibes un material por caja, case, palet o bolsa,
+         pregunta una sola vez: <em>1 caja de GE SILPRUF = ¿cuántas unidades?</em>
+         Después ya solo dice <em>12 unidades por caja</em>, con un enlace para
+         editarlo, y hace la cuenta — incluido el costo por unidad, que se
+         actualiza mientras escribes.</p>
+      <p>No todos los materiales vienen en caja y no todas las cajas traen lo
+         mismo, así que no se supone nada: un material sin respuesta registrada
+         simplemente se cuenta en unidades, como antes. La lista completa se edita
+         en Settings → Materials.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.9</span>
+      <span class="tag fix">Corregido</span>
+      <h3>Una etiqueta de costo que podía hacer pasar el precio de una caja por el de una unidad</h3>
+      <p>Durante cuatro versiones, elegir <em>Box</em> como unidad renombraba el
+         campo de costo a "Cost per Box" sin que nada dividiera — así que un
+         precio escrito para una caja de doce entraba al promedio como el precio
+         de una unidad. El costo se lleva como promedio ponderado, así que una
+         cifra mal ahí afecta todos los costos posteriores de ese material, no
+         solo ese movimiento.</p>
+      <p>El campo nombra un paquete solo cuando la app sabe de verdad cuántas
+         unidades trae, y divide por ese número exacto. Si pusiste precios por
+         caja entre la v11.5 y la v11.8, vale la pena revisar el costo de ese
+         material.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.6 – v11.8</span>
+      <span class="tag new">Nuevo</span>
+      <h3>Las cinco ventanas de movimiento son una sola ventana</h3>
+      <p>Entrada, salida, traslado, devolución y merma se habían separado en cinco
+         diseños distintos — campos en otro orden, la cantidad en otro lugar, y un
+         "1" ya escrito en la cantidad en tres de ellas.</p>
+      <p>Ahora comparten una forma: el material en una caja neutra, el color del
+         movimiento solo alrededor de la parte que dice <em>dónde</em> y
+         <em>cuántos</em>, nada escrito al abrir la ventana, y el cursor en el
+         nombre listo para escribir. Cambiar de una a otra conserva lo que ya
+         escribiste en vez de hacerte escribirlo otra vez.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.3 – v11.4</span>
+      <span class="tag fix">Corregido</span>
+      <h3>Dos cosas pequeñas que estaban mal en silencio</h3>
+      <p>Destildar la casilla de consentimiento dejaba el consentimiento
+         registrado. Y en una entrega con varios materiales, el autollenado
+         llenaba la primera línea en vez de la línea en la que estabas
+         trabajando.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v10.8</span>
+      <span class="tag new">Nuevo</span>
+      <h3>Tu propia llave de IA, puesta desde dentro de la app</h3>
+      <p>Leer el correo de confirmación de un proveedor hacia tus entregas
+         esperadas corre con una llave tuya, escrita en Settings — no una nuestra.
+         Funciona con tu cuota, a tu costo, y se puede quitar cuando quieras.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.18 – v11.20</span>
+      <span class="tag safe">Términos</span>
+      <h3>Qué cubre el soporte, y cómo funciona el cobro, está por escrito</h3>
+      <p>La sección 5 de los Términos dice ahora qué incluye la suscripción, en
+         cuánto se contesta un correo, qué se cotiza aparte y qué se espera de ti.
+         La sección 9 cubre cancelar, devoluciones, cómo se envían las facturas y
+         qué pasa si un pago no entra — incluida la única cosa que conviene saber
+         de antemano: <b>tus datos nunca se retienen por un pago</b>, y la app
+         sigue funcionando.</p>
+    </div>
 
     <div class="entry">
       <span class="ver">v10.0 – v10.4</span>

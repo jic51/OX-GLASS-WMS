@@ -5,6 +5,17 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+0. **Quitar el `1` prellenado de Quantity en Incoming** — Jose lo apuntó para
+   después (v11.22): "ANÓTALO PARA DESPUÉS EN LA LISTA, QUE ES LO QUE SIGUE".
+   `<input id="incQty" … value="1">` en `Index_v3_fixed.html`. Es exactamente lo
+   que mandó quitar de las ventanas de movimientos en v11.7 ("al abrir la
+   ventana no debe haber ningún dato escrito, ni siquiera '0' en qty") y esta
+   ventana quedó fuera de aquel cambio. Dos líneas: quitar el `value="1"` y
+   revisar que guardar con la caja vacía siga mandando la cantidad correcta
+   (`Number(document.getElementById('incQty').value) || 0`, así que vacío = 0 —
+   y ahí hay que decidir si un Incoming sin cantidad se permite o se bloquea
+   como el resto de los formularios).
+
 1. **Clean master template Sheet** — tooling shipped in v9.30 (Advanced →
    Erase everything / Check if clean). Remaining work is Jose's and cannot be
    done from code: rename the Apps Script project, share as Viewer, hand out the
@@ -457,6 +468,29 @@ quitar de las ventanas de movimientos en v11.7 ("al abrir la ventana no debe
 haber ningún dato escrito, ni siquiera '0' en qty"). No lo cambié porque no lo
 pidió para esta ventana y un cambio no pedido en un formulario es cómo se
 rompe algo que funcionaba; dice él y se quita en dos líneas.
+
+## ✅ HECHO (v11.22) — los documentos publicados, al día
+
+Jose decidió: **el changelog se mantiene.** Así que se puso al día y se
+republicó todo.
+
+- **Acopio en Detalle** — precios corregidos ($500 + $49/mes, y el anual de
+  $490). De paso: decía "cinco tipos de movimiento" cuando ya son seis, y el
+  hueco de "conteo cíclico" decía "diseñado, sin construir" cuando ya existe la
+  mitad que corrige. Un documento cuya promesa es "esto está construido y en
+  producción" no puede republicarse con datos viejos.
+- **Acopio Changelog** y **Novedades de Acopio** — de v10.6 a v11.22, en los
+  dos idiomas. **No una entrada por versión**: doce entradas agrupadas por lo
+  que un cliente nota. Incluye el error de la etiqueta de costo por caja
+  (v11.5–v11.8) con la recomendación de revisar el costo de cualquier material
+  que se haya precificado por caja en ese rango — un changelog que solo cuenta
+  las cosas buenas no lo lee nadie dos veces.
+
+**Y para que no se vuelva a atrasar: `tools/check-changelog.js`.** Falla el
+release si el changelog público va más de 5 versiones detrás de `APP_VERSION`,
+o si los dos idiomas no están parejos. No exige una entrada por versión —
+la mayoría no la merece— pero sí que el hueco se quede chico. La página estuvo
+15 versiones atrás sin que nada avisara; se encontró porque Jose la abrió.
 
 ## Documentos publicados — qué es cada uno y cuál está desactualizado (v11.21)
 

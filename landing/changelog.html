@@ -86,7 +86,163 @@
 
   <section class="month">
     <h2>August 2026</h2>
-    <p class="sub">Safety under load, and the catalog tools finished properly.</p>
+    <p class="sub">The movement screens rebuilt as one, packs, backups that
+       carry your settings — and the Terms saying plainly what support covers.</p>
+
+    <div class="entry">
+      <span class="ver">v11.22</span>
+      <span class="tag new">New</span>
+      <h3>Correcting a count is not the same as recording waste</h3>
+      <p>The app says 40 and the rack holds 38. That does not mean two broke — it
+         means the <em>record</em> is wrong, and filing it as waste would quietly
+         turn your waste figure into "waste plus counting mistakes". Those are
+         two different problems with two different fixes.</p>
+      <p><b>Adjust</b> is a movement type of its own, on the movement window and
+         on the rack drawer. You type what you <em>counted</em>, not the
+         difference — the app knows what it believed and does the subtraction —
+         and it tells you what will happen before you save. It costs nothing, it
+         belongs to no job, it needs a reason, and it can go up as easily as
+         down.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.21</span>
+      <span class="tag fix">Fixed</span>
+      <h3>An expected delivery keeps the status you gave it</h3>
+      <p>Entering a delivery as already <em>Arrived</em>, or cancelling one on the
+         spot, saved it as <em>Pending</em> anyway and needed a second edit to
+         stick. Creating and editing disagreed about the same field; they go
+         through one place now.</p>
+      <p>Deleting one also said nothing at all while it worked, so pressing again
+         was the reasonable thing to do — and the second press hit a row that was
+         already gone and reported an error for a delete that had succeeded. The
+         button now shows it is working, a second press is ignored, and a
+         delivery that is already gone ends as success.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.17</span>
+      <span class="tag new">New</span>
+      <h3>Editing a movement fills in what the app already knows</h3>
+      <p>A transfer or a write-off is saved with supplier, contract, PO and
+         project empty, because those boxes are hidden on those screens. Open one
+         to correct something and you used to face five blanks for a material
+         whose supplier the app has known all along.</p>
+      <p>Those boxes now arrive filled from that same material's own history,
+         most recent first — and every suggested one is marked, so you can always
+         see which values are recorded on that movement and which the app is
+         offering. Anything the row already has is never touched.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.16</span>
+      <span class="tag fix">Fixed</span>
+      <h3>A transfer no longer invents a project</h3>
+      <p>Moving material between two racks is not a change of job, but a transfer
+         was being stamped GENERIC — the app's word for "in stock, unassigned" —
+         because the project box is hidden on that screen and nobody filled it
+         in. Filter a material's history and the same job looked like two
+         different stories.</p>
+      <p>A transfer now keeps the job the material already had, and the app never
+         asserts something it was not told.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.13 – v11.15</span>
+      <span class="tag safe">Safety</span>
+      <h3>Your backup carries your settings — and says so when it can't</h3>
+      <p>A backup copies your spreadsheet, but part of an installation lives
+         outside it. Restore a copy without that part and everything looks right
+         until an attachment refuses to open, months later, with nothing pointing
+         at why.</p>
+      <p>Every backup now has a tab inside it listing exactly what to put back
+         and what each one is for, in plain words — including the handful that
+         must be replaced with new values after a restore rather than copied. If
+         it cannot be written, the backup says so on the spot instead of looking
+         complete.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.12</span>
+      <span class="tag new">New</span>
+      <h3>The Terms and the Privacy Policy can be read before you accept them</h3>
+      <p>The consent box asked you to agree to two documents you had no way to
+         open. Both now live on their own tabs inside your own file, linked from
+         the box itself, and they stay there afterwards — so the version you
+         agreed to is always the version you can go back and read.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.5 – v11.11</span>
+      <span class="tag new">New</span>
+      <h3>The app remembers how many come in a box</h3>
+      <p>The first time you receive a material by the box, case, pallet or bag,
+         it asks once: <em>1 box of GE SILPRUF = how many units?</em> After that
+         it just says <em>12 units per box</em>, with an edit link, and it does
+         the arithmetic — including the cost per unit, updated as you type.</p>
+      <p>Not every material comes in a box and not every box holds the same
+         number, so nothing is assumed: a material with no answer on record is
+         simply counted in units, as before. The whole list is editable in
+         Settings → Materials.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.9</span>
+      <span class="tag fix">Fixed</span>
+      <h3>A cost label that could have made a box price look like a unit price</h3>
+      <p>For four versions, choosing <em>Box</em> as the unit relabelled the cost
+         field "Cost per Box" while nothing divided it — so a price typed for a
+         box of twelve went into the running average as the price of one unit.
+         Cost is worked out as a weighted average, so a wrong figure there
+         affects every later cost for that material, not just the one movement.</p>
+      <p>The field now names a pack only when the app actually knows how many are
+         in it, and divides by exactly that number. If you priced anything by the
+         box between v11.5 and v11.8, it is worth checking that material's cost.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.6 – v11.8</span>
+      <span class="tag new">New</span>
+      <h3>The five movement screens are one screen now</h3>
+      <p>Entry, exit, transfer, return and waste had drifted into five different
+         layouts — fields in different orders, quantity boxes in different
+         places, and a "1" already sitting in the quantity on three of them.</p>
+      <p>They now share one shape: the material in a neutral box, the movement's
+         colour only around the part that says <em>where</em> and <em>how
+         many</em>, nothing filled in when the window opens, and the cursor in
+         the name field ready to type. Switching between them keeps what you have
+         already written instead of making you type it again.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.3 – v11.4</span>
+      <span class="tag fix">Fixed</span>
+      <h3>Two small things that were quietly wrong</h3>
+      <p>Un-ticking the consent box left the consent recorded. And on a delivery
+         with several materials, autofill filled the first line rather than the
+         line you were working on.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v10.8</span>
+      <span class="tag new">New</span>
+      <h3>Your own AI key, set from inside the app</h3>
+      <p>Reading a supplier's confirmation email into your expected deliveries
+         runs on a key you own, entered in Settings — not one of ours. It works
+         on your quota, at your cost, and can be removed at any time.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.18 – v11.20</span>
+      <span class="tag safe">Terms</span>
+      <h3>What support covers, and how billing works, is written down</h3>
+      <p>Section 5 of the Terms now says what the subscription includes, how fast
+         an email is answered, what is quoted separately, and what you are
+         expected to do. Section 9 covers cancelling, refunds, how invoices are
+         sent, and what happens if a payment does not go through — including the
+         one thing worth knowing in advance: <b>your data is never withheld over
+         a payment</b>, and the app keeps working.</p>
+    </div>
 
     <div class="entry">
       <span class="ver">v10.0 – v10.4</span>

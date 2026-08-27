@@ -146,7 +146,7 @@
 
     <dl class="facts">
       <div><dt>Mercado</dt><dd>PyME con bodega</dd></div>
-      <div><dt>Precio</dt><dd>$400 + $39/mes</dd></div>
+      <div><dt>Precio</dt><dd>$500 + $49/mes</dd></div>
       <div><dt>Costo de servidor</dt><dd>$0</dd></div>
       <div><dt>Estado</dt><dd>En producción</dd></div>
     </dl>
@@ -218,9 +218,15 @@
       <h3>Registrar lo que entra, sale y se mueve</h3>
       <p class="who">Lo hace el personal de bodega, casi siempre desde el teléfono</p>
       <ul>
-        <li><b>Cinco tipos de movimiento:</b> entrada, salida, traslado entre
-          ubicaciones, devolución y merma. Cada uno pide lo que necesita y nada
-          más.</li>
+        <li><b>Seis tipos de movimiento:</b> entrada, salida, traslado entre
+          ubicaciones, devolución, merma y corrección de conteo. Cada uno pide lo
+          que necesita y nada más.</li>
+        <li><b>Merma y corrección son cosas distintas, a propósito.</b> Merma es
+          material que existió y se perdió: tiene costo. Corrección dice que el
+          <em>registro</em> estaba mal —el sistema decía 40 y en el rack hay 38—
+          y no cuesta nada, porque nada se perdió. Mezclarlas convierte la cifra
+          de desperdicio de la empresa en "desperdicio más errores de
+          anotación".</li>
         <li><b>Varios materiales en un solo registro.</b> Una entrega con doce
           renglones se captura una vez, no doce.</li>
         <li><b>Fotos y documentos adjuntos.</b> Se sube la foto de la placa
@@ -247,8 +253,9 @@
         <li><b>Mapa de bodega:</b> las ubicaciones dibujadas como están en la
           vida real, agrupadas por zona, mostrando cuánto hay en cada una.</li>
         <li><b>Cajón de rack:</b> tocas una ubicación en el mapa y actúas sobre
-          lo que hay dentro —sacar, trasladar, dar de baja— con el material y el
-          origen ya llenos. Tocas la cifra disponible y llena la cantidad.</li>
+          lo que hay dentro —sacar, trasladar, dar de baja, corregir el conteo—
+          con el material y el origen ya llenos. Tocas la cifra disponible y
+          llena la cantidad.</li>
         <li><b>Historial completo</b> de cada movimiento, filtrable y exportable
           a CSV.</li>
       </ul>
@@ -367,8 +374,11 @@
 
       <h3>Conteo cíclico</h3>
       <p>El proceso de contar físicamente una parte del inventario cada semana y
-        cuadrarlo contra el sistema. Diseñado, sin construir. Todo sistema de
-        inventario serio lo tiene.</p>
+        cuadrarlo contra el sistema. Existe la mitad que corrige: se cuenta un
+        rack, se escribe lo contado y el ajuste queda registrado con su motivo.
+        Falta la otra mitad —que el sistema proponga qué contar y lleve la
+        cuenta de lo ya cubierto—, que es lo que lo vuelve un proceso y no un
+        arreglo suelto. Todo sistema de inventario serio lo tiene completo.</p>
 
       <h3>No funciona sin internet</h3>
       <p>Verificado, no supuesto: la plataforma de Google no permite servir esta
@@ -416,8 +426,9 @@
         <li><b>Códigos de barras y QR, con impresión de etiquetas.</b> La pieza
           que más se pide. Convierte el registro de un movimiento en escanear en
           vez de escribir, y elimina la fuente principal de error.</li>
-        <li><b>Conteo cíclico:</b> el sistema propone qué contar, la persona
-          cuenta, y el ajuste queda registrado con su motivo.</li>
+        <li><b>Conteo cíclico completo:</b> la corrección con su motivo ya
+          existe; falta que el sistema proponga qué contar cada semana y lleve
+          la cuenta de lo ya cubierto.</li>
         <li><b>Sincronización entre ventanas abiertas</b> — que dos personas
           mirando el mismo tablero vean lo mismo sin recargar.</li>
         <li><b>Visor de documentos dentro de la app</b>, en vez de abrir Drive
@@ -468,15 +479,16 @@
           <tr><td>inFlow</td><td class="num">~$110/mes</td><td><b>Por usuario</b> (2 usuarios)</td></tr>
           <tr><td>Rango típico PyME</td><td class="num">$50–$300/mes</td><td>Varios</td></tr>
           <tr style="background:var(--good-wash)">
-            <td><b>Acopio</b></td><td class="num"><b>$400 + $39/mes</b></td>
+            <td><b>Acopio</b></td><td class="num"><b>$500 + $49/mes</b></td>
             <td><b>Plano, usuarios ilimitados</b></td></tr>
         </tbody>
       </table>
     </div>
     <div class="prose" style="margin-top:1.4rem">
-      <p>La instalación de $400 cubre trabajo real —configurar, capacitar,
+      <p>La instalación de $500 cubre trabajo real —configurar, capacitar,
         registrar accesos— y es lo que la industria ya cobra por onboarding. Los
-        $39 mensuales compran soporte y todas las actualizaciones.</p>
+        $49 mensuales compran soporte y todas las actualizaciones; $490 al año
+        para quien prefiere pagar de una vez.</p>
       <p><strong>El costo marginal de un cliente adicional es esencialmente
         cero:</strong> corre en la infraestructura de Google pagada por el
         propio cliente. Lo que no escala automáticamente es la instalación

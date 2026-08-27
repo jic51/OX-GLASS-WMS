@@ -49,6 +49,7 @@ node tools/test-incoming.js
 node tools/test-incoming-delete.js
 node tools/test-adjust.js
 node tools/test-adjust-form.js
+node tools/check-changelog.js
 node tools/sync-legal.js --check
 node tools/build-fingerprint.js --check
 ```
@@ -523,6 +524,17 @@ come back from — is invisible to both. Those get a browser test.
   never seen the material in reads 0 the same as an empty one — far more
   often a typo than a discovery, so the screen says so out loud instead of
   quietly inventing stock.
+
+- `check-changelog.js` — not a test; a guard against rot. Both public
+  changelog pages sat at v10.6 while the app shipped v11.22 — fifteen versions
+  of silence on a page whose whole promise is "every change that reaches your
+  installation" — and nothing warned, because nothing was watching. It was
+  found when Jose happened to open it. This fails the release when the newest
+  entry is more than five versions behind `APP_VERSION`, or when the two
+  languages are not level with each other. Deliberately NOT one entry per
+  version: most releases do not deserve one, and a changelog padded with
+  internal work is worse than a short one. The rule is only that the gap stays
+  small.
 
 All of these lift the real code out of `Index_v3_fixed.html` (or
 `Code_v3_fixed.gs`) rather than keeping a copy, so they cannot quietly drift
