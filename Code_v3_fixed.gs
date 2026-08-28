@@ -27,13 +27,26 @@
 //   doGet, getInitialData, processMovement, getPrivateFileData,
 //   getPrivateFileThumbnail, heartbeat, pollLogin, reportIssue,
 //   extractDocumentInfo, getSetupState, saveSetupWizard, checkDeploymentReady,
-//   saveWebAppUrl
+//   saveWebAppUrl, getIncoming, addIncoming, updateIncoming, deleteIncoming,
+//   getMonitoredMaterials
 // — plus the menu/trigger entry points, gated by getUi() / requireOwnerContext_().
+//
+// v11.27: this paragraph was the whole of the rule, and a paragraph does not
+// fail a build. The five Incoming/monitor names above were reachable and
+// authenticating correctly for two versions before anyone noticed the list had
+// never been updated to admit it — and in the same period `getSystemActivity`
+// went out with no trailing `_` and no check at all, reading the audit sheet
+// for anyone who typed its name into a browser console.
+//
+// tools/test-endpoint-auth.js now enumerates every public global in this file
+// and fails unless each one either carries a recognised guard or is named in
+// its allow-list with a written reason. The rule is still stated here for
+// whoever is reading; what makes it hold is that the test counts the doors.
 
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '11.26';
+var APP_VERSION = '11.27';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -45,7 +58,7 @@ var APP_VERSION = '11.26';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '6bc3308c';
+var APP_BUILD = 'b9f04438';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -1545,7 +1558,7 @@ function getInitialData(sessionToken) {
       // the moment its name is filled in, without a round trip per line.
       materialPacks:      (function(){ try { return readPacks_(ss); } catch (e) { return {}; } })(),
       company:            publicCompany_(),
-      systemActivity:     (function(){ try { return getSystemActivity(30, _auth.email); } catch (e) { return []; } })(),
+      systemActivity:     (function(){ try { return getSystemActivity_(30, _auth.email); } catch (e) { return []; } })(),
       columnPrefs:        columnPrefs_(),
       movements:          movements,
       stock:              stock,
@@ -3782,7 +3795,25 @@ function ensureCheckinTrigger_() {
 }
 
 function dailyCheckinTrigger() {
-  try { runCheckin_(); } catch (e) { Logger.log('dailyCheckinTrigger: ' + e.message); }
+  // v11.27 — the trigger name is a public global, so it was also a door: any
+  // signed-in account with the app's URL could call it and make the install
+  // send its check-in mail on demand, as many times as they cared to click.
+  // Nothing was corrupted by that, but the owner's inbox is not a free
+  // service to strangers, and "runs as the owner" is exactly the condition
+  // requireOwnerContext_ was written to prove.
+  //
+  // The time-based trigger executes as the owner, so effective and active
+  // user are the same account and this passes. Under the web app's
+  // "Execute as: Me" deployment they never match for anyone else, so every
+  // google.script.run call from another user is refused here.
+  //
+  // The refusal is swallowed with everything else: a trigger that throws
+  // would mail the owner a failure notice every morning, which is a worse
+  // outcome than the call it just blocked.
+  try {
+    requireOwnerContext_();
+    runCheckin_();
+  } catch (e) { Logger.log('dailyCheckinTrigger: ' + e.message); }
 }
 
 function runCheckin_() {
@@ -5463,7 +5494,18 @@ function dismissSystemCard(data, auth) {
   return { status: 'success', dismissed: list.length };
 }
 
-function getSystemActivity(limit, forEmail) {
+// Renamed in v11.27 — it used to be `getSystemActivity`, with no trailing
+// underscore, which made it an internet-reachable endpoint: any signed-in
+// Google account holding the app's URL could call it and read the audit sheet
+// — who saved what, and when — with no session token and no role check. It has
+// exactly one caller, getInitialData, which has already authenticated by the
+// time it gets here. So the fix is not to add a check: it is to stop being a
+// door at all. The trailing `_` is the part Apps Script itself enforces, and
+// it is the rule the header comment at the top of this file already states.
+//
+// This one stood open for months because nothing counted the doors.
+// tools/test-endpoint-auth.js counts them now.
+function getSystemActivity_(limit, forEmail) {
   var dismissed = sysDismissedSet_(forEmail);
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEETS.AUDIT);

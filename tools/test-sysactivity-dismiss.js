@@ -5,8 +5,8 @@
 // "Last backup: today at 2:13 AM" line that was perfectly true. Both read the
 // same systemActivity list, but they are not the same kind of thing: the
 // corner deck is a NOTICE (you press ✕ once you have read it), Settings →
-// System is a RECORD (it has to keep saying the backup ran). getSystemActivity
-// used to drop dismissed rows at the source, so pressing ✕ deleted the
+// System is a RECORD (it has to keep saying the backup ran). It used to drop
+// dismissed rows at the source, so pressing ✕ deleted the
 // history too. It started when dismissals moved from localStorage — where
 // they never actually stuck — to the server, which is exactly the
 // v9.65 → v9.70 window Jose remembered the list vanishing in.
@@ -39,7 +39,7 @@ function check(label, cond) {
   else { fail++; console.log('  FAIL ', label); }
 }
 
-// ── Backend: getSystemActivity, real source, fake sheet ─────────────────────
+// ── Backend: getSystemActivity_, real source, fake sheet ────────────────────
 // Six nightly backups, oldest first. AUDIT_LOG columns:
 // [when, action, actor, detail, extra, fileId]
 const backups = [];
@@ -84,10 +84,10 @@ const ctx = vm.createContext({
   },
   console: console,
 });
-vm.runInContext(extractFn(GS, 'getSystemActivity'), ctx);
+vm.runInContext(extractFn(GS, 'getSystemActivity_'), ctx);
 
 console.log('\nScenario: four of six nightly backups have been dismissed');
-const out = vm.runInContext('getSystemActivity(30, "jose@ox-glass.com")', ctx);
+const out = vm.runInContext('getSystemActivity_(30, "jose@ox-glass.com")', ctx);
 
 check('all six backups come back, not just the two undismissed ones (got ' + out.length + ')', out.length === 6);
 check('every one of them is a backup — ordinary movement traffic never leaks in',
@@ -103,14 +103,14 @@ check('each backup still carries its Drive link, dismissed or not',
 console.log('\nScenario: the deck\'s budget is spent on LIVE cards, not on ones dismissed months ago');
 // limit:2 — the two undismissed are what the deck can show; asking for two
 // must not stop at the first two rows scanned and return only dismissed ones.
-const small = vm.runInContext('getSystemActivity(2, "jose@ox-glass.com")', ctx);
+const small = vm.runInContext('getSystemActivity_(2, "jose@ox-glass.com")', ctx);
 check('asking for 2 still yields 2 undismissed (deck is not starved by dismissals)',
   small.filter(function (a) { return !a.dismissed; }).length === 2);
 
 console.log('\nScenario: nobody has dismissed anything');
 const NONE = {};
 ctx.sysDismissedSet_ = function () { return NONE; };
-const fresh = vm.runInContext('getSystemActivity(30, "someone@else.com")', ctx);
+const fresh = vm.runInContext('getSystemActivity_(30, "someone@else.com")', ctx);
 check('all six come back, none flagged', fresh.length === 6 && fresh.every(function (a) { return !a.dismissed; }));
 
 // ── Frontend: the two consumers must disagree about `dismissed` ─────────────

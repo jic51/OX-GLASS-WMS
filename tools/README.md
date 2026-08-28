@@ -51,6 +51,9 @@ node tools/test-adjust.js
 node tools/test-adjust-form.js
 node tools/test-data-quality.js
 node tools/test-landing-i18n.js
+node tools/test-endpoint-auth.js
+node tools/test-local-dates.js
+node tools/test-fractional-qty.js
 node tools/check-changelog.js
 node tools/sync-legal.js --check
 node tools/build-fingerprint.js --check
@@ -552,6 +555,42 @@ come back from — is invisible to both. Those get a browser test.
   check cannot see — the language button is visible and thumb-sized at 375px
   (the nav it would naturally live in is hidden there), and the page still
   opens, in English, when `localStorage` throws.
+- `test-endpoint-auth.js` — **Priority 1 of the v11.26 audit, and it is not a
+  bug fix.** `appsscript.json` deploys the app as `executeAs: USER_DEPLOYING` +
+  `access: ANYONE`, which means Apps Script exposes every top-level function
+  whose name does not end in `_` as an internet-reachable endpoint running with
+  the owner's permissions — not the ones the frontend calls, all of them. The
+  per-function defence was well built and, function by function, correct. What
+  did not exist was anything checking it was COMPLETE. Nothing counted the
+  doors, which is how `getSystemActivity` shipped: a public function reading
+  the audit sheet — who saved what, and when — with no token and no role check.
+  This enumerates all 93 public globals and fails unless each is either guarded
+  by one of five recognised primitives or named in an allow-list *with a
+  written reason*. The allow-list is checked for rot too: an entry for a
+  function that no longer exists, or that has since grown a real guard, fails.
+  It reads source, so it proves no guard is MISSING — not that any guard is
+  correct.
+- `test-local-dates.js` — finding 1. `_isoDate` was
+  `dt.toISOString().substring(0,10)`, which converts to UTC first; Utah is
+  UTC−6/−7, so from about 6pm local every date the app produced was TOMORROW.
+  The evening shift filed its receipts a day late, every day, with no error and
+  nothing that looked wrong. The worst of the fourteen sites was the movement
+  form's default date. `process.env.TZ` is pinned to `America/Denver` at the
+  top of the file, above the first `Date` — deliberately, because a test that
+  only passes in the timezone it was written in is exactly how this went
+  unnoticed for months. Both halves of the year are covered, since the offset
+  differs, and January's case crosses a month boundary.
+- `test-fractional-qty.js` — finding 3. Every quantity box in the entry forms
+  was read with `parseInt`, which truncates: 2.5 became 2, 0.75 became 0. The
+  app disagreed with itself and never noticed — the edit modal used
+  `parseFloat`, the backend `Number()`, and only the form where a number FIRST
+  enters the building threw the fraction away, while the units menu has offered
+  SQ FT, LN FT, SHEET and ROLL since day one. Guards both halves of the fix,
+  because either alone does nothing: `_qty` reading with `parseFloat`, and
+  `step="any"` on the inputs — an `<input type="number">` with no step defaults
+  to step=1, so the browser rejects 2.5 before any script sees it. Also checks
+  the fix was not over-applied: row indexes and z-indexes still use `parseInt`,
+  which is right for them.
 - `check-changelog.js` — not a test; a guard against rot. Both public
   changelog pages sat at v10.6 while the app shipped v11.22 — fifteen versions
   of silence on a page whose whole promise is "every change that reaches your
