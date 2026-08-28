@@ -19,6 +19,101 @@ comentario sobre `_applyWarehouseRoleLabel` afirmaba que todo lo demás ya pasab
 por `_displayRole()` — y una frase no hace fallar un build. `test-role-label.js`
 ahora cuenta los caminos de render, no solo la función.
 
+⚠️ **HALLAZGO NUEVO (v11.29) — el respaldo nocturno puede no haberse programado
+NUNCA, y nada lo dice.** Jose preguntó por qué las tarjetas del sistema
+(respaldos) no aparecen desde la v9.x. Rastreado de punta a punta: el camino de
+render está bien —`dailyBackupTrigger` escribe en AUDIT_LOG con actor `system`,
+`getSystemActivity_` filtra por ese actor, `_announceSystemActivity` pinta la
+tarjeta— así que **si no hay tarjetas, es que no hay filas**. Y hay dos razones
+para que no las haya, las dos en el código:
+
+1. **`Code_v3_fixed.gs:473`** — la ÚNICA línea que programa el respaldo durante
+   la instalación:
+
+       if (data.enableBackup) { try { ensureBackupTrigger_(); } catch (e) {} }
+
+   **`catch` vacío.** Crear un trigger exige autorización, y durante el
+   asistente esa autorización puede no estar concedida todavía. Si falla, falla
+   **en silencio para siempre**: no hay respaldo, no hay fila, no hay tarjeta, y
+   nadie se entera. La línea de al lado (`organizeDriveFolders_`) al menos hace
+   `Logger.log`; ésta no hace nada. Y sólo corre si la casilla `enableBackup`
+   estaba marcada.
+2. **`menuCheckInstallation` (🩺 Check this installation) no mira los triggers.**
+   Verificado: no menciona `getProjectTriggers`, ni `Trigger`, ni `backup`. Sólo
+   revisa Script Properties. O sea que el diagnóstico que existe justo para
+   responder "¿está sana esta instalación?" **no puede detectar** que el
+   respaldo nocturno nunca se programó. Es el mismo patrón de la Prioridad 1 de
+   la auditoría: la defensa está bien escrita y nada verifica que exista.
+
+**Comprobación de 15 segundos para Jose:** editor de Apps Script → icono de
+reloj ⏰ (Triggers) en la barra izquierda. Si `dailyBackupTrigger` no está en la
+lista, nunca se creó. Segunda pista: Ajustes → System, línea "Last backup".
+
+**Arreglo propuesto:** (a) que el `catch` vacío registre y avise; (b) que el 🩺
+enumere los triggers que la app espera —`dailyBackupTrigger`,
+`archiveOldMovementsTrigger`, `dailyCheckinTrigger`— y ofrezca recrearlos, que
+es justo lo que ya hace con `SESSION_SECRET`; (c) una prueba que exija que toda
+llamada a `ensureBackupTrigger_` esté cubierta.
+
+---
+
+**PENDIENTE — el faltante (inventario negativo). DECIDIDO POSPONER (Jose,
+v11.29).** Todo el diseño está acordado y verificado; sólo falta construirlo.
+Lo confirmado corriendo el código real, no leyéndolo:
+
+- **El escenario que preocupaba a Jose NO pasa.** Entrada editada a 10 con 50 ya
+  salidos, luego llegan 30 → `warehouseQty: 30`. No 29. El aplastado a cero se
+  aplica **movimiento por movimiento** dentro del bucle, así que lo nuevo suma
+  sobre cero y el faltante no se come nada.
+- **El rastro de auditoría ya existe entero**: `modifyMovementLocked_` exige
+  motivo, escribe `auditLog_('MODIFY_MOVEMENT', …)` con Old Value / New Value, y
+  manda correo al admin con el antes, el después y el motivo.
+- **Editar movimientos ya es sólo de ADMIN** por defecto (`canEditMovements:
+  false`).
+
+**Lo único que falta: que el faltante se VEA.** Hoy se calcula
+(`s._errors.push('NEG@A1 had=10 tried=50')`) y en la línea 1861 se tira a
+`Logger.log`, que nadie abre. La persona ve 0, que es mentira.
+
+Diseño acordado, para cuando se retome:
+- Dos números, no uno: **On hand** (nunca negativo, lo que se puede tomar) y
+  **Shortfall** (el faltante, aparte, que no se resta de nada).
+- Marca en la fila del material, estilo las de stock bajo, que lleva a **Adjust**.
+- **Se limpia sola**: el faltante se muestra sólo si ocurrió DESPUÉS del último
+  Adjust de ese material en ese rack. Un conteo físico manda sobre lo anterior —
+  así la marca desaparece cuando alguien hace lo que la resuelve, sin un botón
+  de "ya lo vi" que se aprieta sin leer.
+- El admin **puede** dejarlo en negativo, pero avisado antes de guardar: *"This
+  will leave GLASS 6MM short by 40 at A1. Save anyway?"*
+- **Pregunta abierta:** ¿la marca la ven todos o sólo los admins? Recomendación:
+  todos — el de bodega es quien puede ir al rack a contarlo.
+
+---
+
+**IDEA DE JOSE (v11.29) — de "Mark arrived" a Entry sin volver a escribir nada.**
+Al guardar un material como *arrived*, la app debe preguntar si se quiere crear
+el **Entry** de ese material. Al aceptar se abre la ventana de movimiento **sólo
+en Entry** (no las seis opciones), con los datos del Incoming ya puestos en los
+campos que corresponden: categoría, nombre, cantidad, unidad, proveedor, PO,
+proyecto. El usuario revisa, corrige lo que haga falta y guarda. Entry creado
+sin volver a teclear lo que la app ya sabía.
+
+Si el cliente no quiere hacerlo en ese momento, se crea una **tarjeta del tamaño
+de las del sistema** (las grandes) que diga:
+`'XXX' MATERIAL ARRIVED 'DATE' — MAKE THE ENTRY / LATER`
+
+**Decisión de diseño pendiente:** ¿la pregunta va como popup aparte o como una
+opción dentro de la misma ventana del Incoming? Hay que elegir cuál se ve más
+profesional. Recomendación a discutir: dentro de la misma ventana — un popup
+encima de otro popup es justo el apilamiento que acaba de costarnos la v11.29.
+
+**Ojo con el orden:** esta tarjeta va al mismo `cornerDeck` que las del sistema,
+así que conviene resolver primero el hallazgo del respaldo de arriba — si el
+deck está vacío por una razón que no entendemos, meterle un tipo de tarjeta
+nuevo encima sólo enturbia el diagnóstico.
+
+---
+
 **AUDITORÍA v11.26 — lo que queda.** El informe completo está publicado en
 https://claude.ai/code/artifact/1f253dd3-1dc7-4e3a-97e5-2468daa4b9bd
 (11 hallazgos + Prioridad 1, en dos registros: "en una frase" y "detalle
