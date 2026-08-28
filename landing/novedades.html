@@ -87,9 +87,150 @@
 
   <section class="month">
     <h2>Agosto 2026</h2>
-    <p class="sub">Las ventanas de movimiento rehechas como una sola, los
-       paquetes, respaldos que se llevan tu configuración — y los Términos
-       diciendo claro qué cubre el soporte.</p>
+    <p class="sub">Una auditoría completa de la app, y las primeras
+       correcciones que salieron de ella: la fecha de la tarde, la cantidad que
+       no era entera, y una revisión que cuenta todas las puertas antes de cada
+       publicación. Además, las ventanas de movimiento rehechas como una sola,
+       los paquetes y respaldos que se llevan tu configuración.</p>
+
+    <div class="entry">
+      <span class="ver">v11.28</span>
+      <span class="tag safe">Seguridad</span>
+      <h3>Lo que un rol no puede ver ya no se le envía</h3>
+      <p>Las cifras de costo llegaban a todos los navegadores y después las
+         escondía la página que las dibujaba. Eso no es un permiso: es una
+         preferencia, y no es lo que promete la página de características. El
+         costo unitario, el costo total y el promedio ahora salen del servidor
+         solo para los roles autorizados a verlos: los administradores siempre,
+         el rol de bodega cuando un administrador activó <b>See costs</b>, y los
+         usuarios de solo lectura nunca. En pantalla no cambia nada; la
+         diferencia es que los números ya no se entregan.</p>
+      <p>Esa misma carga también estaba enviando la lista vieja de correos de
+         los compañeros con su rol al lado, y la dirección del dueño, a todos
+         los roles en cada carga — sin servir para nada, porque ninguna pantalla
+         de la app lee esa lista desde que la gestión de usuarios tiene su
+         propia página. Los administradores siguen recibiendo la lista real; los
+         demás dejan de recibir un directorio del personal que nadie pidió.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.28</span>
+      <span class="tag fix">Corregido</span>
+      <h3>Una categoría con un &lt; adentro ya no corta la pantalla a la mitad</h3>
+      <p>Los nombres de categoría, los nombres de archivos adjuntos y las
+         unidades se estaban insertando en la página sin tratarlos como texto
+         plano. Una categoría escrita como <em>GLASS &lt;5MM</em> terminaba la
+         pantalla justo ahí — sin mensaje de error, solo una página que se
+         detiene y una persona que razonablemente supone que se perdieron sus
+         datos.</p>
+      <p>Las categorías pasan por una sola pieza compartida de la app, así que
+         esto fue una corrección en siete pantallas: la tabla de stock, la lista
+         de movimientos, los paquetes, el selector de materiales, el monitor de
+         stock bajo y las dos vistas de entregas esperadas.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.27</span>
+      <span class="tag fix">Corregido</span>
+      <h3>Después de las seis de la tarde, la app escribía la fecha de mañana</h3>
+      <p>Una entrega recibida a las 6:30 p.m. del día 14 quedaba registrada el
+         15. No se rechazaba ni se marcaba: la app misma la archivaba un día
+         tarde, cada tarde. La casilla de fecha en la ventana de movimientos ya
+         abría llena así, de modo que si nadie se daba cuenta y la cambiaba, esa
+         era la fecha que se guardaba. Los totales de fin de mes quedaban
+         corridos por todo lo que entró al muelle después de las seis.</p>
+      <p>La app estaba leyendo el reloj en UTC en vez de en tu zona horaria.
+         Ahora lee el día en el que realmente estás parado, en todas partes: el
+         formulario de movimientos, las llegadas de la semana y el nombre de los
+         archivos que exportas. Las fechas que ya están en tu hoja no se tocan;
+         corrige las de la tarde que quieras arreglar con <b>Adjust</b> o
+         editando el movimiento.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.27</span>
+      <span class="tag fix">Corregido</span>
+      <h3>Media lámina es una cantidad real, y se estaba redondeando</h3>
+      <p>Escribir <b>2.5</b> en una casilla de cantidad guardaba <b>2</b>.
+         Escribir <b>0.75</b> no guardaba nada. No aparecía ninguna advertencia,
+         así que la única forma de darse cuenta era volver a leer la fila
+         después. Afectaba a cualquiera que trabaje en SQ FT, LN FT, láminas o
+         rollos: justo las unidades que existen porque el material viene en
+         mitades.</p>
+      <p>Las casillas de cantidad ahora aceptan decimales y los conservan, desde
+         el formulario hasta la hoja. El cero se sigue rechazando, y la app lo
+         dice con sus propias palabras. Los números enteros funcionan
+         exactamente igual que antes.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.27</span>
+      <span class="tag safe">Seguridad</span>
+      <h3>Una página de la actividad del sistema se podía leer sin iniciar sesión</h3>
+      <p>La lista de lo que el sistema hizo por su cuenta —respaldos,
+         mantenimiento, quién guardó qué y cuándo— la podía leer alguien que
+         tuviera el enlace de tu app y una cuenta de Google, sin que la app
+         comprobara nunca quién era. No exponía cifras de stock, ni costos, ni
+         datos de materiales, y no hay señal de que alguien la haya leído. Está
+         cerrada.</p>
+      <p>Lo que importa más que esa página: ahora hay una revisión automática
+         que cuenta <em>todas</em> las entradas al sistema antes de cada
+         publicación y se niega a publicar si alguna quedó abierta o sin
+         explicación. Este hueco existía porque nadie las estaba contando.
+         Ahora algo las cuenta.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.25 – v11.26</span>
+      <span class="tag fix">Corregido</span>
+      <h3>Entregas esperadas: la categoría que desaparecía y la ventana que no volvía</h3>
+      <p>Abrir una entrega para editarla mostraba la casilla de categoría vacía
+         aunque ya se había elegido una — y guardar desde ahí escribía ese vacío
+         de vuelta. La causa era un cambio de nombre: renombrar una categoría
+         actualizaba tus movimientos y tu historial, pero dejaba las entregas
+         esperadas apuntando al nombre viejo. Ahora también las renombra, y una
+         entrega cuya categoría ya no está en tu lista lo dice en vez de quedarse
+         en blanco.</p>
+      <p>La lista de llegadas de la mañana también se cerraba para siempre en
+         cuanto marcabas el primer material, y la única forma de volver era
+         recargar la página entera. Se reabre desde <b>This week's arrivals</b>
+         en el menú del usuario, donde todos alcanzan a llegar en vez de solo
+         en la pantalla de Incoming. Cada material lleva su propio botón
+         <b>Mark arrived</b>, y la presentación pone la cantidad al lado del
+         nombre con el estado debajo.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.24</span>
+      <span class="tag fix">Corregido</span>
+      <h3>Una entrega esperada ya no llega con un 1 puesto</h3>
+      <p>La casilla de cantidad de una entrega nueva abría con un <b>1</b>
+         dentro, y ese es un número alrededor del cual la gente planifica, lo
+         haya querido poner alguien o no. Ahora abre vacía, como todas las
+         demás casillas de cantidad de la app.</p>
+      <p>Dejarla vacía está permitido a propósito: una entrega registrada desde
+         una hoja de carga adjunta muchas veces no tiene cifra hasta que llega
+         el camión. Donde nunca se indicó una cantidad, la app dice <em>qty not
+         stated</em> en vez de imprimir un cero.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.23</span>
+      <span class="tag new">Nuevo</span>
+      <h3>Check my data — lo mismo escrito de dos formas, encontrado por ti</h3>
+      <p>Escribe el nombre de un proveedor un poco distinto dos veces y ya
+         tienes dos proveedores. Nada se rompe: los totales simplemente se
+         parten en dos y los reportes dejan de cuadrar en silencio. <b>Check my
+         data</b>, en Ajustes, lee todo tu archivo y te muestra lo que
+         encontró: el mismo nombre escrito de dos formas, materiales sin
+         proveedor o sin proyecto, y nombres lo bastante parecidos entre sí
+         como para ser un error de tecleo.</p>
+      <p>Los dos primeros traen un botón de Merge que hace el trabajo en todas
+         las filas afectadas de una vez. El tercero —posibles errores de
+         tecleo— a propósito no lo trae: <em>JJF 109</em> y <em>JJF 110</em> se
+         parecen casi por completo para una computadora y son dos obras
+         distintas. Ese es solo para tus ojos.</p>
+    </div>
 
     <div class="entry">
       <span class="ver">v11.22</span>

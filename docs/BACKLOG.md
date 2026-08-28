@@ -8,15 +8,23 @@ here once they ship (the commit message is the record of what changed and why).
 **AUDITORÍA v11.26 — lo que queda.** El informe completo está publicado en
 https://claude.ai/code/artifact/1f253dd3-1dc7-4e3a-97e5-2468daa4b9bd
 (11 hallazgos + Prioridad 1, en dos registros: "en una frase" y "detalle
-técnico"). La v11.27 cerró la Prioridad 1 y los hallazgos 1, 3 y 7. Lo que
-sigue, en el mismo orden del informe:
+técnico"). La v11.27 cerró la Prioridad 1 y los hallazgos 1, 3 y 7; la v11.28
+cerró los hallazgos 2, 6, 10 y 11 y puso los changelogs al día. Lo que sigue,
+en el mismo orden del informe:
 
-- **A. Hallazgo 2 — los costos viajan a todos los roles.** `parseArchiveRow`
-  siempre incluye `unitCost`/`totalCost`, y `config.avgCost` no se filtra, así
-  que el dato llega al navegador de cualquier rol; `_canSeeCosts()` solo lo
-  esconde en pantalla. **Esto además contradice lo que promete la página de
-  ventas publicada**, que es la razón por la que va antes que los demás. El
-  arreglo es en el backend: no enviarlo, en vez de no dibujarlo.
+- ~~**A. Hallazgo 2 — los costos viajan a todos los roles.**~~ ✅ **Hecho
+  (v11.28).** Se filtran en el servidor, en las DOS puertas (`getInitialData` y
+  `loadOlderHistory`). `canSeeCosts_()` en el servidor y `_canSeeCosts()` en el
+  navegador se comparan rol por rol en `tools/test-cost-privacy.js`, porque si
+  se separan el fallo es silencioso en la dirección peor. **De paso**:
+  `loadConfig()` devolvía la lista vieja de correos de compañeros con su rol, y
+  `adminEmail`, a todos los roles en cada carga — sin que ninguna pantalla la
+  leyera. Ahora solo va para ADMIN.
+- ~~**D. Hallazgos 6, 10 y 11 — texto sin escapar.**~~ ✅ **Hecho (v11.28).**
+  `catBadge()` escapa la categoría: una corrección, **siete** pantallas (la
+  auditoría dijo ocho, había contado la definición). Más `file.name`,
+  `item.unit` y —encontrado al hacerlo— `item.estDate`.
+  `tools/test-html-escaping.js`.
 - **B. Hallazgo 5 — `addReservation_` sin candado.** Lee y escribe sin
   `withStockLock_`, los ids `RES-` se generan por segundo (dos reservas en el
   mismo segundo comparten id), y `cancelReservation_` sale al primer match. El
@@ -27,10 +35,6 @@ sigue, en el mismo orden del informe:
   detector `mutatesStock` solo reconoce handles atados a ARCHIVE / LIVE / SITE
   / WASTE, así que la prueba que debía atrapar B está ciega justo ahí. Va con
   B, no antes: arreglar el detector sin arreglar B solo hace que la suite falle.
-- **D. Hallazgos 6, 10 y 11 — texto sin escapar (10 sitios).** `catBadge()`
-  mete la categoría en HTML sin escapar (8 sitios), más `file.name` y
-  `item.unit`. Un nombre con `<` rompe la pantalla. Los tres son el mismo
-  error y se arreglan con un solo `_he()` bien puesto.
 - **E. Hallazgo 4 — el stock negativo se aplasta a 0** en los cuatro lectores,
   y los `_errors` se tiran a `Logger.log`. El síntoma que avisaría del problema
   es exactamente lo que se borra. Decidir con Jose qué debe VER la gente: un
@@ -44,9 +48,8 @@ sigue, en el mismo orden del informe:
 - **G. Confirmar que `migrateToV3_Corrected.gs` NO está en el proyecto
   desplegado.** Lleva su propia advertencia y una URL real de hoja de cálculo
   dentro. Es tarea de Jose, en su panel.
-- **H. Changelogs.** `check-changelog.js` dice 5 versiones de atraso, que es
-  justo el límite: la v11.28 hace fallar la suite. Hay que publicar de v11.23 a
-  v11.27 en inglés y español antes de la próxima.
+- ~~**H. Changelogs.**~~ ✅ **Hecho (v11.28).** Publicadas v11.23 → v11.28 en
+  inglés y español, a la par. `check-changelog.js` dice "current" en los dos.
 
 0. ~~**Quitar el `1` prellenado de Quantity en Incoming**~~ ✅ **Hecho
    (v11.24).** La caja abre vacía, como las cinco ventanas de movimientos desde

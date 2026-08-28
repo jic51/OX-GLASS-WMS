@@ -46,7 +46,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '11.27';
+var APP_VERSION = '11.28';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -58,7 +58,7 @@ var APP_VERSION = '11.27';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'b9f04438';
+var APP_BUILD = '97ecb576';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -1222,6 +1222,28 @@ var DEFAULT_ROLE_PERMS = {
   canExportData:    true
 };
 
+// The server's own answer to "may this person see money?", and the ONLY one
+// that decides what leaves this file. _canSeeCosts() in Index_v3_fixed.html is
+// the same rule spelt the same way, but it runs in the browser and therefore
+// decides only what gets drawn — which is a different question, and until
+// v11.27 it was the only question anybody was asking.
+//
+// The two must agree, and a test holds them to it (tools/test-cost-privacy.js).
+// If they ever drift, the failure is silent in the worse direction: the server
+// would send what the page then declines to show, which looks perfect from the
+// outside and is exactly the bug this replaces.
+//
+//   ADMIN      always
+//   WAREHOUSE  only when an admin has turned the See costs toggle on
+//   VIEWER     never — read-only means read what you are shown, and costs are
+//              not part of that. There is no toggle to widen it, by design.
+function canSeeCosts_(auth) {
+  if (!auth || !auth.role) return false;
+  if (auth.role === 'ADMIN') return true;
+  if (auth.role === 'WAREHOUSE') return rolePerms_().canSeeCosts === true;
+  return false;
+}
+
 function rolePerms_() {
   var raw = PropertiesService.getScriptProperties().getProperty('ROLE_PERMS_WAREHOUSE');
   var stored = {};
@@ -1550,6 +1572,51 @@ function getInitialData(sessionToken) {
 
     var materialLocks = [];
     try { materialLocks = getMaterialLocks(); } catch(e) { Logger.log('getMaterialLocks: ' + e.message); }
+
+    // ── WHAT A ROLE MAY NOT SEE IS NOT SENT ─────────────────────────────────
+    // Finding 2 of the v11.26 audit. Costs were computed for everyone and put
+    // on the wire for everyone: parseArchiveRow always fills unitCost and
+    // totalCost, and config.avgCost carries the running average for every
+    // material. _canSeeCosts() then hid them — IN THE BROWSER. Which is to
+    // say it hid them from the screen, not from the person: the numbers had
+    // already arrived, and one console line printed the lot.
+    //
+    // A permission enforced only by the page drawing it is not a permission.
+    // It is a preference. And this one is sold: the published feature page
+    // promises that a warehouse role does not see what things cost unless an
+    // admin turns it on. So this is not only a leak, it is a leak of the
+    // thing the customer was told they were buying.
+    //
+    // Stripped here, at the one place everything leaves the server, rather
+    // than at each of the five screens that draw a dollar sign — the same
+    // reason the user list two blocks up is built only for ADMIN. Every
+    // consumer in the front end is already behind _canSeeCosts(), so a role
+    // that could not see these numbers sees exactly what it saw before; the
+    // difference is that now it was never handed them.
+    if (!canSeeCosts_(auth)) {
+      for (var ci = 0; ci < movements.length; ci++) {
+        movements[ci].unitCost  = null;
+        movements[ci].totalCost = null;
+      }
+      if (config) config.avgCost = {};
+    }
+
+    // Found while doing the above, in the same shape and worse: loadConfig()
+    // returns the CONFIG sheet whole, and that includes `users` — every
+    // colleague's email address with their role beside it — and `adminEmail`.
+    // Both were sent to every role on every load, VIEWER included. Not hidden
+    // by a check that could be argued about: NOTHING in Index_v3_fixed.html
+    // reads either one. The real user list arrives separately, two blocks up,
+    // and only for ADMIN, which is where the app has actually read it from
+    // since USERS_V3 replaced the CONFIG column.
+    //
+    // So this is a roster of who works here, mailed out to everyone who opens
+    // the page, in service of no feature at all. It is left in place for an
+    // ADMIN, who is the one role that already receives the same list by name.
+    if (config && auth.role !== 'ADMIN') {
+      config.users = [];
+      delete config.adminEmail;
+    }
 
     return {
       serverVersion:      APP_VERSION,
@@ -3890,6 +3957,7 @@ function runCheckin_() {
 // and must never be sent to modifyMovement/updateDocument_.
 function loadOlderHistory(auth) {
   auth = requireAuth_();   // any registered user; unauthenticated callers are refused
+  var seeCosts = canSeeCosts_(auth);
   var ss      = SpreadsheetApp.getActiveSpreadsheet();
   var history = ensureArchiveHistorySheet_(ss);
   var data    = history.getDataRange().getValues();
@@ -3899,6 +3967,14 @@ function loadOlderHistory(auth) {
     if (!row[AC.CATEGORY] && !row[AC.NAME]) continue;
     var m = parseArchiveRow(row, i + 1);
     m.archived = true;
+    // The second door for costs, and it would have been easy to miss: this
+    // returns exactly the same movement objects getInitialData does, from the
+    // other sheet, and requireAuth_() with no minimum role lets a VIEWER
+    // through. Stripping only the first load would have moved the leak to
+    // "Load older history" rather than closing it — which is why finding 2 is
+    // fixed at every place these objects leave the server, not at the first
+    // one found.
+    if (!seeCosts) { m.unitCost = null; m.totalCost = null; }
     out.push(m);
   }
   return out;

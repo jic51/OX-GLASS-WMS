@@ -2966,7 +2966,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.27';
+var APP_VERSION = '11.28';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -2978,7 +2978,7 @@ var APP_VERSION = '11.27';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'b9f04438';
+var APP_BUILD = '97ecb576';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -4612,10 +4612,19 @@ var CAT_BADGE = {
   'SCREWS':       'badge-gray',
   'IGU':          'badge-green'
 };
+// The category name goes into HTML here, and it went in RAW until v11.27 —
+// through seven different screens, because everything that shows a category
+// comes through this one function. A material category is typed by a person,
+// so it can contain anything a person can type: a `<` breaks the layout of
+// whatever screen it lands on, and worse is possible. nt() uppercases and
+// trims; it is not an escape.
+//
+// One fix, seven screens, which is exactly why this was worth finding as a
+// PATTERN rather than as seven separate bugs.
 function catBadge(cat){
   var c = nt(cat);
   var cls = CAT_BADGE[c] || 'badge-gray';
-  return '<span class="badge '+cls+'">'+( c || '—')+'</span>';
+  return '<span class="badge '+cls+'">'+ _he(c || '—') +'</span>';
 }
 
 function stockBadge(item){
@@ -7247,7 +7256,9 @@ function _checkIncomingSuggest(n, inputEl){
         var safeId   = _escAttr(item.id);
         var safeName = _escAttr(item.name);
         var safeCat  = _escAttr(item.category || '?');
-        var safeMeta = _escAttr(_incQtyText(item)) + (item.supplier ? ' · ' + _escAttr(item.supplier) : '') + ' — ' + item.estDate;
+        // estDate was the one field in this line still going in raw — the two
+        // beside it were escaped, which is how a gap like this hides.
+        var safeMeta = _escAttr(_incQtyText(item)) + (item.supplier ? ' · ' + _escAttr(item.supplier) : '') + ' — ' + _escAttr(item.estDate);
         return '<div class="inc-suggest-item" data-n="' + n + '" data-inc-id="' + safeId + '"' +
           ' onmousedown="_clickIncomingSuggest(this);return false;">' +
           '<span class="inc-tag">' + safeCat + '</span>' +
@@ -11038,7 +11049,8 @@ function _handlePhotoFiles(uid, files) {
         ? '<img src="data:' + mime + ';base64,' + b64 + '" alt="photo">' +
           '<button class="remove-photo" onclick="this.closest(\'.doc-photo-thumb\').remove();_updateDocPhotoCount()" title="Remove">✕</button>'
         : '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:1.4rem;flex-direction:column;gap:2px">📄' +
-          '<span style="font-size:.5rem;color:#555;padding:0 3px;text-align:center;overflow:hidden;max-width:50px;word-break:break-all">' + file.name.substring(0,10) + '</span></div>' +
+          // A file name comes from the person's own disk and lands in innerHTML.
+          '<span style="font-size:.5rem;color:#555;padding:0 3px;text-align:center;overflow:hidden;max-width:50px;word-break:break-all">' + _he(file.name.substring(0,10)) + '</span></div>' +
           '<button class="remove-photo" onclick="this.closest(\'.doc-photo-thumb\').remove();_updateDocPhotoCount()" title="Remove">✕</button>';
       strip.appendChild(thumb);
       _updateDocPhotoCount();
@@ -12227,7 +12239,7 @@ function openRackDrawer(rackName) {
           '<div class="rdw-item">'+
             '<span class="rack-cat-dot" style="background:'+col+';width:10px;height:10px;flex-shrink:0"></span>'+
             '<span class="rdw-name" data-action="toggle-rdw" data-idx="'+idx+'" title="'+_he(item.name)+'">'+_he(item.name)+'</span>'+
-            '<span class="rdw-rack-qty">'+item.qty+' '+item.unit+'</span>'+
+            '<span class="rdw-rack-qty">'+_he(item.qty)+' '+_he(item.unit)+'</span>'+
             '<span class="rdw-total-qty" title="Total in warehouse">('+item.warehouseTotal+' total)</span>'+
             lockBtn +
           '</div>'+

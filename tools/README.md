@@ -54,6 +54,8 @@ node tools/test-landing-i18n.js
 node tools/test-endpoint-auth.js
 node tools/test-local-dates.js
 node tools/test-fractional-qty.js
+node tools/test-cost-privacy.js
+node tools/test-html-escaping.js
 node tools/check-changelog.js
 node tools/sync-legal.js --check
 node tools/build-fingerprint.js --check
@@ -591,6 +593,30 @@ come back from — is invisible to both. Those get a browser test.
   to step=1, so the browser rejects 2.5 before any script sees it. Also checks
   the fix was not over-applied: row indexes and z-indexes still use `parseInt`,
   which is right for them.
+- `test-cost-privacy.js` — finding 2, and the one with a signature on it: the
+  published feature page promises a customer that the warehouse role does not
+  see costs unless an admin turns it on. Costs were computed for everyone and
+  put on the wire for everyone; `_canSeeCosts()` then hid them IN THE BROWSER,
+  which hides them from the screen and not from the person. A permission
+  enforced by the code that draws the pixels is a preference. Guards three
+  things: that the server strips at BOTH doors (`getInitialData` and
+  `loadOlderHistory` — stripping only the first would have moved the leak
+  rather than closed it); that `canSeeCosts_()` on the server and
+  `_canSeeCosts()` in the browser give the same answer for every role and both
+  toggle states, since drift there fails silently in the worse direction; and
+  that no third door opens later — every caller of `parseArchiveRow` that can
+  return its objects to a browser must strip or be named as internal. Also
+  covers the roster found alongside: `loadConfig()` returns CONFIG whole, so
+  every colleague's email with their role, plus `adminEmail`, went to every
+  role on every load, read by nothing.
+- `test-html-escaping.js` — findings 6, 10 and 11, which are one bug wearing
+  three numbers: text a person typed, dropped into innerHTML unescaped. The
+  reason to treat them as one: `catBadge` is a single function behind SEVEN
+  screens (the audit said eight — it had counted the definition), so it is one
+  fix, not seven bug reports. Runs the escaper and `catBadge` for real rather
+  than only grepping, and records the deliberate non-fix: `_addRejectedFileChip`
+  sets `.title` as a PROPERTY, which the browser never parses, so escaping
+  there would show `&amp;` to a reader. A later sweep would otherwise "fix" it.
 - `check-changelog.js` — not a test; a guard against rot. Both public
   changelog pages sat at v10.6 while the app shipped v11.22 — fifteen versions
   of silence on a page whose whole promise is "every change that reaches your

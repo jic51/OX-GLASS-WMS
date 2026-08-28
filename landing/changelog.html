@@ -86,8 +86,138 @@
 
   <section class="month">
     <h2>August 2026</h2>
-    <p class="sub">The movement screens rebuilt as one, packs, backups that
-       carry your settings — and the Terms saying plainly what support covers.</p>
+    <p class="sub">A full audit of the app, and the first fixes out of it: the
+       evening date, the quantity that was not whole, and a check that counts
+       every door before each release. Plus the movement screens rebuilt as
+       one, packs, and backups that carry your settings.</p>
+
+    <div class="entry">
+      <span class="ver">v11.28</span>
+      <span class="tag safe">Security</span>
+      <h3>What a role may not see is no longer sent to it</h3>
+      <p>Cost figures were reaching every browser and then being hidden by the
+         page that drew them. That is not a permission — it is a preference,
+         and it is not what the feature page promises. Unit cost, total cost
+         and the running average now leave the server only for roles allowed to
+         see them: administrators always, the warehouse role when an
+         administrator has turned <b>See costs</b> on, and read-only users
+         never. Nothing looks different on screen; the difference is that the
+         numbers were never handed over.</p>
+      <p>The same load was also sending the old list of colleagues' email
+         addresses with their roles beside it, and the owner's address, to
+         every role on every load — in service of nothing, since no screen in
+         the app has read that list since user management moved to its own
+         page. Administrators still get the real list; everyone else no longer
+         gets a staff roster they never asked for.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.28</span>
+      <span class="tag fix">Fixed</span>
+      <h3>A category with a &lt; in it no longer cuts a screen in half</h3>
+      <p>Category names, attached file names and units were being placed into
+         the page without being treated as plain text. A category typed as
+         <em>GLASS &lt;5MM</em> ended the screen right there — no error
+         message, just a page that stopped, and a person reasonably assuming
+         their data was gone.</p>
+      <p>Categories go through one shared piece of the app, so this was one
+         correction across seven screens: the stock table, the movement list,
+         packs, the material picker, the low-stock monitor and both expected
+         delivery views.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.27</span>
+      <span class="tag fix">Fixed</span>
+      <h3>After six in the evening, the app was writing tomorrow's date</h3>
+      <p>A delivery received at 6:30pm on the 14th was recorded as the 15th. Not
+         rejected, not flagged — filed one day late, every evening, by the app
+         itself. The date box on the movement window opened already filled in
+         that way, so unless somebody noticed and changed it, that is the date
+         that was saved. Month-end totals were off by whatever crossed the dock
+         after six.</p>
+      <p>The app was reading the clock in UTC instead of in your own time zone.
+         It now reads the day you are actually standing in, everywhere — the
+         movement form, the week's arrivals, the file names on exports. Dates
+         already in your sheet are untouched; correct any evening entries you
+         want to fix with <b>Adjust</b> or by editing the movement.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.27</span>
+      <span class="tag fix">Fixed</span>
+      <h3>Half a sheet is a real quantity, and it was being rounded away</h3>
+      <p>Typing <b>2.5</b> into a quantity box saved <b>2</b>. Typing
+         <b>0.75</b> saved nothing at all. No warning appeared, so the only way
+         to catch it was to go back and read the row afterwards. Anyone working
+         in SQ FT, LN FT, sheets or rolls was affected — the units that exist
+         precisely because material comes in halves.</p>
+      <p>Quantity boxes now accept decimals and keep them, from the entry form
+         through to the sheet. Zero is still refused, with the app saying so in
+         its own words. Whole numbers behave exactly as before.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.27</span>
+      <span class="tag safe">Security</span>
+      <h3>One page of the system's own activity was readable without signing in</h3>
+      <p>The list of what the system did on its own — backups, maintenance, who
+         saved what and when — could be read by someone who had your app's link
+         and a Google account, without the app ever checking who they were. It
+         exposed no stock figures, no costs and no material data, and there is
+         no sign it was ever read. It is closed.</p>
+      <p>What matters more than the one page: there is now an automatic check
+         that counts <em>every</em> way into the system before each release and
+         refuses to ship if any one of them is left unlocked or unexplained.
+         This gap existed because nothing was counting. Something is now.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.25 – v11.26</span>
+      <span class="tag fix">Fixed</span>
+      <h3>Expected deliveries: the category that disappeared, and the window that would not come back</h3>
+      <p>Opening a delivery to edit it showed the category box empty even though
+         one had been chosen — and saving from there wrote that emptiness back.
+         The cause was a rename: renaming a category updated your movements and
+         your history but left expected deliveries pointing at the old name. It
+         now renames them too, and a delivery whose category is no longer on
+         your list says so instead of silently blanking.</p>
+      <p>The morning list of arrivals also closed for good once you marked the
+         first item, with a full page reload the only way back. It reopens from
+         <b>This week's arrivals</b> in the account menu, where everyone can
+         reach it rather than only on the Incoming screen. Every item carries
+         its own <b>Mark arrived</b> button, and the layout puts the quantity
+         beside the name with the status underneath it.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.24</span>
+      <span class="tag fix">Fixed</span>
+      <h3>An expected delivery no longer arrives pre-filled with a 1</h3>
+      <p>The quantity box on a new expected delivery opened with a <b>1</b> in
+         it, which is a number to plan around whether or not anyone meant it.
+         It opens empty, like every other quantity box in the app.</p>
+      <p>Leaving it empty is allowed on purpose: a delivery entered from an
+         attached loading sheet often has no count until the truck arrives.
+         Where a quantity was never stated, the app says <em>qty not
+         stated</em> rather than printing a zero.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.23</span>
+      <span class="tag new">New</span>
+      <h3>Check my data — the same thing written two ways, found for you</h3>
+      <p>Type a supplier's name slightly differently twice and you have two
+         suppliers. Nothing breaks; the totals simply split in half and the
+         reports quietly stop adding up. <b>Check my data</b>, in Settings,
+         reads your whole archive and shows what it found: the same name spelt
+         two ways, materials missing a supplier or a project, and names close
+         enough to each other to be a typo.</p>
+      <p>The first two come with a Merge button that does the work across every
+         affected row at once. The third — possible typos — deliberately does
+         not: <em>JJF 109</em> and <em>JJF 110</em> look almost identical to a
+         computer and are two different jobs. That one is for your eyes only.</p>
+    </div>
 
     <div class="entry">
       <span class="ver">v11.22</span>
