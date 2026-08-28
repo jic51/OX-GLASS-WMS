@@ -19,54 +19,49 @@ comentario sobre `_applyWarehouseRoleLabel` afirmaba que todo lo demás ya pasab
 por `_displayRole()` — y una frase no hace fallar un build. `test-role-label.js`
 ahora cuenta los caminos de render, no solo la función.
 
-⚠️ **HALLAZGO (v11.29) — las tarjetas del sistema existen, se cuentan, y son
-INVISIBLES en reposo.** Jose preguntó por qué las tarjetas de respaldo no
-aparecen desde la v9.x.
+~~**Las tarjetas del sistema no aparecen (ni en el deck ni en Settings).**~~
+✅ **RESUELTO (v11.30) — era UNA LÍNEA, y Jose tenía razón desde el principio en
+que los dos síntomas eran el mismo problema.**
 
-**Descartado primero, con pruebas suyas:** el trigger `dailyBackupTrigger` está
-instalado, corrió el 28-ago a las 2:36 a.m., tasa de error 0%, y hay **27
-respaldos** en Drive del último mes. Los respaldos funcionan perfectamente y las
-filas SÍ se escriben en AUDIT_LOG con actor `system`. (Mi primera hipótesis —que
-el `catch` vacío de la línea 473 hubiera impedido crear el trigger— **era
-incorrecta para esta instalación**. El defecto del `catch` vacío sigue siendo
-real y está abajo, pero no es la causa de esto.)
+`getInitialData` armaba el payload así:
 
-**La causa real, verificada en el CSS y en el render:**
+    systemActivity: (function(){ try { return getSystemActivity_(30, _auth.email); }
+                                 catch (e) { return []; } })(),
 
-    .deck:not(.open) .deck-card:not(:last-child){ visibility:hidden; opacity:0 }
+La variable en ese ámbito es **`auth`**, no `_auth`. Y sí existe un `_auth` en
+esa función — declarado **al final**, dentro del manejador de errores
+(`var _auth = getUserRole(sessionToken)`). Como `var` se iza al inicio de la
+función, `_auth` existía en esa línea **valiendo `undefined`**, así que
+`_auth.email` lanzaba un TypeError en cada llamada y el `catch` en línea lo
+convertía en un array vacío.
 
-    deck.innerHTML = _sysDeckHtml + _cfgDeckHtml;   // sistema 1º, sugerencias al final
+**`systemActivity` salía `[]` en TODAS las cargas, para TODOS los usuarios,
+desde el día que se escribió esa línea.** Las dos pantallas que la leen se
+apagaron juntas: el deck de la esquina (`_sysCards`) y Settings → System
+(`sysActs`). Los respaldos nunca estuvieron rotos — corrían cada noche,
+escribían su fila en AUDIT_LOG con actor `system`, y hay 27 en Drive. Las filas
+simplemente nunca salían del servidor.
 
-En reposo el deck muestra **una sola** tarjeta: la última del DOM. Y las de
-sistema se pintan primero, así que la última es siempre una sugerencia de
-configuración. Es deliberado, y el comentario de `_paintDeck` lo argumenta bien:
-*"the thing waiting on you belongs on top"*.
+**Mis dos hipótesis anteriores eran falsas** y Jose las descartó con capturas:
+no era el trigger sin instalar (existe, 0% error, corrió el 28-ago 2:36) ni el
+apilamiento del deck (abrió la pila y salieron 4 tarjetas, todas de sugerencias
+y ninguna de sistema — o sea que la lista venía vacía, no enterrada).
 
-**El razonamiento es correcto; la consecuencia no se pensó.** Las sugerencias se
-acumulan más rápido de lo que se atienden —Jose tiene 6 pendientes— así que la
-mitad de "ya hecho" quedó tapada de forma permanente. No está perdida: el badge
-las cuenta (`_pendingCfgAdds.length + _sysCards.length`) y el panel de la
-campanita las lista todas. Sólo la pila en reposo las esconde.
+**Por qué nada lo detectó:** no es error de sintaxis, así que `node --check`
+pasa; el `catch` devolvía un valor plausible; y `test-sysactivity-dismiss.js`
+pasa porque llama a `getSystemActivity_` directamente en un vm con sus propios
+argumentos — probaba la FUNCIÓN, nunca la línea que la usa. Mismo patrón que la
+etiqueta de rol en la v11.29.
 
-**Dos arreglos posibles, hay que elegir:**
+`tools/test-use-before-var.js` ahora comprueba la regla general en las 248
+funciones del archivo: ninguna puede LEER un `var` por encima de la línea que lo
+declara. Y el `catch` que lo escondió ahora deja rastro en el log; el array
+vacío se queda, porque un fallo al leer la auditoría no debe tumbar la carga
+entera.
 
-- **(a) La tarjeta de enfrente es la MÁS NUEVA, del tipo que sea.** Ordenar por
-  hora es una regla que una persona puede predecir, y lo de "esto espera tu
-  respuesta" ya lo cubren el badge y el panel. Riesgo: una sugerencia pendiente
-  puede quedar tapada por un aviso de respaldo.
-- **(b) Aceptar que un respaldo no necesita tarjeta.** Ajustes → System ya
-  muestra el respaldo estupendamente (fecha, enlace, los 27 en Drive). Un aviso
-  que nadie ve no está haciendo su trabajo; quizá el error fue crear la tarjeta,
-  no esconderla. Entonces el deck sería sólo para lo que espera respuesta, y las
-  de sistema vivirían únicamente en el panel y en Ajustes.
-
-Recomendación: **(b)**, y que el panel de la campanita sea el lugar oficial de
-"lo que el sistema hizo solo". Pero es decisión de producto, de Jose.
-
-**Falta también una prueba** que fije qué tipo de tarjeta queda de frente — hoy
-eso lo decide el orden de concatenación de dos strings y nada lo vigila.
-
----
+**Queda para Jose:** desplegar la v11.30 y confirmar que aparecen las dos cosas
+— la tarjeta en la esquina y la lista en Settings → System. Leen la misma lista,
+así que o cambian las dos o no cambia ninguna.
 
 ⚠️ **DEFECTO SEPARADO, sigue en pie — `Code_v3_fixed.gs:473` tiene un `catch`
 vacío.** Encontrado buscando lo de arriba; no era la causa en la instalación de

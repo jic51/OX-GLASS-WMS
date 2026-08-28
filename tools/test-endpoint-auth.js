@@ -252,8 +252,26 @@ check('getSystemActivity is no longer a public global — it reads the audit ' +
   PUBLIC.indexOf('getSystemActivity') === -1);
 check('...it survives as getSystemActivity_, so the feature is intact',
   FUNCS.some(f => f.name === 'getSystemActivity_'));
-check('...and its one caller was updated with it',
-  /getSystemActivity_\(\s*30\s*,\s*_auth\.email\s*\)/.test(GS));
+// v11.30 — THIS ASSERTION USED TO PIN THE BUG IN PLACE.
+//
+// It was written as /getSystemActivity_\(\s*30\s*,\s*_auth\.email\s*\)/,
+// copied verbatim from the call site during the v11.27 rename. The call site
+// was already wrong: `_auth` is declared at the bottom of getInitialData, in
+// the error handler, and `var` hoists — so it was `undefined` there and the
+// whole systemActivity list came back empty on every load.
+//
+// Copying a line into a test does not check it. It freezes it. This assertion
+// was green for three versions while the feature it guards was dead, which is
+// worse than having no assertion at all: it answered "yes, the caller is
+// fine" every time anybody asked.
+//
+// It now names `auth` — the variable that exists in that scope — so the
+// broken form fails here too. tools/test-use-before-var.js catches the
+// general case.
+check('...and its one caller passes the identity by a name that exists in that scope',
+  /getSystemActivity_\(\s*30\s*,\s*auth\.email\s*\)/.test(GS));
+check('...and never by the hoisted _auth from the error handler below it',
+  !/getSystemActivity_\([^)]*_auth\.email/.test(GS));
 check('...with no call to the old name left anywhere',
   !/[^_]\bgetSystemActivity\s*\(/.test(codeOnly(GS)));
 

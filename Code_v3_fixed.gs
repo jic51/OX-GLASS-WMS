@@ -46,7 +46,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '11.29';
+var APP_VERSION = '11.30';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -58,7 +58,7 @@ var APP_VERSION = '11.29';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'a3868fa4';
+var APP_BUILD = 'cf18f3a9';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -1625,7 +1625,45 @@ function getInitialData(sessionToken) {
       // the moment its name is filled in, without a round trip per line.
       materialPacks:      (function(){ try { return readPacks_(ss); } catch (e) { return {}; } })(),
       company:            publicCompany_(),
-      systemActivity:     (function(){ try { return getSystemActivity_(30, _auth.email); } catch (e) { return []; } })(),
+      // ONE UNDERSCORE. THAT IS THE WHOLE BUG, AND IT COST MONTHS.
+      //
+      // This read `_auth.email`. The variable in this scope is `auth`. There
+      // IS a `_auth` in this function — but it is declared at the bottom, in
+      // the error handler (`var _auth = getUserRole(sessionToken)`), and `var`
+      // hoists to the top of the function. So `_auth` existed here and held
+      // `undefined`, `_auth.email` threw a TypeError every single time, and
+      // the inline catch below turned that into an empty array.
+      //
+      // systemActivity was therefore [] on EVERY load, for EVERY user, since
+      // the day this line was written. Both things that read it went dark
+      // together, which is exactly what Jose reported and why he was right
+      // that they were one problem and not two:
+      //
+      //   • the corner deck never showed a card — _sysCards is built from it
+      //   • Settings → System said nothing automatic had ever run — the same
+      //     list feeds _renderSystemTab
+      //
+      // The backups were never broken. They ran nightly, wrote their row to
+      // AUDIT_LOG with actor 'system', and 27 of them are sitting in Drive.
+      // The rows simply never left the server.
+      //
+      // Nothing could have caught this from the outside. It is not a syntax
+      // error, `node --check` is happy, and tools/test-sysactivity-dismiss.js
+      // passes — because it calls getSystemActivity_ directly in a vm with its
+      // own arguments. The function was always correct. The CALL was wrong.
+      // Same lesson as the role label in v11.29: testing a function is not
+      // testing the line that uses it.
+      systemActivity:     (function(){
+        try { return getSystemActivity_(30, auth.email); }
+        catch (e) {
+          // NOT silent any more. The empty array stays — a failure to read the
+          // audit sheet must not take down the whole app load — but a failure
+          // that leaves no trace is how this one lasted. If this line is ever
+          // reached again, the reason is in the execution log.
+          Logger.log('getInitialData: systemActivity failed — ' + e.message);
+          return [];
+        }
+      })(),
       columnPrefs:        columnPrefs_(),
       movements:          movements,
       stock:              stock,

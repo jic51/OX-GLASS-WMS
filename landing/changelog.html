@@ -92,6 +92,23 @@
        one, packs, and backups that carry your settings.</p>
 
     <div class="entry">
+      <span class="ver">v11.30</span>
+      <span class="tag fix">Fixed</span>
+      <h3>The app was doing its nightly work and never told you</h3>
+      <p>Backups ran every night. Old movements were archived, stock totals were
+         rebuilt, and every one of those was recorded — 27 backups are sitting in
+         Drive right now. But the corner of the screen never showed a card
+         saying so, and Settings → System said nothing automatic had ever run.
+         Both were reading the same list, and that list arrived empty every
+         single time.</p>
+      <p>One character in one line: the server asked for the signed-in user by a
+         name that does not exist at that point, the error was caught and turned
+         into an empty list, and nothing was ever written down about it. Nothing
+         was lost and nothing was broken — the record simply never reached the
+         screen. It does now, and the error that hid it can no longer hide.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.29</span>
       <span class="tag fix">Fixed</span>
       <h3>The window that opened behind the window</h3>

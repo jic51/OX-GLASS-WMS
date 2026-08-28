@@ -57,6 +57,7 @@ node tools/test-fractional-qty.js
 node tools/test-cost-privacy.js
 node tools/test-html-escaping.js
 node tools/test-window-stack.js
+node tools/test-use-before-var.js
 node tools/check-changelog.js
 node tools/sync-legal.js --check
 node tools/build-fingerprint.js --check
@@ -631,6 +632,24 @@ come back from — is invisible to both. Those get a browser test.
   someone reasoning "a popup should be on top", which is true of a popup and
   false of a popup that opens other windows. It also fails on a TIE, since the
   shield breaks ties by document order and that is how this one happened.
+- `test-use-before-var.js` — the one-underscore bug. `getInitialData` built
+  its payload with `getSystemActivity_(30, _auth.email)`; the variable in that
+  scope is `auth`. A `_auth` DID exist — declared at the bottom of the same
+  function, inside the error handler — and `var` hoists, so it was there
+  holding `undefined`. `_auth.email` threw a TypeError on every call and an
+  inline `catch` returned `[]`. **systemActivity was empty on every load, for
+  every user, since the line was written**, which darkened the corner deck and
+  Settings → System together — both read that one list. The backups were never
+  broken; their rows just never left the server. Nothing could catch it:
+  `node --check` is happy, and `test-sysactivity-dismiss.js` passes because it
+  calls the function directly in a vm and never exercises the call site. So
+  this file checks the general rule instead — no function may READ a `var`
+  above the line declaring it, which can only ever yield `undefined`. Worth
+  reading for the detector's own four blind spots, all found by running it and
+  all fixed rather than assumed away: callback parameters, module-level vars
+  between functions, prose inside string literals, and regex flags (`/…/i.test`
+  read as a variable `i`). The first run reported five offenders and all five
+  were correct code.
 - `check-changelog.js` — not a test; a guard against rot. Both public
   changelog pages sat at v10.6 while the app shipped v11.22 — fifteen versions
   of silence on a page whose whole promise is "every change that reaches your
