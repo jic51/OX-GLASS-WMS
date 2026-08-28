@@ -92,6 +92,34 @@
        one, packs, and backups that carry your settings.</p>
 
     <div class="entry">
+      <span class="ver">v11.29</span>
+      <span class="tag fix">Fixed</span>
+      <h3>The window that opened behind the window</h3>
+      <p>From the morning arrivals list, pressing <b>Mark arrived</b> opened the
+         edit window <em>behind</em> it — and the form underneath could not be
+         touched at all. The only way forward was to close the list and lose
+         your place in it.</p>
+      <p>The app deliberately makes every window but the front one inactive, so
+         a click can never land on a half-hidden form. It was doing that
+         correctly; the morning list had simply been told it was in front of
+         everything, including the windows it opens itself. It now sits behind
+         what it opens.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.29</span>
+      <span class="tag fix">Fixed</span>
+      <h3>A renamed role is now called by its name everywhere</h3>
+      <p>If you rename the warehouse role — to <em>Supervisor</em>, say — the
+         account panel showed the new name on the profile card and the old
+         internal one in the Active Users row directly beneath it. Same person,
+         same panel, two different words.</p>
+      <p>Every screen that shows a role now uses your name for it. The one
+         exception is deliberate: the first-time setup wizard still says
+         Warehouse, because it runs before there is a custom name to use.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.28</span>
       <span class="tag safe">Security</span>
       <h3>What a role may not see is no longer sent to it</h3>

@@ -5,29 +5,19 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
-**BUG REPORTADO POR JOSE (v11.28) — la ventana de edición sale DETRÁS del
-popup de la mañana.** Desde "Good Morning — This Week's Schedule", al dar clic
-en **Mark arrived** se abre "Edit Expected Material" pero queda atrás, y como
-el escudo de ventanas (`_topOpenOverlay`) considera al popup la ventana de
-enfrente, el modal además queda **inerte**: no se puede tocar nada, solo cerrar
-el popup. Causa exacta, en el CSS:
+~~**BUG REPORTADO POR JOSE — la ventana de edición sale DETRÁS del popup de la
+mañana.**~~ ✅ **Hecho (v11.29).** `.morning-overlay` bajó de 2000 a 540. No era
+el escudo de ventanas: el escudo leía la pila correctamente, la pila estaba mal.
+El popup solo ABRE modales, ningún modal lo abre a él, así que va debajo.
+`tools/test-window-stack.js` fija el orden de las cinco capas y también falla si
+dos empatan — el empate con `.wiz-overlay` en 2000 fue justo como pasó.
 
-    .overlay                (todos los modales)      z-index: 550
-    .cconfirm-overlay                                z-index: 1100
-    .media-preview-overlay                           z-index: 1200
-    .wiz-overlay            (asistente de setup)     z-index: 2000
-    .morning-overlay        (popup de la mañana)     z-index: 2000   ← 1450 por
-                                                     encima de lo que él abre
-
-El popup de la mañana **solo abre modales, ningún modal lo abre a él**, así que
-la relación es de un solo sentido y tiene que ir por DEBAJO: bajarlo a **540**
-(libre: los vecinos son 500 y 550) lo deja encima de la página y de la cabecera,
-y debajo de cualquier ventana que él mismo lance. El escudo entonces reconoce al
-modal como la ventana de enfrente sin cambiarle nada al escudo.
-
-Falta: la prueba que fije el orden de las cinco capas, para que la próxima
-ventana nueva no vuelva a nacer con un z-index inventado. `test-modal-shield.js`
-prueba el escudo, no el orden.
+~~**SUPERVISOR / WAREHOUSE en el mismo panel.**~~ ✅ **Hecho (v11.29).**
+`renderActiveUsers` imprimía el rol crudo mientras la tarjeta de perfil dos
+líneas arriba usaba la etiqueta. Sobrevivió cuatro versiones porque el
+comentario sobre `_applyWarehouseRoleLabel` afirmaba que todo lo demás ya pasaba
+por `_displayRole()` — y una frase no hace fallar un build. `test-role-label.js`
+ahora cuenta los caminos de render, no solo la función.
 
 **AUDITORÍA v11.26 — lo que queda.** El informe completo está publicado en
 https://claude.ai/code/artifact/1f253dd3-1dc7-4e3a-97e5-2468daa4b9bd

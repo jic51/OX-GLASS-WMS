@@ -70,5 +70,58 @@ const badge = sandbox._roleBadge('WAREHOUSE');
 check('angle brackets are escaped in the badge', badge.indexOf('<img') === -1);
 check('escaped form is present instead', badge.indexOf('&lt;img') !== -1);
 
+// ── EVERY PLACE A ROLE REACHES A SCREEN ─────────────────────────────────────
+// v11.29. The tests above prove _displayRole is correct. They never asked
+// whether it is USED, and it was not: renderActiveUsers printed the raw role,
+// so Jose's own account panel showed SUPERVISOR on the profile card and
+// WAREHOUSE in the Active Users row immediately beneath it — same person, same
+// panel, two lines apart. Four versions, nobody caught it, because the comment
+// above _applyWarehouseRoleLabel asserted that everything else already went
+// through _displayRole. A sentence cannot fail a build.
+//
+// So this half does not test behaviour. It counts render paths, which is the
+// thing that was actually wrong.
+console.log('\nScenario: no screen prints a raw role next to a relabelled one');
+{
+  // Line comments only — see tools/test-fractional-qty.js for why stripping
+  // /* */ across this file is a good way to lose ten thousand lines.
+  const code = src.split('\n').map(l => l.replace(/\/\/.*$/, '')).join('\n');
+
+  check('the presence list renders the role through _displayRole — THE BUG',
+    /presence-role">'\s*\+\s*_he\(u\.role \? _displayRole\(u\.role\) : '—'\)/.test(code));
+  check('...and no longer prints it raw',
+    !/presence-role">'\s*\+\s*_he\(u\.role \|\| '—'\)/.test(code));
+
+  check('the Manage Users table still goes through _roleBadge, which uses _displayRole',
+    /_roleBadge\(u\.role\)/.test(code));
+  check('the account tag still goes through _displayRole',
+    /acct-tag[\s\S]{0,200}_displayRole\(role\)/.test(code));
+  check('the tooltip still goes through _displayRole',
+    /tipRole\s*=\s*role \? _displayRole\(role\)/.test(code));
+
+  // The wizard is the ONE deliberate exception, and it has to stay one: it runs
+  // before setup finishes, when no custom label exists yet and the global still
+  // holds its default. Asserted so a future sweep does not "fix" it, and so
+  // that if it ever DOES need the label the decision is made on purpose.
+  check('the setup wizard still writes "Warehouse" literally — deliberate, it ' +
+        'runs before any custom label exists',
+    /<option value="WAREHOUSE"'\+\(u\.role==='WAREHOUSE'\?' selected':''\)\+'>Warehouse<\/option>/.test(code));
+
+  // The catch-all. Any NEW place that puts a role into HTML without translating
+  // it fails here by name, which is the only thing that would have caught the
+  // original.
+  const raw = [];
+  const re = /_he\(\s*(?:u|user|m)\.role\s*(?:\|\||\))/g;
+  let m;
+  while ((m = re.exec(code))) raw.push('line ' + (code.slice(0, m.index).split('\n').length));
+  check('no screen puts a role into HTML without _displayRole' +
+        (raw.length ? ' — raw at ' + raw.join(', ') : ''), raw.length === 0);
+
+  // And the comment that lied is gone.
+  check('the stale "nothing else needs patching" claim has been removed from ' +
+        'the source — it was true when written and false for four versions after',
+    src.indexOf('so nothing else needs patching') === -1);
+}
+
 console.log('\nrole label: ' + (fail === 0 ? 'ok' : (fail + ' FAILED')));
 process.exit(fail === 0 ? 0 : 1);

@@ -56,6 +56,7 @@ node tools/test-local-dates.js
 node tools/test-fractional-qty.js
 node tools/test-cost-privacy.js
 node tools/test-html-escaping.js
+node tools/test-window-stack.js
 node tools/check-changelog.js
 node tools/sync-legal.js --check
 node tools/build-fingerprint.js --check
@@ -617,6 +618,19 @@ come back from — is invisible to both. Those get a browser test.
   than only grepping, and records the deliberate non-fix: `_addRejectedFileChip`
   sets `.title` as a PROPERTY, which the browser never parses, so escaping
   there would show `&amp;` to a reader. A later sweep would otherwise "fix" it.
+- `test-window-stack.js` — which window is in front. Jose hit this on the
+  deployed v11.25: from the morning popup, **Mark arrived** opened the edit
+  modal BEHIND it, and the modal was not merely behind — it was DEAD. That
+  second part is not a second bug. The window shield deliberately makes every
+  window but the front one inert, picks the front one by z-index, and was
+  reading the stack correctly; the stack was wrong. `.morning-overlay` was
+  2000, tied with the setup wizard and 1450 above every modal (`.overlay` is
+  550). The popup only ever OPENS modals — the relationship runs one way — so
+  it belongs underneath: 540, above the page and top bar, below all four window
+  layers. A whole file for one number because the number was invented once by
+  someone reasoning "a popup should be on top", which is true of a popup and
+  false of a popup that opens other windows. It also fails on a TIE, since the
+  shield breaks ties by document order and that is how this one happened.
 - `check-changelog.js` — not a test; a guard against rot. Both public
   changelog pages sat at v10.6 while the app shipped v11.22 — fifteen versions
   of silence on a page whose whole promise is "every change that reaches your
