@@ -19,41 +19,79 @@ comentario sobre `_applyWarehouseRoleLabel` afirmaba que todo lo demás ya pasab
 por `_displayRole()` — y una frase no hace fallar un build. `test-role-label.js`
 ahora cuenta los caminos de render, no solo la función.
 
-⚠️ **HALLAZGO NUEVO (v11.29) — el respaldo nocturno puede no haberse programado
-NUNCA, y nada lo dice.** Jose preguntó por qué las tarjetas del sistema
-(respaldos) no aparecen desde la v9.x. Rastreado de punta a punta: el camino de
-render está bien —`dailyBackupTrigger` escribe en AUDIT_LOG con actor `system`,
-`getSystemActivity_` filtra por ese actor, `_announceSystemActivity` pinta la
-tarjeta— así que **si no hay tarjetas, es que no hay filas**. Y hay dos razones
-para que no las haya, las dos en el código:
+⚠️ **HALLAZGO (v11.29) — las tarjetas del sistema existen, se cuentan, y son
+INVISIBLES en reposo.** Jose preguntó por qué las tarjetas de respaldo no
+aparecen desde la v9.x.
 
-1. **`Code_v3_fixed.gs:473`** — la ÚNICA línea que programa el respaldo durante
-   la instalación:
+**Descartado primero, con pruebas suyas:** el trigger `dailyBackupTrigger` está
+instalado, corrió el 28-ago a las 2:36 a.m., tasa de error 0%, y hay **27
+respaldos** en Drive del último mes. Los respaldos funcionan perfectamente y las
+filas SÍ se escriben en AUDIT_LOG con actor `system`. (Mi primera hipótesis —que
+el `catch` vacío de la línea 473 hubiera impedido crear el trigger— **era
+incorrecta para esta instalación**. El defecto del `catch` vacío sigue siendo
+real y está abajo, pero no es la causa de esto.)
 
-       if (data.enableBackup) { try { ensureBackupTrigger_(); } catch (e) {} }
+**La causa real, verificada en el CSS y en el render:**
 
-   **`catch` vacío.** Crear un trigger exige autorización, y durante el
-   asistente esa autorización puede no estar concedida todavía. Si falla, falla
-   **en silencio para siempre**: no hay respaldo, no hay fila, no hay tarjeta, y
-   nadie se entera. La línea de al lado (`organizeDriveFolders_`) al menos hace
-   `Logger.log`; ésta no hace nada. Y sólo corre si la casilla `enableBackup`
-   estaba marcada.
-2. **`menuCheckInstallation` (🩺 Check this installation) no mira los triggers.**
-   Verificado: no menciona `getProjectTriggers`, ni `Trigger`, ni `backup`. Sólo
-   revisa Script Properties. O sea que el diagnóstico que existe justo para
-   responder "¿está sana esta instalación?" **no puede detectar** que el
-   respaldo nocturno nunca se programó. Es el mismo patrón de la Prioridad 1 de
-   la auditoría: la defensa está bien escrita y nada verifica que exista.
+    .deck:not(.open) .deck-card:not(:last-child){ visibility:hidden; opacity:0 }
 
-**Comprobación de 15 segundos para Jose:** editor de Apps Script → icono de
-reloj ⏰ (Triggers) en la barra izquierda. Si `dailyBackupTrigger` no está en la
-lista, nunca se creó. Segunda pista: Ajustes → System, línea "Last backup".
+    deck.innerHTML = _sysDeckHtml + _cfgDeckHtml;   // sistema 1º, sugerencias al final
 
-**Arreglo propuesto:** (a) que el `catch` vacío registre y avise; (b) que el 🩺
-enumere los triggers que la app espera —`dailyBackupTrigger`,
-`archiveOldMovementsTrigger`, `dailyCheckinTrigger`— y ofrezca recrearlos, que
-es justo lo que ya hace con `SESSION_SECRET`; (c) una prueba que exija que toda
-llamada a `ensureBackupTrigger_` esté cubierta.
+En reposo el deck muestra **una sola** tarjeta: la última del DOM. Y las de
+sistema se pintan primero, así que la última es siempre una sugerencia de
+configuración. Es deliberado, y el comentario de `_paintDeck` lo argumenta bien:
+*"the thing waiting on you belongs on top"*.
+
+**El razonamiento es correcto; la consecuencia no se pensó.** Las sugerencias se
+acumulan más rápido de lo que se atienden —Jose tiene 6 pendientes— así que la
+mitad de "ya hecho" quedó tapada de forma permanente. No está perdida: el badge
+las cuenta (`_pendingCfgAdds.length + _sysCards.length`) y el panel de la
+campanita las lista todas. Sólo la pila en reposo las esconde.
+
+**Dos arreglos posibles, hay que elegir:**
+
+- **(a) La tarjeta de enfrente es la MÁS NUEVA, del tipo que sea.** Ordenar por
+  hora es una regla que una persona puede predecir, y lo de "esto espera tu
+  respuesta" ya lo cubren el badge y el panel. Riesgo: una sugerencia pendiente
+  puede quedar tapada por un aviso de respaldo.
+- **(b) Aceptar que un respaldo no necesita tarjeta.** Ajustes → System ya
+  muestra el respaldo estupendamente (fecha, enlace, los 27 en Drive). Un aviso
+  que nadie ve no está haciendo su trabajo; quizá el error fue crear la tarjeta,
+  no esconderla. Entonces el deck sería sólo para lo que espera respuesta, y las
+  de sistema vivirían únicamente en el panel y en Ajustes.
+
+Recomendación: **(b)**, y que el panel de la campanita sea el lugar oficial de
+"lo que el sistema hizo solo". Pero es decisión de producto, de Jose.
+
+**Falta también una prueba** que fije qué tipo de tarjeta queda de frente — hoy
+eso lo decide el orden de concatenación de dos strings y nada lo vigila.
+
+---
+
+⚠️ **DEFECTO SEPARADO, sigue en pie — `Code_v3_fixed.gs:473` tiene un `catch`
+vacío.** Encontrado buscando lo de arriba; no era la causa en la instalación de
+Jose, pero es real para cualquier copia nueva:
+
+    if (data.enableBackup) { try { ensureBackupTrigger_(); } catch (e) {} }
+
+Es la única línea que programa el respaldo nocturno durante la instalación.
+Crear un trigger exige una autorización que puede no estar concedida todavía en
+ese punto del asistente. Si falla, **falla en silencio y para siempre**. La
+línea de al lado (`organizeDriveFolders_`) al menos hace `Logger.log`; ésta no
+hace nada.
+
+Y **`menuCheckInstallation` (🩺) no mira los triggers** — verificado: no
+menciona `getProjectTriggers`, ni `Trigger`, ni `backup`. Sólo lee Script
+Properties. El diagnóstico que existe para contestar "¿está sana esta
+instalación?" no puede detectar un respaldo nocturno que nunca se programó.
+Mismo patrón que la Prioridad 1 de la auditoría: la defensa está bien escrita y
+nada verifica que exista.
+
+**Arreglo:** (a) que el `catch` registre y avise; (b) que el 🩺 enumere los tres
+triggers esperados —`dailyBackupTrigger`, `archiveOldMovementsTrigger`,
+`dailyCheckinTrigger`— y ofrezca recrearlos, como ya hace con `SESSION_SECRET`;
+(c) una prueba que exija que ninguna llamada a `ensureBackupTrigger_` quede sin
+cubrir.
 
 ---
 
