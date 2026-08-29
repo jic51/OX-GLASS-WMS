@@ -2977,7 +2977,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.30';
+var APP_VERSION = '11.31';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -2989,7 +2989,7 @@ var APP_VERSION = '11.30';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'cf18f3a9';
+var APP_BUILD = '059000ea';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -8330,20 +8330,42 @@ function _sysActId(a){ return String(a.at || '') + '|' + String(a.action || '');
 // Opens Settings on the System tab and lights up the entry the card came from,
 // so "what did it actually do?" is one click rather than a hunt through the
 // audit sheet.
+// The entry to light up once the System tab has actually painted. Set here,
+// consumed by _renderSystemTab, cleared on use.
+//
+// v11.31 — THIS USED TO BE A 350ms setTimeout, AND IT LOST THE RACE ALMOST
+// EVERY TIME. openSettingsModal() calls _loadSettings(), which is a
+// google.script.run round trip to Apps Script — half a second on a good day,
+// several on a normal one. The System tab cannot exist until that returns. So
+// the lookup ran against a tab that was not there yet, found nothing, and hit
+// `if (!el) return;` — giving up in silence. Jose's report was exact: it opens
+// Settings and then nothing is marked, with no explanation.
+//
+// Guessing a bigger number would only make the race longer, not winnable. So
+// there is no timer any more: the id is remembered, and the render applies it
+// when the render happens. Correct whether the server takes 50ms or 5s.
+var _sysActSpotWanted = null;
+
 function _openSystemActivity(id){
   if (userRole !== 'ADMIN'){
     showToast('Ask an admin to look this up in Settings → System.', 'info', 5000);
     return;
   }
+  _sysActSpotWanted = id;
   _settingsTab = 'system';
   openSettingsModal();
-  setTimeout(function(){
-    var el = document.getElementById('sysact-' + id);
-    if (!el) return;
-    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    el.classList.add('sysact-spot');
-    setTimeout(function(){ el.classList.remove('sysact-spot'); }, 6000);
-  }, 350);
+}
+
+// Called by _renderSystemTab the moment the list exists in the DOM.
+function _applySysActSpot(){
+  var id = _sysActSpotWanted;
+  _sysActSpotWanted = null;
+  if (!id) return;
+  var el = document.getElementById('sysact-' + id);
+  if (!el) return;
+  el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  el.classList.add('sysact-spot');
+  setTimeout(function(){ el.classList.remove('sysact-spot'); }, 6000);
 }
 
 // "Corrected automatically" is only reassuring if you can go and look. A backup
@@ -8364,8 +8386,19 @@ function _sysActRefHtml(a){
 }
 
 // Takes you to the movements it is talking about: closes Settings, switches to
-// Movements & History, and marks the rows. An archived row is not in the loaded
-// window, so it says so rather than silently doing nothing.
+// Movements & History, and marks the rows.
+//
+// v11.31 — WHEN THE ROWS ARE ARCHIVED, IT FETCHES THEM. It used to say
+// "Those rows are in the archived history — use Load Older History to see
+// them" and stop there. True, and useless: the app knew exactly which rows
+// were missing and knew how to get them, and instead asked the person to go
+// press a different button and start over. Jose hit it on the first click he
+// made — a re-link from April, and the archive cutoff is six months, so every
+// row it named was on the other sheet.
+//
+// The retry runs once. If the rows are still not there after the archive is
+// loaded, that is a different problem and it says so plainly rather than
+// looping.
 function _showMovementRows(csv){
   var want = {};
   String(csv).split(',').forEach(function(n){ want[String(n).trim()] = 1; });
@@ -8375,19 +8408,49 @@ function _showMovementRows(csv){
   if (search) search.value = '';
   _movPage = 1;
   renderMovements();
-  setTimeout(function(){
-    var found = 0;
-    document.querySelectorAll('#tableContainer tbody tr').forEach(function(tr, i){
-      var idx = _movRowIndexAt(i);
-      if (idx && want[String(idx)]){
-        tr.classList.add('row-spotlight');
-        if (!found) tr.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        found++;
-        setTimeout(function(){ tr.classList.remove('row-spotlight'); }, 6000);
-      }
-    });
-    if (!found) showToast('Those rows are in the archived history — use "Load Older History" to see them.', 'warn', 6000);
-  }, 60);
+  setTimeout(function(){ _spotMovementRows(want, true); }, 60);
+}
+
+// Marks whatever of `want` is on screen. `mayFetch` is true only on the first
+// pass, so the archive is loaded at most once per click.
+function _spotMovementRows(want, mayFetch){
+  var found = 0;
+  document.querySelectorAll('#tableContainer tbody tr').forEach(function(tr, i){
+    var idx = _movRowIndexAt(i);
+    if (idx && want[String(idx)]){
+      tr.classList.add('row-spotlight');
+      if (!found) tr.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      found++;
+      setTimeout(function(){ tr.classList.remove('row-spotlight'); }, 6000);
+    }
+  });
+  if (found) return;
+
+  if (mayFetch && !_oldHistoryLoaded){
+    showToast('Those rows are older than your archive cutoff — fetching them…', 'info', 4000);
+    var btn = document.getElementById('btnLoadOlderHistory');
+    if (btn) _btnBusy(btn, 'Loading…');
+    google.script.run
+      .withSuccessHandler(function(rows){
+        oldMovements     = rows || [];
+        _oldHistoryLoaded = true;
+        if (btn){ btn.disabled = false; btn.textContent = '📜 Older History (' + oldMovements.length + ')'; }
+        _movPage = 1;
+        renderMovements();
+        setTimeout(function(){ _spotMovementRows(want, false); }, 60);
+      })
+      .withFailureHandler(function(e){
+        if (btn){ btn.disabled = false; btn.textContent = '📜 Load Older History'; }
+        showToast('Could not load the archived history: ' + (e.message || e), 'err', 6000);
+      })
+      .processMovement('loadOlderHistory', _h({}));
+    return;
+  }
+
+  // Archive already loaded and still nothing — the rows were renumbered or
+  // removed. Say that, rather than repeating advice that has been followed.
+  showToast('Those rows are no longer in the history — they may have been ' +
+            'renumbered by a later edit.', 'warn', 7000);
 }
 
 // The row index the table painted at this position, read back from the data it
@@ -8478,6 +8541,11 @@ function _renderSystemTab() {
         '<button id="btnRebuildStock" class="btn btn-ghost btn-sm" onclick="_rebuildStockNow()">🔧 Rebuild Stock Totals Now</button>' +
       '</div>' +
     '</div>';
+
+  // The list exists in the DOM as of the line above, so this is the earliest
+  // moment the spotlight can land — and the only one that does not depend on
+  // how long the server took. See _openSystemActivity.
+  _applySysActSpot();
 
   _loadBackupStatus();
   _loadSpaceUsage();

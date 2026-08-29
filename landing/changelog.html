@@ -92,6 +92,21 @@
        one, packs, and backups that carry your settings.</p>
 
     <div class="entry">
+      <span class="ver">v11.31</span>
+      <span class="tag fix">Fixed</span>
+      <h3>The links on those notices now go somewhere</h3>
+      <p>Two things you could press on a system notice did nothing useful.
+         <b>Show the movements</b> answered "those rows are in the archived
+         history — use Load Older History", which was true every single time and
+         helped no one: the app knew which rows were missing and knew how to
+         fetch them. It fetches them now, and takes you straight there.</p>
+      <p><b>Details</b> opened Settings and highlighted nothing. The highlight
+         was real, but it was looking for the entry before the page had finished
+         loading it, and gave up without a word. It now waits for the page
+         instead of guessing how long the page will take.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.30</span>
       <span class="tag fix">Fixed</span>
       <h3>The app was doing its nightly work and never told you</h3>

@@ -63,6 +63,25 @@ entera.
 — la tarjeta en la esquina y la lista en Settings → System. Leen la misma lista,
 así que o cambian las dos o no cambia ninguna.
 
+**BUG REPORTADO POR JOSE (v11.31) — al hacer merge de proyectos, sólo se
+desactiva UNO de los dos botones.** En App Settings → Projects, durante el
+merge, el botón *"Merge into selected"* se desactiva mientras corre (correcto),
+pero el otro sigue activo y **se puede hacer clic en él**. Jose: *"¿no debería
+también desactivarse o desaparecer para no causar error si se da clic?"*
+
+Sí. Y no es cosmético: durante un merge el servidor está reescribiendo ambos
+archivos dentro del candado, así que un segundo clic o bien queda encolado
+detrás del candado (y el usuario ve la app congelada sin explicación) o bien
+llega con el estado ya cambiado y falla con un error que no dice nada útil. El
+`_btnBusy` que ya existe hace justo esto — el problema es que se aplicó a un
+botón y no a su pareja.
+
+Hay que revisar **los dos botones a la vez**, y de paso mirar si el mismo
+descuido está en las otras pantallas de merge (proveedores, ubicaciones,
+materiales) — es el patrón de siempre: la defensa está puesta en un sitio y no
+en el de al lado. Falta también una prueba que exija que, mientras una
+operación destructiva corre, **ningún** botón de esa tarjeta acepte clics.
+
 ⚠️ **DEFECTO SEPARADO, sigue en pie — `Code_v3_fixed.gs:473` tiene un `catch`
 vacío.** Encontrado buscando lo de arriba; no era la causa en la instalación de
 Jose, pero es real para cualquier copia nueva:

@@ -58,6 +58,7 @@ node tools/test-cost-privacy.js
 node tools/test-html-escaping.js
 node tools/test-window-stack.js
 node tools/test-use-before-var.js
+node tools/test-sysact-followthrough.js
 node tools/check-changelog.js
 node tools/sync-legal.js --check
 node tools/build-fingerprint.js --check
@@ -650,6 +651,20 @@ come back from — is invisible to both. Those get a browser test.
   between functions, prose inside string literals, and regex flags (`/…/i.test`
   read as a variable `i`). The first run reported five offenders and all five
   were correct code.
+- `test-sysact-followthrough.js` — the two dead ends behind the cards v11.30
+  finally made visible. Jose pressed both links on the first card he saw and
+  both went nowhere, which is what you would expect of a feature nobody could
+  reach for months: its links had never been followed. **"Show the movements"**
+  answered with "use Load Older History to see them" — true, and guaranteed
+  rather than exceptional, since a re-link card names rows old enough to be
+  past the archive cutoff by definition. It now fetches the archive itself and
+  retries once. **"Details →"** opened Settings and marked nothing: the
+  spotlight ran on a `setTimeout(…, 350)` while `openSettingsModal` was still
+  waiting on a `google.script.run` round trip, so it looked for an element that
+  did not exist yet and hit `if (!el) return` — silent. A bigger timeout only
+  makes the race longer; the fix is to stop racing, so the id is remembered and
+  `_renderSystemTab` applies it after it paints. The spotlight half is executed
+  against a stub DOM rather than only grepped.
 - `check-changelog.js` — not a test; a guard against rot. Both public
   changelog pages sat at v10.6 while the app shipped v11.22 — fifteen versions
   of silence on a page whose whole promise is "every change that reaches your
