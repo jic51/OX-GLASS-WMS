@@ -63,6 +63,61 @@ entera.
 — la tarjeta en la esquina y la lista en Settings → System. Leen la misma lista,
 así que o cambian las dos o no cambia ninguna.
 
+**JOSE (v11.32) — TODOS los botones de acción, no sólo el que se tocó.** Amplía
+el punto del merge de abajo a una regla general, y es la correcta: hoy, cuando
+hay dos o más botones y se hace clic en uno que tarda, **sólo se desactiva el
+que tocaste**. Los demás quedan perfectos y clicables. Aplica a *accept*, *add*,
+*mark*, *merge*, y a todo lo que dispare una acción con viaje al servidor.
+
+Jose además pide dos cosas distintas y las dos son correctas:
+1. **El botón tocado se desactiva** para no poder pulsarlo dos veces. Eso ya lo
+   hace `_btnBusy`.
+2. **Los demás también** — desactivarse o, mejor según él, **desaparecer**.
+
+La segunda es la que falta y es la que importa: mientras una operación corre, la
+tarjeta tiene un solo estado válido, y ofrecer otras salidas es ofrecer un error.
+
+**Cómo hacerlo bien (a decidir):** en vez de tocar botón por botón —que es
+exactamente cómo nace este descuido— que `_btnBusy` desactive **todos los
+botones del contenedor** del que salió, y `_btnReset` los devuelva. Así un botón
+nuevo lo hereda gratis y nadie tiene que acordarse. Falta decidir si los otros
+se **atenúan** o **desaparecen**: desaparecer evita el clic pero mueve la
+maqueta y sobresalta; atenuar mantiene el sitio. Recomendación a discutir:
+atenuar + `pointer-events:none`, que es invisible al dedo y estable a la vista.
+
+Prueba pendiente: mientras una acción corre, **ningún** botón de esa tarjeta
+acepta clics. `tools/test-button-states.js` ya prueba el botón tocado; le falta
+la pareja.
+
+---
+
+**JOSE (v11.32) — encerrar cada área de Settings en un recuadro.** Cada bloque
+de App Settings en su propia caja, con **borde azul y sólo el borde** (sin
+relleno). Hoy los bloques se separan sólo por espacio, y en las pantallas largas
+—System, Permissions— no se ve dónde acaba uno y empieza el siguiente.
+
+Al hacerlo hay que decidir el token de color: usar `var(--accent)` para el borde
+en vez de un azul suelto, o el azul quedará mal en modo oscuro.
+
+---
+
+**JOSE (v11.32) — App Settings recarga entero cada vez que se abre.**
+`openSettingsModal()` llama a `_loadSettings()` siempre, que es un viaje al
+servidor, así que abrir Ajustes es esperar aunque no haya cambiado nada. Jose:
+*"debemos mostrar lo que el navegador ya sabe que hay… y sólo cambiar lo que se
+modificó, como ya hacemos en otras partes de la app."*
+
+Tiene razón, y **el patrón ya existe en la app** (`_saveCache` / la carga
+silenciosa del dashboard). Lo que falta es aplicarlo aquí: pintar de inmediato
+con `_settingsData` si ya está en memoria, disparar la lectura en segundo plano,
+y repintar **sólo si volvió algo distinto**.
+
+**El cuidado que hay que tener:** Ajustes es donde se cambian cosas, así que una
+caché mal invalidada mostraría una lista de usuarios o de proyectos vieja
+después de editarla — peor que la espera actual. Cualquier acción que escriba
+tiene que marcar la caché como sucia. Ese es el trabajo real; el pintado
+inmediato es la parte fácil.
+
 **BUG REPORTADO POR JOSE (v11.31) — al hacer merge de proyectos, sólo se
 desactiva UNO de los dos botones.** En App Settings → Projects, durante el
 merge, el botón *"Merge into selected"* se desactiva mientras corre (correcto),

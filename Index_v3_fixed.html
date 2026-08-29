@@ -1550,9 +1550,14 @@
     .bk-list a:hover{text-decoration:underline}
     .bk-when{color:var(--muted);font-size:.72rem;flex:none}
     /* Lands you on the exact entry you clicked through from. */
-    @keyframes spotlight{0%{background:var(--yellow-bg)}100%{background:transparent}}
+    /* HOLDS, THEN FADES — it used to fade from the very first frame, so by the
+       time you had scrolled to the third of eight marked rows the colour was
+       already gone. Now it stays solid for the first 70% of its life and only
+       fades at the end, and the LENGTH is set from JS (--spot-ms) according to
+       how many rows were marked: reading eight takes longer than reading one. */
+    @keyframes spotlight{0%,70%{background:var(--yellow-bg)}100%{background:transparent}}
     .sysact-spot{animation:spotlight 6s ease-out both;border-radius:8px}
-    tr.row-spotlight td{animation:spotlight 6s ease-out both}
+    tr.row-spotlight td{animation:spotlight var(--spot-ms,6s) ease-out both}
     .cfg-new-hint{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap;margin-top:.3rem;font-size:.72rem;color:var(--muted)}
     .cfg-new-add{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:.22rem .5rem;font-size:.7rem;font-weight:700;cursor:pointer;font-family:inherit}
     .cfg-new-add:hover{filter:brightness(1.1)}
@@ -2977,7 +2982,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.31';
+var APP_VERSION = '11.32';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -2989,7 +2994,7 @@ var APP_VERSION = '11.31';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '059000ea';
+var APP_BUILD = '3c19f410';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -8413,18 +8418,47 @@ function _showMovementRows(csv){
 
 // Marks whatever of `want` is on screen. `mayFetch` is true only on the first
 // pass, so the archive is loaded at most once per click.
+// How long a highlight stays up. Jose: one or two rows read fine in six
+// seconds, but a re-link card can name eight or ninety — and by the time you
+// have scrolled to the third the colour is gone. So the time is a function of
+// how much there is to read, not a constant: six seconds for the first, two
+// and a half for each one after, capped at half a minute so a ninety-row card
+// does not leave the table yellow for an afternoon.
+function _spotMs(n){
+  return Math.min(6000 + Math.max(0, n - 1) * 2500, 30000);
+}
+
 function _spotMovementRows(want, mayFetch){
-  var found = 0;
+  // Collected first, marked second. The duration depends on HOW MANY matched,
+  // which is not known until the sweep is finished — marking as we went is
+  // what forced the old fixed 6s.
+  var hits = [];
   document.querySelectorAll('#tableContainer tbody tr').forEach(function(tr, i){
     var idx = _movRowIndexAt(i);
-    if (idx && want[String(idx)]){
-      tr.classList.add('row-spotlight');
-      if (!found) tr.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      found++;
-      setTimeout(function(){ tr.classList.remove('row-spotlight'); }, 6000);
-    }
+    if (idx && want[String(idx)]) hits.push(tr);
   });
-  if (found) return;
+
+  var found = hits.length;
+  if (found){
+    var ms = _spotMs(found);
+    hits.forEach(function(tr){
+      tr.style.setProperty('--spot-ms', ms + 'ms');
+      tr.classList.add('row-spotlight');
+      setTimeout(function(){
+        tr.classList.remove('row-spotlight');
+        tr.style.removeProperty('--spot-ms');
+      }, ms);
+    });
+    hits[0].scrollIntoView({ block: 'center', behavior: 'smooth' });
+    // With more than a handful there is no way to see them all at once, so say
+    // how many are marked rather than leaving the person to count highlights
+    // while they scroll.
+    if (found > 3){
+      showToast(found + ' movements are highlighted — scroll to see them all. ' +
+                'They stay marked for ' + Math.round(ms / 1000) + ' seconds.', 'info', 6000);
+    }
+    return;
+  }
 
   if (mayFetch && !_oldHistoryLoaded){
     showToast('Those rows are older than your archive cutoff — fetching them…', 'info', 4000);

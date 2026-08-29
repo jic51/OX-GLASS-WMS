@@ -151,6 +151,42 @@ console.log('═══ telling you to go and do it yourself             ══�
     /Older History \(' \+ oldMovements\.length/.test(spot));
 }
 
+// ── 3. The highlight lasts long enough to read ──────────────────────────────
+console.log('\n═══ the highlight lasts as long as there is to read ═══\n');
+{
+  const ctx2 = vm.createContext({ Math: Math });
+  vm.runInContext(extractFn(HTML, '_spotMs'), ctx2);
+  const spotMs = vm.runInContext('_spotMs', ctx2);
+
+  // Jose: one or two rows read fine in six seconds; a card naming eight or
+  // ninety does not, because by the time you scroll to the third the colour
+  // has gone. The old value was a flat 6s for any number of rows.
+  check('one row still gets the six seconds that always worked', spotMs(1) === 6000);
+  check('two rows get longer, not the same', spotMs(2) > spotMs(1));
+  check('eight rows get real reading time (' + (spotMs(8) / 1000) + 's)', spotMs(8) >= 20000);
+  check('but it is capped, so a 94-row card does not leave the table yellow ' +
+        'for an afternoon (' + (spotMs(94) / 1000) + 's)', spotMs(94) === 30000);
+  check('it never goes below the old value for any count',
+    [1, 2, 3, 5, 10, 50].every(n => spotMs(n) >= 6000));
+  check('zero and junk do not produce a negative or NaN duration',
+    spotMs(0) >= 6000 && spotMs(-5) >= 6000);
+
+  const code = codeOnly(HTML);
+  check('the duration reaches the CSS through a variable rather than being ' +
+        'baked into the stylesheet',
+    /animation:spotlight var\(--spot-ms,\s*6s\)/.test(code) &&
+    /setProperty\('--spot-ms'/.test(code));
+  check('...and the same number drives the class removal, so the colour and the ' +
+        'class cannot disagree about when it ends',
+    /_spotMs\(found\)/.test(code) && /\}, ms\);/.test(code));
+  check('the highlight HOLDS before it fades — it used to wash out from the ' +
+        'first frame, which is what made a long list unreadable',
+    /@keyframes spotlight\{0%,70%\{/.test(HTML));
+  check('with more than a handful the person is told how many are marked and ' +
+        'for how long, rather than counting highlights while scrolling',
+    /movements are highlighted/.test(code));
+}
+
 console.log('\n' + '─'.repeat(72));
 console.log('The spotlight half is executed against a stub DOM; the fetch half is');
 console.log('read from source, because it needs a live Apps Script round trip.');
