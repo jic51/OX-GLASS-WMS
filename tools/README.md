@@ -59,6 +59,7 @@ node tools/test-html-escaping.js
 node tools/test-window-stack.js
 node tools/test-use-before-var.js
 node tools/test-sysact-followthrough.js
+node tools/build-site.js && node tools/test-site-privacy.js
 node tools/check-changelog.js
 node tools/sync-legal.js --check
 node tools/build-fingerprint.js --check
@@ -665,6 +666,21 @@ come back from — is invisible to both. Those get a browser test.
   makes the race longer; the fix is to stop racing, so the id is remembered and
   `_renderSystemTab` applies it after it paints. The spotlight half is executed
   against a stub DOM rather than only grepped.
+- `build-site.js` + `test-site-privacy.js` — the door between Jose's papers and
+  the internet. The build is **default deny**: a file is published only if it is
+  named, with a written reason, so a document added to `docs/` tomorrow is
+  private by construction and nobody has to remember anything. The guard is two
+  locks that do not share a source of truth — its allow-list is typed out again
+  by hand rather than imported, so one wrong list cannot satisfy both — and the
+  second lock greps the BUILT OUTPUT, which is the only thing that can catch a
+  public document growing a private paragraph. **It earned itself on its first
+  run**, refusing three real leaks: `RESTAURAR-UN-BACKUP.md`, which names
+  `SESSION_SECRET` and `OAUTH_CLIENT_SECRET` and explains that the OAuth secret
+  is shared across every customer; the product page telling readers that "the
+  margin on an additional customer is practically the whole price"; and the
+  personal Gmail standing as the public contact on three pages. The third is
+  still failing on purpose — it is Jose's decision, not a defect, and nothing
+  publishes until he makes it.
 - `check-changelog.js` — not a test; a guard against rot. Both public
   changelog pages sat at v10.6 while the app shipped v11.22 — fifteen versions
   of silence on a page whose whole promise is "every change that reaches your

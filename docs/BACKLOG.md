@@ -63,6 +63,42 @@ entera.
 — la tarjeta en la esquina y la lista en Settings → System. Leen la misma lista,
 así que o cambian las dos o no cambia ninguna.
 
+**SITIO PÚBLICO (v11.32) — lo que falta antes de publicar.**
+
+1. **DECISIÓN DE JOSE, y bloquea la primera publicación: ¿qué correo de contacto
+   va en el sitio?** Hoy `landing/acopio.html`, los Términos y la Privacidad
+   llevan `joseisrael5101@gmail.com`. `tools/test-site-privacy.js` **falla a
+   propósito** por eso y no se publica nada hasta que se decida. No es un
+   defecto: es que poner el Gmail personal en un sitio comercial es distinto de
+   poner `hola@acopio.net`, y ahora que Jose tiene el dominio, la segunda opción
+   existe. Cuando lo decida: cambiar los tres archivos y quitar el patrón del
+   guardián, o dejarlo y quitarlo del guardián a conciencia — pero decidido, no
+   por descuido.
+
+2. **`RESTAURAR-UN-BACKUP.md` — hay que escribir la mitad del cliente.** Estaba
+   en la lista pública y el guardián lo sacó en su primera corrida, con razón:
+   mezcla el procedimiento del cliente con notas de Jose. Nombra
+   `SESSION_SECRET` y `OAUTH_CLIENT_SECRET`, explica las Script Properties, y
+   trae un párrafo sobre guardar copia de las propiedades de cada cliente —
+   incluida la observación de que el secreto OAuth **es de Jose y es compartido
+   entre todos los clientes**. Publicar eso le dice a cualquiera que un solo
+   secreto abarca todas las instalaciones.
+   Hace falta un documento nuevo, solo para el cliente: aquí está tu respaldo,
+   así se restaura, esto es lo que una copia restaurada NO trae. Es trabajo de
+   redacción, no de filtrado — borrar párrafos del archivo actual dejaría un
+   texto con agujeros.
+
+3. **El repo `acopio-site` lo tiene que crear Jose.** Lo intenté y GitHub
+   respondió `403 Resource not accessible by integration`: la app de GitHub de
+   esta sesión no puede crear repositorios. Pasos en el chat.
+
+4. **Quitado de la página pública de producto (hecho):**
+   `landing/acopio-overview.html` decía *"El margen de un cliente adicional es
+   prácticamente el precio completo."* — el margen de Jose, en la página que lee
+   el cliente. Lo encontró el guardián, no una lectura. **Ojo: el artefacto
+   publicado "Acopio en Detalle" todavía tiene esa frase** y hay que
+   republicarlo.
+
 **JOSE (v11.32) — TODOS los botones de acción, no sólo el que se tocó.** Amplía
 el punto del merge de abajo a una regla general, y es la correcta: hoy, cuando
 hay dos o más botones y se hace clic en uno que tarda, **sólo se desactiva el
