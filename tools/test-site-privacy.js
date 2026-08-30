@@ -146,7 +146,18 @@ console.log('\n═══ lock 2 — what the published files actually say ══
     [/GOCSPX-/,                    'a Google client secret, verbatim'],
     [/AKfycb[A-Za-z0-9_-]{20,}/,   'a deployment id — the address of a live install'],
     [/docs\.google\.com\/spreadsheets\/d\/[A-Za-z0-9_-]{20,}/, 'a real spreadsheet URL'],
-    [/joseisrael5101/,             'Jose\'s personal address'],
+    // Jose's Gmail is NOT here, and deleting the check was not the fix.
+    //
+    // It failed on the first run, correctly: a personal Gmail standing as the
+    // public contact of a commercial site is a thing to decide, not to
+    // discover. Jose decided on 2026-08-29 — acopio.net has no mailbox yet, so
+    // the Gmail stands in for now.
+    //
+    // A decision is not the same as no check. The address is named below as
+    // CONTACT_EMAIL and asserted to appear ONLY where a contact belongs, and no
+    // OTHER personal address may appear anywhere. So the day the mailbox
+    // exists, changing it is one edit here and three in the sources — and until
+    // then, the placeholder cannot quietly spread into a doc page.
     [/\bmargen(es)?\b/i,           'margin talk'],
     [/precio de costo/i,           'cost-price talk'],
     [/Script Propert/i,            'instructions about Script Properties'],
@@ -160,9 +171,30 @@ console.log('\n═══ lock 2 — what the published files actually say ══
           (hits.length ? ' — found in: ' + hits.join(', ') : ''), hits.length === 0);
   });
 
-  // A support address is SUPPOSED to be published — that is the point of a
-  // support document — so it is asserted present rather than forbidden, and
-  // asserted to be the business one.
+  // ── The public contact address ────────────────────────────────────────
+  // PLACEHOLDER, on the record. Jose, 2026-08-29: "aún no tengo correo de
+  // acopio, pero puedes poner joseisrael5101@gmail.com por ahora." Replacing
+  // it later is one line here and three in the sources.
+  const CONTACT_EMAIL = 'joseisrael5101@gmail.com';
+  const MAY_CARRY_CONTACT = ['index.html', 'terms.html', 'privacy.html'];
+
+  const carriers = corpus.filter(c => c.t.indexOf(CONTACT_EMAIL) !== -1).map(c => c.f);
+  check('the contact address is on the pages where a reader looks for it (' +
+        carriers.join(', ') + ')', carriers.length >= 1);
+  const strays = carriers.filter(f => MAY_CARRY_CONTACT.indexOf(f) === -1);
+  check('...and NOWHERE else — a placeholder that spreads is a placeholder ' +
+        'nobody manages to replace' +
+        (strays.length ? ' — also in: ' + strays.join(', ') : ''), strays.length === 0);
+
+  // Any OTHER address is either a leak or a mistake. The support one is a
+  // business address by definition; a second personal one is neither.
+  const addrs = {};
+  corpus.forEach(c => (c.t.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g) || [])
+    .forEach(a => { if (a !== CONTACT_EMAIL) addrs[a.toLowerCase()] = 1; }));
+  const others = Object.keys(addrs).filter(a => !/@(example|acopio)\./.test(a));
+  check('no second personal address appears anywhere on the site' +
+        (others.length ? ' — found: ' + others.join(', ') : ''), others.length === 0);
+
   const support = corpus.filter(c => /soporte|terms|privacy/.test(c.f));
   check('the support and legal pages were built (' + support.length + ')', support.length >= 3);
 }
