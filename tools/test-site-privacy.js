@@ -63,7 +63,13 @@ const ALLOWED = [
   'index.html', 'detalle.html', 'changelog.html', 'novedades.html',
   'terms.html', 'privacy.html',
   'docs/instalacion.html', 'docs/setup.html',
-  'docs/vista-por-pasillo.html', 'docs/soporte.html'
+  'docs/vista-por-pasillo.html', 'docs/soporte.html',
+  // The mark and the tab icon. Added deliberately, and only after this guard
+  // refused them — which is the arrangement working: a file appearing in _site/
+  // has to be argued for here before it can ship. They replace a hotlink to a
+  // file in Jose's Drive, so the site's own logo stops depending on that file
+  // staying shared.
+  'logo.png', 'favicon.svg'
   // restaurar-backup.html is deliberately absent — see build-site.js. This
   // guard is what removed it, on its first run, by reading what it said.
 ];
@@ -162,7 +168,26 @@ console.log('\n═══ lock 2 — what the published files actually say ══
     [/precio de costo/i,           'cost-price talk'],
     [/Script Propert/i,            'instructions about Script Properties'],
     [/\bcompetencia\b/i,           'the competitor research'],
-    [/withStockLock_|requireAuth_|getInitialData/, 'internal function names — the shape of the source']
+    [/withStockLock_|requireAuth_|getInitialData/, 'internal function names — the shape of the source'],
+    // A note to ourselves that reached the page as READABLE TEXT.
+    //
+    // The legal markdown opens with an HTML comment naming the source of truth
+    // and saying the text is mirrored inside the app's own file. build-site.js
+    // stripped comments AFTER converting the markdown — by which point mdToHtml
+    // had escaped <!-- into &lt;!-- and wrapped it in a <p>. Nothing was
+    // stripped, and the note stood at the top of the published terms and
+    // privacy pages in full view of every visitor.
+    //
+    // Both locks passed it. Lock 1 only asks WHICH files shipped, and this list
+    // had no pattern for it. Jose found it by reading his own site.
+    //
+    // Three patterns, because they fail differently: the note itself; any
+    // escaped comment marker at all, which catches the next document that opens
+    // with a comment nobody has thought of yet; and the names of the two
+    // application files, which a public page has no reason to mention.
+    [/SOURCE OF TRUTH/i,             'the "source of truth" note, as visible text'],
+    [/&lt;!--/,                      'an HTML comment escaped into readable text instead ' +
+                                     'of stripped — see stripComments in build-site.js'],
   ];
 
   FORBIDDEN.forEach(([re, what]) => {
@@ -170,6 +195,31 @@ console.log('\n═══ lock 2 — what the published files actually say ══
     check('no published page contains ' + what +
           (hits.length ? ' — found in: ' + hits.join(', ') : ''), hits.length === 0);
   });
+
+  // ── The application's own filenames ───────────────────────────────────
+  // Not on the FORBIDDEN list above, because two pages have to name them and a
+  // blanket ban would have been answered by deleting the check.
+  //
+  //   docs/instalacion.html — the customer pastes those two files into Apps
+  //   Script. Naming them IS the document.
+  //
+  //   README.md — names them in order to forbid them.
+  //
+  // Everywhere else there is no reason, and twice there was no reason: both the
+  // landing and the overview carried a CSS comment saying the palette came from
+  // Index_v3_fixed.html. Harmless on its own, and exactly the class of leftover
+  // that put the "source of truth" note on the terms page — a note to ourselves
+  // that shipped because nothing was looking.
+  {
+    const MAY_NAME_SOURCES = ['docs/instalacion.html', 'README.md'];
+    const named = corpus
+      .filter(c => /Index_v3_fixed|Code_v3_fixed/.test(c.t))
+      .map(c => c.f)
+      .filter(f => MAY_NAME_SOURCES.indexOf(f) === -1);
+    check('the application filenames appear only where a reader needs them ' +
+          '(' + MAY_NAME_SOURCES.join(', ') + ')' +
+          (named.length ? ' — also in: ' + named.join(', ') : ''), named.length === 0);
+  }
 
   // ── The public contact address ────────────────────────────────────────
   // PLACEHOLDER, on the record. Jose, 2026-08-29: "aún no tengo correo de

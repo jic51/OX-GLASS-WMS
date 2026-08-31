@@ -260,7 +260,8 @@ function collect() {
   const files = [];
   PAGES.forEach(p => files.push({ out: p.out, kind: 'page', src: p.src }));
   DOCS.forEach(d => files.push({ out: d.out, kind: 'doc', src: d.src }));
-  if (haveLogo) files.push({ out: 'logo.png', kind: 'asset', src: 'landing/assets/logo.png' });
+  if (haveLogo) files.push({ out: 'logo.png',    kind: 'asset', src: 'landing/assets/logo.png' });
+  if (haveFavi) files.push({ out: 'favicon.svg', kind: 'asset', src: 'landing/assets/favicon.svg' });
   files.push({ out: 'CNAME', kind: 'generated', src: '(the custom domain)' });
   files.push({ out: '.nojekyll', kind: 'generated', src: '(stops GitHub Pages processing the files)' });
   files.push({ out: 'README.md', kind: 'generated', src: '(what this repo is, and what it must never contain)' });
@@ -299,11 +300,22 @@ const RENAMES = { 'acopio.html': '/', 'acopio-overview.html': '/detalle.html' };
 // silently pointed at a logo.png nobody had copied would trade a fragile mark
 // for a broken one — and the build says out loud that it is still hanging.
 const LOGO_SRC = path.join(ROOT, 'landing/assets/logo.png');
+const FAVI_SRC = path.join(ROOT, 'landing/assets/favicon.svg');
 const LOGO_HOTLINK = /src="https:\/\/lh3\.googleusercontent\.com\/d\/[A-Za-z0-9_-]+(=[a-z0-9]+)?"/g;
 const haveLogo = fs.existsSync(LOGO_SRC);
+const haveFavi = fs.existsSync(FAVI_SRC);
 
 function localiseLogo(html) {
   return haveLogo ? html.replace(LOGO_HOTLINK, 'src="/logo.png"') : html;
+}
+
+// The tab icon. Every page gets it, including the ones generated from markdown,
+// which is why it is injected here rather than typed into each source — a
+// document added to DOCS tomorrow should not be the one page with a blank tab.
+function addFavicon(html) {
+  if (!haveFavi || /rel="icon"/.test(html)) return html;
+  const tag = '<link rel="icon" href="/favicon.svg" type="image/svg+xml">\n';
+  return /<title>/.test(html) ? html.replace(/<title>/, tag + '<title>') : tag + html;
 }
 
 // HTML comments are notes to ourselves, and they ship. The site went up with
@@ -334,16 +346,30 @@ PAGES.forEach(p => {
   const src = path.join(ROOT, p.src);
   if (!fs.existsSync(src)) throw new Error('missing: ' + p.src);
   fs.writeFileSync(path.join(OUT, p.out),
-    localiseLogo(rewriteLinks(stripComments(fs.readFileSync(src, 'utf8')))));
+    addFavicon(localiseLogo(rewriteLinks(stripComments(fs.readFileSync(src, 'utf8'))))));
 });
 
 if (haveLogo) fs.copyFileSync(LOGO_SRC, path.join(OUT, 'logo.png'));
+if (haveFavi) fs.copyFileSync(FAVI_SRC, path.join(OUT, 'favicon.svg'));
 
 DOCS.forEach(d => {
   const src = path.join(ROOT, d.src);
   if (!fs.existsSync(src)) throw new Error('missing: ' + d.src);
   const md = fs.readFileSync(src, 'utf8');
-  fs.writeFileSync(path.join(OUT, d.out), docShell(d.title, d.lang, stripComments(mdToHtml(md))));
+  // stripComments BEFORE mdToHtml, not after — and that ordering is the whole
+  // point, not a style choice.
+  //
+  // Running it after put the note at the top of terms.html and privacy.html on
+  // the public site as VISIBLE BODY TEXT: mdToHtml escapes <!-- into &lt;!-- and
+  // wraps it in a <p>, so by the time stripComments looked there was no comment
+  // left to find — only a paragraph telling every visitor which file to edit and
+  // that the text is mirrored inside Index_v3_fixed.html. It shipped, and Jose
+  // found it by reading his own site.
+  //
+  // The post-conversion pass stays as well: a document may contain a real HTML
+  // comment that survives conversion, and that one still has to go.
+  fs.writeFileSync(path.join(OUT, d.out),
+    addFavicon(docShell(d.title, d.lang, stripComments(mdToHtml(stripComments(md))))));
 });
 
 fs.writeFileSync(path.join(OUT, 'CNAME'), DOMAIN + '\n');
