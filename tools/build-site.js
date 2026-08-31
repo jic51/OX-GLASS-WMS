@@ -244,7 +244,14 @@ function docShell(title, lang, bodyHtml) {
 <main><article>
 ${bodyHtml}
 </article></main>
-<footer><p><a href="/">← Acopio</a> · <a href="/terms.html">Terms</a> · <a href="/privacy.html">Privacy</a></p></footer>
+<footer>
+  <p>Documentos ·
+    <a href="/docs/setup.html">Setting up your warehouse</a> ·
+    <a href="/docs/instalacion.html">Guía de instalación</a> ·
+    <a href="/docs/vista-por-pasillo.html">La vista por pasillo</a> ·
+    <a href="/docs/soporte.html">Soporte y devoluciones</a></p>
+  <p><a href="/">← Acopio</a> · <a href="/terms.html">Terms</a> · <a href="/privacy.html">Privacy</a></p>
+</footer>
 </body>
 </html>`;
 }
@@ -253,6 +260,7 @@ function collect() {
   const files = [];
   PAGES.forEach(p => files.push({ out: p.out, kind: 'page', src: p.src }));
   DOCS.forEach(d => files.push({ out: d.out, kind: 'doc', src: d.src }));
+  if (haveLogo) files.push({ out: 'logo.png', kind: 'asset', src: 'landing/assets/logo.png' });
   files.push({ out: 'CNAME', kind: 'generated', src: '(the custom domain)' });
   files.push({ out: '.nojekyll', kind: 'generated', src: '(stops GitHub Pages processing the files)' });
   files.push({ out: 'README.md', kind: 'generated', src: '(what this repo is, and what it must never contain)' });
@@ -269,17 +277,73 @@ if (process.argv.indexOf('--list') !== -1) {
 fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(path.join(OUT, 'docs'), { recursive: true });
 
+// One file is called acopio.html in landing/ and index.html on the site, so
+// every link written between those files is correct in the folder and broken on
+// the web. changelog.html and novedades.html each carried two of them, and both
+// answered a click with a 404 for the whole first day the site was up.
+//
+// Rewriting here rather than editing the sources keeps landing/ browsable as a
+// folder — open acopio.html locally and the links still work — while the
+// published copy gets the published name. The map is the rename, stated once.
+const RENAMES = { 'acopio.html': '/', 'acopio-overview.html': '/detalle.html' };
+
+// THE LOGO. The published page loads its mark from Jose's Google Drive by file
+// id. It works today and it is a thread hanging out of the site: move that file,
+// change its sharing, or tidy that Drive folder, and the mark vanishes from
+// acopio.net with nothing to announce it — the rest of the page renders fine, so
+// the first person to notice is a visitor.
+//
+// The fix is to serve the file from the site. Drop the image at
+// landing/assets/logo.png and this build publishes it and rewrites the src to a
+// relative path. Until that file exists the hotlink is left ALONE — a build that
+// silently pointed at a logo.png nobody had copied would trade a fragile mark
+// for a broken one — and the build says out loud that it is still hanging.
+const LOGO_SRC = path.join(ROOT, 'landing/assets/logo.png');
+const LOGO_HOTLINK = /src="https:\/\/lh3\.googleusercontent\.com\/d\/[A-Za-z0-9_-]+(=[a-z0-9]+)?"/g;
+const haveLogo = fs.existsSync(LOGO_SRC);
+
+function localiseLogo(html) {
+  return haveLogo ? html.replace(LOGO_HOTLINK, 'src="/logo.png"') : html;
+}
+
+// HTML comments are notes to ourselves, and they ship. The site went up with
+// one that named the version the domain was bought in and said out loud that the
+// brand's mailbox does not receive mail yet; two more marked the demo video and
+// the customer quotes as not-yet-filled. None of that shows on the page, all of
+// it shows in "view source", and none of it is a visitor's business.
+//
+// Deleting them from the sources was the wrong fix — the notes are worth keeping
+// where the work happens. Stripping them on the way out keeps both: the private
+// file stays annotated, the published file says only what the page says.
+//
+// Verified safe before switching on: markers are balanced in all four sources
+// and neither <!-- nor --> appears inside any <script> or <style>, where a
+// regex like this would otherwise cut through live code.
+function stripComments(html) {
+  return html.replace(/\n?[ \t]*<!--(?![\[>])[\s\S]*?-->/g, '');
+}
+
+function rewriteLinks(html) {
+  return html.replace(/href="([^":/#][^":]*)"/g, (whole, target) =>
+    Object.prototype.hasOwnProperty.call(RENAMES, target)
+      ? 'href="' + RENAMES[target] + '"'
+      : whole);
+}
+
 PAGES.forEach(p => {
   const src = path.join(ROOT, p.src);
   if (!fs.existsSync(src)) throw new Error('missing: ' + p.src);
-  fs.writeFileSync(path.join(OUT, p.out), fs.readFileSync(src, 'utf8'));
+  fs.writeFileSync(path.join(OUT, p.out),
+    localiseLogo(rewriteLinks(stripComments(fs.readFileSync(src, 'utf8')))));
 });
+
+if (haveLogo) fs.copyFileSync(LOGO_SRC, path.join(OUT, 'logo.png'));
 
 DOCS.forEach(d => {
   const src = path.join(ROOT, d.src);
   if (!fs.existsSync(src)) throw new Error('missing: ' + d.src);
   const md = fs.readFileSync(src, 'utf8');
-  fs.writeFileSync(path.join(OUT, d.out), docShell(d.title, d.lang, mdToHtml(md)));
+  fs.writeFileSync(path.join(OUT, d.out), docShell(d.title, d.lang, stripComments(mdToHtml(md))));
 });
 
 fs.writeFileSync(path.join(OUT, 'CNAME'), DOMAIN + '\n');
@@ -309,4 +373,11 @@ before it can be pushed.
 const n = collect().length;
 console.log('\n  built _site/ — ' + n + ' files');
 console.log('  domain: ' + DOMAIN);
-console.log('\n  Run tools/test-site-privacy.js before pushing. Always.\n');
+if (!haveLogo) {
+  console.log('\n  WARNING — the logo is still hotlinked from Google Drive.');
+  console.log('  Put the image at landing/assets/logo.png and build again;');
+  console.log('  it will be published and the src made relative. Until then the');
+  console.log('  mark on the live site depends on that Drive file staying shared.');
+}
+console.log('\n  Run tools/test-site-links.js and tools/test-site-privacy.js');
+console.log('  before pushing. Always.\n');

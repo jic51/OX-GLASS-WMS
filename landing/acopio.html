@@ -211,6 +211,18 @@
   footer { border-top: 1px solid var(--line); padding-block: 2.2rem 3rem; font-size: var(--step--1); color: var(--steel); }
   .foot-row { display: flex; flex-wrap: wrap; gap: 1.4rem; justify-content: space-between; align-items: center; }
   footer a { color: var(--steel); }
+  /* Until this footer existed, detalle.html and the four documents under docs/
+     were published and unreachable — no page on the site linked to them, so the
+     only way in was to know the URL. A page nobody can navigate to is a page
+     that was not published. tools/test-site-links.js now fails the build on it. */
+  .foot-nav { display: grid; gap: 1.6rem 2.6rem; margin-block: 0 2rem;
+              grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); }
+  .foot-nav h3 { font-family: Archivo, Inter, sans-serif; font-size: .74rem;
+                 letter-spacing: .09em; text-transform: uppercase; color: var(--ink);
+                 margin: 0 0 .55rem; opacity: .55; }
+  .foot-nav ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
+  .foot-nav a { text-decoration: none; }
+  .foot-nav a:hover { color: var(--accent-ink); text-decoration: underline; }
 
 
   /* ── Proof, demo, voices ──────────────────────────────────────────────
@@ -418,7 +430,7 @@
       </div>
       <div class="proof-item">
         <div class="n" id="verCount">144</div>
-        <p class="l" data-i18n="t57">Releases shipped so far. Every fix and improvement is included in support — see <a href="#">what's new</a>.</p>
+        <p class="l" data-i18n="t57">Releases shipped so far. Every fix and improvement is included in support — see <a href="/changelog.html">what's new</a>.</p>
       </div>
       <div class="proof-item">
         <div class="n" id="userCount">1</div>
@@ -544,12 +556,36 @@
 </section>
 
 <footer>
+  <div class="wrap foot-nav">
+    <div>
+      <h3 data-i18n="t102">Product</h3>
+      <ul>
+        <li><a href="/detalle.html" data-i18n="t103">How it works, screen by screen</a></li>
+        <li><a href="#price" data-i18n="t104">What it costs</a></li>
+        <li><a href="#contact" data-i18n="t105">Talk to us</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3 data-i18n="t106">Documentation</h3>
+      <ul>
+        <li><a href="/docs/setup.html" data-i18n="t107">Setting up your warehouse</a></li>
+        <li><a href="/docs/instalacion.html" data-i18n="t108">Guía de instalación (español)</a></li>
+        <li><a href="/docs/vista-por-pasillo.html" data-i18n="t109">La vista por pasillo</a></li>
+        <li><a href="/docs/soporte.html" data-i18n="t110">Soporte y devoluciones</a></li>
+      </ul>
+    </div>
+  </div>
   <div class="wrap foot-row">
     <div>© <span id="yr">2026</span> Acopio — Jose Castro</div>
     <div style="display:flex;gap:1.4rem;flex-wrap:wrap">
-      <a href="#" data-i18n="t99">Privacy Policy</a>
-      <a href="#" data-i18n="t100">Terms of Service</a>
-      <a href="#" data-i18n="t101">What's new</a>
+      <a href="/privacy.html" data-i18n="t99">Privacy Policy</a>
+      <a href="/terms.html" data-i18n="t100">Terms of Service</a>
+      <!-- The changelog is two files, one per language, kept level by
+           check-changelog.js. So this link travels with the language toggle:
+           English reads changelog.html, Spanish reads novedades.html. Sending a
+           Spanish reader to the English page would be the same bug as leaving
+           the href at "#", just quieter. -->
+      <a href="/changelog.html" data-i18n="t101" data-i18n-attr="href:a101">What's new</a>
     </div>
   </div>
 </footer>
@@ -634,7 +670,7 @@ var ACOPIO_ES = {
   "t54": "Dónde está hoy",
   "t55": "Todos los días",
   "t56": "Acopio mueve una bodega real de instalación de ventanas, en producción, desde 2026 — la misma versión que reciben los clientes.",
-  "t57": "Versiones publicadas hasta hoy. Cada arreglo y mejora va incluido en el soporte — mira <a href=\"#\">las novedades</a>.",
+  "t57": "Versiones publicadas hasta hoy. Cada arreglo y mejora va incluido en el soporte — mira <a href=\"/novedades.html\">las novedades</a>.",
   "t58": "Bodega usando Acopio hoy: la nuestra, una bodega de instalación de ventanas. Este número cuenta instalaciones reales y sube solo cuando las hay.",
   "t59": "Míralo funcionar",
   "t60": "Noventa segundos, sin registrarte.",
@@ -678,6 +714,16 @@ var ACOPIO_ES = {
   "t99": "Política de Privacidad",
   "t100": "Términos de Servicio",
   "t101": "Novedades",
+  "a101": "/novedades.html",
+  "t102": "Producto",
+  "t103": "Cómo funciona, pantalla por pantalla",
+  "t104": "Cuánto cuesta",
+  "t105": "Hablemos",
+  "t106": "Documentación",
+  "t107": "Setting up your warehouse (inglés)",
+  "t108": "Guía de instalación",
+  "t109": "La vista por pasillo",
+  "t110": "Soporte y devoluciones",
   "t201": "Tu nombre",
   "t202": "Empresa",
   "t203": "Correo",
