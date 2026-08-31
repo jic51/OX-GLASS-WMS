@@ -549,6 +549,21 @@
       <label><span data-i18n="t204">How do you track inventory today?</span>
         <textarea name="how" placeholder="A spreadsheet, paper, another system, nothing yet…" required data-i18n-attr="placeholder:a96"></textarea>
       </label>
+      <!-- The trap. A person never sees this, so a person never fills it in;
+           a robot fills in every field it finds. The endpoint answers OK to a
+           submission that has it filled and quietly throws it away — telling a
+           robot it was caught is telling it what to change next time.
+
+           Hidden with position/opacity rather than display:none or type=hidden:
+           the cruder bots skip anything that is obviously not rendered, and the
+           point is that they DO fill it in. tabindex and autocomplete keep it
+           out of the way of a keyboard and a password manager. -->
+      <div style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden"
+           aria-hidden="true">
+        <label>Website
+          <input type="text" name="website" tabindex="-1" autocomplete="off">
+        </label>
+      </div>
       <button class="btn" type="submit" data-i18n="t97">Send</button>
       <p class="formnote" data-i18n="t98">We'll reply within one business day. No newsletter, no list.</p>
     </form>
@@ -622,6 +637,8 @@ var ACOPIO_ES = {
   "m3": "Correo: ",
   "m4": "Cómo llevan el inventario hoy:\n",
   "m5": "Solicitud de demo de Acopio — ",
+  "m6": "Enviando…",
+  "m7": "Recibido — te contestamos en un día hábil.",
   "t1": "Qué hace",
   "t2": "Precio",
   "t3": "Hablemos",
@@ -803,19 +820,62 @@ function acopioToggleLang(){ acopioApplyLang(acopioLang === 'es' ? 'en' : 'es');
     document.querySelectorAll('.rise').forEach(function (el) { el.classList.add('in'); });
   }
 
-  // Until the real site has a form backend, the form composes an email
-  // rather than pretending to submit. A form that silently goes nowhere is
-  // worse than no form.
+  /* ── The contact form ──────────────────────────────────────────────────
+     GitHub Pages serves files and nothing else — it cannot send an email. So
+     the form posts to a small Apps Script endpoint (landing/form-backend.gs
+     in the private repository) which writes the lead to a sheet and mails it
+     on. Posting to a hidden iframe rather than with fetch() on purpose: no
+     CORS to negotiate, and it still works with JavaScript half-broken.
+
+     While ACOPIO_FORM_URL is empty the old behaviour stands and the form
+     composes an email. That fallback is the point — the switch is one line,
+     and until it is flipped the button still does something. A form that
+     silently goes nowhere is worse than no form. */
+  var ACOPIO_FORM_URL = '';   // ← the /exec URL of the deployed endpoint
+
   document.getElementById('lead').addEventListener('submit', function (ev) {
     ev.preventDefault();
     var f = ev.target;
-    var body =
-      acopioT('m1', 'Name: ')    + f.name.value    + '\n' +
-      acopioT('m2', 'Company: ') + f.company.value + '\n' +
-      acopioT('m3', 'Email: ')   + f.email.value   + '\n\n' +
-      acopioT('m4', 'How they track inventory today:\n') + f.how.value + '\n';
-    window.location.href = 'mailto:joseisrael5101@gmail.com'
-      + '?subject=' + encodeURIComponent(acopioT('m5', 'Acopio demo request — ') + f.company.value)
-      + '&body=' + encodeURIComponent(body);
+
+    if (!ACOPIO_FORM_URL) {
+      var body =
+        acopioT('m1', 'Name: ')    + f.name.value    + '\n' +
+        acopioT('m2', 'Company: ') + f.company.value + '\n' +
+        acopioT('m3', 'Email: ')   + f.email.value   + '\n\n' +
+        acopioT('m4', 'How they track inventory today:\n') + f.how.value + '\n';
+      window.location.href = 'mailto:joseisrael5101@gmail.com'
+        + '?subject=' + encodeURIComponent(acopioT('m5', 'Acopio demo request — ') + f.company.value)
+        + '&body=' + encodeURIComponent(body);
+      return;
+    }
+
+    var btn = f.querySelector('button[type="submit"], button:not([type])');
+    if (btn) { btn.disabled = true; btn.textContent = acopioT('m6', 'Sending…'); }
+
+    var sink = document.getElementById('leadSink');
+    if (!sink) {
+      sink = document.createElement('iframe');
+      sink.id = 'leadSink';
+      sink.name = 'leadSink';
+      sink.style.display = 'none';
+      document.body.appendChild(sink);
+    }
+    f.action = ACOPIO_FORM_URL;
+    f.method = 'POST';
+    f.target = 'leadSink';
+
+    /* The endpoint always answers "ok" — it never reports a failure to the
+       visitor, because there is nothing they could do about one. So this
+       reads the load event as "it arrived", and a network failure simply
+       leaves the button saying Sending…, which is the truth.
+
+       once:true because the iframe fires load again on any later submit, and
+       stacking handlers would show the thank-you more than once. */
+    sink.addEventListener('load', function () {
+      f.innerHTML = '<p class="sub" style="margin:0">' +
+        acopioT('m7', 'Got it — we\'ll reply within one business day.') + '</p>';
+    }, { once: true });
+
+    f.submit();
   });
 </script>

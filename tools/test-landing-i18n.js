@@ -47,16 +47,28 @@ const html = fs.readFileSync(SRC, 'utf8');
 
   console.log('\n═══ every marked element has a Spanish string, and vice versa ═══\n');
 
-  let r = await page.evaluate(() => {
+  // Keys the contact form reads from code rather than from an attribute, so
+  // they cannot be found by walking the DOM.
+  //
+  // This USED to be a hand-written list of five, and it did exactly what a
+  // hand-written list does: the form grew two more strings and the test called
+  // them orphans — Spanish text for something that no longer exists — when they
+  // were newly added and perfectly alive. A guard that has to be edited every
+  // time the thing it guards changes will one day be edited wrongly, and this
+  // file already has that scar.
+  //
+  // So they are read out of the source: every acopioT('key', …) call there is.
+  const codeKeys = [...new Set(
+    [...fs.readFileSync(file, 'utf8').matchAll(/acopioT\(\s*'([^']+)'/g)].map(m => m[1])
+  )];
+
+  let r = await page.evaluate((codeKeys) => {
     const used = new Set(), attrUsed = new Set();
     document.querySelectorAll('[data-i18n]').forEach(el => used.add(el.getAttribute('data-i18n')));
     document.querySelectorAll('[data-i18n-attr]').forEach(el =>
       el.getAttribute('data-i18n-attr').split(' ').forEach(p => {
         const k = p.split(':')[1]; if (k) attrUsed.add(k);
       }));
-    // The five keys the contact form's email uses are read from code, not from
-    // an attribute, so they are named here rather than discovered.
-    const codeKeys = ['m1', 'm2', 'm3', 'm4', 'm5'];
     const all = new Set([...used, ...attrUsed, ...codeKeys]);
     const have = new Set(Object.keys(ACOPIO_ES));
     return {
@@ -64,7 +76,7 @@ const html = fs.readFileSync(SRC, 'utf8');
       missing: [...all].filter(k => !have.has(k)),      // on the page, no Spanish
       orphan:  [...have].filter(k => !all.has(k))       // Spanish for nothing
     };
-  });
+  }, codeKeys);
   check('every marked element has a Spanish string (' + r.marked + ' keys)', r.missing, []);
   // An orphan is how a dictionary rots: a section gets rewritten, its old
   // strings stay behind, and nobody can tell which lines are still live.
