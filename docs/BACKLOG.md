@@ -5,6 +5,43 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+**POLÍTICA DE COBRO — respuestas de Jose (2026-08-31). Falta redactarla y
+publicarla junto a la de soporte.**
+
+Textual, para que la redacción no se invente nada:
+
+- **Cómo se paga:** mensual, o un año completo por adelantado. Los precios ya
+  están en la landing y hay que citarlos desde ahí, no volver a escribirlos —
+  un número en dos sitios es un número que se desincroniza (ya pasó una vez con
+  el documento de detalle, que estuvo semanas en $400 + $39).
+- **Si dejan de pagar:** no se da soporte. Y al querer volver, pagan **el
+  mensual más un adicional** por el trabajo extra de poner la app al día —
+  Jose propone "tal vez la mitad de la instalación". **Ese número falta
+  decidirlo**, y hasta que exista no se puede publicar la política: una
+  política que dice "un adicional" sin decir cuánto no es una política.
+- **Gracia:** 3 días al mes, contados desde el día en que se genera el primer
+  pago en Stripe (o sea, la fecha de cobro es la del primer pago, no el día 1).
+- **Devoluciones:** solo del pago mensual. **El pago de instalación no se
+  devuelve una vez hecha la instalación.** Se procesan en 5 a 10 días hábiles.
+
+**Lo que NO cambia y hay que decir explícitamente en el texto:** los datos son
+del cliente y viven en su propia hoja de Google. Dejar de pagar no le quita el
+acceso a su información ni a la app instalada — se pierde el soporte y las
+actualizaciones, nada más. Esto no es generosidad, es un hecho de la
+arquitectura, y decirlo en voz alta quita el miedo que frena una venta.
+
+**Riesgo a revisar antes de publicar:** el documento de soporte y devoluciones
+ya está publicado y promete cosas. La política de cobro tiene que decir lo
+mismo palabra por palabra o quedan dos promesas distintas por escrito, las dos
+firmadas. Comparar contra `docs/SOPORTE-Y-DEVOLUCIONES.md` antes de dar por
+buena la redacción.
+
+**Para arrancar sin construir nada:** enlace de pago de Stripe mandado por
+correo. Sin integración, sin webhooks, sin código. Cuando haya diez clientes y
+renovaciones que perseguir, ahí se automatiza — y para entonces se sabrá qué
+automatizar. Falta también la pregunta del impuesto sobre ventas de software en
+Utah, que es para un contador y no para esta lista.
+
 **REDISEÑO DEL MODELO DE MOVIMIENTOS — Jose (2026-08-31). El más grande de la
 lista, y el más correcto. Decidir antes de empezar cualquier etapa.**
 

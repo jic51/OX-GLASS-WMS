@@ -150,7 +150,9 @@ console.log('\n═══ lock 2 — what the published files actually say ══
     [/OAUTH_CLIENT_ID/,            'the OAuth client id property name'],
     [/SESSION_SECRET/,             'the session signing key property name'],
     [/GOCSPX-/,                    'a Google client secret, verbatim'],
-    [/AKfycb[A-Za-z0-9_-]{20,}/,   'a deployment id — the address of a live install'],
+    // Deployment ids are checked below rather than here, because exactly ONE is
+    // allowed and a blanket ban would have been answered by deleting the rule.
+    // See "the one endpoint that is meant to be public".
     [/docs\.google\.com\/spreadsheets\/d\/[A-Za-z0-9_-]{20,}/, 'a real spreadsheet URL'],
     // Jose's Gmail is NOT here, and deleting the check was not the fix.
     //
@@ -195,6 +197,41 @@ console.log('\n═══ lock 2 — what the published files actually say ══
     check('no published page contains ' + what +
           (hits.length ? ' — found in: ' + hits.join(', ') : ''), hits.length === 0);
   });
+
+  // ── The one endpoint that is meant to be public ───────────────────────
+  // A /exec address on a public page IS the address of a live Apps Script
+  // deployment, and the rule that bans them is right: every customer install
+  // has one, and publishing any of those hands a stranger the front door of
+  // somebody's warehouse.
+  //
+  // This one is different in kind, not in degree. It is the contact form's
+  // receiver — a standalone project that shares no sheet, no properties and no
+  // permissions with any installation. It has to be public or the form cannot
+  // post to it, and the worst anyone gets by abusing it is junk in a leads
+  // sheet. Jose deployed it on 2026-08-31.
+  //
+  // So it is named here, exactly, and every OTHER deployment id is still
+  // refused. A ban with no exception is a ban that gets deleted the first time
+  // it is inconvenient; this one survives because the exception is written down.
+  {
+    const FORM_ENDPOINT = 'AKfycbxZGYzzytX6zAQe-IDddM4LQwzQia17Dtl9Ape4YWmmAcQgcRXPV9QfezwpWtk28Wo3';
+    const MAY_CARRY_ENDPOINT = ['index.html'];
+
+    const strays = [];
+    corpus.forEach(c => {
+      (c.t.match(/AKfycb[A-Za-z0-9_-]{20,}/g) || []).forEach(id => {
+        if (id !== FORM_ENDPOINT) strays.push(c.f + ' → ' + id.slice(0, 16) + '…');
+        else if (MAY_CARRY_ENDPOINT.indexOf(c.f) === -1) strays.push(c.f + ' → the form endpoint');
+      });
+    });
+    check('the only deployment id on the site is the contact form\'s receiver, ' +
+          'and only on ' + MAY_CARRY_ENDPOINT.join(', ') +
+          (strays.length ? ' — ALSO FOUND: ' + strays.join('; ') : ''), strays.length === 0);
+
+    const onForm = corpus.some(c => c.f === 'index.html' && c.t.indexOf(FORM_ENDPOINT) !== -1);
+    check('...and it is actually there, so the form is not silently back to ' +
+          'opening a mail client', onForm);
+  }
 
   // ── The application's own filenames ───────────────────────────────────
   // Not on the FORBIDDEN list above, because two pages have to name them and a

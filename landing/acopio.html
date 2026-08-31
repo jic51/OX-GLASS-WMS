@@ -831,7 +831,8 @@ function acopioToggleLang(){ acopioApplyLang(acopioLang === 'es' ? 'en' : 'es');
      composes an email. That fallback is the point — the switch is one line,
      and until it is flipped the button still does something. A form that
      silently goes nowhere is worse than no form. */
-  var ACOPIO_FORM_URL = '';   // ← the /exec URL of the deployed endpoint
+  var ACOPIO_FORM_URL =
+    'https://script.google.com/macros/s/AKfycbxZGYzzytX6zAQe-IDddM4LQwzQia17Dtl9Ape4YWmmAcQgcRXPV9QfezwpWtk28Wo3/exec';
 
   document.getElementById('lead').addEventListener('submit', function (ev) {
     ev.preventDefault();

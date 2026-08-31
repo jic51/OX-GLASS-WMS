@@ -2982,7 +2982,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.33';
+var APP_VERSION = '11.34';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -2994,7 +2994,7 @@ var APP_VERSION = '11.33';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'a81f5ac0';
+var APP_BUILD = 'a31d531c';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -15006,8 +15006,64 @@ function _renderSysDeck(){
 // The original label is kept ON the element rather than in a lookup, so it
 // survives anything else that redraws around it, and _btnReset is safe to call
 // on a button that was never made busy.
+// THE OTHER BUTTONS.
+//
+// Jose (v11.32): "cuando hay 2 botones juntos y se da clic en uno, solo el que
+// se dio clic se desactiva, dejando los otros habilitados para dar clic
+// mientras se realiza la acción del otro botón." He first hit it on the merge
+// pair, but the merge was only WHERE he saw it — the rule is general and
+// applies to accept, add, mark, and everything that travels to the server.
+//
+// While an operation is running the card has exactly one valid state, and
+// offering another way out is offering a mistake. Jose chose (2026-08-31):
+// they DISAPPEAR, over my suggestion of dimming them.
+//
+// Two details that make obeying that decision bearable:
+//
+//   visibility:hidden, not display:none and not removing the node. The button
+//   goes from the eye and from the finger, and the space it held stays put —
+//   otherwise the card shrinks while the work runs, grows back when it
+//   finishes, and the list underneath jumps twice.
+//
+//   A button that was ALREADY disabled for its own reason stays disabled when
+//   the others come back. That is Jose's original merge report exactly: "Merge
+//   into selected" disables itself on purpose, and a naive restore would hand
+//   it back enabled.
+//
+// Direct children only, so this reaches the button row and not the whole
+// window. The modal's own ✕ lives in the header, outside that row, so hiding
+// Cancel never traps anyone — mark anything else that must survive with
+// data-stay-visible.
+function _btnHideSiblings(btn){
+  var box = btn && btn.parentElement;
+  if (!box) return;
+  Array.prototype.forEach.call(box.children, function(el){
+    if (el === btn) return;
+    var isBtn = el.tagName === 'BUTTON' ||
+                (el.tagName === 'A' && el.classList && el.classList.contains('btn'));
+    if (!isBtn || el.hasAttribute('data-stay-visible')) return;
+    el._acWasDisabled = !!el.disabled;
+    el.disabled = true;
+    el.style.visibility = 'hidden';
+    el.setAttribute('data-ac-hidden', '1');
+  });
+}
+
+function _btnShowSiblings(btn){
+  var box = btn && btn.parentElement;
+  if (!box) return;
+  Array.prototype.forEach.call(box.children, function(el){
+    if (!el.hasAttribute || !el.hasAttribute('data-ac-hidden')) return;
+    el.removeAttribute('data-ac-hidden');
+    el.style.visibility = '';
+    if (!el._acWasDisabled) el.disabled = false;   // see the merge note above
+    el._acWasDisabled = null;
+  });
+}
+
 function _btnBusy(btn, label){
   if (!btn) return;
+  _btnHideSiblings(btn);
   // Remember the label only when the button is not ALREADY showing a spinner.
   // Not a nicety: several call sites still restore their own button by hand, so
   // this can be entered a second time, and a naive capture would "remember" the
@@ -15022,6 +15078,7 @@ function _btnBusy(btn, label){
 
 function _btnReset(btn){
   if (!btn) return;
+  _btnShowSiblings(btn);
   if (btn._acHtml != null) btn.innerHTML = btn._acHtml;
   btn._acHtml = null;
   btn.disabled = false;
