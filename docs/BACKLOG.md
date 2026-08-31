@@ -121,6 +121,24 @@ se **atenúan** o **desaparecen**: desaparecer evita el clic pero mueve la
 maqueta y sobresalta; atenuar mantiene el sitio. Recomendación a discutir:
 atenuar + `pointer-events:none`, que es invisible al dedo y estable a la vista.
 
+**DECIDIDO — Jose (2026-08-31): desaparecer.** "desaparecer me parece mejor."
+Se implementa así, no como yo había recomendado.
+
+Queda un detalle de ejecución que la decisión no resuelve, y es la parte que
+puede molestar: si el botón se quita del flujo, la tarjeta se encoge mientras la
+acción corre, vuelve a crecer al terminar, y la lista de abajo salta dos veces.
+La forma de obedecer la decisión sin ese salto es `visibility:hidden` en lugar de
+sacar el nodo — el botón desaparece de la vista y del dedo, y el hueco que
+ocupaba se queda quieto. Si al verlo Jose prefiere que el espacio también se
+cierre, es cambiar una línea.
+
+**Corrección mía, anotada para que no se repita:** en la lista de prioridades
+del 31/08 resumí esto como "el par de botones de Merge". Está mal, y Jose lo
+corrigió: el merge fue *dónde* lo vio, no *qué* es. La regla es general —dos o
+más botones juntos, se toca uno, los demás siguen clicables— y aplica a accept,
+add, mark y a todo lo que viaje al servidor. Este archivo ya lo decía bien
+arriba; fue el resumen el que encogió el problema.
+
 Prueba pendiente: mientras una acción corre, **ningún** botón de esa tarjeta
 acepta clics. `tools/test-button-states.js` ya prueba el botón tocado; le falta
 la pareja.
