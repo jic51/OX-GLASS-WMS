@@ -2982,7 +2982,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.32';
+var APP_VERSION = '11.33';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -2994,7 +2994,7 @@ var APP_VERSION = '11.32';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '3c19f410';
+var APP_BUILD = 'a81f5ac0';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -4900,7 +4900,23 @@ function exitSelectedStock(){
   if (!mats.length) return;
 
   openMoveModal('EXIT'); // synchronous — modal + multi-exit section are ready after this returns
+  _fillExitLinesFrom(mats);
+  // The selection USED to be cleared right here, and that is what made Jose's
+  // bug permanent. Switching EXIT → TRANSFER keeps only the first material (see
+  // _readMoveMaterial), which is deliberate — but with the selection already
+  // destroyed, switching BACK to EXIT could not restore the other four either.
+  // They were gone for good, from a form he had not saved.
+  //
+  // It is released in closeModal('moveOverlay') instead, so it lives exactly as
+  // long as the form it belongs to.
+}
 
+// The line-filling half, on its own so the type bar can rebuild the EXIT lines
+// WITHOUT reopening the modal. Calling exitSelectedStock() from there would run
+// openMoveModal() a second time and wipe the date, the comments and everything
+// else already typed — fixing the material list by throwing away the rest of the
+// form is not a fix.
+function _fillExitLinesFrom(mats){
   var container = document.getElementById('multiExitContainer');
   if (container) container.innerHTML = '';
   _exitMatLineIdx = 0;
@@ -4914,7 +4930,23 @@ function exitSelectedStock(){
     autoFillExitMatRows(n);
   });
   updateMultiExitTotal();
-  clearStockSelection();
+}
+
+// The materials the dashboard handed to this form, still selected. Used to
+// rebuild every line when the type goes back to one that holds several.
+function _liveStockSelection(){
+  return Object.values(_stockSelection || {});
+}
+
+// How many material lines the form is holding RIGHT NOW. ENTRY and EXIT keep one
+// line per material; every other screen has room for exactly one.
+function _countMoveMaterialLines(){
+  if (currentMoveType === 'ENTRY')
+    return document.querySelectorAll('#multiMatContainer .mat-line').length;
+  if (currentMoveType === 'EXIT')
+    return document.querySelectorAll('#multiExitContainer .exit-mat-line').length;
+  var el = document.getElementById('mName');
+  return (el && String(el.value || '').trim()) ? 1 : 0;
 }
 
 // ── Dashboard: Stock Table ────────────────────────────────────────────────────
@@ -10908,6 +10940,12 @@ function closeModal(id){
   _btnReset(document.getElementById('attachSubmit'));
   // Reset attach builder when the attach modal closes
   if (id === 'attachOverlay') resetAttachDocBuilder();
+  // The dashboard selection belongs to the form that was opened from it, and it
+  // is released HERE rather than in each of the five places that close this
+  // modal — a sixth one added later inherits this instead of forgetting it.
+  // That is the same reasoning as _btnReset two lines up, and the same mistake
+  // this file has made before: behaviour spread over every call site drifts.
+  if (id === 'moveOverlay') clearStockSelection();
 }
 
 // Clicking the dark backdrop NO LONGER closes the modal (it was closing forms by
@@ -12578,11 +12616,34 @@ function _focusMoveName(){
 
 function _moveTypeBarClick(type){
   var carried = _readMoveMaterial();
+  var before  = _countMoveMaterialLines();
   setModalType(type);
   if (_rdwPrefillActive) {
     _prefillMoveModalMaterial(type, _rdwPrefillActive.category, _rdwPrefillActive.name, _rdwPrefillActive.rack);
   } else {
-    _applyMoveMaterial(carried);
+    // Coming back to EXIT with the dashboard selection still alive, rebuild
+    // every line instead of the one _readMoveMaterial could carry. Without
+    // this, a look at TRANSFER and back costs the other materials — and the
+    // person who lost them did nothing but click a tab.
+    var sel = _liveStockSelection();
+    if (type === 'EXIT' && sel.length > 1){
+      _fillExitLinesFrom(sel);
+    } else {
+      _applyMoveMaterial(carried);
+    }
+  }
+  var after = _countMoveMaterialLines();
+  // Say what was dropped. The form has ALWAYS dropped these — TRANSFER, RETURN
+  // and WASTE hold one material and carrying three into a form with room for
+  // one is not possible. What it did not do is admit it, so Jose lost four
+  // materials and only found out by reasoning about it afterwards. Until those
+  // screens hold several (the movement-model redesign in docs/BACKLOG.md), the
+  // least this can do is not pretend.
+  if (before > after){
+    var lost = before - after;
+    showToast(lost + ' material' + (lost !== 1 ? 's were' : ' was') +
+      ' not carried over — ' + type + ' holds one at a time. ' +
+      'Switch back to Exit to get them back.', 'warn', 7000);
   }
   _focusMoveName();
 }
