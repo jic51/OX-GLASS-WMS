@@ -5,6 +5,117 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+**REDISEÑO DEL MODELO DE MOVIMIENTOS — Jose (2026-08-31). El más grande de la
+lista, y el más correcto. Decidir antes de empezar cualquier etapa.**
+
+Empezó como un bug chico: seleccionar varios materiales en el tablero, dar
+"Exit Selected", y al cambiar el tipo a TRANSFER solo sobrevive el primero.
+
+Eso NO es un descuido — está escrito y razonado en `Index_v3_fixed.html`
+(`_readMoveMaterial`): *"Only the FIRST material carries... there is no honest
+way to carry three materials into a form with room for one."* La decisión era
+correcta cuando se tomó. Dejó de serlo cuando Jose necesitó registrar en el
+sistema una tarima que ya había movido físicamente, con prisa.
+
+Yo propuse multi-material con **un destino compartido**. Jose lo rechazó, con
+razón: *"cualquier bodega debe ser libre de mover todo como quiera pero nosotros
+debemos darles eso en orden y con advertencias"*. Sus casos: 2 materiales a 2
+lugares distintos de una vez; 1 material a 2 destinos en un solo movimiento
+(guardado como 2 filas); 2 retornos desde 2 obras distintas a 2 estantes
+distintos. Mi diseño resolvía su prisa y le quitaba la bodega.
+
+**El modelo correcto, que es el que él describió:**
+
+> Un movimiento es una lista de renglones: material + de dónde + a dónde + cuánto.
+
+Y cada tipo es ese renglón con los extremos restringidos:
+
+| Tipo | De | A |
+|---|---|---|
+| ENTRY | proveedor (fuera) | estante (dentro) |
+| EXIT | estante (dentro) | obra (fuera) |
+| TRANSFER | estante u obra | estante u obra |
+| RETURN | obra (fuera) | estante (dentro) |
+| WASTE | estante u obra | nada |
+| ADJUST | no es un movimiento: es un conteo |
+
+TRANSFER es el caso general y los demás son TRANSFER con los extremos amarrados.
+Los tres casos de Jose caben sin excepciones — ese es el argumento de que el
+modelo es el bueno: dejan de existir los casos especiales.
+
+**LO QUE SE VERIFICÓ EN EL CÓDIGO, y que es lo que hace esto grande:**
+
+1. `calculateStock` (Code_v3_fixed.gs ~1750) tiene el modelo escrito a mano por
+   tipo, y dice literalmente `TRANSFER → rack-to-rack. no warehouseQty change`.
+   Mover algo de una obra a un estante y guardarlo como TRANSFER **no sube el
+   número de bodega**. No es un límite de pantalla: el modelo no lo representa.
+
+2. Hay **una sola** lista de ubicaciones, `rackList`, compartida por todos los
+   campos (origen, destino, filas de exit, filas de transfer, el candado de
+   destinos permitidos). Dentro/fuera no existe en ninguna parte de la UI.
+
+3. **La app no sabe en qué obra está el material que salió.** `warehouseLocs` es
+   un mapa por estante; `siteQty` es UN número. Sabe cuánto salió, no a dónde.
+   "¿Cuánto tengo en el proyecto Jordan River?" hoy no se le puede preguntar a
+   los datos, y sin eso "retornar desde 2 obras distintas" no tiene con qué
+   cuadrar.
+
+**Las etapas, en orden obligatorio:**
+
+- **1. Las ubicaciones tienen tipo.** Registro con dos clases: *dentro*
+  (estantes) y *fuera* (obras, proyectos, otra bodega). Las existentes se
+  clasifican solas — lo que está en `warehouseLocs` es dentro, lo que aparece
+  como destino de EXIT es fuera. Nada que teclear. Con esto solo ya se cumple la
+  segunda idea de Jose: EXIT sugiere solo lugares de fuera **pero deja escribir
+  uno nuevo**, ENTRY solo de dentro. Y es la puerta a varias bodegas: una segunda
+  bodega es un grupo de ubicaciones "dentro" con otro nombre.
+- **2. `siteLocs`, igual que `warehouseLocs`.** Saldo por obra. **Aquí está el
+  riesgo real**: `calculateStock` es donde viven los números y no es la única
+  función que convierte movimientos en existencias. Si una no entiende la forma
+  nueva, el inventario se va en silencio.
+- **3. El movimiento pasa a ser N renglones libres**, con el tipo que
+  **advierte, no prohíbe** — palabras de Jose. Si un TRANSFER tiene los dos
+  extremos fuera de la bodega, la app avisa "esto no toca tu inventario de
+  bodega, ¿seguro?" y deja seguir.
+- **4. El texto de guía en pantalla**, con las definiciones de Jose tal cual:
+  *WASTE es solo para inventario perdido que no se puede recuperar; TRANSFER es
+  para inventario que se mueve entre proyectos 'on site' y locaciones dentro de
+  la bodega, o solo entre locaciones dentro de la bodega; EXIT y ENTRY para
+  material que sale o llega; ADJUST es solo para ajustar lo que alguien hizo mal,
+  sea dentro de la bodega o el proveedor.*
+
+**Retrocompatibilidad, en todas las etapas.** Hay meses de movimientos guardados
+con el modelo viejo. Cada etapa tiene que leer los dos, y hay que probarlo con
+datos reales, no inventados.
+
+**Los dos parches chicos, que sirven aunque el rediseño se posponga:**
+- `exitSelectedStock()` llama a `clearStockSelection()` al abrir la ventana, así
+  que la selección se destruye antes de que se pueda cambiar de tipo. Mantenerla
+  viva hasta guardar o cerrar.
+- Cuando el cambio de tipo tire materiales, **decirlo**: "4 materiales no se
+  pudieron pasar a Transfer". Hoy se pierden en silencio y Jose lo descubrió
+  solo porque se puso a pensarlo.
+
+---
+
+**JOSE (2026-08-31) — Reporte diario de entradas y salidas.** Un resumen
+nocturno de qué se recibió y qué salió de la bodega ese día. **La hora la
+configura un admin**, no es fija.
+
+Notas para cuando se haga: ya existe `dailyCheckinTrigger` (9:00) y
+`dailyBackupTrigger` (2:00), así que el patrón de tarea programada está hecho y
+`ensureCheckinTrigger_` es el molde. Lo que NO existe es una hora configurable —
+los tres disparadores actuales tienen la hora escrita en el código
+(`.atHour(9)`), así que hace falta guardar la hora elegida y reinstalar el
+disparador cuando cambie. Ojo con eso: cambiar la hora significa borrar y
+recrear el trigger, no editarlo.
+
+Decidir también a quién le llega (¿solo admins? ¿lista de correos?) y qué pasa
+un día sin movimientos — mandar "hoy no hubo movimientos" es información;
+mandar un correo vacío es ruido que la gente aprende a ignorar.
+
+---
+
 ~~**BUG REPORTADO POR JOSE — la ventana de edición sale DETRÁS del popup de la
 mañana.**~~ ✅ **Hecho (v11.29).** `.morning-overlay` bajó de 2000 a 540. No era
 el escudo de ventanas: el escudo leía la pila correctamente, la pila estaba mal.
