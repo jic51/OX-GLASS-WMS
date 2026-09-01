@@ -952,6 +952,43 @@
        big empty gap below a short list instead of the list filling the box. */
     .settings-content{flex:1;min-width:0;min-height:0;overflow-y:auto;padding:1.25rem 1.5rem 1.5rem;display:flex;flex-direction:column}
     #settingsTabContent{display:flex;flex-direction:column;flex:1;min-height:0}
+    /* Jose (v11.32): "poner un cuadro o separar cada area en settings
+       encerrando en un cuadro cada cosa, el cuadro debe ser azul pero solo el
+       borde." Literal: blue, border only, nothing filled in.
+
+       The System tab is where this was needed — seven areas stacked with
+       nothing but whitespace between them, so "Backups" and "Storage" read as
+       one long paragraph of settings.
+
+       DIRECT CHILDREN ONLY. `.field` appears a hundred times in this file — in
+       the movement form, in the wizard, inside these very blocks — and styling
+       it globally would have drawn a blue box around every input in the app.
+       The `>` is what keeps this to the areas of one panel.
+
+       The colour comes from var(--accent), the app's own blue, so it follows
+       the dark theme instead of being a second blue that only matches by day.
+       The label sits ON the border like a fieldset legend: it turns a box into
+       a named area, which is what Jose actually asked for — separation he can
+       point at. */
+    #settingsTabContent > .field{
+      position:relative;
+      border:1px solid var(--accent);
+      border-radius:8px;
+      padding:1.1rem 1rem .95rem;
+      gap:.45rem;
+    }
+    #settingsTabContent > .field > label:first-child{
+      position:absolute;
+      top:0;
+      left:.8rem;
+      transform:translateY(-50%);
+      background:var(--card);
+      padding:0 .4rem;
+      color:var(--accent);
+      /* The label is lifted onto the border line, so the box it sits on has to
+         be the thing behind it — on a panel with any other background this
+         would show a white notch. --card is what the settings panel paints. */
+    }
     .settings-tab{background:none;border:none;padding:.4rem .9rem;border-radius:6px;font-size:.8rem;font-weight:600;color:var(--muted);cursor:pointer;transition:.15s}
     .settings-tab.active{background:var(--accent);color:#fff}
     .settings-tab:hover:not(.active){background:rgba(0,0,0,.06)}
@@ -2982,7 +3019,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.37';
+var APP_VERSION = '11.38';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -2994,7 +3031,7 @@ var APP_VERSION = '11.37';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'e28276be';
+var APP_BUILD = 'f42ee9ee';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -8726,14 +8763,9 @@ function _hourLabel(h){
 }
 
 function _loadDailyReport(){
-  var box = document.getElementById('dailyReportBox');
-  if (!box) return;
-  google.script.run
-    .withSuccessHandler(_drawDailyReport)
-    .withFailureHandler(function(e){
-      box.textContent = 'Could not read this setting — ' + ((e && e.message) || e);
-    })
-    .getDailyReportSettings();
+  _sysLoad('daily', 'dailyReportBox', _drawDailyReport,
+    'Could not read this setting:',
+    function(r){ r.getDailyReportSettings(); });
 }
 
 function _drawDailyReport(cfg){
@@ -8790,8 +8822,12 @@ function _saveDailyReport(){
         // the job ever failed, this panel would otherwise keep showing the hour
         // that was typed while the mail kept arriving at the old one — and the
         // panel is the only place anyone would look.
-        if (res && res.settings) _drawDailyReport(res.settings);
-        else _loadDailyReport();
+        // El recuerdo se actualiza aquí también. Dibujar sin recordar dejaría
+        // la caja correcta AHORA y al siguiente cambio de pestaña pintaría lo
+        // viejo un instante antes de corregirse — un parpadeo que sólo aparece
+        // después de guardar, que es justo cuando la gente está mirando.
+        if (res && res.settings) { _sysRemember('daily', res.settings); _drawDailyReport(res.settings); }
+        else { delete _sysBox.daily; _loadDailyReport(); }
         showToast(res && res.state === 'off'
           ? 'Daily report turned off.'
           : 'Daily report saved.', 'ok');
@@ -8985,15 +9021,9 @@ function _dqApply(i){
 // and its last four characters, which is enough to recognise which key you
 // pasted and useless to anybody else.
 function _loadAiStatus(){
-  var box = document.getElementById('aiBox');
-  if (!box) return;
-  google.script.run
-    .withSuccessHandler(function(st){ _drawAiBox(st || {}); })
-    .withFailureHandler(function(e){
-      var b = document.getElementById('aiBox');
-      if (b) b.innerHTML = '<span style="color:var(--red)">Could not read the AI setting: ' + _he(e.message||e) + '</span>';
-    })
-    .processMovement('getAiStatus', _h({}));
+  _sysLoad('ai', 'aiBox', _drawAiBox,
+    'Could not read the AI setting:',
+    function(r){ r.processMovement('getAiStatus', _h({})); });
 }
 
 function _drawAiBox(st){
@@ -9087,15 +9117,9 @@ function _aiRemoveKey(){
 // and shouting the loudest. A number on its own ("1,847,322 cells") means
 // nothing to anyone — a bar at 18% is understood without explanation.
 function _loadSpaceUsage(){
-  var box = document.getElementById('spaceBox');
-  if (!box) return;
-  google.script.run
-    .withSuccessHandler(function(st){ _drawSpaceBox(st || {}); })
-    .withFailureHandler(function(e){
-      var b = document.getElementById('spaceBox');
-      if (b) b.innerHTML = '<span style="color:var(--red)">Could not measure the file: ' + _he(e.message||e) + '</span>';
-    })
-    .processMovement('getSpaceUsage', _h({}));
+  _sysLoad('space', 'spaceBox', _drawSpaceBox,
+    'Could not measure the file:',
+    function(r){ r.processMovement('getSpaceUsage', _h({})); });
 }
 
 function _fmtInt(n){ return Math.round(Number(n)||0).toLocaleString('en-US'); }
@@ -9159,16 +9183,59 @@ function _drawSpaceBox(st){
 // this very tab told people so — without offering any way to do it. An admin
 // who lives in the app could not see whether their data was being backed up at
 // all, which is a strange thing for a system to keep to itself.
-function _loadBackupStatus(){
-  var box = document.getElementById('backupBox');
+/* ── The four boxes on the System tab ───────────────────────────────────────
+   Jose, after v11.37: "la ventana de app settings ya no se recarga, pero la
+   parte de system sí lo hace cada vez que cambio de pestaña."
+
+   Right, and it is the same fault one level down. _renderSystemTab rewrites the
+   pane, which puts "⏳ Checking…" back into all four boxes, and then four round
+   trips fill them in again with what they already said.
+
+   So the same answer as Settings, and for the same reason — this is NOT a cache
+   with an expiry. The four requests still go out every single time. What
+   changed is that the last answer is painted at once instead of a spinner, and
+   the box is only rewritten if the new answer differs from it.
+
+   One helper rather than four copies of it. Four copies is how three of them
+   end up fixed and the fourth ships as it was. */
+var _sysBox = {};   // clave → { payload, json }
+
+function _sysRemember(key, payload){
+  _sysBox[key] = { payload: payload, json: JSON.stringify(payload) };
+}
+
+/* call(runner) fires the right server method on the chainable runner it is
+   handed — the four do not share one endpoint, and pretending they did would
+   mean an extra layer to translate between them. */
+function _sysLoad(key, boxId, draw, errText, call){
+  var box = document.getElementById(boxId);
   if (!box) return;
-  google.script.run
-    .withSuccessHandler(function(st){ _drawBackupBox(st || {}); })
-    .withFailureHandler(function(e){
-      var b = document.getElementById('backupBox');
-      if (b) b.innerHTML = '<span style="color:var(--red)">Could not read the backup schedule: ' + _he(e.message||e) + '</span>';
+  var known = _sysBox[key];
+  if (known) draw(known.payload);   // instantáneo: sin ⏳, sin esperar
+
+  call(google.script.run
+    .withSuccessHandler(function(st){
+      st = st || {};
+      // Ya está en pantalla y es idéntico. No se toca el DOM: redibujar lo
+      // mismo hace parpadear la caja, que es la queja original con otra ropa.
+      if (_sysBox[key] && _sysBox[key].json === JSON.stringify(st)) return;
+      _sysRemember(key, st);
+      draw(st);
     })
-    .processMovement('getBackupStatus', _h({}));
+    .withFailureHandler(function(e){
+      // Un fallo sobre una caja que ya muestra algo real se calla. Misma razón
+      // que en Ajustes: un rojo encima de algo que funciona enseña a ignorar
+      // los rojos. La primera vez sí habla, porque ahí sólo hay un ⏳.
+      if (known) return;
+      var b = document.getElementById(boxId);
+      if (b) b.innerHTML = '<span style="color:var(--red)">' + errText + ' ' + _he(e.message||e) + '</span>';
+    }));
+}
+
+function _loadBackupStatus(){
+  _sysLoad('backup', 'backupBox', _drawBackupBox,
+    'Could not read the backup schedule:',
+    function(r){ r.processMovement('getBackupStatus', _h({})); });
 }
 
 function _drawBackupBox(st){
@@ -9258,6 +9325,10 @@ function _toggleBackup(el){
   el.disabled = true;
   google.script.run
     .withSuccessHandler(function(res){
+      // El recuerdo se BORRA antes de dibujar el optimista. Si no, la relectura
+      // de la línea siguiente pintaría primero lo recordado —el estado de antes
+      // del interruptor— y quien lo tocó vería encendido, apagado, encendido.
+      delete _sysBox.backup;
       _drawBackupBox({ enabled: res && res.enabled, retentionDays: 30, folder: '' });
       _loadBackupStatus();                       // re-read, so the text is the server's truth
       showToast(want ? 'Nightly backup is on ✓' : 'Nightly backup turned off', want ? 'ok' : 'warn');
