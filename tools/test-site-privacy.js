@@ -111,7 +111,8 @@ console.log('\n═══ the papers that must never be published ═══\n');
     'ACCESO-Y-LOGIN':       'how login is wired, including what to check when it breaks',
     'MASTER-TEMPLATE':      'how the master copy is built',
     'BACKLOG':              'everything not built yet, and every bug not fixed yet',
-    'CONCURRENCIA':         'a frank analysis of what is still at risk under load',
+    'CONCURRENCIA':         'a frank analysis of what is still at risk under load, and ' +
+                            'the script for the live test — which names the two open findings',
     'SPEC':                 'the internal specification',
     'LICENCIA-E-INTEGRIDAD':'how misuse would be detected',
     'CUANDO-SE-LLENE':      'the plan for when a customer sheet fills up',

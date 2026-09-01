@@ -2982,7 +2982,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.36';
+var APP_VERSION = '11.37';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -2994,7 +2994,7 @@ var APP_VERSION = '11.36';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'f510fc80';
+var APP_BUILD = 'e28276be';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -8027,7 +8027,30 @@ function openSettingsModal() {
   document.getElementById('settingsMsgBar').style.display = 'none';
   _filterSettingsSidebar();
   document.getElementById('settingsOverlay').classList.add('show');
-  _loadSettings();
+
+  /* Jose (v11.32): "cada vez que abro 'app settings' se vuelve a cargar la
+     página." He was describing exactly what happened: every open blanked the
+     pane to "Loading…" and waited on a round trip to Apps Script — half a
+     second on a good day, several on a normal one — to draw a list that had not
+     changed since he closed it thirty seconds earlier.
+
+     THE FIX IS NOT A CACHE WITH AN EXPIRY. That is the version that goes wrong:
+     the real work in caching this is invalidating it, and every write in this
+     file would have to remember to. One that forgets shows a stale category
+     list and there is no symptom to trace back.
+
+     So the fetch still happens, every time, exactly as before. What changed is
+     that it no longer blanks the pane first: what is already known is painted
+     at once, and the answer only redraws if it actually differs. Nothing can go
+     stale, because nothing is being trusted for longer than one round trip.
+
+     A first open still shows Loading… — there is genuinely nothing to paint. */
+  if (_settingsData && Object.keys(_settingsData).length) {
+    _renderSettingsTab(_settingsTab);
+    _loadSettings({ quiet: true });
+  } else {
+    _loadSettings();
+  }
 }
 
 // Reaching this modal at all now means ADMIN, or WAREHOUSE with
@@ -8063,9 +8086,44 @@ function _filterSettingsSidebar(){
   if (!isAdmin && !SETTINGS_CATALOG_TABS[_settingsTab]) _settingsTab = 'categories';
 }
 
-function _loadSettings() {
-  document.getElementById('settingsTabContent').innerHTML =
-    '<p style="padding:1rem;color:var(--muted);font-size:.85rem">Loading…</p>';
+/* A refresh that lands while somebody is typing must not take the field away.
+   Opening Settings, starting to type a category name, and having the answer
+   arrive 400ms later would otherwise wipe the box mid-word — a bug that only
+   shows up on a slow connection, which is where it hurts most.
+
+   So a quiet refresh that DOES bring something new waits for the field to be
+   let go. One listener, attached once. */
+var _settingsRedrawPending = false;
+
+function _settingsFocusInPanel(){
+  var el = document.activeElement;
+  if (!el || !/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return null;
+  var pane = document.getElementById('settingsTabContent');
+  return (pane && pane.contains(el)) ? el : null;
+}
+
+function _redrawSettingsWhenFree(){
+  var busy = _settingsFocusInPanel();
+  if (!busy) { _renderSettingsTab(_settingsTab); return; }
+  if (_settingsRedrawPending) return;
+  _settingsRedrawPending = true;
+  busy.addEventListener('blur', function(){
+    _settingsRedrawPending = false;
+    // Checked again on the way out: the person may have tabbed straight into
+    // the next field, and redrawing then is the same bug one box along.
+    _redrawSettingsWhenFree();
+  }, { once: true });
+}
+
+function _loadSettings(opts) {
+  // quiet = the panel already shows something real. Do not blank it, and only
+  // redraw if the server's answer differs from what is on screen.
+  var quiet = !!(opts && opts.quiet);
+  if (!quiet) {
+    document.getElementById('settingsTabContent').innerHTML =
+      '<p style="padding:1rem;color:var(--muted);font-size:.85rem">Loading…</p>';
+  }
+  var before = quiet ? JSON.stringify(_settingsData) : null;
   google.script.run
     .withSuccessHandler(function(d) {
       _settingsData = d;
@@ -8083,28 +8141,45 @@ function _loadSettings() {
           });
         }
       });
-      _renderSettingsTab(_settingsTab);
+      // The comparison is made AFTER the sort above, so a list that came back
+      // in a different order but with the same contents counts as unchanged —
+      // otherwise every quiet refresh would redraw for nothing.
+      if (quiet && JSON.stringify(_settingsData) === before) return;
+      if (quiet) _redrawSettingsWhenFree();
+      else _renderSettingsTab(_settingsTab);
     })
-    .withFailureHandler(function(e) { _settingMsg('Error: '+(e.message||e), 'error'); })
+    .withFailureHandler(function(e) {
+      // A quiet refresh that fails says nothing: the panel is showing real data
+      // from a moment ago, and a red bar over a working screen teaches people
+      // to ignore red bars. A first load that fails still has to speak — there
+      // is nothing on screen but the word Loading.
+      if (!quiet) _settingMsg('Error: '+(e.message||e), 'error');
+    })
     .processMovement('getSettings', _h({}));
 
   // Prefetch Materials + Error Log in parallel so switching to those tabs feels
   // as instant as Categories/Projects/Suppliers/Locations (which come bundled
   // in getSettings above) — previously each one only fetched on first visit to
   // that tab, showing a "Loading…" flash the other tabs never had.
-  _matListAll = null;
+  //
+  // On a QUIET refresh these three keep what they have while the new answer is
+  // on its way. Nulling them is what makes Materials, Error Log and Directory
+  // say "Loading…" — so blanking them here would have moved Jose's complaint
+  // out of the four bundled tabs and into the other three, which is not a fix,
+  // it is a smaller version of the same thing.
+  if (!quiet) _matListAll = null;
   google.script.run
     .withSuccessHandler(function(list) { _matListAll = list; if (_settingsTab === 'materials') _filterMatList(); })
     .withFailureHandler(function(){})
     .processMovement('listMaterials', _h({}));
 
-  _errorLogData = null;
+  if (!quiet) _errorLogData = null;
   google.script.run
     .withSuccessHandler(function(rows) { _errorLogData = rows || []; if (_settingsTab === 'errorlog') _drawErrorLog(); })
     .withFailureHandler(function(){})
     .processMovement('getErrorLog', _h({}));
 
-  _pmDirectoryData = null;
+  if (!quiet) _pmDirectoryData = null;
   google.script.run
     .withSuccessHandler(function(list) {
       _pmDirectoryData = list || [];
