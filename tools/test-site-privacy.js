@@ -64,6 +64,9 @@ const ALLOWED = [
   'terms.html', 'privacy.html',
   'docs/instalacion.html', 'docs/setup.html',
   'docs/vista-por-pasillo.html', 'docs/soporte.html',
+  // El documento del cliente para volver a una copia. Escrito desde cero: el
+  // RESTAURAR-UN-BACKUP.md privado NO es su fuente y sigue sin publicarse.
+  'docs/restaurar.html',
   // The mark and the tab icon. Added deliberately, and only after this guard
   // refused them — which is the arrangement working: a file appearing in _site/
   // has to be argued for here before it can ship. They replace a hotlink to a

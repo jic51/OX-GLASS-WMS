@@ -161,8 +161,30 @@ console.log('\n═══ no third door ═══\n');
     refreshDerivedSheets_: 'rewrites LIVE_STOCK / SITE_STOCK / WASTED_STOCK inside the ' +
                            'lock; the objects never leave the server'
   };
-  const leaky = holders.filter(n => !INTERNAL[n] && !/canSeeCosts_\(/.test(bodyOf(n)));
-  check('every caller that can return these objects to a browser strips them' +
+  // Two ways of being safe, not one.
+  //
+  // This used to accept only canSeeCosts_ — the CONDITIONAL strip, which asks
+  // the role and blanks the costs for whoever must not see them. That is the
+  // right shape for the screens, where an admin does need the numbers.
+  //
+  // Then dailyReportMovements_ arrived and this failed on it, on code that was
+  // already safe: the daily report has no use for costs at all, so it blanks
+  // them for EVERY caller, unconditionally. That is strictly stronger than
+  // asking the role — there is no branch that can be got wrong later — and the
+  // guard was calling it a leak because it recognised one spelling of safety.
+  //
+  // A guard that only accepts the weaker of two protections pushes the next
+  // author toward the weaker one. So both are accepted, and the unconditional
+  // form has to blank BOTH fields to count: blanking unitCost and forgetting
+  // totalCost still puts the money in the payload.
+  const stripsAlways = n => {
+    const b = bodyOf(n);
+    return /\.unitCost\s*=\s*null/.test(b) && /\.totalCost\s*=\s*null/.test(b);
+  };
+  const leaky = holders.filter(n =>
+    !INTERNAL[n] && !/canSeeCosts_\(/.test(bodyOf(n)) && !stripsAlways(n));
+  check('every caller that can return these objects to a browser strips them — ' +
+        'by role, or unconditionally' +
         (leaky.length ? ' — NOT stripping: ' + leaky.join(', ') : ''),
     leaky.length === 0);
   const staleInternal = Object.keys(INTERNAL).filter(n => holders.indexOf(n) === -1);

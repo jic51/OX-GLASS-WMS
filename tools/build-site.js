@@ -72,6 +72,11 @@ const DOCS = [
   // copy does not carry. That is a writing job, not a filtering one, and doing
   // it by deleting paragraphs from the existing file would leave a document
   // that reads like it has holes in it. Noted in docs/BACKLOG.md.
+  { src: 'docs/RESTAURAR-UNA-COPIA.md',     out: 'docs/restaurar.html',
+    title: 'Si algo se dañó, así vuelves a ayer', lang: 'es',
+    why: 'The customer half, written from scratch. This is the document the ' +
+         'comment above says was missing — the private RESTAURAR-UN-BACKUP.md ' +
+         'stays private and is NOT its source.' },
   { src: 'docs/VISTA-POR-PASILLO.md',       out: 'docs/vista-por-pasillo.html',
     title: 'La vista por pasillo', lang: 'es',
     why: 'Explains a feature to the person using it. No internals.' },
@@ -249,6 +254,7 @@ ${bodyHtml}
     <a href="/docs/setup.html">Setting up your warehouse</a> ·
     <a href="/docs/instalacion.html">Guía de instalación</a> ·
     <a href="/docs/vista-por-pasillo.html">La vista por pasillo</a> ·
+    <a href="/docs/restaurar.html">Volver a una copia</a> ·
     <a href="/docs/soporte.html">Soporte y devoluciones</a></p>
   <p><a href="/">← Acopio</a> · <a href="/terms.html">Terms</a> · <a href="/privacy.html">Privacy</a></p>
 </footer>
