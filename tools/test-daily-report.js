@@ -256,6 +256,45 @@ console.log('\n═══ el manejador es un global público, y por eso una puert
   });
 }
 
+// ── 7. La pantalla ──────────────────────────────────────────────────────────
+console.log('\n═══ y se puede encender desde Ajustes ═══\n');
+{
+  // Un ajuste sin pantalla es un ajuste que no existe, por bien escrito que
+  // esté el servidor. Esto comprueba que las tres funciones del servidor tienen
+  // quién las llame y que el panel se dibuja al abrir la pestaña.
+  const HTML = fs.readFileSync(path.join(__dirname, '..', 'Index_v3_fixed.html'), 'utf8');
+
+  check('la pestaña System dibuja el panel al abrirse',
+    /_loadDailyReport\(\);/.test(HTML) &&
+    /id="dailyReportBox"/.test(HTML));
+
+  ['getDailyReportSettings', 'saveDailyReportSettings', 'sendDailyReportNow'].forEach(n => {
+    check('la pantalla llama a ' + n, new RegExp('\\.' + n + '\\(').test(HTML));
+  });
+
+  check('el panel ofrece las 24 horas, no una lista corta que obligue a ' +
+        'conformarse', /for \(var h = 0; h < 24; h\+\+\)/.test(HTML));
+
+  // El detalle que importa: guardar redibuja con lo que contestó el SERVIDOR.
+  // Si reprogramar el disparador fallara, dibujar desde el formulario dejaría
+  // el panel mostrando la hora tecleada mientras el correo sigue llegando a la
+  // vieja — y el panel es el único sitio donde alguien miraría.
+  const save = /function _saveDailyReport\(\)\{?[\s\S]*?\n\}/.exec(HTML)[0];
+  check('guardar redibuja con la respuesta del servidor, no con el formulario',
+    /res\.settings/.test(save) && /_drawDailyReport\(res\.settings\)/.test(save));
+  check('...y si el servidor no devolviera ajustes, los vuelve a pedir en vez ' +
+        'de dejar el panel mintiendo', /_loadDailyReport\(\)/.test(save));
+
+  // "Send one now" existe para no tener que esperar a la noche para saber si
+  // quedó bien configurado.
+  check('hay un botón para mandar uno ahora y comprobarlo',
+    /id="btnDrTest"/.test(HTML) && /_sendDailyReportNow\(\)/.test(HTML));
+
+  // La lista de destinatarios se imprime de verdad.
+  check('el panel imprime a quién le llega, en vez de dejarlo a la imaginación',
+    /Goes to: /.test(HTML));
+}
+
 console.log('\n' + '─'.repeat(72));
 console.log('Los otros tres disparadores salen temprano al encontrar uno instalado.');
 console.log('Éste compara además la HORA, porque la suya la elige un admin — y un');

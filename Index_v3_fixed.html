@@ -2982,7 +2982,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.35';
+var APP_VERSION = '11.36';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -2994,7 +2994,7 @@ var APP_VERSION = '11.35';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '5734c470';
+var APP_BUILD = 'f510fc80';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -8577,6 +8577,14 @@ function _renderSystemTab() {
       '<div id="backupBox" style="color:var(--muted);font-size:.78rem"><span class="spin-hg">⏳</span> Checking…</div>' +
     '</div>' +
     '<div class="field" style="margin-bottom:1.25rem">' +
+      '<label style="display:flex;align-items:center;gap:.4rem">Daily movement report ' +
+        _infoIc('An email each evening listing what came into the warehouse and what left that day. ' +
+                'It is sent on quiet days too, saying there were no movements — so a quiet day never ' +
+                'looks the same as a report that failed to arrive.') +
+      '</label>' +
+      '<div id="dailyReportBox" style="color:var(--muted);font-size:.78rem"><span class="spin-hg">⏳</span> Checking…</div>' +
+    '</div>' +
+    '<div class="field" style="margin-bottom:1.25rem">' +
       '<label style="display:flex;align-items:center;gap:.4rem">Storage ' +
         _infoIc('Google caps a spreadsheet at 10 million cells across all its tabs. This is how much of that your file uses.') +
       '</label>' +
@@ -8614,8 +8622,132 @@ function _renderSystemTab() {
   _applySysActSpot();
 
   _loadBackupStatus();
+  _loadDailyReport();
   _loadSpaceUsage();
   _loadAiStatus();
+}
+
+/* ── The daily movement report ──────────────────────────────────────────────
+   Jose asked for an evening email of what came in and what went out, with the
+   hour set by an admin. The server side is in Code.gs; this is where somebody
+   can actually turn it on — a setting with no screen is a setting that does not
+   exist, however well it is written.
+
+   Two things this panel has to make plain, because both are decisions Jose made
+   and neither is guessable from a checkbox:
+
+     WHO GETS IT. The admin who switches it on always does, plus whoever they
+     add. So the panel prints the real list rather than an empty box that looks
+     like nobody is subscribed.
+
+     THE HOUR IS REAL. Changing it here deletes and recreates the scheduled job,
+     because an Apps Script trigger cannot be edited. If that ever failed
+     quietly, this panel would say one hour while the mail arrived at another —
+     so Save re-reads the server's answer instead of trusting what was typed. */
+function _hourLabel(h){
+  var ampm = h < 12 ? 'AM' : 'PM';
+  var h12  = (h % 12) || 12;
+  return h12 + ':00 ' + ampm;
+}
+
+function _loadDailyReport(){
+  var box = document.getElementById('dailyReportBox');
+  if (!box) return;
+  google.script.run
+    .withSuccessHandler(_drawDailyReport)
+    .withFailureHandler(function(e){
+      box.textContent = 'Could not read this setting — ' + ((e && e.message) || e);
+    })
+    .getDailyReportSettings();
+}
+
+function _drawDailyReport(cfg){
+  var box = document.getElementById('dailyReportBox');
+  if (!box || !cfg) return;
+  var opts = '';
+  for (var h = 0; h < 24; h++){
+    opts += '<option value="' + h + '"' + (h === cfg.hour ? ' selected' : '') + '>' +
+            _hourLabel(h) + '</option>';
+  }
+  var who = (cfg.recipients || []);
+  box.innerHTML =
+    '<label style="display:flex;align-items:center;gap:.5rem;color:var(--text);font-size:.82rem;cursor:pointer">' +
+      '<input type="checkbox" id="drEnabled"' + (cfg.enabled ? ' checked' : '') + '> ' +
+      'Email me what moved, every evening' +
+    '</label>' +
+    '<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-top:.6rem">' +
+      '<span>Send at</span>' +
+      '<select id="drHour" style="padding:.35rem .5rem;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text)">' +
+        opts +
+      '</select>' +
+    '</div>' +
+    '<div style="margin-top:.6rem">' +
+      '<div style="margin-bottom:.25rem">Also send to <span style="color:var(--muted)">(comma separated)</span></div>' +
+      '<input type="text" id="drExtra" value="' + _he(cfg.extra || '') + '" ' +
+        'placeholder="warehouse@yourcompany.com, manager@yourcompany.com" ' +
+        'style="width:100%;max-width:420px;padding:.4rem .55rem;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text)">' +
+    '</div>' +
+    // The real list, not a promise of one. An admin who switches this on and
+    // types nobody else still needs to see their own address here, or the box
+    // reads as if the report goes nowhere.
+    '<div style="margin-top:.5rem;color:var(--muted)">' +
+      (who.length
+        ? 'Goes to: ' + _he(who.join(', '))
+        : 'Nobody yet — switching it on adds you.') +
+    '</div>' +
+    '<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.7rem">' +
+      '<button id="btnDrSave" class="btn btn-primary btn-sm" onclick="_saveDailyReport()">Save</button>' +
+      '<button id="btnDrTest" class="btn btn-ghost btn-sm" onclick="_sendDailyReportNow()">Send one now</button>' +
+    '</div>' +
+    '<div style="font-size:.74rem;color:var(--muted);margin-top:.4rem">' +
+      'Sent on quiet days too, saying there were no movements.' +
+    '</div>';
+}
+
+function _saveDailyReport(){
+  var btn = document.getElementById('btnDrSave');
+  if (!btn || btn.disabled) return;
+  _btnBusy(btn, 'Saving…');
+  google.script.run
+    .withSuccessHandler(function(res){
+      _btnDone(btn, true, function(){
+        // Redrawn from what the SERVER says, not from the form. If rescheduling
+        // the job ever failed, this panel would otherwise keep showing the hour
+        // that was typed while the mail kept arriving at the old one — and the
+        // panel is the only place anyone would look.
+        if (res && res.settings) _drawDailyReport(res.settings);
+        else _loadDailyReport();
+        showToast(res && res.state === 'off'
+          ? 'Daily report turned off.'
+          : 'Daily report saved.', 'ok');
+      });
+    })
+    .withFailureHandler(function(e){
+      _btnDone(btn, false);
+      showToast('Could not save it — ' + ((e && e.message) || e), 'err', 6000);
+    })
+    .saveDailyReportSettings({
+      enabled: !!document.getElementById('drEnabled').checked,
+      hour:    parseInt(document.getElementById('drHour').value, 10),
+      extra:   document.getElementById('drExtra').value
+    });
+}
+
+function _sendDailyReportNow(){
+  var btn = document.getElementById('btnDrTest');
+  if (!btn || btn.disabled) return;
+  _btnBusy(btn, 'Sending…');
+  google.script.run
+    .withSuccessHandler(function(res){
+      _btnDone(btn, !!(res && res.ok), function(){
+        showToast((res && res.message) || 'Sent.', res && res.ok ? 'ok' : 'warn', 6000);
+      });
+    })
+    .withFailureHandler(function(e){
+      _btnDone(btn, false);
+      showToast('Could not send it — ' + ((e && e.message) || e), 'err', 6000);
+    })
+    .sendDailyReportNow();
 }
 
 // ── The data check ───────────────────────────────────────────────────────────
