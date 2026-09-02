@@ -46,7 +46,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '11.38';
+var APP_VERSION = '11.39';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -58,7 +58,7 @@ var APP_VERSION = '11.38';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'f42ee9ee';
+var APP_BUILD = 'ae5491e2';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -2240,6 +2240,14 @@ function processMovementInner_(ss, action, data, auth) {
   if (action === 'getSpaceUsage')   return getSpaceUsage(auth);
   if (action === 'getAiStatus')     return getAiStatus(auth);
   if (action === 'setAiKey')        return setAiKey(data, auth);
+  // El reporte diario. Estas tres llegaban por google.script.run directo, sin
+  // pasar por aquí — y processMovement es donde el token de sesión se convierte
+  // en _verifiedAuth. Sin eso, requireAuth_ contestaba "Not authenticated.
+  // Please sign in and use the app from its own page." en rojo, dentro de un
+  // panel al que sólo se llega estando autenticado. Jose lo fotografió.
+  if (action === 'getDailyReportSettings')  return getDailyReportSettings(auth);
+  if (action === 'saveDailyReportSettings') return saveDailyReportSettings(data, auth);
+  if (action === 'sendDailyReportNow')      return sendDailyReportNow(auth);
   if (action === 'getMaterialPacks')   return getMaterialPacks(auth);
   if (action === 'saveMaterialPack')   return saveMaterialPack(data, auth);
   if (action === 'deleteMaterialPack') return deleteMaterialPack(data, auth);

@@ -1,12 +1,27 @@
-// Verifies tooltip edge avoidance (_positionTip / .tip-edge-l / .tip-edge-r) —
-// Jose's report: the dashboard's info icons centre their bubble on themselves,
-// so one sitting near the left or right edge of the window gets its bubble
-// cut off by the viewport instead of staying fully visible.
+// Que la burbuja de un tooltip quepa SIEMPRE, mirando dónde acaba de verdad.
 //
-// WHY THIS ONE EARNS A REAL TEST: it's real layout geometry
-// (getBoundingClientRect against the actual window width) — nothing about
-// "does this icon sit near the edge" is knowable from the CSS or the JS
-// source alone, only from a real render at a real size.
+// Jose lo reportó dos veces, y la segunda enseñó que la primera se había
+// arreglado a medias:
+//
+//   v11.x — un icono cerca del borde de la ventana centraba su burbuja en sí
+//   mismo y la mitad quedaba fuera de la pantalla. Se arregló con dos clases,
+//   .tip-edge-l y .tip-edge-r, que anclaban la burbuja al borde del ICONO.
+//
+//   v11.38 — Jose fotografió los tooltips de Ajustes cortados a media frase y
+//   dibujados a través del texto de debajo. Ninguna clase podía arreglarlo: la
+//   burbuja era `position:absolute` y el panel de ajustes tiene overflow-y:auto,
+//   así que la recortaba su contenedor. Recortar no es apilar, y ningún z-index
+//   lo habría salvado.
+//
+// Ahora es `position:fixed` con coordenadas que escribe _positionTip, lo que la
+// saca de todo overflow de la página y permite además voltearla arriba cuando
+// no cabe debajo.
+//
+// POR ESO ESTA PRUEBA CAMBIÓ DE PREGUNTA. Antes comprobaba que se pusiera la
+// clase correcta, que es un sustituto de lo que importa. Ahora mide la caja: el
+// rectángulo real de la burbuja contra la ventana y contra el panel que la
+// recortaba. Una clase puede estar bien puesta y la burbuja seguir cortada —
+// que es exactamente lo que pasó.
 //
 // Usage:  node tools/test-tooltip-edge.js [path/to/Index_v3_fixed.html]
 
@@ -64,37 +79,74 @@ async function classesOf(page, id) {
   await page.goto('file://' + f);
   await page.waitForTimeout(300);
 
-  console.log('\nScenario: icon near the LEFT edge of the window');
+  // El rectángulo que el navegador dibuja de verdad para el ::after. Es la
+  // única forma de saber dónde acabó: un pseudo-elemento no está en el DOM.
+  async function bubble(id){
+    return page.evaluate((id) => {
+      const el = document.getElementById(id);
+      const cs = getComputedStyle(el, '::after');
+      const w = parseFloat(cs.width), h = parseFloat(cs.height);
+      const x = parseFloat(el.style.getPropertyValue('--tip-x'));
+      const y = parseFloat(el.style.getPropertyValue('--tip-y'));
+      const arriba = el.classList.contains('tip-above');
+      return {
+        left: x - w / 2, right: x + w / 2,
+        top:  arriba ? (y - h) : y,
+        bottom: arriba ? y : (y + h),
+        arriba: arriba, fija: cs.position
+      };
+    }, id);
+  }
+
+  console.log('\nLa burbuja se dibuja fuera de todo overflow');
+  await page.hover('#iconMid');
+  await page.waitForTimeout(80);
+  let b = await bubble('iconMid');
+  check('el tooltip es position:fixed — lo que lo saca del panel que lo ' +
+        'recortaba (' + b.fija + ')', b.fija === 'fixed');
+
+  console.log('\nIcono pegado al borde IZQUIERDO');
   await page.hover('#iconLeft');
   await page.waitForTimeout(80);
-  check('gets tip-edge-l (anchors the bubble to the left, not centred off-screen)',
-    (await classesOf(page, 'iconLeft')).indexOf('tip-edge-l') !== -1);
-  check('does NOT get tip-edge-r', (await classesOf(page, 'iconLeft')).indexOf('tip-edge-r') === -1);
+  b = await bubble('iconLeft');
+  check('la burbuja no se sale por la izquierda (borde en ' + Math.round(b.left) + 'px)',
+    b.left >= 0);
+  check('...y sigue enganchada cerca de su icono, no tirada al centro',
+    b.left < 260);
 
-  console.log('\nScenario: icon in the MIDDLE of the window');
+  console.log('\nIcono en MEDIO');
   await page.hover('#iconMid');
   await page.waitForTimeout(80);
-  const midClasses = await classesOf(page, 'iconMid');
-  check('stays centred — neither edge class applied', midClasses.indexOf('tip-edge-l') === -1 && midClasses.indexOf('tip-edge-r') === -1);
+  b = await bubble('iconMid');
+  check('la burbuja queda centrada sobre su icono, sin correrse',
+    Math.abs((b.left + b.right) / 2 - 508) < 12);
 
-  console.log('\nScenario: icon near the RIGHT edge of the window');
+  console.log('\nIcono pegado al borde DERECHO');
   await page.hover('#iconRight');
   await page.waitForTimeout(80);
-  check('gets tip-edge-r (anchors the bubble to the right, not centred off-screen)',
-    (await classesOf(page, 'iconRight')).indexOf('tip-edge-r') !== -1);
-  check('does NOT get tip-edge-l', (await classesOf(page, 'iconRight')).indexOf('tip-edge-l') === -1);
+  b = await bubble('iconRight');
+  check('la burbuja no se sale por la derecha (borde en ' + Math.round(b.right) +
+        'px de 1000)', b.right <= 1000);
+  check('...y sigue cerca de su icono', b.right > 740);
 
-  console.log('\nScenario: re-hovering the middle icon after the edge ones leaves no leftover edge class');
+  console.log('\nIcono con la ventana acabándose debajo');
+  // La ventana mide 400 de alto; un icono a 380 no tiene sitio para la burbuja.
+  await page.evaluate(() => {
+    const el = document.getElementById('iconMid');
+    el.style.top = '360px';
+    el.style.left = '500px';
+  });
   await page.hover('#iconMid');
   await page.waitForTimeout(80);
-  const midAgain = await classesOf(page, 'iconMid');
-  check('middle icon has no leftover edge class from earlier hovers',
-    midAgain.indexOf('tip-edge-l') === -1 && midAgain.indexOf('tip-edge-r') === -1);
+  b = await bubble('iconMid');
+  check('sin sitio debajo, la burbuja se voltea encima del icono', b.arriba === true);
+  check('...y queda entera dentro de la ventana (arriba en ' + Math.round(b.top) + 'px)',
+    b.top >= 0 && b.bottom <= 400);
 
   check('no page errors', pageErrors.length === 0);
   if (pageErrors.length) pageErrors.forEach(e => console.log('  PAGE ERROR:', e));
 
   await browser.close();
-  console.log('\ntooltip edge avoidance: ' + (fail === 0 ? 'ok' : (fail + ' FAILED')));
+  console.log('\ntooltip fits on screen: ' + (fail === 0 ? 'ok' : (fail + ' FAILED')));
   process.exit(fail === 0 ? 0 : 1);
 })();

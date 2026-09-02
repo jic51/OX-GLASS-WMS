@@ -263,13 +263,36 @@ console.log('\n═══ y se puede encender desde Ajustes ═══\n');
   // esté el servidor. Esto comprueba que las tres funciones del servidor tienen
   // quién las llame y que el panel se dibuja al abrir la pestaña.
   const HTML = fs.readFileSync(path.join(__dirname, '..', 'Index_v3_fixed.html'), 'utf8');
+  const GS   = SRC;
 
   check('la pestaña System dibuja el panel al abrirse',
     /_loadDailyReport\(\);/.test(HTML) &&
     /id="dailyReportBox"/.test(HTML));
 
-  ['getDailyReportSettings', 'saveDailyReportSettings', 'sendDailyReportNow'].forEach(n => {
-    check('la pantalla llama a ' + n, new RegExp('\\.' + n + '\\(').test(HTML));
+  // ESTA COMPROBACIÓN ESTABA MAL ESCRITA Y CONGELÓ UN FALLO REAL.
+  //
+  // Pedía /\.nombre\(/, o sea la llamada DIRECTA google.script.run.nombre(),
+  // y pasaba en verde — porque así estaba escrito. Pero processMovement es
+  // donde el token de sesión se convierte en _verifiedAuth, así que las tres
+  // llegaban al servidor sin autenticar y requireAuth_ contestaba en rojo
+  // "Not authenticated. Please sign in and use the app from its own page."
+  // dentro de un panel al que sólo se llega estando autenticado. Jose lo
+  // fotografió; la prueba llevaba dos versiones diciendo que estaba bien.
+  //
+  // Es exactamente el mismo error que la aserción copiada de _auth. Una
+  // comprobación escrita mirando el código que ya existe no comprueba nada:
+  // repite lo que el código dice de sí mismo.
+  //
+  // Ahora exige lo contrario, y en dos mitades: que la acción viaje por
+  // processMovement, y que NO quede ninguna llamada directa. La segunda es la
+  // que habría atrapado esto.
+  const RPC = ['getDailyReportSettings', 'saveDailyReportSettings', 'sendDailyReportNow'];
+  RPC.forEach(n => {
+    check('la pantalla pide ' + n + ' por processMovement, que es donde va el token',
+      new RegExp("processMovement\\('" + n + "'").test(HTML));
+    check('...y no queda ninguna llamada directa google.script.run.' + n + '()',
+      !new RegExp("\\.\\s*" + n + "\\s*\\(").test(HTML));
+    check('...y el servidor la despacha', new RegExp("action === '" + n + "'").test(GS));
   });
 
   check('el panel ofrece las 24 horas, no una lista corta que obligue a ' +
