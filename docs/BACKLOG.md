@@ -36,6 +36,50 @@ mismo palabra por palabra o quedan dos promesas distintas por escrito, las dos
 firmadas. Comparar contra `docs/SOPORTE-Y-DEVOLUCIONES.md` antes de dar por
 buena la redacción.
 
+---
+
+### ⛔ REVISADO (2026-09-01) — y el riesgo era real. TRES CHOQUES. Decidir antes de redactar.
+
+Las respuestas de Jose contradicen `legal/TERMS-OF-SERVICE.md`, que **ya está
+publicado en acopio.net Y va dentro de la app de cada cliente** (LEGAL_DOCS).
+Escribir la política encima de esto produciría dos promesas firmadas distintas,
+que es peor que no tener ninguna.
+
+| | Términos (§9, publicado) | Jose (31/08) |
+|---|---|---|
+| Impago | Stripe reintenta → día 10 correo personal → **día 30 se pausa** el soporte | **3 días de gracia** |
+| Reactivación | "**with no reconnection fee**" | **+$150** pasados 2 meses |
+| Volver tras irse | "treated as a **new customer**… **includes the setup fee**" | ≤2 meses sin cargo · >2 meses +$150 · >12 meses instalación nueva |
+| Plazo de devolución | "within **10 business days**" | **5 a 10** días hábiles |
+
+**Mi lectura, punto por punto:**
+
+1. **Los 3 días son un error y hay que decírselo.** Los reintentos de Stripe se
+   reparten a lo largo de ~2 semanas. Una tarjeta que falla el día 1 y entra el
+   día 5 es completamente normal — banco, tarjeta renovada, límite temporal. Con
+   3 días ese cliente queda cortado por un cobro que iba a entrar solo. Se
+   castiga al que se porta bien por lo que hizo su banco. La escalera que ya
+   está escrita (reintentos → día 10 correo personal → día 30 pausa) es mejor y
+   ya está firmada.
+
+2. **La escalera de reactivación de Jose es MEJOR que lo publicado, y conviene
+   adoptarla.** Hoy los Términos dicen que quien vuelve paga la instalación otra
+   vez: **$500**. Lo de Jose es más barato para el cliente y más defendible.
+   Cambiarlo es mejorar la promesa, no recortarla.
+
+3. **Los 5–10 días** son compatibles: 10 sigue siendo el techo. Se unifica
+   diciendo "entre 5 y 10 días hábiles".
+
+**Y el detalle que hace urgente decidirlo:** los propios Términos dicen que un
+cambio se avisa **con 30 días de antelación** a los clientes existentes. Jose no
+tiene clientes todavía, así que cambiarlos hoy es gratis. Dentro de tres meses,
+con clientes firmados, no lo será.
+
+**Cambiar los Términos no es editar un archivo.** `legal/TERMS-OF-SERVICE.md` es
+la fuente, pero el texto está DUPLICADO dentro de `Code_v3_fixed.gs`
+(LEGAL_DOCS) porque cada cliente corre su copia y no tiene a dónde enlazar. Hay
+que correr `node tools/sync-legal.js` y volver a desplegar, o `--check` falla.
+
 **Para arrancar sin construir nada:** enlace de pago de Stripe mandado por
 correo. Sin integración, sin webhooks, sin código. Cuando haya diez clientes y
 renovaciones que perseguir, ahí se automatiza — y para entonces se sabrá qué
