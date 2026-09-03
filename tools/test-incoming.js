@@ -100,8 +100,14 @@ check('the three states are exactly the three the dropdown offers',
   // The dropdown in the HTML is the other end of the contract. If somebody
   // adds a fourth option there, the normaliser silently turns it into Pending
   // — so the two lists have to be checked against each other, not assumed.
-  const sel = HTML.slice(HTML.indexOf('<select id="incStatus">'),
-                         HTML.indexOf('</select>', HTML.indexOf('<select id="incStatus">')));
+  // Se busca la etiqueta SIN el '>' de cierre: en v11.42 el select ganó un
+  // onchange y la búsqueda literal de '<select id="incStatus">' dejó de
+  // encontrar nada — indexOf devolvía -1, el slice salía de cualquier parte del
+  // archivo, y la comprobación pasó a hablar de un texto que no era el menú.
+  // Una prueba que no encuentra lo que mide no falla: mide otra cosa.
+  const at = HTML.indexOf('<select id="incStatus"');
+  if (at === -1) throw new Error('no se encontró el menú de estado de Incoming');
+  const sel = HTML.slice(at, HTML.indexOf('</select>', at));
   const opts = (sel.match(/value="([^"]+)"/g) || []).map(s => s.slice(7, -1));
   check('every option the form offers is a status the server accepts',
     opts.length === 3 && opts.every(o => st(o) === o));

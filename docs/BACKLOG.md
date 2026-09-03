@@ -443,6 +443,36 @@ Diseño acordado, para cuando se retome:
 
 ---
 
+~~**IDEA DE JOSE (v11.29) — de "Mark arrived" a Entry sin volver a escribir
+nada.**~~ ✅ **Hecho (v11.42).** La pregunta va DENTRO de la ventana de la
+entrega, no en un popup después de guardar — la recomendación de abajo era la
+correcta. Aparece sólo con estado Arrived y viene marcada.
+
+**Lo que queda vivo de esto, y hay que arreglarlo cuando se pueda:** la lista de
+"llegó y falta su entrada" vive en `localStorage`, o sea **por navegador**.
+Quien marque la llegada en el teléfono no verá la tarjeta en el escritorio.
+
+Se eligió a sabiendas frente a las dos alternativas. Guardarlo en la hoja pide
+columna nueva, endpoint nuevo y un viaje al servidor por cada "más tarde", para
+un recordatorio que casi siempre se atiende en dos minutos. Y **deducirlo** —
+"toda entrega Arrived sin su Entry"— sería lo correcto y hoy no se puede:
+emparejar una entrega con un movimiento es adivinar por nombre y cantidad, y
+adivinar mal ahí significa decirle a alguien que le falta una entrada que ya
+hizo.
+
+**Cuando el rediseño del modelo de movimientos ate las dos cosas, esto se
+vuelve derivable y localStorage sobra.** Es una razón más para hacer ese
+rediseño, y va anotada aquí para que no se pierda.
+
+Y una decisión que NO hay que deshacer: **el estante no se rellena.** La app
+sabe cuánto llegó; no sabe dónde lo pusieron. Un estante de relleno —el último
+usado, el primero de la lista— produce inventario que dice estar en un sitio
+donde nadie miró. `tools/test-arrived-to-entry.js` lo fija.
+
+---
+
+**El texto original de la idea, para referencia:**
+
 **IDEA DE JOSE (v11.29) — de "Mark arrived" a Entry sin volver a escribir nada.**
 Al guardar un material como *arrived*, la app debe preguntar si se quiere crear
 el **Entry** de ese material. Al aceptar se abre la ventana de movimiento **sólo

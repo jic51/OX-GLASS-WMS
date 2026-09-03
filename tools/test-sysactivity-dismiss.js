@@ -122,6 +122,10 @@ const fe = vm.createContext({
   _sysDismissedNow: {},
   _sysCards: null,
   _renderSysDeck: function () {},
+  // v11.42: _announceSystemActivity repinta también las tarjetas de "entrada
+  // pendiente", que son la tercera clase del mazo. Sin este doble el sandbox
+  // lanzaba ReferenceError y la prueba entera moría antes de comprobar nada.
+  _renderTodoDeck: function () {},
   console: console,
 });
 vm.runInContext('var _sysCards;' + announce, fe);
