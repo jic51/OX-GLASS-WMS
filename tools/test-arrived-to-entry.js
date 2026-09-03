@@ -31,6 +31,13 @@ function check(label, cond) {
   else { fail++; console.log('  FAIL ', label); }
 }
 
+// La regla tal cual está en el archivo. Reescribirla aquí probaría la copia.
+function cssRule(selector){
+  const i = SRC.indexOf(selector + '{');
+  if (i === -1) throw new Error('no encontrada la regla: ' + selector);
+  return SRC.slice(i, SRC.indexOf('}', i) + 1);
+}
+
 function fnSrc(name){
   const start = SRC.indexOf('function ' + name + '(');
   if (start === -1) throw new Error('no encontrada: ' + name);
@@ -213,6 +220,45 @@ const ENTREGA = {
   check('...relleno con el material de la tarjeta', r.name === ENTREGA.name);
   check('la tarjeta se retira de la lista guardada', r.quedan === 0);
   check('...y del mazo', r.cardsEnPantalla === 0);
+
+  console.log('\n═══ la tarjeta se puede LEER ═══\n');
+  {
+    // Jose lo fotografió: la tarjeta salía translúcida siempre, con la tabla de
+    // debajo leyéndose a través del texto. Le faltaba el fondo — sólo declaraba
+    // el borde izquierdo, así que heredaba del montón el de reposo y no lo
+    // recuperaba nunca.
+    //
+    // Esto se mide con la regla REAL sacada del archivo, no con una copia: una
+    // copia probaría la copia.
+    const reglas = cssRule('    .todo-card') + '\n' +
+                   cssRule('    .deck.dim:not(.open) .todo-card');
+    const q = await p.evaluate((css) => {
+      const st = document.createElement('style');
+      st.textContent = ':root{--card:#FFFFFF;--card-ghost:rgba(255,255,255,.52);' +
+                       '--text:#1a1a2e;--border:#E5E7EB;--yellow:#D97706}\n' + css;
+      document.head.appendChild(st);
+      const deck = document.getElementById('cornerDeck');
+      const card = document.querySelector('.todo-card') ||
+                   (function(){ const d = document.createElement('div');
+                     d.className = 'deck-card todo-card'; deck.appendChild(d); return d; })();
+      const leer = () => getComputedStyle(card).backgroundColor;
+      deck.className = "deck";                       // despierta
+      const abierta = leer();
+      deck.className = 'deck dim';                   // en reposo, cerrada
+      const reposo = leer();
+      deck.className = 'deck dim open';              // en reposo pero abierta
+      const abiertaDim = leer();
+      return { abierta: abierta, reposo: reposo, abiertaDim: abiertaDim };
+    }, reglas);
+
+    check('en reposo, dentro de la pila, es translúcida — para no competir con ' +
+          'la app (' + q.reposo + ')', /rgba\(255, 255, 255, 0\.52\)/.test(q.reposo));
+    check('pero al ABRIR la pila es papel blanco, que es lo que se puede leer (' +
+          q.abiertaDim + ')', q.abiertaDim === 'rgb(255, 255, 255)');
+    check('...y también con la pila despierta', q.abierta === 'rgb(255, 255, 255)');
+    check('es el mismo trato que las tarjetas del sistema, no un caso aparte',
+      /\.deck\.dim:not\(\.open\) \.sys-card/.test(SRC));
+  }
 
   console.log('\n═══ y si el navegador no deja guardar nada ═══\n');
   r = await p.evaluate(() => {
