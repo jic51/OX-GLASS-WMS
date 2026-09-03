@@ -1,5 +1,18 @@
 # Soporte y devoluciones — cómo aplicarlo
 
+> **PRIVADO. Este archivo NO se publica, y hubo que aprender por qué.**
+>
+> Estuvo publicado en acopio.net durante semanas, como `docs/soporte.html`. No
+> filtraba ningún secreto —por eso los dos candados lo dejaron pasar— pero está
+> escrito para Jose: dice qué contestarle a un cliente molesto, marca qué
+> plazos son propuesta y qué decisión suya, y deja por escrito que está por
+> decidir si factura como persona natural o como LLC. Cualquier cliente podía
+> leer que la política que estaba aceptando aún se estaba discutiendo.
+>
+> Lo reemplaza `docs/SOPORTE-Y-PAGOS.md`, escrito al cliente. Y
+> `tools/test-site-privacy.js` tiene desde el 01/09 un candado nuevo que
+> pregunta lo que los otros dos no podían: **a quién va dirigida la página.**
+
 > **El texto que obliga son los Términos** (`legal/TERMS-OF-SERVICE.md`,
 > secciones 5 y 9), que es lo que el cliente acepta al marcar la casilla. Este
 > documento es para Jose: la misma política en lenguaje de trabajo, con los
@@ -96,8 +109,8 @@ escrito previo.
   arreglas en 30 días desde que lo reportaron, se devuelve el período completo
   sin importar las fechas. Nadie debe pagar un mes en el que no funcionó.
 
-Las devoluciones se hacen por el mismo medio de pago, dentro de **10 días
-hábiles** de acordadas.
+Las devoluciones se hacen por el mismo medio de pago, **entre 5 y 10 días
+hábiles** de acordadas. (Jose, 01/09.)
 
 > **Los 14 días, los meses enteros y los 30 días son propuesta mía**, no
 > decisión de Jose. Él dijo "depende del caso y la fecha"; eso no se puede
@@ -141,8 +154,10 @@ Ya está en los Términos, sección 9:
     ponga al día. **La app sigue funcionando** y conservan todos sus datos.
   - **Nunca se retienen sus datos para cobrar.** No son nuestros para
     retenerlos, y la exportación queda disponible pase lo que pase.
-- Al pagar, soporte y versiones vuelven de inmediato, **sin cargo de
-  reconexión**.
+- Al pagar, soporte y versiones vuelven de inmediato. **Lo que cuesta volver
+  depende sólo de cuánto tiempo estuvo la cuenta sin pagar** — ver "Volver
+  después de una pausa" más abajo. Esto cambió el 01/09: antes prometía "sin
+  cargo de reconexión".
 
 ### Por qué Stripe desde el primer cliente es la decisión correcta
 
@@ -173,11 +188,33 @@ facturas (persona natural o LLC), y si hay que cobrar impuesto sobre las ventas
 de software en Utah y en el estado del cliente. Averígualo antes del primer
 cobro.
 
-### Volver después de irse
+### Volver después de una pausa
 
-**Quien se va y regresa, vuelve como cliente nuevo.** Precios vigentes, y
-ningún precio promocional o fundador que hubiera tenido regresa con él —
-incluida la instalación, si hay que hacerla otra vez. Decisión de Jose.
+**Cambiado el 01/09 por Jose, y es MÁS BARATO para el cliente que antes.** La
+versión anterior lo trataba como cliente nuevo, o sea la instalación otra vez:
+$500. Ahora depende sólo de cuánto tiempo estuvo fuera, y da igual si la pausa
+fue por impago o por cancelación:
+
+| Fuera | Para volver |
+|---|---|
+| Hasta 2 meses | Los meses que debe. Nada más. |
+| Más de 2 meses | Los meses que debe, más **$150** de puesta al día. |
+| Más de 12 meses | Instalación nueva, a precios vigentes. |
+
+**Cómo explicárselo si pregunta por los $150:** no es una multa por irse. Una
+instalación pausada deja de recibir los arreglos y las versiones que reciben
+las demás, así que hay que ponerla al día antes de poder darle soporte — y eso
+es trabajo. Por debajo de dos meses casi nunca hay nada de eso, y por eso no se
+cobra. Esa frase está en los Términos, así que se puede citar tal cual.
+
+**Ningún precio promocional o fundador regresa**, en ninguno de los tres casos.
+
+**Los 3 días de gracia que Jose había propuesto no se implementaron, y él
+estuvo de acuerdo.** Los reintentos de Stripe se reparten a lo largo de unas
+dos semanas: una tarjeta que falla el día 1 y entra el día 5 es normal, y con 3
+días ese cliente quedaba cortado por un cobro que iba a entrar solo. Se
+mantiene la escalera de la sección 6 — reintentos, día 10 correo personal, día
+30 pausa.
 
 ---
 

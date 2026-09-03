@@ -120,7 +120,15 @@ console.log('\n═══ the papers that must never be published ═══\n');
     'UNIDADES-Y-CONVERSIONES':'internal design note',
     'FINDING-drive-file':   'internal research note',
     'LANDING':              'the plan for this very site',
-    'WELCOME-EMAIL':        'the template Jose sends, not something to publish'
+    'WELCOME-EMAIL':        'the template Jose sends, not something to publish',
+    // Estuvo PUBLICADO hasta el 01/09, aprobado en la lista y sin que ninguno
+    // de los dos candados chistara: no filtra ningún secreto, filtra el
+    // DESTINATARIO. Es el manual de Jose —"casos que van a aparecer y qué
+    // contestar", qué plazos son propuesta y qué decisión suya, si factura como
+    // persona natural o como LLC— leído por el comprador. Lo reemplaza
+    // SOPORTE-Y-PAGOS.md, escrito para el cliente.
+    'SOPORTE-Y-DEVOLUCIONES':'Jose\'s own playbook: what to answer when a customer complains, ' +
+                            'which deadlines are proposals, and whether he has an LLC yet'
   };
   const leaked = Object.keys(NEVER).filter(stem =>
     built.some(f => f.toUpperCase().indexOf(stem.toUpperCase()) !== -1));
@@ -202,6 +210,61 @@ console.log('\n═══ lock 2 — what the published files actually say ══
           (hits.length ? ' — found in: ' + hits.join(', ') : ''), hits.length === 0);
   });
 
+  // ── WHO IS THIS WRITTEN TO? ───────────────────────────────────────────
+  //
+  // The leak neither lock could see, found on 2026-09-01.
+  //
+  // docs/SOPORTE-Y-DEVOLUCIONES.md was published for weeks. It carries no
+  // secret — no credential, no property name, no margin — so lock 2 had nothing
+  // to grep for. And it was NAMED in build-site.js, deliberately, because the
+  // reasoning was right: a promise nobody can read is not a promise. So lock 1
+  // waved it through too.
+  //
+  // What was wrong was the READER. Its first line says "Este documento es para
+  // Jose". It has a section called "Casos que van a aparecer, y qué contestar".
+  // It marks which deadlines are my proposal rather than his decision, and it
+  // says in writing that he has not yet decided whether to invoice as a person
+  // or as an LLC. Every customer could read the seller's own playbook, and see
+  // that the policy they were agreeing to was still being argued about.
+  //
+  // So this asks the question the other two cannot: does a published page
+  // address the SELLER? A document written to Jose says "Jose" in the second
+  // person, tells him what to answer, and marks its own open decisions. Those
+  // are the phrases, not a vague tone check — a guard that needs judgement is a
+  // guard that gets argued with.
+  {
+    const SELLER_FACING = [
+      [/\bpara Jose\b/i,                  'says out loud that it is written for Jose'],
+      [/qu[eé] contestar/i,                'tells the seller what to answer a customer'],
+      [/propuesta m[ií]a/i,                'marks its own policy as not yet decided'],
+      [/decisi[oó]n de Jose|decidi[oó] Jose/i, 'discusses whose decision a clause was'],
+      [/\bno lo puedo hacer yo\b/i,        'assigns homework to the seller'],
+      [/\bLLC\b/,                          'the seller\'s own company structure, undecided'],
+      [/lo que falta decidir/i,             'a list of things still undecided']
+      // Había un octavo patrón, /v11\.\d+/, para los números de versión usados
+      // como cita ("decidido por Jose (v11.23)"). Se quitó en su primera
+      // corrida: marcó changelog.html y novedades.html, que SON listas de
+      // versiones — ahí el número es el contenido.
+      //
+      // No se arregló acotándolo a esas dos páginas, porque el patrón no
+      // distinguía la cita del listado y sólo iba a volver a marcar la próxima
+      // página que hablara de versiones. Lo que sí es fuga —atribuir una
+      // cláusula a una decisión interna— ya lo atrapa /decisión de Jose/.
+      //
+      // Un candado que marca contenido legítimo es un candado que alguien
+      // borra, y con él se van los siete que sí servían.
+    ];
+    const talking = [];
+    corpus.filter(c => /\.html$/.test(c.f)).forEach(c => {
+      SELLER_FACING.forEach(([re, what]) => {
+        if (re.test(c.t)) talking.push(c.f + ' — ' + what);
+      });
+    });
+    check('no published page is written TO the seller instead of the customer' +
+          (talking.length ? '\n         ' + talking.join('\n         ') : ''),
+      talking.length === 0);
+  }
+
   // ── The one endpoint that is meant to be public ───────────────────────
   // A /exec address on a public page IS the address of a live Apps Script
   // deployment, and the rule that bans them is right: every customer install
@@ -267,7 +330,12 @@ console.log('\n═══ lock 2 — what the published files actually say ══
   // acopio, pero puedes poner joseisrael5101@gmail.com por ahora." Replacing
   // it later is one line here and three in the sources.
   const CONTACT_EMAIL = 'joseisrael5101@gmail.com';
-  const MAY_CARRY_CONTACT = ['index.html', 'terms.html', 'privacy.html'];
+  // docs/soporte.html se sumó el 01/09, y sólo después de que este candado lo
+  // rechazara — que es el arreglo funcionando. Es la página que PROMETE
+  // respuesta en un día hábil; una promesa de contestar sin decir a dónde
+  // escribir es media promesa.
+  const MAY_CARRY_CONTACT = ['index.html', 'terms.html', 'privacy.html',
+                             'docs/soporte.html'];
 
   const carriers = corpus.filter(c => c.t.indexOf(CONTACT_EMAIL) !== -1).map(c => c.f);
   check('the contact address is on the pages where a reader looks for it (' +

@@ -204,9 +204,34 @@ console.log('\nWhat the support and refund promises actually say');
     ['a failed payment PAUSES support rather than the software', /support and new versions/i],
     ['...and the software is never switched off over money', /Nothing is switched off, at any point/i],
     ['...and data is never held hostage for payment', /never withhold your data to get paid/i],
-    ['...with no reconnection fee once it is settled', /no reconnection fee/i],
-    ['coming back after leaving means current prices', /treated as a new customer/i],
-    ['...and no promotional or founding rate returns', /does not come back/i]
+    // Estas tres cambiaron el 01/09, con la decisión de Jose, y las tres
+    // aserciones se reescribieron con ellas — no se aflojaron.
+    //
+    // Antes los Términos prometían "no reconnection fee" y trataban a quien
+    // volvía como cliente nuevo, o sea con la instalación otra vez: $500. La
+    // escalera nueva es MÁS BARATA para el cliente (nada hasta 2 meses, $150
+    // después, instalación nueva pasado el año), así que esto es mejorar la
+    // promesa y no recortarla.
+    //
+    // Lo que se exige ahora es que los tres escalones estén escritos. Un
+    // contrato que dice "un cargo adicional" sin decir cuánto no es un
+    // contrato: es una discusión aplazada hasta el día en que alguien la
+    // pierda.
+    // Escrito como LISTA y no como tabla, y eso no es estilo: sync-legal.js no
+    // convierte tablas, así que la de la primera versión llegó a la copia de la
+    // app como un párrafo lleno de barras y guiones. Un cliente leyendo el
+    // contrato DENTRO de su app habría visto eso. El contrato tiene que leerse
+    // bien en las tres copias, no sólo en el .md.
+    ['coming back is priced by how long you were away, and all three steps are written',
+      /Up to 2 months away/i],
+    ['...including the number, so "an extra charge" is never left to a conversation',
+      /\$150/],
+    ['...and the twelve-month line, after which it is a new installation',
+      /More than 12 months/i],
+    ['...and no promotional or founding rate returns', /comes? back with you/i],
+    // Y la razón, que es lo que hace que el cargo no se lea como castigo.
+    ['...and the $150 says what it pays for, not just that it is due',
+      /brought forward|up to date/i]
   ];
   for (const [label, re] of promises) {
     const missing = all.filter(([, text]) => !re.test(text)).map(([name]) => name);

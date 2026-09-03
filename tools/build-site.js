@@ -80,9 +80,28 @@ const DOCS = [
   { src: 'docs/VISTA-POR-PASILLO.md',       out: 'docs/vista-por-pasillo.html',
     title: 'La vista por pasillo', lang: 'es',
     why: 'Explains a feature to the person using it. No internals.' },
-  { src: 'docs/SOPORTE-Y-DEVOLUCIONES.md',  out: 'docs/soporte.html',
-    title: 'Soporte y devoluciones', lang: 'es',
-    why: 'This is a PROMISE to the customer. A promise nobody can read is not one.' },
+  // SOPORTE-Y-DEVOLUCIONES.md YA NO SE PUBLICA, Y ESO ERA UNA FUGA.
+  //
+  // Estaba en esta lista, y la idea era correcta: una promesa que nadie puede
+  // leer no es una promesa. Pero el documento equivocado. Su primera línea dice
+  // "Este documento es para Jose", tiene una sección titulada "Casos que van a
+  // aparecer, y qué contestar", marca qué plazos son propuesta mía y qué es
+  // decisión suya, y deja por escrito que está por decidir si factura como
+  // persona natural o como LLC. Todo eso estuvo público en acopio.net.
+  //
+  // Ninguno de los dos candados lo vio: el primero sólo pregunta qué archivos
+  // se publicaron —y este estaba en la lista, aprobado— y el segundo busca
+  // secretos y no encuentra ninguno, porque no hay. La fuga no era un dato: era
+  // el DESTINATARIO. Un documento dirigido al vendedor, leído por el comprador.
+  //
+  // SOPORTE-Y-PAGOS.md es el reemplazo, escrito para el cliente, y trae además
+  // la política de cobro que faltaba. El manual de Jose se queda privado, que
+  // es donde sirve.
+  { src: 'docs/SOPORTE-Y-PAGOS.md',         out: 'docs/soporte.html',
+    title: 'Soporte y pagos', lang: 'es',
+    why: 'The customer half: what it costs, when, and what happens if something ' +
+         'goes wrong. A promise nobody can read is not one — but it has to be ' +
+         'written TO them.' },
   { src: 'legal/TERMS-OF-SERVICE.md',       out: 'terms.html',
     title: 'Terms of Service', lang: 'en',
     why: 'Has to be public — the app links to it from its own footer.' },

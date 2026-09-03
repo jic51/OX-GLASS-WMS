@@ -197,8 +197,8 @@ system to your categories and racks, loading your team, and training you.
   current period is refunded in full whatever the dates say. You should not
   pay for a month in which it did not work.
 
-Refunds are issued by the method you paid with, within 10 business days of
-being agreed.
+Refunds are issued by the method you paid with, **within 5 to 10 business
+days** of being agreed.
 
 ### Add-ons
 
@@ -240,15 +240,31 @@ recurring charge. What actually happens:
 4. **We never withhold your data to get paid.** It is not ours to withhold,
    and export stays available whatever the state of your account.
 
-Settle the account and support and updates resume immediately, with no
-reconnection fee.
+Settle the account and support and updates resume immediately. What that
+costs depends only on how long the account was unpaid — see the next section.
 
-### Coming back after leaving
+### Coming back after a pause, or after leaving
 
-If you cancel and later want to return, you are treated as a new customer:
-current prices, and any promotional or founding rate you previously had does
-not come back. That includes the setup fee if the installation has to be done
-again.
+Support and updates can be paused for two reasons: an unpaid account, or you
+cancelling. What it takes to start again is the same either way, and it depends
+on one thing only — **how long you were away**:
+
+- **Up to 2 months away** — you pay the months you owe. Nothing extra.
+- **More than 2 months away** — the months you owe, plus **$150** to bring the installation up to date.
+- **More than 12 months away** — treated as a new installation, at current prices.
+
+The $150 is not a penalty for leaving. While an account is paused you stop
+receiving the fixes and new versions everyone else gets, so an installation
+that has been paused for months has to be brought forward before it is
+supportable again — and that is real work. Under two months there is normally
+none of it, which is why there is no charge.
+
+**No promotional or founding rate comes back with you**, in any of the three
+cases.
+
+**Nothing about your data changes while an account is paused.** The software
+keeps running in your own Google account, your records stay yours, and export
+stays available. See section 5.
 
 ## 10. Termination
 
