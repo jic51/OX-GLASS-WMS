@@ -30,7 +30,16 @@ function slice(from, to, label){
 // I can write one that passes.
 const code = [
   slice('function _he(', '\n', '_he'),
-  slice('function _btnBusy(', '\nfunction showToast(', '_btnBusy…_btnDone'),
+  // Desde _btnHideSiblings, no desde _btnBusy: los ayudantes que esconden los
+  // botones vecinos (v11.34) están ENCIMA de _btnBusy y _btnBusy los llama, así
+  // que cortar desde _btnBusy construía una página que lanzaba
+  // "_btnHideSiblings is not defined" en cuanto se pulsaba algo.
+  //
+  // Llevaba rota desde la v11.34 y no se vio porque las tandas de pruebas de
+  // navegador se corrieron por lotes elegidos a mano, y a ésta le tocó antes
+  // del cambio. Es el mismo corte que hubo que arreglar en test-button-states,
+  // y la segunda vez que el mismo descuido pasa por dos sitios distintos.
+  slice('function _btnHideSiblings(', '\nfunction showToast(', '_btnHideSiblings…_btnDone'),
   slice('function _doDeleteIncomingItem(', '// ── Read an email into expected deliveries', '_doDeleteIncomingItem')
 ].join('\n');
 
