@@ -5,6 +5,67 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+**PRUEBA DE CONCURRENCIA HECHA — Jose, 2026-09-04, tres cuentas.** El resultado
+de fondo es bueno: **la app no se corrompió**. Cuando dos personas escribían a
+la vez, la segunda recibió "el sistema está ocupado, vuelve a intentar" en vez
+de pisar el dato. Ese era el riesgo grande y no se materializó.
+
+Lo que Jose encontró, en sus palabras:
+
+1. **No se ven los movimientos de otros sin recargar.** "Si no cambio o
+   actualizo la página, nunca se ven los movimientos de otros usuarios, pero no
+   quiero que la app se actualice ni haga refresh, solo que muestre lo que es
+   nuevo o ha cambiado, nada más." Es la pieza que falta para que tres personas
+   trabajen a la vez sin pisarse: hoy cada quien ve su propia foto del almacén
+   hasta que recarga.
+2. **El aviso de "sistema ocupado" sale donde no se está mirando.** Hoy es un
+   toast arriba de la pantalla mientras la persona tiene los ojos en el botón
+   de Guardar. Debe decirlo **el botón mismo**, no volver a su estado normal
+   como si no hubiera pasado nada.
+3. **La velocidad de respuesta de la app hacia el usuario.** Anotado por él
+   mismo como "para la lista", no urgente.
+
+**LAS TARJETAS DEL DASHBOARD SE RECARGAN EN CADA CAMBIO — Jose (2026-09-04).**
+Su imagen 1: las tarjetas en esqueleto y "Connecting to Google Sheets... this
+may take 10-20 seconds" después de un cambio.
+
+**Ya está diagnosticado y NO hace falta inventar nada:** `loadDataFromGoogle`
+tiene tres modos, y los tres existen ya en el código. `(false)` enseña lo
+cacheado al instante y no parpadea; `(true, true)` recarga en silencio;
+`(true)` —sin el segundo argumento— pinta los esqueletos y el mensaje de los
+20 segundos. **Hay nueve llamadas del tercer tipo** (líneas aprox. 4519, 5843,
+8536, 9295, 9798, 14487, 15397, 16985 y la de arranque). El arreglo es
+revisarlas una a una y decidir cuáles merecen de verdad la pantalla de carga —
+la de arranque sí, casi ninguna otra— y pasar el resto al modo silencioso. No
+es un rediseño, es una auditoría de nueve sitios.
+
+**LOGO COMPLETO DE ACOPIO — Jose (2026-09-04).** Dos sitios distintos:
+- **Al abrir la app la primera vez** (el cliente que la acaba de instalar).
+- **Un segundo al abrir la página web**, antes de cargar el resto.
+
+**EL SITIO NO ENSEÑA NI UNA IMAGEN DE LA APP — Jose (2026-09-04).** "Dice mucho
+pero no muestra ninguna foto o imagen de la app." Quiere un GIF o video corto en
+bucle en la landing, e imágenes de la app en la guía de instalación
+(`docs/instalacion.html`). **Esto necesita capturas reales de la instalación de
+Jose**, y hay que decidir antes qué se puede enseñar: una captura del dashboard
+lleva nombres de obra, de proveedor y cantidades reales de OX Glass. O se usan
+datos de ejemplo o se difuminan.
+
+**LA PERSONA EN CADA MOVIMIENTO — Jose (2026-09-04).** Nombre encima del correo,
+el nombre en negrita y más grande, el correo debajo en gris (casi el color
+actual). Y al pasar el ratón, un globo con botones: **mandar correo**,
+**videollamada por Google Meet**, y **chat**.
+
+**Sobre el chat, que es la parte que hay que decidir antes de prometerla:** un
+chat dentro de la app es posible pero NO es una función pequeña. Necesita hoja
+propia, sondeo constante contra Apps Script (que tiene cuota diaria de tiempo de
+ejecución) y avisos. Correo y Meet, en cambio, son **enlaces** —`mailto:` y
+`meet.google.com/new`— o sea prácticamente gratis y funcionan hoy. Recomendación:
+hacer los dos enlaces ya, y tratar el chat como una decisión aparte.
+
+**LA VELOCIDAD DE RESPUESTA — Jose (2026-09-04).** Anotada por él mismo como no
+urgente. Va con el punto 3 de la concurrencia.
+
 **JOSE (2026-09-04): LA POLÍTICA DE COBRO NO ES URGENTE.** Palabras suyas: "PON
 EN LA LISTA LO QUE NO ES IMPORTANTE AHORA." Baja de "lo que bloquea vender" a
 esta lista, y todo lo que sigue se queda escrito tal cual para cuando se

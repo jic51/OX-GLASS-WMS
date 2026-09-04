@@ -85,6 +85,143 @@
 <main class="wrap">
 
   <section class="month">
+    <h2>September 2026</h2>
+    <p class="sub">A report that arrives on its own every evening, deliveries
+       laid out like a week instead of a list, and marking one arrived now fills
+       in its entry for you. Plus a run of small things that were quietly
+       wrong: a header that scrolled away, tooltips cut off at the edge, and a
+       morning reminder that never admitted you had dealt with it.</p>
+
+    <div class="entry">
+      <span class="ver">v11.42 – v11.45</span>
+      <span class="tag new">New</span>
+      <h3>Mark a delivery arrived, and its entry is already filled in</h3>
+      <p>The app already knew what was arriving, how much, from which supplier
+         and under which PO. Marking it arrived used to mean typing all of it
+         again on the entry screen — which is exactly where what was expected
+         and what got recorded start to differ.</p>
+      <p>Now marking it arrived offers to record the entry, and opens it with
+         everything the delivery already knew. <b>The rack is left empty on
+         purpose</b>: the app knows how much arrived, not where it was put, and a
+         filler rack would be stock claiming to sit somewhere nobody looked.</p>
+      <p>If you don't do it right away, a card waits in the corner of the screen
+         until you do. It stays there if you open the entry and close it without
+         saving — only a saved entry clears it.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.44</span>
+      <span class="tag fix">Fixed</span>
+      <h3>The header stayed put on a phone and scrolled away on a computer</h3>
+      <p>The tabs and the account menu are meant to stay at the top of the
+         screen. On any screen wide enough to show the compact header — which is
+         to say every desktop — they scrolled away with the page instead. Two
+         rules were fighting over it and the wrong one was winning, on exactly
+         the screens most people use.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.43</span>
+      <span class="tag fix">Fixed</span>
+      <h3>The morning reminder never admitted you had dealt with it</h3>
+      <p>The list of this week's arrivals that greets you in the morning stayed
+         on screen showing deliveries you had just marked as arrived. It was
+         deciding whether a delivery was still waiting by looking for a status
+         the app has never produced, so nothing ever counted as done.</p>
+      <p>It now closes itself when the last one is handled, and keeps showing
+         the rest when there are more.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.41</span>
+      <span class="tag new">New</span>
+      <h3>The week's deliveries, laid out like a week</h3>
+      <p>Expected deliveries were a list. They are now seven cards — four across
+         the top, three below — all the same size, the way a calendar week
+         looks. A busy day scrolls inside its own card instead of stretching it
+         and pushing the other days out of shape, so the shape of the week stays
+         readable no matter how uneven it is.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.40</span>
+      <span class="tag safe">Terms</span>
+      <h3>What happens if you stop paying, written down plainly</h3>
+      <p>The Terms now say exactly what happens when a subscription lapses and
+         what it costs to come back, instead of leaving it to be decided case by
+         case. Refunds are stated as one timeframe — 5 to 10 business days — in
+         every document that mentions them.</p>
+      <p>What has not changed, and is worth repeating: <b>your data is yours and
+         lives in your own Google spreadsheet.</b> Stopping payment does not take
+         away your information or the app you have installed. You lose support
+         and updates, nothing else.</p>
+    </div>
+      <div class="entry">
+      <span class="ver">v11.39</span>
+      <span class="tag fix">Fixed</span>
+      <h3>Help text you could not finish reading</h3>
+      <p>The small ⓘ explanations were being cut off at the edge of the window,
+         and near the bottom of the screen they opened downward into nothing.
+         They now stay inside the window wherever they are, and flip above the
+         icon when there is no room below.</p>
+      <p>Settings also grew: on a large screen it now uses the room it has
+         instead of staying at the width of a small laptop.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.37 – v11.38</span>
+      <span class="tag fix">Fixed</span>
+      <h3>Opening Settings stopped looking like the app was reloading</h3>
+      <p>Every time you opened Settings — and every time you switched tabs
+         inside it — the whole page blanked and rebuilt itself. It now shows
+         what it already knows immediately and quietly replaces only what
+         actually changed. If nothing changed, nothing moves. And if you are
+         typing in a field when fresh data arrives, it waits until you are done
+         rather than redrawing under your hands.</p>
+      <p>Each area of Settings is now boxed and labelled, so it reads as
+         separate things rather than one long column of controls.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.35 – v11.36</span>
+      <span class="tag new">New</span>
+      <h3>A daily report of what moved, sent to you every evening</h3>
+      <p>At an hour you choose, the app emails a summary of the day: what came
+         in, what went out, what was corrected, and who did it. If nothing moved
+         it says so in one line rather than sending an empty table — a quiet day
+         is information too.</p>
+      <p>You pick the hour and who else receives it in <b>Settings → System</b>.
+         Costs are never included, whatever the recipient's role: a report
+         forwarded outside the company should not be the way a supplier price
+         gets out.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.33 – v11.34</span>
+      <span class="tag fix">Fixed</span>
+      <h3>Two ways to lose work, both closed</h3>
+      <p>Selecting rows and opening a form used to drop the selection, so
+         pressing Save recorded nothing and said it had worked. The selection now
+         survives the form and is only released when the window closes.</p>
+      <p>And while one button is working, the buttons beside it now step out of
+         the way instead of staying pressable. A second press on a neighbouring
+         button mid-save was a real way to record something twice.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.33</span>
+      <span class="tag safe">Safety</span>
+      <h3>A nightly backup that failed silently now says so</h3>
+      <p>If setting up the automatic nightly backup failed during installation,
+         nothing was written down and nothing was shown — the app simply had no
+         backups and no one knew. The failure is now recorded and
+         <b>Settings → System</b> checks all four automatic jobs and tells you
+         which ones are really installed.</p>
+    </div>
+
+</section>
+
+  <section class="month">
     <h2>August 2026</h2>
     <p class="sub">A full audit of the app, and the first fixes out of it: the
        evening date, the quantity that was not whole, and a check that counts

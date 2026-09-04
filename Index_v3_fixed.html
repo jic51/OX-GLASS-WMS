@@ -1595,8 +1595,27 @@
     .btn:disabled{opacity:.5;cursor:not-allowed}
     /* Settings → Company */
     .co-form{max-width:460px}
+    /* La pestaña Company pasó de una .co-form suelta a dos áreas con recuadro
+       (v11.46). Conservan el ancho legible de la forma original — un campo de
+       texto de 900px de ancho no se lee mejor, sólo se ve descuidado — y el
+       primer .co-label de cada área no lleva el margen de arriba, que ahora es
+       trabajo del recuadro. */
+    #settingsTabContent > .field.co-area{max-width:520px}
+    /* Los interruptores de permisos, ya dentro de un área con nombre y no cada
+       uno en su propia caja azul. La línea de separación se queda: son cosas
+       distintas dentro de la misma lista. */
+    .perm-row{padding:.55rem 0;border-bottom:1px solid var(--border)}
+    .perm-row:last-child{border-bottom:none;padding-bottom:0}
     .co-label{display:block;font-size:.78rem;font-weight:700;color:var(--text);margin:1rem 0 .3rem}
     .co-form .co-label:first-child{margin-top:0}
+    .co-area .co-label:first-of-type{margin-top:.2rem}
+    /* Y hay que devolverles su forma: `.field label` (0,1,1) le gana a
+       `.co-label` (0,1,0), así que al meter estos campos dentro de un .field
+       los nombres se volvían MAYÚSCULAS grises de rótulo. El único label que
+       debe verse así es el del recuadro. */
+    #settingsTabContent > .field.co-area .co-label{
+      text-transform:none;letter-spacing:0;
+      color:var(--text);font-size:.78rem;font-weight:700}
     .co-opt{font-weight:400;color:var(--muted)}
     .co-input{width:100%;padding:.5rem .6rem;border:1px solid var(--border);border-radius:7px;background:var(--card);color:var(--text);font-size:.86rem;font-family:inherit}
     .co-input:focus{outline:none;border-color:var(--accent)}
@@ -3244,7 +3263,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.45';
+var APP_VERSION = '11.46';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -3256,7 +3275,7 @@ var APP_VERSION = '11.45';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '41a5380b';
+var APP_BUILD = 'd2b5be01';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -8592,7 +8611,13 @@ function _renderPermissionsTab(){
   var perms = rolePerms || {};
   var rows = PERM_DEFS.map(function(d){
     var on = !!perms[d.key];
-    return '<div class="field" style="margin-bottom:1.1rem;padding-bottom:1.1rem;border-bottom:1px solid var(--border)">' +
+    // `perm-row`, NO `.field`. Cada interruptor era su propio `.field`, y desde
+    // que los .field de esta pantalla llevan recuadro (v11.38) eso dibujaba
+    // cuatro cajas azules SIN NOMBRE, una por interruptor. El recuadro está
+    // para separar áreas; cuatro recuadros alrededor de cuatro renglones de la
+    // misma lista separan una lista de sí misma. Van todos dentro de un área
+    // con nombre, más abajo.
+    return '<div class="perm-row">' +
       '<div style="display:flex;align-items:center;gap:.4rem">' +
         '<label class="sw">' +
           '<input type="checkbox" class="perm-sw" data-perm="' + d.key + '"' + (on ? ' checked' : '') + '>' +
@@ -8605,23 +8630,24 @@ function _renderPermissionsTab(){
   }).join('');
 
   document.getElementById('settingsTabContent').innerHTML =
-    '<div class="field" style="margin-bottom:1.4rem;padding-bottom:1.4rem;border-bottom:1px solid var(--border)">' +
-      '<label class="co-label" for="warehouseRoleLabelInput" style="display:flex;align-items:center;gap:.4rem">' +
-        'What you call this role ' + _infoIc('Shown as this name everywhere in the app: the user list, the account ' +
-          'menu, the Add User form. Use whatever your team already calls this person, e.g. "Supervisor" or "Manager". ' +
-          'It never changes what they can actually do.') +
-      '</label>' +
+    '<div class="field">' +
+      '<label>What you call this role ' + _infoIc('Shown as this name everywhere in the app: the user list, the account ' +
+        'menu, the Add User form. Use whatever your team already calls this person, e.g. "Supervisor" or "Manager". ' +
+        'It never changes what they can actually do.') + '</label>' +
       '<div style="display:flex;gap:.5rem;align-items:center;max-width:320px">' +
         '<input type="text" id="warehouseRoleLabelInput" class="co-input" maxlength="30" ' +
           'value="' + _escAttr(warehouseRoleLabel) + '" placeholder="Warehouse">' +
         '<button type="button" class="btn btn-ghost btn-sm" id="btnSaveRoleLabel" onclick="_saveWarehouseRoleLabel()">Save</button>' +
       '</div>' +
     '</div>' +
-    '<p style="font-size:.8rem;color:var(--muted);margin-bottom:1rem">' +
-      'What the ' + _he(warehouseRoleLabel) + ' role can do, beyond recording movements and viewing stock. ' +
-      'Admins can already do all of this — these switches only ever widen ' + _he(warehouseRoleLabel) + ', never narrow an admin. ' +
-      'Viewers stay read-only no matter what is on here.</p>' +
-    rows;
+    '<div class="field">' +
+      '<label>What this role can do</label>' +
+      '<p style="font-size:.8rem;color:var(--muted);margin:0 0 .9rem">' +
+        'What the ' + _he(warehouseRoleLabel) + ' role can do, beyond recording movements and viewing stock. ' +
+        'Admins can already do all of this — these switches only ever widen ' + _he(warehouseRoleLabel) + ', never narrow an admin. ' +
+        'Viewers stay read-only no matter what is on here.</p>' +
+      rows +
+    '</div>';
 
   document.querySelectorAll('.perm-sw').forEach(function(sw){
     sw.addEventListener('change', function(){ _savePermSwitch(sw); });
@@ -8668,8 +8694,15 @@ function _savePermSwitch(sw){
 
 function _renderCompanyTab(){
   var c = (_settingsData && _settingsData.company) || {};
+  // Dos áreas nombradas en vez de una columna de campos: quién es la empresa, y
+  // con qué imagen aparece. Los recuadros son los mismos que System y
+  // Permissions ya usan — `.field` como HIJO DIRECTO de #settingsTabContent,
+  // que es lo único que hace que la regla los alcance. Envolverlo todo en
+  // .co-form como estaba dejaba los `.field` un nivel por debajo y el recuadro
+  // no aparecía.
   document.getElementById('settingsTabContent').innerHTML =
-    '<div class="co-form">' +
+    '<div class="field co-area">' +
+      '<label>Who this company is</label>' +
       '<label class="co-label" for="coName" style="display:flex;align-items:center;gap:.4rem">Company name ' +
         _infoIc('Shown in the header, on the browser tab, on the loading screen, and as the sender name on every email this system sends.') +
       '</label>' +
@@ -8680,8 +8713,11 @@ function _renderCompanyTab(){
         _infoIc('People with an email at this domain are recognised as staff. Everyone still has to be on the user list to get in — this only saves them the extra sign-in step. Leave it blank if your team uses personal Gmail accounts.') +
       '</label>' +
       '<input type="text" id="coDomain" class="co-input" maxlength="60" placeholder="yourcompany.com" value="' + _escAttr(c.domain || '') + '">' +
+    '</div>' +
 
-      '<label class="co-label" style="display:flex;align-items:center;gap:.4rem">Logo ' +
+    '<div class="field co-area">' +
+      '<label>Logo</label>' +
+      '<label class="co-label" style="display:flex;align-items:center;gap:.4rem">Image ' +
         _infoIc('Any size or shape works — it is resized automatically. Appears beside the company name in the header and on the loading screen.') +
       '</label>' +
       '<div id="coLogoWrap">' + _coLogoBoxHtml() + '</div>' +
@@ -8694,9 +8730,11 @@ function _renderCompanyTab(){
         (_coLogoRemove || _coLogo
           ? '<button type="button" class="btn btn-ghost btn-sm" onclick="_coUndoLogo()">Undo</button>' : '') +
       '</div>' +
+    '</div>' +
 
-      '<div class="co-save"><button type="button" class="btn btn-primary" id="coSave" onclick="_saveCompanyProfile()">Save changes</button></div>' +
-    '</div>';
+    // Fuera de los recuadros a propósito: guardar no es un área de ajustes, es
+    // lo que se hace con las dos de arriba.
+    '<div class="co-save"><button type="button" class="btn btn-primary" id="coSave" onclick="_saveCompanyProfile()">Save changes</button></div>';
 }
 
 function _coLogoPick(inp){
@@ -9658,16 +9696,25 @@ var _importParsedRows = [];
 
 function _renderImportTab() {
   var content = document.getElementById('settingsTabContent');
+  // Dos áreas: de dónde sale el archivo, y qué se va a guardar. La vista previa
+  // va en su propio recuadro porque es lo que se mira antes de decidir — y
+  // separarla es lo que hace evidente que todavía no se ha guardado nada.
   content.innerHTML =
-    '<p style="font-size:.8rem;color:var(--muted);margin-bottom:.75rem">' +
-      'Bulk-import an existing inventory from an Excel (.xlsx) or CSV file — useful for the first setup, or catching up after counting on paper. ' +
-      'Every row becomes a real ENTRY movement, reviewed here before anything is saved. Multi-sheet workbooks: the right sheet is detected automatically, and you can switch sheets after loading.' +
-    '</p>' +
-    '<div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem">' +
-      '<button class="btn btn-ghost btn-sm" onclick="_downloadImportTemplate()">⬇ Download CSV Template</button>' +
-      '<input type="file" id="importFileInput" accept=".csv,.xlsx,.xls" style="font-size:.82rem">' +
+    '<div class="field">' +
+      '<label>Bring in a file</label>' +
+      '<p style="font-size:.8rem;color:var(--muted);margin:0 0 .75rem">' +
+        'Bulk-import an existing inventory from an Excel (.xlsx) or CSV file — useful for the first setup, or catching up after counting on paper. ' +
+        'Every row becomes a real ENTRY movement, reviewed here before anything is saved. Multi-sheet workbooks: the right sheet is detected automatically, and you can switch sheets after loading.' +
+      '</p>' +
+      '<div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap">' +
+        '<button class="btn btn-ghost btn-sm" onclick="_downloadImportTemplate()">⬇ Download CSV Template</button>' +
+        '<input type="file" id="importFileInput" accept=".csv,.xlsx,.xls" style="font-size:.82rem">' +
+      '</div>' +
     '</div>' +
-    '<div id="importPreviewBox"></div>';
+    '<div class="field">' +
+      '<label>What will be saved</label>' +
+      '<div id="importPreviewBox"></div>' +
+    '</div>';
   document.getElementById('importFileInput').addEventListener('change', _onImportFileChange);
   _importParsedRows = [];
 }
@@ -9947,33 +9994,42 @@ function _renderLocationsTab(){
   _locLayout = names.map(function(n){ return { name: n, type: (types[n] || LOC_DEFAULT_GROUP) }; });
   _locExtraGroups = [];
 
+  // Dos áreas: cómo funciona esta pantalla, y la lista en sí. La explicación y
+  // el botón de crear van juntos arriba; los estantes, dentro de su propio
+  // recuadro, que es lo que separa "leer las reglas" de "moverlos".
   content.innerHTML =
-    '<div class="loc-toolbar">' +
-      '<p style="font-size:.8rem;color:var(--muted);margin:0;flex:1">' +
-        'Drag a location into a group to file it there. Grouping is for organising only — every location still counts toward stock, ' +
-        'and the Warehouse Map shows these same groups.' +
-        // Said here for the same reason it is said on the other catalog tabs:
-        // where a thing WAS is a fact about the past, and renaming the rack
-        // today cannot make January's material have sat somewhere else.
-        '<br>Renaming a location updates the list only — existing movements keep the name they were recorded with.' +
-        '<br><b>Dragging needs a mouse</b> — on a phone this list is read-only for now.' +
-      '</p>' +
-      '<div class="loc-plus-wrap">' +
-        '<button class="loc-plus" id="locPlusBtn" title="Add">+</button>' +
-        '<div class="loc-plus-menu">' +
-          '<button onclick="_locShowNew(\'location\')">📍 Create location</button>' +
-          '<button onclick="_locShowNew(\'group\')">🗂 Create group</button>' +
+    '<div class="field">' +
+      '<label>How this works</label>' +
+      '<div class="loc-toolbar">' +
+        '<p style="font-size:.8rem;color:var(--muted);margin:0;flex:1">' +
+          'Drag a location into a group to file it there. Grouping is for organising only — every location still counts toward stock, ' +
+          'and the Warehouse Map shows these same groups.' +
+          // Said here for the same reason it is said on the other catalog tabs:
+          // where a thing WAS is a fact about the past, and renaming the rack
+          // today cannot make January's material have sat somewhere else.
+          '<br>Renaming a location updates the list only — existing movements keep the name they were recorded with.' +
+          '<br><b>Dragging needs a mouse</b> — on a phone this list is read-only for now.' +
+        '</p>' +
+        '<div class="loc-plus-wrap">' +
+          '<button class="loc-plus" id="locPlusBtn" title="Add">+</button>' +
+          '<div class="loc-plus-menu">' +
+            '<button onclick="_locShowNew(\'location\')">📍 Create location</button>' +
+            '<button onclick="_locShowNew(\'group\')">🗂 Create group</button>' +
+          '</div>' +
         '</div>' +
       '</div>' +
+      '<div id="locNewRow" class="cfg-add-row" style="display:none">' +
+        '<input type="text" id="locNewVal" placeholder="Name…" onkeydown="if(event.key===\'Enter\')_locCreate()">' +
+        '<button class="btn btn-primary btn-sm" onclick="_locCreate()">Create</button>' +
+        '<button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'locNewRow\').style.display=\'none\'">Cancel</button>' +
+      '</div>' +
     '</div>' +
-    '<div id="locNewRow" class="cfg-add-row" style="display:none">' +
-      '<input type="text" id="locNewVal" placeholder="Name…" onkeydown="if(event.key===\'Enter\')_locCreate()">' +
-      '<button class="btn btn-primary btn-sm" onclick="_locCreate()">Create</button>' +
-      '<button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'locNewRow\').style.display=\'none\'">Cancel</button>' +
+    '<div class="field">' +
+      '<label>Locations and groups</label>' +
+      '<div id="locMergeBar" class="cfg-pickbar"></div>' +
+      _rowModeBarHtml('loc') +
+      '<div class="loc-groups" id="locGroups" data-rowscope="loc"></div>' +
     '</div>' +
-    '<div id="locMergeBar" class="cfg-pickbar"></div>' +
-    _rowModeBarHtml('loc') +
-    '<div class="loc-groups" id="locGroups" data-rowscope="loc"></div>' +
     '<div id="locSaveBar" class="loc-savebar"></div>';
   _redrawLocGroups();
 }
