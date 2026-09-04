@@ -5,6 +5,100 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+**SEGUNDA RONDA DE CONCURRENCIA — Jose, 2026-09-04, tres cuentas. ONCE COSAS.**
+
+Todo lo de abajo salió de una sesión real con tres personas. Es el reporte más
+útil que ha dado esta app, y casi todo cae en **tres causas, no once**.
+
+### CAUSA A — el navegador no se entera de lo que hacen los demás
+
+Ya estaba anotado como el punto 1 de la primera ronda. Esta ronda enseña que no
+es una comodidad: es la raíz de la mitad de los fallos.
+
+- **La ventana de EXIT sigue diciendo 142 disponibles cuando ya hay 92.** El
+  servidor rechaza bien el movimiento —eso funciona— pero la pantalla sigue
+  mintiendo después del rechazo. Jose: "aunque la app le dijo que no se podía
+  hacer el movimiento porque solo había 92 available, la ventana seguia
+  mostrando 142."
+- **El candado no cambia de icono** cuando otro lo puso o lo quitó. Se intenta
+  desbloquear algo ya desbloqueado y sale `Lock not found or already removed`.
+- **Corolario importante, y es una corrección a lo que yo dije:** el "stock
+  negativo aplastado a 0" (hallazgo 4) **no se manifiesta como Jose temía**. La
+  app SÍ impide sacar de más. Lo que falla es la pantalla que no se refresca.
+  El hallazgo 4 sigue vivo como defensa en profundidad, pero baja de prioridad.
+
+**Lo mínimo que arregla casi todo esto:** después de CUALQUIER rechazo del
+servidor por conflicto, refrescar el dato que se acaba de rechazar y volver a
+pintar la ventana abierta con el número verdadero. No hace falta el refresco
+incremental completo para esto — sólo para el caso de "ver los movimientos de
+otros sin recargar".
+
+### CAUSA B — los candados no tienen ni candado ni dueño visible
+
+- **Dos personas bloquean el mismo material y la app deja a las dos.** Mirado
+  en el código: `lockMaterial` encuentra el candado activo existente y lo
+  ACTUALIZA, sobrescribiendo motivo y dueño. Está escrito a propósito como
+  "editar el candado", pero visto desde fuera es pisarle el candado a otro sin
+  decir una palabra.
+- **`lockMaterial` no usa `withStockLock_`**, igual que `addReservation_`. Dos
+  llamadas simultáneas pueden añadir dos filas.
+- **CORRECCIÓN A LO QUE LE DIJE A JOSE: quién hizo el candado YA SE GUARDA.**
+  `lockMaterial` escribe `auth.email` en la columna 8 y `unlockMaterial` escribe
+  quién lo quitó en la 11. El dato existe desde siempre; lo que falta es
+  **enseñarlo en la pantalla**. No es trabajo de servidor, es de interfaz.
+- **Al tocar un candado que no se puede tocar no se dice por qué.** Hoy sólo se
+  ve el botón deshabilitado o un error crudo.
+
+### CAUSA C — un conflicto se cuenta como un error del usuario
+
+- **Tres personas hacen salidas que suman exactamente lo que hay** (142 = 42 +
+  50 + 50): una lo consigue y dos ven un error. Jose: "no debemos dejar que la
+  app muestre un error cuando los movimientos sí están hechos correctamente,
+  pero es el sistema el que no lo está haciendo bien. debemos poner en cola los
+  movimientos o reintentar hacerlos otra vez, si todo está correcto."
+  **Tiene razón y es la petición más importante de la lista.** Los tres
+  movimientos son legítimos; el sistema es el que no supo ponerlos en fila.
+- **Borrar un movimiento siendo Warehouse/Supervisor da un error a secas**, sin
+  decir que hace falta permiso de admin ni a quién pedírselo.
+
+### LO QUE NO ENTRA EN LAS TRES CAUSAS
+
+- **La ventana de Manage Users se recarga entera cada vez.** Mismo trato que
+  App Settings en la v11.37: enseñar lo que ya se sabe y reemplazar sólo lo que
+  cambió.
+- **En el panel del estante, el título debe ser el NOMBRE DEL MATERIAL, no la
+  locación.** Motivo de Jose, y es el bueno: en el teléfono el nombre del
+  material no se ve completo. La locación ya se sabe — se acaba de tocar.
+- **Roles distintos para la misma persona en dos sitios de la misma ventana.**
+  Imagen 1: la cabecera dice SUPERVISOR y la lista de usuarios activos dice
+  ADMIN, para la misma cuenta. Los dos pasan por `_displayRole`, así que no es
+  el mapeo: es que **la cabecera se pinta desde la CACHÉ** (`_setAccountIdentity`
+  con `stale=true` en `loadDataFromGoogle`) y la lista viene del servidor. Un
+  rol cambiado hace poco se ve viejo arriba y nuevo abajo.
+  Y hay un segundo efecto que NO es un fallo pero se lee como tal: dos cuentas
+  distintas con el mismo nombre ("Jose Castro" dos veces) salen como dos
+  renglones idénticos porque la lista enseña el nombre y no el correo. Se
+  arregla solo con el cambio de "nombre sobre correo" ya anotado.
+- **Firmas de Gmail en los correos que manda la app.** Ver la respuesta larga:
+  `MailApp`/`GmailApp` NO añaden la firma. Hay que leerla con el servicio
+  avanzado de Gmail (`Gmail.Users.Settings.SendAs.list`) y pegarla al pie del
+  HTML. Es posible, pide activar el servicio avanzado y un permiso más.
+
+### LO QUE JOSE PROBÓ Y NO ERA LO QUE YO LE PEDÍ — culpa mía
+
+Le pedí probar **reservas** y probó **candados**. Son cosas distintas, y el
+error es mío por no decirlo con claridad:
+
+- Los candados usan `LOCK-` + milisegundos → **no chocan**. Por eso cancelar uno
+  nunca canceló otro, como él comprobó varias veces. Su prueba fue correcta y
+  el resultado es bueno.
+- Las reservas usan `RES-` + **segundos**, que es donde está el hallazgo 5.
+- **Y no se pueden probar desde la app: `addReservation` no tiene ningún botón
+  en la interfaz.** Sólo se llega por `processMovement`. Así que el hallazgo 5
+  es hoy teórico, y no hay forma de que Jose lo verifique. Queda pendiente
+  DECIDIR si las reservas van a existir de cara al usuario; si no, el arreglo
+  correcto puede ser quitar el endpoint en vez de blindarlo.
+
 **PRUEBA DE CONCURRENCIA HECHA — Jose, 2026-09-04, tres cuentas.** El resultado
 de fondo es bueno: **la app no se corrompió**. Cuando dos personas escribían a
 la vez, la segunda recibió "el sistema está ocupado, vuelve a intentar" en vez
