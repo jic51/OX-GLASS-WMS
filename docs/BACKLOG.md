@@ -5,6 +5,21 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+**JOSE (2026-09-04): LA POLÍTICA DE COBRO NO ES URGENTE.** Palabras suyas: "PON
+EN LA LISTA LO QUE NO ES IMPORTANTE AHORA." Baja de "lo que bloquea vender" a
+esta lista, y todo lo que sigue se queda escrito tal cual para cuando se
+retome.
+
+Lo que hay que saber al volver, para no tener que decidir nada otra vez: **las
+tres decisiones difíciles ya están tomadas y aprobadas** (2026-09-01, "HAZ COMO
+ME DICES EN LA RECOMENDACION") — se queda la escalera de 30 días por impago, se
+adopta la escalera de reactivación de Jose, y las devoluciones se unifican en
+"5 a 10 días hábiles". Los Términos ya se sincronizaron con esas tres. Lo único
+que falta es **redactar el documento de cobro** y comprobar que no contradice
+lo ya publicado. Es trabajo de escribir, no de decidir.
+
+---
+
 **POLÍTICA DE COBRO — respuestas de Jose (2026-08-31). Falta redactarla y
 publicarla junto a la de soporte.**
 

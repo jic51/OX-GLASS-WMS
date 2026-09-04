@@ -80,7 +80,11 @@ const page = `<!doctype html><html><head><meta charset="utf-8"></head><body>
   function _qtyText(n){ return String(Math.round((Number(n)||0)*1000)/1000); }
   function _fmtWhen(){ return 'just now'; }
   function showTab(t){ window.__opened.push('tab:' + t); }
-  function openMoveModal(t){ window.__opened.push('move:' + t); }
+  // Este doble copia UNA línea del openMoveModal real —el borrado de
+  // _entryTodoId— porque sin ella el ciclo de vida no se puede ejercitar. Que
+  // el real la tenga se comprueba aparte, leyendo el archivo: ver la aserción
+  // "cada apertura del formulario empieza sin tarjeta colgando".
+  function openMoveModal(t){ window.__opened.push('move:' + t); _entryTodoId = null; }
   function showToast(m, k){ window.__toast = m; }
   function updateMatLineNameList(){} function syncMatLineQty(){}
   function updateMultiMatTotal(){} function _updateMoveSubmitState(){}
@@ -97,9 +101,11 @@ ${fnSrc('_todoSave')}
 ${fnSrc('_todoAdd')}
 ${fnSrc('_todoDrop')}
 ${fnSrc('_todoDo')}
+${fnSrc('_entryTodoResolve')}
 ${fnSrc('_renderTodoDeck')}
   var _TODO_KEY = 'acopio_pending_entries';
   var _todoItems = [];
+  var _entryTodoId = null;
 </script></body></html>`;
 
 const ENTREGA = {
@@ -204,7 +210,20 @@ const ENTREGA = {
   check('...con el mismo material', r.texto.indexOf(ENTREGA.name) !== -1);
 
   // ── 4. Hacerla desde la tarjeta ─────────────────────────────────────────
-  console.log('\n═══ hacerla desde la tarjeta ═══\n');
+  //
+  // AQUÍ ESTÁ LA REGLA QUE CAMBIÓ EN LA v11.44, y es al revés de como estaba.
+  //
+  // Hasta la v11.43 la tarjeta se borraba al ABRIR el formulario. El comentario
+  // que defendía esa decisión decía que, si la entrada no se hacía, siempre se
+  // podía volver a marcar la entrega — y era verdad, y era caro: obligaba a
+  // volver al Incoming, editar la entrega y marcarla otra vez para recuperar un
+  // recordatorio que nunca debió perderse.
+  //
+  // Ahora ABRIR NO CUENTA. La tarjeta es el registro de "llegó y falta su
+  // entrada", y sólo la salda la entrada guardada. Es la misma distinción que
+  // Jose señaló al ver que marcar una entrega como Arrived con la casilla
+  // puesta no dejaba nada: empezar una cosa no es haberla hecho.
+  console.log('\n═══ abrir la entrada NO es haberla hecho ═══\n');
   r = await p.evaluate(() => {
     window.__opened = [];
     const id = JSON.parse(localStorage.getItem('acopio_pending_entries'))[0].id;
@@ -213,13 +232,96 @@ const ENTREGA = {
       abierto: window.__opened.slice(),
       name: document.getElementById('mat-name-1').value,
       quedan: JSON.parse(localStorage.getItem('acopio_pending_entries') || '[]').length,
-      cardsEnPantalla: document.querySelectorAll('.todo-card').length
+      cardsEnPantalla: document.querySelectorAll('.todo-card').length,
+      colgando: _entryTodoId === id
     };
   });
   check('abre el formulario en ENTRY', r.abierto.indexOf('move:ENTRY') !== -1);
   check('...relleno con el material de la tarjeta', r.name === ENTREGA.name);
-  check('la tarjeta se retira de la lista guardada', r.quedan === 0);
-  check('...y del mazo', r.cardsEnPantalla === 0);
+  check('LA TARJETA SIGUE AHÍ mientras el formulario está abierto — quien lo ' +
+        'cierre sin guardar no se queda sin tarjeta y sin entrada, que es lo ' +
+        'que pasaba hasta la v11.43', r.quedan === 1 && r.cardsEnPantalla === 1);
+  check('...y el formulario sabe de qué tarjeta viene, para poder saldarla',
+    r.colgando);
+
+  console.log('\n═══ cerrar sin guardar la deja intacta ═══\n');
+  r = await p.evaluate(() => {
+    // Cerrar sin guardar no llama a nada: simplemente el éxito nunca ocurre.
+    return { quedan: JSON.parse(localStorage.getItem('acopio_pending_entries') || '[]').length,
+             enPantalla: document.querySelectorAll('.todo-card').length };
+  });
+  check('el recordatorio sobrevive al formulario abandonado',
+    r.quedan === 1 && r.enPantalla === 1);
+
+  console.log('\n═══ y la entrada guardada sí la salda ═══\n');
+  r = await p.evaluate(() => {
+    _entryTodoResolve('ENTRY');
+    return { quedan: JSON.parse(localStorage.getItem('acopio_pending_entries') || '[]').length,
+             enPantalla: document.querySelectorAll('.todo-card').length,
+             colgando: _entryTodoId };
+  });
+  check('con la entrada guardada la tarjeta desaparece de la lista',
+    r.quedan === 0);
+  check('...y del mazo', r.enPantalla === 0);
+  check('...y no queda ningún id colgando para la siguiente vez',
+    r.colgando === null);
+
+  console.log('\n═══ una salida no salda una entrada pendiente ═══\n');
+  r = await p.evaluate((it) => {
+    localStorage.removeItem('acopio_pending_entries');
+    _todoItems = [];
+    const id = _todoAdd(it, true);
+    _entryTodoId = id;
+    // Se abrió el formulario desde la tarjeta y quien lo usó cambió el tipo a
+    // EXIT antes de guardar. Sacar material no es haber registrado su entrada.
+    _entryTodoResolve('EXIT');
+    return { quedan: JSON.parse(localStorage.getItem('acopio_pending_entries') || '[]').length,
+             colgando: _entryTodoId };
+  }, ENTREGA);
+  check('guardar un movimiento que NO es ENTRY deja la tarjeta donde estaba',
+    r.quedan === 1);
+  check('...pero suelta el id igual, para que no salde una entrada de más tarde',
+    r.colgando === null);
+
+  console.log('\n═══ el aviso no estorba cuando el formulario viene detrás ═══\n');
+  r = await p.evaluate((it) => {
+    window.__toast = '';
+    _todoAdd(it, true);
+    const callado = window.__toast;
+    window.__toast = '';
+    _todoAdd(it, false);
+    return { callado: callado, hablado: window.__toast };
+  }, ENTREGA);
+  check('con el formulario abriéndose acto seguido no se avisa de nada — el ' +
+        'aviso diría "está en la esquina hasta que hagas la entrada" y la ' +
+        'entrada está justo delante', r.callado === '');
+  check('...y cuando la tarjeta se queda sola, sí se avisa',
+    /corner/i.test(r.hablado || ''));
+
+  // Lo que el doble de openMoveModal copia, comprobado sobre el real.
+  console.log('\n═══ y sobre el archivo, no sobre el doble ═══\n');
+  {
+    const real = fnSrc('openMoveModal');
+    check('cada apertura del formulario empieza sin tarjeta colgando de la ' +
+          'anterior — si no, abrir desde una tarjeta, cerrar, y registrar ' +
+          'otra entrada cualquiera borraría la tarjeta equivocada',
+      /_entryTodoId\s*=\s*null/.test(real));
+
+    const guardar = fnSrc('saveIncomingItem');
+    check('LA TARJETA SE CREA SIEMPRE QUE LA ENTREGA PASA A ARRIVED, marque o ' +
+          'no la casilla — el `else if (arrived)` de la v11.42 era el hueco ' +
+          'que Jose encontró',
+      !/else\s+if\s*\(\s*arrived\s*\)/.test(guardar) &&
+      /if\s*\(\s*arrived\s*\)\s*\{/.test(guardar) &&
+      /_todoAdd\(\s*payload/.test(guardar));
+    check('...y el formulario de entrada se abre además de la tarjeta, no en ' +
+          'vez de ella', /_entryFromIncoming\(\s*payload\s*,\s*todoId/.test(guardar));
+
+    const enviar = fnSrc('submitMovement');
+    check('y la tarjeta se salda en el handler de ÉXITO del movimiento, que ' +
+          'es el único sitio donde consta que la entrada existe',
+      /_entryTodoResolve\(/.test(enviar));
+  }
 
   console.log('\n═══ la tarjeta se puede LEER ═══\n');
   {
@@ -235,7 +337,8 @@ const ENTREGA = {
     const q = await p.evaluate((css) => {
       const st = document.createElement('style');
       st.textContent = ':root{--card:#FFFFFF;--card-ghost:rgba(255,255,255,.52);' +
-                       '--text:#1a1a2e;--border:#E5E7EB;--yellow:#D97706}\n' + css;
+                       '--text:#1a1a2e;--border:#E5E7EB;--yellow:#D97706;' +
+                       '--orange:#EA580C;--orange-bg:#FED7AA}\n' + css;
       document.head.appendChild(st);
       const deck = document.getElementById('cornerDeck');
       const card = document.querySelector('.todo-card') ||
@@ -248,7 +351,10 @@ const ENTREGA = {
       const reposo = leer();
       deck.className = 'deck dim open';              // en reposo pero abierta
       const abiertaDim = leer();
-      return { abierta: abierta, reposo: reposo, abiertaDim: abiertaDim };
+      const cs = getComputedStyle(card);
+      return { abierta: abierta, reposo: reposo, abiertaDim: abiertaDim,
+               alto: cs.getPropertyValue('--card-h').trim(),
+               bordeIzq: cs.borderLeftColor, anchoBordeIzq: cs.borderLeftWidth };
     }, reglas);
 
     check('en reposo, dentro de la pila, es translúcida — para no competir con ' +
@@ -258,6 +364,21 @@ const ENTREGA = {
     check('...y también con la pila despierta', q.abierta === 'rgb(255, 255, 255)');
     check('es el mismo trato que las tarjetas del sistema, no un caso aparte',
       /\.deck\.dim:not\(\.open\) \.sys-card/.test(SRC));
+
+    // Jose (v11.44): "LA TARJETA DEBE SER UN POCO MÁS ALTA, Y TAL VEZ PUEDES
+    // HACERLA DE COLOR NARANJA (PERO NO TAN ENCENDIDO)."
+    check('es más alta que las 136px que Jose vio quedarse cortas (' + q.alto +
+          ')', parseInt(q.alto, 10) >= 150);
+    check('la banda de la izquierda es naranja (' + q.bordeIzq + ') — es lo ' +
+          'único del montón que espera un movimiento de quien la lee; las del ' +
+          'sistema sólo informan',
+      q.bordeIzq === 'rgb(234, 88, 12)');
+    check('...una banda, no un fondo entero: --orange-bg sobre toda la ' +
+          'tarjeta sería más grito del que se pidió, y el texto se lee peor',
+      q.anchoBordeIzq === '4px' && q.abiertaDim === 'rgb(255, 255, 255)');
+    check('y el naranja sale de --orange, que existe en :root — no de una ' +
+          'variable inventada, que el navegador ignoraría en silencio',
+      /--orange:#EA580C/.test(SRC) && /border-left:4px solid var\(--orange\)/.test(SRC));
   }
 
   console.log('\n═══ y si el navegador no deja guardar nada ═══\n');
