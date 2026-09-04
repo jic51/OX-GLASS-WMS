@@ -31,13 +31,6 @@ function check(label, cond) {
   else { fail++; console.log('  FAIL ', label); }
 }
 
-// La regla tal cual está en el archivo. Reescribirla aquí probaría la copia.
-function cssRule(selector){
-  const i = SRC.indexOf(selector + '{');
-  if (i === -1) throw new Error('no encontrada la regla: ' + selector);
-  return SRC.slice(i, SRC.indexOf('}', i) + 1);
-}
-
 function fnSrc(name){
   const start = SRC.indexOf('function ' + name + '(');
   if (start === -1) throw new Error('no encontrada: ' + name);
@@ -107,6 +100,137 @@ ${fnSrc('_renderTodoDeck')}
   var _todoItems = [];
   var _entryTodoId = null;
 </script></body></html>`;
+
+// ── La tarjeta, medida contra la hoja de estilos ENTERA ──────────────────────
+//
+// ESTA FUNCIÓN EXISTE POR UN ERROR MÍO, y conviene que se lea antes de tocarla.
+//
+// La v11.44 comprobaba el alto así: sacaba del archivo las dos reglas de
+// .todo-card, las inyectaba solas en la página de prueba, y leía --card-h. Daba
+// 160px y pasaba. En la app real la tarjeta medía 96px.
+//
+// El motivo es que .deck-card declara `--card-h:96px` y estaba escrita DESPUÉS
+// de .todo-card en el archivo. Misma especificidad —una clase cada una— así que
+// ganaba la última, y la última era .deck-card. Al inyectar sólo las dos reglas
+// de .todo-card, la que ganaba en la app no estaba presente en la prueba: la
+// prueba medía una cascada que no existe en ningún sitio.
+//
+// Una aserción que arma su propio entorno mide ese entorno, no el producto. Por
+// eso ahora la página se construye con TODO el <style> del archivo, y lo que se
+// comprueba no es una variable sino el hecho que a Jose le importaba: QUE TODO
+// QUEPA DENTRO. Ver adentro por qué se mide soltando la altura y no con
+// scrollHeight.
+async function medirTarjeta(browser){
+  const styles = SRC.slice(SRC.indexOf('<style>') + 7, SRC.indexOf('</style>'));
+  // El nombre y el proveedor más largos que la app puede producir, porque el
+  // caso que rompe el alto no es el corto.
+  const marcado = `<div class="deck-card todo-card" id="tc">
+      <button class="sys-card-x">✕</button>
+      <div class="todo-card-lbl">Arrived · entry not made</div>
+      <div class="todo-card-val">M-JUNIPERHEIGHTS-B6-SASHES-LEFT-AND-RIGHT</div>
+      <div class="todo-card-sub">1250.5 SHEETS · GLASSCO INDUSTRIAL SUPPLY COMPANY OF UTAH</div>
+      <div class="todo-card-when">today at 12:31 PM</div>
+      <div class="cfg-card-acts">
+        <button class="cfg-card-add">Make the entry</button>
+        <button class="cfg-card-skip">Later</button>
+      </div></div>`;
+  const doc = `<!doctype html><html><head><meta charset="utf-8"><style>${styles}</style></head>
+    <body><div class="deck dim open" id="dk">${marcado}</div></body></html>`;
+  const f2 = path.join(os.tmpdir(), 'acopio-todo-card.html');
+  fs.writeFileSync(f2, doc);
+  // Ancho de escritorio: por debajo de 769px la pila se sustituye por la
+  // campana del header y .deck queda en display:none, así que medir ahí no
+  // mediría nada — y una medida de cero pasa cualquier comprobación de "no se
+  // sale". Se comprueba también que la pila es visible, para que esta prueba
+  // no pueda aprobar por no estar mirando.
+  const browserPage = await browser.newPage({ viewport: { width: 1280, height: 700 } });
+  await browserPage.goto('file://' + f2);
+  await browserPage.waitForTimeout(150);
+
+  console.log('\n═══ todo cabe dentro de la tarjeta ═══\n');
+  const g = await browserPage.evaluate(() => {
+    const c = document.getElementById('tc');
+    const deck = document.getElementById('dk');
+    const cr = c.getBoundingClientRect();
+    const cs = getComputedStyle(c);
+    // EL ALTO QUE EL CONTENIDO PIDE DE VERDAD, medido soltando la altura fija.
+    //
+    // scrollHeight NO sirve aquí, y la primera versión de esta comprobación lo
+    // usaba: la tarjeta es un flex en columna, así que cuando no cabe, los
+    // hijos se ENCOGEN en vez de desbordar. scrollHeight se queda igual al
+    // alto de la caja pase lo que pase, y la aserción pasaba con la tarjeta a
+    // 96px — el tamaño roto que Jose fotografió. Lo comprobé rompiéndola a
+    // propósito, que es la única manera de saber si una aserción mira algo.
+    //
+    // Lo que sí distingue los dos casos es soltar `height` y ver cuánto pide el
+    // contenido por su cuenta.
+    const alturaFija = c.style.height;
+    c.style.height = 'auto';
+    const natural = c.getBoundingClientRect().height;
+    c.style.height = alturaFija;
+    return {
+      visible: cr.width > 0 && cr.height > 0,
+      alto: cr.height, ancho: cr.width,
+      pide: natural,
+      abierta: getComputedStyle(c).backgroundColor,
+      colorTexto: getComputedStyle(c.querySelector('.todo-card-val')).color,
+      colorHora: getComputedStyle(c.querySelector('.todo-card-when')).color
+    };
+  });
+
+  // El reposo se lee DESPUÉS de esperar: .deck-card lleva
+  // `transition: background-color .45s`, así que leer el estilo en el mismo
+  // instante en que cambia la clase devuelve todavía el color de partida. La
+  // primera versión de esta comprobación lo leía al momento y daba naranja
+  // sólido — la aserción fallaba con el CSS correcto delante.
+  await browserPage.evaluate(() => { document.getElementById('dk').className = 'deck dim'; });
+  await browserPage.waitForTimeout(600);
+  g.reposo = await browserPage.evaluate(() =>
+    getComputedStyle(document.getElementById('tc')).backgroundColor);
+
+  check('la pila se está dibujando de verdad (' + Math.round(g.ancho) + '×' +
+        Math.round(g.alto) + ') — por debajo de 769px .deck es display:none y ' +
+        'una tarjeta de 0px pasaría cualquier medida', g.visible);
+  check('NADA SE SALE: el contenido pide ' + Math.round(g.pide) + 'px y la ' +
+        'tarjeta mide ' + Math.round(g.alto) + 'px. A 96px el contenido pedía ' +
+        'más de lo que había y los botones cruzaban el borde de abajo — es lo ' +
+        'que Jose fotografió',
+    g.pide <= Math.ceil(g.alto));
+  // NO se comprueba "los botones no cruzan el borde" midiendo su rectángulo.
+  // Se probó, y esa medida no falla nunca: desde que la tarjeta es un flex en
+  // columna, cuando no cabe el navegador encoge los hijos en vez de dejarlos
+  // salir, así que los botones quedan dentro del borde incluso con la tarjeta
+  // rota. Una aserción que pasa en los dos casos no es una aserción — es un
+  // renglón que tranquiliza. La que sirve es la de arriba, que compara el alto
+  // que el contenido pide con el que tiene.
+  check('y el alto sobrevive a la cascada entera — no sólo a las dos reglas ' +
+        'de .todo-card, que es lo que medía la versión anterior de esta ' +
+        'comprobación', Math.round(g.alto) >= 140);
+
+  console.log('\n═══ naranja entera, y legible en los dos estados ═══\n');
+  check('con la pila abierta la tarjeta es naranja sólida (' + g.abierta + ')',
+    g.abierta === 'rgb(234, 88, 12)');
+  check('en reposo sigue siendo NARANJA, sólo más tenue (' + g.reposo + ') — ' +
+        'no el blanco fantasma de las otras: sobre blanco desvanecido el ' +
+        'texto blanco desaparecería',
+    /^rgba\(234, 88, 12,/.test(g.reposo));
+  check('el texto principal es blanco (' + g.colorTexto + ')',
+    g.colorTexto === 'rgb(255, 255, 255)');
+  check('y la hora es el mismo blanco bajado, que se lee como gris (' +
+        g.colorHora + ') — un gris de la paleta se ensuciaría sobre naranja',
+    /^rgba\(255, 255, 255, 0\.7/.test(g.colorHora));
+  check('el naranja sale de --orange, que existe en :root — no de una variable ' +
+        'inventada, que el navegador ignoraría en silencio',
+    /--orange:#EA580C/.test(SRC) && /background:var\(--orange\)/.test(SRC));
+
+  // Y la razón de fondo, escrita como regla: que .todo-card no vuelva a
+  // quedarse por delante de .deck-card en el archivo.
+  check('.todo-card se declara DESPUÉS de .deck-card — que es lo único que ' +
+        'hace que su --card-h gane, igual que .sys-card',
+    SRC.indexOf('.todo-card{') > SRC.indexOf('.deck-card{'));
+
+  await browserPage.close();
+}
 
 const ENTREGA = {
   name: 'M-JUNIPERHEIGHTS-B6', category: 'MIRROR', qty: 24, unit: 'UNIT',
@@ -323,63 +447,11 @@ const ENTREGA = {
       /_entryTodoResolve\(/.test(enviar));
   }
 
-  console.log('\n═══ la tarjeta se puede LEER ═══\n');
-  {
-    // Jose lo fotografió: la tarjeta salía translúcida siempre, con la tabla de
-    // debajo leyéndose a través del texto. Le faltaba el fondo — sólo declaraba
-    // el borde izquierdo, así que heredaba del montón el de reposo y no lo
-    // recuperaba nunca.
-    //
-    // Esto se mide con la regla REAL sacada del archivo, no con una copia: una
-    // copia probaría la copia.
-    const reglas = cssRule('    .todo-card') + '\n' +
-                   cssRule('    .deck.dim:not(.open) .todo-card');
-    const q = await p.evaluate((css) => {
-      const st = document.createElement('style');
-      st.textContent = ':root{--card:#FFFFFF;--card-ghost:rgba(255,255,255,.52);' +
-                       '--text:#1a1a2e;--border:#E5E7EB;--yellow:#D97706;' +
-                       '--orange:#EA580C;--orange-bg:#FED7AA}\n' + css;
-      document.head.appendChild(st);
-      const deck = document.getElementById('cornerDeck');
-      const card = document.querySelector('.todo-card') ||
-                   (function(){ const d = document.createElement('div');
-                     d.className = 'deck-card todo-card'; deck.appendChild(d); return d; })();
-      const leer = () => getComputedStyle(card).backgroundColor;
-      deck.className = "deck";                       // despierta
-      const abierta = leer();
-      deck.className = 'deck dim';                   // en reposo, cerrada
-      const reposo = leer();
-      deck.className = 'deck dim open';              // en reposo pero abierta
-      const abiertaDim = leer();
-      const cs = getComputedStyle(card);
-      return { abierta: abierta, reposo: reposo, abiertaDim: abiertaDim,
-               alto: cs.getPropertyValue('--card-h').trim(),
-               bordeIzq: cs.borderLeftColor, anchoBordeIzq: cs.borderLeftWidth };
-    }, reglas);
-
-    check('en reposo, dentro de la pila, es translúcida — para no competir con ' +
-          'la app (' + q.reposo + ')', /rgba\(255, 255, 255, 0\.52\)/.test(q.reposo));
-    check('pero al ABRIR la pila es papel blanco, que es lo que se puede leer (' +
-          q.abiertaDim + ')', q.abiertaDim === 'rgb(255, 255, 255)');
-    check('...y también con la pila despierta', q.abierta === 'rgb(255, 255, 255)');
-    check('es el mismo trato que las tarjetas del sistema, no un caso aparte',
-      /\.deck\.dim:not\(\.open\) \.sys-card/.test(SRC));
-
-    // Jose (v11.44): "LA TARJETA DEBE SER UN POCO MÁS ALTA, Y TAL VEZ PUEDES
-    // HACERLA DE COLOR NARANJA (PERO NO TAN ENCENDIDO)."
-    check('es más alta que las 136px que Jose vio quedarse cortas (' + q.alto +
-          ')', parseInt(q.alto, 10) >= 150);
-    check('la banda de la izquierda es naranja (' + q.bordeIzq + ') — es lo ' +
-          'único del montón que espera un movimiento de quien la lee; las del ' +
-          'sistema sólo informan',
-      q.bordeIzq === 'rgb(234, 88, 12)');
-    check('...una banda, no un fondo entero: --orange-bg sobre toda la ' +
-          'tarjeta sería más grito del que se pidió, y el texto se lee peor',
-      q.anchoBordeIzq === '4px' && q.abiertaDim === 'rgb(255, 255, 255)');
-    check('y el naranja sale de --orange, que existe en :root — no de una ' +
-          'variable inventada, que el navegador ignoraría en silencio',
-      /--orange:#EA580C/.test(SRC) && /border-left:4px solid var\(--orange\)/.test(SRC));
-  }
+  // La parte visual se mide en su propia página, con la HOJA DE ESTILOS ENTERA
+  // de la app. Ver el comentario de arriba: la versión de la v11.44 inyectaba
+  // sólo dos reglas escogidas a mano, y por eso no vio que el resto del archivo
+  // pisaba el alto.
+  await medirTarjeta(browser);
 
   console.log('\n═══ y si el navegador no deja guardar nada ═══\n');
   r = await p.evaluate(() => {

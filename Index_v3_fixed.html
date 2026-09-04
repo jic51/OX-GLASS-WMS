@@ -1099,44 +1099,9 @@
       background:#EFF6FF;border:1px solid var(--accent);border-radius:6px;
       padding:.5rem .6rem}
     .entry-offer input{margin:0;flex:none}
-    /* La tarjeta de entrada pendiente. Del tamaño de las del sistema, como
-       pidió Jose, y con su propio color: ámbar, que dentro de esta app ya
-       significa "mira esto" — es el mismo que marca el stock bajo. Las del
-       sistema son verdes porque informan de algo hecho; ésta no está hecha. */
-    /* --yellow, no --amber: --amber existe en la landing y NO en la app, así
-       que la primera versión de esto pintó un borde de ningún color y una
-       etiqueta que heredaba el color del texto. Un var() que no existe no
-       falla, se ignora — que es por lo que un color inventado se despliega
-       tan bien como uno real hasta que alguien lo mira.
-
-       Y LE FALTABA EL FONDO, que es el otro fallo que Jose fotografió: la
-       tarjeta se veía translúcida SIEMPRE, con la tabla de abajo leyéndose a
-       través del texto. Sólo declaraba el borde izquierdo, así que heredaba
-       del montón el fondo de reposo y nunca lo recuperaba.
-
-       El patrón correcto es el de .sys-card, dos reglas: opaca por defecto, y
-       fantasma ÚNICAMENTE mientras la pila está en reposo y cerrada. Así se
-       desdibuja para no competir con la app, y en cuanto se abre o se pasa el
-       ratón vuelve a ser papel blanco que se puede leer. Del tamaño de las del
-       sistema, como pidió, y algo más alta porque lleva dos botones. */
-    /* 160px, no 136: a 136 el nombre largo y la línea de "hace un momento"
-       llegaban al borde de abajo y el par de botones quedaba apretado contra
-       ellos. Naranja y no amarillo porque es lo único del montón que pide algo
-       de quien lo lee — las del sistema informan, ésta espera un movimiento.
-       --orange (#EA580C) existe en :root; el fondo se queda blanco a propósito,
-       --orange-bg entero sería más grito del que Jose pidió. */
-    .todo-card{--card-h:160px;--card-w:352px;
-      background:var(--card);color:var(--text);
-      border:1px solid var(--border);border-left:4px solid var(--orange)}
-    .deck.dim:not(.open) .todo-card{background:var(--card-ghost);
-      border-color:rgba(0,0,0,.06);border-left-color:var(--border);
-      box-shadow:0 2px 10px rgba(0,0,0,.08)}
-    .todo-card-lbl{font-size:.62rem;font-weight:700;text-transform:uppercase;
-      letter-spacing:.04em;color:var(--orange);margin-bottom:.15rem}
-    .todo-card-val{font-weight:700;font-size:.86rem;line-height:1.25;
-      overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .todo-card-sub{font-size:.74rem;color:var(--text);opacity:.85;margin-top:.1rem}
-    .todo-card-when{font-size:.68rem;color:var(--muted);margin-top:.1rem;margin-bottom:.35rem}
+    /* La tarjeta de entrada pendiente NO se define aquí: sus reglas viven
+       junto a .sys-card, después de .deck-card. Estuvieron aquí desde la v11.42
+       y ese sitio era el fallo — ver el comentario largo allí. */
     /* ── INCOMING SECTION ── */
     .incoming-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:1.5rem}
     /* Jose lo dibujó encima de una captura: CUATRO arriba y TRES abajo, y las
@@ -1420,6 +1385,79 @@
        list above it does it over time rather than in one frame. */
     .deck-card.leaving{opacity:0;transform:translateX(150%) scale(.9);margin-bottom:calc(-1 * (var(--card-h) + .45rem));pointer-events:none;transition-delay:0s!important}
     .sys-card{--card-h:112px;--card-w:352px;cursor:pointer}
+
+    /* ── LA TARJETA DE ENTRADA PENDIENTE ──────────────────────────────────────
+     *
+     * TIENE QUE ESTAR AQUÍ, DESPUÉS DE .deck-card. Estuvo 250 líneas más
+     * arriba desde la v11.42, y ése era el fallo que Jose fotografió con los
+     * botones saliéndose por debajo del borde.
+     *
+     * .deck-card declara `--card-h:96px` y .todo-card declaraba `--card-h:160px`.
+     * Las dos tienen la misma especificidad —una clase— así que gana la que
+     * viene después en el archivo, y la que venía después era .deck-card. La
+     * tarjeta midió 96px todo el tiempo, mientras el archivo decía 160 y yo
+     * decía que la había subido. El contenido pide 106px, así que los botones
+     * caían fuera. .sys-card no tiene ese problema por una sola razón: está
+     * escrita justo debajo de .deck-card, que es donde ahora está ésta.
+     *
+     * Es el mismo fallo que el header de la v11.44: dos reglas que se leen bien
+     * por separado, y el error está en cuál gana.
+     *
+     * EL ALTO NO SE ADIVINA. 190px sale de medir el contenido real —etiqueta,
+     * nombre, cantidad, hora y la fila de botones, más el relleno— y dejar aire
+     * en vez de justo lo necesario, porque un nombre de material más largo
+     * envuelve a dos líneas. test-arrived-to-entry.js mide que nada se salga.
+     *
+     * NARANJA ENTERA, no una banda. Jose: "la tarjeta hay que hacerla naranja
+     * toda, así las letras dentro serán blancas y grises, y se verán sin
+     * problemas al hacerse transparentes". Y tiene razón en el motivo: el
+     * estado de reposo desvanece la tarjeta, y un texto gris oscuro sobre un
+     * blanco desvanecido se lee peor que uno blanco sobre naranja desvanecido.
+     * Por eso el reposo aquí NO usa --card-ghost (que es blanco translúcido):
+     * usa el mismo naranja con menos opacidad, para que el texto blanco siga
+     * teniendo detrás algo oscuro.
+     */
+    .todo-card{--card-h:150px;--card-w:352px;
+      background:var(--orange);color:#fff;
+      border:1px solid rgba(0,0,0,.12);
+      box-shadow:0 6px 20px rgba(154,52,18,.32);
+      /* Columna con los botones empujados abajo. Sin esto el contenido se
+         amontona arriba y el aire de más queda todo en un hueco al pie, que es
+         lo que hace que una tarjeta con sitio de sobra parezca mal cortada. Y
+         de paso el alto deja de ser un número que hay que clavar: sobre o
+         falte un poco, los botones siguen apoyados en el borde de abajo. */
+      display:flex;flex-direction:column;padding:.7rem .85rem}
+    .todo-card .cfg-card-acts{margin-top:auto}
+    .deck.dim:not(.open) .todo-card{background:rgba(234,88,12,.66);
+      border-color:rgba(0,0,0,.05);
+      box-shadow:0 2px 10px rgba(154,52,18,.16)}
+    .todo-card-lbl{font-size:.62rem;font-weight:800;text-transform:uppercase;
+      letter-spacing:.05em;color:rgba(255,255,255,.92);margin-bottom:.2rem}
+    .todo-card-val{font-weight:800;font-size:.9rem;line-height:1.25;color:#fff;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    /* Una línea, igual que el nombre. Sin este corte el alto de la tarjeta
+       depende de lo largo que sea el nombre del proveedor, y entonces ningún
+       --card-h es correcto para todos los proveedores: es lo que convierte
+       "cabe" en "cabe hoy". Con el corte, el contenido mide lo mismo pase lo
+       que pase, y el alto se puede fijar de verdad. */
+    .todo-card-sub{font-size:.76rem;color:rgba(255,255,255,.92);margin-top:.15rem;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    /* El gris que pidió Jose: el mismo blanco bajado de intensidad, no un gris
+       de la paleta. Un #9CA3AF sobre naranja se ensucia; el blanco al 72% se
+       lee como gris y conserva el contraste. */
+    .todo-card-when{font-size:.7rem;color:rgba(255,255,255,.72);
+      margin-top:.15rem;margin-bottom:.55rem}
+    /* Los botones, releídos para fondo naranja: el azul de .cfg-card-add
+       desaparecía encima. Blanco sólido para el que hace algo, contorno para
+       el que aplaza. */
+    .todo-card .cfg-card-add{background:#fff;color:#9A3412}
+    .todo-card .cfg-card-add:hover{background:#FFF7ED}
+    .todo-card .cfg-card-skip{background:rgba(255,255,255,.16);color:#fff;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.45)}
+    .todo-card .cfg-card-skip:hover{background:rgba(255,255,255,.26)}
+    /* La ✕ del pico también: navy sobre naranja se lee como una mancha. */
+    .todo-card .sys-card-x{background:#9A3412;border-color:#fff}
+    .todo-card .sys-card-x:hover{background:var(--red)}
     .deck-card + .deck-card{margin-top:.45rem}
     /* --deck-in already governs margin/transform unconditionally, from the
        base rule above, so it needs no separate re-statement here for opening —
@@ -3206,7 +3244,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.44';
+var APP_VERSION = '11.45';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -3218,7 +3256,7 @@ var APP_VERSION = '11.44';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '17ffbff4';
+var APP_BUILD = '41a5380b';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -16056,10 +16094,17 @@ function toggleDarkMode() {
 var _splashTimer = null, _splashPct = 8;
 
 // A single "almost there" message read the same whether the load takes 3
-// seconds or 20 — a real wait deserves more than one sentence. Rotates every
-// 3.5s (Jose: 2.5s read as too fast) — the last one stays up and stops
-// rotating rather than looping, since repeating "taking longer than
-// expected" over and over reads as broken, not as still trying.
+// seconds or 20 — a real wait deserves more than one sentence. Rotates cada
+// 4s — el último se queda quieto y deja de rotar en vez de dar la vuelta,
+// porque repetir "taking longer than expected" una y otra vez se lee como
+// averiado, no como que sigue intentándolo.
+//
+// El intervalo ha subido dos veces por la misma razón, y las dos veces lo
+// pidió Jose leyéndolo de verdad: 2.5s → 3.5s (v9.x, "demasiado rápido") y
+// 3.5s → 4s (v11.45, "0.5 segundos más cada una"). Se anota el histórico
+// porque el número parece arbitrario y no lo es: es lo que tarda alguien en
+// leer la frase más larga de la lista sin sentirse apurado.
+var SPLASH_NOTE_MS = 4000;
 var SPLASH_NOTES = [
   'Connecting to your spreadsheet…',
   'Reading your inventory…',
@@ -16092,7 +16137,7 @@ var _splashNoteTimer = null, _splashNoteIdx = 0;
       return;
     }
     if (n) n.textContent = SPLASH_NOTES[_splashNoteIdx];
-  }, 3500);
+  }, SPLASH_NOTE_MS);
 })();
 
 function _showSplashReload(){
