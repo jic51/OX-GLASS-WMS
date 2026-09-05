@@ -3263,7 +3263,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.46';
+var APP_VERSION = '11.47';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -3275,7 +3275,7 @@ var APP_VERSION = '11.46';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'd2b5be01';
+var APP_BUILD = '4d6bc259';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -4535,6 +4535,11 @@ function wizFinish(){
       document.body.style.overflow = '';
       btn.disabled = false; btn.textContent = '✓ Start using ' + PRODUCT;
       _wizJustFinished = true;
+      // RUIDOSO A PROPÓSITO, y es uno de los dos sitios donde lo es. El
+      // asistente acaba de terminar: no hay caché, no hay nada en pantalla, y
+      // esta primera carga es la que de verdad puede tardar los 10-20 segundos
+      // que anuncia. Aquí los esqueletos no son un parpadeo, son la única señal
+      // de que algo está pasando.
       loadDataFromGoogle(true);
       showToast('Setup complete — welcome to ' + PRODUCT + '.', 'ok');
     })
@@ -5859,7 +5864,9 @@ function _doDeleteMovementRow(rowIdx){
   google.script.run
     .withSuccessHandler(function(){
       showToast('Movement deleted.', 'ok');
-      loadDataFromGoogle(true); // skipCache — show fresh data
+      // Silencioso: la fila desaparece de la tabla y el aviso lo dice. Desarmar
+      // el tablero para volver a montarlo no añade nada.
+      loadDataFromGoogle(true, true);
     })
     .withFailureHandler(function(err){
       showToast('Delete failed: ' + (err.message || err), 'err', 6000);
@@ -6741,6 +6748,102 @@ function updateNotifyPreview(){
   document.getElementById('mNotifyMsg').value = msg;
 }
 
+/* ── "OCUPADO" NO ES UN ERROR DE QUIEN GUARDA ────────────────────────────────
+ *
+ * Jose, prueba con tres cuentas (2026-09-04): tres salidas del mismo estante
+ * que sumaban exactamente lo que había (142 = 42 + 50 + 50). Una pasó, dos
+ * vieron un error rojo. Sus palabras, y son la especificación de esto:
+ *
+ *   "no debemos dejar que la app muestre un error cuando los movimientos sí
+ *    están hechos correctamente, pero es el sistema el que no lo está haciendo
+ *    bien. debemos poner en cola los movimientos o reintentar hacerlos otra
+ *    vez, si todo está correcto."
+ *
+ * El servidor ya hacía lo correcto: serializa las escrituras con un candado
+ * para que dos personas no se pisen. Lo que estaba mal es lo que pasa cuando
+ * te toca esperar — el candado se rinde a los 8 segundos y devuelve un error,
+ * y el navegador enseñaba ese error igual que enseñaría "no hay suficiente
+ * material". Dos cosas opuestas con la misma cara: una dice QUE NO, la otra
+ * dice TODAVÍA NO.
+ *
+ * Ahora el servidor marca la segunda con SYSTEM_BUSY| y aquí se reintenta sola.
+ *
+ * POR QUÉ CON ESPERA CRECIENTE Y AL AZAR, que es la parte que parece un adorno
+ * y no lo es: si los tres navegadores reintentaran a los mismos milisegundos,
+ * volverían a chocar los tres en cada ronda, y la tercera persona podría no
+ * pasar nunca. La parte al azar es lo que los desordena. Es la misma razón por
+ * la que dos coches en un cruce estrecho se desatascan cuando uno duda un
+ * momento más que el otro.
+ *
+ * REINTENTAR AQUÍ ES SEGURO porque el error de ocupado significa que el candado
+ * NO se llegó a tomar, o sea que no se escribió absolutamente nada. No es un
+ * "no sé si se guardó": es un "no se guardó". Un reintento no puede duplicar.
+ * Si algún día el servidor marcara con SYSTEM_BUSY| un fallo posterior a la
+ * escritura, esto duplicaría movimientos — por eso la marca sólo se pone donde
+ * se pide el candado, y en ningún otro sitio.
+ */
+var BUSY_MAX_RETRIES = 4;
+var BUSY_BASE_MS     = 900;
+var BUSY_JITTER_MS   = 700;
+
+function _isBusyError(err){
+  var msg = (err && err.message) ? err.message : String(err || '');
+  return msg.indexOf('SYSTEM_BUSY|') !== -1;
+}
+
+/** El texto legible, sin la marca — para cuando hay que enseñarlo de verdad. */
+function _busyText(err){
+  var msg = (err && err.message) ? err.message : String(err || '');
+  var i = msg.indexOf('SYSTEM_BUSY|');
+  return i === -1 ? msg : msg.slice(i + 'SYSTEM_BUSY|'.length);
+}
+
+/** Cuánto esperar antes del intento número `attempt` (1 = el primer reintento). */
+function _busyDelay(attempt){
+  return BUSY_BASE_MS * Math.pow(2, attempt - 1) +
+         Math.floor(Math.random() * BUSY_JITTER_MS);
+}
+
+/* Reintento compartido por los TRES caminos de guardado.
+ *
+ * Escrito una vez a propósito. Hay tres funciones que mandan movimientos
+ * —submitMovement para los sueltos, addMultiExit para las salidas y
+ * submitMultiEntry para las entradas— y este archivo ya tiene dos comentarios
+ * que dicen "addMultiExit never got it wired up" y "addMultiEntry never got it
+ * wired up" sobre el aviso de duplicado, que se escribió tres veces y sólo
+ * llegó a una. Copiar el reintento tres veces sería repetir esa historia.
+ *
+ * Devuelve true cuando se ha ocupado del error — sea porque ha programado un
+ * reintento, sea porque se agotaron y ya ha avisado. En los dos casos quien
+ * llama debe salir sin enseñar nada más. Devuelve false si no era un "ocupado",
+ * y entonces el error sigue su camino normal.
+ *
+ * `state` es un objeto con `tries`, propio de cada guardado: el contador tiene
+ * que morir con la ventana, no vivir en una variable global que arrastre los
+ * intentos de un guardado al siguiente.
+ */
+function _busyRetry(err, opts){
+  if (!_isBusyError(err)) return false;
+  var btn = opts.btn, state = opts.state;
+  if (state.tries < BUSY_MAX_RETRIES){
+    state.tries++;
+    // La ventana se queda ocupada a propósito: devolverle el botón a la persona
+    // la invitaría a pulsar otra vez, y el guardado no ha fallado — está en
+    // cola. El texto del botón es el aviso, que es donde Jose está mirando.
+    _btnBusy(btn, 'Waiting its turn…');
+    setTimeout(opts.retry, _busyDelay(state.tries));
+    return true;
+  }
+  // Agotados. Aquí sí hay que hablar, pero diciendo de quién es el problema:
+  // no se guardó nada y lo que se escribió está bien.
+  _btnReset(btn);
+  if (opts.overlay) _setModalBusy(opts.overlay, false);
+  showToast('The system stayed busy through ' + (BUSY_MAX_RETRIES + 1) +
+    ' tries. Nothing was saved and nothing is wrong with what you entered — ' +
+    'press Save again in a few seconds.', 'warn', 9000);
+  return true;
+}
+
 // ── Modal: Submit ─────────────────────────────────────────────────────────────
 async function submitMovement(){
  try {
@@ -6959,9 +7062,14 @@ async function submitMovement(){
     forceSubmit:      false
   };
 
+  // Cuántas veces se ha tenido que esperar turno para ESTE guardado. Vive
+  // fuera de _doSubmit porque el reintento vuelve a entrar en ella, y muere con
+  // ella para que los intentos de un guardado no cuenten en el siguiente.
+  var _busyState = { tries: 0 };
+
   function _doSubmit(force) {
     payload.forceSubmit = !!force;
-    _btnBusy(btn, 'Saving…');
+    _btnBusy(btn, _busyState.tries ? 'Waiting its turn…' : 'Saving…');
     _setModalBusy('moveOverlay', true);
     google.script.run
       .withSuccessHandler(function(res){
@@ -7008,6 +7116,11 @@ async function submitMovement(){
       })
       .withFailureHandler(function(err){
         var msg = err.message || String(err);
+        // ── Otro guardado tenía el turno ───────────────────────────────────
+        // Lo primero, antes de soltar el botón: si toca esperar, el botón no
+        // debe volver a ser pulsable.
+        if (_busyRetry(err, { btn: btn, overlay: 'moveOverlay', state: _busyState,
+                              retry: function(){ _doSubmit(force); } })) return;
         // ── Duplicate detected by backend ──────────────────────────────────
         // GAS wraps errors with "Error: " prefix, so we search anywhere in msg
         var dupIdx = msg.indexOf('DUPLICATE_MOVEMENT|');
@@ -7028,7 +7141,7 @@ async function submitMovement(){
           return;
         }
         // ── Any other error ────────────────────────────────────────────────
-        showToast('Error: ' + msg, 'err', 6000);
+        showToast('Error: ' + _busyText(err), 'err', 6000);
         _btnReset(btn);
         _setModalBusy('moveOverlay', false);
       })
@@ -8137,6 +8250,8 @@ function submitMultiExit(){
     });
   });
 
+  var _busyState = { tries: 0 };
+
   var doSubmit = function(force){
     // BUGFIX: this used to look up 'moveSaveBtn', an id that doesn't exist anywhere
     // in the HTML (the button is 'moveSubmit') — so `btn` was always null and NO
@@ -8157,6 +8272,11 @@ function submitMultiExit(){
         loadDataFromGoogle(false); // cached numbers show instantly, fresh ones catch up quietly
       })
       .withFailureHandler(function(err){
+        // ANTES de soltar el botón: mientras se espera turno no debe poder
+        // volver a pulsarse. Éste es el camino que Jose reventó en la prueba
+        // —tres salidas del mismo estante— así que es el que más importa.
+        if (_busyRetry(err, { btn: btn, overlay: 'moveOverlay', state: _busyState,
+                              retry: function(){ doSubmit(force); } })) return;
         if (btn){ btn.disabled=false; btn.textContent='Save to System'; }
         _setModalBusy('moveOverlay', false);
         var msg = err.message || String(err);
@@ -8299,10 +8419,11 @@ function submitMultiEntry(){
   };
 
   var btn = document.getElementById('moveSubmit');
+  var _busyState = { tries: 0 };
 
   function _doMultiSubmit(force){
     payload.forceSubmit = !!force;
-    _btnBusy(btn, 'Saving…');
+    _btnBusy(btn, _busyState.tries ? 'Waiting its turn…' : 'Saving…');
     _setModalBusy('moveOverlay', true);
     google.script.run
       .withSuccessHandler(function(res){
@@ -8325,6 +8446,9 @@ function submitMultiEntry(){
         }, 400);
       })
       .withFailureHandler(function(err){
+        // Antes de soltar el botón, por el mismo motivo que en los otros dos.
+        if (_busyRetry(err, { btn: btn, overlay: 'moveOverlay', state: _busyState,
+                              retry: function(){ _doMultiSubmit(force); } })) return;
         var msg = err.message || String(err);
         btn.textContent = 'Save to System'; btn.disabled = false;
         _setModalBusy('moveOverlay', false);
@@ -8552,7 +8676,9 @@ function _rebuildStockNow() {
     .withSuccessHandler(function(res){
       btn.disabled = false; btn.textContent = '🔧 Rebuild Stock Totals Now';
       showToast('✓ ' + (res && res.message ? res.message : 'Stock totals rebuilt.'), 'ok');
-      loadDataFromGoogle(true);
+      // Silencioso: esto se pulsa desde Ajustes, con su propio botón ocupado y
+      // su propio aviso. La pantalla de carga taparía las dos cosas.
+      loadDataFromGoogle(true, true);
     })
     .withFailureHandler(function(e){
       btn.disabled = false; btn.textContent = '🔧 Rebuild Stock Totals Now';
@@ -9330,7 +9456,9 @@ function _dqApply(i){
         }
       });
       // Stock can move: merging two materials joins two stock lines into one.
-      loadDataFromGoogle(true);
+      // Silencioso: la tarjeta de "Check my data" ya dice ahí mismo cuántas
+      // filas cambió. Ese texto es el acuse de recibo.
+      loadDataFromGoogle(true, true);
     })
     .withFailureHandler(function(err){
       _btnReset(btn);
@@ -9842,7 +9970,10 @@ function _commitImport(){
       _importParsedRows = [];
       var box = document.getElementById('importPreviewBox'); if (box) box.innerHTML = '';
       var fi  = document.getElementById('importFileInput');  if (fi)  fi.value = '';
-      loadDataFromGoogle(true);
+      // Silencioso aunque una importación cambie mucho: sigue siendo el
+      // resultado de algo que se acaba de pulsar, y el aviso dice cuántas filas
+      // entraron.
+      loadDataFromGoogle(true, true);
     })
     .withFailureHandler(function(err){
       btn.disabled = false; btn.innerHTML = '✓ Import ' + validRows.length + ' Valid Row(s)';
@@ -14540,7 +14671,8 @@ function _incomingDeleted(btn){
     closeModal('incomingOverlay');
     showToast('Expected delivery deleted.', 'ok');
   });
-  loadDataFromGoogle(true); // skipCache
+  // Silencioso: la ventana se cierra con su tick y el aviso lo confirma.
+  loadDataFromGoogle(true, true);
 }
 
 // ── Read an email into expected deliveries ──────────────────────────────────
@@ -15450,6 +15582,9 @@ function _startGoogleLogin() {
 function _signOut() {
   try { localStorage.removeItem(_SESSION_KEY); } catch(e) {}
   _sessionToken = '';
+  // RUIDOSO A PROPÓSITO, el otro sitio. Al cerrar sesión la pantalla TIENE que
+  // vaciarse: dejar el inventario de la empresa a la vista mientras se vuelve a
+  // la pantalla de acceso sería enseñar datos a quien acaba de salir.
   loadDataFromGoogle(true);
 }
 
@@ -15500,9 +15635,29 @@ function loadDataFromGoogle(skipCache, quiet){
   lastLoadTime = null;
   if (!quiet) setConnStatus('loading');
 
-  // ── Show cached data instantly while fresh data loads in background ──────
-  // skipCache=true is passed after a save/delete so user sees loading state
-  // rather than stale data that doesn't include their new movement yet.
+  // ── LOS TRES MODOS DE ESTA FUNCIÓN, Y CUÁNDO USAR CADA UNO ───────────────
+  //
+  // El comentario que había aquí decía que skipCache=true se pasa "después de
+  // guardar o borrar, para que el usuario vea el estado de carga en vez de
+  // datos viejos". Era verdad cuando se escribió y dejó de serlo: ver la
+  // pantalla de carga después de guardar es exactamente lo que Jose fotografió
+  // y pidió quitar (v11.47). Los dos argumentos son independientes:
+  //
+  //   ()            → usa la caché. Pinta lo conocido al instante y lo
+  //                   reemplaza cuando llega lo fresco. El arranque normal.
+  //   (true)        → sin caché Y CON pantalla de carga: esqueletos y el aviso
+  //                   de los 10-20 segundos. Sólo para cuando de verdad no hay
+  //                   nada que enseñar — el primer arranque tras el asistente,
+  //                   y cerrar sesión.
+  //   (true, true)  → sin caché y EN SILENCIO. Lo de antes se queda en pantalla
+  //                   hasta que llega lo nuevo. Éste es el que va después de
+  //                   guardar, borrar o editar: quien acaba de pulsar un botón
+  //                   ya sabe que algo está pasando —lo dice el botón— y no
+  //                   necesita que la pantalla se desarme para creérselo.
+  //
+  // Un fallo sí se enseña aunque el modo sea silencioso: el manejador de error
+  // de abajo escribe en statsRow igualmente. Silencioso significa sin
+  // parpadeo, no sin noticias.
   var cached = skipCache ? null : _loadCache();
   if (cached && cached.userRole) {
     _applyData(cached);
@@ -17038,7 +17193,8 @@ function saveEditMov() {
       _setModalBusy('editMovOverlay', false);
       closeModal('editMovOverlay');
       showToast('Movement updated — ' + res.changes + ' field(s) changed. Email sent.', 'ok');
-      loadDataFromGoogle(true);
+      // Silencioso: mismo caso que borrar un movimiento.
+      loadDataFromGoogle(true, true);
     })
     .withFailureHandler(function(err) {
       btn.disabled = false; btn.textContent = '💾 Save Changes';

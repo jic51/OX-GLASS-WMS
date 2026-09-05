@@ -131,8 +131,17 @@ console.log('\n═══ deleting says something, and cannot be pressed twice �
     /_btnReset\(btn\);/.test(del) && /showToast\('Error: ' \+ msg, 'err'/.test(del));
   check('a successful delete confirms itself — there was no toast at all before',
     /showToast\('Expected delivery deleted\.', 'ok'\)/.test(del));
-  check('the window closes and the data reloads exactly as before',
-    /closeModal\('incomingOverlay'\)/.test(del) && /loadDataFromGoogle\(true\)/.test(del));
+  // Decía "exactly as before" y exigía `loadDataFromGoogle(true)`, o sea el modo
+  // con esqueletos y el aviso de los 10-20 segundos. Era correcto cuando se
+  // escribió: entonces ése ERA el comportamiento de antes. Jose pidió quitarlo
+  // (v11.47) porque desarmar el tablero después de borrar algo se lee como si
+  // la app se estuviera recargando entera.
+  //
+  // Lo que sigue importando es lo mismo de siempre —que la ventana se cierre y
+  // los datos se refresquen— y eso no ha cambiado. Lo que cambia es CÓMO, así
+  // que se nombra el modo en vez de decir "como antes", que ya no dice nada.
+  check('the window closes and the data reloads without tearing the dashboard down',
+    /closeModal\('incomingOverlay'\)/.test(del) && /loadDataFromGoogle\(true, true\)/.test(del));
   // err can arrive as an Error, or as a bare string from some transports.
   // Reading .message off a string is undefined, and "Error: undefined" is
   // exactly the message that teaches a user to stop reading toasts.

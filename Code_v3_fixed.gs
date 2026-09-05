@@ -46,7 +46,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '11.46';
+var APP_VERSION = '11.47';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -58,7 +58,7 @@ var APP_VERSION = '11.46';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'd2b5be01';
+var APP_BUILD = '4d6bc259';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -2291,10 +2291,33 @@ function processMovementInner_(ss, action, data, auth) {
 // Apps Script releases a script lock when the execution ends, so even a bug
 // that skipped releaseLock could only hold others up until this request
 // finishes, never permanently.
+// SYSTEM_BUSY| ES UNA MARCA PARA EL NAVEGADOR, NO UN TEXTO PARA LEER.
+//
+// Jose, tras la prueba con tres cuentas: tres salidas que sumaban exactamente
+// lo que había en el estante (142 = 42 + 50 + 50). Una pasó y dos vieron un
+// error. Sus palabras: "no debemos dejar que la app muestre un error cuando los
+// movimientos sí están hechos correctamente, pero es el sistema el que no lo
+// está haciendo bien. debemos poner en cola los movimientos o reintentar".
+//
+// Tiene razón, y la distinción es la que importa: "no cabe" es un NO, y "estoy
+// ocupado" es un TODAVÍA NO. Los dos llegaban al navegador como texto rojo de
+// la misma forma, así que la app no podía tratarlos distinto — y quien se
+// llevaba el "todavía no" leía un fallo suyo.
+//
+// El prefijo lo arregla sin cambiar nada más: el navegador reconoce la marca y
+// reintenta solo (ver _isBusyError en Index). Es el mismo recurso que ya usa
+// DUPLICATE_MOVEMENT|, y por el mismo motivo — Apps Script entrega los errores
+// al cliente como texto, así que un código DENTRO del texto es la única forma
+// de distinguir una causa de otra sin adivinar por el idioma del mensaje.
+//
+// El texto que va detrás se sigue enseñando cuando los reintentos se agotan,
+// así que tiene que seguir leyéndose bien por sí solo.
+var BUSY_PREFIX = 'SYSTEM_BUSY|';
+
 function withStockLock_(fn) {
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(15000)) {
-    throw new Error('System busy — someone else is saving right now. Please try again in a moment.');
+    throw new Error(BUSY_PREFIX + 'System busy — someone else is saving right now. Please try again in a moment.');
   }
   try { return fn(); }
   finally { try { lock.releaseLock(); } catch (e) {} }
@@ -2306,7 +2329,7 @@ function addMovementsBatch_(ss, archive, movements, auth) {
 
   var lock = LockService.getScriptLock();
   try { lock.waitLock(8000); }
-  catch (e) { throw new Error('System busy — another save is in progress. Please retry in a moment.'); }
+  catch (e) { throw new Error(BUSY_PREFIX + 'System busy — another save is in progress. Please retry in a moment.'); }
 
   try {
     // ── ONE read of the whole archive ────────────────────────────────────────
