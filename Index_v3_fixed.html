@@ -3263,7 +3263,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.49';
+var APP_VERSION = '11.50';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -3275,7 +3275,7 @@ var APP_VERSION = '11.49';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '37266773';
+var APP_BUILD = '292babb6';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -6798,6 +6798,107 @@ function _busyText(err){
   return i === -1 ? msg : msg.slice(i + 'SYSTEM_BUSY|'.length);
 }
 
+/* ── CUANDO OTRO SE LLEVÓ EL MATERIAL MIENTRAS ESTA VENTANA ESTABA ABIERTA ───
+ *
+ * Jose: "aun le aparece un error a la segunda persona, no se actualiza la
+ * cantidad ni la ventana de exit se cierra, ni explica que paso y porque no se
+ * puede."
+ *
+ * El servidor siempre supo el número bueno y siempre lo mandó dentro del texto
+ * del error. Lo que faltaba era hacerle caso.
+ *
+ * SE CORRIGE stockData, NO EL RÓTULO. Es la decisión que importa aquí: se podría
+ * reescribir el "✓ 92 avail" de la fila y quedaría bien en la foto, pero el
+ * total de abajo, el aviso al escribir otra cantidad y el resto del formulario
+ * seguirían leyendo el 92 viejo de stockData. Arreglando el origen y volviendo
+ * a pintar, todo lo que se deriva de él queda a la vez — que es la diferencia
+ * entre parecer correcto y serlo.
+ *
+ * NO SE CIERRA LA VENTANA. Jose dijo "ni la ventana de exit se cierra", y
+ * pensándolo despacio creo que cerrarla sería peor: lo que la persona escribió
+ * —el destino, quién se lo lleva, los comentarios— se perdería, y tendría que
+ * teclearlo otra vez para sacar las 42 que sí quedan. Se queda abierta, con el
+ * número verdadero y la cantidad ajustada, lista para guardar. Si ya no queda
+ * NADA, entonces sí no hay nada que guardar y se dice claramente.
+ */
+var SHORT_PREFIX = 'SHORT_STOCK|';
+
+function _shortStockInfo(err){
+  var msg = (err && err.message) ? err.message : String(err || '');
+  var i = msg.indexOf(SHORT_PREFIX);
+  if (i === -1) return null;
+  try { return JSON.parse(msg.slice(i + SHORT_PREFIX.length)); }
+  catch (e) { return null; }   // la frase humana de delante sigue enseñándose
+}
+
+/** El texto sin la etiqueta, que es lo que se le enseña a una persona. */
+function _stripTags(err){
+  var msg = (err && err.message) ? err.message : String(err || '');
+  var i = msg.indexOf(SHORT_PREFIX);
+  if (i !== -1) msg = msg.slice(0, i);
+  return msg.replace('SYSTEM_BUSY|', '').replace(/^Error:\s*/i, '').trim();
+}
+
+/**
+ * Devuelve true si se ocupó del error. Corrige el stock conocido con lo que el
+ * servidor acaba de decir, repinta el formulario y explica qué pasó.
+ */
+function _shortStockFix(err){
+  var info = _shortStockInfo(err);
+  if (!info) return false;
+
+  var key  = _normKey(info.cat) + '|||' + _normKey(info.name);
+  var rack = String(info.rack || '').toUpperCase();
+
+  // 1. La verdad, en el sitio del que todo lo demás lee.
+  if (stockData[key]) {
+    if (rack) {
+      stockData[key].warehouseLocs = stockData[key].warehouseLocs || {};
+      stockData[key].warehouseLocs[rack] = info.there;
+    }
+    if (typeof info.total === 'number') stockData[key].availableQty = info.total;
+  }
+
+  // 2. Bajar la cantidad pedida a lo que de verdad hay, en la fila que falló.
+  //    Se busca por estante para no tocar las otras líneas del mismo formulario.
+  var ajustada = false;
+  document.querySelectorAll('.exit-loc-row').forEach(function(row){
+    var r = (row.querySelector('.el-rack') || {}).value || '';
+    if (rack && r.trim().toUpperCase() !== rack) return;
+    var q = row.querySelector('.el-qty');
+    if (!q) return;
+    if (_qty(q.value) > info.there) {
+      q.value = info.there > 0 ? info.there : '';
+      ajustada = true;
+    }
+  });
+
+  // 3. Repintar desde stockData corregido: los rótulos, los totales y los
+  //    avisos vuelven a estar de acuerdo entre sí.
+  try {
+    document.querySelectorAll('[id^="exit-locs-"]').forEach(function(box){
+      var n = box.id.replace('exit-locs-', '');
+      syncExitRackAvail(n);
+      syncExitMatTotal(n);
+    });
+  } catch (e) {}
+  try { renderAll(); } catch (e) {}
+
+  // 4. Y decirlo con palabras, que es lo que faltaba del todo.
+  var donde = rack ? (' at ' + rack) : '';
+  if (info.there <= 0) {
+    showToast('Nothing left' + donde + '. Someone else took the last of ' +
+      info.name + ' while this window was open — nothing was saved. The ' +
+      'numbers on screen are updated.', 'warn', 10000);
+  } else {
+    showToast('Someone else took some while this window was open. Only ' +
+      info.there + ' left' + donde + ' of ' + info.name +
+      (ajustada ? ' — the quantity has been lowered to match. ' : ' — nothing was saved. ') +
+      'Check it and save again.', 'warn', 10000);
+  }
+  return true;
+}
+
 /** Cuánto esperar antes del intento número `attempt` (1 = el primer reintento). */
 function _busyDelay(attempt){
   return BUSY_BASE_MS * Math.pow(2, attempt - 1) +
@@ -7140,10 +7241,12 @@ async function submitMovement(){
           });
           return;
         }
-        // ── Any other error ────────────────────────────────────────────────
-        showToast('Error: ' + _busyText(err), 'err', 6000);
+        // ── Otro se llevó el material mientras esta ventana estaba abierta ─
         _btnReset(btn);
         _setModalBusy('moveOverlay', false);
+        if (_shortStockFix(err)) return;
+        // ── Any other error ────────────────────────────────────────────────
+        showToast('Error: ' + _stripTags(err), 'err', 6000);
       })
       .processMovement('addMovement', _h(payload));
   }
@@ -8296,7 +8399,11 @@ function submitMultiExit(){
           });
           return;
         }
-        showToast('Error: '+msg.replace(/^Error:\s*/i,''),'err',6000);
+        // Otro se llevó el material mientras esta ventana estaba abierta. Va
+        // DESPUÉS del aviso de duplicado y antes del error genérico: los dos
+        // son rechazos legítimos, pero éste trae el número bueno consigo.
+        if (_shortStockFix(err)) return;
+        showToast('Error: '+_stripTags(err),'err',6000);
       })
       .processMovement('addMultiExit', _h({
         materials: materials,

@@ -5,6 +5,40 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+**MEDIDO POR JOSE EN LA v11.49 (2026-09-06) — FUNCIONA, Y HAY DOS NÚMEROS QUE
+MEJORAR.** Sus palabras: "cada vez que muevo algo, cambio, borro, hago un entry,
+en una cuenta, la otra lo cambia entre los 17-25+ segundos". Y: "el boton verde
+se pone rojo al quitar el wifi y al regresarlo tarda casi 15-20 segundos en
+volver a ponerse verde".
+
+**Los 17-25 s son exactamente el diseño**: `PULSE_FAST_MS` está en 20 000. No es
+un fallo, es el número que elegimos. Para bajarlo hay tres caminos, y ninguno es
+gratis:
+
+- **Bajar el intervalo** (10 s → 2800 llamadas por persona y día). Es el más
+  simple y el que más cuota gasta. Recordar el cálculo: tres personas a 20 s ya
+  son ~30 min diarios de ejecución.
+- **Latir más rápido sólo durante un rato después de guardar** ("modo caliente":
+  5 s durante el minuto siguiente a cualquier cambio, propio o ajeno). Casi todo
+  el trabajo de un almacén pasa en ráfagas, así que esto da la sensación de
+  instantáneo por una fracción del coste. **Es mi recomendación.**
+- **Actualización optimista** (ver la opción C de la respuesta del 2026-09-05):
+  no acelera lo que ven los DEMÁS, sólo lo que ve quien guarda. Resuelve otro
+  problema, no éste.
+
+**Los 15-20 s del punto rojo SÍ merecen mirarse**, porque deberían ser cero: la
+v11.49 escucha el evento `online` del navegador, que llega en el momento en que
+vuelve la red. Si tardó 15-20 s es que ese evento **no se disparó** y el que
+funcionó fue el latido de 20 s. Dos causas probables, y hay que distinguirlas
+antes de tocar nada:
+
+1. `navigator.onLine` dentro del iframe de Apps Script puede no recibir el
+   evento — el documento que lo escucha es el de dentro, no el de fuera.
+2. Chrome tarda en decidir que la red volvió cuando el wifi se enciende a mano.
+
+Se distingue mirando la consola del navegador con la red cayendo y volviendo.
+Hasta saber cuál es, cualquier arreglo sería adivinar.
+
 **TERCERA RONDA — Jose, 2026-09-05, con la cola ya funcionando.**
 
 **LA COLA FUNCIONA.** Palabras suyas: "cada movimiento toma un turno y se hace

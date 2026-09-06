@@ -46,7 +46,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '11.49';
+var APP_VERSION = '11.50';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -58,7 +58,7 @@ var APP_VERSION = '11.49';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '37266773';
+var APP_BUILD = '292babb6';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -2368,6 +2368,41 @@ function withStockLock_(fn) {
  * vacía sola, y un sello que desaparece se lee como "todo cambió" en todos los
  * navegadores a la vez.
  */
+/* ── SHORT_STOCK: el número verdadero, en un formato que el navegador entienda
+ *
+ * Jose, prueba con tres cuentas: dos personas sacan todo lo que hay en un
+ * estante. "aun le aparece un error a la segunda persona, no se actualiza la
+ * cantidad ni la ventana de exit se cierra, ni explica que paso y porque no se
+ * puede."
+ *
+ * LO CURIOSO ES QUE EL DATO YA VIAJABA. El servidor lanzaba, literalmente,
+ * "INSUFFICIENT at C3B for 44 NORTH. Available there: 42" — con el número
+ * correcto dentro. El navegador lo enseñaba como texto rojo y lo tiraba, así
+ * que la ventana seguía diciendo 92 mientras el error decía 42.
+ *
+ * Esta etiqueta no añade información: hace legible por máquina la que ya había.
+ *
+ * VA AL FINAL, NO AL PRINCIPIO, y ésa es la diferencia con SYSTEM_BUSY|. Los
+ * dos archivos se despliegan a mano y por separado —la v11.49 se pagó ese
+ * precio— así que un Index viejo contra un Code.gs nuevo tiene que seguir
+ * siendo legible. Con la etiqueta al final, ese Index enseña la frase de
+ * siempre y un poco de ruido detrás. Con la etiqueta delante, enseñaría un
+ * churro de JSON y nada más.
+ *
+ * Y por eso también la frase humana se conserva entera: es la que se lee si
+ * algo falla al interpretar la etiqueta.
+ */
+var SHORT_PREFIX = 'SHORT_STOCK|';
+
+function shortStockTag_(cat, name, rack, there, total, asked) {
+  try {
+    return ' ' + SHORT_PREFIX + JSON.stringify({
+      cat: cat, name: name, rack: rack || '',
+      there: there, total: total, asked: asked
+    });
+  } catch (e) { return ''; }   // sin etiqueta, la frase humana sigue sirviendo
+}
+
 var DATA_STAMP_KEY = 'WMS_DATA_STAMP';
 
 /* LAS ACCIONES QUE MUEVEN EL SELLO. Es una lista corta a propósito, y lo que
@@ -2583,11 +2618,13 @@ function addMovementsBatch_(ss, archive, movements, auth) {
         var locAvail = srcKey ? (snap.locs[srcKey] || 0) : avail;
         if (avail < qty) {
           throw new Error('INSUFFICIENT STOCK for ' + name + '. Available: ' + avail +
-            ' (Warehouse: ' + snap.wh + ', Reserved: ' + reserved + '). Cannot remove ' + qty + '.');
+            ' (Warehouse: ' + snap.wh + ', Reserved: ' + reserved + '). Cannot remove ' + qty + '.' +
+            shortStockTag_(cat, name, '', avail, avail, qty));
         }
         if (srcKey && locAvail < qty) {
           throw new Error('INSUFFICIENT at ' + src + ' for ' + name + '. Available there: ' +
-            locAvail + '. Total available: ' + avail);
+            locAvail + '. Total available: ' + avail +
+            shortStockTag_(cat, name, src, locAvail, avail, qty));
         }
       }
       if (mt === 'WASTE' && !String(d.comments || '').trim()) {
