@@ -3263,7 +3263,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.47';
+var APP_VERSION = '11.48';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -3275,7 +3275,7 @@ var APP_VERSION = '11.47';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '4d6bc259';
+var APP_BUILD = 'c52aeb28';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -15709,6 +15709,11 @@ function loadDataFromGoogle(skipCache, quiet){
         _saveCache(data);
         _announceSystemActivity();
         lastLoadTime = Date.now();
+        // La referencia del latido. Se pone SIEMPRE que llegan datos frescos,
+        // incluidos los refrescos que el propio latido dispara — si no, el sello
+        // que provocó el refresco seguiría pareciendo nuevo y la app se
+        // refrescaría en bucle cada 20 segundos.
+        if (data.dataStamp) _dataStamp = data.dataStamp;
         setConnStatus('online');
         _checkVersionMatch(data.serverVersion, data.serverBuild);
         _setAccountIdentity(data.userName, userEmail, userRole, false);
@@ -16573,10 +16578,19 @@ function setConnStatus(status){
   btn.title = labels[status] || '';
 }
 
-// Check every 60 s — if last load > 5 min ago, mark stale
+// Check every 60 s — if last load > 5 min ago, mark stale.
+//
+// UN LATIDO CORRECTO CUENTA COMO CONTACTO. Antes esto miraba sólo la última
+// CARGA DE DATOS, así que una app conectada y al día se marcaba "stale" a los
+// cinco minutos simplemente porque nadie había guardado nada. Eso es lo
+// contrario de lo que la palabra significa: "stale" tiene que querer decir "no
+// hemos podido confirmar que esto siga siendo verdad", no "no ha cambiado
+// nada". Con el latido comprobando cada 20-150 s, no cambiar nada es
+// información buena, no motivo de sospecha.
 setInterval(function(){
-  if (!lastLoadTime) return;
-  var ageSec = (Date.now() - lastLoadTime) / 1000;
+  var ultimo = Math.max(lastLoadTime || 0, _lastPulseOk || 0);
+  if (!ultimo) return;
+  var ageSec = (Date.now() - ultimo) / 1000;
   if (ageSec > 300) setConnStatus('stale');
 }, 60000);
 
@@ -17227,20 +17241,113 @@ function saveEditMov() {
 // so presence is correct the moment someone actually looks. Interval widened
 // 90s → 150s, still well inside the 5-minute window that decides who counts as
 // active.
-setInterval(function(){
+/* ── EL LATIDO, QUE AHORA HACE TRES COSAS ────────────────────────────────────
+ *
+ * Antes: preguntaba quién está conectado cada 150 s y TIRABA el resultado si
+ * fallaba (`withFailureHandler(function(){})`, vacío). Ahora, con lo mismo,
+ * resuelve las dos cosas que Jose reportó el 2026-09-05.
+ *
+ * 1. QUE CADA QUIEN VEA LOS CAMBIOS DE LOS DEMÁS.
+ *    El servidor devuelve un sello que cambia SÓLO cuando cambian los datos del
+ *    almacén (ver DATA_STAMP_ACTIONS en Code.gs — la lista es la regla de Jose
+ *    escrita como datos). Si el sello cambió, se refresca en silencio. Si no,
+ *    no se mueve nada. Sus reglas, una por una:
+ *      · off-line no se actualiza  → si el latido falla, no hay refresco
+ *      · on-line, cuando cambien los datos → el sello
+ *      · nada de respaldos, permisos ni tarjetas → no bombean el sello
+ *
+ * 2. QUE EL PUNTO NARANJA VUELVA SOLO.
+ *    Jose: "puede pasar minutos con el punto naranja, sin volver a estar online,
+ *    solo se actualiza cuando alguien toca el punto naranja... pero sino nunca."
+ *    Tenía razón literal: NADA lo intentaba. El estado off-line se ponía sólo
+ *    desde el fallo de la carga de datos; este latido tenía el manejador de
+ *    fallo vacío; y el temporizador de 60 s sólo marcaba "stale" a los cinco
+ *    minutos, sin reintentar. Ahora el éxito del latido pone verde, el fallo
+ *    pone naranja, y volver de naranja a verde dispara un refresco — volver de
+ *    off-line es justo cuando más probable es haberse perdido algo.
+ *
+ * 3. EL RITMO SE ADAPTA, Y ESTO ES UNA DECISIÓN DE COSTE, NO DE GUSTO.
+ *    Cada latido gasta cuota de ejecución de Apps Script. A 20 s durante ocho
+ *    horas son ~1400 llamadas por persona y día; con tres personas es media
+ *    hora diaria de cuota. A 150 s la prueba de concurrencia no sirve: los
+ *    cambios de los demás tardan dos minutos y medio en aparecer.
+ *    Así que: RÁPIDO cuando hay actividad —alguien tocó esta pestaña hace poco,
+ *    o el sello se acaba de mover— y LENTO cuando lleva rato quieto. Un almacén
+ *    tranquilo no quema cuota y tres personas trabajando se ven casi al
+ *    instante.
+ */
+var PULSE_FAST_MS   = 20000;    // alguien está trabajando
+var PULSE_SLOW_MS   = 150000;   // quieto: el ritmo de siempre
+var PULSE_ACTIVE_MS = 180000;   // cuánto dura "hace poco" desde el último toque
+
+var _dataStamp    = null;   // null = todavía no se sabe; no se compara contra eso
+var _lastActivity = Date.now();
+var _lastPulseOk  = null;
+var _pulseTimer   = null;
+
+['mousedown','keydown','touchstart','wheel'].forEach(function(ev){
+  document.addEventListener(ev, function(){ _lastActivity = Date.now(); },
+    { passive: true });
+});
+
+function _pulseInterval(){
+  var activo = (Date.now() - _lastActivity) < PULSE_ACTIVE_MS;
+  return activo ? PULSE_FAST_MS : PULSE_SLOW_MS;
+}
+
+function _pulseOnce(){
   if (document.hidden) return;
   google.script.run
-    .withSuccessHandler(renderActiveUsers)
-    .withFailureHandler(function(){})
-    .heartbeat(_sessionToken || null);
-}, 150000);
+    .withSuccessHandler(function(res){
+      res = res || {};
+      _lastPulseOk = Date.now();
+      // `users: null` significa "el limitador cortó, no toques la lista", que
+      // NO es lo mismo que "no hay nadie conectado". Pintar [] aquí borraría la
+      // lista de usuarios activos cada vez que se pasa de llamadas.
+      if (res.users) renderActiveUsers(res.users);
 
+      // El punto vuelve a verde por sí solo. Si venía de naranja, además se
+      // recupera lo que haya pasado mientras tanto.
+      var btn = document.getElementById('connBtn');
+      var veniaCaido = btn && /offline|stale/.test(btn.className);
+      setConnStatus('online');
+
+      var cambio = (_dataStamp !== null && res.stamp && res.stamp !== _dataStamp);
+      if (res.stamp) _dataStamp = res.stamp;
+
+      if (cambio || veniaCaido) {
+        // El modo silencioso de la v11.47: lo de antes se queda en pantalla
+        // hasta que llega lo nuevo. Sin esto, ver el trabajo de otro te
+        // desarmaría el tablero cada vez que otra persona guarda algo, que
+        // sería peor que no verlo.
+        loadDataFromGoogle(true, true);
+      }
+    })
+    .withFailureHandler(function(){
+      // Este manejador estaba VACÍO, y ése era el fallo: el latido sabía que no
+      // había conexión y no se lo decía a nadie.
+      setConnStatus('offline');
+    })
+    .pulse(_sessionToken || null);
+}
+
+function _pulseSchedule(){
+  clearTimeout(_pulseTimer);
+  _pulseTimer = setTimeout(function(){
+    _pulseOnce();
+    _pulseSchedule();
+  }, _pulseInterval());
+}
+_pulseSchedule();
+
+// Al volver a la pestaña se late de inmediato: es el momento en que alguien
+// mira, y —desde este cambio— también el reintento de una conexión caída. Por
+// eso cuenta como actividad, para volver al ritmo rápido.
 document.addEventListener('visibilitychange', function(){
   if (document.hidden) return;
-  google.script.run
-    .withSuccessHandler(renderActiveUsers)
-    .withFailureHandler(function(){})
-    .heartbeat(_sessionToken || null);
+  _lastActivity = Date.now();
+  _pulseOnce();
+  _pulseSchedule();
 });
 
 // ── Version tag — set by JS so we can confirm script is running ───────────────

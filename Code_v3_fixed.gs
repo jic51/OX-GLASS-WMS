@@ -46,7 +46,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '11.47';
+var APP_VERSION = '11.48';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -58,7 +58,7 @@ var APP_VERSION = '11.47';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '4d6bc259';
+var APP_BUILD = 'c52aeb28';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -1687,6 +1687,10 @@ function getInitialData(sessionToken) {
       config:             config,
       reservations:       reservations,
       userRole:           auth.role,
+      // La referencia contra la que el latido compara. Sin esto, el primer
+      // latido tras cargar vería un sello "distinto" del que no tiene, y todo
+      // el mundo se refrescaría una vez de más nada más entrar.
+      dataStamp:          dataStamp_(),
       rolePerms:          rolePerms_(),
       warehouseRoleLabel: warehouseRoleLabel_(),
       userName:           auth.name || '',
@@ -2006,7 +2010,17 @@ function processMovement(action, data) {
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   try {
-    return processMovementInner_(ss, action, data, auth);
+    var out = processMovementInner_(ss, action, data, auth);
+    // EL SELLO SE PONE AQUÍ, en el único sitio por el que pasan todas las
+    // acciones, y DESPUÉS de que la acción haya salido bien. Bombearlo dentro
+    // de cada función que escribe habría significado repartirlo por cuatro
+    // sitios con varios `return` cada uno — que es exactamente cómo se olvida
+    // uno. Aquí no se puede olvidar ninguno: o está en la lista o no está.
+    //
+    // Y la lista ES la regla de Jose, escrita como datos en vez de como
+    // comentario. Ver DATA_STAMP_ACTIONS.
+    if (DATA_STAMP_ACTIONS[action]) bumpDataStamp_();
+    return out;
   } catch (err) {
     var reqId = newRequestId_();
     var severity = classifyErrorSeverity_(err.message);
@@ -2321,6 +2335,99 @@ function withStockLock_(fn) {
   }
   try { return fn(); }
   finally { try { lock.releaseLock(); } catch (e) {} }
+}
+
+/* ── EL SELLO DE LOS DATOS ────────────────────────────────────────────────────
+ *
+ * Un número que cambia cuando cambian LOS DATOS DEL ALMACÉN, y sólo entonces.
+ * El navegador lo pide en cada latido y, si cambió, se refresca en silencio.
+ *
+ * LAS REGLAS SON DE JOSE, y son la parte importante de esto:
+ *
+ *   "la pagina no se actualiza cuando esta off-line, si el usuario esta on
+ *    line, se actualiza cada vez que haya un cambio en los datos, hay que
+ *    verificar que no se actualize por otras cosas como crear la copia de
+ *    seguridad, cambios en los permisos de los usuarios, nuevas tarjetas, solo
+ *    debe ser por los datos, ingresos, salidas, transfers, etc."
+ *
+ * Por eso el sello NO se bombea solo. Se llama a mano desde los cuatro sitios
+ * que cambian movimientos o existencias, y desde ningún otro. Un respaldo
+ * nocturno, un permiso, una tarjeta o un cambio de catálogo NO lo tocan — no
+ * porque se les haya olvidado, sino porque no deben.
+ *
+ * QUÉ QUEDA FUERA A PROPÓSITO, para que nadie lo "arregle" luego:
+ *   · archiveOldMovements — mueve filas entre hojas a las 3 de la mañana. Las
+ *     existencias no cambian y no hay nadie mirando.
+ *   · los respaldos, los permisos, los usuarios, el catálogo y los candados.
+ *   · las entregas esperadas (INCOMING). Es discutible y está anotado en el
+ *     backlog: no son existencias, y la regla de Jose enumera movimientos. Se
+ *     deja fuera porque pasarse de refrescos es peor que quedarse corto — una
+ *     pantalla que se sacude sola enseña a desconfiar del movimiento.
+ *
+ * Se guarda en ScriptProperties y no en CacheService: la caché caduca y se
+ * vacía sola, y un sello que desaparece se lee como "todo cambió" en todos los
+ * navegadores a la vez.
+ */
+var DATA_STAMP_KEY = 'WMS_DATA_STAMP';
+
+/* LAS ACCIONES QUE MUEVEN EL SELLO. Es una lista corta a propósito, y lo que
+ * NO está en ella importa tanto como lo que está.
+ *
+ * Están: las que escriben movimientos o cambian existencias.
+ *
+ *   addMovement          entradas, salidas, transfers, waste, adjust, returns
+ *   addMultiEntry        una entrada con varios materiales
+ *   addMultiExit         una salida con varios materiales
+ *   modifyMovement       editar un movimiento ya guardado
+ *   manageMaterial       borrar una fila, renombrar o fusionar un material
+ *   applyDataQualityFix  los arreglos en bloque de "Check my data"
+ *   commitImport         una importación, que son entradas de verdad
+ *
+ * NO están, y ninguna es un olvido:
+ *
+ *   runBackupOnDemand, setBackupEnabled  — Jose lo pidió por su nombre
+ *   setRolePerms, addUser, removeUser    — permisos y usuarios, también
+ *   dismissSystemCard                    — "nuevas tarjetas", también
+ *   updateConfig, mergeConfigValues,
+ *   mergeLocations, saveLocationLayout   — catálogo: nombres, no existencias
+ *   lockMaterial, unlockMaterial         — cambian permisos sobre el material,
+ *                                          no cuánto hay. (Que el candado se
+ *                                          vea al momento es una petición
+ *                                          aparte, anotada en el backlog.)
+ *   addIncoming, deleteIncoming          — entregas ESPERADAS. Discutible, y
+ *                                          anotado: no son existencias, y la
+ *                                          regla de Jose enumera movimientos.
+ *   todo lo que empieza por get…         — no escriben nada
+ *
+ * La regla al añadir una acción nueva: si después de ejecutarla el número de
+ * AVAILABLE de algún material puede ser distinto, va en la lista. Si no, no.
+ */
+var DATA_STAMP_ACTIONS = {
+  addMovement:         true,
+  addMultiEntry:       true,
+  addMultiExit:        true,
+  modifyMovement:      true,
+  manageMaterial:      true,
+  applyDataQualityFix: true,
+  commitImport:        true
+};
+
+function bumpDataStamp_() {
+  // Nunca puede tumbar la escritura que acaba de ocurrir: el movimiento ya está
+  // guardado, y quedarse sin sello sólo significa que los demás lo verán en su
+  // siguiente carga en vez de en los próximos segundos.
+  try {
+    PropertiesService.getScriptProperties()
+      .setProperty(DATA_STAMP_KEY, String(new Date().getTime()));
+  } catch (e) {
+    Logger.log('bumpDataStamp_ failed: ' + e.message);
+  }
+}
+
+function dataStamp_() {
+  try {
+    return String(PropertiesService.getScriptProperties().getProperty(DATA_STAMP_KEY) || '');
+  } catch (e) { return ''; }
 }
 
 function addMovementsBatch_(ss, archive, movements, auth) {
@@ -7971,6 +8078,54 @@ function heartbeat(sessionToken) {
 
   // Return sorted list: most-recent first
   return Object.values(sessions).sort(function(a, b) { return b.time - a.time; });
+}
+
+/* ── pulse: el latido que además dice si los datos cambiaron ──────────────────
+ *
+ * Jose: "cada persona en la app necesita ver cada cambio cuando se realiza".
+ *
+ * NO ES UN MECANISMO NUEVO. heartbeat ya corría cada dos minutos y medio, y ya
+ * se disparaba al volver a la pestaña. Lo único que faltaba era que trajera el
+ * sello, para que el navegador pueda comparar y refrescarse SOLO cuando hay
+ * algo que refrescar. Sin sello habría que traerse todo el almacén cada vez
+ * para averiguar si cambió algo — que es la forma cara de hacer esta pregunta.
+ *
+ * SE AÑADE EN VEZ DE CAMBIAR heartbeat porque getInitialData también lo llama
+ * (`activeUsers = heartbeat(sessionToken)`) y espera recibir un array. Cambiarle
+ * la forma a heartbeat habría roto ese sitio en silencio: JavaScript no se
+ * queja de leer .users en un array, simplemente devuelve undefined y la lista
+ * de usuarios activos aparece vacía para siempre.
+ *
+ * EL SELLO SE LEE AUNQUE EL LATIDO ESTÉ LIMITADO. heartbeat devuelve [] cuando
+ * el limitador corta —60 llamadas por 300 s y por persona— y eso es correcto
+ * para la lista de usuarios, pero el sello tiene que llegar igual: si no, subir
+ * la frecuencia del latido apagaría justo la función por la que se subió.
+ * `users: null` es la forma de decir "no toques la lista", distinta de `[]`,
+ * que significaría "no hay nadie".
+ */
+function pulse(sessionToken) {
+  // COMPRUEBA LA IDENTIDAD AQUÍ, no sólo dentro de heartbeat.
+  //
+  // La primera versión delegaba: llamaba a heartbeat y devolvía el sello sin
+  // más. test-endpoint-auth.js la marcó, y tenía razón. Todo global sin guion
+  // bajo final es alcanzable por google.script.run desde cualquier cuenta de
+  // Google que tenga la URL, y aunque heartbeat sí se defiende, EL SELLO NO
+  // PASABA POR ÉL: cualquiera con el enlace habría podido preguntar cada 20
+  // segundos y deducir a qué horas se mueve material en este almacén. Es poco,
+  // y es información del cliente igualmente.
+  //
+  // Devuelve vacío en vez de lanzar, por el mismo motivo que heartbeat: un
+  // error aquí sacaría un aviso rojo en una sesión perfectamente sana.
+  var auth = getUserRole(sessionToken);
+  if (!auth || auth.role === 'DENIED' || auth.role === 'NO_SESSION' || !auth.email) {
+    return { users: null, stamp: '' };
+  }
+  var users = [];
+  try { users = heartbeat(sessionToken) || []; } catch (e) { users = []; }
+  return {
+    users: users.length ? users : null,
+    stamp: dataStamp_()
+  };
 }
 
 // ─── LOCKING ─────────────────────────────────────────────────────────────────
