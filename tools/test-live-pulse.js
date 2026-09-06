@@ -141,19 +141,33 @@ function escenario(op){
     setConnStatus: (s) => { ctx._estados.push(s); clases.connBtn = 'conn-btn ' + s; },
     loadDataFromGoogle: (a, b) => { ctx._recargas.push([a, b]); },
     clearTimeout: () => {}, setTimeout: () => 0,
-    google: { script: { run: {
-      withSuccessHandler(fn){ this._ok = fn; return this; },
-      withFailureHandler(fn){ this._no = fn; return this; },
-      pulse(){ op.falla ? this._no(new Error('net')) : this._ok(op.respuesta); }
-    }}}
+    google: { script: { run: (function(){
+      const r = {
+        withSuccessHandler(fn){ this._ok = fn; return this; },
+        withFailureHandler(fn){ this._no = fn; return this; },
+        heartbeat(){ ctx._usoHeartbeat = true;
+          op.falla ? this._no(new Error('net')) : this._ok((op.respuesta || {}).users || []); }
+      };
+      // `sinPulse` imita un servidor todavía en la versión anterior: en Apps
+      // Script, google.script.run SÓLO conoce las funciones desplegadas de
+      // verdad, así que llamar a una que no existe lanza.
+      if (!op.sinPulse) {
+        r.pulse = function(){ ctx._usoPulse = true;
+          op.falla ? this._no(new Error('net')) : this._ok(op.respuesta); };
+      }
+      return r;
+    })() }}
   });
   vm.runInContext('var _dataStamp = ' + JSON.stringify(op.selloConocido) + ';' +
                   'var _lastActivity = Date.now(), _lastPulseOk = null, _pulseTimer = null;' +
                   'var PULSE_FAST_MS = 20000, PULSE_SLOW_MS = 150000, PULSE_ACTIVE_MS = 180000;', ctx);
   vm.runInContext(fnSrc('_pulseInterval'), ctx);
+  vm.runInContext(fnSrc('_pulseOk'), ctx);
+  vm.runInContext(fnSrc('_pulseFail'), ctx);
   vm.runInContext(fnSrc('_pulseOnce'), ctx);
   vm.runInContext('_pulseOnce()', ctx);
   return {
+    usoPulse: ctx._usoPulse, usoHeartbeat: ctx._usoHeartbeat,
     recargas: ctx._recargas, estados: ctx._estados,
     sello: vm.runInContext('_dataStamp', ctx),
     usuarios: ctx._usuariosPintados,
@@ -213,6 +227,52 @@ console.log('\n═══ el punto naranja vuelve solo ═══\n');
   const r = escenario({ selloConocido: '100', claseInicial: 'conn-btn stale',
                         respuesta: { users: null, stamp: '100' } });
   check('lo mismo desde "stale"', r.recargas.length === 1);
+}
+
+console.log('\n═══ y si el servidor todavía es de la versión anterior ═══\n');
+{
+  // EL CASO QUE MATÓ EL LATIDO EN CASA DE JOSE (v11.48). Los dos archivos se
+  // despliegan a mano y por separado, así que "Index nuevo, Code.gs viejo" es
+  // media hora de cualquier despliegue. Y google.script.run sólo conoce las
+  // funciones DESPLEGADAS, así que llamar a `pulse` cuando el servidor no la
+  // tiene lanza de forma síncrona — dentro del temporizador, matando el bucle.
+  const r = escenario({ sinPulse: true, selloConocido: '100',
+                        respuesta: { users: [{ email: 'a' }] } });
+  check('no se cae: usa el latido de siempre cuando `pulse` no existe todavía ' +
+        'en el servidor', r.usoHeartbeat === true && !r.usoPulse);
+  check('...y con eso el punto y la lista de usuarios siguen vivos',
+    r.estados.indexOf('online') !== -1 && !!r.usuarios);
+  check('...aunque sin sello, o sea sin ver los cambios de los demás hasta ' +
+        'desplegar el servidor. Degradarse no es caerse', r.recargas.length === 0);
+}
+
+console.log('\n═══ un tick malo cuesta un tick, no la sesión ═══\n');
+{
+  // La v11.48 tenía `_pulseOnce(); _pulseSchedule();` seguidos en el cuerpo del
+  // temporizador. Si el primero lanzaba, el segundo no llegaba a ejecutarse y
+  // el latido no volvía nunca — en silencio, sin nada en pantalla.
+  const cuerpo = fnSrc('_pulseSchedule');
+  check('el bucle se rearma dentro de un `finally`, así que ningún error de ' +
+        'dentro puede dejar la app sin latido para siempre',
+    /try \{[\s\S]*_pulseOnce\(\)[\s\S]*finally \{[\s\S]*_pulseSchedule\(\)/.test(cuerpo));
+  check('...y el error se registra en vez de tragarse — un latido muerto en ' +
+        'silencio es exactamente lo que costó encontrar esto',
+    /console\.error\('pulse:'/.test(cuerpo));
+}
+
+console.log('\n═══ el navegador avisa cuando vuelve el wifi ═══\n');
+{
+  // Jose apagó y encendió el wifi: una cuenta volvió a verde y la otra se quedó
+  // en rojo. Esperar al siguiente latido puede ser dos minutos y medio; el
+  // navegador lo sabe en el momento y sólo había que escucharlo.
+  check("se escucha el evento 'online' del navegador y se late al instante",
+    /addEventListener\('online'[\s\S]{0,260}_pulseOnce\(\)/.test(SRC));
+  check("...y el 'offline', para no seguir enseñando verde sin red",
+    /addEventListener\('offline'[\s\S]{0,140}setConnStatus\('offline'\)/.test(SRC));
+  check('y también al traer la ventana al frente — `visibilitychange` NO cubre ' +
+        'una ventana visible pero detrás de otra, que es como Jose prueba con ' +
+        'dos cuentas a la vez',
+    /addEventListener\('focus'[\s\S]{0,200}_pulseOnce\(\)/.test(SRC));
 }
 
 console.log('\n═══ el ritmo se adapta ═══\n');

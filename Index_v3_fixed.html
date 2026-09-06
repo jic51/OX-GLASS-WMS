@@ -3263,7 +3263,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.48';
+var APP_VERSION = '11.49';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -3275,7 +3275,7 @@ var APP_VERSION = '11.48';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'c52aeb28';
+var APP_BUILD = '37266773';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -17297,48 +17297,128 @@ function _pulseInterval(){
 
 function _pulseOnce(){
   if (document.hidden) return;
-  google.script.run
-    .withSuccessHandler(function(res){
-      res = res || {};
-      _lastPulseOk = Date.now();
-      // `users: null` significa "el limitador cortó, no toques la lista", que
-      // NO es lo mismo que "no hay nadie conectado". Pintar [] aquí borraría la
-      // lista de usuarios activos cada vez que se pasa de llamadas.
-      if (res.users) renderActiveUsers(res.users);
 
-      // El punto vuelve a verde por sí solo. Si venía de naranja, además se
-      // recupera lo que haya pasado mientras tanto.
-      var btn = document.getElementById('connBtn');
-      var veniaCaido = btn && /offline|stale/.test(btn.className);
-      setConnStatus('online');
+  // SI EL SERVIDOR TODAVÍA NO CONOCE `pulse`, SE USA EL LATIDO DE SIEMPRE.
+  //
+  // Los dos archivos se despliegan A MANO y por separado, así que "el Index es
+  // de la v11.48 y el Code.gs es de la v11.47" no es un caso raro: es media
+  // hora de cualquier despliegue, y es un estado en el que la app tiene que
+  // seguir funcionando.
+  //
+  // Y sin esto la avería es TOTAL, no parcial: google.script.run sólo conoce
+  // las funciones que el servidor desplegado tiene de verdad, así que llamar a
+  // una que no existe LANZA — de forma síncrona, dentro del temporizador. El
+  // bucle de abajo moría en el primer tick y no volvía a latir nunca: ni
+  // presencia, ni punto verde, ni ver lo de los demás. Sólo pulsar el punto
+  // arreglaba algo, porque eso llama a otra cosa.
+  //
+  // Con el latido viejo se pierde el sello —o sea, no se ven los cambios de los
+  // demás hasta desplegar el servidor— pero el punto sigue vivo y la lista de
+  // usuarios también. Degradarse no es lo mismo que caerse.
+  var run = google.script.run
+    .withSuccessHandler(function(res){ _pulseOk(res); })
+    .withFailureHandler(function(){ _pulseFail(); });
 
-      var cambio = (_dataStamp !== null && res.stamp && res.stamp !== _dataStamp);
-      if (res.stamp) _dataStamp = res.stamp;
-
-      if (cambio || veniaCaido) {
-        // El modo silencioso de la v11.47: lo de antes se queda en pantalla
-        // hasta que llega lo nuevo. Sin esto, ver el trabajo de otro te
-        // desarmaría el tablero cada vez que otra persona guarda algo, que
-        // sería peor que no verlo.
-        loadDataFromGoogle(true, true);
-      }
-    })
-    .withFailureHandler(function(){
-      // Este manejador estaba VACÍO, y ése era el fallo: el latido sabía que no
-      // había conexión y no se lo decía a nadie.
-      setConnStatus('offline');
-    })
-    .pulse(_sessionToken || null);
+  if (typeof run.pulse !== 'function') {
+    google.script.run
+      .withSuccessHandler(function(users){
+        _pulseOk({ users: (users && users.length) ? users : null, stamp: '' });
+      })
+      .withFailureHandler(function(){ _pulseFail(); })
+      .heartbeat(_sessionToken || null);
+    return;
+  }
+  run.pulse(_sessionToken || null);
 }
 
+/** Lo que hace un latido que llegó. Separado de _pulseOnce para que el camino
+ *  de respaldo de arriba use exactamente el mismo, y no una copia. */
+function _pulseOk(res){
+  res = res || {};
+  _lastPulseOk = Date.now();
+
+  // `users: null` significa "el limitador cortó, no toques la lista", que NO es
+  // lo mismo que "no hay nadie conectado". Pintar [] aquí borraría la lista de
+  // usuarios activos cada vez que se pasa de llamadas.
+  if (res.users) renderActiveUsers(res.users);
+
+  // El punto vuelve a verde por sí solo. Si venía caído, además se recupera lo
+  // que haya pasado mientras tanto.
+  var btn = document.getElementById('connBtn');
+  var veniaCaido = btn && /offline|stale/.test(btn.className);
+  setConnStatus('online');
+
+  var cambio = (_dataStamp !== null && res.stamp && res.stamp !== _dataStamp);
+  if (res.stamp) _dataStamp = res.stamp;
+
+  if (cambio || veniaCaido) {
+    // El modo silencioso de la v11.47: lo de antes se queda en pantalla hasta
+    // que llega lo nuevo. Sin esto, ver el trabajo de otro desarmaría el
+    // tablero cada vez que otra persona guarda algo, que sería peor que no
+    // verlo.
+    loadDataFromGoogle(true, true);
+  }
+}
+
+/** Y lo que hace un latido que no llegó. Este manejador estaba VACÍO hasta la
+ *  v11.48, y ése era el fallo entero: el latido sabía que no había conexión y
+ *  no se lo decía a nadie. */
+function _pulseFail(){
+  setConnStatus('offline');
+}
+
+/* EL BUCLE SE VUELVE A ARMAR PASE LO QUE PASE.
+ *
+ * La v11.48 llamaba a _pulseOnce() y luego a _pulseSchedule() en el mismo
+ * cuerpo del temporizador. Si _pulseOnce lanzaba —y lanzaba, en cuanto el
+ * servidor desplegado no conocía todavía `pulse`— la segunda línea no se
+ * ejecutaba nunca y EL LATIDO MORÍA PARA SIEMPRE, en silencio, sin dejar rastro
+ * en la pantalla.
+ *
+ * Ese es el fallo que Jose vio con dos cuentas: una siguió latiendo y la otra
+ * no volvió del rojo hasta que pulsó el punto a mano.
+ *
+ * El `finally` es lo que hace que un tick malo cueste un tick y no la sesión
+ * entera. Un temporizador que se rearma solo puede sobrevivir a cualquier
+ * error de dentro; uno que depende de que el cuerpo llegue al final, no.
+ */
 function _pulseSchedule(){
   clearTimeout(_pulseTimer);
   _pulseTimer = setTimeout(function(){
-    _pulseOnce();
-    _pulseSchedule();
+    try { _pulseOnce(); }
+    catch (e) { console.error('pulse:', e && e.message); }
+    finally { _pulseSchedule(); }
   }, _pulseInterval());
 }
 _pulseSchedule();
+
+/* EL NAVEGADOR YA SABE CUÁNDO VUELVE EL WIFI. Sólo había que escucharlo.
+ *
+ * Jose apagó el wifi y lo volvió a encender: una cuenta volvió a verde y la
+ * otra se quedó en rojo hasta que pulsó el punto. Esperar al siguiente latido
+ * puede ser hasta dos minutos y medio, y si el bucle había muerto (arriba), no
+ * llegaba nunca.
+ *
+ * `online` y `offline` son eventos del propio navegador y llegan en el momento.
+ * No sustituyen al latido —el navegador sólo sabe si HAY red, no si el servidor
+ * responde— pero convierten "hasta que alguien lo toque" en "al instante".
+ */
+window.addEventListener('online', function(){
+  _lastActivity = Date.now();   // volver de una caída cuenta como actividad
+  _pulseOnce();
+  _pulseSchedule();
+});
+window.addEventListener('offline', function(){ setConnStatus('offline'); });
+
+// Y al traer la ventana al frente. `visibilitychange` NO cubre esto: una
+// ventana visible pero detrás de otra no está "hidden", así que dos ventanas
+// lado a lado —que es como Jose hace las pruebas— nunca disparaban el latido de
+// vuelta. Con `focus` sí.
+window.addEventListener('focus', function(){
+  _lastActivity = Date.now();
+  _pulseOnce();
+  _pulseSchedule();
+});
 
 // Al volver a la pestaña se late de inmediato: es el momento en que alguien
 // mira, y —desde este cambio— también el reintento de una conexión caída. Por
