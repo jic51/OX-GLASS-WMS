@@ -5,6 +5,96 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+**TERCERA RONDA — Jose, 2026-09-05, con la cola ya funcionando.**
+
+**LA COLA FUNCIONA.** Palabras suyas: "cada movimiento toma un turno y se hace
+en orden". El video de 63 s lo confirma: una salida de 42 unidades de C3B se
+guarda y el tablero queda en 92. Eso ya no hay que tocarlo.
+
+### 1. Que cada quien vea los cambios de los demás — CON SUS REGLAS
+
+Reglas de Jose, textuales: no se actualiza si está off-line; si está on-line se
+actualiza cuando cambian LOS DATOS; y hay que verificar que NO se actualice por
+copias de seguridad, cambios de permisos ni tarjetas nuevas.
+
+**Y no hace falta inventar un mecanismo: ya existe.** El `heartbeat` corre cada
+150 s cuando la pestaña está visible, y además dispara uno al volver a la
+pestaña (`visibilitychange`). Lo que falta es que devuelva un SELLO de la última
+escritura de datos, y que el cliente compare.
+
+- El sello lo bombea SÓLO lo que escribe movimientos. Un respaldo nocturno, un
+  permiso o una tarjeta no lo tocan — que es exactamente la regla de Jose, y
+  sale gratis porque el sello se pone a mano donde toca.
+- Si el sello cambió → `loadDataFromGoogle(true, true)`, el modo silencioso que
+  ya existe desde la v11.47.
+- Si el heartbeat falla → no hay refresco. La regla de "no se actualiza
+  off-line" se cumple sola.
+- **Cero llamadas nuevas al servidor si se deja en 150 s.** Para la prueba de
+  concurrencia eso es demasiado lento; ver la nota de coste abajo.
+
+**El coste que hay que decidir:** bajar el intervalo a ~20 s hace que tres
+personas se vean casi al instante, y cuesta cuota. Una llamada de heartbeat es
+del orden de medio segundo de ejecución; a 20 s durante 8 horas son ~1440
+llamadas por persona y día. Con tres personas eso es media hora diaria de la
+cuota de Apps Script. **Recomendación: adaptativo.** 20 s mientras haya
+actividad reciente en esta pestaña o el sello se esté moviendo; 90–150 s cuando
+lleva rato quieto. Así la prueba de concurrencia va fluida y un almacén tranquilo
+no quema cuota.
+
+### 2. Una vez off-line, NUNCA vuelve solo — CAUSA ENCONTRADA
+
+Confirmado leyendo el código, no deducido:
+
+- `setConnStatus('offline')` se pone SÓLO desde el manejador de fallo de
+  `loadDataFromGoogle`.
+- El `heartbeat` tiene el manejador de fallo **vacío**:
+  `.withFailureHandler(function(){})`. Ni marca off-line ni marca on-line.
+- El temporizador de 60 s sólo marca `stale` a los 5 minutos. **No reintenta
+  nada.**
+
+O sea: nada en la app vuelve a intentar por su cuenta. El punto se queda naranja
+hasta que alguien lo toca o recarga la página, exactamente como Jose describe.
+
+**Arreglo, y es pequeño:** el heartbeat ya corre y ya se dispara al volver a la
+pestaña. Que su éxito ponga el punto en verde y su fallo lo ponga en naranja. Y
+que al pasar de naranja a verde dispare un refresco silencioso, porque volver de
+off-line es justo cuando hay más probabilidad de haberse perdido algo.
+
+### 3. Los 5-6 segundos de pantalla congelada
+
+Jose: "lo que me preocupa es el tiempo que toma y el usuario que solo ve una
+pantalla congelada por casi 5 o 6 segundos antes de ver un toast". Ver la
+respuesta larga con las tres opciones y la recomendación.
+
+### 4. El conflicto de EXIT sigue sin explicarse — Y EL ARREGLO ES BARATO
+
+Dos personas sacan todo lo que hay: la segunda ve un error, la cantidad no se
+actualiza, la ventana no se cierra y nadie explica qué pasó.
+
+**El dato que falta YA VIAJA en el error.** El servidor lanza:
+
+    'INSUFFICIENT at ' + src + ' for ' + name + '. Available there: ' + ...
+
+O sea que el número verdadero está en el mensaje y el navegador lo tira. Falta:
+ponerle una marca legible por máquina (como SYSTEM_BUSY| y DUPLICATE_MOVEMENT|),
+escribir ese número en el campo AVAILABLE de la fila que falló, bajar la
+cantidad a lo que de verdad queda, y decirlo con palabras. Si ya no queda nada,
+la fila no puede seguir en pantalla con su número viejo.
+
+### 5. El formulario pierde datos al cambiar de pestaña — PENDIENTE DE VER
+
+Jose describe: al pasar de EXIT a TRANSFER se pierden datos, las listas de
+ubicaciones no son las correctas, se borra la ubicación de donde está el
+material, TRANSFER sugiere ubicaciones de TODOS los proyectos aunque el material
+esté en uno, y al elegir cualquiera se añade una línea de Source Rack con
+`? UNKNOWN RACK` y sin cantidad; sólo DESPUÉS aparecen las ubicaciones buenas, y
+al pulsarlas se crea una SEGUNDA línea correcta mientras la mala se queda.
+
+**El video que llegó es el de la salida, no éste.** Falta recibirlo antes de
+tocar nada: lo que describe suena a dos fallos distintos (el prellenado que no
+se limpia al cambiar de tipo, y la lista de sugerencias que no filtra por dónde
+está el material de verdad) y confundirlos costaría un arreglo a medias.
+
 **SEGUNDA RONDA DE CONCURRENCIA — Jose, 2026-09-04, tres cuentas. ONCE COSAS.**
 
 Todo lo de abajo salió de una sesión real con tres personas. Es el reporte más
