@@ -5,6 +5,51 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+**EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA — Jose, 2026-09-07.**
+
+Un material bloqueado enseña su candado en el Warehouse Map y **en ningún otro
+sitio**. En el Stock Dashboard —que es la pantalla donde la gente BUSCA— no hay
+nada. Sus palabras:
+
+> "nadie más sabe hasta que va a tratar de sacarlo del sistema, cosa que sucede
+>  luego de mover y cargar las ventanas o el material para llevárselo... cuando
+>  alguien busca un material hay que mostrar los permisos o cosas que pasan con
+>  ese material."
+
+**El coste de este fallo no es una pantalla fea: es material cargado en una
+camioneta que hay que volver a bajar.** El aviso llega en el peor momento
+posible — después del trabajo físico, no antes.
+
+**Y ES EL QUINTO CASO DEL MISMO PATRÓN.** Después de SYSTEM_BUSY|, SHORT_STOCK|,
+el desbloqueo doble y la carrera de cargas: **la app ya lo sabe y no lo enseña.**
+`materialLocks` llega en cada carga, `_rebuildLocksIndex` ya construye el índice
+y `_findLock(matId, rack)` ya existe y se usa en tres sitios (el cajón del
+estante, el aviso de la salida y el del movimiento suelto). **No hace falta ni
+un dato nuevo del servidor: es puramente lo que se dibuja.**
+
+**Dónde ponerlo, en orden de lo que más rinde:**
+
+1. **La tabla del Stock Dashboard**, que es donde se busca. Ya tiene una columna
+   STATUS ("In Stock", "All at Site") y una LOCATION que dice "B2A (51)". Un
+   candado junto al estante afectado —`B2A 🔒 (51)`— cuesta poco y sale
+   exactamente donde el ojo ya está.
+2. **El buscador**: si lo que se escribe encuentra un material con candado, que
+   se note en la fila, no sólo al abrirla.
+3. **La vista de proyecto y el resto de listados**, por el mismo motivo.
+
+**El diseño a decidir antes de escribir código:** un material puede estar
+bloqueado EN UN ESTANTE Y NO EN OTRO —los candados son por material Y estante—
+así que "MH 145 está bloqueado" sería mentira si tiene 51 en B2A bloqueadas y 30
+libres en otro sitio. La marca tiene que decir DÓNDE, o no decir nada.
+
+**Lo que hay que enseñar, más allá del candado**, que es la parte general de lo
+que pide Jose: el estado de un material es más que su número. Candado y su
+motivo, reservas, mínimo de stock, y (cuando exista) el faltante. Hoy cada una
+de esas cosas se enseña en un sitio distinto o en ninguno. Vale la pena
+resolverlo de una vez con **una sola marca de estado por material**, calculada
+en un lugar y pintada igual en todas las pantallas, en vez de añadir el candado
+a la tabla y repetir el problema con la siguiente.
+
 **CUARTA RONDA — Jose, 2026-09-06, con la v11.50 en producción.**
 
 "En general la app se actualiza bien... pero no siempre, y es a eso a lo que
