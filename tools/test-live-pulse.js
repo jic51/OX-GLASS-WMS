@@ -160,6 +160,10 @@ function escenario(op){
   });
   vm.runInContext('var _dataStamp = ' + JSON.stringify(op.selloConocido) + ';' +
                   'var _lastActivity = Date.now(), _lastPulseOk = null, _pulseTimer = null;' +
+                  // La bandera de "hay una carga en camino" (v11.52): el latido
+                  // no pide datos si ya hay una pedida. Por defecto libre, y un
+                  // escenario puede ponerla a true para comprobarlo.
+                  'var _loadBusy = ' + (op.cargando ? 'true' : 'false') + ';' +
                   'var PULSE_FAST_MS = 20000, PULSE_SLOW_MS = 150000, PULSE_ACTIVE_MS = 180000;', ctx);
   vm.runInContext(fnSrc('_pulseInterval'), ctx);
   vm.runInContext(fnSrc('_pulseOk'), ctx);
@@ -192,10 +196,28 @@ function escenario(op){
   check('...y se refresca EN SILENCIO, sin desarmar el tablero. Ver el trabajo ' +
         'de otro no puede costar un parpadeo cada vez',
     r.recargas[0][0] === true && r.recargas[0][1] === true);
-  check('...y el sello nuevo queda guardado, o se refrescaría en bucle',
-    r.sello === '200');
+  // ESTA ASERCIÓN DECÍA LO CONTRARIO HASTA LA v11.52, y estaba bien entonces:
+  // el latido apuntaba el sello él mismo. Se cambió al descubrir que apuntarlo
+  // ANTES de tener los datos daba el cambio por visto aunque la carga fallara,
+  // se perdiera o llegara tarde y se descartara — y entonces nadie volvía a
+  // intentarlo. Ahora el sello lo aprende la carga que se aplica de verdad, y
+  // el bucle se evita por ahí, no aquí.
+  check('el latido NO apunta el sello por su cuenta: sigue en ' +
+        JSON.stringify(r.sello) + ' hasta que unos datos lleguen y se apliquen',
+    r.sello === '100');
   check('users:null no borra la lista de usuarios — significa "el limitador ' +
         'cortó", no "no hay nadie"', r.usuarios === null);
+}
+{
+  // Con una carga ya en camino, el latido no pide otra. La v11.52 lo añadió
+  // porque amontonar cargas es justo lo que hace probable la carrera que ese
+  // mismo cambio arregla — y el sello sigue distinto, así que el próximo latido
+  // lo verá igual. No se pierde nada, sólo se deja de insistir.
+  const r = escenario({ selloConocido: '100', cargando: true,
+                        respuesta: { users: null, stamp: '200' } });
+  check('si ya hay una carga en camino, no se pide otra — insistir gasta cuota ' +
+        'y hace más probable que dos respuestas se crucen',
+    r.recargas.length === 0);
 }
 {
   // Primera vuelta: todavía no hay sello conocido.
@@ -203,7 +225,8 @@ function escenario(op){
   check('sin sello previo no se refresca — un sello desconocido no es un ' +
         'sello cambiado, y refrescar aquí sería una recarga de más nada más ' +
         'entrar', r.recargas.length === 0);
-  check('...pero se aprende para la próxima', r.sello === '200');
+  check('...y tampoco se apunta aquí: quien lo aprende es la carga inicial, que ' +
+        'ya trae el sello dentro de los datos', r.sello === null);
 }
 
 console.log('\n═══ el punto naranja vuelve solo ═══\n');
