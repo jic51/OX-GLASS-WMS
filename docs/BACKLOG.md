@@ -5,6 +5,147 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+**CUARTA RONDA — Jose, 2026-09-06, con la v11.50 en producción.**
+
+"En general la app se actualiza bien... pero no siempre, y es a eso a lo que
+quiero llegar: la app a veces deja de actualizarse aun cuando estamos trabajando
+en ella."
+
+### A. ¿Puede el servidor AVISAR en vez de que el navegador pregunte?
+
+Pregunta de Jose, y la respuesta corta es **NO, no con Apps Script.** No hay
+WebSockets ni Server-Sent Events; `google.script.run` es pregunta-respuesta y
+nada más. Tres caminos reales, con su precio:
+
+1. **Long-polling** — el servidor retiene la llamada ~25 s mirando el sello.
+   Técnicamente se puede con `Utilities.sleep`. **Es la peor opción de largo:**
+   gasta 25 s de cuota por llamada en vez de ~0,5 s. Cincuenta veces más caro
+   para el mismo resultado. Descartada, y escrito aquí para no volver a
+   considerarla.
+2. **Sondeo más listo ("modo caliente")** — 5 s durante el minuto siguiente a
+   cualquier cambio, 20 s con actividad, 150 s en reposo. Barato, incremental,
+   y no cambia la arquitectura. **Es lo que recomiendo hacer ya.**
+3. **Firebase Realtime Database** — el único camino que da AVISO DE VERDAD. La
+   app escribe el sello en Firebase al guardar un movimiento (un `UrlFetchApp`,
+   y el límite son 20.000 al día) y cada navegador se suscribe por WebSocket.
+   Los cambios llegan en milisegundos y el sondeo desaparece entero. Gratis a
+   esta escala. **El coste real no es técnico: es un producto de Google más que
+   configurar en cada instalación que se venda.** Decisión de negocio, no de
+   código.
+
+**Y falta un dato antes de elegir: "a veces deja de actualizarse".** Eso no lo
+explica ninguna de las tres. Hay que averiguar POR QUÉ se para — la v11.49 ya
+puso el bucle dentro de un `finally` y registra el error en la consola, así que
+la próxima vez que pase, mirar la consola del navegador (F12) es lo que lo
+resuelve. Sin ese dato, cambiar de arquitectura sería tapar un fallo sin verlo.
+
+### B. Cuotas de Google: cuánto hay, y cómo saber si un cliente va a sufrir
+
+**LA CORRECCIÓN MÁS IMPORTANTE, Y ES A ALGO QUE YO DIJE MAL:** la cuota NO es
+por persona. La app se despliega "ejecutar como yo", así que **TODAS las
+llamadas de TODOS los usuarios gastan la cuota del DUEÑO de la instalación**.
+Tres personas a 20 s no son tres presupuestos: son uno solo, gastado tres veces
+más rápido.
+
+Los topes de Apps Script (verificar en la página oficial de cuotas antes de
+prometer nada a un cliente — cambian):
+
+- Tiempo total de ejecución al día: **~90 minutos con cuenta gratuita
+  (@gmail.com)**, **~6 horas con Google Workspace**.
+- Ejecuciones simultáneas: 30.
+- `UrlFetch`: 20.000 al día.
+
+**CÓMO MEDIRLO DE VERDAD, sin adivinar:** el proyecto de Apps Script tiene una
+pestaña **Executions** que lista cada ejecución con su duración real. Ahí se ve
+cuánto cuesta de verdad un `pulse`, un `getInitialData` y un guardado en LA
+INSTALACIÓN DE ESE CLIENTE, con SUS datos. Un almacén con 300 movimientos y otro
+con 30.000 no tardan lo mismo en `getInitialData`.
+
+**La fórmula para el estimado**, con los tres números sacados de ahí:
+
+    minutos/día ≈ ( P × Tp  +  C × Tc  +  M × Tm ) / 60
+
+    P = pulsos/día   = personas × horas activas × 3600 / intervalo
+    C = cargas/día   = arranques + refrescos silenciosos por cambio
+    M = movimientos/día
+    Tp, Tc, Tm = segundos reales de cada uno, leídos de Executions
+
+Ejemplo con números plausibles (Tp=0,6 s · Tc=4 s · Tm=5 s), 3 personas, 8 h,
+pulso a 20 s, 60 movimientos al día:
+
+    P = 3 × 8 × 180 = 4320 pulsos  → 43 min
+    C = 3 × 60 recargas           → 12 min
+    M = 60 movimientos            →  5 min
+    TOTAL ≈ 60 min/día
+
+**Con cuenta gratuita eso ya roza el tope de 90 minutos con TRES personas.** Con
+Workspace sobra sitio. Esto hay que saberlo ANTES de vender, no después: es la
+diferencia entre "esta app funciona" y "esta app se apaga a las tres de la
+tarde".
+
+**Qué hacer con eso, propuesto:**
+- **Que el intervalo sea configurable por instalación**, y que el asistente de
+  instalación pregunte cuántas personas la van a usar y si la cuenta es de
+  Workspace o gratuita. Con eso se elige el ritmo solo.
+- **Una pantalla en Settings → System que enseñe el gasto estimado del mes** con
+  los números reales de esa instalación, en vez de que el cliente se entere
+  cuando la app deje de responder.
+
+### C. Cosas que fallan, encontradas esta ronda
+
+**C1. El toast sale medio fuera de la pantalla en el teléfono (imagen 2), y la
+causa ya está localizada.** Es del mismo tipo que el header de la v11.44 — una
+regla que pone unas propiedades y no quita las que sustituye:
+
+    #toastContainer{position:fixed;top:1.25rem;left:50%;transform:translateX(-50%);…}
+    @media (max-width:768px){ #toastContainer{bottom:.75rem;right:.75rem;left:.75rem} }
+
+La regla del móvil **no anula `top` ni `transform`**. El `top` sigue mandando,
+así que el aviso se queda ARRIBA en vez de abajo; y el `translateX(-50%)` sigue
+corriendo el bloque media pantalla a la izquierda, ahora que ocupa todo el
+ancho. Por eso sale cortado por el borde izquierdo y arriba. **Arreglo:
+`top:auto` y `transform:none` en esa media query.** Dos declaraciones.
+
+Y sí lo habíamos hablado antes: se arregló el ancho (`max-width:100%`) y no la
+posición, así que el síntoma cambió de forma y siguió ahí.
+
+**C2. Los botones se solapan al cambiar "Saving…" por "Waiting its turn…"
+(imagen 1).** `_btnBusy` fija `min-width` al ancho medido ANTES de cambiar la
+etiqueta —puesto ahí para que el botón no diera un salto— y la etiqueta nueva es
+más larga. En `.modal-actions{display:flex}` los hermanos se encogen, el botón
+ocupado no puede bajar de su `min-width`, y el texto se desborda por encima del
+de al lado. Tres arreglos posibles: acortar la etiqueta a "Waiting…";
+`flex-wrap:wrap` en `.modal-actions` para que nunca se solapen; o sacar el
+estado del botón a una línea propia. **Mi voto: las dos primeras juntas.**
+
+**C3. Desbloquear un material que otro ya desbloqueó.** Sale
+`Error: error: lock not found or already removed` **y el candado sigue en
+pantalla con la palabra "Unlock"**. Jose: "no debería decirle error al usuario,
+debe darle la explicación sin hacerlo sentir como que hizo algo malo o que la
+app está fallando".
+
+Tiene razón dos veces. **Y hay algo más de fondo: eso NO ES UN ERROR.** La
+persona quería que el material quedara desbloqueado, y está desbloqueado. El
+objetivo se cumplió; sólo lo cumplió otro. Es el mismo caso que SYSTEM_BUSY| y
+SHORT_STOCK|: el servidor sabe la verdad y el navegador la tira.
+
+Arreglo: marcar ese rechazo como lo que es, tratarlo como éxito, **refrescar la
+lista de candados** —que es lo que falta y por lo que el candado se queda
+pintado— y decir "someone else already unlocked this" en vez de "Error".
+
+**C4. El número del EXIT tarda demasiado en corregirse.** La v11.50 lo corrige
+al RECHAZAR el guardado, o sea después de pulsar Save. Jose lo quiere antes:
+"apenas la app detecta que no se puede hacer exit de esa cantidad, se le avise
+al usuario el porqué (no con el toast actual) y se actualice la cantidad en la
+ventana del exit".
+
+O sea: **la ventana abierta tiene que enterarse sola**, sin esperar a que la
+persona pulse Save. Con el latido ya funcionando, la pieza es pequeña: cuando
+llega un sello nuevo y hay un formulario de salida abierto, repintar sus
+disponibles y, si alguna cantidad ya no cabe, marcarla en la propia fila.
+**Y el aviso NO debe ser un toast**, sino algo dentro de la ventana, junto al
+número que cambió — que es donde está mirando quien lo va a corregir.
+
 **MEDIDO POR JOSE EN LA v11.49 (2026-09-06) — FUNCIONA, Y HAY DOS NÚMEROS QUE
 MEJORAR.** Sus palabras: "cada vez que muevo algo, cambio, borro, hago un entry,
 en una cuenta, la otra lo cambia entre los 17-25+ segundos". Y: "el boton verde
