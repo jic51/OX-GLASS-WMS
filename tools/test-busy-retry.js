@@ -97,8 +97,18 @@ function escenario(opciones){
     _setModalBusy: (id, on) => { ctx._modalOcupado = on; },
     showToast: (m, k) => { ctx._avisos.push({ m, k }); }
   });
-  vm.runInContext(SRC.slice(SRC.indexOf('var BUSY_MAX_RETRIES'),
-                            SRC.indexOf('// ── Modal: Submit')), ctx);
+  // El bloque entero de constantes y ayudantes del reintento. SE ANCLA EN LA
+  // PRIMERA CONSTANTE DEL BLOQUE, no en una del medio: cuando la v11.51 añadió
+  // BUSY_LABEL por encima de BUSY_MAX_RETRIES, el recorte que empezaba en
+  // MAX_RETRIES se dejó fuera la nueva y _busyRetry reventó con un
+  // ReferenceError — la prueba se cayó por dónde empezaba a mirar, no por el
+  // código que vigila.
+  const desde = SRC.indexOf('var BUSY_LABEL');
+  const hasta = SRC.indexOf('// ── Modal: Submit');
+  if (desde === -1 || hasta === -1 || hasta < desde) {
+    throw new Error('no se encontró el bloque del reintento — revisar los anclajes');
+  }
+  vm.runInContext(SRC.slice(desde, hasta), ctx);
 
   const btn = { texto: 'Saving…', pulsable: false };
   const state = { tries: 0 };
@@ -130,8 +140,8 @@ function escenario(opciones){
   check('con el sistema ocupado dos veces, el guardado ACABA PASANDO solo (' +
         r.intentos + ' intentos)', r.ctx._exito === true && r.intentos === 3);
   check('...sin enseñar ni un error por el camino', r.ctx._avisos.length === 0);
-  check('...y el botón dice que está esperando turno, no que falló ("' +
-        r.btn.texto + '")', /Waiting its turn/.test(r.ctx._botones.join(' ')));
+  check('...y el botón dice que está esperando, no que falló ("' +
+        r.btn.texto + '")', /Waiting/.test(r.ctx._botones.join(' ')));
   check('...y no se puede volver a pulsar mientras espera — pulsarlo otra vez ' +
         'es justo lo que hay que evitar', r.btn.pulsable === false);
 }

@@ -450,7 +450,14 @@
     #lockMatOverlay .field label{color:var(--text)}
     .field input,.field select,.field textarea{padding:.6rem .75rem;border:1px solid var(--border);border-radius:6px;font-family:inherit;transition:.15s}
     .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(59,125,216,.15)}
-    .modal-actions{display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem}
+    /* `flex-wrap:wrap` no es adorno: es lo que impide que los botones se
+       solapen (Jose, imagen 1 del 2026-09-06). _btnBusy fija el `min-width` del
+       botón al ancho que tenía ANTES de cambiarle la etiqueta —puesto ahí para
+       que no diera un salto— así que con una etiqueta más larga no puede
+       encogerse, y sin `wrap` el texto se desborda por encima del botón de al
+       lado. Con `wrap` se baja a la línea siguiente, que es feo pero legible;
+       sin él, se pisan. */
+    .modal-actions{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:flex-end;margin-top:1.5rem}
     /* ── NOTIFY SECTION ── */
     .notify-section{margin-top:1rem;padding:1rem;background:#F8FAFC;border:1px dashed var(--border);border-radius:8px}
     .notify-section label.check-label{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.88rem;font-weight:600;color:var(--navy)}
@@ -909,6 +916,17 @@
     .presence-empty{padding:.75rem 1rem;font-size:.8rem;color:var(--muted);text-align:center}
     /* ── STOCK WARNING ── */
     .stock-warn{padding:.5rem .75rem;border-radius:6px;font-size:.82rem;min-height:2rem;display:flex;align-items:center}
+    /* El aviso de "otro se llevó material mientras tenías esto abierto". Va
+       dentro del formulario de salida, no en un toast: el toast aparece en otra
+       esquina, dura unos segundos y se va, y para cuando se lee ya no está el
+       número al lado. Ámbar y no rojo — nadie ha hecho nada mal. */
+    .exit-live-warn{background:var(--yellow-bg);color:#92400E;border:1px solid var(--yellow);
+      border-radius:8px;padding:.55rem .75rem;font-size:.8rem;line-height:1.35;
+      margin-bottom:.6rem;display:flex;gap:.45rem;align-items:flex-start}
+    /* Un parpadeo corto en la fila que cambió, para que el ojo vaya ahí sin que
+       haya que buscar cuál de las cinco filas se movió. */
+    @keyframes exit-row-flash{0%{background:var(--yellow-bg)}100%{background:transparent}}
+    .exit-loc-row.just-changed{animation:exit-row-flash 1.8s ease-out}
     /* ── EXPANDABLE ROWS ── */
     .expandable-row{cursor:pointer;transition:background .2s}
     .expandable-row:hover{background:#f1f5f9 !important}
@@ -2005,8 +2023,24 @@
       th,td{padding:.45rem .5rem}
       .charts-grid{grid-template-columns:1fr}
       .modal-type-bar button{padding:.4rem .25rem;font-size:.72rem;min-height:40px}
-      #toastContainer{bottom:.75rem;right:.75rem;left:.75rem}
-      .toast{max-width:100%}
+      /* EL AVISO EN EL TELÉFONO. Jose lo fotografió dos veces, y la segunda
+         vez porque la primera lo arreglé a medias.
+         Esta regla pone bottom/left/right pero NO anulaba las dos cosas que
+         sustituye, y las dos seguían mandando desde la regla base:
+           · `top:1.25rem` — con top Y bottom puestos, top gana la posición, así
+             que el aviso se quedaba ARRIBA en vez de bajar.
+           · `transform:translateX(-50%)` — pensado para centrar un bloque
+             estrecho, seguía corriendo el bloque media pantalla a la izquierda
+             ahora que ocupa todo el ancho.
+         Por eso salía cortado por arriba y por la izquierda. Es el mismo fallo
+         que el header de la v11.44: una regla que gana sin quitar lo que
+         reemplaza.
+         La vez anterior se arregló `max-width`, que era el ancho, no la
+         posición — el síntoma cambió de forma y siguió ahí. */
+      #toastContainer{top:auto;transform:none;bottom:.75rem;right:.75rem;left:.75rem;align-items:stretch}
+      /* Y el ancho mínimo de 300px no cabe en un teléfono de 320 con márgenes
+         a los dos lados: se desbordaba aunque la posición fuera correcta. */
+      .toast{max-width:100%;min-width:0}
     }
   </style>
 </head>
@@ -2965,6 +2999,13 @@
 
     <!-- ── MULTI-MATERIAL EXIT ── -->
     <div id="multiExitSection" style="display:none;margin-top:.75rem">
+      <!-- Aviso DENTRO de la ventana, no un toast. Jose: "se le avise al
+           usuario el porqué (no con el toast actual) y se actualice la cantidad
+           en la ventana del exit". Un toast sale en otra esquina de la
+           pantalla, dura unos segundos y se va; esto se queda pegado al número
+           que cambió, que es donde está mirando quien lo va a corregir.
+           Vacío hasta que hace falta: _exitLiveNotice lo llena y lo esconde. -->
+      <div id="exitLiveWarn" class="exit-live-warn" style="display:none"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
         <label style="font-size:.72rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.04em">Materials to Dispatch</label>
         <span id="multiExitTotal" style="font-size:.9rem;font-weight:700;color:var(--red);background:var(--red-bg);padding:3px 12px;border-radius:20px">Total: 0</span>
@@ -3263,7 +3304,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.50';
+var APP_VERSION = '11.51';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -3275,7 +3316,7 @@ var APP_VERSION = '11.50';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '292babb6';
+var APP_BUILD = '16ba3d3c';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -6334,6 +6375,10 @@ function openMoveModal(type){
   document.getElementById('notifyFields').style.display = 'none';
   document.getElementById('stockWarning').innerHTML = '';
   document.getElementById('stockWarning').style.background = '';
+  // Y el aviso de "otro movió esto": pertenece a la sesión de la ventana
+  // anterior, no a ésta.
+  var lw = document.getElementById('exitLiveWarn');
+  if (lw){ lw.style.display = 'none'; lw.innerHTML = ''; }
 
   setModalType(currentMoveType);
 
@@ -6782,6 +6827,10 @@ function updateNotifyPreview(){
  * escritura, esto duplicaría movimientos — por eso la marca sólo se pone donde
  * se pide el candado, y en ningún otro sitio.
  */
+// Corta A PROPÓSITO. "Waiting its turn…" desbordaba el botón por encima del de
+// al lado — ver .modal-actions. El `wrap` de allí evita que se pisen; esto evita
+// que llegue a hacer falta.
+var BUSY_LABEL = 'Waiting…';
 var BUSY_MAX_RETRIES = 4;
 var BUSY_BASE_MS     = 900;
 var BUSY_JITTER_MS   = 700;
@@ -6931,7 +6980,7 @@ function _busyRetry(err, opts){
     // La ventana se queda ocupada a propósito: devolverle el botón a la persona
     // la invitaría a pulsar otra vez, y el guardado no ha fallado — está en
     // cola. El texto del botón es el aviso, que es donde Jose está mirando.
-    _btnBusy(btn, 'Waiting its turn…');
+    _btnBusy(btn, BUSY_LABEL);
     setTimeout(opts.retry, _busyDelay(state.tries));
     return true;
   }
@@ -7170,7 +7219,7 @@ async function submitMovement(){
 
   function _doSubmit(force) {
     payload.forceSubmit = !!force;
-    _btnBusy(btn, _busyState.tries ? 'Waiting its turn…' : 'Saving…');
+    _btnBusy(btn, _busyState.tries ? BUSY_LABEL : 'Saving…');
     _setModalBusy('moveOverlay', true);
     google.script.run
       .withSuccessHandler(function(res){
@@ -8144,6 +8193,86 @@ function updateMultiExitTotal(){
   if (el) el.textContent = 'Total: ' + _qtyText(total);
 }
 
+/* ── LA VENTANA DE SALIDA SE ENTERA SOLA ──────────────────────────────────────
+ *
+ * Jose, tras la v11.50: "el refresh de la cantidad al hacer un exit... no es lo
+ * suficientemente rápido... necesitamos que apenas la app detecta que no se
+ * puede hacer exit de esa cantidad, se le avise al usuario el porqué (no con el
+ * toast actual) y se actualice la cantidad en la ventana del exit".
+ *
+ * La v11.50 corregía el número AL RECHAZAR el guardado, o sea después de pulsar
+ * Save. Esto lo adelanta: con el latido ya trayendo los cambios de los demás,
+ * la ventana abierta se entera en cuanto llegan, sin que nadie pulse nada.
+ *
+ * TRES DECISIONES QUE NO SON OBVIAS:
+ *
+ * 1. NO SE TOCA LA CANTIDAD QUE LA PERSONA ESCRIBIÓ. Sólo se avisa. Bajarle el
+ *    número mientras teclea sería quitarle el control de las manos, y peor:
+ *    puede que esté a punto de cambiar de estante. Cuando el servidor RECHAZA
+ *    de verdad (v11.50) sí se ajusta, porque entonces ya no hay ninguna duda.
+ * 2. EL AVISO VA DENTRO DE LA VENTANA, no en un toast. Es literal lo que pidió,
+ *    y el motivo es bueno: un toast sale en otra esquina, dura unos segundos y
+ *    se va; para cuando se lee, el número ya no está al lado.
+ * 3. SÓLO SE AVISA CUANDO ALGO EMPEORÓ. Que llegue más material a un estante
+ *    también cambia el número, y no hace falta interrumpir a nadie por eso.
+ */
+function _exitLiveNotice(){
+  var sec = document.getElementById('multiExitSection');
+  var box = document.getElementById('exitLiveWarn');
+  if (!sec || !box) return;
+  var abierto = document.getElementById('moveOverlay');
+  if (!abierto || !abierto.classList.contains('show') || sec.style.display === 'none') {
+    box.style.display = 'none';
+    return;
+  }
+
+  var cortas = [];
+  document.querySelectorAll('[id^="exit-locs-"]').forEach(function(cont){
+    var n    = cont.id.replace('exit-locs-', '');
+    var cat  = nt((document.getElementById('exit-cat-'  + n) || {}).value || '');
+    var name = ((document.getElementById('exit-name-' + n) || {}).value || '').trim().toUpperCase();
+    if (!name) return;
+    var locs = (stockData[_normKey(cat) + '|||' + _normKey(name)] || {}).warehouseLocs || {};
+    cont.querySelectorAll('.exit-loc-row').forEach(function(row){
+      var rack = ((row.querySelector('.el-rack') || {}).value || '').trim().toUpperCase();
+      var pide = _qty((row.querySelector('.el-qty') || {}).value);
+      if (!rack || !pide) return;
+      var hay = locs[rack];
+      if (hay === undefined || pide <= hay) { row.classList.remove('just-changed'); return; }
+      cortas.push({ name: name, rack: rack, pide: pide, hay: hay });
+      // Reiniciar la animación: quitar la clase, forzar un reflow y volver a
+      // ponerla. Sin el reflow el navegador no vuelve a lanzarla si ya estaba.
+      row.classList.remove('just-changed');
+      void row.offsetWidth;
+      row.classList.add('just-changed');
+    });
+  });
+
+  if (!cortas.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+
+  var lineas = cortas.map(function(c){
+    return '<div>' + _he(c.name) + ' at ' + _he(c.rack) + ': you asked for ' +
+      _qtyText(c.pide) + ', only <b>' + _qtyText(c.hay) + '</b> left.</div>';
+  }).join('');
+  box.innerHTML = '<span>⚠️</span><div><b>Someone else moved this material ' +
+    'while you had this open.</b>' + lineas +
+    '<div style="margin-top:.25rem">Lower the amount, pick another rack, or ' +
+    'remove the line.</div></div>';
+  box.style.display = 'flex';
+}
+
+/** Repinta el formulario de salida abierto desde el stock que acaba de llegar. */
+function _refreshOpenExitForm(){
+  try {
+    document.querySelectorAll('[id^="exit-locs-"]').forEach(function(cont){
+      var n = cont.id.replace('exit-locs-', '');
+      syncExitRackAvail(n);
+      syncExitMatTotal(n);
+    });
+    _exitLiveNotice();
+  } catch (e) { console.error('_refreshOpenExitForm:', e && e.message); }
+}
+
 function syncExitRackAvail(n){
   var cat  = nt((document.getElementById('exit-cat-'+n)  || {}).value || '');
   var name = ((document.getElementById('exit-name-'+n) || {}).value || '').trim().toUpperCase();
@@ -8530,7 +8659,7 @@ function submitMultiEntry(){
 
   function _doMultiSubmit(force){
     payload.forceSubmit = !!force;
-    _btnBusy(btn, _busyState.tries ? 'Waiting its turn…' : 'Saving…');
+    _btnBusy(btn, _busyState.tries ? BUSY_LABEL : 'Saving…');
     _setModalBusy('moveOverlay', true);
     google.script.run
       .withSuccessHandler(function(res){
@@ -13884,15 +14013,25 @@ function unlockMaterialConfirm(lockId, name){
 
 function _doUnlockMaterial(lockId){
   google.script.run
-    .withSuccessHandler(function(){
+    .withSuccessHandler(function(res){
       materialLocks = materialLocks.filter(function(l){ return l.id !== lockId; });
       _rebuildLocksIndex();
-      showToast('🔓 Unlocked.', 'ok');
+      // Si otro lo quitó primero, el resultado es el mismo, y se dice como lo
+      // que es: una coincidencia, no un fallo de quien pulsó. Todo lo de abajo
+      // —quitarlo de la lista y repintar el estante y el mapa— pasa igual, que
+      // es justo lo que faltaba: antes este caso iba por el manejador de FALLO,
+      // que sólo enseñaba un error, y por eso el candado se quedaba pintado.
+      if (res && res.alreadyGone) {
+        showToast('🔓 Already unlocked — someone else got there first. ' +
+                  'Nothing left to do.', 'info', 5000);
+      } else {
+        showToast('🔓 Unlocked.', 'ok');
+      }
       if (_openRackName) openRackDrawer(_openRackName);
       renderStock();
       renderWarehouseMap();
     })
-    .withFailureHandler(function(err){ showToast('Error: ' + (err.message || err), 'err', 6000); })
+    .withFailureHandler(function(err){ showToast('Error: ' + _stripTags(err), 'err', 6000); })
     .processMovement('unlockMaterial', _h({ id: lockId }));
 }
 
@@ -15834,6 +15973,11 @@ function loadDataFromGoogle(skipCache, quiet){
           var sr = document.getElementById('statsRow');
           if (sr) sr.innerHTML = '<p style="padding:1rem;color:var(--red)">⚠ Render error: '+_he(e.message)+'</p>';
         }
+        // Con datos nuevos en la mano, la ventana de salida abierta —si la
+        // hay— se entera sola: repinta sus disponibles y avisa DENTRO de la
+        // ventana si algo que se pidió ya no cabe. Va aquí, y no en el latido,
+        // para que valga igual venga el refresco de donde venga.
+        try { _refreshOpenExitForm();     } catch(e){ console.error('_refreshOpenExitForm:', e); }
         try { _restoreTab();              } catch(e){ console.error('_restoreTab:', e); }
         try { checkMorningPopup();        } catch(e){ console.error('checkMorningPopup:', e); }
         try { _offerSetupIfUnconfigured(data); } catch(e){ console.error('_offerSetupIfUnconfigured:', e); }

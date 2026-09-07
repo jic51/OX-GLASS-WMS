@@ -46,7 +46,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '11.50';
+var APP_VERSION = '11.51';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -58,7 +58,7 @@ var APP_VERSION = '11.50';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '292babb6';
+var APP_BUILD = '16ba3d3c';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -5007,7 +5007,28 @@ function unlockMaterial(data, auth) {
       return { status: 'success' };
     }
   }
-  throw new Error('Lock not found or already removed.');
+  // NO ES UN ERROR: EL OBJETIVO SE CUMPLIÓ.
+  //
+  // Jose lo vio con dos cuentas quitando el mismo candado a la vez: la segunda
+  // recibía "Error: error: lock not found or already removed" Y EL CANDADO
+  // SEGUÍA PINTADO. Sus palabras: "no debería decirle error al usuario, debe
+  // darle la explicación sin hacerlo sentir como que hizo algo malo o que la
+  // app está fallando".
+  //
+  // Tiene razón, y hay algo más de fondo que él señaló sin nombrarlo: la
+  // persona quería que el material quedara desbloqueado, y está desbloqueado.
+  // Que lo haya conseguido otro no lo convierte en un fallo suyo. Lo mismo que
+  // borrar algo que ya no estaba: el mundo acabó como se pedía.
+  //
+  // Y devolver éxito ARREGLA EL CANDADO PINTADO SIN TOCAR EL NAVEGADOR: el
+  // manejador de éxito de _doUnlockMaterial ya quita el candado de la lista,
+  // reconstruye el índice y repinta el estante y el mapa. Era el manejador de
+  // FALLO el que no hacía nada de eso. O sea que el código correcto ya existía
+  // y sólo lo estábamos mandando por el camino equivocado.
+  //
+  // `alreadyGone` es para poder decirlo con otras palabras, no para decidir
+  // nada distinto.
+  return { status: 'success', alreadyGone: true };
 }
 
 // ─── DOCUMENT UPLOAD ─────────────────────────────────────────────────────────
