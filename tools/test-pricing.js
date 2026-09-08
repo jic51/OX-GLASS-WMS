@@ -57,6 +57,12 @@ FakeSheet.prototype.getDataRange = function () {
   return { getValues: function () { return self.rows.map(function (r) { return r.slice(); }); } };
 };
 FakeSheet.prototype.getLastRow = function () { return this.rows.length; };
+// A real sheet has a fixed number of COLUMNS, separate from how many hold
+// data, and the real code asks — a sheet narrower than the row model cannot be
+// written to. 26 is what a new spreadsheet arrives with.
+FakeSheet.prototype._maxCols = 26;
+FakeSheet.prototype.getMaxColumns = function () { return this._maxCols; };
+FakeSheet.prototype.insertColumnsAfter = function (after, n) { this._maxCols = this._maxCols + n; };
 FakeSheet.prototype.getRange = function (r, c, nr, nc) {
   var self = this;
   nr = nr || 1; nc = nc || 1;
@@ -127,7 +133,7 @@ function buildSandbox() {
     'round2_', 'normalizeString', 'cleanDisplay_', 'sheetSafe_', 'getMaterialId',
     'statusForMoveType_', 'buildStockSnapshot_', 'applyMovementToSnapshot_',
     'getActiveLocksMap_', 'enforceMaterialLock_', 'loadConfig', 'saveAvgCostUpdates_',
-    'addMovementsBatch_'
+    'ensureArchiveWidth_', 'newMovId_', 'addMovementsBatch_'
   ].forEach(function (name) { vm.runInContext(extractFn(name), sandbox); });
 
   return { sandbox: sandbox, ss: ss, archive: archive, cfg: cfg };

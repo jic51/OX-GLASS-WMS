@@ -5,6 +5,90 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+### ✅ HECHO (v11.53) — PASO 1: CADA MOVIMIENTO YA TIENE NOMBRE PROPIO
+
+`AC.MOV_ID` (columna 23), `AC_WIDTH` 22 → 23, añadida AL FINAL. Todo movimiento
+guardado desde la v11.53 nace con su id. Los que ya estaban se rellenan con un
+botón en Ajustes → System ("Movement IDs"), que:
+
+- sólo rellena huecos, así que **correrlo dos veces no hace nada la segunda**;
+- **escribe UNA sola columna** — ninguna cantidad, estante, fecha ni precio
+  puede resultar dañado, porque nunca se reescribe la fila;
+- no le pone nombre a una fila vacía;
+- toma el mismo candado que un guardado, porque escribe en el archivo;
+- queda en la auditoría.
+
+**Nada se ha cambiado todavía a USAR el id** — borrar y editar siguen mandando
+el número de fila. Ése es el paso 2, y no puede hacerse hasta que las filas
+viejas tengan id (o sea, hasta que Jose pulse el botón).
+
+**Y salió un fallo de camino, que llevaba ahí desde antes:** el trabajo de las
+3 de la mañana (`archiveOldMovements`) escribía **20 columnas** puestas a mano.
+20 dejó de ser verdad el día que se añadieron Unit Cost y Total Cost. O sea que
+cada noche que ese trabajo movía una fila, o fallaba en seco, o dejaba caer los
+dos precios. Ahora usa `AC_WIDTH` y rellena las filas cortas antes de escribir.
+
+---
+
+### JOSE (2026-09-08) — CORRECCIONES Y ACLARACIONES
+
+**1. LA REGLA DE LA RESPUESTA INMEDIATA, COMO ÉL LA DIJO — NO COMO YO LA
+ESCRIBÍ.** Yo lo anoté como "quitar la fila al instante, y revisar los sitios
+donde se quitan filas". No es eso:
+
+> "hay muchos otros lugares en la app donde se borra, se cambia o se añade algo
+>  y la app debe actuar y mostrar/cambiar/borrar ese algo inmediatamente, si el
+>  servidor y el backend ya hicieron su trabajo, no hay porque hacer esperar al
+>  usuario... el feedback visual no debe demorar nunca."
+
+O sea: **barrer TODOS los sitios que confirman algo y luego se quedan esperando
+una recarga entera para reflejarlo.** El aviso de éxito sale en el manejador de
+éxito — el trabajo YA está hecho — y aun así la pantalla espera. No es una
+mejora del borrado: es una regla de la app.
+
+**2. "La calculadora de cuota" — malentendido, corregido.** Jose preguntó si
+era el cálculo de unidades por caja/pallet. No lo es: es el **medidor de la
+cuota de ejecución de Apps Script** (el tiempo de servidor que consume la app
+al día). Importa porque **la cuota es del DUEÑO, no de cada usuario** — la app
+corre "como yo", así que las llamadas de todos salen del mismo presupuesto:
+~90 min/día en cuenta normal, ~6 h/día en Workspace, medible en la pestaña
+Executions. Va al final, como pidió. Lo de cajas/pallets es otra cosa y sigue
+en su sitio en esta lista.
+
+**3. El candado — lo que quería decir:** al DESBLOQUEAR hay que enseñar **quién
+lo hizo y la razón que dio esa persona**. El dueño ya se guarda (`auth.email`);
+la razón es lo que no se enseña.
+
+**4. El título del panel = nombre del material: SÍ, y es para teléfonos.**
+
+**5. Manage Users — el alcance crece.** Además de que no se recargue entera:
+- rediseñar **cómo se editan** los usuarios;
+- la ventana se ve **pequeña**;
+- el correo se parte en **varias líneas** en vez de una;
+- hay una **barra de scroll lateral** que se puede evitar;
+- los nombres pueden ir en más de una línea, para aprovechar el ancho.
+
+**6. Las tres que no recordaba, explicadas (y siguen pendientes):**
+- **"El borrado por Supervisor"**: quien no es admin y trata de borrar un
+  movimiento recibe un error pelado, en vez de "esto necesita permiso de
+  administrador" y a quién pedírselo. Es el mensaje, no el permiso.
+- **"El video de las pestañas"**: la grabación que Jose quedó en mandar del
+  formulario de movimiento perdiendo datos al cambiar entre EXIT y TRANSFER —
+  locations mal, estante de origen borrado, TRANSFER sugiriendo estantes de
+  otros proyectos, y una línea `? UNKNOWN RACK` sin cantidad que aparece antes
+  de la correcta y se queda. Lo leo como DOS fallos: el formulario no se limpia
+  al cambiar de tipo, y la lista de sugerencias no filtra por dónde está el
+  material. **Sigue sin llegar el video, y no lo toco hasta verlo.**
+- **"La ficha de usuario"**: petición suya. En cada movimiento, el **nombre
+  encima del correo** (nombre en negrita y más grande, correo debajo en gris), y
+  al pasar el ratón una ventanita con **enviar correo / videollamada de Meet /
+  chat**. Correo y Meet son enlaces baratos; el chat es decisión aparte.
+
+**7. Al final, confirmado por él:** el logo al arrancar, las imágenes del sitio,
+la política de cobro y el rediseño de movimientos.
+
+---
+
 ### LA RAÍZ DE TODO ESTO: UN MOVIMIENTO NO TIENE NOMBRE PROPIO
 
 Verificado el 2026-09-07. `var AC = { TIMESTAMP:0, CATEGORY:1, ... UNIT_COST:20,

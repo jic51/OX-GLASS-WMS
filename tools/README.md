@@ -59,6 +59,24 @@ node tools/test-html-escaping.js
 node tools/test-window-stack.js
 node tools/test-use-before-var.js
 node tools/test-sysact-followthrough.js
+node tools/test-daily-report.js
+node tools/test-morning-closes.js
+node tools/test-selection-survives.js
+node tools/test-site-links.js
+node tools/test-arrived-to-entry.js
+node tools/test-settings-reopen.js
+node tools/test-settings-system-tab.js
+node tools/test-topbar-sticky.js
+node tools/test-product-link.js
+node tools/test-quiet-reload.js
+node tools/test-busy-retry.js
+node tools/test-live-pulse.js
+node tools/test-short-stock.js
+node tools/test-settings-boxes.js
+node tools/test-toast-and-buttons.js
+node tools/test-live-exit-unlock.js
+node tools/test-load-race.js
+node tools/test-movement-id.js
 node tools/build-site.js && node tools/test-site-privacy.js
 node tools/check-changelog.js
 node tools/sync-legal.js --check

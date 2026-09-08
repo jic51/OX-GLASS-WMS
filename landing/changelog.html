@@ -90,7 +90,54 @@
        laid out like a week instead of a list, and marking one arrived now fills
        in its entry for you. Plus a run of small things that were quietly
        wrong: a header that scrolled away, tooltips cut off at the edge, and a
-       morning reminder that never admitted you had dealt with it.</p>
+       morning reminder that never admitted you had dealt with it. And a long
+       run of work on the same question: when several people use the app at
+       once, does everyone see the same warehouse?</p>
+
+    <div class="entry">
+      <span class="ver">v11.46 – v11.53</span>
+      <span class="tag new">New</span>
+      <h3>Everyone sees the same warehouse</h3>
+      <p>When two or three people work in the app at the same time, a change one
+         of them makes now reaches the others on its own, within about twenty
+         seconds — an entry, an exit, a transfer, a deleted movement. Nobody has
+         to press refresh, and nothing flashes or interrupts what you were
+         typing.</p>
+      <p><b>Saving at the same moment as somebody else no longer fails.</b> The
+         app waits its turn and tries again by itself, up to four times, showing
+         "Waiting…" while it does. What used to be an error you had to redo is
+         now a short pause.</p>
+      <p><b>Taking out more than there is</b> now corrects the number on screen
+         and explains what happened, instead of only refusing. If someone else
+         took the last of it while your form was open, the form says so — the
+         moment it happens, not when you press save.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.52</span>
+      <span class="tag fix">Fixed</span>
+      <h3>A deleted movement could come back on somebody else's screen</h3>
+      <p>Four movements deleted on one account were still showing on another
+         twelve minutes later, with both screens connected and nothing wrong in
+         sight. Two refreshes were racing each other, and when the slower one
+         had been asked for <i>before</i> the deletion and arrived <i>after</i>
+         it, it painted the older warehouse back over the newer one.</p>
+      <p>Nothing failed, which is why nothing warned: both answers were correct,
+         they just arrived in the wrong order. An answer that has been overtaken
+         is now discarded instead of drawn.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.51</span>
+      <span class="tag fix">Fixed</span>
+      <h3>Notices off the edge of a phone, and buttons on top of each other</h3>
+      <p>On a phone, the small confirmation notices appeared outside the visible
+         area — so the app was answering where nobody could read it. And a
+         button that changed its label mid-action grew wide enough to sit on top
+         of the one beside it. Both are fixed, and two people unlocking the same
+         material at once no longer leaves one of them with an error for work
+         that was already done.</p>
+    </div>
 
     <div class="entry">
       <span class="ver">v11.42 – v11.45</span>

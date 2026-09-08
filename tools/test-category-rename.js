@@ -226,8 +226,13 @@ console.log('\n═══ manageMaterial: matching on one column, writing another
       !/\.setValue\(/.test(seg));
   });
 
-  check('deleting a row logs the FULL row width (AC_WIDTH), not the hardcoded 19 that silently dropped PM and both cost columns from the record of a deletion',
-    /getRange\(rowIdx, 1, 1, AC_WIDTH\)/.test(body));
+  // `readWidth_(archive)` is AC_WIDTH clamped to the columns the sheet
+  // physically has — a read must not widen a sheet as a side effect of looking
+  // at it. Either spelling passes here; a number written out by hand does not,
+  // which is the whole point of the check.
+  check('deleting a row logs the FULL row width, not the hardcoded 19 that silently dropped PM and both cost columns from the record of a deletion',
+    /getRange\(rowIdx, 1, 1, (AC_WIDTH|readWidth_\(archive\))\)/.test(body) &&
+    !/getRange\(rowIdx, 1, 1, \d+\)/.test(body));
 }
 
 console.log('\ncategory-rename: ' + (fail === 0 ? 'ok' : (fail + ' FAILED')));
