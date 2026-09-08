@@ -46,7 +46,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '11.57';
+var APP_VERSION = '11.58';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -58,7 +58,7 @@ var APP_VERSION = '11.57';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '7d5e59a9';
+var APP_BUILD = '5a87ff27';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -9562,6 +9562,21 @@ function manageMaterialLocked_(data, auth) {
               rid + ' → ' + backTo);
     refreshDerivedSheets_(ss);
     return { status: 'success', movId: rid };
+
+  } else if (op === 'emptyTrash') {
+    // ESTE SÍ ES DEFINITIVO, y es el único sitio de la app que lo es. Por eso
+    // no lo cubre "Edit movements": vaciar la papelera no es borrar un
+    // movimiento, es renunciar a poder deshacer TODOS los que se borraron.
+    // Esa es una decisión de quien responde por los datos.
+    requireAuth_('ADMIN');
+    var tSh = ss.getSheetByName(SHEETS.TRASH);
+    if (!tSh || tSh.getLastRow() < 2) return { status: 'success', removed: 0 };
+    var n = tSh.getLastRow() - 1;
+    // Se borran las FILAS, no su contenido: dejar filas vacías haría que la
+    // papelera pareciera llena de movimientos sin datos la próxima vez.
+    tSh.deleteRows(2, n);
+    auditLog_(ss, 'TRASH_EMPTIED', auth.email, n + ' deleted movement(s) discarded for good', '', '');
+    return { status: 'success', removed: n };
 
   } else if (op === 'listTrash') {
     var tSheet = ss.getSheetByName(SHEETS.TRASH);

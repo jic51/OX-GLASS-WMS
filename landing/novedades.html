@@ -97,6 +97,33 @@
        almacén?</p>
 
     <div class="entry">
+      <span class="ver">v11.58</span>
+      <span class="tag fix">Arreglado</span>
+      <h3>Borrar varios movimientos a la vez ya no dice "System busy"</h3>
+      <p>Pulsar cuatro papeleras seguidas le pedía al servidor cuatro
+         reconstrucciones completas del stock en el mismo momento, y las últimas
+         volvían ocupadas. Ahora salen de una en una, en el orden en que las
+         pulsaste: la fila que espera su turno se ve atenuada, se reintenta sola
+         si otra persona está guardando, y sólo habla si de verdad no pudo
+         pasar.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.58</span>
+      <span class="tag new">Nuevo</span>
+      <h3>Vaciar la papelera, y Ajustes deja de volver a pedir lo que no cambió</h3>
+      <p>La papelera tiene ahora su propio botón <b>Empty the trash</b>, dentro
+         del cuadro que vacía. Es la única acción de la app que de verdad no se
+         puede deshacer, así que sigue siendo sólo de administrador aunque
+         borrar un movimiento ya no lo sea.</p>
+      <p>Y abrir Ajustes ya no vuelve a preguntarle al servidor por cosas que no
+         han cambiado desde la última vez — la lista de borrados, los IDs de
+         movimiento y la lista de usuarios se conservan hasta que algo las
+         cambia de verdad. Ajustes también tiene ahora un filo inferior, en vez
+         de terminar a ras del contenido.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.57</span>
       <span class="tag fix">Arreglado</span>
       <h3>Cambiar de tipo de movimiento dejaba media fila atrás</h3>

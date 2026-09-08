@@ -95,6 +95,32 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.58</span>
+      <span class="tag fix">Fixed</span>
+      <h3>Deleting several movements at once no longer says "System busy"</h3>
+      <p>Pressing four bins in a row asked the server for four full stock
+         rebuilds at the same moment, and the last ones came back busy. They
+         now go one at a time, in the order you pressed them: a row waiting its
+         turn is dimmed, it retries by itself if somebody else is saving, and
+         it only speaks up if it genuinely could not get through.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.58</span>
+      <span class="tag new">New</span>
+      <h3>Empty the trash, and Settings stops re-fetching what hasn't changed</h3>
+      <p>The trash now has its own <b>Empty the trash</b> button, inside the box
+         it empties. It is the one action in the app that really cannot be
+         undone, so it stays admin-only even though deleting a movement no
+         longer is.</p>
+      <p>And opening Settings no longer re-asks the server for things that
+         haven't changed since you last looked — the deleted list, the movement
+         IDs and the user list are kept until something actually changes them.
+         Settings also has a proper bottom edge now, instead of ending flush
+         against the content.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.57</span>
       <span class="tag fix">Fixed</span>
       <h3>Switching movement type left half a row behind</h3>

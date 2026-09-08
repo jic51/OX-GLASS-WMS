@@ -10,52 +10,77 @@ here once they ship (the commit message is the record of what changed and why).
 Todo lo pendiente, de más urgente a menos. Lo de arriba estorba para publicar;
 lo de abajo puede esperar meses sin que pase nada.
 
-**1. BORRAR VARIOS A LA VEZ DA "BUSY" EN VEZ DE PONERSE EN COLA.** Jose,
-2026-09-08. La cola con reintentos **ya existe** (`_busyRetry`, v11.47) y está
-enganchada a los tres caminos de guardado — **al borrado no.** Es un hueco mío,
-no un problema nuevo: escribí la máquina y no la conecté aquí. Y hay una causa
-de fondo que lo empeora: cada borrado llama a `refreshDerivedSheets_`, que
-reconstruye los totales de TODO el almacén. Tres borrados = tres
-reconstrucciones enteras, cada una con el candado en la mano. Por eso salta tan
-fácil. → Enganchar `_busyRetry` al borrado, y mirar si el refresco puede
-esperar al final de una ráfaga en vez de correr por cada fila.
+**1. LAS CASILLAS DE SELECCIÓN Y LA BARRA DE ACCIONES** — paso 4 del plan de la
+ID, con las correcciones de diseño de Jose ya escritas más abajo (Edit y Delete
+en la fila que YA existe, la de Columns, apagados sin selección; el encabezado
+del mismo tamaño antes y después; "Save" en vez de "Done"; casilla general =
+lo filtrado y visible, con estado intermedio; Edit sólo con una fila).
+Convierte "borro cinco de uno en uno" en una sola operación.
 
-**2. LAS CASILLAS DE SELECCIÓN Y LA BARRA DE ACCIONES** (paso 4 del plan de la
-ID, con las correcciones de diseño de Jose ya escritas más abajo). Convierte
-"borro cinco de uno en uno" en una sola operación — y por tanto es también
-media solución del punto 1.
+**2. EL CANDADO CON DUEÑO Y RAZÓN VISIBLES al desbloquear.** Jose, 2026-09-08:
+*"ya tenemos la información, sólo hay que mostrarla"*. Correcto — el dueño se
+guarda en `auth.email` y la razón también; sólo falta enseñarlas.
 
-**3. VACIAR LA PAPELERA.** Hoy crece sin límite. Una papelera que no se vacía
-es otro archivo creciendo dentro del mismo Sheet.
+**3. EL MENSAJE DEL BORRADO CON EL PERMISO APAGADO.** Que diga "no tienes
+permiso para esta acción, contacta al admin" en vez del texto genérico de
+`requirePerm_`. Ya no es un fallo de permisos (v11.56), es el texto.
 
 **4. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
 mínimos). Detalle completo más abajo. Es el que cuesta material cargado en una
 camioneta que hay que volver a bajar.
 
-**5. MANAGE USERS** — que no se recargue entera, rediseñar cómo se editan los
-usuarios, ventana más grande, el correo en una línea, quitar el scroll lateral.
+**5. MANAGE USERS — EL REDISEÑO.** La recarga ya está arreglada (v11.58);
+queda rediseñar cómo se editan los usuarios, la ventana más grande, el correo
+en una línea, y quitar el scroll lateral.
 
-**6. EL CANDADO CON DUEÑO Y RAZÓN VISIBLES** al desbloquear.
+**6. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
 
-**7. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
-
-**8. LAS CABECERAS QUE FALTAN EN UNA INSTALACIÓN VIEJA** (ver más abajo). No
+**7. LAS CABECERAS QUE FALTAN EN UNA INSTALACIÓN VIEJA** (ver más abajo). No
 urgente para Jose —ya lo arregló a mano— sí para el siguiente cliente.
 
-**9. EL MENSAJE DEL BORRADO POR SUPERVISOR.** Ya no es un fallo de permisos
-(v11.56); queda revisar que el texto sea bueno cuando el permiso está apagado.
-
-**10. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
+**8. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
 enviar correo / videollamada de Meet / chat.
 
-**11. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
+**9. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
 
-**12. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
+**10. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
 
-**13. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
+**11. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
 
-**14. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
+**12. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
 sitio, la política de cobro y el rediseño del modelo de movimientos.
+
+---
+
+### PREGUNTA ABIERTA DE JOSE (2026-09-08) — ¿PERMISOS POR TIPO DE MOVIMIENTO?
+
+*"¿es posible desglosar más los permisos? por ejemplo que el admin seleccione si
+quiere que alguien haga sólo entrys o sólo exits, sólo waste, o sólo returns?"*
+
+**Técnicamente, sí, y es barato.** `requirePerm_` ya existe y todos los tipos
+entran por la misma puerta (`processMovement` → `addMovement`/`addMultiEntry`/
+`addMultiExit`), así que sería un interruptor por tipo y una comprobación en un
+sitio. La parte visible es más trabajo que la de permisos: esconder las pestañas
+que alguien no puede usar, porque un botón que siempre dice que no es peor que
+un botón que no está.
+
+**Lo que hay que decidir ANTES de construirlo, y no es técnico:**
+
+- **WASTE y ADJUST no son como los otros cuatro.** Los dos dicen "el número
+  estaba mal" y los dos cambian el stock sin que entre ni salga material. Ésos
+  son los que un dueño querría restringir de verdad. Es posible que la respuesta
+  correcta no sea "seis interruptores" sino **dos**: *puede registrar
+  movimientos* (los cuatro normales) y *puede corregir el conteo* (waste/adjust).
+- **Cada interruptor nuevo es una combinación más que puede estar mal.** Seis
+  interruptores son 64 combinaciones; la mitad no tienen sentido (poder hacer
+  EXIT y no ENTRY) y alguien las va a configurar igual.
+- **Y hay que preguntarse por el problema de verdad:** ¿es que alguien registra
+  el tipo equivocado, o que alguien registra algo que no debería? Si es lo
+  primero, esto no lo arregla — lo arregla que el formulario sea más claro.
+
+**Mi recomendación:** anotarlo y esperar a que aparezca el caso real. Ahora
+mismo no hay ningún cliente que lo haya pedido, y el diseño correcto depende de
+por qué lo pide.
 
 ---
 
@@ -81,6 +106,51 @@ trabajo antes de tiempo. Lo que sí conviene es que el precio no quede colgado
 sin ninguna acción al lado.
 
 ---
+
+### ✅ HECHO (v11.58) — LA COLA DE BORRADO, Y DEJAR DE PREGUNTAR LO QUE YA SE SABE
+
+**1. BORRAR VARIOS A LA VEZ YA NO DA "BUSY".** Jose tenía razón dos veces: la
+cola con reintentos **ya existía** (`_busyRetry`, v11.47), enganchada a los tres
+caminos de guardado y a **ninguno** de borrado. Hueco mío.
+
+**Pero la cola del servidor era la SEGUNDA respuesta, no la primera.** La razón
+de que saltara tan fácil es que cada borrado reconstruye los totales de TODO el
+almacén con el candado en la mano; cuatro borrados a la vez son cuatro
+reconstrucciones enteras peleándose por el mismo candado — y el navegador se las
+pedía todas de golpe. Contra eso, reintentar más rápido no arregla nada.
+
+Ahora hay dos cosas: **una cola en el navegador** (los borrados salen de uno en
+uno, en el orden en que se pulsaron, lo que quita la causa) y **el reintento con
+espera creciente detrás**, para cuando quien tiene el candado es otra persona —
+eso el navegador no lo puede evitar. Ocupado no dice nada: la fila se ve
+esperando y se reintenta sola. Sólo habla si se agotan los cinco intentos.
+
+Y la recarga silenciosa **ya no corre entre un borrado y el siguiente**:
+traerse el almacén entero cuatro veces en mitad de una ráfaga era justo lo que
+la hacía lenta. Corre una vez, al final.
+
+**2. LOS PANELES DEJAN DE RECARGARSE EN CADA APERTURA.** Jose: *"nada debe
+recargarse a cada rato en la app, sólo cosas puntuales y específicas"*. Cada
+apertura de Ajustes disparaba tres llamadas para pintar datos que no habían
+cambiado.
+
+**El sello ya existía y no se usaba.** Desde la v11.48 el servidor devuelve
+`dataStamp`, que cambia cuando cambian los datos y no cambia cuando no — o sea,
+la respuesta exacta a "¿hace falta volver a preguntar?". Ahora los IDs de
+movimiento y la papelera se pintan al instante de lo guardado y sólo se
+preguntan si el almacén se movió. **Manage Users** va aparte, con su propia
+regla: la lista de usuarios cambia cuando alguien cambia un usuario, no porque
+se haya guardado una entrada — atarla al sello la haría recargarse después de
+cada movimiento, que es lo contrario de lo que se pidió.
+
+**3. VACIAR LA PAPELERA**, con el botón dentro del cuadro que vacía. Es **la
+única acción definitiva de la app**, y por eso es la única que sigue siendo de
+admin aunque borrar ya no lo sea: vaciar no es borrar un movimiento, es
+renunciar a poder deshacer todos los que se borraron.
+
+**4. EL FILO DE ABAJO DE LA VENTANA DE AJUSTES.** La cabecera cerraba la ventana
+por arriba con su propio fondo; abajo el contenido llegaba al borde y la ventana
+parecía cortada en vez de terminada.
 
 ### ✅ HECHO (v11.57) — EL FORMULARIO YA NO PIERDE LA MITAD DE LOS DATOS
 

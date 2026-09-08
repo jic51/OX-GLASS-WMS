@@ -80,6 +80,7 @@ node tools/test-movement-id.js
 node tools/test-trash.js
 node tools/test-role-permissions.js
 node tools/test-move-tabs.js
+node tools/test-delete-queue.js
 node tools/build-site.js && node tools/test-site-privacy.js
 node tools/check-changelog.js
 node tools/sync-legal.js --check

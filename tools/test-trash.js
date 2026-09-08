@@ -341,7 +341,9 @@ console.log('\n═══ la papelera no cuenta para el stock ═══\n');
 console.log('\n═══ y en pantalla, al instante ═══\n');
 {
   const del = sinComentarios(fnSrc(HTML, '_doDeleteMovementRow'));
-  check('manda el nombre del movimiento', /movId: mov \? \(mov\.movId/.test(del));
+  check('manda el nombre del movimiento', /movId: mov\.movId \|\| ''/.test(del));
+  check('...y sale antes si no encuentra el movimiento, que es lo que permite ' +
+        'leerlo sin comprobar nada más abajo', /if \(!mov\) return;/.test(del));
   check('LA FILA SE QUITA EN EL MANEJADOR DE ÉXITO — el servidor ya lo hizo, así ' +
         'que esperar a que una recarga entera nos lo repita es hacer esperar a ' +
         'alguien por algo que ya se sabe',

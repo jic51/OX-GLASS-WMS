@@ -1011,6 +1011,22 @@
     }
     .settings-modal .mhdr{border-radius:14px 14px 0 0;margin:0}
     .settings-body{display:flex;flex:1;min-height:0}
+    /* EL FILO DE ABAJO. Jose, 2026-09-08: "no hay marco o filo de la ventana en
+       la parte de abajo; debemos dejar un marco en la ventana igual que en la
+       parte superior." La cabecera cierra la ventana por arriba con su propio
+       fondo; abajo el contenido llegaba al borde y la ventana parecía cortada
+       en vez de terminada. Esta franja no lleva nada dentro a propósito: su
+       único trabajo es cerrar el marco, igual que la cabecera lo abre. */
+    .settings-modal .sftr{flex-shrink:0;height:14px;background:var(--bg);
+      border-top:1px solid var(--border);border-radius:0 0 14px 14px}
+    /* Una fila esperando su turno en la cola de borrado. Sigue ahí porque
+       TODAVÍA NO SE HA BORRADO — atenuarla es la verdad, no un adorno — y de
+       paso deja claro que la papelera ya se pulsó. Nada de animación: la fila
+       está a punto de irse, y llamar la atención sobre algo que desaparece es
+       ruido. */
+    tr.row-deleting{opacity:.4}
+    tr.row-deleting .btn-icon{pointer-events:none}
+    @media (prefers-reduced-motion:reduce){ tr.row-deleting{opacity:.45} }
     /* A quarter of the dialog, not a fixed 210px. On a narrow window that
        fixed width was eating half the screen and the settings themselves were
        reading through a slot. */
@@ -3170,6 +3186,7 @@
         <div id="settingsMsgBar" style="display:none;margin-top:.75rem;padding:.5rem .75rem;border-radius:6px;font-size:.82rem"></div>
       </div>
     </div>
+    <div class="sftr"></div>
   </div>
 </div>
 
@@ -3310,7 +3327,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.57';
+var APP_VERSION = '11.58';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -3322,7 +3339,7 @@ var APP_VERSION = '11.57';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '7d5e59a9';
+var APP_BUILD = '5a87ff27';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -5831,7 +5848,11 @@ function renderMovements(){
       ? '<td><div style="display:flex;align-items:center;gap:2px">'+(m.archived?'<span style="font-size:.68rem;color:var(--muted)" title="Archived movement — read only">📜</span>':'<button class="btn-icon" data-rowact="edit" title="Edit record" onclick="openEditMovModal('+m.rowIdx+')" style="color:var(--accent)">✏️</button><button class="btn-icon" data-rowact="del" title="Delete record" onclick="deleteMovementRow('+m.rowIdx+')" style="color:var(--red);opacity:.7">🗑</button>')+'</div></td>'
       : '';
 
-    return '<tr class="'+rowClass(m.moveType)+'">' + body + adminCell + '</tr>';
+    // A row waiting its turn in the delete queue says so. It is still there
+    // because it has NOT been deleted yet — dimming it is the truth, and it
+    // stops the same bin being pressed twice.
+    var pendCls = (m.movId && _delPending[m.movId]) ? ' row-deleting' : '';
+    return '<tr class="'+rowClass(m.moveType)+pendCls+'">' + body + adminCell + '</tr>';
   }).join('');
 
   var span = _visibleColCount('mov') + ((isAdmin && _rowModes.mov) ? 1 : 0);
@@ -5923,38 +5944,94 @@ function _movByRowIdx(rowIdx){
   return null;
 }
 
+/* ── BORRAR VARIOS A LA VEZ ─────────────────────────────────────────────────
+   Jose, 2026-09-08: borrar cuatro movimientos seguidos daba "System busy" en
+   los últimos. Pedía lo mismo que ya hace un guardado — ponerse en cola en vez
+   de enseñar un error.
+
+   Y tenía razón dos veces, porque la cola ya existía (_busyRetry, v11.47) y
+   estaba enganchada a los tres caminos de guardado y a NINGÚN borrado. Hueco
+   mío.
+
+   PERO LA COLA DEL SERVIDOR NO ES LA PRIMERA RESPUESTA, ES LA SEGUNDA. La causa
+   de que saltara tan fácil es que cada borrado reconstruye los totales de TODO
+   el almacén con el candado en la mano; cuatro borrados son cuatro
+   reconstrucciones enteras peleándose por el mismo candado. Contra eso, el
+   arreglo correcto no es reintentar más rápido: es NO PEDIRLO TODO A LA VEZ.
+
+   Así que los borrados salen de aquí de uno en uno, en el orden en que se
+   pulsaron. El reintento con espera creciente sigue detrás, para cuando quien
+   tiene el candado es OTRA persona — eso el navegador no lo puede evitar. */
+var _delQueue   = [];      // trabajos esperando turno
+var _delRunning = false;   // hay uno en el aire
+var _delPending = {};      // movId → true, para que la fila se vea esperando
+
+function _delEnqueue(job){ _delQueue.push(job); _delPump(); }
+
+function _delPump(){
+  if (_delRunning || !_delQueue.length) return;
+  _delRunning = true;
+  var job = _delQueue.shift();
+  job(function(){ _delRunning = false; _delPump(); });
+}
+
 function _doDeleteMovementRow(rowIdx){
   var mov = _movByRowIdx(rowIdx);
-  google.script.run
-    .withSuccessHandler(function(){
-      // AL INSTANTE. El servidor YA lo hizo — este manejador es el de ÉXITO —
-      // así que esperar a que una recarga entera nos lo repita es hacer esperar
-      // a alguien por algo que ya se sabe. Jose: "el feedback visual no debe
-      // demorar nunca". Y ahora es seguro: quitar una fila de la lista ya no
-      // desplaza los números de las demás, porque nada se identifica por su
-      // número desde la v11.53.
-      if (mov) {
-        var at = movements.indexOf(mov);
-        if (at !== -1) movements.splice(at, 1);
-        renderAll();
-      }
-      showToast('Movement deleted. It is in the trash.', 'ok');
-      // La recarga silenciosa sigue: reconcilia los totales de stock, que los
-      // calcula el servidor. Ya no es lo que hace desaparecer la fila.
-      loadDataFromGoogle(true, true);
-    })
-    .withFailureHandler(function(err){
-      // Nada se ha quitado de la pantalla todavía, así que no hay que devolver
-      // nada a su sitio — el orden importa: primero el servidor, luego la
-      // pantalla. Al revés, un "ya lo borró otro" dejaría la fila desaparecida
-      // en una cuenta y presente en la otra.
-      showToast(_stripTags(err), 'err', 8000);
-    })
-    .processMovement('manageMaterial', _h({
-      op: 'deleteRow',
-      movId: mov ? (mov.movId || '') : '',
-      rowIdx: rowIdx            // sólo para el registro; el servidor borra por movId
-    }));
+  if (!mov) return;
+  // Pulsar dos veces la misma papelera no encola dos borrados. El segundo
+  // recibiría "ya lo borró jose@…", que es verdad y no ayuda a nadie.
+  if (mov.movId && _delPending[mov.movId]) return;
+  if (mov.movId) { _delPending[mov.movId] = true; renderAll(); }
+
+  _delEnqueue(function(done){
+    var state = { tries: 0 };
+
+    function attempt(){
+      google.script.run
+        .withSuccessHandler(function(){
+          if (mov.movId) delete _delPending[mov.movId];
+          // AL INSTANTE. El servidor YA lo hizo — este manejador es el de
+          // ÉXITO — así que esperar a que una recarga entera nos lo repita es
+          // hacer esperar a alguien por algo que ya se sabe. Jose: "el
+          // feedback visual no debe demorar nunca". Y es seguro desde la
+          // v11.53: quitar una fila ya no desplaza los números de las demás,
+          // porque nada se identifica por su número.
+          var at = movements.indexOf(mov);
+          if (at !== -1) movements.splice(at, 1);
+          renderAll();
+          _sysCacheDrop('trash');
+          showToast('Movement deleted. It is in the trash.', 'ok');
+          done();
+          // La recarga silenciosa va DESPUÉS de soltar la cola, y sólo cuando
+          // no queda ninguno esperando: traerse el almacén entero entre un
+          // borrado y el siguiente es justo lo que hacía la ráfaga lenta.
+          if (!_delQueue.length && !_delRunning) loadDataFromGoogle(true, true);
+        })
+        .withFailureHandler(function(err){
+          // Ocupado no es un fallo: es un turno. Se espera y se vuelve, sin
+          // decir nada — la fila ya se ve esperando, y un aviso por cada
+          // reintento sería ruido sobre algo que se está arreglando solo.
+          if (_isBusyError(err) && state.tries < BUSY_MAX_RETRIES){
+            state.tries++;
+            setTimeout(attempt, _busyDelay(state.tries));
+            return;
+          }
+          if (mov.movId) { delete _delPending[mov.movId]; renderAll(); }
+          showToast(_isBusyError(err)
+            ? ('The system stayed busy through ' + (BUSY_MAX_RETRIES + 1) +
+               ' tries. Nothing was deleted — try that one again in a moment.')
+            : _stripTags(err), 'err', 8000);
+          done();
+        })
+        .processMovement('manageMaterial', _h({
+          op: 'deleteRow',
+          movId: mov.movId || '',
+          rowIdx: rowIdx            // sólo para el registro; el servidor borra por movId
+        }));
+    }
+
+    attempt();
+  });
 }
 
 // ── Project View ──────────────────────────────────────────────────────────────
@@ -9539,8 +9616,14 @@ function _renderSystemTab() {
 function _loadTrash(){
   var box = document.getElementById('trashBox');
   if (!box) return;
+  var hit = _sysCacheGet('trash');
+  if (hit) { _paintTrash(hit); return; }
   google.script.run
-    .withSuccessHandler(function(res){ _paintTrash(res && res.items); })
+    .withSuccessHandler(function(res){
+      var items = (res && res.items) || [];
+      _sysCachePut('trash', items);
+      _paintTrash(items);
+    })
     .withFailureHandler(function(){
       var b = document.getElementById('trashBox');
       // An older Code.gs simply does not know this op yet, which is normal for
@@ -9560,6 +9643,15 @@ function _paintTrash(items){
     return;
   }
   box.innerHTML =
+    // El botón de vaciar va DENTRO del cuadro, junto a lo que vacía — pedido de
+    // Jose, y es donde se busca. Sólo aparece cuando hay algo que vaciar: un
+    // botón que no puede hacer nada es una pregunta sin respuesta.
+    '<div style="display:flex;align-items:center;justify-content:space-between;' +
+         'gap:.6rem;margin-bottom:.5rem;flex-wrap:wrap">' +
+      '<span style="font-size:.78rem;color:var(--muted)">' + items.length +
+        ' movement' + (items.length === 1 ? '' : 's') + ' you can still put back.</span>' +
+      '<button id="btnEmptyTrash" class="btn btn-ghost btn-sm" onclick="_emptyTrash()">🗑 Empty the trash</button>' +
+    '</div>' +
     '<div style="max-height:260px;overflow:auto;border:1px solid var(--border);border-radius:8px">' +
       items.map(function(it){
         var where = it.destLoc || it.srcLoc || '';
@@ -9583,12 +9675,44 @@ function _paintTrash(items){
     '</div>';
 }
 
+function _emptyTrash(){
+  var btn = document.getElementById('btnEmptyTrash');
+  _showConfirm({
+    icon: '🗑', danger: true,
+    title: 'Empty the trash?',
+    // El único aviso de la app que puede decir esto con verdad. Desde la v11.55
+    // borrar un movimiento NO es definitivo — va aquí. Vaciar sí lo es, y el
+    // aviso tiene que separar las dos cosas o deja de significar nada.
+    message: 'Everything in the trash is discarded for good and can no longer be put back.\n\n' +
+             'The movements themselves are already out of your stock totals — this only ' +
+             'gives up the ability to undo those deletions.',
+    confirmText: 'Empty it',
+    onConfirm: function(){
+      _btnBusy(btn, 'Emptying…');
+      google.script.run
+        .withSuccessHandler(function(res){
+          _btnReset(btn);
+          var n = (res && res.removed) || 0;
+          showToast('✓ ' + n + ' deleted movement' + (n === 1 ? '' : 's') + ' discarded.', 'ok');
+          _sysCacheDrop('trash');
+          _loadTrash();
+        })
+        .withFailureHandler(function(e){
+          _btnReset(btn);
+          showToast('⚠ ' + _stripTags(e), 'err', 8000);
+        })
+        .processMovement('manageMaterial', _h({ op: 'emptyTrash' }));
+    }
+  });
+}
+
 function _restoreMovement(btn){
   var movId = btn ? (btn.getAttribute('data-movid') || '') : '';
   _btnBusy(btn, 'Restoring…');
   google.script.run
     .withSuccessHandler(function(){
       showToast('✓ Movement restored.', 'ok');
+      _sysCacheDrop('trash');         // uno menos, y lo sabemos ya
       _loadTrash();
       loadDataFromGoogle(true, true);
     })
@@ -9597,6 +9721,7 @@ function _restoreMovement(btn){
       showToast('⚠ ' + _stripTags(e), 'err', 8000);
       // Somebody else may have put it back already, in which case the list on
       // screen is out of date and saying so is not enough — show the truth.
+      _sysCacheDrop('trash');
       _loadTrash();
     })
     .processMovement('manageMaterial', _h({ op: 'restoreMovement', movId: movId }));
@@ -9613,11 +9738,53 @@ function _restoreMovement(btn){
    to the real archive, and Jose asked to be the one who decides when anything
    touches his data. It is safe to press twice — the server only ever fills a
    blank — and the panel says so rather than making anyone guess. */
+/* ── LO QUE YA SE SABE NO SE VUELVE A PREGUNTAR ─────────────────────────────
+   Jose, 2026-09-08: "'deleted movements' y 'movements ids' se recargan cada vez
+   que abro la ventana... nada debe recargarse a cada rato en la app, sólo cosas
+   puntuales y específicas."
+
+   Cada apertura de Ajustes disparaba tres llamadas al servidor para pintar
+   datos que no habían cambiado desde la apertura anterior. Sale del presupuesto
+   de ejecución de Jose —la cuota es del dueño, no de cada usuario— y hace que
+   la ventana parezca lenta por trabajo que ya estaba hecho.
+
+   EL SELLO YA EXISTÍA. Desde la v11.48 el servidor devuelve `dataStamp`, que
+   cambia cuando cambian los datos y no cambia cuando no. O sea que ya había una
+   respuesta exacta a "¿hace falta volver a preguntar?" y estos paneles no la
+   usaban. Con ella: se pinta lo guardado al instante, y sólo se pregunta si el
+   almacén se movió desde la última vez.
+
+   `_sysCacheDrop` es para cuando el propio panel cambia lo que enseña — un
+   borrado, un restaurado, la migración de IDs. Ahí no hay que esperar a que el
+   sello se entere: ya sabemos que lo que teníamos dejó de valer. */
+var _sysCache = {};
+
+function _sysCacheGet(k){
+  var e = _sysCache[k];
+  if (!e) return null;
+  // `own` = esto no depende del sello del almacén. La lista de usuarios cambia
+  // cuando alguien cambia un usuario, y no porque se haya guardado una entrada
+  // — atarla al sello la haría recargarse después de cada movimiento, que es
+  // exactamente lo que Jose pidió que dejara de pasar. Se tira a mano donde se
+  // cambia (ver _sysCacheDrop).
+  if (e.stamp === 'own') return e.data;
+  // `_dataStamp` es null hasta la primera carga aplicada; hasta entonces no hay
+  // con qué comparar, así que no se sirve nada de la caché.
+  if (_dataStamp === null || e.stamp !== _dataStamp) return null;
+  return e.data;
+}
+function _sysCachePut(k, data, own){
+  _sysCache[k] = { stamp: own ? 'own' : _dataStamp, data: data };
+}
+function _sysCacheDrop(k){ delete _sysCache[k]; }
+
 function _loadMovIdStatus(){
   var box = document.getElementById('movIdBox');
   if (!box) return;
+  var hit = _sysCacheGet('movId');
+  if (hit) { _paintMovIdStatus(hit); return; }
   google.script.run
-    .withSuccessHandler(function(res){ _paintMovIdStatus(res); })
+    .withSuccessHandler(function(res){ _sysCachePut('movId', res); _paintMovIdStatus(res); })
     .withFailureHandler(function(){
       var b = document.getElementById('movIdBox');
       // Not an error worth shouting about: an older Code.gs simply does not
@@ -9656,8 +9823,9 @@ function _fillMovIds(){
       _btnBusy(btn, 'Working…');
       google.script.run
         .withSuccessHandler(function(res){
-          _btnReset(btn);
+              _btnReset(btn);
           showToast('✓ ' + ((res && res.message) || 'Done.'), 'ok', 6000);
+          _sysCacheDrop('movId');     // acabamos de cambiar lo que cuenta
           _loadMovIdStatus();
         })
         .withFailureHandler(function(e){
@@ -15829,10 +15997,17 @@ function openUsersModal() {
 
 function _loadUsersTable() {
   var tbody = document.getElementById('usersTableBody');
+  // Misma regla que los paneles de Ajustes: si el almacén no se ha movido desde
+  // la última vez, la lista de usuarios tampoco, y volver a pedirla es pagar
+  // por una respuesta que ya tenemos. Sin el "Loading…" tampoco — parpadear
+  // para acabar enseñando lo mismo es peor que no parpadear.
+  var hit = _sysCacheGet('users');
+  if (hit) { _usersData = hit; _renderUsersTable(); return; }
   tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:1rem"><span class="spin-hg">⏳</span> Loading…</td></tr>';
   google.script.run
     .withSuccessHandler(function(res) {
       _usersData = res || [];
+      _sysCachePut('users', _usersData, true);
       _renderUsersTable();
     })
     .withFailureHandler(function(err) {
@@ -15934,6 +16109,7 @@ function saveUser() {
       else _usersData.push({ email: email, name: name, role: role, active: true,
                              addedBy: userEmail, addedAt: _isoDate(new Date()) });
       resetUserForm();
+      _sysCachePut('users', _usersData, true);   // ya está al día, no hay que ir a buscarla
       _renderUsersTable();
     })
     .withFailureHandler(function(err) {
@@ -15953,6 +16129,7 @@ function deactivateUser(email) {
       google.script.run
         .withSuccessHandler(function() {
           _usersData.forEach(function(u){ if (u.email === email) u.active = false; });
+          _sysCachePut('users', _usersData, true);
           _renderUsersTable();
           showToast(email + ' can no longer sign in.', 'ok');
         })
