@@ -5,6 +5,109 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+### ⛔ URGENTE — BORRAR UN MOVIMIENTO PUEDE BORRAR EL EQUIVOCADO
+
+Encontrado el 2026-09-07 verificando una pregunta de Jose sobre por qué el
+borrado tarda en verse. **No es lo que él preguntó; salió de mirarlo.**
+
+`manageMaterial / deleteRow` borra **por número de fila de la hoja** y no
+comprueba nada:
+
+    var rowIdx = parseInt(data.rowIdx || 0);
+    if (rowIdx < 2) throw new Error('Invalid row index.');
+    var rowData = archive.getRange(rowIdx, 1, 1, AC_WIDTH).getValues()[0];
+    auditLog_(ss, 'DELETE_ROW', ..., 'row ' + rowIdx + ' — ' + JSON.stringify(...));
+    archive.deleteRow(rowIdx);
+
+**Al borrar una fila, TODAS las de abajo suben un número.** O sea que cualquier
+`rowIdx` que el navegador tuviera de antes queda desplazado. Dos escenarios
+reales, los dos posibles hoy:
+
+1. **Dos personas borrando a la vez.** A borra la fila 1051. La lista de B se
+   dibujó antes, así que su "1052" ahora es lo que era 1053. **B borra un
+   movimiento que no eligió.**
+2. **Una sola persona borrando varios seguidos**, si los índices no se
+   recalculan entre uno y otro.
+
+**POR QUÉ NO HA EXPLOTADO TODAVÍA, y por qué eso no tranquiliza:** la tabla se
+enseña del más nuevo al más viejo, y los más nuevos están al final de la hoja
+(número de fila más alto). Así que borrar de arriba abajo en la pantalla da un
+orden DESCENDENTE de índices — que es justo el orden seguro. Se ve en el registro
+de Jose del 2026-09-06: 1054, 1053, 1052, 1051. **Sale bien por casualidad, no
+por diseño.** Con un filtro puesto, con la tabla ordenada de otra forma, o con
+dos personas a la vez, deja de salir bien.
+
+**Y no avisa de nada.** El movimiento equivocado desaparece y el que se quería
+borrar se queda. Lo único que lo delataría es el registro de auditoría, que sí
+guarda el contenido de la fila borrada — o sea que es detectable después, nunca
+antes.
+
+**EL ARREGLO: que el servidor compruebe antes de borrar.** El navegador manda,
+además del índice, la identidad de la fila (fecha, categoría, nombre y
+cantidad). El servidor lee la fila, compara, y:
+- si coincide, la borra;
+- si no, la busca por identidad en las filas cercanas y borra la correcta;
+- si no la encuentra, se niega y lo dice ("this movement was already deleted or
+  changed — refresh and try again").
+
+**Esto además DESBLOQUEA el borrado instantáneo que pide Jose** (ver abajo): hoy
+hay que recargar todo después de borrar precisamente porque los índices quedan
+mal. Con la comprobación por identidad, los índices dejan de ser críticos.
+
+---
+
+**JOSE (2026-09-07): CUATRO COSAS DE INTERFAZ Y COMPORTAMIENTO.**
+
+**1. Selección con casillas en Movements, como en el Dashboard.** Casilla por
+fila, casilla general para seleccionar y quitar todo, y los botones Edit y
+Delete en la MISMA línea que Columns. "Hay que planear, definir y hacerlo bien
+para que nada salte o se mueva al tocar cada botón."
+
+Puntos de diseño a fijar antes de escribir (ver la respuesta larga para el
+razonamiento):
+- La barra de acciones **ocupa su sitio siempre**, con los botones apagados
+  cuando no hay nada seleccionado. Aparecer y desaparecer es lo que hace saltar
+  la página.
+- El panel de Columns debe dejar de **empujar** la tabla: hoy se despliega en
+  línea con un texto largo y dos botones más. Debe ser un panel flotante.
+- La casilla general selecciona **lo que se está viendo** (filtrado y página
+  actual), no las 604 filas. Y necesita el estado intermedio "algunas".
+- **Edit sólo tiene sentido con UNA fila.** Con dos o más se apaga, y el
+  tooltip dice por qué. Delete sí funciona con varias.
+- Lo de "al seleccionar un botón se desactiva el otro" **no hace falta**: la
+  ventana emergente ya bloquea el resto. Menos estado que mantener.
+
+**2. Un botón de deshacer.** "hay algunas cosas que hice que quisiera eliminar
+pero no se puede". Propuesta en tres niveles, en la respuesta larga:
+- **Nivel 1 (barato, ya):** Undo dentro del propio aviso de confirmación, unos
+  15 segundos. Cubre el 90% de los casos reales, que son "me acabo de
+  equivocar".
+- **Nivel 2 (el arreglo de verdad):** papelera. Borrar deja de quitar la fila y
+  la marca como anulada; una vista de "borrados hace poco" permite restaurar.
+  Borrar deja de dar miedo y la historia se conserva.
+- **Nivel 3:** deshacer genérico desde la auditoría. **No vale la pena todavía**
+  y queda escrito para no volver a considerarlo antes de tiempo.
+
+**3. El borrado tarda en verse aunque el servidor ya confirmó.** Jose tiene
+razón: el aviso sale en el manejador de ÉXITO, o sea que el servidor ya lo hizo.
+Después se llama a `loadDataFromGoogle`, que se trae el almacén entero, y la
+fila no desaparece hasta que eso llega — varios segundos para enterarse de algo
+que ya se sabía.
+
+**No es "optimista"** (actuar antes de que el servidor confirme, con su riesgo).
+Es lo contrario: **el servidor YA confirmó y estamos esperando a que nos lo
+repita.** La fila se quita del array y se repinta al instante, y el refresco de
+fondo sólo reconcilia.
+
+**Bloqueado por el fallo de arriba:** hoy no se puede quitar la fila sin
+recargar, porque los `rowIdx` de las demás quedan mal. Primero la comprobación
+por identidad, después el borrado instantáneo.
+
+**4. La regla general que Jose señala, y que vale más que el caso concreto:**
+"este es solo una cosa de las tantas que la app debe hacer enseguida luego de
+que se verificó algo en el backend". Hay que revisar TODOS los sitios que
+confirman algo y luego esperan una recarga entera para reflejarlo.
+
 **EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA — Jose, 2026-09-07.**
 
 Un material bloqueado enseña su candado en el Warehouse Map y **en ningún otro
