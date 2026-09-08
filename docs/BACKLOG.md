@@ -5,6 +5,83 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+### LA RAÍZ DE TODO ESTO: UN MOVIMIENTO NO TIENE NOMBRE PROPIO
+
+Verificado el 2026-09-07. `var AC = { TIMESTAMP:0, CATEGORY:1, ... UNIT_COST:20,
+TOTAL_COST:21 }` — **no hay columna de ID.** Un movimiento se identifica
+únicamente por SU POSICIÓN en la hoja.
+
+De ahí salen, todas por el mismo sitio:
+
+- **Borrar puede borrar el equivocado** (ver arriba). Confirmado por Jose en
+  vivo: dos personas borran el mismo movimiento y a las dos les dice que se
+  borró. No es teórico.
+- **Editar tiene el mismo problema.** `openEditMovModal(rowIdx)` y
+  `modifyMovement` usan el mismo número de fila.
+- **No se puede quitar la fila de la pantalla al instante**, porque los números
+  de las demás quedan mal.
+- **La papelera y el deshacer** necesitan poder señalar un movimiento concreto
+  dentro de un mes, y una posición no vale para eso.
+
+**LA DECISIÓN: añadir una columna de ID antes que nada.** `AC_WIDTH` pasa de 22
+a 23, **añadida al final**, que es la única forma segura sobre datos que ya
+existen — el propio archivo lo dice al lado de UNIT_COST/TOTAL_COST:
+
+    // Appended at the end, not inserted among the columns above, on purpose:
+    // every other index in AC is a POSITION some existing sheet already has
+    // data in, and inserting would shift every column after it.
+
+**Con eso, todo lo demás se vuelve fácil y seguro:**
+- Borrar, editar, restaurar y deshacer señalan un ID, no una posición.
+- La posición puede cambiar todo lo que quiera (borrados de otros, el archivado
+  de las 3 de la mañana) sin romper nada.
+- Quitar la fila al instante deja de ser peligroso.
+
+**Lo que hay que cuidar:** las filas que YA existen no tienen ID, así que hace
+falta rellenarlas una vez. Es una escritura sobre los datos reales de Jose —
+**hacer copia de seguridad antes** (el respaldo nocturno ya existe) y que la
+migración sea repetible sin estropear nada si se corre dos veces.
+
+**Orden decidido, y por qué NO es ninguna de las dos opciones que le ofrecí:**
+
+    1. La columna de ID + el relleno de las filas viejas.
+    2. La papelera (borrado suave) sobre esa ID → deshacer, y nada se mueve.
+    3. Quitar la fila al instante, que ya es seguro.
+    4. Las casillas de selección y la barra de acciones.
+
+La "comprobación por identidad" que propuse ayer era un parche para no tener
+ID. Con la ID no hace falta: no hay que verificar una posición si no se usan
+posiciones.
+
+---
+
+**JOSE (2026-09-07), correcciones a lo que propuse — TODAS MEJORES QUE LO MÍO:**
+
+- **La barra de acciones no debe crecer al aparecer.** Su idea, y es la buena:
+  Edit y Delete van **en la línea que YA EXISTE**, la de Columns, apagados
+  cuando no hay selección. No se reserva una fila nueva: se usa una que ya
+  ocupa su alto. Nada crece porque no hay nada nuevo.
+- **El panel de Columns NO debe ser flotante.** Jose: "podemos modificar la app
+  para que nada se mueva al dar clic en el botón... hacer que al dar clic en un
+  botón la app cambie sólo lo necesario". Concretamente: que el encabezado mida
+  **lo mismo antes y después**, el texto explicativo se va al icono ⓘ (que ya
+  existe y sale al pasar el ratón), y los dos botones quedan iguales — con
+  **"Save" en vez de "Done"**. Es mejor que mi propuesta: la mía escondía el
+  problema debajo de un panel flotante; la suya lo quita.
+- Casilla general = lo filtrado y visible, con estado intermedio. **Aprobado.**
+- Edit sólo con una fila. **Aprobado.**
+- Sin desactivación mutua de botones. **Aprobado.**
+
+**Y una petición nueva:** el mensaje "Nothing left. Someone else took the last
+of…" debe ser una **ventana con un botón**, no un aviso que se va solo. Motivo
+suyo, y es correcto: mientras tanto, la ventana de salida se actualiza con el
+número nuevo lo más rápido posible. Un aviso que se desvanece se pierde
+justamente cuando la persona está mirando el formulario y no la esquina.
+
+**Nota:** el aviso EN LA VENTANA (v11.51, `#exitLiveWarn`) se queda — ése es el
+que avisa mientras trabajas. La ventana con botón es sólo para el caso de
+"ya no queda nada", que es el que obliga a parar.
+
 ### ⛔ URGENTE — BORRAR UN MOVIMIENTO PUEDE BORRAR EL EQUIVOCADO
 
 Encontrado el 2026-09-07 verificando una pregunta de Jose sobre por qué el
