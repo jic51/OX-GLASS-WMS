@@ -97,6 +97,22 @@
        almacén?</p>
 
     <div class="entry">
+      <span class="ver">v11.54</span>
+      <span class="tag fix">Arreglado</span>
+      <h3>Ya no aparece "GENERIC" donde va el nombre de un trabajo</h3>
+      <p>El material que entraba al almacén sin asignar a ningún trabajo se
+         anotaba como si perteneciera a uno llamado GENERIC. Era la palabra que
+         usaba la app para decir "sin asignar", y todas las pantallas ya sabían
+         ignorarla — pero en la hoja se leía exactamente como el nombre de un
+         cliente, y eso es algo que un registro de movimientos no debe
+         inventarse nunca.</p>
+      <p>Una entrada sin trabajo ya no anota ningún trabajo. Las filas escritas
+         antes de esta versión siguen diciendo GENERIC y siguen significando lo
+         mismo, así que nada cambia por debajo; se pueden limpiar cuando
+         quieras.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.46 – v11.53</span>
       <span class="tag new">Nuevo</span>
       <h3>Todos ven el mismo almacén</h3>

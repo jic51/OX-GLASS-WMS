@@ -5,6 +5,87 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+### ✅ HECHO (v11.54) — QUE NUNCA HAYA DOS NOMBRES IGUALES, Y GENERIC FUERA
+
+**Jose, 2026-09-08, sobre los ID repetidos — y su corrección es la buena:**
+
+> "la cosa no es solo contar repetidos, es cambiar los repetidos para que nunca
+>  haya ninguno repetido, debe hacerse automatico, el cliente o usuario no debe
+>  ni saber que la app hace eso, es solo algo que hace y ya, no se confirma ni
+>  se da la noticia de lo que hizo."
+
+Yo había propuesto CONTARLOS y enseñarlo en Ajustes. Contar un fallo y
+enseñárselo al usuario es pasarle a él un trabajo que la app puede hacer sola.
+
+**DE DÓNDE SALEN DE VERDAD.** El generador no puede chocar en la práctica: los
+guardados van en fila por el candado, cada uno tarda cientos de milisegundos, el
+reloj avanza entre uno y otro, las filas de un lote van numeradas, y debajo de
+todo eso hay tres caracteres al azar. **Los repetidos vienen de FUERA**: alguien
+copia una fila a mano en la hoja, o pega filas de un respaldo. Jose trabaja en
+la hoja directamente, así que no es hipotético — y una fila copiada es invisible
+para cualquier cuidado que se ponga en el generador.
+
+**LA REGLA: GANA LA PRIMERA.** Es la que lleva más tiempo con ese nombre, así
+que lo que ya apuntaba a ella sigue valiendo; la copia es la que se mueve.
+Renombrar la primera rompería en silencio justo lo que el ID existe para
+proteger.
+
+**TRES SITIOS, LOS TRES GRATIS:**
+
+1. **En cada guardado.** El archivo entero ya está en memoria y ya estamos
+   dentro del candado: no cuesta ni una lectura ni un viaje más. Hace dos cosas
+   — que una fila nueva no reciba un nombre que ya existe, y reparar un choque.
+   La reparación va DESPUÉS de la escritura verificada del movimiento y
+   envuelta, porque arreglar la casa de otro no puede costarle a nadie el
+   movimiento que acaba de guardar.
+2. **En el trabajo de las 3 de la mañana.** Es el único sitio donde las DOS
+   hojas están en memoria a la vez, o sea el único que puede ver un repetido que
+   cruza de una a la otra. Se escribe antes del "no hay nada que archivar",
+   porque si esperara al reescribido, no correría ninguna de las noches en que
+   nada cruza la fecha de corte — que son casi todas.
+3. **En el relleno**, con una sola lista de nombres para las dos hojas.
+
+**Y NO SE ANUNCIA.** Queda en la auditoría —una reparación sin registrar no se
+distingue de un fallo— pero bajo el actor `auto`, que **no** está en
+`SYSTEM_ACTORS`, así que no puede salir en "lo que el sistema hizo por su
+cuenta". Registrado, no reportado.
+
+---
+
+**GENERIC FUERA.** Jose: *"ningún proyecto se llama GENERIC, así que es un
+error, no debe llenar el proyecto si no se le escribe nada"*. Tiene razón, y lo
+revisé entero antes de tocarlo: **todos** los lectores, servidor y navegador,
+escriben la prueba `proj && proj !== 'GENERIC'`, o sea que un vacío siempre
+significó lo mismo. Era un marcador que no necesitaba nadie, puesto en la hoja
+con pinta de nombre de cliente.
+
+- Una ENTRY sin proyecto ya no escribe nada.
+- **Leerlo se sigue tolerando**, a propósito: las 1047 filas que ya existen lo
+  dicen, y quitar la tolerancia las convertiría a todas en un cliente llamado
+  GENERIC. Eso está protegido por prueba.
+- El formulario de edición ya enseñaba GENERIC como casilla vacía, y eso creaba
+  una trampa: guardar cualquier otro cambio habría borrado el proyecto y lo
+  habría anotado como una edición que nadie hizo. Antes se resolvía volviendo a
+  escribir GENERIC; ahora vacío y GENERIC se tratan como **la misma respuesta**:
+  ni se escribe, ni se anota, ni se devuelve el marcador.
+- **Jose limpia él las filas viejas.**
+
+**Las cabeceras que faltaban (U1 "Unit Cost", V1 "Total Cost") las puso él.**
+Casi borra las dos columnas porque no tenían título — el código nunca toca las
+cabeceras de una hoja que ya existe, así que "Movement ID" sí apareció y esas
+dos no. Anotado abajo como lo que hay que arreglar para el próximo cliente.
+
+### ⛔ PENDIENTE — las cabeceras viejas que faltan en una instalación existente
+
+`ensureCoreSheets_` sólo crea hojas que no existen; **nunca completa la cabecera
+de una que ya existe**. Resultado: cualquier columna añadida después de la
+instalación queda sin título para siempre. A Jose le pasó con Unit Cost y Total
+Cost, y estuvo a punto de borrar las dos columnas por eso.
+
+La migración de los ID escribe su propio título; hay que hacerlo **general** —
+que rellene cualquier título que falte, comparando contra la cabecera del SPEC.
+No urgente para Jose (ya lo arregló a mano), sí para el siguiente cliente.
+
 ### ✅ HECHO (v11.53) — PASO 1: CADA MOVIMIENTO YA TIENE NOMBRE PROPIO
 
 `AC.MOV_ID` (columna 23), `AC_WIDTH` 22 → 23, añadida AL FINAL. Todo movimiento

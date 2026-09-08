@@ -135,8 +135,22 @@ console.log('\n═══ what the batch writer does with it ═══\n');
     /mt === 'TRANSFER'/.test(rule) && /carried\.project/.test(rule));
   check('...and falls back to BLANK, never to GENERIC, when the material has no job',
     /:\s*''/.test(rule));
-  check('ENTRY still means GENERIC when no project is given — that is a real state',
-    /if \(!proj && mt === 'ENTRY'\) proj = 'GENERIC';/.test(rule));
+  // v11.54: an ENTRY with no project now stores NOTHING, where it used to store
+  // the word GENERIC. Jose read his own history on 2026-09-08 and took it for a
+  // bug — "ningún proyecto se llama GENERIC, así que es un error" — and he was
+  // right: every reader on both sides already spelled the test
+  // `proj && proj !== 'GENERIC'`, so a blank had always meant the same thing.
+  // It was a placeholder nothing needed, sitting in the sheet looking like a
+  // customer's name.
+  check('an ENTRY with no project writes NOTHING — nothing here ASSIGNS the word GENERIC any more',
+    !/proj\s*=\s*'GENERIC'/.test(rule) &&
+    /var proj = normalizeString\(d\.project \|\| ''\);/.test(rule));
+  // The other half, and the one that would be easy to lose: the 1047 rows Jose
+  // already has still say GENERIC. Reading it must keep meaning "unassigned"
+  // for as long as any of them exist, or every one of them turns into a
+  // customer called GENERIC the day the tolerance is tidied away.
+  check('...and reading it is STILL tolerated, because the rows already written say it',
+    /proj === 'GENERIC'/.test(rule) && /carried\.project !== 'GENERIC'/.test(rule));
   check('EXIT, RETURN and WASTE are untouched — no branch names them',
     !/mt === 'EXIT'/.test(rule) && !/mt === 'WASTE'/.test(rule) && !/mt === 'RETURN'/.test(rule));
   // Both offsets measured in the SAME string. The first version compared an
@@ -153,13 +167,19 @@ console.log('\n═══ editing: GENERIC is not a project name ═══\n');
   check('the edit form shows GENERIC as an EMPTY project box, not as a customer called GENERIC',
     /!== 'GENERIC'/.test(fill));
 
-  // ...which creates a trap the server has to close: saving any unrelated
-  // change would otherwise blank the project and log an edit nobody made.
+  // ...which creates a trap the server has to close: on the rows already
+  // written, saving any unrelated change would otherwise blank the project and
+  // log an edit nobody made.
+  //
+  // The trap is the same; the way out changed in v11.54. It used to re-derive
+  // GENERIC and write it back — keeping the phantom edit away by keeping the
+  // placeholder alive. Now blank and GENERIC are simply treated as the SAME
+  // answer: no write, no log entry, and nothing put back into the sheet.
   const upd = GS.slice(GS.indexOf('var NORMALIZE_ON_WRITE'), GS.indexOf('if (!changes.length)'));
-  check('saving an ENTRY with the box left blank re-derives GENERIC rather than erasing it',
-    /key === 'project' && !newStr/.test(upd) && /'GENERIC'/.test(upd) && /AC\.MOVETYPE/.test(upd));
-  check('...and only for ENTRY, since that is the only type GENERIC means anything for',
-    /=== 'ENTRY'/.test(upd));
+  check('a blank project box over a row that says GENERIC is not a change — no phantom edit',
+    /key === 'project' && !newStr && oldStr\.toUpperCase\(\) === 'GENERIC'/.test(upd));
+  check('...and it BAILS OUT rather than writing the placeholder back',
+    /=== 'GENERIC'\) return;/.test(upd) && !/newStr = 'GENERIC'/.test(upd));
 }
 
 console.log('\ntransfer project: ' + (fail === 0 ? 'ok' : (fail + ' FAILED')));

@@ -95,6 +95,20 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.54</span>
+      <span class="tag fix">Fixed</span>
+      <h3>"GENERIC" no longer appears where a job name should be</h3>
+      <p>Material received into stock without being assigned to a job was
+         written down as belonging to a job called GENERIC. It was the app's own
+         word for "not assigned", and every screen already knew to ignore it —
+         but it sat in the spreadsheet looking exactly like a customer's name,
+         which is not something a movement log should ever invent.</p>
+      <p>An entry with no job now records no job. Rows written before this
+         update still say GENERIC and still mean the same thing, so nothing
+         changes underneath you; they can be cleared whenever you like.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.46 – v11.53</span>
       <span class="tag new">New</span>
       <h3>Everyone sees the same warehouse</h3>

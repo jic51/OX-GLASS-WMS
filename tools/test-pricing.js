@@ -133,7 +133,8 @@ function buildSandbox() {
     'round2_', 'normalizeString', 'cleanDisplay_', 'sheetSafe_', 'getMaterialId',
     'statusForMoveType_', 'buildStockSnapshot_', 'applyMovementToSnapshot_',
     'getActiveLocksMap_', 'enforceMaterialLock_', 'loadConfig', 'saveAvgCostUpdates_',
-    'ensureArchiveWidth_', 'newMovId_', 'addMovementsBatch_'
+    'ensureArchiveWidth_', 'newMovId_', 'uniqueMovId_', 'dedupeMovementIds_',
+    'writeMovIdColumn_', 'addMovementsBatch_'
   ].forEach(function (name) { vm.runInContext(extractFn(name), sandbox); });
 
   return { sandbox: sandbox, ss: ss, archive: archive, cfg: cfg };

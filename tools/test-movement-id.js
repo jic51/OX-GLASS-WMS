@@ -25,6 +25,14 @@
 //      que perdió todos sus datos.
 //   6. Que el trabajo nocturno deje de escribir 20 columnas. Decía 20 desde
 //      antes de que existieran Unit Cost y Total Cost.
+//   7. QUE NUNCA HAYA DOS IGUALES, Y QUE SE ARREGLE SOLO. Jose, 2026-09-08:
+//      "la cosa no es solo contar repetidos, es cambiar los repetidos para que
+//      nunca haya ninguno... el cliente o usuario no debe ni saber que la app
+//      hace eso". El generador no puede chocar en la práctica; los repetidos
+//      salen de FUERA — alguien copia una fila a mano en la hoja, o pega filas
+//      de un respaldo. Jose trabaja en la hoja directamente, así que eso no es
+//      hipotético. Se protege que gane SIEMPRE la primera: es la que lleva más
+//      tiempo con ese nombre, así que lo que ya apuntaba a ella sigue valiendo.
 //
 // Se EJECUTA la función de verdad, sacada del archivo, contra una hoja falsa.
 //
@@ -86,11 +94,14 @@ check("...y el último dice 'Movement ID'", /'Movement ID'\]/.test(header));
 // ── El id ────────────────────────────────────────────────────────────────────
 console.log('\n═══ dos movimientos no pueden llamarse igual ═══\n');
 
-const ctx = vm.createContext({ Date, Math, String, Number, JSON, console });
+const ctx = vm.createContext({ Date, Math, String, Number, JSON, console, AC });
 vm.runInContext('var AC_WIDTH = ' + AC_WIDTH + ';\n' + fnSrc('newMovId_') + '\n' +
-                fnSrc('padRow_') + '\n' + fnSrc('readWidth_'), ctx);
-const newMovId_ = vm.runInContext('newMovId_', ctx);
-const padRow_   = vm.runInContext('padRow_',   ctx);
+                fnSrc('padRow_') + '\n' + fnSrc('readWidth_') + '\n' +
+                fnSrc('uniqueMovId_') + '\n' + fnSrc('dedupeMovementIds_'), ctx);
+const newMovId_          = vm.runInContext('newMovId_',          ctx);
+const padRow_            = vm.runInContext('padRow_',            ctx);
+const uniqueMovId_       = vm.runInContext('uniqueMovId_',       ctx);
+const dedupeMovementIds_ = vm.runInContext('dedupeMovementIds_', ctx);
 
 {
   // El caso real: un lote entero se construye dentro del mismo milisegundo.
@@ -112,6 +123,126 @@ const padRow_   = vm.runInContext('padRow_',   ctx);
     a < b && a.length === b.length);
   check('no lleva espacios ni comas: se copia y se pega de una pieza',
     !/[\s,]/.test(a));
+}
+
+// ── Que NUNCA haya dos iguales ──────────────────────────────────────────────
+console.log('\n═══ un nombre repetido se arregla solo ═══\n');
+
+{
+  // uniqueMovId_ dibuja hasta encontrar uno libre. Se le da una lista donde
+  // TODO lo que sabe dibujar ya está cogido, para obligarle a salir por el otro
+  // lado. Si el bucle no terminara, esto se colgaría — que es justamente la
+  // forma de comprobar que termina.
+  const t = new Date(1757000000000);
+  const taken = {};
+  for (let i = 0; i < 3000; i++) taken[newMovId_(7, t)] = true;   // de 46.656 posibles
+  const ocupadosAntes = Object.keys(taken).slice();
+  const libre = uniqueMovId_(taken, 7, t);
+  check('encuentra uno libre aunque miles estén cogidos (' + libre + ')',
+    ocupadosAntes.indexOf(libre) === -1);
+  check('...y lo apunta como cogido, para que la siguiente llamada no lo repita',
+    taken[libre] === true);
+
+  // El caso que el sorteo NO puede resolver: todos los valores que sabe dibujar
+  // para ese milisegundo, y las 200 primeras salidas del contador, ya cogidos.
+  // Si el bucle no terminara, esta prueba se colgaría — que es exactamente la
+  // forma de comprobar que termina.
+  const todo = {};
+  const base = newMovId_(1, t);
+  todo[base] = true;
+  for (let n = 1; n <= 200; n++) todo[base + '-' + n] = true;
+  const antesDeTodo = Object.keys(todo).slice();
+  const salida = uniqueMovId_(todo, 1, t);
+  check('no se queda dando vueltas cuando el sorteo no sirve: sale por un ' +
+        'contador que no puede repetir un valor (' + salida + ')',
+    !!salida && antesDeTodo.indexOf(salida) === -1);
+}
+
+{
+  // Lo que de verdad pasa: alguien copia una fila en la hoja.
+  const fila2 = fila(new Date(1757000000000), 'GLASS', 'MH 145', 'M-EL-BUENO');
+  const copia = fila(new Date(1757000000000), 'GLASS', 'MH 145', 'M-EL-BUENO');
+  const otra  = fila(new Date(1757000060000), 'ALUM',  'SILL 12', 'M-OTRO');
+  const grid  = [new Array(AC_WIDTH).fill('Type'), fila2, copia, otra];
+
+  const taken = {};
+  const fixes = dedupeMovementIds_(grid, taken);
+
+  check('encuentra la copia', fixes.length === 1);
+  check('LA PRIMERA CONSERVA EL NOMBRE — es la que lleva más tiempo con él, así ' +
+        'que lo que ya apuntaba a ella sigue valiendo; renombrar la primera ' +
+        'rompería en silencio justo lo que el id existe para proteger',
+    grid[1][AC.MOV_ID] === 'M-EL-BUENO');
+  check('y la copia es la que se mueve (' + grid[2][AC.MOV_ID] + ')',
+    grid[2][AC.MOV_ID] !== 'M-EL-BUENO' && !!grid[2][AC.MOV_ID]);
+  check('la fila que no chocaba no se toca', grid[3][AC.MOV_ID] === 'M-OTRO');
+  check('el índice que devuelve señala la fila de la copia, no otra', fixes[0] === 2);
+
+  // Y la segunda pasada, sobre lo ya arreglado.
+  const antes = grid.map(r => r[AC.MOV_ID]).join('|');
+  const otraVez = dedupeMovementIds_(grid, {});
+  check('pasar otra vez no cambia nada — ya no hay nada repetido',
+    otraVez.length === 0 && grid.map(r => r[AC.MOV_ID]).join('|') === antes);
+}
+
+{
+  // La cabecera dice "Movement ID" en LAS DOS hojas. Si el barrido la tratara
+  // como un movimiento, la segunda hoja parecería una copia de la primera y le
+  // renombraría el título.
+  const cab = new Array(AC_WIDTH).fill('');
+  cab[AC.CATEGORY] = 'Type'; cab[AC.NAME] = 'Name'; cab[AC.MOV_ID] = 'Movement ID';
+  const g1 = [cab.slice(), fila(new Date(1757000000000), 'GLASS', 'A', 'M-1')];
+  const g2 = [cab.slice(), fila(new Date(1757000060000), 'GLASS', 'B', 'M-2')];
+  const taken = {};
+  dedupeMovementIds_(g1, taken);
+  dedupeMovementIds_(g2, taken);
+  check('la cabecera de la segunda hoja sigue diciendo "Movement ID" — la fila 1 ' +
+        'no es un movimiento en ninguna de las dos',
+    g2[0][AC.MOV_ID] === 'Movement ID');
+  check('y no se cuela en la lista de nombres cogidos', taken['Movement ID'] !== true);
+}
+
+{
+  // Las dos hojas comparten lista a propósito: una fila aquí y una fila allí
+  // son dos movimientos, y no pueden llamarse igual.
+  const cab = new Array(AC_WIDTH).fill('');
+  const activa   = [cab.slice(), fila(new Date(1757000000000), 'GLASS', 'A', 'M-MISMO')];
+  const historia = [cab.slice(), fila(new Date(1750000000000), 'GLASS', 'B', 'M-MISMO')];
+  const taken = {};
+  dedupeMovementIds_(activa, taken);
+  const fixes = dedupeMovementIds_(historia, taken);
+  check('un nombre repetido ENTRE las dos hojas también se ve, porque la lista ' +
+        'de nombres es una sola — con una lista por hoja el choque sólo ' +
+        'aparecería el día que las dos filas se encuentran',
+    fixes.length === 1 && historia[1][AC.MOV_ID] !== 'M-MISMO');
+  check('y la de la hoja activa, que se vio primero, conserva el suyo',
+    activa[1][AC.MOV_ID] === 'M-MISMO');
+}
+
+{
+  // Una fila sin nombre todavía es cosa del relleno, no del barrido. Que cada
+  // trabajo haga uno solo es lo que permite razonar sobre cualquiera de los dos.
+  const cab = new Array(AC_WIDTH).fill('');
+  const g = [cab.slice(), fila(new Date(1757000000000), 'GLASS', 'A', '')];
+  const fixes = dedupeMovementIds_(g, {});
+  check('una fila sin nombre se deja como está — ponerle uno aquí sería hacer ' +
+        'el trabajo del relleno a espaldas de quien pulsó el botón',
+    fixes.length === 0 && g[1][AC.MOV_ID] === '');
+}
+
+{
+  // Una hoja estrecha devuelve filas cortas. Escribir en el índice del id
+  // dejaría huecos detrás que setValues no sabe escribir.
+  const cab = new Array(AC_WIDTH).fill('');
+  const corta1 = new Array(AC.MOV_ID).fill('');   // sin la columna del id
+  const corta2 = new Array(AC.MOV_ID).fill('');
+  corta1[AC.CATEGORY] = 'GLASS'; corta1[AC.NAME] = 'A'; corta1[AC.MOV_ID] = 'M-X';
+  corta2[AC.CATEGORY] = 'GLASS'; corta2[AC.NAME] = 'B'; corta2[AC.MOV_ID] = 'M-X';
+  const g = [cab, corta1, corta2];
+  dedupeMovementIds_(g, {});
+  const huecos = g[2].filter(v => v === undefined).length;
+  check('la fila corregida no queda con huecos dentro (' + huecos + ') — un hueco ' +
+        'hace fallar la escritura entera, no sólo esa celda', huecos === 0);
 }
 
 // ── Rellenar las filas que ya existen ───────────────────────────────────────
@@ -169,7 +300,8 @@ function mundoBackfill(hoja){
     auditLog_: function(){ auditadas.push(Array.prototype.slice.call(arguments, 1)); },
     ss: { getSheetByName: (n) => (n === 'MASTER_ARCHIVE_V3' ? hoja : null) }
   });
-  vm.runInContext(fnSrc('newMovId_') + '\n' + fnSrc('ensureArchiveWidth_') + '\n' +
+  vm.runInContext(fnSrc('newMovId_') + '\n' + fnSrc('uniqueMovId_') + '\n' +
+                  fnSrc('ensureArchiveWidth_') + '\n' +
                   fnSrc('backfillMovementIds_'), c);
   return { c, auditadas,
            correr: () => vm.runInContext('backfillMovementIds_(ss, { email: "jose@ox" })', c) };
@@ -262,6 +394,48 @@ console.log('\n═══ el trabajo de las 3 de la mañana ═══\n');
   check('y rellena las filas cortas antes de escribirlas — las dos hojas pueden ' +
         'tener anchos distintos, una actualizada y la otra no',
     (cuerpo.match(/padRow_\(/g) || []).length === 2);
+  check('mira las DOS hojas contra una sola lista de nombres — es el único sitio ' +
+        'donde las dos están en memoria a la vez, así que es el único que puede ' +
+        'ver un repetido que cruza de una a otra',
+    (cuerpo.match(/dedupeMovementIds_\((a|h)Data, takenIds\)/g) || []).length === 2);
+  check('y escribe la corrección ANTES del "no hay nada que archivar" — si ' +
+        'esperara al reescribido de abajo, la reparación no correría ninguna de ' +
+        'las noches en que nada cruza la fecha de corte, que son casi todas',
+    cuerpo.indexOf('writeMovIdColumn_') < cuerpo.indexOf("return { status: 'noop' }"));
+}
+
+console.log('\n═══ y en cada guardado, sin costar una lectura ═══\n');
+{
+  const cuerpo = fnSrc('addMovementsBatch_');
+  check('el barrido usa el archivo QUE YA ESTÁ EN MEMORIA — leerlo otra vez sería ' +
+        'pagar en cada guardado por algo que ya se tenía',
+    /dedupeMovementIds_\(archiveValues, takenIds\)/.test(cuerpo) &&
+    (cuerpo.match(/archive\.getDataRange\(\)/g) || []).length === 1);
+  check('el id de una fila nueva se sortea CONTRA esos nombres, no a ciegas',
+    /uniqueMovId_\(takenIds, newRows\.length, now\)/.test(cuerpo));
+  check('y la reparación va DESPUÉS de la escritura verificada del movimiento, ' +
+        'envuelta — arreglar la casa de otro nunca puede costarle a alguien el ' +
+        'movimiento que acaba de guardar',
+    cuerpo.indexOf('WRITE_VERIFY_FAIL') < cuerpo.indexOf('writeMovIdColumn_') &&
+    /catch \(de\)/.test(cuerpo));
+}
+
+console.log('\n═══ y no se le cuenta a nadie ═══\n');
+{
+  // Jose: "el cliente o usuario no debe ni saber que la app hace eso... no se
+  // confirma ni se da la noticia de lo que hizo". Queda en la auditoría, que es
+  // el registro del sistema, pero bajo un actor que NO está en SYSTEM_ACTORS,
+  // así que no puede salir en "lo que el sistema hizo por su cuenta".
+  const actores = GS.slice(GS.indexOf('var SYSTEM_ACTORS'), GS.indexOf('var SYSTEM_EVENT_LABELS'));
+  check("se anota bajo 'auto'", (GS.match(/'MOVEMENT_ID_DEDUPE', 'auto'/g) || []).length === 2);
+  check("...y 'auto' NO es un actor de sistema, que es lo que la mantiene fuera " +
+        'de la vista del usuario', !/'auto'/.test(actores));
+  check('tampoco tiene etiqueta en la lista de sucesos del sistema — una etiqueta ' +
+        'sería precisamente para enseñarlo',
+    !/MOVEMENT_ID_DEDUPE/.test(GS.slice(GS.indexOf('var SYSTEM_EVENT_LABELS'),
+                                        GS.indexOf('var SYSTEM_EVENT_LABELS') + 400)));
+  check('y el panel de Ajustes no cuenta repetidos: sólo cuántos siguen sin nombre',
+    !/without.*duplicad|duplicate/i.test(fnSrc('movementIdStatus_')));
 }
 
 console.log('\n═══ lo que llega al navegador ═══\n');
@@ -272,7 +446,7 @@ console.log('\n═══ lo que llega al navegador ═══\n');
     /rowIdx:\s+rowIdx,/.test(GS));
   check('el id se pone al construir la fila, no al leerla: dos movimientos ' +
         'idénticos siguen siendo dos movimientos',
-    /row\[AC\.MOV_ID\]\s+= newMovId_\(/.test(GS));
+    /row\[AC\.MOV_ID\]\s+= uniqueMovId_\(/.test(GS));
 }
 
 console.log('\n' + '─'.repeat(72));
