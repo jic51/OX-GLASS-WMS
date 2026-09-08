@@ -5,38 +5,49 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
-### ⛔ "LOAD OLDER HISTORY" BORRA LOS BOTONES ENTRY Y EXIT — vídeo de Jose, 2026-09-08
+### ✅ HECHO (v11.56) — EL PERMISO DE BORRAR NUNCA FUNCIONÓ, Y LOS BOTONES QUE DESAPARECÍAN
 
-**Visto en el vídeo, y la causa está localizada.** Al pulsar "Load Older
-History", los botones **+ Entry (IN)** y **− Exit (OUT)** desaparecen y no
-vuelven hasta recargar la página.
+**1. EL SUPERVISOR NO PODÍA BORRAR, Y EL INTERRUPTOR DECÍA QUE SÍ.** Jose, con
+el rol SUPERVISOR y "Edit movements" encendido: pulsa la papelera y sale
+**"Admin only."**. Su pregunta —"¿se dañó o nunca se pudo?"— tiene respuesta:
+**nunca se pudo.**
 
-`_btnBusy(btn)` llama a `_btnHideSiblings(btn)`: esconde los botones hermanos
-mientras el que se pulsó está ocupado, para que no se solapen (fue el arreglo de
-la imagen 1 del 2026-09-06). Quien los devuelve es `_btnShowSiblings`, y a ése
-sólo lo llama **`_btnReset`**. Pero `_loadOlderHistoryClicked` se restaura **a
-mano**:
+El texto del propio interruptor promete las dos mitades desde el día que se
+hizo: *"Warehouse staff can fix **or delete** a movement someone already saved"*.
+`modifyMovement` (arreglar) sí se conectó al permiso; `deleteRow` (borrar) se
+quedó dentro de `manageMaterial`, que pedía ADMIN para **todo**.
 
-    btn.disabled = false;
-    btn.textContent = '📜 Older History (' + oldMovements.length + ')';
+**Y no se notó porque el NAVEGADOR sí honraba el permiso** — `renderMovements`
+enseña Edit y Delete a un WAREHOUSE con el interruptor puesto. Así que el
+interruptor se veía encendido, los botones aparecían, y sólo al pulsarlos el
+servidor decía que no. Las dos mitades de la app discrepaban y la que mentía
+era la que no se ve.
 
-Nunca llama a `_btnReset`, así que los hermanos se quedan escondidos para
-siempre. También se queda el `min-width` clavado y la clase `is-busy`.
+Arreglado partiendo la puerta por operación (`MOVEMENT_OPS`): borrar, restaurar
+y ver la papelera tocan **un** movimiento y van por el permiso; `rename`,
+`changeCategory` y `merge` reescriben la historia entera de un material —miles
+de filas de un clic y sin deshacer— y siguen siendo de admin.
 
-**El arreglo son dos líneas** — `_btnReset(btn)` y después la etiqueta nueva.
+`tools/test-role-permissions.js` vigila la forma del fallo, que no es "¿está
+cerrada la puerta?" (de eso ya se ocupa `test-endpoint-auth.js`) sino **"¿la
+puerta hace lo que promete su cartel?"**. Un permiso que se enciende y no hace
+nada es peor que no tenerlo: el admin cree que ya lo concedió.
 
-**PERO NO ES UN SITIO, SON MUCHOS.** Un barrido del archivo encuentra **más de
-veinte** manejadores que se restauran a mano con `btn.disabled = false`. En casi
-todos no se nota, porque el botón está solo en su fila y no tiene hermanos que
-esconder; en éste sí se nota porque tiene dos al lado. Es el mismo fallo
-esperando a que alguien ponga un segundo botón junto a cualquiera de los otros.
+**2. LOS BOTONES QUE DESAPARECÍAN.** Arreglado de raíz, no en el sitio del
+vídeo: se añade `_btnLabel(btn, etiqueta)` = `_btnReset` + etiqueta nueva, y se
+convirtieron **25 sitios** que se restauraban a mano. Sólo se notaba en éste
+porque el botón tiene dos vecinos; en los demás era el mismo fallo esperando a
+que alguien pusiera un segundo botón al lado.
 
-**Lo que hay que hacer, y no sólo parchear éste:**
-1. Un `_btnLabel(btn, texto)` = `_btnReset` + etiqueta nueva, para el caso
-   normal de "termina y cambia de nombre".
-2. Cambiar los sitios que se restauran a mano por ése.
-3. Una prueba que falle si aparece otro `btn.disabled = false` suelto después de
-   un `_btnBusy` — `test-button-states.js` ya existe y es su sitio.
+`test-button-states.js` gana una comprobación que **lee el archivo entero** y
+falla si vuelve a aparecer un `btn.disabled = false` suelto después de un
+`_btnBusy`. Los comentarios se quitan antes: el comentario que EXPLICA la línea
+prohibida la contiene, y un guardia que salta con su propia explicación acaba
+borrado (ya me pasó en la v11.55).
+
+**3.** De paso: el aviso decía *"delete that record permanently"*, y desde la
+v11.55 va a la papelera. Un aviso que exagera lo que hace un botón cuesta lo
+mismo que uno que lo minimiza — se deja de creer a los dos.
 
 ### ⛔ EL FORMULARIO PIERDE LA MITAD DE LOS DATOS AL CAMBIAR DE PESTAÑA — vídeo por fin visto
 

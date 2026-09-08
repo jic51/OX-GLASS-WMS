@@ -3304,7 +3304,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.55';
+var APP_VERSION = '11.56';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -3316,7 +3316,7 @@ var APP_VERSION = '11.55';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '0b723d73';
+var APP_BUILD = 'fa07738e';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -3728,7 +3728,10 @@ var ROW_MODES = {
          delHint:  'Bin deletes a group (its locations move to ALL LOCATIONS). The box archives a single location.' },
   mov: { edit: 'Edit', del: 'Delete',
          editHint: 'Click the pencil on a row to correct that record.',
-         delHint:  'Click the bin on a row to delete that record permanently.',
+         // No longer "permanently" — since v11.55 it goes to the trash and can
+         // be put back. A warning that overstates what a button does costs the
+         // same as one that understates it: people stop trusting either.
+         delHint:  'Click the bin on a row to remove that record. It goes to the trash, so you can put it back.',
          refresh: function(){ renderMovements(); } },   // its actions column comes and goes with the mode
   usr: { edit: 'Edit', del: 'Deactivate',
          editHint: 'Click the pencil on a person to change their name or role.',
@@ -4574,7 +4577,7 @@ function wizFinish(){
       // and the company identity, and loadDataFromGoogle re-reads all three.
       document.getElementById('wizOverlay').classList.remove('show');
       document.body.style.overflow = '';
-      btn.disabled = false; btn.textContent = '✓ Start using ' + PRODUCT;
+      _btnLabel(btn, _he('✓ Start using ' + PRODUCT));
       _wizJustFinished = true;
       // RUIDOSO A PROPÓSITO, y es uno de los dos sitios donde lo es. El
       // asistente acaba de terminar: no hay caché, no hay nada en pantalla, y
@@ -4587,7 +4590,7 @@ function wizFinish(){
     .withFailureHandler(function(err){
       clearInterval(ticker);
       if (wrap) wrap.style.display = 'none';
-      btn.disabled = false; btn.textContent = '✓ Start using ' + PRODUCT;
+      _btnLabel(btn, _he('✓ Start using ' + PRODUCT));
       showToast('Setup failed: ' + ((err && err.message) || err), 'err');
     })
     .saveSetupWizard(_wiz);
@@ -4925,12 +4928,12 @@ function submitReportIssue(){
   _btnBusy(btn, 'Sending…');
   google.script.run
     .withSuccessHandler(function(){
-      btn.disabled = false; btn.textContent = 'Send Report';
+      _btnLabel(btn, 'Send Report');
       closeModal('reportIssueOverlay');
       showToast('Thanks — your report was sent.', 'ok');
     })
     .withFailureHandler(function(err){
-      btn.disabled = false; btn.textContent = 'Send Report';
+      _btnLabel(btn, 'Send Report');
       showToast('Could not send the report: ' + ((err && err.message) || err), 'err');
     })
     // location.href here is the INSIDE of Google's sandboxed frame
@@ -5871,14 +5874,13 @@ function _loadOlderHistoryClicked() {
     .withSuccessHandler(function(rows) {
       oldMovements = rows || [];
       _oldHistoryLoaded = true;
-      btn.disabled = false;
-      btn.textContent = '📜 Older History (' + oldMovements.length + ')';
+      _btnLabel(btn, '📜 Older History (' + oldMovements.length + ')');
       _movPage = 1;
       renderMovements();
       showToast('✓ Loaded ' + oldMovements.length + ' archived movement(s).', 'ok');
     })
     .withFailureHandler(function(e) {
-      btn.disabled = false; btn.textContent = '📜 Load Older History';
+      _btnLabel(btn, '📜 Load Older History');
       showToast('⚠ Error: ' + (e.message||e), 'err');
     })
     .processMovement('loadOlderHistory', _h({}));
@@ -8543,7 +8545,7 @@ function submitMultiExit(){
         // —tres salidas del mismo estante— así que es el que más importa.
         if (_busyRetry(err, { btn: btn, overlay: 'moveOverlay', state: _busyState,
                               retry: function(){ doSubmit(force); } })) return;
-        if (btn){ btn.disabled=false; btn.textContent='Save to System'; }
+        _btnLabel(btn, 'Save to System');
         _setModalBusy('moveOverlay', false);
         var msg = err.message || String(err);
         // Same "possible duplicate" confirmation submitMovement() already has —
@@ -8720,7 +8722,7 @@ function submitMultiEntry(){
         if (_busyRetry(err, { btn: btn, overlay: 'moveOverlay', state: _busyState,
                               retry: function(){ _doMultiSubmit(force); } })) return;
         var msg = err.message || String(err);
-        btn.textContent = 'Save to System'; btn.disabled = false;
+        _btnLabel(btn, 'Save to System');
         _setModalBusy('moveOverlay', false);
         // Same "possible duplicate" confirmation submitMovement() already has for
         // single movements — addMultiEntry() never got it wired up, so it was
@@ -8944,14 +8946,14 @@ function _rebuildStockNow() {
   _btnBusy(btn, 'Rebuilding…');
   google.script.run
     .withSuccessHandler(function(res){
-      btn.disabled = false; btn.textContent = '🔧 Rebuild Stock Totals Now';
+      _btnLabel(btn, '🔧 Rebuild Stock Totals Now');
       showToast('✓ ' + (res && res.message ? res.message : 'Stock totals rebuilt.'), 'ok');
       // Silencioso: esto se pulsa desde Ajustes, con su propio botón ocupado y
       // su propio aviso. La pantalla de carga taparía las dos cosas.
       loadDataFromGoogle(true, true);
     })
     .withFailureHandler(function(e){
-      btn.disabled = false; btn.textContent = '🔧 Rebuild Stock Totals Now';
+      _btnLabel(btn, '🔧 Rebuild Stock Totals Now');
       showToast('⚠ Error: ' + (e.message||e), 'err', 6000);
     })
     .processMovement('adminAction', _h({ action: 'reconcile' }));
@@ -9181,7 +9183,7 @@ function _saveCompanyProfile(){
       showToast('Company details saved ✓', 'ok');
     })
     .withFailureHandler(function(e){
-      btn.disabled = false; btn.textContent = 'Save changes';
+      _btnLabel(btn, 'Save changes');
       _settingMsg('Could not save: ' + (e.message || e), 'error');
     })
     .processMovement('saveCompanyProfile', _h(payload));
@@ -9327,13 +9329,13 @@ function _spotMovementRows(want, mayFetch){
       .withSuccessHandler(function(rows){
         oldMovements     = rows || [];
         _oldHistoryLoaded = true;
-        if (btn){ btn.disabled = false; btn.textContent = '📜 Older History (' + oldMovements.length + ')'; }
+        _btnLabel(btn, '📜 Older History (' + oldMovements.length + ')');
         _movPage = 1;
         renderMovements();
         setTimeout(function(){ _spotMovementRows(want, false); }, 60);
       })
       .withFailureHandler(function(e){
-        if (btn){ btn.disabled = false; btn.textContent = '📜 Load Older History'; }
+        _btnLabel(btn, '📜 Load Older History');
         showToast('Could not load the archived history: ' + (e.message || e), 'err', 6000);
       })
       .processMovement('loadOlderHistory', _h({}));
@@ -10399,7 +10401,7 @@ function _commitImport(){
       loadDataFromGoogle(true, true);
     })
     .withFailureHandler(function(err){
-      btn.disabled = false; btn.innerHTML = '✓ Import ' + validRows.length + ' Valid Row(s)';
+      _btnLabel(btn, '✓ Import ' + validRows.length + ' Valid Row(s)');
       showToast('Import failed: ' + (err.message || err).replace(/^Error:\s*/i,''), 'err', 8000);
     })
     .processMovement('commitImport', _h({ rows: validRows }));
@@ -10796,7 +10798,7 @@ function _wireLocMerge(){
               loadDataFromGoogle(true, true);   // skipCache, quiet
             })
             .withFailureHandler(function(e){
-              btn.disabled = false; btn.textContent = 'Merge';
+              _btnLabel(btn, 'Merge');
               showToast('Merge failed: ' + (e.message || e), 'err', 6000);
             })
             .processMovement('mergeLocations', _h({ from: from, into: into }));
@@ -10888,7 +10890,7 @@ function _locMarkDirty(){
         refreshDropdowns();
       })
       .withFailureHandler(function(e){
-        btn.disabled = false; btn.textContent = 'Save layout';
+        _btnLabel(btn, 'Save layout');
         showToast('Could not save: ' + (e.message || e), 'err', 6000);
       })
       .processMovement('saveLocationLayout', _h({ locations: _locLayout }));
@@ -10947,7 +10949,7 @@ function _wireManualMerge(tab, label){
               loadDataFromGoogle(true, true);   // skipCache, quiet
             })
             .withFailureHandler(function(e){
-              btn.disabled = false; btn.textContent = 'Merge';
+              _btnLabel(btn, 'Merge');
               showToast('Merge failed: ' + (e.message || e), 'err', 6000);
             })
             .processMovement('mergeConfigValues', _h({ type: tab, from: from, into: into }));
@@ -11109,7 +11111,7 @@ function _wireSimilarGroups(tab){
               _refreshSimHeader();
             })
             .withFailureHandler(function(e){
-              btn.disabled = false; btn.textContent = 'Merge into selected';
+              _btnLabel(btn, 'Merge into selected');
               showToast('Merge failed: ' + (e.message || e), 'err', 6000);
             })
             .processMovement('mergeConfigValues', _h({ type: tab, from: from, into: into }));
@@ -13072,7 +13074,7 @@ function _cfgCardAction(act, key, btn){
     if (ok){
       showToast('Added to your ' + (p.type === 'suppliers' ? 'suppliers' : 'projects') + ' ✓', 'ok');
     } else {
-      if (btn){ btn.disabled = false; btn.textContent = '+ Add to list'; }
+      _btnLabel(btn, '+ Add to list');
       showToast('Could not add: ' + err, 'err', 5000);
       return;
     }
@@ -13280,7 +13282,7 @@ function _cfgAddInline(type, value, hintEl){
   if (btn){ _btnBusy(btn, 'Adding…'); }
   _cfgAddValue(type, value, function(ok, err){
     if (!ok){
-      if (btn){ btn.disabled = false; btn.textContent = '+ Add it'; }
+      _btnLabel(btn, '+ Add it');
       showToast('Could not add: ' + err, 'err', 5000);
       return;
     }
@@ -14168,7 +14170,7 @@ function submitLockMaterial(){
 
   google.script.run
     .withSuccessHandler(function(res){
-      btn.disabled = false; btn.innerHTML = '🔒 Lock Material';
+      _btnLabel(btn, '🔒 Lock Material');
       closeModal('lockMatOverlay');
       // Apply locally + re-index immediately — don't wait on a full async reload,
       // which would leave the just-reopened drawer showing stale (unlocked) state.
@@ -14183,7 +14185,7 @@ function submitLockMaterial(){
       renderWarehouseMap();
     })
     .withFailureHandler(function(err){
-      btn.disabled = false; btn.innerHTML = '🔒 Lock Material';
+      _btnLabel(btn, '🔒 Lock Material');
       showToast('Error: ' + (err.message || err), 'err', 6000);
     })
     .processMovement('lockMaterial', _h(payload));
@@ -15140,7 +15142,7 @@ function runEmailImport(){
 
   google.script.run
     .withSuccessHandler(function(res){
-      btn.disabled = false; btn.textContent = 'Read it';
+      _btnLabel(btn, 'Read it');
       _emailDrafts = (res && res.items) || [];
       if (!_emailDrafts.length){
         status.textContent = 'Nothing about a delivery in that one. Try another email, or add it by hand.';
@@ -15154,7 +15156,7 @@ function runEmailImport(){
       _renderEmailDrafts();
     })
     .withFailureHandler(function(err){
-      btn.disabled = false; btn.textContent = 'Read it';
+      _btnLabel(btn, 'Read it');
       var msg = (err && err.message ? err.message : String(err)).replace(/^Error:\s*/i, '');
       // A feature that was never switched on is not a broken feature, and it
       // should not look like one. The server sends NO_AI_KEY as a marker; this
@@ -15268,7 +15270,7 @@ function _eiSave(i, done){
       if (done) done();
     })
     .withFailureHandler(function(err){
-      if (btn){ btn.disabled = false; btn.textContent = 'Save'; }
+      _btnLabel(btn, 'Save');
       showToast('Could not save item ' + (i + 1) + ': ' + ((err && err.message) || err), 'err', 6000);
       if (done) done();
     })
@@ -15283,7 +15285,7 @@ function _emailSaveAll(){
   var i = 0;
   (function next(){
     if (i >= _emailDrafts.length){
-      btn.disabled = false; btn.textContent = 'Save all';
+      _btnLabel(btn, 'Save all');
       showToast('Saved. Closing — the list will refresh.', 'ok');
       closeModal('emailImportOverlay');
       loadDataFromGoogle(true, true);   // quiet refresh
@@ -16717,6 +16719,32 @@ function _btnReset(btn){
 // deliberate: a save that closes its window instantly is indistinguishable from
 // a save that did nothing. `then` runs after the tick, so callers close the
 // window there rather than racing it.
+/* Finish, and come back under a NEW name.
+   ────────────────────────────────────────
+   For the case _btnReset alone does not cover: a button that is done and now
+   says something else. "Load Older History" becomes "Older History (247)".
+
+   It exists because writing that by hand is a trap, and the trap sprang. Every
+   handler that did
+
+       btn.disabled = false; btn.textContent = 'something new';
+
+   skipped _btnReset — and _btnReset is the ONLY thing that calls
+   _btnShowSiblings. _btnBusy hides the neighbouring buttons so a growing label
+   cannot land on top of them; without the matching reset they stay hidden for
+   the rest of the session. Jose filmed it on 2026-09-08: pressing "Load Older
+   History" made "+ Entry (IN)" and "− Exit (OUT)" vanish, and only a page
+   reload brought them back. Nothing errored — the neighbours were simply never
+   told the button had finished.
+
+   The hand-written version also leaves min-width pinned and `is-busy` on. */
+function _btnLabel(btn, html){
+  if (!btn) return;
+  _btnReset(btn);                       // siblings back, width free, class off
+  if (html != null) btn.innerHTML = html;
+  btn._acHtml = null;                   // the new label is the label now
+}
+
 function _btnDone(btn, ok, then){
   if (!btn){ if (then) then(); return; }
   btn.classList.remove('is-busy');
@@ -17692,7 +17720,7 @@ function saveEditMov() {
       loadDataFromGoogle(true, true);
     })
     .withFailureHandler(function(err) {
-      btn.disabled = false; btn.textContent = '💾 Save Changes';
+      _btnLabel(btn, '💾 Save Changes');
       _setModalBusy('editMovOverlay', false);
       var msg = (err.message || String(err)).replace(/^Error:\s*/i, '');
       showToast('Error: ' + msg, 'err', 6000);

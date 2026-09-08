@@ -197,7 +197,75 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   }));
   check('_btnDone gives the row back too', (await q('#skip')).vis, 'visible');
 
+  // ── Finishing under a NEW name ────────────────────────────────────────────
+  // The case that actually bit. "Load Older History" turns into "Older History
+  // (247)" when it finishes, and the handler wrote that by hand:
+  //
+  //     btn.disabled = false; btn.textContent = 'Older History (247)';
+  //
+  // which never calls _btnReset — the only thing that calls _btnShowSiblings.
+  // So the neighbours stayed hidden for the rest of the session. Jose filmed it
+  // on 2026-09-08: pressing it made "+ Entry (IN)" and "− Exit (OUT)" disappear,
+  // with nothing in the console, because nothing had failed.
+  const lbl = await p.evaluate(() => {
+    const g = document.getElementById('go');
+    _btnBusy(g, 'Loading…');
+    _btnLabel(g, '📜 Older History (247)');
+    return { label: g.textContent, minW: g.style.minWidth,
+             busy: g.classList.contains('is-busy'), off: g.disabled };
+  });
+  check('_btnLabel puts the new label on', lbl.label, '📜 Older History (247)');
+  check('THE NEIGHBOURS COME BACK — this is the bug from the video',
+    (await q('#skip')).vis, 'visible');
+  check('...and the one that was already off for its own reason stays off',
+    (await q('#keep')).dis, true);
+  check('_btnLabel unpins the width it was holding', lbl.minW, '');
+  check('_btnLabel takes the busy class off', lbl.busy, false);
+  check('_btnLabel gives the button back',    lbl.off, false);
+
+  // And the new label is the label from now on: pressing it again and finishing
+  // must not resurrect the one it had two states ago.
+  const again = await p.evaluate(() => {
+    _btnBusy(document.getElementById('go'), 'Loading…');
+    _btnReset(document.getElementById('go'));
+    return document.getElementById('go').textContent;
+  });
+  check('a second press comes back to the NEW label, not the original',
+    again, '📜 Older History (247)');
+
   await browser.close();
+
+  // ── And that nobody writes the hand-rolled version again ──────────────────
+  // The browser checks above prove _btnLabel behaves. They cannot see a NEW
+  // handler that skips it — and that is how this shipped in the first place:
+  // one function out of thirty doing it by hand, in a file where the other
+  // twenty-nine looked fine.
+  //
+  // Comments are stripped first, both kinds. The comment above this very check
+  // contains the forbidden line because it EXPLAINS it, and a guard that trips
+  // on its own explanation is a guard that gets deleted.
+  const raw = fs.readFileSync(HTML, 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^[ \t]*\/\/.*$/gm, '');
+  const lines = raw.split('\n');
+  const offenders = [];
+  lines.forEach((line, i) => {
+    const m = line.match(/_btnBusy\(\s*([A-Za-z_$][\w$]*)\s*,/);
+    if (!m) return;
+    const v = m[1];
+    for (let j = i + 1; j < Math.min(i + 70, lines.length); j++) {
+      if (new RegExp('\\b' + v + '\\.disabled\\s*=\\s*false').test(lines[j])) {
+        offenders.push((j + 1) + ': ' + lines[j].trim());
+      }
+    }
+  });
+  // _btnReset is the one place allowed to write it — it IS the reset.
+  const bad = offenders.filter(o => !/^\s*\d+:\s*btn\.disabled = false;$/.test(o));
+  check('no handler resets a busy button by hand — use _btnLabel or _btnReset, ' +
+        'or the neighbours never come back' +
+        (bad.length ? '\n       ' + bad.join('\n       ') : ''),
+    bad.length, 0);
+
   if (fails.length){ console.error('\nFAILED:\n  ' + fails.join('\n  ')); process.exit(1); }
   console.log('\nbutton states: ok');
 })();

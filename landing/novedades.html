@@ -97,6 +97,31 @@
        almacén?</p>
 
     <div class="entry">
+      <span class="ver">v11.56</span>
+      <span class="tag fix">Arreglado</span>
+      <h3>El permiso de "puede borrar movimientos" nunca funcionó de verdad</h3>
+      <p>Darle a un rol de almacén permiso para editar movimientos debía
+         dejarle corregir <i>o borrar</i> un movimiento ya guardado — lo dice el
+         propio interruptor. Corregir funcionaba; borrar seguía siendo sólo de
+         administrador por debajo, así que el interruptor se veía encendido, el
+         botón de borrar aparecía, y al pulsarlo decía "Admin only." Ya
+         funciona, y el permiso sigue sin abrir las operaciones masivas que
+         reescriben la historia entera de un material.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.56</span>
+      <span class="tag fix">Arreglado</span>
+      <h3>"Load Older History" hacía desaparecer los botones de Entry y Exit</h3>
+      <p>Mientras un botón trabaja, los de al lado se esconden para que una
+         etiqueta que crece no se les monte encima. "Load Older History" termina
+         con otro nombre, y cambiaba ese nombre sin avisar a sus vecinos de que
+         había terminado — así que <b>+ Entry (IN)</b> y <b>− Exit (OUT)</b> se
+         quedaban escondidos hasta recargar la página. Arreglado en todos los
+         sitios donde podía pasar, no sólo donde se veía.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.55</span>
       <span class="tag new">Nuevo</span>
       <h3>Borrar un movimiento se puede deshacer</h3>

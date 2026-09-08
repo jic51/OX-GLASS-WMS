@@ -95,6 +95,30 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.56</span>
+      <span class="tag fix">Fixed</span>
+      <h3>The "can delete movements" permission never actually worked</h3>
+      <p>Giving a warehouse role permission to edit movements was supposed to
+         let them fix <i>or delete</i> a saved movement — the switch says so.
+         Editing worked; deleting was still admin-only underneath, so the
+         switch looked on, the delete button appeared, and pressing it said
+         "Admin only." It works now, and the permission still does not open the
+         bulk operations that rewrite a material's whole history.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.56</span>
+      <span class="tag fix">Fixed</span>
+      <h3>"Load Older History" made the Entry and Exit buttons disappear</h3>
+      <p>While a button is working, the ones beside it are hidden so a growing
+         label can't land on top of them. "Load Older History" finishes under a
+         new name, and it changed that name without telling its neighbours it
+         had finished — so <b>+ Entry (IN)</b> and <b>− Exit (OUT)</b> stayed
+         hidden until the page was reloaded. Fixed everywhere it could happen,
+         not just where it showed.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.55</span>
       <span class="tag new">New</span>
       <h3>Deleting a movement can be undone</h3>

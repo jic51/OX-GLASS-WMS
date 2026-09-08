@@ -143,9 +143,15 @@ console.log('═══ telling you to go and do it yourself             ══�
         'THAT — a different fact, not the same advice again',
     /no longer in the history/.test(spot));
 
+  // Through _btnLabel since v11.56, not by hand. Same guarantee, and one more:
+  // _btnBusy hides the neighbouring buttons, and only _btnLabel/_btnReset give
+  // them back. Setting .textContent directly left "+ Entry (IN)" and
+  // "− Exit (OUT)" hidden until the page was reloaded — Jose filmed it.
   check('the Load Older History button is left usable again on failure, not ' +
-        'stuck saying "Loading…"',
-    /btn\.textContent = '📜 Load Older History'/.test(spot));
+        'stuck saying "Loading…" — and through the helper, so its neighbours ' +
+        'come back too',
+    /_btnLabel\(btn, '📜 Load Older History'\)/.test(spot) &&
+    !/btn\.disabled = false/.test(spot));
   check('...and shows the loaded count on success, matching what the button ' +
         'does when pressed by hand',
     /Older History \(' \+ oldMovements\.length/.test(spot));

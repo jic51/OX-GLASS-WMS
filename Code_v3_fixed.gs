@@ -46,7 +46,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '11.55';
+var APP_VERSION = '11.56';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -58,7 +58,7 @@ var APP_VERSION = '11.55';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '0b723d73';
+var APP_BUILD = 'fa07738e';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -9390,8 +9390,39 @@ function listMaterials(auth) {
 //   • changeCategory changes what a material's MatID IS, since the id is built
 //     from category+name. Without the rebuild, every stored MatID for it went
 //     stale; refreshDerivedSheets_ repairs them as it goes.
+// TWO VERY DIFFERENT JOBS SHARING ONE DOOR, and until v11.56 the door was
+// ADMIN for both.
+//
+//   rename / changeCategory / merge rewrite EVERY row of both archive sheets
+//   for a material. One click can change thousands of movements, and there is
+//   no undo. Those stay ADMIN, and should.
+//
+//   deleteRow / restoreMovement / listTrash touch ONE movement. That is
+//   precisely what the "Edit movements" permission is about, and its own
+//   tooltip has promised since the day it shipped that warehouse staff can
+//   "fix or delete a movement someone already saved, the same way an admin
+//   can today".
+//
+// The delete half never worked. modifyMovement was wired to the permission;
+// deleteRow was left sitting behind this blanket ADMIN gate and nobody noticed,
+// because the BROWSER honours the permission (renderMovements shows Edit and
+// Delete to a WAREHOUSE whose admin turned it on) and only the server refused.
+// So the switch looked on, the buttons appeared, and pressing one said "Admin
+// only." Jose found it on 2026-09-08 with the SUPERVISOR role and the switch
+// turned on — and his question was the right one: was it broken, or did it
+// never work? It never worked.
+var MOVEMENT_OPS = { deleteRow: true, restoreMovement: true, listTrash: true };
+
 function manageMaterial(data, auth) {
-  auth = requireAuth_('ADMIN');   // ignores any caller-supplied `auth` — see requireAuth_
+  // ignores any caller-supplied `auth` — see requireAuth_
+  if (MOVEMENT_OPS[data && data.op]) {
+    // VIEWER never reaches the permission check: requireAuth_('WRITE') refuses
+    // it first. Read-only means read-only, with no switch to widen it.
+    auth = requireAuth_('WRITE');
+    requirePerm_(auth, 'canEditMovements');
+  } else {
+    auth = requireAuth_('ADMIN');
+  }
   return withStockLock_(function () { return manageMaterialLocked_(data, auth); });
 }
 

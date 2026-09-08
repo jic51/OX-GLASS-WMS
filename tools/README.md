@@ -78,6 +78,7 @@ node tools/test-live-exit-unlock.js
 node tools/test-load-race.js
 node tools/test-movement-id.js
 node tools/test-trash.js
+node tools/test-role-permissions.js
 node tools/build-site.js && node tools/test-site-privacy.js
 node tools/check-changelog.js
 node tools/sync-legal.js --check
