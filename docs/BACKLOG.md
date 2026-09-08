@@ -5,6 +5,76 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+### ⛔ "LOAD OLDER HISTORY" BORRA LOS BOTONES ENTRY Y EXIT — vídeo de Jose, 2026-09-08
+
+**Visto en el vídeo, y la causa está localizada.** Al pulsar "Load Older
+History", los botones **+ Entry (IN)** y **− Exit (OUT)** desaparecen y no
+vuelven hasta recargar la página.
+
+`_btnBusy(btn)` llama a `_btnHideSiblings(btn)`: esconde los botones hermanos
+mientras el que se pulsó está ocupado, para que no se solapen (fue el arreglo de
+la imagen 1 del 2026-09-06). Quien los devuelve es `_btnShowSiblings`, y a ése
+sólo lo llama **`_btnReset`**. Pero `_loadOlderHistoryClicked` se restaura **a
+mano**:
+
+    btn.disabled = false;
+    btn.textContent = '📜 Older History (' + oldMovements.length + ')';
+
+Nunca llama a `_btnReset`, así que los hermanos se quedan escondidos para
+siempre. También se queda el `min-width` clavado y la clase `is-busy`.
+
+**El arreglo son dos líneas** — `_btnReset(btn)` y después la etiqueta nueva.
+
+**PERO NO ES UN SITIO, SON MUCHOS.** Un barrido del archivo encuentra **más de
+veinte** manejadores que se restauran a mano con `btn.disabled = false`. En casi
+todos no se nota, porque el botón está solo en su fila y no tiene hermanos que
+esconder; en éste sí se nota porque tiene dos al lado. Es el mismo fallo
+esperando a que alguien ponga un segundo botón junto a cualquiera de los otros.
+
+**Lo que hay que hacer, y no sólo parchear éste:**
+1. Un `_btnLabel(btn, texto)` = `_btnReset` + etiqueta nueva, para el caso
+   normal de "termina y cambia de nombre".
+2. Cambiar los sitios que se restauran a mano por ése.
+3. Una prueba que falle si aparece otro `btn.disabled = false` suelto después de
+   un `_btnBusy` — `test-button-states.js` ya existe y es su sitio.
+
+### ⛔ EL FORMULARIO PIERDE LA MITAD DE LOS DATOS AL CAMBIAR DE PESTAÑA — vídeo por fin visto
+
+**Jose lo mandó el 2026-09-08 y lo he mirado entero.** Es peor y más concreto de
+lo que yo había supuesto. Material SCREEN / "44 NORTH", 142 unidades, todas en
+el estante C3B.
+
+**1. LA CANTIDAD VIAJA ENTRE PESTAÑAS Y EL ESTANTE NO.** En EXIT queda relleno
+C3B / 142. Al pasar a TRANSFER, la fila conserva **142** y pierde **C3B**, así
+que queda una fila que dice `? unknown rack` con una cantidad real dentro.
+Media información arrastrada es **peor que ninguna**: produce una fila que
+parece rellena y no lo está. Igual en RETURN, donde además la cantidad no
+significa nada (no se devuelven 142 unidades de algo que está en el almacén).
+
+**2. EL TOTAL CUENTA LA FILA INVÁLIDA.** Con la fila mala (142, sin estante) más
+la buena que él añade luego pulsando el chip C3B (142), el marcador de arriba
+dice **284** — de un material del que hay 142 en total. Es un número sobre el
+que alguien va a tomar una decisión.
+
+**3. LA LISTA DE ESTANTES DE ORIGEN OFRECE TODO EL SISTEMA.** Al abrir "Source
+rack" salen `2PER SAGE@COMPASS`, `565 REDWOOD`, `A`, `A1A`, `A1B`… — todos los
+sitios que existen, proyectos y direcciones incluidos, cuando este material sólo
+está en **C3B**.
+
+**Y LA APP YA SABE CUÁL ES.** Justo encima, en el mismo formulario, dice
+`CLICK A RACK TO ADD IT AS A TRANSFER ROW: C3B 142`. Y la pestaña **ADJUST**,
+en el mismo vídeo, abre con `RACK YOU COUNTED: C3B` y `THE APP SAYS 142`. O sea
+que el dato correcto está ahí y se usa en una pestaña y no en la otra. No hace
+falta nada del servidor.
+
+**El arreglo, en orden:**
+1. Al cambiar de tipo, **limpiar las filas de ubicación enteras** en vez de
+   dejar la cantidad huérfana. O arrastrar las dos cosas, o ninguna.
+2. La lista de estantes de origen, **filtrada a donde el material está de
+   verdad** — el mismo cálculo que ya alimenta los chips y el ADJUST.
+3. Una fila `? unknown rack` **no puede sumar al total**, y debería poder
+   quitarse de un vistazo.
+
 ### ✅ HECHO (v11.55) — PASO 2 Y 3: LA PAPELERA, Y LA FILA SE VA AL INSTANTE
 
 **Cierra el fallo urgente de arriba.** Borrar ya no señala una POSICIÓN:
