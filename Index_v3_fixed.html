@@ -2915,6 +2915,12 @@
         <label id="mSrcLabel">Source Rack</label>
         <input type="text" id="mSrc" list="rackList" placeholder="e.g. A1A">
         <datalist id="rackList"></datalist>
+        <!-- Only the racks the material being transferred is ACTUALLY in.
+             Rebuilt per material by renderTransferLocPicker; falls back to the
+             full rackList when the app does not recognise the material, since
+             "we don't know where this is" is better answered with everything
+             than with nothing. -->
+        <datalist id="transferSrcRacks"></datalist>
       </div>
       <div class="field" id="mDestField" style="display:none">
         <label id="mDestLabel">Destination</label>
@@ -3304,7 +3310,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.56';
+var APP_VERSION = '11.57';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -3316,7 +3322,7 @@ var APP_VERSION = '11.56';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'fa07738e';
+var APP_BUILD = '7d5e59a9';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -6153,12 +6159,21 @@ function renderTransferLocPicker(){
 
   var cat  = nt((document.getElementById('mType') || {}).value || '');
   var name = ((document.getElementById('mName') || {}).value || '').trim().toUpperCase();
-  if (!name) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  // No material typed yet: no material-specific answer to give, so the boxes
+  // go back to suggesting every rack rather than keeping the last material's.
+  if (!name) { _syncTransferSrcRacks([], {}); box.style.display = 'none'; box.innerHTML = ''; return; }
 
   var key   = _normKey(cat) + '|||' + _normKey(name);
   var locs  = stockData[key] && stockData[key].warehouseLocs;
   var racks = locs ? Object.keys(locs).filter(function(r){ return locs[r] > 0; })
                                        .sort(function(a,b){ return locs[b] - locs[a]; }) : [];
+
+  // The same list of racks, as suggestions inside the Source Rack boxes. The
+  // chips are only useful once you know they are there; the dropdown is what
+  // opens under your finger. Both are now the same short, true answer instead
+  // of the chips saying "C3B" three lines above a menu offering the whole
+  // building.
+  _syncTransferSrcRacks(racks, locs);
 
   if (!racks.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
 
@@ -6183,6 +6198,24 @@ function renderTransferLocPicker(){
   box.style.display = 'block';
 }
 
+// Fills the per-material suggestion list, and points every Source Rack box at
+// it — or back at the full rackList when the material is not one the app knows,
+// because an empty dropdown on an unrecognised name reads as a broken field.
+function _syncTransferSrcRacks(racks, locs){
+  var dl = document.getElementById('transferSrcRacks');
+  if (dl){
+    dl.innerHTML = racks.map(function(r){
+      // The quantity rides along in the label, so choosing a rack and knowing
+      // how much is in it is one look instead of two.
+      return '<option value="' + _escAttr(r) + '">' + _he(r + ' — ' + locs[r] + ' in stock') + '</option>';
+    }).join('');
+  }
+  var which = racks.length ? 'transferSrcRacks' : 'rackList';
+  document.querySelectorAll('#transferRowsContainer .tr-rack').forEach(function(inp){
+    inp.setAttribute('list', which);
+  });
+}
+
 function addTransferRowFromChip(chip){
   var rack = chip.getAttribute('data-rack');
   var qty  = _qty(chip.getAttribute('data-qty'));
@@ -6195,7 +6228,14 @@ function addTransferRow(rack, qty, dest, silent){
   var row = document.createElement('div');
   row.className = 'transfer-row';
   row.innerHTML =
-    '<input type="text"   class="tr-rack" list="rackList"     placeholder="Source rack">' +
+    // NOT list="rackList". That is every location in the building — racks,
+    // projects, site addresses — offered as the source of a transfer for a
+    // material that is sitting in one rack. Jose opened it on 2026-09-08 and
+    // got "2PER SAGE@COMPASS", "565 REDWOOD", "A", "A1A"… for a material that
+    // was only ever in C3B. The suggestions are rebuilt per material in
+    // renderTransferLocPicker; a datalist only suggests, so anything can still
+    // be typed by hand.
+    '<input type="text"   class="tr-rack" list="transferSrcRacks" placeholder="Source rack">' +
     '<input type="number" class="tr-qty"  min="0" step="any"   placeholder="Qty">' +
     '<span  class="exit-avail neutral">—</span>' +
     '<input type="text"   class="tr-dest" list="rackListDest" placeholder="Destination rack">' +
@@ -6220,6 +6260,10 @@ function addTransferRow(rack, qty, dest, silent){
 
   container.appendChild(row);
   validateTransferRows();
+  // Points the new row's Source Rack box at the right suggestion list. A row
+  // built before this runs carries the per-material list by default, which is
+  // wrong on a material the app does not recognise.
+  renderTransferLocPicker();
   if (!silent) (dest ? destInp : (rack ? destInp : rackInp)).focus();
 }
 
@@ -6635,6 +6679,13 @@ function _syncMoveMatTotal(){
   var n = 0;
   if (currentMoveType === 'TRANSFER'){
     document.querySelectorAll('#transferRowsContainer .transfer-row').forEach(function(row){
+      // A ROW WITH NO SOURCE RACK IS NOT A TRANSFER, so its number is not part
+      // of the total. Jose filmed it on 2026-09-08: an orphan row holding 142
+      // and no rack, plus the real row holding 142, and the badge reading
+      // **284** — of a material there are 142 of in the whole warehouse.
+      // A number nobody typed on purpose is still a number somebody acts on.
+      var rk = row.querySelector('.tr-rack');
+      if (!rk || !(rk.value || '').trim()) return;
       var q = row.querySelector('.tr-qty');
       n += Math.max(0, parseFloat(q && q.value) || 0);
     });
@@ -13771,6 +13822,18 @@ function _readMoveMaterial(){
   return { cat: val('mType'), name: val('mName'), qty: Math.max(0, parseFloat(val('mQty')) || 0) };
 }
 
+// The single rack a material is in, or '' when that question has no single
+// answer — nothing in stock, or stock spread over several racks. Deliberately
+// returns '' rather than "the biggest one": picking the fullest rack for
+// somebody would be the app deciding which shelf they walked to.
+function _soleRackFor(cat, name){
+  var key  = _normKey(nt(cat || '')) + '|||' + _normKey((name || '').trim().toUpperCase());
+  var locs = stockData[key] && stockData[key].warehouseLocs;
+  if (!locs) return '';
+  var withStock = Object.keys(locs).filter(function(r){ return locs[r] > 0; });
+  return withStock.length === 1 ? withStock[0] : '';
+}
+
 function _applyMoveMaterial(m){
   if (!m) return;
   var name = (m.name || '').trim();
@@ -13793,8 +13856,25 @@ function _applyMoveMaterial(m){
     updateExitMatNameList(1); syncExitRackAvail(1); syncExitMatTotal(1); updateMultiExitTotal();
   } else if (currentMoveType === 'TRANSFER'){
     set('mType', m.cat); set('mName', name);
-    var tq = document.querySelector('#transferRowsContainer .tr-qty');
-    if (tq && q) tq.value = q;
+    // THE RACK AND THE QUANTITY TRAVEL TOGETHER, OR NEITHER TRAVELS.
+    //
+    // This used to drop the quantity into the first row and leave the rack
+    // empty, producing a row that read "? unknown rack" with 142 in it — a row
+    // that LOOKS filled in and is not. Jose filmed it on 2026-09-08 switching
+    // from Exit to Transfer. Half the information carried across is worse than
+    // none: none is obviously empty, half is quietly wrong.
+    //
+    // When the material sits in exactly ONE rack, that rack is not a guess and
+    // both go. When it is spread over several, the app does not know which one
+    // was meant, so it carries neither and the chips above the rows offer the
+    // choice.
+    var trRow = document.querySelector('#transferRowsContainer .transfer-row');
+    var only  = _soleRackFor(m.cat, name);
+    if (trRow && only){
+      trRow.querySelector('.tr-rack').value = only;
+      if (q) trRow.querySelector('.tr-qty').value = q;
+    }
+    renderTransferLocPicker();
     validateTransferRows(); checkStock();
   } else if (currentMoveType === 'ADJUST'){
     // Material only — see _readMoveMaterial for why the quantity stays behind.
@@ -13802,7 +13882,20 @@ function _applyMoveMaterial(m){
     _syncAdjustCount();
   } else {
     set('mType', m.cat); set('mName', name);
-    if (q) set('mQty', q);
+    // WASTE has the same shape as TRANSFER — a quantity and a rack it comes
+    // out of — so it follows the same rule. RETURN does NOT: its source is a
+    // site or a job, which is not something the app can know, and its quantity
+    // sits in a plain field rather than in a location row, so it produces no
+    // orphan. Noted in docs/BACKLOG.md rather than guessed at here.
+    if (currentMoveType === 'WASTE'){
+      var wRack = _soleRackFor(m.cat, name);
+      if (wRack){
+        set('mSrc', wRack);
+        if (q) set('mQty', q);
+      }
+    } else if (q) {
+      set('mQty', q);
+    }
     _syncMoveMatTotal(); checkStock();
   }
   _updateMoveSubmitState();

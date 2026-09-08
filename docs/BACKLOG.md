@@ -5,6 +5,162 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+# ══ LA LISTA, ORDENADA — 2026-09-08 ══
+
+Todo lo pendiente, de más urgente a menos. Lo de arriba estorba para publicar;
+lo de abajo puede esperar meses sin que pase nada.
+
+**1. BORRAR VARIOS A LA VEZ DA "BUSY" EN VEZ DE PONERSE EN COLA.** Jose,
+2026-09-08. La cola con reintentos **ya existe** (`_busyRetry`, v11.47) y está
+enganchada a los tres caminos de guardado — **al borrado no.** Es un hueco mío,
+no un problema nuevo: escribí la máquina y no la conecté aquí. Y hay una causa
+de fondo que lo empeora: cada borrado llama a `refreshDerivedSheets_`, que
+reconstruye los totales de TODO el almacén. Tres borrados = tres
+reconstrucciones enteras, cada una con el candado en la mano. Por eso salta tan
+fácil. → Enganchar `_busyRetry` al borrado, y mirar si el refresco puede
+esperar al final de una ráfaga en vez de correr por cada fila.
+
+**2. LAS CASILLAS DE SELECCIÓN Y LA BARRA DE ACCIONES** (paso 4 del plan de la
+ID, con las correcciones de diseño de Jose ya escritas más abajo). Convierte
+"borro cinco de uno en uno" en una sola operación — y por tanto es también
+media solución del punto 1.
+
+**3. VACIAR LA PAPELERA.** Hoy crece sin límite. Una papelera que no se vacía
+es otro archivo creciendo dentro del mismo Sheet.
+
+**4. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
+mínimos). Detalle completo más abajo. Es el que cuesta material cargado en una
+camioneta que hay que volver a bajar.
+
+**5. MANAGE USERS** — que no se recargue entera, rediseñar cómo se editan los
+usuarios, ventana más grande, el correo en una línea, quitar el scroll lateral.
+
+**6. EL CANDADO CON DUEÑO Y RAZÓN VISIBLES** al desbloquear.
+
+**7. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
+
+**8. LAS CABECERAS QUE FALTAN EN UNA INSTALACIÓN VIEJA** (ver más abajo). No
+urgente para Jose —ya lo arregló a mano— sí para el siguiente cliente.
+
+**9. EL MENSAJE DEL BORRADO POR SUPERVISOR.** Ya no es un fallo de permisos
+(v11.56); queda revisar que el texto sea bueno cuando el permiso está apagado.
+
+**10. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
+enviar correo / videollamada de Meet / chat.
+
+**11. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
+
+**12. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
+
+**13. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
+
+**14. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
+sitio, la política de cobro y el rediseño del modelo de movimientos.
+
+---
+
+### ⚠ ANTES DE PUBLICAR EN REDDIT — para que nadie diga "esto está roto"
+
+**Estorba de verdad:**
+- **Capturas.** No hay ninguna en la landing (`landing/assets/` sólo tiene el
+  logo). Jose ya está haciendo una copia con otro nombre —"MY WAREHOUSE"— para
+  no arrastrar la marca de OX. Faltan los formularios de ENTRY y EXIT abiertos,
+  y una de móvil.
+- **Nada que hacer al llegar.** El único botón es un `mailto:`. O el paquete
+  gratis para instalar, o una demo con datos falsos y sólo lectura.
+
+**Importante:**
+- **Las guías están en español** (`instalacion.html`, `restaurar.html`,
+  `soporte.html` son `lang="es"`). Un post en inglés las lleva a un muro.
+- **La página pública de instalación tiene una nota interna pegada dentro**:
+  *"Actualizar un cliente ya instalado — SON TRES ARCHIVOS, NO DOS"*.
+
+**No estorba:** los cobros. Facturar a mano por correo es lo correcto para los
+primeros clientes; montar cobros para un tráfico que todavía no existe es
+trabajo antes de tiempo. Lo que sí conviene es que el precio no quede colgado
+sin ninguna acción al lado.
+
+---
+
+### ✅ HECHO (v11.57) — EL FORMULARIO YA NO PIERDE LA MITAD DE LOS DATOS
+
+El vídeo de las pestañas, arreglado. Tres cosas, y la primera es la que importa:
+
+**1. EL ESTANTE Y LA CANTIDAD VIAJAN JUNTOS O NO VIAJA NINGUNO.** Antes se metía
+la cantidad en la primera fila y se dejaba el estante vacío, lo que producía una
+fila que decía `? unknown rack` con 142 dentro — **una fila que parece rellena y
+no lo está.** Media información arrastrada es peor que ninguna: ninguna se ve
+vacía, media se ve mal en silencio.
+
+Cuando el material está en **un** estante, ése no es una suposición y van los
+dos. Cuando está repartido, la app no sabe a cuál fue la persona, así que no
+lleva ninguno — y los chips de arriba ofrecen la elección. **Poner el estante
+más lleno sería decidir por ella a qué balda caminó.**
+
+WASTE sigue la misma regla (su origen también es un estante). RETURN **no**: su
+origen es una obra, que la app no puede saber, y su cantidad va en un campo
+suelto, así que no produce ninguna fila huérfana.
+
+**2. UNA FILA SIN ESTANTE NO SUMA AL TOTAL.** El marcador decía **284** de un
+material del que hay 142 en todo el almacén. Un número que nadie escribió a
+propósito sigue siendo un número sobre el que alguien decide.
+
+**3. LA LISTA DE ESTANTES DE ORIGEN ES LA DE ESE MATERIAL.** Era `rackList` —
+todo el edificio, proyectos y direcciones incluidos. Ahora es una lista propia
+por material, con la cantidad al lado (`C3B — 142 in stock`), y vuelve a la
+completa cuando la app no reconoce el material, porque un desplegable vacío se
+lee como una casilla rota.
+
+**Lo que lo hacía absurdo, y quedó escrito en la prueba:** el dato correcto ya
+estaba en la pantalla. Los chips lo enseñaban tres líneas más arriba —
+`CLICK A RACK TO ADD IT AS A TRANSFER ROW: C3B 142` — y la pestaña ADJUST abría
+con C3B ya puesto. No era falta de información: era una pestaña que no usaba la
+que la de al lado ya tenía.
+
+### ✅ HECHO (v11.56) — EL PERMISO DE BORRAR NUNCA FUNCIONÓ, Y LOS BOTONES QUE DESAPARECÍAN
+
+**1. EL SUPERVISOR NO PODÍA BORRAR, Y EL INTERRUPTOR DECÍA QUE SÍ.** Jose, con
+el rol SUPERVISOR y "Edit movements" encendido: pulsa la papelera y sale
+**"Admin only."**. Su pregunta —"¿se dañó o nunca se pudo?"— tiene respuesta:
+**nunca se pudo.**
+
+El texto del propio interruptor promete las dos mitades desde el día que se
+hizo: *"Warehouse staff can fix **or delete** a movement someone already saved"*.
+`modifyMovement` (arreglar) sí se conectó al permiso; `deleteRow` (borrar) se
+quedó dentro de `manageMaterial`, que pedía ADMIN para **todo**.
+
+**Y no se notó porque el NAVEGADOR sí honraba el permiso** — `renderMovements`
+enseña Edit y Delete a un WAREHOUSE con el interruptor puesto. Así que el
+interruptor se veía encendido, los botones aparecían, y sólo al pulsarlos el
+servidor decía que no. Las dos mitades de la app discrepaban y la que mentía
+era la que no se ve.
+
+Arreglado partiendo la puerta por operación (`MOVEMENT_OPS`): borrar, restaurar
+y ver la papelera tocan **un** movimiento y van por el permiso; `rename`,
+`changeCategory` y `merge` reescriben la historia entera de un material —miles
+de filas de un clic y sin deshacer— y siguen siendo de admin.
+
+`tools/test-role-permissions.js` vigila la forma del fallo, que no es "¿está
+cerrada la puerta?" (de eso ya se ocupa `test-endpoint-auth.js`) sino **"¿la
+puerta hace lo que promete su cartel?"**. Un permiso que se enciende y no hace
+nada es peor que no tenerlo: el admin cree que ya lo concedió.
+
+**2. LOS BOTONES QUE DESAPARECÍAN.** Arreglado de raíz, no en el sitio del
+vídeo: se añade `_btnLabel(btn, etiqueta)` = `_btnReset` + etiqueta nueva, y se
+convirtieron **25 sitios** que se restauraban a mano. Sólo se notaba en éste
+porque el botón tiene dos vecinos; en los demás era el mismo fallo esperando a
+que alguien pusiera un segundo botón al lado.
+
+`test-button-states.js` gana una comprobación que **lee el archivo entero** y
+falla si vuelve a aparecer un `btn.disabled = false` suelto después de un
+`_btnBusy`. Los comentarios se quitan antes: el comentario que EXPLICA la línea
+prohibida la contiene, y un guardia que salta con su propia explicación acaba
+borrado (ya me pasó en la v11.55).
+
+**3.** De paso: el aviso decía *"delete that record permanently"*, y desde la
+v11.55 va a la papelera. Un aviso que exagera lo que hace un botón cuesta lo
+mismo que uno que lo minimiza — se deja de creer a los dos.
+
 ### ✅ HECHO (v11.56) — EL PERMISO DE BORRAR NUNCA FUNCIONÓ, Y LOS BOTONES QUE DESAPARECÍAN
 
 **1. EL SUPERVISOR NO PODÍA BORRAR, Y EL INTERRUPTOR DECÍA QUE SÍ.** Jose, con

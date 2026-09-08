@@ -95,6 +95,22 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.57</span>
+      <span class="tag fix">Fixed</span>
+      <h3>Switching movement type left half a row behind</h3>
+      <p>Going from Exit to Transfer carried the quantity across but not the
+         rack it came from, leaving a row that read "? unknown rack" with a real
+         number in it — a row that looks filled in and isn't. The badge at the
+         top counted that row too, so it could show more units than exist.</p>
+      <p>Now the rack and the quantity travel together or neither does. If the
+         material sits in one rack, both are filled in for you; if it is spread
+         across several, neither is, because the app doesn't know which shelf
+         you walked to. The source-rack dropdown also stopped offering every
+         location in the building and now lists only the racks that material is
+         actually in, with how much is in each.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.56</span>
       <span class="tag fix">Fixed</span>
       <h3>The "can delete movements" permission never actually worked</h3>

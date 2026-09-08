@@ -317,16 +317,34 @@ const NORM = s => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
   await page.waitForTimeout(150);
   await page.evaluate(() => openMoveModal('TRANSFER'));
   await page.waitForTimeout(250);
+  // The rows carry a SOURCE RACK now, and that is not padding: since v11.57 a
+  // row with no rack does not count towards the badge, because a row with no
+  // rack is not a transfer and cannot be saved as one. Jose filmed the old
+  // behaviour on 2026-09-08 — an orphan row holding 142 plus the real row
+  // holding 142, and a badge reading 284 for a material there are 142 of.
+  // "Because that is what gets saved" was always the rule; it just wasn't true.
   const trBadge = await page.evaluate(() => {
     addTransferRow(); addTransferRow();
+    const rk = [...document.querySelectorAll('#transferRowsContainer .tr-rack')];
     const qs = [...document.querySelectorAll('#transferRowsContainer .tr-qty')];
+    rk[0].value = 'A1A'; rk[0].dispatchEvent(new Event('input'));
+    rk[1].value = 'B2B'; rk[1].dispatchEvent(new Event('input'));
     qs[0].value = 120; qs[0].dispatchEvent(new Event('input'));
     qs[1].value = 180; qs[1].dispatchEvent(new Event('input'));
-    return { badge: document.getElementById('moveMatTotal').textContent,
+    const before = document.getElementById('moveMatTotal').textContent;
+    // And the same two numbers with the racks taken away: not a transfer, not
+    // on the badge.
+    rk[0].value = ''; rk[0].dispatchEvent(new Event('input'));
+    rk[1].value = ''; rk[1].dispatchEvent(new Event('input'));
+    return { badge: before,
+             rackless: document.getElementById('moveMatTotal').textContent,
              qtyFieldShown: getComputedStyle(document.getElementById('mQtyField')).display !== 'none' };
   });
   check('TRANSFER: the badge SUMS the rows (120 + 180 = 300), because that is what gets saved',
     trBadge.badge === '300');
+  check('TRANSFER: ...and a row with NO source rack is not counted — it cannot ' +
+        'be saved as a transfer, so putting it on the badge shows more units ' +
+        'than exist', trBadge.rackless === '0');
   check('TRANSFER: ...and it is not reading the Quantity box, which this screen hides and ignores',
     trBadge.qtyFieldShown === false);
 
@@ -431,6 +449,26 @@ const NORM = s => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
     }, [type, name, qty]);
   };
 
+  // MM210 lives in exactly ONE rack, in every category the form offers.
+  //
+  // Not scenery. Since v11.57 the quantity only travels to TRANSFER and WASTE
+  // together with the rack it came from — half the information carried across
+  // is what produced Jose's "? unknown rack" row holding 142. Giving the
+  // material a real, single location is what lets the check below still demand
+  // that NOTHING is lost on a switch, which is the promise that matters, while
+  // also proving the rack now comes with it.
+  await page.evaluate(() => {
+    const norm = v => String(v || '').toUpperCase().replace(/\s+/g, ' ').trim();
+    const cats = new Set();
+    document.querySelectorAll('select').forEach(sel => {
+      [...sel.options].forEach(o => { if (o.value) cats.add(o.value); });
+    });
+    cats.add('');
+    cats.forEach(c => {
+      stockData[norm(c) + '|||' + norm('MM210')] = { warehouseLocs: { 'A1A': 500 } };
+    });
+  });
+
   let pairFails = 0;
   for (const from of TYPES) {
     const got = [];
@@ -446,22 +484,36 @@ const NORM = s => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
         const v = id => (document.getElementById(id) || {}).value || '';
         const sum = sel => { let n = 0; document.querySelectorAll(sel).forEach(i => n += parseFloat(i.value) || 0); return n; };
         let name = '', qty = 0;
+        let rack = null;
         if (t === 'ENTRY') { name = v('mat-name-1'); qty = sum('#mat-locs-1 .loc-qty'); }
         else if (t === 'EXIT') { name = v('exit-name-1'); qty = sum('#exit-locs-1 .el-qty'); }
-        else if (t === 'TRANSFER') { name = v('mName'); qty = sum('#transferRowsContainer .tr-qty'); }
-        else { name = v('mName'); qty = parseFloat(v('mQty')) || 0; }
-        return { name, qty,
+        else if (t === 'TRANSFER') {
+          name = v('mName'); qty = sum('#transferRowsContainer .tr-qty');
+          const rk = document.querySelector('#transferRowsContainer .tr-rack');
+          rack = rk ? rk.value : '';
+        }
+        else {
+          name = v('mName'); qty = parseFloat(v('mQty')) || 0;
+          if (t === 'WASTE') rack = v('mSrc');
+        }
+        return { name, qty, rack,
           focus: document.activeElement ? (document.activeElement.id || document.activeElement.tagName) : null };
       }, to);
 
       const wantFocus = to === 'ENTRY' ? 'mat-name-1' : (to === 'EXIT' ? 'exit-name-1' : 'mName');
-      const ok = r.name === 'MM210' && r.qty === 12 && r.focus === wantFocus;
-      if (!ok) { pairFails++; got.push(to + '(' + r.name + '/' + r.qty + '/' + r.focus + ')'); }
+      // On the two screens whose quantity sits in a row that needs a SOURCE
+      // rack, the rack has to arrive with it. A quantity on its own there is
+      // the bug, not the feature.
+      const rackOk = (r.rack === null) || r.rack === 'A1A';
+      const ok = r.name === 'MM210' && r.qty === 12 && r.focus === wantFocus && rackOk;
+      if (!ok) { pairFails++; got.push(to + '(' + r.name + '/' + r.qty + '/' + (r.rack === null ? '-' : (r.rack || 'NO-RACK')) + '/' + r.focus + ')'); }
       else got.push(to + '✓');
     }
     console.log('  from ' + from.padEnd(9) + '→ ' + got.join('  '));
   }
-  check('every one of the 20 type switches carries name AND quantity, and leaves the cursor in Name',
+  check('every one of the 20 type switches carries name AND quantity — and, on ' +
+        'the screens whose quantity lives in a row, the SOURCE RACK with it — ' +
+        'and leaves the cursor in Name',
     pairFails === 0);
 
   console.log('\n═══ the colour is on the location box, not the whole material ═══\n');

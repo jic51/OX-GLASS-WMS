@@ -97,6 +97,23 @@
        almacén?</p>
 
     <div class="entry">
+      <span class="ver">v11.57</span>
+      <span class="tag fix">Arreglado</span>
+      <h3>Cambiar de tipo de movimiento dejaba media fila atrás</h3>
+      <p>Pasar de Exit a Transfer arrastraba la cantidad pero no el estante de
+         donde salía, dejando una fila que decía "? unknown rack" con un número
+         de verdad dentro — una fila que parece rellena y no lo está. El
+         marcador de arriba contaba también esa fila, así que podía enseñar más
+         unidades de las que existen.</p>
+      <p>Ahora el estante y la cantidad viajan juntos o no viaja ninguno. Si el
+         material está en un solo estante, se rellenan los dos; si está
+         repartido en varios, ninguno, porque la app no sabe a qué balda fuiste.
+         La lista de estantes de origen también dejó de ofrecer todos los sitios
+         del edificio y ahora enseña sólo los estantes donde ese material está
+         de verdad, con cuánto hay en cada uno.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.56</span>
       <span class="tag fix">Arreglado</span>
       <h3>El permiso de "puede borrar movimientos" nunca funcionó de verdad</h3>
