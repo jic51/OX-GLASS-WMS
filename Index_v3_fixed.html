@@ -3304,7 +3304,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.54';
+var APP_VERSION = '11.55';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -3316,7 +3316,7 @@ var APP_VERSION = '11.54';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'fa354706';
+var APP_BUILD = '0b723d73';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -5893,26 +5893,60 @@ function _loadMoreMovements(){
 }
 
 function deleteMovementRow(rowIdx){
+  var mov = _movByRowIdx(rowIdx);
+  var what = mov ? (mov.qty + ' ' + (mov.unit || '') + ' of ' + mov.name).replace(/\s+/g, ' ') : 'This movement';
   _showConfirm({
     icon: '🗑️', danger: true,
-    title: 'Delete Movement Record?',
-    message: 'Row #' + rowIdx + ' will be permanently removed.\nThis cannot be undone.',
+    title: 'Delete this movement?',
+    // No longer "permanently removed, this cannot be undone" — since v11.55 it
+    // goes to the trash and can be put back. Saying otherwise made people stop
+    // and go and ask somebody before pressing a button that is now reversible.
+    message: what + ' will be removed from the warehouse history.\n\n' +
+             'It goes to the trash, so you can put it back from Settings → System.',
     confirmText: 'Yes, Delete',
     onConfirm: function(){ _doDeleteMovementRow(rowIdx); }
   });
 }
+
+function _movByRowIdx(rowIdx){
+  for (var i = 0; i < movements.length; i++) {
+    if (movements[i].rowIdx === rowIdx) return movements[i];
+  }
+  return null;
+}
+
 function _doDeleteMovementRow(rowIdx){
+  var mov = _movByRowIdx(rowIdx);
   google.script.run
     .withSuccessHandler(function(){
-      showToast('Movement deleted.', 'ok');
-      // Silencioso: la fila desaparece de la tabla y el aviso lo dice. Desarmar
-      // el tablero para volver a montarlo no añade nada.
+      // AL INSTANTE. El servidor YA lo hizo — este manejador es el de ÉXITO —
+      // así que esperar a que una recarga entera nos lo repita es hacer esperar
+      // a alguien por algo que ya se sabe. Jose: "el feedback visual no debe
+      // demorar nunca". Y ahora es seguro: quitar una fila de la lista ya no
+      // desplaza los números de las demás, porque nada se identifica por su
+      // número desde la v11.53.
+      if (mov) {
+        var at = movements.indexOf(mov);
+        if (at !== -1) movements.splice(at, 1);
+        renderAll();
+      }
+      showToast('Movement deleted. It is in the trash.', 'ok');
+      // La recarga silenciosa sigue: reconcilia los totales de stock, que los
+      // calcula el servidor. Ya no es lo que hace desaparecer la fila.
       loadDataFromGoogle(true, true);
     })
     .withFailureHandler(function(err){
-      showToast('Delete failed: ' + (err.message || err), 'err', 6000);
+      // Nada se ha quitado de la pantalla todavía, así que no hay que devolver
+      // nada a su sitio — el orden importa: primero el servidor, luego la
+      // pantalla. Al revés, un "ya lo borró otro" dejaría la fila desaparecida
+      // en una cuenta y presente en la otra.
+      showToast(_stripTags(err), 'err', 8000);
     })
-    .processMovement('manageMaterial', _h({ op: 'deleteRow', rowIdx: rowIdx }));
+    .processMovement('manageMaterial', _h({
+      op: 'deleteRow',
+      movId: mov ? (mov.movId || '') : '',
+      rowIdx: rowIdx            // sólo para el registro; el servidor borra por movId
+    }));
 }
 
 // ── Project View ──────────────────────────────────────────────────────────────
@@ -9424,6 +9458,12 @@ function _renderSystemTab() {
       '<div id="movIdBox" style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">' +
         '<span style="font-size:.8rem;color:var(--muted)">Checking…</span>' +
       '</div>' +
+    '</div>' +
+    '<div class="field" style="margin-top:1.25rem">' +
+      '<label style="display:flex;align-items:center;gap:.4rem">Deleted movements ' +
+        _infoIc('Deleting a movement moves it here instead of destroying it. Putting one back restores it exactly as it was, and the stock totals are recalculated straight away.') +
+      '</label>' +
+      '<div id="trashBox"><span style="font-size:.8rem;color:var(--muted)">Checking…</span></div>' +
     '</div>';
 
   // The list exists in the DOM as of the line above, so this is the earliest
@@ -9436,6 +9476,77 @@ function _renderSystemTab() {
   _loadSpaceUsage();
   _loadAiStatus();
   _loadMovIdStatus();
+  _loadTrash();
+}
+
+/* ── The trash: undo for a deleted movement ─────────────────────────────────
+   Jose: "hay algunas cosas que hice que quisiera eliminar pero no se puede".
+   Deleting used to destroy the row outright, so there was nothing to undo with.
+   Now it moves to a sheet of its own and comes back exactly as it was. */
+function _loadTrash(){
+  var box = document.getElementById('trashBox');
+  if (!box) return;
+  google.script.run
+    .withSuccessHandler(function(res){ _paintTrash(res && res.items); })
+    .withFailureHandler(function(){
+      var b = document.getElementById('trashBox');
+      // An older Code.gs simply does not know this op yet, which is normal for
+      // the half hour between deploying one file and the other.
+      if (b) b.innerHTML = '<span style="font-size:.8rem;color:var(--muted)">Not available on this version.</span>';
+    })
+    .processMovement('manageMaterial', _h({ op: 'listTrash' }));
+}
+
+function _paintTrash(items){
+  var box = document.getElementById('trashBox');
+  if (!box) return;
+  items = items || [];
+  if (!items.length){
+    box.innerHTML = '<span style="font-size:.8rem;color:var(--muted)">Nothing deleted. ' +
+      'Anything you delete lands here and can be put back.</span>';
+    return;
+  }
+  box.innerHTML =
+    '<div style="max-height:260px;overflow:auto;border:1px solid var(--border);border-radius:8px">' +
+      items.map(function(it){
+        var where = it.destLoc || it.srcLoc || '';
+        return '<div style="display:flex;align-items:center;gap:.6rem;padding:.5rem .65rem;border-bottom:1px solid var(--border)">' +
+          '<div style="flex:1;min-width:0">' +
+            '<div style="font-size:.82rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
+              _he(it.name) + ' <span style="font-weight:400;color:var(--muted)">· ' +
+              _he(String(it.qty)) + ' ' + _he(it.unit) + ' · ' + _he(it.moveType) +
+              (where ? ' · ' + _he(where) : '') + '</span>' +
+            '</div>' +
+            '<div style="font-size:.72rem;color:var(--muted)">Deleted by ' + _he(it.deletedBy) +
+              (it.deletedAt ? ' · ' + _he(_fmtWhen(it.deletedAt)) : '') + '</div>' +
+          '</div>' +
+          // El id va en un atributo, no dentro de las comillas de un onclick.
+          // Lo que hay en la hoja lo puede haber escrito una persona a mano, y
+          // una comilla ahí dentro rompería el botón — o algo peor.
+          '<button class="btn btn-ghost btn-sm" data-movid="' + _escAttr(it.movId) +
+            '" onclick="_restoreMovement(this)">↩ Put back</button>' +
+        '</div>';
+      }).join('') +
+    '</div>';
+}
+
+function _restoreMovement(btn){
+  var movId = btn ? (btn.getAttribute('data-movid') || '') : '';
+  _btnBusy(btn, 'Restoring…');
+  google.script.run
+    .withSuccessHandler(function(){
+      showToast('✓ Movement restored.', 'ok');
+      _loadTrash();
+      loadDataFromGoogle(true, true);
+    })
+    .withFailureHandler(function(e){
+      _btnReset(btn);
+      showToast('⚠ ' + _stripTags(e), 'err', 8000);
+      // Somebody else may have put it back already, in which case the list on
+      // screen is out of date and saying so is not enough — show the truth.
+      _loadTrash();
+    })
+    .processMovement('manageMaterial', _h({ op: 'restoreMovement', movId: movId }));
 }
 
 /* ── Giving every existing movement a name ──────────────────────────────────

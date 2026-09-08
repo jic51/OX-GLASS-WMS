@@ -5,6 +5,59 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+### ✅ HECHO (v11.55) — PASO 2 Y 3: LA PAPELERA, Y LA FILA SE VA AL INSTANTE
+
+**Cierra el fallo urgente de arriba.** Borrar ya no señala una POSICIÓN:
+
+    var movId = String(data.movId || '').trim();
+    var found = findMovementById_(ss, movId);
+
+Con eso, borrar el movimiento equivocado deja de ser improbable y pasa a ser
+**imposible**. Un nombre señala un movimiento y ningún otro, esté donde esté
+sentado. Y una fila sin ID **se niega** a borrarse por posición: volver al
+número de fila "sólo por esta vez" es exactamente cómo vuelve el fallo.
+
+**LA PAPELERA ES UNA HOJA, NO UNA MARCA EN LA FILA.** Con una marca, cada lector
+de este archivo —el motor de stock, las hojas derivadas, el barrido de calidad,
+el trabajo nocturno— tendría que aprender a saltarse esas filas, y el primero
+que se olvidara enseñaría un almacén que todavía contiene material que alguien
+tiró. Sacando la fila, todos siguen funcionando sin cambiar nada, porque la fila
+de verdad ya no está. Es la misma forma que ARCHIVE_HISTORY, que ya mueve filas
+entre hojas sin romper el stock.
+
+**El orden importa en las dos direcciones, y está protegido por prueba:**
+- Al borrar: **a la papelera ANTES de quitarla**. Al revés, un fallo entre las
+  dos destruye el movimiento sin dejar de dónde sacarlo.
+- Al restaurar: **puesta en su sitio ANTES de salir de la papelera**. El otro
+  orden lo pierde del todo si falla en medio.
+
+**Se guarda la FILA ENTERA, tal cual.** Una reconstrucción a partir de sus
+campos devolvería algo parecido, no lo mismo. Y vuelve a **la hoja de donde
+salió**, así que un movimiento de hace un año no reaparece en la lista reciente.
+
+**EL DOBLE BORRADO YA NO MIENTE.** Era la misma mentira del desbloqueo doble: a
+los dos se les decía que lo habían hecho ellos. Ahora el segundo recibe *"Already
+deleted by jose@ox-glass.com on Sep 8, 10:45 AM. It is in the trash — you can
+put it back from there."* Y "ya lo borró otro" se distingue de "esto no existe":
+son dos situaciones distintas, y confundirlas manda a la persona a buscar al
+sitio equivocado. El doble restaurar también, y ahí el daño era peor —
+dos filas iguales suman dos veces al stock.
+
+**Y LA FILA SE VA DE LA PANTALLA AL INSTANTE**, que es el punto 3 y el primer
+sitio donde se aplica la regla general de Jose. Se quita en el manejador de
+ÉXITO —el servidor YA lo hizo— y no en el de fallo: primero el servidor, luego
+la pantalla. Al revés, un "ya lo borró otro" dejaría la fila desaparecida en una
+cuenta y presente en la otra. La recarga silenciosa sigue, pero ya sólo para
+reconciliar los totales de stock, que los calcula el servidor.
+
+**Y el aviso ya no dice "no se puede deshacer"**, porque ahora sí se puede.
+Decir lo contrario hacía que la gente parase a preguntar antes de tocar un botón
+que ya es reversible.
+
+**LO QUE FALTA DE ESTE BLOQUE:** vaciar la papelera (hoy crece sin límite), y
+las casillas de selección con la barra de acciones (punto 4, con las
+correcciones de diseño de Jose ya anotadas más abajo).
+
 ### ✅ HECHO (v11.54) — QUE NUNCA HAYA DOS NOMBRES IGUALES, Y GENERIC FUERA
 
 **Jose, 2026-09-08, sobre los ID repetidos — y su corrección es la buena:**

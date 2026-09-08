@@ -95,6 +95,35 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.55</span>
+      <span class="tag new">New</span>
+      <h3>Deleting a movement can be undone</h3>
+      <p>A deleted movement now goes to the trash instead of being destroyed.
+         Settings → System lists what has been deleted, who deleted it and when,
+         and puts any of it back exactly as it was — same quantity, same rack,
+         same date — with the stock totals recalculated straight away.</p>
+      <p><b>And the row leaves the screen the moment it is deleted</b>, rather
+         than after the next full refresh. The confirmation no longer warns that
+         this cannot be undone, because now it can.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.55</span>
+      <span class="tag fix">Fixed</span>
+      <h3>Deleting could remove a different movement than the one you clicked</h3>
+      <p>Movements were identified by their position in the list, and positions
+         move: deleting one lifts everything below it. So if somebody else
+         deleted a movement while your screen was open, the one you clicked and
+         the one that went could be two different movements — with no error, no
+         warning, and nothing on screen to suggest anything had gone wrong.</p>
+      <p>Every movement now carries an identifier of its own, and deleting names
+         that identifier instead of a position. It cannot pick the wrong one.
+         Two people deleting the same movement is also handled honestly now:
+         the second person is told who deleted it and when, instead of being
+         told it worked.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.54</span>
       <span class="tag fix">Fixed</span>
       <h3>"GENERIC" no longer appears where a job name should be</h3>

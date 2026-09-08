@@ -226,13 +226,20 @@ console.log('\n═══ manageMaterial: matching on one column, writing another
       !/\.setValue\(/.test(seg));
   });
 
-  // `readWidth_(archive)` is AC_WIDTH clamped to the columns the sheet
-  // physically has — a read must not widen a sheet as a side effect of looking
-  // at it. Either spelling passes here; a number written out by hand does not,
-  // which is the whole point of the check.
-  check('deleting a row logs the FULL row width, not the hardcoded 19 that silently dropped PM and both cost columns from the record of a deletion',
-    /getRange\(rowIdx, 1, 1, (AC_WIDTH|readWidth_\(archive\))\)/.test(body) &&
-    !/getRange\(rowIdx, 1, 1, \d+\)/.test(body));
+  // Since v11.55 the delete does not read the row itself — findMovementById_
+  // finds it by the movement's own id and hands back the whole row, padded to
+  // AC_WIDTH. The rule being guarded has not changed: the record of a deletion
+  // is the one place that must be COMPLETE. It used to say 19 by hand, which
+  // silently dropped PM and both cost columns from every deletion ever logged.
+  const finder = GS.slice(GS.indexOf('function findMovementById_'),
+                          GS.indexOf('function findTrashedById_'));
+  check('the row a deletion works from is the FULL width, not a hardcoded number',
+    /padRow_\(sheet\.getRange\(i \+ 2, 1, 1, readWidth_\(sheet\)\)\.getValues\(\)\[0\], AC_WIDTH\)/.test(finder));
+  check('...and the deletion logs THAT row, so nothing is missing from the record',
+    /auditLog_\(ss, 'DELETE_ROW'[\s\S]{0,220}found\.row/.test(body));
+  check('...and the whole row goes to the trash before it goes anywhere else, at ' +
+        'the trash sheet\'s own full width',
+    /trash\.getRange\([\s\S]{0,60}TRASH_WIDTH\)\.setValues\(\[saved\]\)/.test(body));
 }
 
 console.log('\ncategory-rename: ' + (fail === 0 ? 'ok' : (fail + ' FAILED')));
