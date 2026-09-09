@@ -5,42 +5,79 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
-# ══ LA LISTA, ORDENADA — 2026-09-08 ══
+# ══ LA LISTA, ORDENADA — 2026-09-09 ══
 
-Todo lo pendiente, de más urgente a menos. Lo de arriba estorba para publicar;
-lo de abajo puede esperar meses sin que pase nada.
+De más urgente a menos. Lo de arriba estorba para publicar; lo de abajo puede
+esperar meses sin que pase nada.
 
-**1. EL CANDADO CON DUEÑO Y RAZÓN VISIBLES al desbloquear.** Jose, 2026-09-08:
-*"ya tenemos la información, sólo hay que mostrarla"*. Correcto — el dueño se
-guarda en `auth.email` y la razón también; sólo falta enseñarlas.
+**1. LAS COLUMNAS DE MOVEMENTS: LA TABLA CRECE Y SE VA A LO ANCHO.** Jose,
+2026-09-09, y tiene razón en que me quedé corto: *"al dar clic en columns no se
+mueve nada en el lugar donde está el botón, eso sí es cierto, pero se mueve toda
+la parte de los movimientos, se abren las columnas más grandes y el header se
+hace más alto"*. La v11.59 arregló la fila de herramientas y la prueba mide el
+BOTÓN, no la tabla — **dije que no se movía nada y eso no era verdad.**
 
-**2. EL MENSAJE DEL BORRADO CON EL PERMISO APAGADO.** Que diga "no tienes
-permiso para esta acción, contacta al admin" en vez del texto genérico de
-`requirePerm_`. Ya no es un fallo de permisos (v11.56), es el texto.
+**Y su idea de fondo es mejor que arreglar sólo el alto del encabezado:**
 
-**3. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
+> *"decidimos que las columnas type, date, category y name no se van a cambiar
+>  nunca, entonces si no se van a cambiar podemos unir type sobre date, y
+>  category sobre name, reducimos 2 columnas y la pantalla no debe hacerse muy
+>  larga horizontalmente."*
+
+Cuatro columnas pasan a dos celdas de dos líneas. La tabla se estrecha de verdad
+en vez de comprimirse. **El precio, que él ya nombró:** esas cuatro dejan de
+poder reordenarse. Hay que decidirlo antes, no después — y creo que vale la
+pena: nadie reordena el tipo y la fecha de un movimiento.
+
+**2. LAS LOCACIONES: CREAR VARIAS A LA VEZ, Y PODER BORRAR UNA VACÍA.** Vídeo
+de Jose, 2026-09-08.
+- **Crear muchas de golpe.** Intentó crear varias y sólo se puede una por una.
+  Un almacén nuevo son decenas de estantes: A1A…A6C es teclear el mismo patrón
+  cuarenta veces.
+- **Borrar, no sólo archivar.** *"si la locación no tiene nada dentro se la debe
+  poder borrar, eso no cambia el historial pero ya no aparece en la lista"*. La
+  distinción es correcta y es la que hace que sea seguro: **vacía se borra,
+  con algo dentro se archiva.** Una locación que nunca tuvo nada no tiene
+  historia que proteger, y obligar a archivarla llena la lista de basura que
+  nadie puede quitar.
+
+**3. LA ANIMACIÓN AL BORRAR UNA FILA, Y LA VELOCIDAD.** Jose: *"está bien como
+lo hace pero aún no lo veo con la velocidad que quisiera, no sé por qué"*. Dos
+cosas distintas y conviene no confundirlas:
+- **Lo que se siente.** Una fila que se encoge y deja subir a las de abajo
+  despacio se lee como "esto está pasando", mientras que una que desaparece de
+  golpe se lee como un parpadeo. Es lo que él describe y es barato.
+- **Lo que tarda de verdad.** Cada borrado sigue reconstruyendo los totales de
+  todo el almacén en el servidor. La cola lo ordenó; no lo hizo más rápido. Si
+  al medirlo resulta que son segundos, la animación tapa el síntoma y hay que
+  mirar si el refresco puede esperar al final de la ráfaga.
+
+**4. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
 mínimos). Detalle completo más abajo. Es el que cuesta material cargado en una
 camioneta que hay que volver a bajar.
 
-**4. MANAGE USERS — EL REDISEÑO.** La recarga ya está arreglada (v11.58);
-queda rediseñar cómo se editan los usuarios, la ventana más grande, el correo
-en una línea, y quitar el scroll lateral.
+**5. MANAGE USERS — EL REDISEÑO.** La recarga ya está arreglada (v11.58);
+queda cómo se editan los usuarios, la ventana más grande, el correo en una
+línea, y quitar el scroll lateral.
 
-**5. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
+**6. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
 
-**6. LAS CABECERAS QUE FALTAN EN UNA INSTALACIÓN VIEJA** (ver más abajo). No
+**7. LAS CABECERAS QUE FALTAN EN UNA INSTALACIÓN VIEJA** (ver más abajo). No
 urgente para Jose —ya lo arregló a mano— sí para el siguiente cliente.
 
-**7. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
+**8. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
 enviar correo / videollamada de Meet / chat.
 
-**8. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
+**9. LA FORMA DE MOSTRAR LAS CANTIDADES EN EL DASHBOARD.** Jose lo recordó el
+2026-09-09 y está pendiente de que explique qué quiere cambiar exactamente.
 
-**9. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
+**10. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
 
-**10. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
+**11. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
 
-**11. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
+**12. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
+
+**13. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
 sitio, la política de cobro y el rediseño del modelo de movimientos.
 
 ---
@@ -99,6 +136,35 @@ trabajo antes de tiempo. Lo que sí conviene es que el precio no quede colgado
 sin ninguna acción al lado.
 
 ---
+
+### ✅ HECHO (v11.60) — EL CANDADO DICE QUIÉN Y POR QUÉ, Y DOS MENSAJES QUE MENTÍAN
+
+**1. AL DESBLOQUEAR, QUIÉN LO CERRÓ, CUÁNDO Y POR QUÉ.** Jose: *"ya tenemos la
+información, sólo hay que mostrarla"*. Literal: el motivo, quién y cuándo viajan
+en cada candado desde que existen, y **sólo se veían pasando el ratón por un
+icono diminuto**.
+
+Ése es el sitio equivocado. Un candado lo pone alguien PARA QUE NADIE TOQUE ese
+material — casi siempre porque está apartado para una obra, o porque hay algo
+mal con él. Quien va a quitarlo es justo quien necesita leer el motivo, y es
+justo el momento en que todavía puede parar. Un tooltip se lo enseña a quien
+pasa por al lado, no a quien va a decidir.
+
+El aviso dice ahora quién, cuándo, su razón **entre comillas y tal cual la
+escribió** —es lo que dijo una persona, no un estado que la app calculó— y a
+dónde se permitía moverlo. Y si no dio ninguna, lo dice: un hueco en blanco
+parece que la app perdió el dato. No hace falta pedirle nada al servidor.
+
+**2. EL "NO" DEL PERMISO SIRVE PARA ALGO.** Decía *"esto requiere un permiso que
+tu admin no ha activado"* — sin decir cuál, ni qué se intentaba hacer, ni a
+quién pedírselo. Ahora dice las tres: **qué** (en palabras de la persona, no el
+nombre interno del permiso), **a quién** (por su correo, de la configuración) y
+**dónde** se enciende.
+
+**3. "GOOD MORNING" A LAS OCHO DE LA TARDE.** Estaba escrito a mano en el HTML,
+así que saludaba igual a cualquier hora. Ahora se pregunta al reloj **cada vez
+que la ventana se abre**, no al cargar la página: quien deja la app abierta toda
+la tarde tiene que ver cambiar el saludo con ella.
 
 ### ✅ HECHO (v11.59) — LAS CASILLAS Y LA BARRA DE ACCIONES
 

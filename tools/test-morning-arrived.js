@@ -69,7 +69,11 @@ function run(role) {
   // card has to get right, and a stub would only prove the stub works.
   vm.runInContext(extractFn('_he') + '\n' + extractFn('_escAttr') + '\n' +
                   extractFn('_incQtyText') + '\n' + extractFn('_incFirstDocUrl') + '\n' +
-                  extractFn('_incItemHtml') + '\n' + extractFn('showMorningPopup'), sandbox);
+                  extractFn('_incItemHtml') + '\n' +
+                  // El saludo cambia con la hora desde la v11.60, y showMorningPopup
+                  // lo llama. Sin él, la ventana no se pinta.
+                  extractFn('_timeOfDayGreeting') + '\n' + extractFn('_applyMorningGreeting') + '\n' +
+                  extractFn('showMorningPopup'), sandbox);
   vm.runInContext('showMorningPopup(' + JSON.stringify(items) + ', ' + JSON.stringify(TODAY) + ')', sandbox);
   return box.innerHTML;
 }
@@ -119,7 +123,11 @@ const sb = {
 vm.createContext(sb);
 vm.runInContext(extractFn('_he') + '\n' + extractFn('_escAttr') + '\n' +
                 extractFn('_incQtyText') + '\n' + extractFn('_incFirstDocUrl') + '\n' +
-                extractFn('_incItemHtml') + '\n' + extractFn('showMorningPopup'), sb);
+                extractFn('_incItemHtml') + '\n' +
+                  // El saludo cambia con la hora desde la v11.60, y showMorningPopup
+                  // lo llama. Sin él, la ventana no se pinta.
+                  extractFn('_timeOfDayGreeting') + '\n' + extractFn('_applyMorningGreeting') + '\n' +
+                  extractFn('showMorningPopup'), sb);
 vm.runInContext('showMorningPopup(' + JSON.stringify(nasty) + ', ' + JSON.stringify(TODAY) + ')', sb);
 check('the quote is escaped, no injected onclick survives',
   box.innerHTML.indexOf('onclick="alert(1)') === -1 && box.innerHTML.indexOf('&quot;') !== -1);
@@ -204,6 +212,41 @@ check('an open popup redraws itself when the data behind it changes',
 check('...and nothing happens when it is closed', /return;/.test(refresh));
 check('the redraw is wired to the Incoming render, which runs after a save',
   /_refreshMorningPopup\(\);/.test(extractFn('renderIncoming')));
+
+// ── El saludo, según la hora que es ─────────────────────────────────────────
+// Jose, a las ocho de la tarde: "la ventana de los incomings me dice buenos
+// días". Estaba escrito a mano en el HTML, así que decía "Good Morning" a
+// cualquier hora. Una app que saluda como si fueran las siete de la mañana a
+// las ocho de la tarde da la impresión de no saber nada de lo que está pasando
+// — que es lo contrario de lo que esta ventana intenta transmitir.
+{
+  const saludo = (hora) => {
+    const c = require('vm').createContext({
+      Date: function(){ return { getHours: () => hora }; }
+    });
+    require('vm').runInContext(extractFn('_timeOfDayGreeting'), c);
+    return require('vm').runInContext('_timeOfDayGreeting()', c);
+  };
+
+  check('a las 7 de la mañana dice "Good morning"', saludo(7).text === 'Good morning');
+  check('a las 11:59 todavía', saludo(11).text === 'Good morning');
+  check('a las 12 pasa a "Good afternoon" — el mediodía es tarde, no mañana',
+    saludo(12).text === 'Good afternoon');
+  check('a las 17 sigue siendo tarde', saludo(17).text === 'Good afternoon');
+  check('Y A LAS 20 DICE "Good evening" — la hora exacta a la que Jose lo vio ' +
+        'saludar con los buenos días', saludo(20).text === 'Good evening');
+  check('a la 1 de la madrugada no dice "buenas tardes"', saludo(1).text === 'Good morning');
+  check('cada tramo trae su propio icono, no un sol a las diez de la noche',
+    saludo(7).icon !== saludo(20).icon && saludo(12).icon !== saludo(20).icon);
+
+  // Y que se pregunte AL ABRIR, no al cargar la página: alguien que deja la app
+  // abierta toda la tarde tiene que ver cambiar el saludo con ella.
+  check('el saludo se aplica cada vez que la ventana se abre',
+    /_applyMorningGreeting\(\);/.test(extractFn('showMorningPopup')));
+  check('y el HTML ya no lleva la hora escrita a mano en un sitio donde no se ' +
+        'puede cambiar',
+    /<h3 id="morningTitle">/.test(src));
+}
 
 console.log('\nmorning "mark arrived": ' + (fail === 0 ? 'ok' : (fail + ' FAILED')));
 process.exit(fail === 0 ? 0 : 1);

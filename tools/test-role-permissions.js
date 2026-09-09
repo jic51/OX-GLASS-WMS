@@ -55,7 +55,12 @@ function fnSrc(src, name){
 function varSrc(src, name){
   const i = src.indexOf('var ' + name + ' =');
   if (i === -1) throw new Error('no encontrada: ' + name);
-  return src.slice(i, src.indexOf(';', i) + 1);
+  // Un objeto multilínea acaba en "\n};", no en el primer ';' — que dentro de
+  // una cadena o de una propiedad llega mucho antes.
+  const llave = src.indexOf('\n};', i);
+  const punto = src.indexOf(';', i);
+  if (llave !== -1 && llave < punto) return src.slice(i, llave + 3);
+  return src.slice(i, punto + 1);
 }
 
 // ── La puerta, con cada llave ───────────────────────────────────────────────
@@ -73,10 +78,13 @@ function puerta(role, perms){
     // El candado y el cuerpo no son lo que se prueba aquí: se quiere saber
     // quién LLEGA a ellos.
     withStockLock_: (fn) => fn(),
+    // El mensaje del "no" nombra al admin, y para eso lee CONFIG. Aquí se
+    // responde con un correo fijo para poder comprobar que sale en el texto.
+    adminNotifyEmail_: () => 'jefe@ox-glass.com',
     manageMaterialLocked_: (data, auth) => { llamadas.push({ op: data.op, auth: auth }); return { status: 'success' }; }
   });
   vm.runInContext([
-    varSrc(GS, 'DEFAULT_ROLE_PERMS'), varSrc(GS, 'MOVEMENT_OPS'),
+    varSrc(GS, 'DEFAULT_ROLE_PERMS'), varSrc(GS, 'MOVEMENT_OPS'), varSrc(GS, 'PERM_LABELS'),
     fnSrc(GS, 'rolePerms_'), fnSrc(GS, 'requireAuth_'), fnSrc(GS, 'requirePerm_'),
     fnSrc(GS, 'manageMaterial')
   ].join('\n'), c);
@@ -113,8 +121,14 @@ console.log('\n═══ con el interruptor APAGADO ═══\n');
   const sup = puerta('WAREHOUSE', SIN);
   const r = sup('deleteRow');
   check('el supervisor NO puede borrar', r.pasa === false);
-  check('y el mensaje manda al sitio donde se arregla, en vez de un "no" seco ' +
-        '(' + r.error + ')', /Settings → Permissions/.test(r.error));
+  // Jose: "hay que mostrar la información: no tienes permiso para esta acción,
+  // contacta al admin". Las tres cosas, o el mensaje no sirve para nada más que
+  // para ir a preguntar de qué habla.
+  check('el "no" dice QUÉ no se puede hacer, en palabras de la persona y no con ' +
+        'el nombre interno del permiso (' + r.error + ')',
+    /delete a movement/.test(r.error) && !/canEditMovements/.test(r.error));
+  check('...A QUIÉN pedírselo, por su nombre', /jefe@ox-glass\.com/.test(r.error));
+  check('...y DÓNDE se enciende', /Settings → Permissions/.test(r.error));
 }
 
 console.log('\n═══ lo que el interruptor NO abre ═══\n');

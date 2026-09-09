@@ -212,6 +212,36 @@ console.log('\n═══ desbloquear algo que otro ya desbloqueó no es un error
     /_stripTags\(err\)/.test(cli));
 }
 
+// ── Quién lo cerró, cuándo y por qué — ANTES de quitarlo ────────────────────
+// Jose: "al desbloquear deberíamos decir quién lo hizo y mostrar la razón que
+// dio esa persona... ya tenemos la información, sólo hay que mostrarla". Y es
+// literal: el motivo, quién y cuándo viajan en cada candado desde que existen.
+// Sólo se veían pasando el ratón por un icono diminuto, que es el sitio
+// equivocado: un candado lo pone alguien PARA QUE NADIE TOQUE ese material, y
+// quien va a quitarlo es justo quien necesita leer el motivo, justo en el
+// momento en que todavía puede parar.
+{
+  const conf = fnSrc(SRC, 'unlockMaterialConfirm');
+  check('el aviso de desbloqueo dice QUIÉN lo cerró', /Locked by/.test(conf) && /lock\.lockedBy/.test(conf));
+  check('...y CUÁNDO', /lock\.lockedAt/.test(conf));
+  check('...y SU RAZÓN, entre comillas y tal cual la escribió — es lo que dijo ' +
+        'una persona, no un estado que la app calculó',
+    /Their reason/.test(conf) && /lock\.reason/.test(conf));
+  check('...y si no dio ninguna, lo dice: un hueco en blanco parece que la app ' +
+        'perdió el dato', /did not give a reason/.test(conf));
+  check('...y a dónde se permitía moverlo, cuando el candado lo limitaba',
+    /allowedDest/.test(conf));
+  check('el candado se busca por su id en lo que el navegador YA tiene — no ' +
+        'hace falta pedirle nada al servidor para esto',
+    /_lockById\(lockId\)/.test(conf));
+
+  const doUnlock = fnSrc(SRC, '_doUnlockMaterial');
+  check('y al soltarlo el aviso dice QUÉ se soltó, no sólo que se soltó',
+    /lock && lock\.name/.test(doUnlock));
+  check('...leyéndolo ANTES de quitarlo de la lista, porque después ya no está',
+    doUnlock.indexOf('_lockById(lockId)') < doUnlock.indexOf('materialLocks.filter'));
+}
+
 console.log('\n' + '─'.repeat(72));
 console.log('Tercera y cuarta vez del mismo patrón: el servidor sabe la verdad');
 console.log('y el navegador la tira. Y otra vez, el código correcto ya estaba');

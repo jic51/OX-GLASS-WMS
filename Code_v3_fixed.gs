@@ -46,7 +46,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '11.59';
+var APP_VERSION = '11.60';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -58,7 +58,7 @@ var APP_VERSION = '11.59';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'd08c278b';
+var APP_BUILD = '7c9a80c0';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -1381,11 +1381,38 @@ function setWarehouseRoleLabel(data, auth) {
 // admin. VIEWER never passes, regardless of what is turned on; the flags exist
 // to let a trusted WAREHOUSE user do more, not to let a read-only visitor do
 // anything at all.
+// El "no" también es una respuesta, y tiene que servir para algo.
+//
+// Jose, 2026-09-08, sobre lo que le sale a un supervisor sin el permiso: "hay
+// que mostrar la información: no tienes permiso para esta acción, contacta al
+// admin". El mensaje de antes decía "una permission" sin decir CUÁL, ni QUÉ se
+// intentaba hacer, ni A QUIÉN pedírselo. Quien lo recibe no puede hacer nada
+// con él más que ir a preguntar de qué habla.
+//
+// `what` es la acción en las palabras de la persona ("delete a movement"), no
+// el nombre interno del permiso. Y el correo del admin se busca con
+// adminNotifyEmail_, que ya existe y ya sabe caer con gracia si nadie lo ha
+// configurado. Es un camino de error: costar una lectura de CONFIG aquí no le
+// quita tiempo a nadie que esté trabajando.
+var PERM_LABELS = {
+  canEditMovements: 'edit or delete a movement someone already saved',
+  canManageCatalog: 'change the catalog',
+  canExportData:    'export data',
+  canSeeCosts:      'see costs'
+};
+
 function requirePerm_(auth, permKey) {
   if (auth.role === 'ADMIN') return auth;
   if (auth.role === 'WAREHOUSE' && rolePerms_()[permKey] === true) return auth;
-  throw new Error('This requires a permission your admin has not turned on for your role. ' +
-    'Ask them to check Settings → Permissions.');
+
+  var what  = PERM_LABELS[permKey] || 'do that';
+  var quien = '';
+  try { quien = adminNotifyEmail_(); } catch (e) {}
+
+  throw new Error(
+    "You don't have permission to " + what + '. ' +
+    (quien ? 'Ask ' + quien + ' to turn it on' : 'Ask an administrator to turn it on') +
+    ' in Settings → Permissions.');
 }
 
 // Gate for entry points that legitimately have no session token: the daily

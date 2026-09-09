@@ -2546,7 +2546,7 @@
 <div class="morning-overlay" id="morningOverlay">
   <div class="morning-popup">
     <div class="morning-popup-hdr">
-      <h3>☀️ Good Morning — This Week's Schedule</h3>
+      <h3 id="morningTitle">☀️ Good Morning — This Week's Schedule</h3>
       <button onclick="closeMorningPopup()">✕</button>
     </div>
     <div class="morning-popup-body" id="morningPopupBody"></div>
@@ -3356,7 +3356,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.59';
+var APP_VERSION = '11.60';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -3368,7 +3368,7 @@ var APP_VERSION = '11.59';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'd08c278b';
+var APP_BUILD = '7c9a80c0';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -14642,16 +14642,62 @@ function submitLockMaterial(){
     .processMovement('lockMaterial', _h(payload));
 }
 
+/* QUIÉN LO CERRÓ, CUÁNDO Y POR QUÉ — antes de quitarlo.
+   ─────────────────────────────────────────────────────
+   Jose: "al desbloquear deberíamos decir quién lo hizo y mostrar la razón que
+   dio esa persona". Y añadió lo que lo hace fácil: "ya tenemos la información,
+   sólo hay que mostrarla". Es exactamente así — el motivo, quién y cuándo
+   viajan en cada candado desde que existen, y aquí sólo se veían pasando el
+   ratón por encima de un icono diminuto.
+
+   Ese sitio es el equivocado. Un candado lo pone alguien PARA QUE NADIE TOQUE
+   ESE MATERIAL, casi siempre porque está apartado para una obra o hay algo mal
+   con él. Quien va a quitarlo es justo quien necesita leer el motivo, y es
+   justo el momento en que puede parar. Esconderlo en un tooltip es enseñárselo
+   a quien pasa por al lado y no a quien va a decidir. */
+function _lockById(lockId){
+  var out = null;
+  (materialLocks || []).forEach(function(l){ if (l.id === lockId) out = l; });
+  return out;
+}
+
 function unlockMaterialConfirm(lockId, name){
+  var lock = _lockById(lockId);
+  var lineas = [];
+
+  if (lock && lock.lockedBy){
+    lineas.push('Locked by ' + lock.lockedBy +
+      (lock.lockedAt ? ' on ' + lock.lockedAt : '') + '.');
+  }
+  if (lock && String(lock.reason || '').trim()){
+    // Entre comillas y tal cual se escribió. Es lo que dijo una persona, no un
+    // estado que la app calculó, y resumirlo o recortarlo sería ponerle
+    // palabras en la boca.
+    lineas.push('Their reason: "' + lock.reason + '"');
+  } else if (lock){
+    // Decirlo es mejor que dejar el hueco: "no dio ninguna" es una respuesta,
+    // y un espacio en blanco parece que la app perdió el dato.
+    lineas.push('They did not give a reason.');
+  }
+  if (lock && lock.allowedDest && lock.allowedDest.length){
+    lineas.push('It could only be moved to: ' + lock.allowedDest.join(', ') + '.');
+  }
+
+  lineas.push('');
+  lineas.push('Unlocking it makes it exit-able and unrestricted again at this rack.');
+
   _showConfirm({
     icon: '🔓', title: 'Unlock ' + name + '?',
-    message: 'This material will be exit-able and unrestricted again at this rack.',
+    message: lineas.join('\n'),
     confirmText: 'Unlock', danger: false,
     onConfirm: function(){ _doUnlockMaterial(lockId); }
   });
 }
 
 function _doUnlockMaterial(lockId){
+  // Se lee ANTES de quitarlo de la lista: después ya no está, y el aviso se
+  // quedaría sin poder decir qué material se soltó.
+  var lock = _lockById(lockId);
   google.script.run
     .withSuccessHandler(function(res){
       materialLocks = materialLocks.filter(function(l){ return l.id !== lockId; });
@@ -14665,7 +14711,9 @@ function _doUnlockMaterial(lockId){
         showToast('🔓 Already unlocked — someone else got there first. ' +
                   'Nothing left to do.', 'info', 5000);
       } else {
-        showToast('🔓 Unlocked.', 'ok');
+        showToast('🔓 Unlocked' +
+          (lock && lock.name ? ' — ' + lock.name + (lock.rack ? ' at ' + lock.rack : '') : '') +
+          '.', 'ok');
       }
       if (_openRackName) openRackDrawer(_openRackName);
       renderStock();
@@ -15962,7 +16010,32 @@ function _refreshMorningPopup(){
   showMorningPopup(quedan, todayStr);
 }
 
+// El saludo, según la hora que es de verdad. Jose, a las 8 de la tarde: "la
+// ventana de los incomings me dice buenos días". Estaba escrito a mano en el
+// HTML, así que decía "Good Morning" a cualquier hora — y una app que saluda
+// como si fueran las siete de la mañana a las ocho de la tarde da la impresión
+// de no saber nada de lo que está pasando, que es justo lo contrario de lo que
+// esta ventana intenta transmitir.
+//
+// Se pregunta al reloj cada vez que se abre, no al cargar la página: alguien
+// que deja la app abierta toda la tarde tiene que ver cambiar el saludo con
+// ella.
+function _timeOfDayGreeting(){
+  var h = new Date().getHours();
+  if (h < 12) return { icon: '☀️', text: 'Good morning' };
+  if (h < 18) return { icon: '🌤️', text: 'Good afternoon' };
+  return { icon: '🌙', text: 'Good evening' };
+}
+
+function _applyMorningGreeting(){
+  var el = document.getElementById('morningTitle');
+  if (!el) return;
+  var g = _timeOfDayGreeting();
+  el.textContent = g.icon + ' ' + g.text + " — This Week's Schedule";
+}
+
 function showMorningPopup(items, todayStr) {
+  _applyMorningGreeting();
   var todayItems = items.filter(function(i){ return _incOnDay(i, todayStr); });
   var restItems  = items.filter(function(i){ return !_incOnDay(i, todayStr); });
 
