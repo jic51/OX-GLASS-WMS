@@ -59,6 +59,7 @@ function fnSrc(src, name){
   }
   throw new Error('sin cerrar: ' + name);
 }
+function fnSrcOf(name){ return fnSrc(HTML, name); }
 function varSrc(name){
   const re = new RegExp('^var ' + name + '\\s*=[^;]*;', 'm');
   const m = HTML.match(re);
@@ -72,12 +73,18 @@ function varSrc(name){
 function navegador(opts){
   opts = opts || {};
   const avisos = [], consola = [], botones = [];
-  let ahora = 0;
+  let ahora = 0, idSeq = 0;
   const timers = [];
 
   const ctx = vm.createContext({
     Math, Date, String, Number, JSON, Array, Object, RegExp,
-    setTimeout: (fn, ms) => { timers.push({ at: ahora + (ms || 0), fn }); return timers.length; },
+    setTimeout: (fn, ms) => { timers.push({ id: ++idSeq, at: ahora + (ms || 0), fn }); return idSeq; },
+    // clearTimeout de verdad: quita el temporizador de la lista. Uno fingido
+    // dejaría correr veinte recargas y la prueba diría que hay veinte cuando el
+    // código sólo pidió una.
+    clearTimeout: (id) => {
+      for (let i = 0; i < timers.length; i++) if (timers[i].id === id) { timers.splice(i, 1); return; }
+    },
     console: { warn: (...a) => consola.push(a.join(' ')), log(){}, error(){} },
     showToast: (msg, kind, ms) => avisos.push({ msg: String(msg), kind: kind, ms: ms }),
     _btnBusy:  (b, t) => { if (b) { b.estado = 'busy'; b.texto = t; } botones.push('busy'); },
@@ -104,7 +111,7 @@ function navegador(opts){
     enVuelo++; if (enVuelo > maxEnVuelo) maxEnVuelo = enVuelo;
     const r = opts.responder ? opts.responder(llamadas.length, metodo, args) : { ok: {} };
     // La respuesta llega en el siguiente turno, como una de verdad.
-    timers.push({ at: ahora, fn: function(){
+    timers.push({ id: ++idSeq, at: ahora, fn: function(){
       enVuelo--;
       if (r.err) handlers.fail(typeof r.err === 'string' ? new Error(r.err) : r.err);
       else handlers.ok(r.ok || {});
@@ -345,6 +352,66 @@ console.log('\n═══ el check no sobrevive a irse de la pantalla ═══\n
   const masFilas = HTML.slice(HTML.indexOf('_movPage++'), HTML.indexOf('_movPage++') + 400);
   check('"load more" NO lo limpia — es la misma página, sólo que más larga',
         masFilas.indexOf('_clearMovSelection') === -1);
+}
+
+console.log('\n═══ veinte arreglos, UNA recarga ═══\n');
+{
+  // Cada "Apply" pedía por su cuenta una recarga COMPLETA del almacén. Veinte
+  // arreglos seguidos eran veinte barridos del archivo — cuota del dueño
+  // tirada, y lo que hizo pensar a Jose que el caché de la v11.58 había dejado
+  // de funcionar: cada recarga cambia el sello de los datos, y el sello es lo
+  // que invalida el caché.
+  const n = navegador({ responder: () => ({ ok: { rows: 1 } }) });
+  let recargas = 0;
+  n.ctx.loadDataFromGoogle = () => { recargas++; };
+  n.run(varSrc('_reloadTimer') + '\n' + fnSrcOf('_reloadWhenIdle'));
+
+  for (let i = 0; i < 20; i++){
+    n.run(`_acWrite({ args:['applyDataQualityFix', {}], ok: function(){ _reloadWhenIdle(); } });`);
+  }
+  n.correr();
+
+  check('los veinte arreglos llegaron al servidor',        n.llamadas.length === 20);
+  check('UNA SOLA RECARGA, no veinte (' + recargas + ')',  recargas === 1);
+  check('y no queda ningún temporizador colgado',          n.run('_reloadTimer') === null);
+}
+
+{
+  // Y la recarga espera a que la cola esté vacía: hacerla a medias daría una
+  // foto que hay que repetir igual.
+  const n = navegador({ responder: () => ({ ok: {} }) });
+  const orden = [];
+  n.ctx.loadDataFromGoogle = () => orden.push('recarga');
+  n.run(varSrc('_reloadTimer') + '\n' + fnSrcOf('_reloadWhenIdle'));
+  n.run(`
+    _acWrite({ args:['a', {}], ok: function(){ _reloadWhenIdle(); } });
+    _acWrite({ args:['b', {}], ok: function(){ _reloadWhenIdle(); } });
+    _acWrite({ args:['c', {}], ok: function(){ _reloadWhenIdle(); } });
+  `);
+  n.correr();
+  check('la recarga va DESPUÉS de que la cola se vacíe',
+        orden.length === 1 && n.run('_wq.length') === 0 && n.run('_wqBusy') === false);
+}
+
+console.log('\n═══ lo que ya se encontró se vuelve a pintar ═══\n');
+{
+  // Jose aplicó veinte arreglos, cerró la ventana y al volver no había nada.
+  // _dqFindings nunca se perdió: el render reconstruía el recuadro con sólo el
+  // botón y no volvía a dibujar lo que seguía en memoria.
+  const sys = fnSrc(HTML, '_renderSystemTab');
+  check('al dibujar la pestaña System se repintan los hallazgos que siguen en memoria',
+        /if \(_dqFindings\.length\) _drawDataCheck\(/.test(sys));
+  // El botón "Check my data" lleva onclick="_runDataCheck()" en su marcado, y
+  // eso NO es una llamada — es texto dentro de un atributo. Buscar el nombre a
+  // secas daba positivo sobre código correcto.
+  check('...y NO se vuelve a escanear solo, que costaría un barrido entero del ' +
+        'archivo para enseñar algo que ya se sabe',
+        !/(^|[^"'])_runDataCheck\(\)\s*;/.test(sys));
+  check('el resultado entero se guarda, no sólo los hallazgos — hace falta para ' +
+        'la frase "los N mayores de M"',
+        /_dqLast\s*=\s*res \|\| \{\}/.test(HTML));
+  check('y el fallo de "Check my data" tampoco enseña ya el error crudo',
+        /Could not check: ' \+ _humanErr\(err\)/.test(HTML));
 }
 
 console.log('\n' + (fail ? '✗ ' + fail + ' fallo(s), ' : '✓ ') + ok + ' comprobacion(es) ok\n');

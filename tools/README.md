@@ -18,6 +18,7 @@ node tools/test-rack-drawer.js
 node tools/test-backup-status.js
 node tools/test-backup-backfill.js
 node tools/test-tooltip-edge.js
+node tools/test-tip-in-settings.js
 node tools/test-splash-notes.js
 node tools/test-account-tooltip.js
 node tools/test-favicon.js

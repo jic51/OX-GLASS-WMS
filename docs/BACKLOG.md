@@ -130,9 +130,10 @@ Una cola que sobreviva a cerrar la ventana necesita una hoja de pendientes y un
 disparador que los vaya sacando. Funciona — y **gasta cuota de Apps Script, que
 es del DUEÑO de la copia, no de cada usuario**. Es una decisión de negocio.
 
-Mi recomendación: esperar. Que la del navegador esté en producción y ver si
-alguien pierde algo de verdad. Construir la del servidor por si acaso es pagar
-cuota todos los días por un problema que quizá no existe.
+**DECIDIDO por Jose el 2026-09-09: esperar.** Que la del navegador esté en
+producción y ver si alguien pierde algo de verdad. Construir la del servidor
+por si acaso es pagar cuota todos los días por un problema que quizá no
+existe.
 
 **¿EL CORREO DE UNA MODIFICACIÓN A CUÁNTOS ADMINS?** Hoy va a UNO: el campo
 Admin Email de CONFIG (columna H, fila 2). En la instalación de Jose está
@@ -146,7 +147,89 @@ los crea la identidad del script (el dueño) y **no se comparten con nadie** —
 sólo se ven A TRAVÉS de la app, que los abre como dueño y entrega los bytes.
 Así que un ADMIN de la app no tiene esos documentos en su Drive.
 
-Pendiente de decidir por él: uno, todos los ADMIN, o una lista aparte.
+**DECIDIDO por Jose el 2026-09-09:** *"podemos poner una lista para elegir con
+un check mark de todos los que hay en la lista que son admins."* Mejor que las
+tres opciones que le di. Queda como trabajo pendiente, no como pregunta.
+
+Y confirmado en el código lo que él sospechaba: los archivos los crea la
+identidad del script (el dueño de la copia) y **no se comparten con nadie** —
+sólo se ven A TRAVÉS de la app, que los abre como dueño y entrega los bytes. Un
+ADMIN de la app no los tiene en su Drive. Su razonamiento se sostiene entero:
+el correo le da *"un poquito más de información pero no la suficiente para ser
+un admin completo"*.
+
+### ✅ HECHO (v11.65) — LA AYUDA SALE DONDE SE ESTÁ MIRANDO
+
+**LA CAUSA, MEDIDA EN UN NAVEGADOR DE VERDAD Y NO DEDUCIDA.** Jose fotografió
+todos los iconos de información de Ajustes sacando su burbuja un par de
+centímetros por debajo y dibujándola detrás de los recuadros. Abrí la app en
+Chromium y le pregunté al icono quién manda sobre él:
+
+    LABEL  →  transform: matrix(1, 0, 0, 1, 0, -7.5)
+
+`#settingsTabContent > .field > label:first-child` lleva
+`transform: translateY(-50%)` — es lo que sube el título encima de la línea del
+recuadro. Y en CSS, un elemento con `transform` **pasa a ser el marco de
+referencia de todo `position:fixed` que tenga dentro**, además de crear su
+propia capa de apilado. La burbuja calculaba sus coordenadas contra la VENTANA
+y las aplicaba contra ese label.
+
+**Las dos cosas que Jose ve —desplazada y detrás— son una sola.**
+
+**POR QUÉ NO SE ARREGLÓ QUITANDO ESE transform**, que era lo obvio y lo barato:
+porque deja la trampa puesta. `transform`, `filter`, `will-change`, `contain` y
+`perspective` hacen todos lo mismo, y el día que alguien anime cualquier otro
+recuadro vuelve el fallo, en otro sitio y sin relación aparente. Jose eligió
+"la de verdad" y tenía razón.
+
+Ahora la burbuja es **un solo div colgado del `<body>`**: no tiene encima más
+que el body, así que ningún overflow la recorta y ningún transform la mueve. Es
+literalmente lo que pidió — *"debe aparecer sobre todo y donde se lo pueda leer
+completo"*.
+
+**DOS COSAS QUE SALIERON GRATIS AL HACERLO BIEN:**
+- Se mide la burbuja DE VERDAD en vez de dar por hecho un ancho de 240. Un
+  texto corto ocupa 120 y se le empujaba como si ocupara el doble.
+- Aparece el tercer caso que el código viejo no tenía: si no cabe ni debajo ni
+  encima (ventana baja), se pone donde más sitio hay en vez de salirse.
+
+**Y UNA QUE ENSEÑÓ LA PROPIA PRUEBA.** Puse "al hacer scroll, esconderla" —
+parecía correcto. La prueba lo tumbó: al llegar a un icono CON EL TECLADO, el
+navegador desplaza la página para enseñarlo, y la ayuda se iba en el mismo
+instante en que se acababa de pedir. Ahora **sigue a su icono**, y sólo se va
+cuando el icono sale de la ventana.
+
+**POR QUÉ NO LO VIO NINGUNA PRUEBA, que es la parte que más importa:**
+`tools/test-tooltip-edge.js` **se fabrica sus propios iconos** en un div suelto
+y los mide ahí. Nunca abrió el panel de Ajustes. Es el error de siempre — *una
+prueba que se construye su propio entorno mide ESE ENTORNO, no el producto.*
+
+`tools/test-tip-in-settings.js` existe para no repetirlo: carga el
+Index_v3_fixed.html de verdad, abre el panel de verdad, y mide los cinco iconos
+que Jose fotografió. Comprobado que sirve: devolviendo la burbuja dentro del
+label, falla reproduciendo la foto — **136 px abajo, 306 px a la derecha, y
+detrás**.
+
+**Y OBLIGÓ A REESCRIBIR `test-account-tooltip-delay.js`**, que leía la propiedad
+`transition-delay` del `::after`. Ya no hay `::after`. Ahora mide LA CONDUCTA:
+al segundo de pasar el ratón no está, a los cuatro y medio sí. Es lo que la
+persona ve, no un sustituto de ello.
+
+---
+
+**CHECK MY DATA RECUERDA LO QUE ENCONTRÓ.** Jose aplicó unos veinte arreglos,
+cerró la ventana y al volver *"ya no hay ningún dato en la ventana en la parte
+de data"*. `_dqFindings` **nunca se perdió** — sigue en memoria toda la sesión.
+El render reconstruía el recuadro con sólo el botón y no volvía a dibujar lo
+que ya tenía. Volver a escanear habría sido la respuesta fácil y la equivocada:
+un barrido entero del archivo para enseñar algo que ya se sabe.
+
+**UNA RECARGA AL FINAL, NO UNA POR ARREGLO.** Cada "Apply" pedía por su cuenta
+una recarga COMPLETA del almacén: veinte arreglos, veinte barridos. Eso es
+cuota del DUEÑO tirada, y es lo que le hizo pensar que el caché de la v11.58
+había dejado de funcionar — cada recarga cambia el sello de los datos, y el
+sello es justo lo que invalida el caché. **El caché estaba bien**; lo que
+estaba mal es que veinte arreglos fueran veinte recargas.
 
 ### ✅ HECHO (v11.64) — "OCUPADO" DEJA DE PARECER UN FALLO DE LA PERSONA
 

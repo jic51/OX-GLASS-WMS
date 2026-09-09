@@ -79,35 +79,47 @@ async function classesOf(page, id) {
   await page.goto('file://' + f);
   await page.waitForTimeout(300);
 
-  // El rectángulo que el navegador dibuja de verdad para el ::after. Es la
-  // única forma de saber dónde acabó: un pseudo-elemento no está en el DOM.
+  /* EL RECTÁNGULO DE VERDAD, medido sobre el elemento de verdad.
+   *
+   * Hasta la v11.65 esta función reconstruía la caja a mano a partir del ancho
+   * del ::after y de las variables --tip-x / --tip-y, porque un pseudo-elemento
+   * no está en el DOM y no se le puede preguntar dónde acabó. Era un cálculo
+   * paralelo al del producto: si los dos se equivocaban igual, la prueba pasaba.
+   *
+   * Ahora la burbuja es #acTip, un div colgado del <body> (ver _tipShow), y se
+   * le pregunta directamente. "Arriba" también deja de ser una clase que hay que
+   * creerse y pasa a ser un hecho: la burbuja está por encima del icono o no
+   * está. */
   async function bubble(id){
     return page.evaluate((id) => {
       const el = document.getElementById(id);
-      const cs = getComputedStyle(el, '::after');
-      const w = parseFloat(cs.width), h = parseFloat(cs.height);
-      const x = parseFloat(el.style.getPropertyValue('--tip-x'));
-      const y = parseFloat(el.style.getPropertyValue('--tip-y'));
-      const arriba = el.classList.contains('tip-above');
+      const t  = document.getElementById('acTip');
+      if (!t) return null;
+      const r = t.getBoundingClientRect();
+      const a = el.getBoundingClientRect();
       return {
-        left: x - w / 2, right: x + w / 2,
-        top:  arriba ? (y - h) : y,
-        bottom: arriba ? y : (y + h),
-        arriba: arriba, fija: cs.position
+        left: r.left, right: r.right, top: r.top, bottom: r.bottom,
+        arriba: r.bottom <= a.top + 1,
+        fija: getComputedStyle(t).position,
+        padre: t.parentElement.tagName
       };
     }, id);
   }
 
   console.log('\nLa burbuja se dibuja fuera de todo overflow');
   await page.hover('#iconMid');
-  await page.waitForTimeout(80);
+  await page.waitForTimeout(260);
   let b = await bubble('iconMid');
   check('el tooltip es position:fixed — lo que lo saca del panel que lo ' +
         'recortaba (' + b.fija + ')', b.fija === 'fixed');
+  // Y desde la v11.65, además, cuelga del <body>: es lo que hace que ningún
+  // transform de ningún ancestro lo pueda mover ni tapar. Ver
+  // tools/test-tip-in-settings.js, que es donde eso se mide en su propio sitio.
+  check('...y cuelga del <body>, no del icono (' + b.padre + ')', b.padre === 'BODY');
 
   console.log('\nIcono pegado al borde IZQUIERDO');
   await page.hover('#iconLeft');
-  await page.waitForTimeout(80);
+  await page.waitForTimeout(260);
   b = await bubble('iconLeft');
   check('la burbuja no se sale por la izquierda (borde en ' + Math.round(b.left) + 'px)',
     b.left >= 0);
@@ -116,14 +128,14 @@ async function classesOf(page, id) {
 
   console.log('\nIcono en MEDIO');
   await page.hover('#iconMid');
-  await page.waitForTimeout(80);
+  await page.waitForTimeout(260);
   b = await bubble('iconMid');
   check('la burbuja queda centrada sobre su icono, sin correrse',
     Math.abs((b.left + b.right) / 2 - 508) < 12);
 
   console.log('\nIcono pegado al borde DERECHO');
   await page.hover('#iconRight');
-  await page.waitForTimeout(80);
+  await page.waitForTimeout(260);
   b = await bubble('iconRight');
   check('la burbuja no se sale por la derecha (borde en ' + Math.round(b.right) +
         'px de 1000)', b.right <= 1000);
@@ -137,7 +149,7 @@ async function classesOf(page, id) {
     el.style.left = '500px';
   });
   await page.hover('#iconMid');
-  await page.waitForTimeout(80);
+  await page.waitForTimeout(260);
   b = await bubble('iconMid');
   check('sin sitio debajo, la burbuja se voltea encima del icono', b.arriba === true);
   check('...y queda entera dentro de la ventana (arriba en ' + Math.round(b.top) + 'px)',

@@ -1,9 +1,16 @@
 // Verifies the account button's tooltip has a 4s hover delay — Jose: unlike
 // the instant info icons, this one is for someone who lingers, not a quick
-// glance. Checks the actual computed transition-delay Chromium will use
-// (not a wait-4-seconds-and-hope test — CSS transitions run on the
-// compositor's own clock, not page.clock's faked JS timers, so this reads
-// the real value the browser would animate with instead).
+// glance.
+//
+// CAMBIÓ DE PREGUNTA EN LA v11.65, y el cambio es a mejor. Antes leía la
+// propiedad `transition-delay` del ::after del botón, que es un sustituto de lo
+// que importa. Ahora la burbuja no es un ::after: es un solo div colgado del
+// <body> —ver _tipShow— porque un ::after queda a merced del `transform` de
+// cualquier ancestro, que es el fallo que Jose fotografió en Ajustes.
+//
+// Así que se mide LA CONDUCTA: se pasa el ratón por encima, se mira al segundo
+// (no tiene que estar) y a los cuatro y medio (tiene que estar). Una propiedad
+// puede estar puesta y la burbuja no salir; esto es lo que la persona ve.
 //
 // Usage:  node tools/test-account-tooltip-delay.js [path/to/Index_v3_fixed.html]
 
@@ -53,25 +60,54 @@ function check(label, cond) {
   await page.goto('file://' + f);
   await page.waitForTimeout(300);
 
-  console.log('\nScenario: not hovering — no delay to speak of, tooltip simply is not shown');
-  check('opacity is 0 at rest', await page.evaluate(() =>
-    getComputedStyle(document.getElementById('acctBtn'), '::after').opacity) === '0');
-
-  console.log('\nScenario: hovering the account button — 4 second delay before it would appear');
-  await page.hover('#acctBtn');
-  check('transition-delay is 4s while hovering', await page.evaluate(() =>
-    getComputedStyle(document.getElementById('acctBtn'), '::after').transitionDelay) === '4s');
-
-  console.log('\nScenario: a table-header info tooltip is unaffected — the 4s delay is scoped to the account button only');
-  const anyOtherTip = await page.evaluate(() => document.querySelector('.tip:not(#acctBtn)'));
-  check('found another .tip element to compare against', !!anyOtherTip);
-  await page.hover('.tip:not(#acctBtn) >> nth=0').catch(() => {});
-  const otherDelay = await page.evaluate(() => {
-    var el = document.querySelector('.tip:not(#acctBtn)');
-    return el ? getComputedStyle(el, '::after').transitionDelay : null;
+  // La burbuja es una sola para toda la app y se crea la primera vez que hace
+  // falta, así que "no se ve" es tanto no existir como existir transparente.
+  const visible = () => page.evaluate(() => {
+    var t = document.getElementById('acTip');
+    return !!t && Number(getComputedStyle(t).opacity) > 0.5;
   });
-  check('other tooltips still show instantly (0s delay), not stuck waiting 4s too (' + otherDelay + ')',
-    !!otherDelay && otherDelay.split(',').every(d => d.trim() === '0s'));
+
+  console.log('\nScenario: not hovering — the tooltip is simply not shown');
+  check('nothing is showing at rest', (await visible()) === false);
+
+  console.log('\nScenario: hovering the account button — still nothing one second in');
+  await page.hover('#acctBtn');
+  await page.waitForTimeout(1000);
+  check('one second of hovering shows nothing — this one is for someone who lingers',
+    (await visible()) === false);
+
+  console.log('\nScenario: still hovering past four seconds — now it appears');
+  await page.waitForTimeout(3800);
+  check('it appears after about four seconds', (await visible()) === true);
+
+  console.log('\nScenario: moving away hides it again, with no delay of its own');
+  await page.mouse.move(5, 5);
+  await page.waitForTimeout(350);
+  check('leaving dismisses it promptly', (await visible()) === false);
+
+  console.log('\nScenario: an info icon is unaffected — the 4s wait is the account button only');
+  // VISIBLE, no el primero que haya. Media app está en pestañas ocultas, y
+  // pasar el ratón por encima de algo de ancho cero no dispara nada — la
+  // comprobación decía "no sale al instante" sobre código correcto.
+  const otro = await page.evaluate(() => {
+    var els = document.querySelectorAll('.tip:not(#acctBtn)');
+    for (var i = 0; i < els.length; i++) {
+      var r = els[i].getBoundingClientRect();
+      if (r.width > 0 && r.height > 0 && r.top >= 0 && r.bottom <= window.innerHeight &&
+          els[i].getAttribute('data-tip')) {
+        if (!els[i].id) els[i].id = 'otroTipProbe';
+        return els[i].id;
+      }
+    }
+    return null;
+  });
+  check('found another .tip element to compare against', !!otro);
+  if (otro) {
+    await page.hover('#' + otro).catch(() => {});
+    await page.waitForTimeout(300);
+    check('other tooltips still show instantly, not stuck waiting 4s too',
+      (await visible()) === true);
+  }
 
   check('no page errors', pageErrors.length === 0);
   if (pageErrors.length) pageErrors.forEach(e => console.log('  PAGE ERROR:', e));

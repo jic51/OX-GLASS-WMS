@@ -97,6 +97,35 @@
        almacén?</p>
 
     <div class="entry">
+      <span class="ver">v11.65</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Las burbujas de ayuda salen donde estás mirando</h3>
+      <p>Cada <em>i</em> pequeña de Ajustes ponía su explicación un par de
+         centímetros por debajo de su icono y la dibujaba detrás de los recuadros
+         de al lado. La causa era una línea: el título de cada recuadro se sube a
+         su línea de borde con un transform de CSS, y un transform pasa a ser en
+         silencio el marco de referencia de todo lo que se posicione dentro.</p>
+      <p>En vez de quitar esa subida, la burbuja vive ahora fuera de todos los
+         recuadros. Nada de la página la puede recortar, mover ni tapar — ni este
+         recuadro, ni el que se decore el año que viene. Además se acomoda sola
+         en ventanas bajas en vez de salirse por abajo, y se aparta al hacer
+         scroll.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.65</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Check my data recuerda lo que encontró</h3>
+      <p>Cerrar Ajustes y volver a abrirlo mostraba el recuadro vacío, como si el
+         barrido no se hubiera hecho nunca. Los hallazgos nunca se perdieron — el
+         panel simplemente se reconstruía sin dibujarlos. Ahora vuelven, sin
+         volver a escanear.</p>
+      <p>Y aplicar una tanda de arreglos pide una sola recarga al final en vez de
+         una por arreglo. Veinte arreglos eran veinte lecturas completas del
+         almacén.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.64</span>
       <span class="tag fix">Arreglo</span>
       <h3>"Sistema ocupado" deja de parecer algo que rompiste tú</h3>

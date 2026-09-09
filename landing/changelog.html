@@ -95,6 +95,35 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.65</span>
+      <span class="tag fix">Fix</span>
+      <h3>The help bubbles appear where you are looking</h3>
+      <p>Every small <em>i</em> in Settings put its explanation a couple of
+         centimetres below its icon and drew it behind the boxes around it. The
+         cause was one line: the heading of each box is lifted onto its border
+         line with a CSS transform, and a transform quietly becomes the frame of
+         reference for anything positioned inside it.</p>
+      <p>Rather than remove that lift, the bubble now lives outside every box
+         entirely. Nothing on the page can clip it, shift it or draw over it —
+         not this box, and not whatever gets styled next year. It also fits
+         itself into short windows instead of running off the bottom, and it
+         gets out of the way when you scroll.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.65</span>
+      <span class="tag fix">Fix</span>
+      <h3>Check my data remembers what it found</h3>
+      <p>Closing Settings and opening it again showed an empty box, as if the
+         scan had never run. The findings were never lost — the panel simply
+         rebuilt itself without drawing them. They come back now, without
+         re-scanning.</p>
+      <p>And applying a run of fixes asks for one refresh at the end instead of
+         one per fix. Twenty fixes used to mean twenty full reads of the whole
+         warehouse.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.64</span>
       <span class="tag fix">Fix</span>
       <h3>"System busy" stops looking like something you broke</h3>

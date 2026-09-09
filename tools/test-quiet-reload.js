@@ -98,8 +98,16 @@ const DEBEN_SER_SILENCIOSAS = [
   ['borrar una entrega esperada', /Expected delivery deleted[\s\S]{0,400}?loadDataFromGoogle\(true, true\)/],
   ['importar un archivo',         /importFileInput[\s\S]{0,400}?loadDataFromGoogle\(true, true\)/],
   ['rehacer los totales',         /Stock totals rebuilt[\s\S]{0,400}?loadDataFromGoogle\(true, true\)/],
+  // Desde la v11.65 este camino no llama a loadDataFromGoogle directamente:
+  // veinte arreglos seguidos pedían veinte recargas completas, así que pasa por
+  // _reloadWhenIdle, que espera a que la cola se vacíe y recarga UNA vez. La
+  // garantía que protege esta prueba no cambia —refrescar sin desarmar el
+  // tablero— así que se sigue el desvío en vez de aflojar la comprobación: las
+  // dos mitades tienen que estar.
   ['arreglar datos desde "Check my data"',
-                                  /merging two materials[\s\S]{0,400}?loadDataFromGoogle\(true, true\)/]
+                                  /merging two materials[\s\S]{0,400}?_reloadWhenIdle\(\)/],
+  ['...y la recarga que ese desvío acaba pidiendo',
+                                  /function _reloadWhenIdle\(\)[\s\S]{0,700}?loadDataFromGoogle\(true, true\)/]
 ];
 DEBEN_SER_SILENCIOSAS.forEach(([que, patron]) => {
   check(que + ': refresca sin desarmar el tablero', patron.test(src));
