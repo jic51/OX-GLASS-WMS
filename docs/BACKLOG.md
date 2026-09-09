@@ -106,6 +106,67 @@ sin ninguna acción al lado.
 
 ---
 
+### ✅ HECHO (v11.63) — UN PO ESCRITO "07-6329" SE QUEDA "07-6329"
+
+**EL FALLO ERA MÍO Y LO ENCONTRÓ JOSE**, borrando tres movimientos y
+devolviéndolos desde la papelera el 2026-09-09.
+
+Google Sheets INTERPRETA lo que se le da. `setValues("07-6329")` no guarda esos
+ocho caracteres: lee "mes 07, año 6329", guarda el número 1617842 y le cuelga un
+formato de fecha. El PO ya no está en la celda.
+
+    "07-6329"  →  copiado a MOVEMENT_TRASH  →  1617842  (una fecha, en silencio)
+    1617842    →  devuelto al archivo       →  un PO que nunca existió
+
+Palabras suyas: *"está dando un dato que no existe y borrando uno que sí"*. Las
+dos mitades son ciertas y la segunda es la peor.
+
+**ÉL HIZO EL DIAGNÓSTICO, NO YO.** Vio que `7/1/6329` y `1617842` eran el mismo
+valor con dos formatos, y que `07-6593` de JJF 109 estaba bien en tres filas y
+roto en una. Yo había propuesto antes conectar `safeStr_` en el lector, y era
+**peor que no hacer nada**: esa función devuelve VACÍO ante una fecha, o sea que
+la app habría tapado el problema borrando el dato — justo la mitad de su queja.
+Lo retiré.
+
+**EL ALCANCE REAL ERA MAYOR QUE LA PAPELERA.** El mismo `setValues` estaba en
+seis sitios: guardar, editar, copiar a la papelera, restaurar y las dos mitades
+de la rotación de las 3am. Más las tres hojas derivadas y las cuatro columnas
+del catálogo. La papelera fue sólo la primera en dispararse porque las otras
+hojas de Jose son viejas y llevan formato de texto puesto a mano. **UNA
+INSTALACIÓN NUEVA no lo lleva** — ahí el archivo lo crea `insertSheet`, con
+formato automático, y el PO se habría roto en el primer guardado.
+
+**EL ARREGLO:** `textCell_` pone una comilla delante de CADA cadena, y
+`textSafeRow_` la aplica a la fila entera. Los números, las fechas y los
+booleanos pasan intactos.
+
+- La comilla **no forma parte del valor**: `getValue()` devuelve `"07-6329"`.
+- Por eso se pone a todas las cadenas y no sólo a las que "parecen fecha":
+  decidir cuáles significa reimplementar el parser de Sheets y equivocarse la
+  primera vez que los dos no coincidan.
+- **Ninguna lista de "qué columnas son texto" aparece en el arreglo.** Una lista
+  así envejece — igual que `colCount = 20` en `archiveOldMovements` envejeció
+  cuando llegaron las dos columnas de costo. La fila ya trae sus propios tipos.
+
+**LO QUE CAMBIA A LA VISTA:** un PO escrito sólo con dígitos se guarda ahora
+como texto, así que queda a la izquierda de la celda en vez de a la derecha. Un
+PO es una etiqueta, no una cantidad.
+
+**LO QUE NO REPARA:** las filas ya rotas. Un valor ya convertido perdió el
+original dentro de la celda, y la única fuente honesta es el resto de filas que
+todavía lo tienen. Jose decidió corregirlas a mano: *"yo voy a modificar
+manualmente los PO's, tu preocupate por que el error no vuelva a pasar."*
+
+`tools/test-text-stays-text.js` — 33 comprobaciones. **La hoja falsa PARSEA como
+Sheets**, que es la única parte que importa: una hoja de mentira que guardara
+las cadenas tal cual no podría enseñar este fallo jamás. Comprueba la ida Y la
+vuelta, y dos ciclos completos, porque uno solo no distingue "no se rompe" de
+"se rompe una vez y ya está roto".
+
+**Y OBLIGÓ A ARREGLAR CUATRO PRUEBAS VIEJAS**, que es la parte que más dice: sus
+hojas falsas no sabían que Sheets se come la comilla al guardar. Una hoja falsa
+que no se porta como la de verdad es exactamente lo que dejó pasar este fallo.
+
 ### ✅ HECHO (v11.62) — VARIAS LOCACIONES DE UNA VEZ, Y BORRAR UNA VACÍA
 
 **CREAR VARIAS.** El cuadro parte por comas: `A1A, A1B, A1C` crea tres. Las que

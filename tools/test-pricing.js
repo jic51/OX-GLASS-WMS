@@ -60,6 +60,15 @@ FakeSheet.prototype.getLastRow = function () { return this.rows.length; };
 // A real sheet has a fixed number of COLUMNS, separate from how many hold
 // data, and the real code asks — a sheet narrower than the row model cannot be
 // written to. 26 is what a new spreadsheet arrives with.
+// A LEADING APOSTROPHE IS NOT PART OF THE VALUE. Sheets uses it to mean "this
+// cell is text, do not parse it" and strips it on the way in — getValues()
+// returns "07-6329", never "'07-6329". Every writer in the app now quotes its
+// strings (see textCell_), so a fake sheet that kept the apostrophe would fail
+// every name comparison below for a reason that does not exist in production.
+function asSheets(v) {
+  return (typeof v === 'string' && v.charAt(0) === "'") ? v.slice(1) : v;
+}
+
 FakeSheet.prototype._maxCols = 26;
 FakeSheet.prototype.getMaxColumns = function () { return this._maxCols; };
 FakeSheet.prototype.insertColumnsAfter = function (after, n) { this._maxCols = this._maxCols + n; };
@@ -82,13 +91,13 @@ FakeSheet.prototype.getRange = function (r, c, nr, nc) {
         var rowIdx = r - 1 + i;
         while (self.rows.length <= rowIdx) self.rows.push([]);
         var row = self.rows[rowIdx];
-        for (var j = 0; j < vals[i].length; j++) row[c - 1 + j] = vals[i][j];
+        for (var j = 0; j < vals[i].length; j++) row[c - 1 + j] = asSheets(vals[i][j]);
       }
     },
     setValue: function (v) {
       var rowIdx = r - 1;
       while (self.rows.length <= rowIdx) self.rows.push([]);
-      self.rows[rowIdx][c - 1] = v;
+      self.rows[rowIdx][c - 1] = asSheets(v);
     },
     setNumberFormat: function () {}
   };
@@ -130,7 +139,7 @@ function buildSandbox() {
   ].forEach(function (code) { vm.runInContext(code, sandbox); });
 
   [
-    'round2_', 'normalizeString', 'cleanDisplay_', 'sheetSafe_', 'getMaterialId',
+    'round2_', 'normalizeString', 'cleanDisplay_', 'sheetSafe_', 'textCell_', 'textSafeRow_', 'getMaterialId',
     'statusForMoveType_', 'buildStockSnapshot_', 'applyMovementToSnapshot_',
     'getActiveLocksMap_', 'enforceMaterialLock_', 'loadConfig', 'saveAvgCostUpdates_',
     'ensureArchiveWidth_', 'newMovId_', 'uniqueMovId_', 'dedupeMovementIds_',

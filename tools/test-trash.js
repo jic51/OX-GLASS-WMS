@@ -89,6 +89,15 @@ function Hoja(nombre, filas, maxCols){
   this.rows = filas.map(r => r.slice());
   this._maxCols = maxCols || 30;
 }
+// La comilla NO forma parte del valor: Sheets la usa para decir "esto es texto,
+// no lo interpretes" y la quita al guardar — getValues() devuelve "07-6329", no
+// "'07-6329". Desde la v11.63 todo escritor de filas protege sus cadenas así
+// (ver textCell_), de modo que una hoja falsa que se quedara la comilla fallaría
+// cada comparación de nombre por un motivo que en producción no existe.
+function comoSheets(v){
+  return (typeof v === 'string' && v.charAt(0) === "'") ? v.slice(1) : v;
+}
+
 Hoja.prototype.getName        = function(){ return this.nombre; };
 Hoja.prototype.getLastRow     = function(){ return this.rows.length; };
 Hoja.prototype.getMaxColumns  = function(){ return this._maxCols; };
@@ -105,7 +114,7 @@ Hoja.prototype.getRange = function(r, c, nr, nc){
     getValue: () => (self.rows[r - 1] || [])[c - 1],
     setValue(v){
       while (self.rows.length < r) self.rows.push([]);
-      self.rows[r - 1][c - 1] = v;
+      self.rows[r - 1][c - 1] = comoSheets(v);
       return { setFontWeight: () => {} };
     },
     getValues(){
@@ -121,7 +130,7 @@ Hoja.prototype.getRange = function(r, c, nr, nc){
     setValues(vals){
       for (let i = 0; i < vals.length; i++) {
         while (self.rows.length <= r - 1 + i) self.rows.push([]);
-        for (let j = 0; j < vals[i].length; j++) self.rows[r - 1 + i][c - 1 + j] = vals[i][j];
+        for (let j = 0; j < vals[i].length; j++) self.rows[r - 1 + i][c - 1 + j] = comoSheets(vals[i][j]);
       }
     },
     setNumberFormat(){ return this; },
@@ -170,6 +179,7 @@ function mundo(){
     }
   });
   vm.runInContext([
+    fnSrc(GS, 'textCell_'), fnSrc(GS, 'textSafeRow_'),
     fnSrc(GS, 'padRow_'), fnSrc(GS, 'readWidth_'), fnSrc(GS, 'ensureArchiveWidth_'),
     fnSrc(GS, 'ensureTrashSheet_'), fnSrc(GS, 'findMovementById_'),
     fnSrc(GS, 'findTrashedById_'), fnSrc(GS, 'ensureArchiveHistorySheet_'),

@@ -73,6 +73,15 @@ function Hoja(nombre, filas, maxRows){
   this.rows = filas.map(r => r.slice());
   this._maxRows = maxRows || 200;
 }
+// La comilla NO forma parte del valor: Sheets la usa para decir "esto es texto,
+// no lo interpretes" y la quita al guardar. Desde la v11.63 writeConfigColumn_
+// protege así cada nombre del catálogo (una locación llamada "07-6329" se
+// convertía en fecha), de modo que una hoja falsa que se quedara la comilla
+// mediría el arreglo mal en las dos direcciones.
+function comoSheets(v){
+  return (typeof v === 'string' && v.charAt(0) === "'") ? v.slice(1) : v;
+}
+
 Hoja.prototype.getName       = function(){ return this.nombre; };
 Hoja.prototype.getLastRow    = function(){ return this.rows.length; };
 Hoja.prototype.getMaxRows    = function(){ return this._maxRows; };
@@ -89,7 +98,7 @@ Hoja.prototype.getRange = function(r, c, nr, nc){
     getValue: () => (self.rows[r - 1] || [])[c - 1],
     setValue(v){
       while (self.rows.length < r) self.rows.push([]);
-      self.rows[r - 1][c - 1] = v;
+      self.rows[r - 1][c - 1] = comoSheets(v);
       return { setFontWeight: () => {} };
     },
     getValues(){
@@ -105,7 +114,7 @@ Hoja.prototype.getRange = function(r, c, nr, nc){
     setValues(vals){
       for (let i = 0; i < vals.length; i++) {
         while (self.rows.length <= r - 1 + i) self.rows.push([]);
-        for (let j = 0; j < vals[i].length; j++) self.rows[r - 1 + i][c - 1 + j] = vals[i][j];
+        for (let j = 0; j < vals[i].length; j++) self.rows[r - 1 + i][c - 1 + j] = comoSheets(vals[i][j]);
       }
     },
     clearContent(){
@@ -172,7 +181,7 @@ function mundo(opts){
     ss: { getSheetByName: (n) => hojas[n] || null }
   });
 
-  ['writeConfigColumn_', 'saveLocationLayout', 'removedLocations_',
+  ['textCell_', 'writeConfigColumn_', 'saveLocationLayout', 'removedLocations_',
    'locationUsage_', 'locationBlockReason_', 'forgetRackPhotos_'].forEach(n => {
     vm.runInContext(fnSrc(GS, n), c);
   });

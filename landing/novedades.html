@@ -97,6 +97,29 @@
        almacén?</p>
 
     <div class="entry">
+      <span class="ver">v11.63</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Un PO escrito 07-6329 se queda 07-6329</h3>
+      <p>Google Sheets interpreta lo que se le da. Al recibir el texto
+         <code>07-6329</code> decidió que eso significaba <em>julio del año
+         6329</em>, guardó una fecha y tiró la orden de compra. El número que
+         salía después era uno que nadie había escrito nunca.</p>
+      <p>Apareció al borrar un movimiento y devolverlo desde la papelera, que es
+         el camino que copia una fila de una hoja a otra. Pero la misma línea de
+         código está en seis sitios — guardar, editar, la papelera, restaurar y
+         las dos mitades de la rotación nocturna del archivo — más los resúmenes
+         de existencias y las listas del catálogo. Todos escriben ahora el texto
+         como texto.</p>
+      <p>Dos consecuencias que conviene saber. Una orden de compra escrita sólo
+         con dígitos se guarda a partir de ahora como texto, así que queda a la
+         izquierda de la celda en vez de a la derecha: un PO es una etiqueta, no
+         una cantidad. Y las filas escritas antes de esta versión no se reparan
+         con ella — un valor ya convertido perdió el original dentro de la
+         celda, y la única fuente honesta para recuperarlo son las otras filas
+         que todavía lo tienen.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.62</span>
       <span class="tag new">Nuevo</span>
       <h3>Varias locaciones de una vez, y una vacía se puede borrar</h3>

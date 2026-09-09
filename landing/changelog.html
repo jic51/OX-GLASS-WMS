@@ -95,6 +95,28 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.63</span>
+      <span class="tag fix">Fix</span>
+      <h3>A PO number written 07-6329 stays 07-6329</h3>
+      <p>Google Sheets reads what it is given. Handed the text
+         <code>07-6329</code> it decided that meant <em>July, year 6329</em>,
+         stored a date, and threw the purchase order away. The number that came
+         back afterwards was one nobody had ever typed.</p>
+      <p>It showed up when deleting a movement and putting it back from the
+         trash, which is the path that copies a row between sheets. But the same
+         line of code sits in six places — saving, editing, the trash, the
+         restore, and both halves of the nightly archive rotation — plus the
+         stock summaries and the catalog lists. All of them now write text as
+         text.</p>
+      <p>Two consequences worth knowing. A purchase order typed as digits is
+         stored as text from now on, so it sits on the left of the cell instead
+         of the right: a PO is a label, not a quantity. And rows written before
+         this version are not repaired by it — a value already converted has
+         lost the original in the cell, and the only honest source for it is the
+         other rows that still carry it.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.62</span>
       <span class="tag new">New</span>
       <h3>Several locations at once, and an empty one can be deleted</h3>

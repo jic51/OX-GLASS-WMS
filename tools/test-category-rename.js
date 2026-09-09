@@ -239,7 +239,7 @@ console.log('\n═══ manageMaterial: matching on one column, writing another
     /auditLog_\(ss, 'DELETE_ROW'[\s\S]{0,220}found\.row/.test(body));
   check('...and the whole row goes to the trash before it goes anywhere else, at ' +
         'the trash sheet\'s own full width',
-    /trash\.getRange\([\s\S]{0,60}TRASH_WIDTH\)\.setValues\(\[saved\]\)/.test(body));
+    /trash\.getRange\([\s\S]{0,60}TRASH_WIDTH\)\.setValues\(\[textSafeRow_\(saved\)\]\)/.test(body));
 }
 
 console.log('\ncategory-rename: ' + (fail === 0 ? 'ok' : (fail + ' FAILED')));
