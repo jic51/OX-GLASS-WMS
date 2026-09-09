@@ -97,6 +97,35 @@
        almacén?</p>
 
     <div class="entry">
+      <span class="ver">v11.64</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>"Sistema ocupado" deja de parecer algo que rompiste tú</h3>
+      <p>Cuando dos personas guardan en el mismo momento, una espera. Eso es
+         normal y el sistema siempre lo ha manejado — pero se rendía a los trece
+         segundos y entonces escribía en pantalla su propia nota interna, con
+         marca y código de referencia incluidos. Ahora espera unas tres veces
+         más, en silencio, y el botón simplemente dice <em>Waiting…</em>.</p>
+      <p>Todas las pantallas que escriben pasan ahora por una sola cola, así que
+         tus propios dos clics ya no chocan entre sí. Seis de ellas no tenían
+         ninguna espera — entre ellas <em>Check my data</em>, donde aplicar un
+         arreglo fallaba sin más si alguien estaba guardando.</p>
+      <p>Y cuando algo de verdad no se puede hacer, el mensaje dice qué está mal
+         en vez de repetir "ocupado". Las marcas internas y la referencia de
+         soporte ya no aparecen en pantalla; la referencia se sigue guardando,
+         donde el soporte la puede buscar.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.64</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>El check de un movimiento se va cuando terminas con él</h3>
+      <p>Seleccionar un movimiento, editarlo y guardarlo dejaba la fila todavía
+         marcada, y cambiar de pestaña y volver también. La selección se limpia
+         ahora al guardar una edición y al salir de la pantalla — sólo sobrevive
+         mientras sigues en la misma página mirando la misma lista.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.63</span>
       <span class="tag fix">Arreglo</span>
       <h3>Un PO escrito 07-6329 se queda 07-6329</h3>

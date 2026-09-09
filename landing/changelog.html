@@ -95,6 +95,37 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.64</span>
+      <span class="tag fix">Fix</span>
+      <h3>"System busy" stops looking like something you broke</h3>
+      <p>When two people save at the same moment, one of them waits. That is
+         normal and the system has always handled it — but it used to give up
+         after about thirteen seconds and then print its own internal note on
+         the screen, marker and reference code included. It now waits about
+         three times longer, quietly, with the button simply saying
+         <em>Waiting…</em>.</p>
+      <p>Every screen that writes goes through one queue now, so your own two
+         clicks no longer collide with each other. Six of them previously had no
+         waiting at all — including <em>Check my data</em>, where applying a fix
+         would just fail if anyone else happened to be saving.</p>
+      <p>And when something genuinely cannot be done, the message says what is
+         actually wrong instead of repeating "busy". Internal markers and the
+         support reference no longer appear on screen; the reference is still
+         recorded, where support can find it.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.64</span>
+      <span class="tag fix">Fix</span>
+      <h3>The tick on a movement clears when you are done with it</h3>
+      <p>Selecting a movement, editing it and saving used to leave the row still
+         ticked, and so did switching to another tab and back. The selection now
+         clears when you save an edit and when you leave the screen — it only
+         survives while you are still on the same page looking at the same
+         list.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.63</span>
       <span class="tag fix">Fix</span>
       <h3>A PO number written 07-6329 stays 07-6329</h3>

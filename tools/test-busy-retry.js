@@ -150,11 +150,29 @@ console.log('\n═══ las esperas crecen y no van todas a la vez ═══\n'
 {
   const r = escenario({ ocupadoHasta: 99 });   // nunca pasa: se agotan
   const esperas = r.ctx._esperas || [];
-  check('espera entre intento e intento (' + esperas.join(', ') + ' ms)',
-    esperas.length === 4);
-  check('cada espera es mayor que la anterior — si el sistema sigue ocupado, ' +
+  // El número sale del código, no de aquí. Escrito a mano, esta prueba se
+  // quedó diciendo 4 cuando la v11.64 lo subió a 8, y falló contra código
+  // correcto — que es exactamente el fallo que ya cometí midiendo entornos
+  // inventados en vez del producto.
+  const MAX = Number((SRC.match(/var BUSY_MAX_RETRIES = (\d+);/) || [])[1]);
+  const TOPE = Number((SRC.match(/var BUSY_MAX_MS\s+= (\d+);/) || [])[1]);
+  const JITTER = Number((SRC.match(/var BUSY_JITTER_MS\s+= (\d+);/) || [])[1]);
+  check('reintenta las veces que dice el código (' + esperas.length + ' de ' + MAX + ')',
+    esperas.length === MAX);
+  check('LA ESPERA TOTAL PASA DE 40 SEGUNDOS. Trece era poco para un almacén ' +
+        'donde tres personas guardan a la vez — Jose, 2026-09-09',
+    esperas.reduce((a, b) => a + b, 0) > 40000);
+  check('ninguna espera es menor que la anterior — si el sistema sigue ocupado, ' +
         'insistir más rápido sólo empeora la cola',
-    esperas.every((v, i) => i === 0 || v > esperas[i - 1]));
+  // Con la holgura de la parte al azar: dos esperas ya en el tope pueden
+  // salir 8553 y 8228 y eso NO es "insistir más rápido", es el azar haciendo
+  // su trabajo. Lo que no puede pasar es que la BASE baje.
+    esperas.every((v, i) => i === 0 || v >= esperas[i - 1] - JITTER));
+  // El tope no contradice lo de arriba, lo completa: crecer sin freno haría que
+  // el último intento esperase él solo más de dos minutos, y la app parecería
+  // colgada justo cuando ya iba a funcionar. Deja de crecer, no baja.
+  check('y ninguna pasa del tope de ' + (TOPE / 1000) + 's, con su parte al azar',
+    esperas.every(v => v <= TOPE + 1000));
 
   // La parte al azar: dos escenarios idénticos NO pueden dar la misma espera.
   // Si la dieran, tres navegadores reintentarían a la vez y volverían a chocar.
@@ -168,8 +186,9 @@ console.log('\n═══ las esperas crecen y no van todas a la vez ═══\n'
 console.log('\n═══ cuando de verdad se agota, se dice de quién es el problema ═══\n');
 {
   const r = escenario({ ocupadoHasta: 99 });
+  const MAXR = Number((SRC.match(/var BUSY_MAX_RETRIES = (\d+);/) || [])[1]);
   check('se rinde tras un número acotado de intentos, no en bucle (' +
-        r.intentos + ')', r.intentos === 5);
+        r.intentos + ')', r.intentos === MAXR + 1);
   check('devuelve el botón a la persona', r.btn.pulsable === true);
   const aviso = (r.ctx._avisos[0] || {}).m || '';
   check('avisa una sola vez, no una por intento', r.ctx._avisos.length === 1);

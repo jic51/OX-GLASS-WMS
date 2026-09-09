@@ -10,59 +10,7 @@ here once they ship (the commit message is the record of what changed and why).
 De más urgente a menos. Lo de arriba estorba para publicar; lo de abajo puede
 esperar meses sin que pase nada.
 
-**1. LA COLA DE VERDAD, Y LOS MENSAJES DE "OCUPADO".** Jose, 2026-09-09,
-después de que "Check my data" le fallara dos veces seguidas con
-`SYSTEM_BUSY|... [ID: 3da14230]`:
-
-> *"¿este feature tiene una cola? ¿cuántos de estos requests podemos poner en la
->  cola? No tiene sentido poner una cola si la cola solo puede con 3 o 4 cosas a
->  la vez. Debemos hacer que el sistema los maneje todos, los mantenga en la
->  cola hasta que se puedan realizar, pero estos mensajes no le ayudan al
->  usuario. A mí me dicen algo, pero al usuario no."*
-
-**LO QUE HAY HOY, medido en el código, no supuesto:**
-
-| Camino | ¿Cola? | ¿Reintento? |
-|---|---|---|
-| Guardar movimientos (los tres caminos) | no | sí — `_busyRetry`, 4 intentos |
-| Borrar movimientos | **sí** — `_delQueue`, sin límite de tamaño | sí |
-| **Check my data → Apply** | **no** | **no** |
-| Todo lo demás (candados, catálogo, usuarios, locaciones…) | no | no |
-
-Así que su premisa hay que corregirla en un punto y confirmarla en otro: **la
-cola que existe no tiene límite de tamaño** — es un arreglo en memoria. Lo que
-está limitado a 4 es el REINTENTO, y con esperas de 0.9s, 1.8s, 3.6s y 7.2s eso
-son unos 13 segundos en total. Y tiene toda la razón en lo demás: `_dqApply` no
-tiene ni cola ni reintento, y por eso el error crudo del servidor —marcador
-`SYSTEM_BUSY|` e `[ID:]` incluidos— le llegó entero a la pantalla.
-
-**LO QUE HAY QUE HACER:**
-- **Una sola cola para TODA escritura**, no una por función. Hoy hay tres
-  comportamientos distintos para el mismo problema y el tercero es "ninguno".
-- **Aguantar mucho más que 13 segundos.** Si está ocupado no es un fallo, es
-  espera; el usuario no tiene por qué enterarse hasta que deje de serlo.
-- **Ningún marcador interno en pantalla, nunca.** `SYSTEM_BUSY|` y el `[ID:]`
-  son para el registro, no para la persona.
-- **Al segundo fallo de verdad, decir QUÉ está mal**, no "ocupado" otra vez.
-
-**EL LÍMITE QUE HAY QUE DECIRLE, porque cambia lo que se puede prometer:** una
-cola en el navegador **muere con la pestaña**. "Mantenerlos hasta que se puedan
-realizar" tiene techo: si cierra la ventana, lo que estuviera esperando se
-pierde. Una cola que sobreviva a eso tiene que vivir en el servidor con un
-disparador, y eso gasta cuota de Apps Script — que es del DUEÑO, no de cada
-usuario. Hay que decidirlo, no asumirlo.
-
-**2. EL CHECK QUE NO SE VA.** Jose, 2026-09-09: *"una vez que se selecciona un
-movimiento, se lo edita y se guarda, el check debe desaparecer. Si cambio de
-página, el check debe desaparecer. El check debe mantenerse solo si estoy en la
-misma página."*
-
-Las dos son ciertas y están comprobadas en el código: `_clearMovSelection()` se
-llama sólo desde los tres filtros (`movSearch`, `movTypeFilter`, `movCatFilter`).
-Ni `editSelectedMovement` al guardar, ni el cambio de pestaña, ni el "load
-more" la tocan. Es pequeño y es un fallo, no una mejora.
-
-**3. LA COLUMNA "USER": PERSONA, NO CORREO.** Jose, 2026-09-09, con captura:
+**1. LA COLUMNA "USER": PERSONA, NO CORREO.** Jose, 2026-09-09, con captura:
 
 > *"quiero que en lugar del email que aparece en User, aparezca el nombre de la
 >  persona, y el correo en gris abajo pero más pequeño, y al hacer hover
@@ -75,7 +23,7 @@ los dos necesitan lo mismo: **que el navegador sepa el NOMBRE de cada correo.**
 Hoy la tabla sólo tiene el correo; el nombre está en USERS_V3 y no viaja con los
 movimientos.
 
-**4. LA ANIMACIÓN AL BORRAR UNA FILA, Y LA VELOCIDAD.** Jose: *"está bien como
+**2. LA ANIMACIÓN AL BORRAR UNA FILA, Y LA VELOCIDAD.** Jose: *"está bien como
 lo hace pero aún no lo veo con la velocidad que quisiera, no sé por qué"*. Dos
 cosas distintas y conviene no confundirlas:
 - **Lo que se siente.** Una fila que se encoge y deja subir a las de abajo
@@ -86,32 +34,32 @@ cosas distintas y conviene no confundirlas:
   al medirlo resulta que son segundos, la animación tapa el síntoma y hay que
   mirar si el refresco puede esperar al final de la ráfaga.
 
-**5. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
+**3. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
 mínimos). Detalle completo más abajo. Es el que cuesta material cargado en una
 camioneta que hay que volver a bajar.
 
-**6. MANAGE USERS — EL REDISEÑO.** La recarga ya está arreglada (v11.58);
+**4. MANAGE USERS — EL REDISEÑO.** La recarga ya está arreglada (v11.58);
 queda cómo se editan los usuarios, la ventana más grande, el correo en una
 línea, y quitar el scroll lateral.
 
-**7. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
+**5. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
 
-**8. LAS CABECERAS QUE FALTAN EN UNA INSTALACIÓN VIEJA** (ver más abajo). No
+**6. LAS CABECERAS QUE FALTAN EN UNA INSTALACIÓN VIEJA** (ver más abajo). No
 urgente para Jose —ya lo arregló a mano— sí para el siguiente cliente.
 
-**9. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
+**7. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
 enviar correo / videollamada de Meet / chat.
 
-**10. LA FORMA DE MOSTRAR LAS CANTIDADES EN EL DASHBOARD.** Jose lo recordó el
+**8. LA FORMA DE MOSTRAR LAS CANTIDADES EN EL DASHBOARD.** Jose lo recordó el
 2026-09-09 y está pendiente de que explique qué quiere cambiar exactamente.
 
-**11. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
+**9. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
 
-**12. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
+**10. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
 
-**13. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
+**11. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
 
-**14. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
+**12. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
 sitio, la política de cobro y el rediseño del modelo de movimientos.
 
 ---
@@ -170,6 +118,112 @@ trabajo antes de tiempo. Lo que sí conviene es que el precio no quede colgado
 sin ninguna acción al lado.
 
 ---
+
+
+## Decisión abierta — 2026-09-09
+
+**¿LA COLA MUERE CON LA PESTAÑA, O VIVE EN EL SERVIDOR?** La v11.64 la puso en
+el navegador: resuelve el caso de todos los días y no gasta cuota. Pero si la
+persona cierra la ventana con algo esperando, eso se pierde.
+
+Una cola que sobreviva a cerrar la ventana necesita una hoja de pendientes y un
+disparador que los vaya sacando. Funciona — y **gasta cuota de Apps Script, que
+es del DUEÑO de la copia, no de cada usuario**. Es una decisión de negocio.
+
+Mi recomendación: esperar. Que la del navegador esté en producción y ver si
+alguien pierde algo de verdad. Construir la del servidor por si acaso es pagar
+cuota todos los días por un problema que quizá no existe.
+
+**¿EL CORREO DE UNA MODIFICACIÓN A CUÁNTOS ADMINS?** Hoy va a UNO: el campo
+Admin Email de CONFIG (columna H, fila 2). En la instalación de Jose está
+VACÍO, así que cae al dueño de la copia — él. Nadie más se entera.
+
+Su razonamiento para ampliarlo, que es bueno: *"aunque una persona sea admin, no
+tiene acceso a los documentos del Drive si no lo tiene en su Drive… entonces que
+le llegue un correo sería darle un poquito más de información pero no la
+suficiente para ser un admin completo."* Confirmado en el código: los archivos
+los crea la identidad del script (el dueño) y **no se comparten con nadie** —
+sólo se ven A TRAVÉS de la app, que los abre como dueño y entrega los bytes.
+Así que un ADMIN de la app no tiene esos documentos en su Drive.
+
+Pendiente de decidir por él: uno, todos los ADMIN, o una lista aparte.
+
+### ✅ HECHO (v11.64) — "OCUPADO" DEJA DE PARECER UN FALLO DE LA PERSONA
+
+**LO QUE VIO JOSE**, dos veces seguidas al pulsar "Check my data → Apply":
+
+    Could not apply: Error: SYSTEM_BUSY|System busy — someone else is saving
+    right now. Please try again in a moment. [ID: 3da14230]
+
+Y lo que dijo: *"estos mensajes no le ayudan al usuario. A mí me dicen algo,
+pero al usuario no."*
+
+**LO QUE SE MIDIÓ ANTES DE TOCAR NADA.** Ocho funciones del servidor toman
+`withStockLock_` y pueden contestar "ocupado". Sólo DOS estaban protegidas en
+el navegador, y cada una a su manera: guardar tenía reintento sin cola, borrar
+tenía cola con reintento, y las otras SEIS no tenían nada. `_dqApply` era una
+de esas seis.
+
+**SU PREMISA HABÍA QUE CORREGIRLA EN UN PUNTO:** la cola que existía no tenía
+límite de tamaño — es un arreglo en memoria. Lo que estaba limitado a 4 era el
+REINTENTO, y con esperas de 0.9s, 1.8s, 3.6s y 7.2s eso son unos TRECE
+SEGUNDOS. Su instinto apuntaba a lo correcto aunque el número fuera de otra
+cosa: trece segundos es poco.
+
+**LO QUE SE HIZO:**
+
+1. **`_humanErr`** — lo que se le enseña a una persona. Quita `SYSTEM_BUSY|`,
+   `SHORT_STOCK|`, el `Error:` que añade Apps Script, y **el `[ID: 3da14230]`**,
+   que es la referencia del registro del servidor. El ID no se pierde: va a la
+   consola, que es donde el soporte lo busca. Quitarlo del todo habría sido
+   cambiar un problema por otro.
+2. **Ocho reintentos con tope de 8s** en vez de cuatro sin tope: ~45 segundos
+   en vez de ~13. **El tope importa tanto como el número** — sin él, el octavo
+   intento esperaría dos minutos él solo y la app parecería colgada justo
+   cuando ya iba a funcionar.
+3. **`_acWrite` — una sola cola para toda escritura.** Y es una cola, no sólo
+   un reintento: el reintento resuelve el choque con OTRA persona; la cola quita
+   el que uno se hace a sí mismo pulsando dos botones seguidos, que es el más
+   frecuente y el más tonto.
+4. **"Ocupado" y "no se puede" dicen cosas distintas.** Confundirlas deja a la
+   persona sin saber si volver a intentarlo sirve de algo.
+
+**LAS TRES FUSIONES NO VAN POR LA COLA, Y ES A PROPÓSITO.** Una fusión es una
+decisión que la persona acaba de confirmar mirando la pantalla; encolarla la
+dejaría ejecutándose minutos después sobre unos datos que ya no son los que
+vio. Ahí lo que faltaba era decir la verdad, no reintentar a ciegas —
+`_mergeFailed`, escrito una vez para las tres.
+
+**EL LÍMITE, DICHO Y NO ESCONDIDO:** esta cola vive en el navegador y **muere
+con la pestaña**. "Mantenerlos hasta que se puedan realizar" llega hasta ahí.
+Una cola que sobreviva a cerrar la ventana tiene que vivir en el servidor con
+un disparador, y eso gasta cuota de Apps Script — que es del DUEÑO de la copia,
+no de cada usuario. **Es una decisión de negocio, no técnica, y sigue abierta.**
+
+**Y EL CHECK QUE NO SE IBA**, que iba en la misma versión. Jose: *"el check
+debe mantenerse solo si estoy en la misma página"*. `showTab` ya limpiaba los
+modos de fila con este mismo argumento escrito al lado — pero en la v11.59 las
+casillas SUSTITUYERON a los modos en Movements y ese limpiado se quedó hablando
+sólo de los modos. La selección era lo único de la pantalla que sobrevivía a
+irse de ella. También se limpia al guardar una edición.
+
+Y vaciar el mapa no bastaba: `_clearMovSelection` ahora **desmarca las casillas
+dibujadas** y repinta la barra. Si no, quedaba una selección que se VE pero no
+EXISTE — Edit y Delete apagados encima de tres filas con el check puesto, que
+es peor que cualquiera de las dos cosas por separado.
+
+`tools/test-write-queue.js` — 54 comprobaciones, con un navegador falso que
+**tiene el reloj en la mano**: los setTimeout se guardan en vez de dispararse,
+así se puede medir cuánto habría esperado de verdad en vez de creérselo.
+
+Comprobado que sirve: volviendo a 4 reintentos, enseñando el error crudo y
+quitando el limpiado del check, fallan 10 comprobaciones — entre ellas la que
+reproduce el mensaje exacto de la foto de Jose.
+
+**Y OBLIGÓ A ARREGLAR `test-busy-retry.js`**, que llevaba el 4 escrito a mano y
+exigía que cada espera fuera MAYOR que la anterior. Con el tope eso deja de ser
+cierto y deja de ser deseable. Ahora lee los números del código y exige lo que
+de verdad importa: que la base nunca BAJE, y que el total pase de 40 segundos.
 
 ### ✅ HECHO (v11.63) — UN PO ESCRITO "07-6329" SE QUEDA "07-6329"
 
