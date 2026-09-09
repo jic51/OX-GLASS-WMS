@@ -3360,7 +3360,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.66';
+var APP_VERSION = '11.67';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -3372,7 +3372,7 @@ var APP_VERSION = '11.66';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '08ba376f';
+var APP_BUILD = '2b44734f';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -3491,7 +3491,21 @@ var monitoredMaterials = null; // null = all; array of names = filtered
 // a window is one unit and will never appear in here.
 var materialPacks = {};
 var rackPhotos = {}; // { LOCATION_UPPER: { url, uploadedBy, uploadedAt } }
-var _stockSelection = {}; // { matId: stockData[matId] } — checked rows in Stock Dashboard, for "Exit Selected"
+/* SÓLO LOS NOMBRES, NUNCA LAS FILAS.
+ *
+ * Guardaba { matId: stockData[matId] } — o sea, una COPIA de la fila del
+ * momento en que se marcó la casilla. Y `stockData` se reemplaza entero en cada
+ * carga (`stockData = data.stock || {}`), así que la cesta se quedaba con
+ * objetos huérfanos de una foto vieja.
+ *
+ * Consecuencia real: alguien marca cinco materiales, otra persona guarda una
+ * salida, y "Exit Selected" abre el formulario con las cantidades de ANTES. La
+ * cesta se veía igual de bien y ya no era verdad.
+ *
+ * Con sólo el nombre, la fila se busca en el momento de usarla y siempre es la
+ * de ahora. Y un material que ya no existe —fusionado, renombrado— simplemente
+ * deja de estar en la cesta en vez de aparecer con datos de un pasado. */
+var _stockSelection = {}; // { matId: true } — casillas marcadas en el Stock Dashboard
 var materialLocks = []; // [{id, matId, category, name, rack, allowedDest:[...], reason, lockedBy, lockedAt}]
 var _locksByKey = {}; // 'MATID|||RACK' -> lock object, rebuilt whenever materialLocks changes (fast lookup for row rendering)
 function _rebuildLocksIndex(){
@@ -5355,19 +5369,29 @@ function toggleStockDetail(rowId) {
 // ── Stock Selection → bulk "Exit Selected" ──────────────────────────────────
 function toggleStockSelect(cb){
   var matId = cb.getAttribute('data-matid');
-  if (cb.checked) {
-    var s = stockData[matId];
-    if (s) _stockSelection[matId] = s;
-  } else {
-    delete _stockSelection[matId];
-  }
+  if (cb.checked) { if (stockData[matId]) _stockSelection[matId] = true; }
+  else delete _stockSelection[matId];
   _updateStockSelectBar();
+}
+
+/* Las filas de la cesta, TAL COMO ESTÁN AHORA. Se intersecta con stockData en
+ * cada llamada: lo que ya no existe no viaja, y lo que sigue existiendo viaja
+ * con sus números de este momento, no con los de cuando se marcó. */
+function _selectedStockRows(){
+  var out = [];
+  for (var id in _stockSelection) {
+    if (!_stockSelection.hasOwnProperty(id)) continue;
+    if (stockData[id]) out.push(stockData[id]);
+    else delete _stockSelection[id];   // se fusionó, se renombró o se acabó
+  }
+  return out;
 }
 
 function _updateStockSelectBar(){
   var bar = document.getElementById('stockSelectBar');
   if (!bar) return;
-  var count = Object.keys(_stockSelection).length;
+  // Se cuenta lo que de verdad sigue ahí, no lo que se marcó alguna vez.
+  var count = _selectedStockRows().length;
   if (count > 0) {
     bar.style.display = 'flex';
     document.getElementById('stockSelectCount').textContent =
@@ -5387,7 +5411,7 @@ function clearStockSelection(){
 // racks auto-filled — same engine as the "↗ Auto-fill Racks" button, just applied
 // to each selection instead of typed one at a time.
 function exitSelectedStock(){
-  var mats = Object.values(_stockSelection);
+  var mats = _selectedStockRows();
   if (!mats.length) return;
 
   openMoveModal('EXIT'); // synchronous — modal + multi-exit section are ready after this returns
@@ -5426,7 +5450,7 @@ function _fillExitLinesFrom(mats){
 // The materials the dashboard handed to this form, still selected. Used to
 // rebuild every line when the type goes back to one that holds several.
 function _liveStockSelection(){
-  return Object.values(_stockSelection || {});
+  return _selectedStockRows();
 }
 
 // How many material lines the form is holding RIGHT NOW. ENTRY and EXIT keep one

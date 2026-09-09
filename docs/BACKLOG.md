@@ -10,7 +10,48 @@ here once they ship (the commit message is the record of what changed and why).
 De más urgente a menos. Lo de arriba estorba para publicar; lo de abajo puede
 esperar meses sin que pase nada.
 
-**1. LA COLUMNA "USER": PERSONA, NO CORREO.** Jose, 2026-09-09, con captura:
+**1. LA BARRA DE CANTIDADES DEL DASHBOARD.** Idea de Jose, 2026-09-09, y es la
+que sustituye al punto viejo de "la forma de mostrar las cantidades":
+
+> *"una barra de 2 colores que muestra la cantidad que hay con la cantidad que
+>  ya se fue, y si hay reservas también metemos esa cantidad ahí en la barra y
+>  pasaría a ser de 3 colores. Así unimos IN WAREHOUSE, USED, AVAILABLE, WASTE y
+>  RESERVED en una barra de 3 datos… todo junto es lo que el warehouse recibió
+>  en algún momento. Al hacer hover podemos mostrar datos o detalles, como el
+>  detalle de por qué se reservó."*
+
+**Lo que la hace buena, y conviene escribirlo antes de construirla:** hoy son
+cinco números sueltos que el ojo tiene que sumar para entender la situación de
+un material. Una barra dice de un vistazo *cuánto había en total* y *qué
+proporción queda* — y la proporción es la pregunta de verdad, no el número.
+
+**El total es lo recibido alguna vez**, y las partes suman ese total. Antes de
+dibujar nada hay que comprobar que esa suma CIERRA con los datos que ya
+tenemos, porque una barra cuyos trozos no llegan al borde es peor que cinco
+números: parece exacta y no lo es.
+
+**Y ahí va la ayuda flotante**, que ya sabe salir donde se la puede leer desde
+la v11.65.
+
+**2. LA COLUMNA "CATEGORY" QUE SOBRA CUANDO YA ELEGISTE LA CATEGORÍA.** Idea de
+Jose, mismo día:
+
+> *"si al seleccionar un material en 'All Categories' en específico ya sabemos
+>  que solo nos mostrará ese material… solo en ese caso podemos eliminar la
+>  columna de category y poner la category arriba donde se vea bien, y
+>  eliminamos ese espacio haciendo la lista más pequeña horizontalmente."*
+
+Es el mismo razonamiento que la v11.61 aplicó a Movements, y es correcto: **una
+columna en la que todas las filas dicen lo mismo no es información, es margen.**
+Cuando el filtro está en "All Categories" la columna se queda; en cuanto se
+elige una, se va y su nombre pasa al encabezado.
+
+Detalle a decidir al hacerlo: qué pasa con el orden de columnas guardado de cada
+persona cuando la columna vuelve. La v11.61 ya resolvió el caso parecido con
+`COL_MERGES`; aquí es más fácil, porque la columna no desaparece del modelo,
+sólo se oculta.
+
+**3. LA COLUMNA "USER": PERSONA, NO CORREO.** Jose, 2026-09-09, con captura:
 
 > *"quiero que en lugar del email que aparece en User, aparezca el nombre de la
 >  persona, y el correo en gris abajo pero más pequeño, y al hacer hover
@@ -23,9 +64,35 @@ los dos necesitan lo mismo: **que el navegador sepa el NOMBRE de cada correo.**
 Hoy la tabla sólo tiene el correo; el nombre está en USERS_V3 y no viaja con los
 movimientos.
 
-**2. LA ANIMACIÓN AL BORRAR UNA FILA, Y LA VELOCIDAD.** Jose: *"está bien como
-lo hace pero aún no lo veo con la velocidad que quisiera, no sé por qué"*. Dos
-cosas distintas y conviene no confundirlas:
+**4. LA ANIMACIÓN AL QUITAR UNA FILA — ESTÁNDAR DE LA APP, NO DE UNA PANTALLA.**
+
+Jose lo dejó claro el 2026-09-09, y cambia el alcance: *"quiero esta animación
+en cada lugar donde se borre algo, ya sea que se corrija, restaure, elimine,
+haga merge, etc. Debe ser estándar en la app."*
+
+O sea que no es "animar el borrado de movimientos": es **una sola forma de que
+una fila se vaya**, escrita una vez y usada en todas partes. Los sitios donde
+hoy una fila desaparece de golpe:
+
+- borrar un movimiento (Movements)
+- restaurar uno desde la papelera (la fila se va de la papelera)
+- vaciar la papelera entera
+- fusionar materiales, proyectos, proveedores o locaciones — la que se absorbe
+- borrar una locación vacía (v11.62)
+- quitar un valor del catálogo, un contacto del directorio, una entrega esperada
+- aplicar un arreglo de "Check my data"
+
+**La lección de la v11.66 aplica aquí antes de empezar:** varias de esas
+pantallas se repintan enteras al terminar. Una animación de salida sobre un
+repintado completo no se ve — la fila no se encoge, la lista entera parpadea.
+Así que esto obliga a que cada una de esas listas sepa quitar UNA fila en vez de
+redibujarse, que es exactamente el cambio que ya se hizo en la papelera y en los
+movimientos. **Ése es el trabajo de verdad; la animación es la parte fácil.**
+
+Y la otra mitad, que no se resuelve animando:
+
+Jose: *"está bien como lo hace pero aún no lo veo con la velocidad que quisiera,
+no sé por qué"*. Dos cosas distintas y conviene no confundirlas:
 - **Lo que se siente.** Una fila que se encoge y deja subir a las de abajo
   despacio se lee como "esto está pasando", mientras que una que desaparece de
   golpe se lee como un parpadeo. Es lo que él describe y es barato.
@@ -34,29 +101,26 @@ cosas distintas y conviene no confundirlas:
   al medirlo resulta que son segundos, la animación tapa el síntoma y hay que
   mirar si el refresco puede esperar al final de la ráfaga.
 
-**3. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
+**5. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
 mínimos). Detalle completo más abajo. Es el que cuesta material cargado en una
 camioneta que hay que volver a bajar.
 
-**4. MANAGE USERS — EL REDISEÑO.** La recarga ya está arreglada (v11.58);
+**6. MANAGE USERS — EL REDISEÑO.** La recarga ya está arreglada (v11.58);
 queda cómo se editan los usuarios, la ventana más grande, el correo en una
 línea, y quitar el scroll lateral.
 
-**5. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
+**7. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
 
-**6. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
+**8. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
 enviar correo / videollamada de Meet / chat.
 
-**7. LA FORMA DE MOSTRAR LAS CANTIDADES EN EL DASHBOARD.** Jose lo recordó el
-2026-09-09 y está pendiente de que explique qué quiere cambiar exactamente.
+**9. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
 
-**8. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
+**10. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
 
-**9. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
+**11. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
 
-**10. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
-
-**11. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
+**12. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
 sitio, la política de cobro y el rediseño del modelo de movimientos.
 
 ---
@@ -154,6 +218,51 @@ sólo se ven A TRAVÉS de la app, que los abre como dueño y entrega los bytes. 
 ADMIN de la app no los tiene en su Drive. Su razonamiento se sostiene entero:
 el correo le da *"un poquito más de información pero no la suficiente para ser
 un admin completo"*.
+
+### ✅ HECHO (v11.67) — LA CESTA DEL DASHBOARD ENSEÑA LOS NÚMEROS DE HOY
+
+**LA PREGUNTA DE JOSE:** *"pusiste el candado de que los checkboxes de Movements
+no se mantenían activos al cambiar de página, pero no lo hiciste con los del
+Dashboard, ¿por qué? ¿crees que hay alguna razón para no hacerlo?"*
+
+**SÍ LA HAY, y no son la misma cosa.**
+
+Las casillas de Movements arman **Edit y Delete**. Una marca que sobrevive es un
+botón de borrar apuntando a filas en las que ya nadie está pensando.
+
+Las del Dashboard son una **CESTA** que se llena para "Exit Selected". Vaciarla
+al salir de la pantalla haría perder el trabajo de alguien que fue a mirar el
+mapa antes de sacar el material. Y ya hubo un fallo por limpiarla de más: al
+cambiar EXIT → TRANSFER se perdían los otros cuatro materiales, de un formulario
+sin guardar — está escrito como advertencia en `exitSelectedStock`.
+
+**PERO AL MIRARLO APARECIÓ ALGO PEOR QUE LA PREGUNTA.**
+
+`_stockSelection` guardaba `{ matId: stockData[matId] }` — una **copia de la
+fila** del momento en que se marcó la casilla. Y `stockData` se reemplaza ENTERO
+en cada carga (`stockData = data.stock || {}`), así que la cesta se quedaba con
+objetos huérfanos de una foto vieja.
+
+    Se marcan cinco materiales.
+    Otra persona guarda una salida.
+    "Exit Selected" abre el formulario CON LAS CANTIDADES DE ANTES.
+
+La cesta se veía igual de bien y ya no era verdad. Misma familia que el PO#
+convertido en fecha de la v11.63: **parece exacto y no lo es**, que es peor que
+estar visiblemente roto.
+
+**EL ARREGLO:** la cesta guarda sólo NOMBRES. `_selectedStockRows()` los cruza
+con `stockData` en cada uso, así que las filas son siempre las de ahora — y un
+material que dejó de existir (fusionado, renombrado, agotado) se cae de la cesta
+solo en vez de viajar con datos de un pasado. El contador de la barra cuenta lo
+que de verdad queda.
+
+`tools/test-stock-basket.js` — 16 comprobaciones. Comprobado que sirve:
+guardando otra vez la fila entera, la cesta dice **100 cuando ya quedan 42**.
+
+Y deja escrito, en una prueba y no en un comentario suelto, **por qué las dos
+pantallas se comportan distinto a propósito**: `showTab` limpia una y no la
+otra, y eso tiene que seguir siendo cierto.
 
 ### ✅ HECHO (v11.66) — DEVOLVER VARIOS, Y LAS COLUMNAS SIN NOMBRE
 
