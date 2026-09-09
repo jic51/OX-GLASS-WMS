@@ -10,7 +10,72 @@ here once they ship (the commit message is the record of what changed and why).
 De más urgente a menos. Lo de arriba estorba para publicar; lo de abajo puede
 esperar meses sin que pase nada.
 
-**1. LA ANIMACIÓN AL BORRAR UNA FILA, Y LA VELOCIDAD.** Jose: *"está bien como
+**1. LA COLA DE VERDAD, Y LOS MENSAJES DE "OCUPADO".** Jose, 2026-09-09,
+después de que "Check my data" le fallara dos veces seguidas con
+`SYSTEM_BUSY|... [ID: 3da14230]`:
+
+> *"¿este feature tiene una cola? ¿cuántos de estos requests podemos poner en la
+>  cola? No tiene sentido poner una cola si la cola solo puede con 3 o 4 cosas a
+>  la vez. Debemos hacer que el sistema los maneje todos, los mantenga en la
+>  cola hasta que se puedan realizar, pero estos mensajes no le ayudan al
+>  usuario. A mí me dicen algo, pero al usuario no."*
+
+**LO QUE HAY HOY, medido en el código, no supuesto:**
+
+| Camino | ¿Cola? | ¿Reintento? |
+|---|---|---|
+| Guardar movimientos (los tres caminos) | no | sí — `_busyRetry`, 4 intentos |
+| Borrar movimientos | **sí** — `_delQueue`, sin límite de tamaño | sí |
+| **Check my data → Apply** | **no** | **no** |
+| Todo lo demás (candados, catálogo, usuarios, locaciones…) | no | no |
+
+Así que su premisa hay que corregirla en un punto y confirmarla en otro: **la
+cola que existe no tiene límite de tamaño** — es un arreglo en memoria. Lo que
+está limitado a 4 es el REINTENTO, y con esperas de 0.9s, 1.8s, 3.6s y 7.2s eso
+son unos 13 segundos en total. Y tiene toda la razón en lo demás: `_dqApply` no
+tiene ni cola ni reintento, y por eso el error crudo del servidor —marcador
+`SYSTEM_BUSY|` e `[ID:]` incluidos— le llegó entero a la pantalla.
+
+**LO QUE HAY QUE HACER:**
+- **Una sola cola para TODA escritura**, no una por función. Hoy hay tres
+  comportamientos distintos para el mismo problema y el tercero es "ninguno".
+- **Aguantar mucho más que 13 segundos.** Si está ocupado no es un fallo, es
+  espera; el usuario no tiene por qué enterarse hasta que deje de serlo.
+- **Ningún marcador interno en pantalla, nunca.** `SYSTEM_BUSY|` y el `[ID:]`
+  son para el registro, no para la persona.
+- **Al segundo fallo de verdad, decir QUÉ está mal**, no "ocupado" otra vez.
+
+**EL LÍMITE QUE HAY QUE DECIRLE, porque cambia lo que se puede prometer:** una
+cola en el navegador **muere con la pestaña**. "Mantenerlos hasta que se puedan
+realizar" tiene techo: si cierra la ventana, lo que estuviera esperando se
+pierde. Una cola que sobreviva a eso tiene que vivir en el servidor con un
+disparador, y eso gasta cuota de Apps Script — que es del DUEÑO, no de cada
+usuario. Hay que decidirlo, no asumirlo.
+
+**2. EL CHECK QUE NO SE VA.** Jose, 2026-09-09: *"una vez que se selecciona un
+movimiento, se lo edita y se guarda, el check debe desaparecer. Si cambio de
+página, el check debe desaparecer. El check debe mantenerse solo si estoy en la
+misma página."*
+
+Las dos son ciertas y están comprobadas en el código: `_clearMovSelection()` se
+llama sólo desde los tres filtros (`movSearch`, `movTypeFilter`, `movCatFilter`).
+Ni `editSelectedMovement` al guardar, ni el cambio de pestaña, ni el "load
+more" la tocan. Es pequeño y es un fallo, no una mejora.
+
+**3. LA COLUMNA "USER": PERSONA, NO CORREO.** Jose, 2026-09-09, con captura:
+
+> *"quiero que en lugar del email que aparece en User, aparezca el nombre de la
+>  persona, y el correo en gris abajo pero más pequeño, y al hacer hover
+>  aparezcan las opciones de enviar email o llamar por Google Meet."*
+
+Es la misma forma que "Type / Date" y "Category / Name" de la v11.61: el dato
+que se busca arriba, el de apoyo debajo en gris. Y encaja con el punto de la
+FICHA DE USUARIO que ya estaba en la lista — conviene hacerlos juntos, porque
+los dos necesitan lo mismo: **que el navegador sepa el NOMBRE de cada correo.**
+Hoy la tabla sólo tiene el correo; el nombre está en USERS_V3 y no viaja con los
+movimientos.
+
+**4. LA ANIMACIÓN AL BORRAR UNA FILA, Y LA VELOCIDAD.** Jose: *"está bien como
 lo hace pero aún no lo veo con la velocidad que quisiera, no sé por qué"*. Dos
 cosas distintas y conviene no confundirlas:
 - **Lo que se siente.** Una fila que se encoge y deja subir a las de abajo
@@ -21,32 +86,32 @@ cosas distintas y conviene no confundirlas:
   al medirlo resulta que son segundos, la animación tapa el síntoma y hay que
   mirar si el refresco puede esperar al final de la ráfaga.
 
-**2. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
+**5. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
 mínimos). Detalle completo más abajo. Es el que cuesta material cargado en una
 camioneta que hay que volver a bajar.
 
-**3. MANAGE USERS — EL REDISEÑO.** La recarga ya está arreglada (v11.58);
+**6. MANAGE USERS — EL REDISEÑO.** La recarga ya está arreglada (v11.58);
 queda cómo se editan los usuarios, la ventana más grande, el correo en una
 línea, y quitar el scroll lateral.
 
-**4. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
+**7. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
 
-**5. LAS CABECERAS QUE FALTAN EN UNA INSTALACIÓN VIEJA** (ver más abajo). No
+**8. LAS CABECERAS QUE FALTAN EN UNA INSTALACIÓN VIEJA** (ver más abajo). No
 urgente para Jose —ya lo arregló a mano— sí para el siguiente cliente.
 
-**6. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
+**9. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
 enviar correo / videollamada de Meet / chat.
 
-**7. LA FORMA DE MOSTRAR LAS CANTIDADES EN EL DASHBOARD.** Jose lo recordó el
+**10. LA FORMA DE MOSTRAR LAS CANTIDADES EN EL DASHBOARD.** Jose lo recordó el
 2026-09-09 y está pendiente de que explique qué quiere cambiar exactamente.
 
-**8. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
+**11. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
 
-**9. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
+**12. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
 
-**10. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
+**13. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
 
-**11. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
+**14. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
 sitio, la política de cobro y el rediseño del modelo de movimientos.
 
 ---
