@@ -44,22 +44,19 @@ línea, y quitar el scroll lateral.
 
 **5. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
 
-**6. LAS CABECERAS QUE FALTAN EN UNA INSTALACIÓN VIEJA** (ver más abajo). No
-urgente para Jose —ya lo arregló a mano— sí para el siguiente cliente.
-
-**7. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
+**6. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
 enviar correo / videollamada de Meet / chat.
 
-**8. LA FORMA DE MOSTRAR LAS CANTIDADES EN EL DASHBOARD.** Jose lo recordó el
+**7. LA FORMA DE MOSTRAR LAS CANTIDADES EN EL DASHBOARD.** Jose lo recordó el
 2026-09-09 y está pendiente de que explique qué quiere cambiar exactamente.
 
-**9. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
+**8. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
 
-**10. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
+**9. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
 
-**11. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
+**10. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
 
-**12. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
+**11. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
 sitio, la política de cobro y el rediseño del modelo de movimientos.
 
 ---
@@ -157,6 +154,64 @@ sólo se ven A TRAVÉS de la app, que los abre como dueño y entrega los bytes. 
 ADMIN de la app no los tiene en su Drive. Su razonamiento se sostiene entero:
 el correo le da *"un poquito más de información pero no la suficiente para ser
 un admin completo"*.
+
+### ✅ HECHO (v11.66) — DEVOLVER VARIOS, Y LAS COLUMNAS SIN NOMBRE
+
+**EL BOTÓN QUE SE REARMABA SOLO.** Jose lo grabó: pulsó "Put back" en varios
+movimientos borrados seguidos, y **al llegar el primer "Done" en verde todos los
+demás botones volvieron a su estado inicial**, como si nadie los hubiera tocado.
+
+La causa: cada restauración que funcionaba pedía la lista otra vez al servidor y
+repintaba el cuadro ENTERO. Los botones que seguían esperando su turno en la
+cola se rehacían desde cero. **El trabajo seguía en marcha; la pantalla decía
+que no.**
+
+Es el mismo fallo que ya tuvo borrar en la v11.58, y se arregla igual:
+`_trashPending` guarda qué está en camino, y la pantalla se dibuja desde ahí. Un
+repintado los sigue enseñando esperando en vez de olvidarlos.
+
+**Y eso dejó ver el otro, que él no llegó a ver:** cada restauración pedía además
+una recarga COMPLETA del almacén. Cinco movimientos devueltos eran cinco
+barridos del archivo. Misma respuesta que en "Check my data" — `_reloadWhenIdle`,
+una sola al final de la ráfaga. Y la fila desaparece AL INSTANTE y en local: el
+servidor ya lo hizo, así que volver a preguntarle era justo lo que rompía todo.
+
+---
+
+**UNA COLUMNA SIN NOMBRE ES UNA COLUMNA QUE ALGUIEN VA A BORRAR.** Punto 6 de la
+lista, y Jose casi lo demuestra en carne propia: estuvo a punto de borrar las
+columnas U y V de su archivo —**Unit Cost y Total Cost**— porque sus cabeceras
+estaban en blanco y no había forma de saber qué eran.
+
+`ensureCoreSheets_` empezaba con `if (ss.getSheetByName(spec.name)) return;`: si
+la hoja YA EXISTÍA se saltaba entera. Todo lo que se añadió después de instalar
+—las dos de costo, el Movement ID— se escribía por su índice y su cabecera no la
+ponía nadie nunca.
+
+**Y el comentario de esa misma función ya prometía lo contrario:** *"this only
+fills in what is missing, so it is safe on an installation that already has
+data"*. El código no lo hacía. Esto lo pone de acuerdo con lo que dice.
+
+`fillMissingHeaders_` rellena **sólo las vacías**. Una cabecera con texto no se
+toca jamás, diga lo que diga: la hoja de Jose llama "Racks" a lo que la
+especificación llama "Locations" y "email" a "User Email", y da igual — todo el
+código va por POSICIÓN. Renombrarlas sería un cambio que él no pidió y podría
+romper un filtro o una fórmula suyos.
+
+Y no escribe cuando no falta nada: una escritura por arranque que no cambia nada
+es cuota gastada en no hacer nada.
+
+**Se aplica al volver a pasar por Setup**, que es donde vive `ensureCoreSheets_`.
+
+`tools/test-restore-batch.js` (23 comprobaciones) y
+`tools/test-headers-repair.js` (20). El primero, comprobado que sirve: volviendo
+a recargar la lista tras cada restauración, fallan 4 — entre ellas las dos que
+reproducen el vídeo.
+
+La segunda prueba tiene una hoja falsa que **sabe cuántas columnas tiene**: una
+infinitamente ancha no podría enseñar nunca el fallo de escribir más allá del
+último borde, que es justo lo que revienta en una instalación vieja de 20
+columnas.
 
 ### ✅ HECHO (v11.65) — LA AYUDA SALE DONDE SE ESTÁ MIRANDO
 

@@ -95,6 +95,34 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.66</span>
+      <span class="tag fix">Fix</span>
+      <h3>Putting several movements back at once</h3>
+      <p>Pressing <em>Put back</em> on a run of deleted movements looked as if it
+         had forgotten them: the moment the first one finished, every other
+         button reset itself as though it had never been pressed. The work was
+         always going ahead — the list was being redrawn from scratch each time
+         and losing what was still in flight. Rows now stay marked as on their
+         way until they are actually back.</p>
+      <p>They also go back one at a time and ask for a single refresh at the end,
+         instead of one full read of the warehouse per movement.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.66</span>
+      <span class="tag safe">Safer</span>
+      <h3>Columns added after you installed finally get their names</h3>
+      <p>An installation only ever wrote its column headings once, when it was
+         first set up. Anything added in a later version — the two cost columns,
+         the movement ID — was written by position, and its heading stayed
+         blank. A column with no name looks like leftover junk, and eventually
+         somebody clears it out.</p>
+      <p>Re-running Setup now fills in the missing names. A heading that already
+         has text is never touched, whatever it says: nothing in the app reads
+         those names, so renaming yours would be a change nobody asked for.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.65</span>
       <span class="tag fix">Fix</span>
       <h3>The help bubbles appear where you are looking</h3>
