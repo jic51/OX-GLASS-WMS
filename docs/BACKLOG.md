@@ -10,26 +10,7 @@ here once they ship (the commit message is the record of what changed and why).
 De más urgente a menos. Lo de arriba estorba para publicar; lo de abajo puede
 esperar meses sin que pase nada.
 
-**1. LAS COLUMNAS DE MOVEMENTS: LA TABLA CRECE Y SE VA A LO ANCHO.** Jose,
-2026-09-09, y tiene razón en que me quedé corto: *"al dar clic en columns no se
-mueve nada en el lugar donde está el botón, eso sí es cierto, pero se mueve toda
-la parte de los movimientos, se abren las columnas más grandes y el header se
-hace más alto"*. La v11.59 arregló la fila de herramientas y la prueba mide el
-BOTÓN, no la tabla — **dije que no se movía nada y eso no era verdad.**
-
-**Y su idea de fondo es mejor que arreglar sólo el alto del encabezado:**
-
-> *"decidimos que las columnas type, date, category y name no se van a cambiar
->  nunca, entonces si no se van a cambiar podemos unir type sobre date, y
->  category sobre name, reducimos 2 columnas y la pantalla no debe hacerse muy
->  larga horizontalmente."*
-
-Cuatro columnas pasan a dos celdas de dos líneas. La tabla se estrecha de verdad
-en vez de comprimirse. **El precio, que él ya nombró:** esas cuatro dejan de
-poder reordenarse. Hay que decidirlo antes, no después — y creo que vale la
-pena: nadie reordena el tipo y la fecha de un movimiento.
-
-**2. LAS LOCACIONES: CREAR VARIAS A LA VEZ, Y PODER BORRAR UNA VACÍA.** Vídeo
+**1. LAS LOCACIONES: CREAR VARIAS A LA VEZ, Y PODER BORRAR UNA VACÍA.** Vídeo
 de Jose, 2026-09-08.
 - **Crear muchas de golpe.** Intentó crear varias y sólo se puede una por una.
   Un almacén nuevo son decenas de estantes: A1A…A6C es teclear el mismo patrón
@@ -41,7 +22,7 @@ de Jose, 2026-09-08.
   historia que proteger, y obligar a archivarla llena la lista de basura que
   nadie puede quitar.
 
-**3. LA ANIMACIÓN AL BORRAR UNA FILA, Y LA VELOCIDAD.** Jose: *"está bien como
+**2. LA ANIMACIÓN AL BORRAR UNA FILA, Y LA VELOCIDAD.** Jose: *"está bien como
 lo hace pero aún no lo veo con la velocidad que quisiera, no sé por qué"*. Dos
 cosas distintas y conviene no confundirlas:
 - **Lo que se siente.** Una fila que se encoge y deja subir a las de abajo
@@ -52,32 +33,32 @@ cosas distintas y conviene no confundirlas:
   al medirlo resulta que son segundos, la animación tapa el síntoma y hay que
   mirar si el refresco puede esperar al final de la ráfaga.
 
-**4. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
+**3. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
 mínimos). Detalle completo más abajo. Es el que cuesta material cargado en una
 camioneta que hay que volver a bajar.
 
-**5. MANAGE USERS — EL REDISEÑO.** La recarga ya está arreglada (v11.58);
+**4. MANAGE USERS — EL REDISEÑO.** La recarga ya está arreglada (v11.58);
 queda cómo se editan los usuarios, la ventana más grande, el correo en una
 línea, y quitar el scroll lateral.
 
-**6. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
+**5. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
 
-**7. LAS CABECERAS QUE FALTAN EN UNA INSTALACIÓN VIEJA** (ver más abajo). No
+**6. LAS CABECERAS QUE FALTAN EN UNA INSTALACIÓN VIEJA** (ver más abajo). No
 urgente para Jose —ya lo arregló a mano— sí para el siguiente cliente.
 
-**8. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
+**7. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
 enviar correo / videollamada de Meet / chat.
 
-**9. LA FORMA DE MOSTRAR LAS CANTIDADES EN EL DASHBOARD.** Jose lo recordó el
+**8. LA FORMA DE MOSTRAR LAS CANTIDADES EN EL DASHBOARD.** Jose lo recordó el
 2026-09-09 y está pendiente de que explique qué quiere cambiar exactamente.
 
-**10. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
+**9. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
 
-**11. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
+**10. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
 
-**12. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
+**11. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
 
-**13. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
+**12. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
 sitio, la política de cobro y el rediseño del modelo de movimientos.
 
 ---
@@ -136,6 +117,37 @@ trabajo antes de tiempo. Lo que sí conviene es que el precio no quede colgado
 sin ninguna acción al lado.
 
 ---
+
+### ✅ HECHO (v11.61) — CUATRO COLUMNAS EN DOS
+
+**Idea de Jose, y mejor que la mía.** Yo iba a pelearme con el alto del
+encabezado al abrir el editor de columnas; eso arregla el síntoma. Lo suyo quita
+dos columnas de verdad:
+
+> *"decidimos que las columnas type, date, category y name no se van a cambiar
+>  nunca, entonces si no se van a cambiar podemos unir type sobre date, y
+>  category sobre name, reducimos 2 columnas y la pantalla no debe hacerse muy
+>  larga horizontalmente."*
+
+`type` + `date` → **Type / Date**. `category` + `name` → **Category / Name**. La
+insignia arriba, el dato debajo; la segunda línea en gris y más pequeña porque
+se lee DESPUÉS de haber encontrado la fila — salvo el nombre del material, que
+va en negrita porque es lo que la gente busca, y puede partirse en varias líneas
+(hay materiales llamados "SCENIC MOUNTAIN 4PLEX PHASE2").
+
+De 18 columnas a 16, y las dos nuevas siguen sin poder esconderse.
+
+**EL PRECIO, QUE ÉL YA NOMBRÓ:** esas cuatro dejan de poder reordenarse por
+separado, porque ya no son cuatro. Es una decisión, no un efecto secundario.
+
+**LA PARTE QUE PODÍA SALIR MAL EN SILENCIO, Y NO ES LA FUSIÓN:** el orden de
+columnas que cada persona tiene guardado en su navegador sigue hablando de las
+viejas. `_colOrder` descarta lo que no reconoce y añade lo que falta AL FINAL —
+así que sin traducirlo, a Jose la tabla se le habría abierto empezando por Qty,
+con el tipo y el nombre al otro extremo, **sin que él hubiera tocado nada**.
+`COL_MERGES` traduce: la de arriba se queda con el sitio de la vieja, la de
+abajo desaparece. Es lo que significa "type SOBRE date", también para decidir
+cuál de las dos manda.
 
 ### ✅ HECHO (v11.60) — EL CANDADO DICE QUIÉN Y POR QUÉ, Y DOS MENSAJES QUE MENTÍAN
 

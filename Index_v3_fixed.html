@@ -1020,6 +1020,13 @@
     /* La barra de acciones vive en la misma fila que Columns, separada por una
        línea en vez de por un salto: la fila no puede crecer ni encogerse al
        marcar una casilla. */
+    /* Las dos celdas de dos líneas de Movements. La de arriba es por la que se
+       encuentra la fila; la de abajo se lee después, y por eso va más pequeña y
+       en gris — salvo el nombre del material, que es lo que la gente busca. */
+    td.mc-when, td.mc-what{white-space:nowrap;vertical-align:top}
+    .mc-sub{font-size:.72rem;color:var(--muted);margin-top:.15rem}
+    .mc-main{font-weight:700;margin-top:.15rem;white-space:normal;
+      max-width:22ch;overflow-wrap:anywhere}
     .col-bar-right{margin-left:auto;display:inline-flex;align-items:center;gap:.4rem}
     /* Mismo alto, mismo ancho, mismo sitio: sólo cambia el color. */
     .btn.col-open{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -3356,7 +3363,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.60';
+var APP_VERSION = '11.61';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -3368,7 +3375,7 @@ var APP_VERSION = '11.60';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '7c9a80c0';
+var APP_BUILD = 'a82bd53d';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -3861,11 +3868,26 @@ var STOCK_COLS = [
 // Movements is the record of what happened, Stock is what is on hand — different
 // columns, but the same gesture edits both. What is locked here is what makes a
 // movement readable at a glance: what kind it was, when, of what, and how much.
+// CUATRO COLUMNAS EN DOS. Idea de Jose, 2026-09-09:
+//
+//   "decidimos que las columnas type, date, category y name no se van a cambiar
+//    nunca, entonces si no se van a cambiar podemos unir type sobre date, y
+//    category sobre name, reducimos 2 columnas y la pantalla no debe hacerse
+//    muy larga horizontalmente."
+//
+// Es mejor que lo que yo iba a hacer, que era pelearme con el alto del
+// encabezado al abrir el editor de columnas. Eso arregla el síntoma; esto quita
+// dos columnas de verdad y la tabla se estrecha.
+//
+// EL PRECIO, QUE ÉL YA NOMBRÓ: esas cuatro dejan de poder reordenarse por
+// separado, porque ya no son cuatro. Vale la pena — nadie reordena el tipo y la
+// fecha de un movimiento — pero es una decisión, no un efecto secundario.
+//
+// Las dos siguen siendo `lock:true`: no se pueden esconder. Un movimiento sin
+// tipo ni fecha, o sin nombre, no es una fila que sirva para nada.
 var MOV_COLS = [
-  { key:'type',     def:'Type',        lock:true  },
-  { key:'date',     def:'Date',        lock:true  },
-  { key:'category', def:'Category',    lock:true  },
-  { key:'name',     def:'Name',        lock:true  },
+  { key:'when',     def:'Type / Date',     lock:true  },
+  { key:'what',     def:'Category / Name', lock:true  },
   { key:'qty',      def:'Qty',         lock:true  },
   { key:'unit',     def:'Unit',        lock:false },
   { key:'po',       def:'PO#',         lock:false },
@@ -3950,10 +3972,32 @@ function _colCfg(t){ return COL_TABLES[t]; }
 
 function _defaultColOrder(t){ return _colCfg(t).cols.map(function(c){ return c.key; }); }
 
+// Cuando dos columnas se convierten en una, el orden que la gente ya tenía
+// guardado sigue hablando de las viejas. Sin esta traducción, el filtro de abajo
+// las tira y la columna nueva se añade AL FINAL — o sea que a Jose la tabla se
+// le abriría empezando por Qty y con el tipo y el nombre al otro extremo, sin
+// que él hubiera tocado nada.
+//
+// La vieja de arriba se queda con el sitio, la de abajo desaparece: es lo que
+// significa "type SOBRE date".
+var COL_MERGES = { mov: { type: 'when', date: null, category: 'what', name: null } };
+
 function _colOrder(t){
   var cfg = _colCfg(t);
   var saved = [];
   try { saved = JSON.parse(localStorage.getItem(cfg.orderKey) || '[]') || []; } catch (e) {}
+
+  var merge = COL_MERGES[t];
+  if (merge){
+    var vistos = {};
+    saved = saved.map(function(k){
+      return Object.prototype.hasOwnProperty.call(merge, k) ? merge[k] : k;
+    }).filter(function(k){
+      if (!k || vistos[k]) return false;   // la segunda mitad del par, y los repetidos
+      vistos[k] = 1; return true;
+    });
+  }
+
   var known = {};
   cfg.cols.forEach(function(c){ known[c.key] = 1; });
   // Filtered against the current column set, then topped up: a saved order from
@@ -5864,10 +5908,13 @@ function renderMovements(){
     var srcDest = (m.sourceLoc||'—') + ' → ' + (m.destLoc||'—');
 
     var cells = {
-      type:     '<td class="mc-type">'+moveBadge(m.moveType)+'</td>',
-      date:     '<td class="mc-date" style="white-space:nowrap">'+_he(m.dateRec||m.timestamp||'—')+'</td>',
-      category: '<td class="mc-category">'+catBadge(m.category)+'</td>',
-      name:     '<td class="mc-name"><strong>'+_he(displayName(m))+'</strong></td>',
+      // Dos líneas en una celda: la insignia arriba, el dato debajo. La segunda
+      // línea va en gris y más pequeña porque es la que se lee DESPUÉS de haber
+      // encontrado la fila por la de arriba.
+      when:     '<td class="mc-when">'+moveBadge(m.moveType)+
+                '<div class="mc-sub">'+_he(m.dateRec||m.timestamp||'—')+'</div></td>',
+      what:     '<td class="mc-what">'+catBadge(m.category)+
+                '<div class="mc-main">'+_he(displayName(m))+'</div></td>',
       qty:      '<td class="mc-qty" style="color:'+(isOut?'var(--red)':'var(--accent2)')+';font-weight:600">'+(isOut?'−':'+')+m.qty+'</td>',
       unit:     '<td class="mc-unit" style="color:var(--muted);font-size:.78rem">'+_he(m.unit||'—')+'</td>',
       po:       '<td class="mc-po" style="font-size:.78rem">'+_he(m.po||'—')+'</td>',
