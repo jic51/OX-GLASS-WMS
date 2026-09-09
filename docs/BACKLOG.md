@@ -10,19 +10,7 @@ here once they ship (the commit message is the record of what changed and why).
 De más urgente a menos. Lo de arriba estorba para publicar; lo de abajo puede
 esperar meses sin que pase nada.
 
-**1. LAS LOCACIONES: CREAR VARIAS A LA VEZ, Y PODER BORRAR UNA VACÍA.** Vídeo
-de Jose, 2026-09-08.
-- **Crear muchas de golpe.** Intentó crear varias y sólo se puede una por una.
-  Un almacén nuevo son decenas de estantes: A1A…A6C es teclear el mismo patrón
-  cuarenta veces.
-- **Borrar, no sólo archivar.** *"si la locación no tiene nada dentro se la debe
-  poder borrar, eso no cambia el historial pero ya no aparece en la lista"*. La
-  distinción es correcta y es la que hace que sea seguro: **vacía se borra,
-  con algo dentro se archiva.** Una locación que nunca tuvo nada no tiene
-  historia que proteger, y obligar a archivarla llena la lista de basura que
-  nadie puede quitar.
-
-**2. LA ANIMACIÓN AL BORRAR UNA FILA, Y LA VELOCIDAD.** Jose: *"está bien como
+**1. LA ANIMACIÓN AL BORRAR UNA FILA, Y LA VELOCIDAD.** Jose: *"está bien como
 lo hace pero aún no lo veo con la velocidad que quisiera, no sé por qué"*. Dos
 cosas distintas y conviene no confundirlas:
 - **Lo que se siente.** Una fila que se encoge y deja subir a las de abajo
@@ -33,32 +21,32 @@ cosas distintas y conviene no confundirlas:
   al medirlo resulta que son segundos, la animación tapa el síntoma y hay que
   mirar si el refresco puede esperar al final de la ráfaga.
 
-**3. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
+**2. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
 mínimos). Detalle completo más abajo. Es el que cuesta material cargado en una
 camioneta que hay que volver a bajar.
 
-**4. MANAGE USERS — EL REDISEÑO.** La recarga ya está arreglada (v11.58);
+**3. MANAGE USERS — EL REDISEÑO.** La recarga ya está arreglada (v11.58);
 queda cómo se editan los usuarios, la ventana más grande, el correo en una
 línea, y quitar el scroll lateral.
 
-**5. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
+**4. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
 
-**6. LAS CABECERAS QUE FALTAN EN UNA INSTALACIÓN VIEJA** (ver más abajo). No
+**5. LAS CABECERAS QUE FALTAN EN UNA INSTALACIÓN VIEJA** (ver más abajo). No
 urgente para Jose —ya lo arregló a mano— sí para el siguiente cliente.
 
-**7. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
+**6. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
 enviar correo / videollamada de Meet / chat.
 
-**8. LA FORMA DE MOSTRAR LAS CANTIDADES EN EL DASHBOARD.** Jose lo recordó el
+**7. LA FORMA DE MOSTRAR LAS CANTIDADES EN EL DASHBOARD.** Jose lo recordó el
 2026-09-09 y está pendiente de que explique qué quiere cambiar exactamente.
 
-**9. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
+**8. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
 
-**10. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
+**9. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
 
-**11. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
+**10. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
 
-**12. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
+**11. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
 sitio, la política de cobro y el rediseño del modelo de movimientos.
 
 ---
@@ -117,6 +105,49 @@ trabajo antes de tiempo. Lo que sí conviene es que el precio no quede colgado
 sin ninguna acción al lado.
 
 ---
+
+### ✅ HECHO (v11.62) — VARIAS LOCACIONES DE UNA VEZ, Y BORRAR UNA VACÍA
+
+**CREAR VARIAS.** El cuadro parte por comas: `A1A, A1B, A1C` crea tres. Las que
+ya existan se saltan y se nombran, en vez de cancelar el lote entero.
+
+**POR QUÉ NO PARTE POR ESPACIOS**, aunque "A1A A1B A1C" es lo que una mano
+escribe: el espacio es un carácter legal en un nombre de locación — "BACK ROOM"
+es un sitio que un negocio puede tener — y un separador que vuelve IMPOSIBLE
+escribir un nombre es peor que uno que a veces pide una coma. Escribir espacios
+ahora crea una locación con ese nombre literal, que se ve en la lista al
+instante y que, desde esta versión, se puede borrar.
+
+**BORRAR UNA VACÍA.** Palabras de Jose: *"si la locación no tiene nada dentro se
+la debe poder borrar, eso no cambia el historial pero ya no aparece en la
+lista"*. Tres cosas la retienen, y ninguna es la historia:
+
+- material guardado dentro,
+- un candado puesto sobre ella,
+- un candado que la nombra como destino permitido.
+
+**La historia NO retiene, y es la decisión que hace que esto sirva de algo.**
+Cada movimiento guarda su locación como TEXTO, así que un nombre borrado se
+sigue leyendo bien en cada fila del pasado — la misma regla que ya sigue el
+renombrar, y que la pantalla ya explicaba.
+
+**LO QUE APARECIÓ AL ABRIR ESA PUERTA, Y ERA LO SERIO.** `saveLocationLayout`
+recibe la lista ENTERA desde el navegador y la escribe tal cual. O sea que dejar
+un nombre fuera del arreglo **siempre ha bastado para borrar una locación** —
+incluida una con material adentro, que habría dejado ese stock existiendo,
+contado y mostrado bajo un nombre que ya no está en ninguna lista. Nadie lo
+había hecho porque la pantalla no ofrecía el botón; el agujero estaba abierto
+igual. Ahora la regla vive en el servidor, y el botón sólo decide qué OFRECER.
+
+**LA FOTO SE VA CON ELLA.** Si no, queda un archivo en Drive que nadie abrirá
+jamás y una fila que nadie leerá. Se tira DESPUÉS de que el guardado funcione:
+una foto borrada por un guardado que falló sería una pérdida por algo que no
+llegó a pasar.
+
+`tools/test-locations.js` — 60 comprobaciones, ejecutando las funciones de
+verdad de los dos archivos. Incluye que el navegador y el servidor coincidan en
+qué es "vacía": dos definiciones distintas serían un botón que aparece y luego
+falla.
 
 ### ✅ HECHO (v11.61) — CUATRO COLUMNAS EN DOS
 

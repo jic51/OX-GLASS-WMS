@@ -46,7 +46,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '11.61';
+var APP_VERSION = '11.62';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -58,7 +58,7 @@ var APP_VERSION = '11.61';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'a82bd53d';
+var APP_BUILD = 'c06e632d';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -9042,11 +9042,150 @@ function saveLocationLayout(data, auth) {
   var cfg = ss.getSheetByName(SHEETS.CONFIG);
   if (!cfg) throw new Error('CONFIG sheet not found.');
 
+  // ─── WHAT DISAPPEARED FROM THE LIST, AND WHETHER IT WAS ALLOWED TO ────────
+  // This screen sends the WHOLE list and this function writes it verbatim, so
+  // leaving a name out of the array has ALWAYS been enough to delete a
+  // location — including one with material still in it, which would leave that
+  // stock sitting in the warehouse map under a name no longer on any dropdown.
+  // Nobody had done it because the screen offered no delete button; the hole
+  // was open all the same, and v11.62 adds exactly that button.
+  //
+  // So the rule lives HERE, where nothing can route around it. The button in
+  // the browser only decides what to OFFER.
+  var removed = removedLocations_(cfg, seen);
+  if (removed.length) {
+    var use = locationUsage_(ss);
+    for (var d = 0; d < removed.length; d++) {
+      var why = locationBlockReason_(use, removed[d]);
+      if (why) throw new Error('"' + removed[d] + '" cannot be deleted — ' + why +
+                               '. Archive it instead.');
+    }
+  }
+
   writeConfigColumn_(cfg, 3, names);
   writeConfigColumn_(cfg, 4, types);
 
-  auditLog_(ss, 'UPDATE_CONFIG', auth.email, 'locations', 'reorder', names.length + ' location(s)');
-  return { status: 'success', count: names.length };
+  // Only after the write: a photo trashed for a save that then failed would be
+  // gone for a location that is still there.
+  if (removed.length) forgetRackPhotos_(ss, removed);
+
+  auditLog_(ss, 'UPDATE_CONFIG', auth.email, 'locations',
+            removed.length ? 'reorder + delete' : 'reorder',
+            names.length + ' location(s)' +
+            (removed.length ? ' — deleted ' + removed.join(', ') : ''));
+  return { status: 'success', count: names.length, deleted: removed };
+}
+
+// The names that are in CONFIG today and not in the list being saved. `keep` is
+// saveLocationLayout's own `seen` map — uppercase name → 1 — so the comparison
+// is case-insensitive without building a second index.
+function removedLocations_(cfg, keep) {
+  var lastRow = cfg.getLastRow();
+  if (lastRow < 2) return [];
+  var col = cfg.getRange(2, 4, lastRow - 1, 1).getValues();
+  var out = [], seenGone = {};
+  for (var i = 0; i < col.length; i++) {
+    var n = String(col[i][0] || '').trim();
+    if (!n) continue;
+    var k = n.toUpperCase();
+    if (keep[k] || seenGone[k]) continue;
+    seenGone[k] = 1;
+    out.push(n);
+  }
+  return out;
+}
+
+// ─── WHAT MAKES A LOCATION SAFE TO DELETE ───────────────────────────────────
+// Three things can point at a location, and each one has to be gone before the
+// name may leave the list:
+//
+//   • STOCK. Material sitting in it. Deleting the location would leave those
+//     units real, counted, and displayed under a name no dropdown offers.
+//   • A LOCK on it. Somebody has pinned a material to that shelf on purpose.
+//   • A LOCK NAMING IT AS AN ALLOWED DESTINATION. Deleting it would silently
+//     narrow a rule somebody wrote — the lock would go on existing while one of
+//     the places it permits quietly stopped being offered.
+//
+// HISTORY IS NOT ON THAT LIST, and that is deliberate. Every movement stores
+// its location as TEXT, so a deleted name goes on reading correctly on every
+// past row for ever. It is the same rule renaming already follows, and the same
+// one the Locations screen already explains: "existing movements keep the name
+// they were recorded with."
+//
+// Reads LIVE_STOCK rather than the archive because LIVE_STOCK is the aggregate
+// every screen already trusts for "what is where", and scanning the whole
+// archive to answer one delete would be minutes of work for a question the
+// cache answers instantly.
+function locationUsage_(ss) {
+  var use = {};
+  function slot(name) {
+    var k = String(name || '').trim().toUpperCase();
+    if (!k) return null;
+    if (!use[k]) use[k] = { qty: 0, locked: 0, allowed: 0 };
+    return use[k];
+  }
+
+  // LIVE_STOCK: A=Category B=Name C=Project D=Location E=Qty
+  var live = ss.getSheetByName(SHEETS.LIVE);
+  if (live && live.getLastRow() > 1) {
+    var rows = live.getRange(2, 4, live.getLastRow() - 1, 2).getValues();
+    for (var i = 0; i < rows.length; i++) {
+      var q = Number(rows[i][1]) || 0;
+      if (q <= 0) continue;
+      var s = slot(rows[i][0]);
+      if (s) s.qty += q;
+    }
+  }
+
+  // MATERIAL_LOCKS: E=Rack F=AllowedDestinations(CSV) … J=Status
+  var locks = ss.getSheetByName('MATERIAL_LOCKS');
+  if (locks && locks.getLastRow() > 1) {
+    var lr = locks.getRange(2, 5, locks.getLastRow() - 1, 6).getValues();
+    for (var j = 0; j < lr.length; j++) {
+      if (String(lr[j][5] || '').toUpperCase() !== 'ACTIVE') continue;
+      var sr = slot(lr[j][0]);
+      if (sr) sr.locked++;
+      String(lr[j][1] || '').split(',').forEach(function (dest) {
+        var sd = slot(dest);
+        if (sd) sd.allowed++;
+      });
+    }
+  }
+  return use;
+}
+
+// '' when the location is free to go, otherwise the reason it has to stay,
+// worded to drop straight into a sentence. The browser says the same three
+// things in its own words — see _locWhyKept.
+function locationBlockReason_(use, name) {
+  var u = use[String(name || '').trim().toUpperCase()];
+  if (!u) return '';
+  if (u.qty > 0) return 'it still holds ' + u.qty + ' unit(s)';
+  if (u.locked)  return 'a material is locked to it';
+  if (u.allowed) return 'a lock names it as an allowed destination';
+  return '';
+}
+
+// A photo of a rack that no longer exists is a Drive file nobody will ever open
+// and a row nobody will ever read. Deleting the location takes both with it.
+function forgetRackPhotos_(ss, names) {
+  var sheet = ss.getSheetByName('RACK_PHOTOS');
+  if (!sheet || sheet.getLastRow() < 2) return 0;
+
+  var gone = {};
+  for (var g = 0; g < names.length; g++) gone[String(names[g]).trim().toUpperCase()] = 1;
+
+  var rows = sheet.getDataRange().getValues();
+  var dropped = 0;
+  // Bottom-up: deleting a row shifts everything below it.
+  for (var i = rows.length - 1; i >= 1; i--) {
+    if (!gone[String(rows[i][0] || '').trim().toUpperCase()]) continue;
+    trashFileQuietly_(String(rows[i][1] || '').trim());
+    sheet.deleteRow(i + 1);
+    dropped++;
+  }
+  if (dropped) CacheService.getScriptCache().remove('rackPhotosV1');
+  return dropped;
 }
 
 // data.type  : 'categories' | 'projects' | 'suppliers' | 'locations'

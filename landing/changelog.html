@@ -95,6 +95,25 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.62</span>
+      <span class="tag new">New</span>
+      <h3>Several locations at once, and an empty one can be deleted</h3>
+      <p>Setting up a rack no longer means six trips through the same box: type
+         <code>A1A, A1B, A1C</code> and you get three. Names that already exist
+         are skipped and named, rather than cancelling the whole thing.</p>
+      <p>A location with nothing stored in it can now be deleted outright — a
+         bin appears next to it. Past movements are unaffected: each one keeps
+         the location name it was recorded with, the same rule renaming already
+         follows. A location that still holds material, has a lock on it, or is
+         named as a lock's allowed destination keeps only the archive button,
+         and hovering it says which of the three is holding it.</p>
+      <p>Under that: the server now enforces the rule instead of trusting the
+         screen. This page has always sent the whole list back, so a location
+         could in principle be dropped without anyone checking whether it was
+         empty. Now it is checked where it cannot be skipped.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.61</span>
       <span class="tag new">New</span>
       <h3>Movements fits on the screen: four columns became two</h3>
