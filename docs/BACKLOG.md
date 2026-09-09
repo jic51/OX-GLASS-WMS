@@ -10,44 +10,37 @@ here once they ship (the commit message is the record of what changed and why).
 Todo lo pendiente, de más urgente a menos. Lo de arriba estorba para publicar;
 lo de abajo puede esperar meses sin que pase nada.
 
-**1. LAS CASILLAS DE SELECCIÓN Y LA BARRA DE ACCIONES** — paso 4 del plan de la
-ID, con las correcciones de diseño de Jose ya escritas más abajo (Edit y Delete
-en la fila que YA existe, la de Columns, apagados sin selección; el encabezado
-del mismo tamaño antes y después; "Save" en vez de "Done"; casilla general =
-lo filtrado y visible, con estado intermedio; Edit sólo con una fila).
-Convierte "borro cinco de uno en uno" en una sola operación.
-
-**2. EL CANDADO CON DUEÑO Y RAZÓN VISIBLES al desbloquear.** Jose, 2026-09-08:
+**1. EL CANDADO CON DUEÑO Y RAZÓN VISIBLES al desbloquear.** Jose, 2026-09-08:
 *"ya tenemos la información, sólo hay que mostrarla"*. Correcto — el dueño se
 guarda en `auth.email` y la razón también; sólo falta enseñarlas.
 
-**3. EL MENSAJE DEL BORRADO CON EL PERMISO APAGADO.** Que diga "no tienes
+**2. EL MENSAJE DEL BORRADO CON EL PERMISO APAGADO.** Que diga "no tienes
 permiso para esta acción, contacta al admin" en vez del texto genérico de
 `requirePerm_`. Ya no es un fallo de permisos (v11.56), es el texto.
 
-**4. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
+**3. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
 mínimos). Detalle completo más abajo. Es el que cuesta material cargado en una
 camioneta que hay que volver a bajar.
 
-**5. MANAGE USERS — EL REDISEÑO.** La recarga ya está arreglada (v11.58);
+**4. MANAGE USERS — EL REDISEÑO.** La recarga ya está arreglada (v11.58);
 queda rediseñar cómo se editan los usuarios, la ventana más grande, el correo
 en una línea, y quitar el scroll lateral.
 
-**6. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
+**5. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
 
-**7. LAS CABECERAS QUE FALTAN EN UNA INSTALACIÓN VIEJA** (ver más abajo). No
+**6. LAS CABECERAS QUE FALTAN EN UNA INSTALACIÓN VIEJA** (ver más abajo). No
 urgente para Jose —ya lo arregló a mano— sí para el siguiente cliente.
 
-**8. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
+**7. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
 enviar correo / videollamada de Meet / chat.
 
-**9. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
+**8. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
 
-**10. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
+**9. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
 
-**11. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
+**10. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
 
-**12. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
+**11. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
 sitio, la política de cobro y el rediseño del modelo de movimientos.
 
 ---
@@ -106,6 +99,60 @@ trabajo antes de tiempo. Lo que sí conviene es que el precio no quede colgado
 sin ninguna acción al lado.
 
 ---
+
+### ✅ HECHO (v11.59) — LAS CASILLAS Y LA BARRA DE ACCIONES
+
+Paso 4 del plan de la ID, con las correcciones de diseño de Jose. **Las suyas
+eran mejores que las mías y así se hizo.**
+
+**LAS CASILLAS SE GUARDAN POR ID, NO POR NÚMERO DE FILA.** Es lo que hace que la
+selección sobreviva a un cambio de página y a una recarga silenciosa: los
+números de fila cambian, los nombres no. **Antes de la v11.53 esto no se podía
+escribir** — es la primera cosa que la columna de ID paga de vuelta.
+
+**LA FILA DE HERRAMIENTAS NO SE MUEVE NUNCA.** Jose: *"podemos modificar la app
+para que nada se mueva al dar clic en el botón"*. Tres cosas la movían y las
+tres están quitadas, no escondidas:
+
+- **Edit y Delete están siempre**, apagados cuando no hay nada marcado. Un botón
+  que aparece es un botón que mueve la página.
+- **El texto largo vive en el ⓘ** — corrección de Jose, y mejor que mi panel
+  flotante: la mía escondía el problema debajo de un panel, la suya lo quita.
+- **La columna de acciones ya no va y viene con el modo.** Los modos de fila
+  desaparecieron de Movements: eran justo lo que hacía crecer y encoger la tabla.
+
+Y dos cosas que salieron al medir, no al leer, porque la prueba mide píxeles:
+
+- **"⚙ Columns" se escondía mientras su propio panel estaba abierto**, y como es
+  el primer botón de la fila, esconderlo corría a los de su derecha. Ahora se
+  queda, se enciende de color, y sigue siendo el botón que cierra el panel.
+- **Save y Reset se fueron al extremo derecho**, empujados por el hueco. Al
+  aparecer empujan espacio vacío en vez de los botones de la izquierda.
+
+**"Save" en vez de "Done"**, en las dos tablas.
+
+**Las reglas de la selección, y por qué:**
+- **La casilla general marca LO QUE SE VE**, no las 604 filas. Con estado
+  intermedio, porque "algunas" es una respuesta distinta de "ninguna" y de
+  "todas", y una casilla que sólo sabe decir dos de las tres miente en la que
+  falta.
+- **Cambiar el filtro suelta la selección.** Sin eso, alguien puede marcar tres
+  filas, filtrar hasta que dejen de verse, y pulsar Delete sobre movimientos que
+  ya no tiene delante. Pasar de página **no** la suelta: la página cambia lo que
+  se ve, no lo que se buscó.
+- **Edit sólo con una.** Con dos no hay un formulario que pueda decir la verdad
+  sobre las dos a la vez, y el tooltip lo explica.
+- **Borrar varias pasa por la cola de la v11.58**, de una en una. Pedirle al
+  servidor veinte reconstrucciones del almacén de golpe es exactamente lo que
+  daba "System busy".
+- **Un movimiento archivado o sin ID no se puede marcar.** El servidor se
+  negaría, así que dejar marcarlo sería prometer algo que no se va a cumplir.
+
+**Y la regla del permiso, escrita UNA vez.** `_movCanAct()` decide quién ve las
+casillas, la columna de acciones y la barra. El fallo de la v11.56 fue
+precisamente que las dos mitades de la app no decían lo mismo; dos copias de una
+regla son dos sitios donde puede dejar de coincidir, y hay una prueba que se
+queja si alguien vuelve a escribirla a mano.
 
 ### ✅ HECHO (v11.58) — LA COLA DE BORRADO, Y DEJAR DE PREGUNTAR LO QUE YA SE SABE
 

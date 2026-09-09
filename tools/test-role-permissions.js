@@ -169,10 +169,23 @@ console.log('\n═══ y que el navegador no prometa más que el servidor ═�
   // botones y el servidor los rechazaba. Las dos reglas tienen que decir lo
   // mismo, o el fallo vuelve por el otro lado — botones escondidos a alguien
   // que sí puede.
-  const cli = (HTML.match(/var isAdmin\s+= userRole === 'ADMIN' \|\| \(userRole === 'WAREHOUSE' && !!rolePerms\.canEditMovements\);/) || [])[0];
+  // Desde la v11.59 la regla del navegador vive en UNA función con nombre, en
+  // vez de repetida en cada sitio que la necesita. Eso importa aquí más que en
+  // otros sitios: el fallo que Jose encontró era precisamente que las dos
+  // mitades de la app no decían lo mismo. Dos copias de una regla son dos
+  // sitios donde puede dejar de coincidir.
+  const canAct = fnSrc(HTML, '_movCanAct');
   check('el navegador enseña Edit y Delete a ADMIN, o a WAREHOUSE con el ' +
-        'permiso — exactamente la misma regla que ahora aplica el servidor',
-    !!cli);
+        'permiso — exactamente la misma regla que aplica el servidor',
+    /userRole === 'ADMIN'/.test(canAct) &&
+    /userRole === 'WAREHOUSE'/.test(canAct) &&
+    /canEditMovements/.test(canAct));
+  // Y fuera de esa función, NADIE vuelve a leer el permiso a mano. Es la parte
+  // que de verdad impide que las dos mitades se separen otra vez: una segunda
+  // copia es un segundo sitio donde puede quedarse atrás.
+  const fueraDeCanAct = HTML.replace(canAct, '');
+  check('...escrita UNA vez: nadie la repite a mano por ahí',
+    !/rolePerms[^;\n]{0,12}\.canEditMovements/.test(fueraDeCanAct));
 }
 
 console.log('\n' + '─'.repeat(72));

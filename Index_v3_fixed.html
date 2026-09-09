@@ -1017,6 +1017,18 @@
        fondo; abajo el contenido llegaba al borde y la ventana parecía cortada
        en vez de terminada. Esta franja no lleva nada dentro a propósito: su
        único trabajo es cerrar el marco, igual que la cabecera lo abre. */
+    /* La barra de acciones vive en la misma fila que Columns, separada por una
+       línea en vez de por un salto: la fila no puede crecer ni encogerse al
+       marcar una casilla. */
+    .col-bar-right{margin-left:auto;display:inline-flex;align-items:center;gap:.4rem}
+    /* Mismo alto, mismo ancho, mismo sitio: sólo cambia el color. */
+    .btn.col-open{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .mov-act-sep{display:inline-flex;align-items:center;gap:.4rem;
+      padding-left:.7rem;margin-left:.35rem;border-left:1px solid var(--border)}
+    .mov-sel-count{font-size:.74rem;color:var(--muted);min-width:5.5rem}
+    .mov-sel-cell{width:32px;text-align:center}
+    .mov-select-cb{cursor:pointer}
+    .mov-select-cb:disabled{cursor:not-allowed;opacity:.35}
     .settings-modal .sftr{flex-shrink:0;height:14px;background:var(--bg);
       border-top:1px solid var(--border);border-radius:0 0 14px 14px}
     /* Una fila esperando su turno en la cola de borrado. Sigue ahí porque
@@ -2343,7 +2355,7 @@
         <span class="col-edit-help" id="colEditHelp_stock" style="display:none">
           Drag a heading to move it · click the eye to hide it<span id="colEditAdminHelp_stock"> · click a name to rename it for everyone</span>
         </span>
-        <button class="btn btn-primary btn-sm" id="btnColDone_stock" style="display:none" onclick="finishColEdit('stock')">Done</button>
+        <button class="btn btn-primary btn-sm" id="btnColDone_stock" style="display:none" onclick="finishColEdit('stock')">Save</button>
         <button class="btn btn-ghost btn-sm" id="btnColReset_stock" style="display:none" onclick="resetColEdit('stock')">Reset</button>
       </div>
       <div id="stockSelectBar" style="display:none;align-items:center;gap:.75rem;background:var(--red-bg);border:1px solid var(--red);border-radius:8px;padding:.5rem .9rem;margin-bottom:.75rem">
@@ -2383,22 +2395,39 @@
           <button id="btnExit" class="btn btn-danger">− Exit (OUT)</button>
         </div>
       </div>
-      <div class="col-bar">
+      <!-- ONE ROW, THE SAME HEIGHT ALWAYS.
+           Jose, 2026-09-07: "los botones edit y delete deben aparecer en la
+           misma línea que el botón columns... podemos modificar la app para que
+           nada se mueva al dar clic en el botón".
+
+           The row used to change shape twice. Edit and Delete once sat here and
+           got pushed onto a new toolbar row when the column help text appeared;
+           moving them to a line of their own fixed the jumping by adding a
+           permanent empty row. Now they are back here for good, and the two
+           things that made the row grow are gone instead of hidden:
+
+             · the long help text lives in the ⓘ, which is Jose's own
+               correction and better than my floating panel — his removes the
+               problem, mine covered it up;
+             · Edit and Delete are ALWAYS here, greyed out with nothing
+               selected. A button that appears is a button that moves the page. -->
+      <div class="col-bar" id="movColBar">
         <button class="btn btn-ghost btn-sm" id="btnEditCols_mov" onclick="toggleColEdit('mov')">⚙ Columns</button>
-        <span class="col-edit-help" id="colEditHelp_mov" style="display:none">
-          Drag a heading to move it · click the eye to hide it<span id="colEditAdminHelp_mov"> · click a name to rename it for everyone</span>
+        <span class="info-ic tip" tabindex="0" data-tip="Drag a heading to move it &#183; click the eye to hide it &#183; click a name to rename it for everyone. Your order and what you hide are yours; a renamed heading is the company's and everyone sees it.">i</span>
+        <span class="mov-act-sep" id="movActBar" style="display:none">
+          <button class="btn btn-ghost btn-sm" id="btnMovEdit" onclick="editSelectedMovement()" disabled>✏️ Edit</button>
+          <button class="btn btn-ghost btn-sm" id="btnMovDel"  onclick="deleteSelectedMovements()" disabled>🗑 Delete</button>
+          <span id="movSelCount" class="mov-sel-count"></span>
         </span>
-        <button class="btn btn-primary btn-sm" id="btnColDone_mov" style="display:none" onclick="finishColEdit('mov')">Done</button>
-        <button class="btn btn-ghost btn-sm" id="btnColReset_mov" style="display:none" onclick="resetColEdit('mov')">Reset</button>
+        <!-- Save y Reset A LA DERECHA DEL TODO, empujados por el hueco. Sólo
+             existen mientras se están cambiando las columnas, y aparecer es lo
+             único que un botón puede hacer para mover la página: puestos aquí,
+             lo que empujan es el hueco vacío y no los botones de la izquierda. -->
+        <span class="col-bar-right">
+          <button class="btn btn-primary btn-sm" id="btnColDone_mov" style="display:none" onclick="finishColEdit('mov')">Save</button>
+          <button class="btn btn-ghost btn-sm" id="btnColReset_mov" style="display:none" onclick="resetColEdit('mov')">Reset</button>
+        </span>
       </div>
-      <!-- On its own line, not sharing the "Columns" toolbar row above: Edit and
-           Delete used to sit beside "⚙ Columns" until the hint text below them
-           got long enough to not fit anymore, which shoved both buttons down
-           onto a whole new toolbar row the moment Jose clicked one — a
-           different top position every time (bug report). Giving this its own
-           row from the start means that row never happens; the buttons never
-           move again regardless of the hint's length. -->
-      <div id="rowModeSlot_mov"></div>
       <div class="table-wrapper" id="tableContainer" data-rowscope="mov"></div>
     </div>
   </div>
@@ -3327,7 +3356,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.58';
+var APP_VERSION = '11.59';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -3339,7 +3368,7 @@ var APP_VERSION = '11.58';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '5a87ff27';
+var APP_BUILD = 'd08c278b';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -3749,13 +3778,11 @@ var ROW_MODES = {
   loc: { edit: 'Rename', del: 'Remove',
          editHint: 'Click the pencil on a group to rename it.',
          delHint:  'Bin deletes a group (its locations move to ALL LOCATIONS). The box archives a single location.' },
-  mov: { edit: 'Edit', del: 'Delete',
-         editHint: 'Click the pencil on a row to correct that record.',
-         // No longer "permanently" — since v11.55 it goes to the trash and can
-         // be put back. A warning that overstates what a button does costs the
-         // same as one that understates it: people stop trusting either.
-         delHint:  'Click the bin on a row to remove that record. It goes to the trash, so you can put it back.',
-         refresh: function(){ renderMovements(); } },   // its actions column comes and goes with the mode
+  // `mov` YA NO ESTÁ AQUÍ. Movements dejó de tener modos en la v11.59: sus
+  // acciones viven en la fila de Columns, encendidas por lo que hay marcado, y
+  // la columna de la papelera y el lápiz está siempre puesta para quien puede
+  // usarla. El modo era lo que hacía crecer y encoger la tabla al pulsar un
+  // botón — quitarlo es el arreglo que pidió Jose, no esconderlo.
   usr: { edit: 'Edit', del: 'Deactivate',
          editHint: 'Click the pencil on a person to change their name or role.',
          delHint:  'Click 🚫 to stop someone signing in. Their history is kept.' }
@@ -3893,10 +3920,19 @@ var COL_TABLES = {
     // on upgrade for someone who never touched the old checkboxes.
     defaultHidden: ['rawLoc','gc','supplier','pm','sysDate'],
     head: 'movHeadRow',
-    lead: function(){ return ''; },
-    // The actions column comes and goes with the row mode, so a table nobody
-    // is editing has no empty column hanging off the end of it.
-    tail: function(){ return (userRole === 'ADMIN' && _rowModes.mov) ? '<th></th>' : ''; },
+    // La casilla de "todo", como en el Dashboard. Sólo para quien puede actuar:
+    // a alguien que no puede editar ni borrar, una columna de casillas le
+    // ofrece elegir para nada.
+    lead: function(){
+      if (!_movCanAct()) return '';
+      return '<th style="width:32px"><input type="checkbox" id="movSelAll" ' +
+             'onclick="event.stopPropagation()" onchange="toggleMovSelectAll(this)" ' +
+             'title="Select everything you can see"></th>';
+    },
+    // La columna de acciones ya NO va y viene: aparecía y desaparecía con el
+    // modo, y eso era justo lo que hacía saltar la tabla al pulsar un botón.
+    // Ahora está siempre para quien puede usarla, y para nadie más.
+    tail: function(){ return _movCanAct() ? '<th></th>' : ''; },
     refresh: function(){ renderMovements(); }                             // rebuilds its own header
   }
 };
@@ -4037,13 +4073,22 @@ function _colBarEl(t, base){ return document.getElementById(base + '_' + t); }
 
 function _setColBarMode(t){
   var on = _colEdit[t];
-  [['btnColDone', on], ['btnColReset', on], ['colEditHelp', on], ['btnEditCols', !on]]
+  // "⚙ Columns" SE QUEDA. Se escondía mientras el panel estaba abierto, y como
+  // es el primer botón de la fila, esconderlo corría a los de su derecha —
+  // exactamente lo que Jose pidió que dejara de pasar ("que nada se mueva al
+  // dar clic en el botón"). Además es el mismo botón que cierra el panel, así
+  // que quitarlo dejaba abierto algo sin una forma obvia de cerrarlo.
+  [['btnColDone', on], ['btnColReset', on], ['colEditHelp', on]]
     .forEach(function(pair){
       var el = _colBarEl(t, pair[0]);
       if (el) el.style.display = pair[1] ? '' : 'none';
     });
   var adminHelp = _colBarEl(t, 'colEditAdminHelp');
   if (adminHelp) adminHelp.style.display = (userRole === 'ADMIN') ? '' : 'none';
+  // Encendido mientras el panel está abierto, para que se vea cuál es el botón
+  // que lo cierra. Cambia de color, no de tamaño ni de sitio.
+  var open = _colBarEl(t, 'btnEditCols');
+  if (open) open.classList.toggle('col-open', !!on);
 }
 
 function toggleColEdit(t){
@@ -5764,7 +5809,7 @@ function renderMovements(){
   // Permissions (see requirePerm_/canEditMovements server-side, which is what
   // actually enforces this; hiding the buttons here is just so a WAREHOUSE
   // user without the flag never sees a control that would fail on the save).
-  var isAdmin   = userRole === 'ADMIN' || (userRole === 'WAREHOUSE' && !!rolePerms.canEditMovements);
+  var isAdmin   = _movCanAct();   // una sola regla, escrita una vez — ver _movCanAct
   var order     = _colOrder('mov');
   var hiddenNow = {};
   _colHidden('mov').forEach(function(k){ hiddenNow[k] = 1; });
@@ -5844,18 +5889,31 @@ function renderMovements(){
       return cells[k] || '';
     }).join('');
 
-    var adminCell = (isAdmin && _rowModes.mov)
+    // Siempre, para quien puede actuar. Antes venía y se iba con el modo de
+    // fila, y esa columna apareciendo y desapareciendo era lo que hacía saltar
+    // la tabla entera al pulsar un botón.
+    var adminCell = isAdmin
       ? '<td><div style="display:flex;align-items:center;gap:2px">'+(m.archived?'<span style="font-size:.68rem;color:var(--muted)" title="Archived movement — read only">📜</span>':'<button class="btn-icon" data-rowact="edit" title="Edit record" onclick="openEditMovModal('+m.rowIdx+')" style="color:var(--accent)">✏️</button><button class="btn-icon" data-rowact="del" title="Delete record" onclick="deleteMovementRow('+m.rowIdx+')" style="color:var(--red);opacity:.7">🗑</button>')+'</div></td>'
+      : '';
+
+    // La casilla de la fila. Un movimiento archivado no la lleva: no se puede
+    // editar ni borrar, así que ofrecerlo sería ofrecer un callejón sin salida.
+    var selCell = isAdmin
+      ? '<td class="mov-sel-cell">' + (m.archived ? '' :
+          '<input type="checkbox" class="mov-select-cb" data-movid="' + _escAttr(m.movId || '') +
+          '" data-rowidx="' + m.rowIdx + '"' + (m.movId && _movSelection[m.movId] ? ' checked' : '') +
+          (m.movId ? '' : ' disabled title="This movement has no ID yet — run Settings → System → Movement IDs"') +
+          ' onclick="event.stopPropagation()" onchange="toggleMovSelect(this)">') + '</td>'
       : '';
 
     // A row waiting its turn in the delete queue says so. It is still there
     // because it has NOT been deleted yet — dimming it is the truth, and it
     // stops the same bin being pressed twice.
     var pendCls = (m.movId && _delPending[m.movId]) ? ' row-deleting' : '';
-    return '<tr class="'+rowClass(m.moveType)+pendCls+'">' + body + adminCell + '</tr>';
+    return '<tr class="'+rowClass(m.moveType)+pendCls+'">' + selCell + body + adminCell + '</tr>';
   }).join('');
 
-  var span = _visibleColCount('mov') + ((isAdmin && _rowModes.mov) ? 1 : 0);
+  var span = _visibleColCount('mov') + (isAdmin ? 2 : 0);   // casilla + acciones
 
   // An empty result used to replace the whole table, header included — which
   // took the column editor off screen with it. The message is a row now, so the
@@ -5882,11 +5940,10 @@ function renderMovements(){
   // to be attached again each time.
   if (_colEdit.mov) _wireColEdit('mov');
 
-  // Admins get the Edit / Delete toggles beside the column button. Mounted once
-  // and then left alone — re-rendering the table must not reset the mode.
-  var rmSlot = document.getElementById('rowModeSlot_mov');
-  if (rmSlot && isAdmin && !rmSlot.firstChild) rmSlot.innerHTML = _rowModeBarHtml('mov');
-  _mountRowMode('mov');
+  // La selección sobrevive al repintado, y la barra de acciones se pone al día
+  // con lo que de verdad hay marcado — no con lo que había antes de filtrar.
+  _syncMovSelectAll();
+  _updateMovActionBar();
 
   tc.querySelectorAll('[data-row]').forEach(function(btn){
     btn.addEventListener('click', function(){ openAttachModal(parseInt(btn.dataset.row), btn.dataset.po); });
@@ -5934,6 +5991,139 @@ function deleteMovementRow(rowIdx){
              'It goes to the trash, so you can put it back from Settings → System.',
     confirmText: 'Yes, Delete',
     onConfirm: function(){ _doDeleteMovementRow(rowIdx); }
+  });
+}
+
+/* ── SELECCIÓN DE MOVIMIENTOS ───────────────────────────────────────────────
+   Jose, 2026-09-07: "quiero hacer la selección de los movimientos como en el
+   dashboard, con los checkmarks... también quiero poner un checkmark general".
+
+   Se guarda por ID, no por número de fila. Es lo que hace que la selección
+   sobreviva a un filtro, a un cambio de página y a una recarga silenciosa: los
+   números de fila cambian, los nombres no. Antes de la v11.53 esto no se podía
+   escribir.
+
+   Un movimiento archivado no se puede marcar, y uno sin ID tampoco — el
+   servidor se negaría a borrarlo, así que dejar marcarlo sería prometer algo
+   que no se va a cumplir. */
+var _movSelection = {};   // movId → true
+
+// Quién ve las casillas y la barra: exactamente la misma regla que decide si
+// ve la columna de acciones, escrita una vez.
+function _movCanAct(){
+  return userRole === 'ADMIN' ||
+         (userRole === 'WAREHOUSE' && !!(rolePerms || {}).canEditMovements);
+}
+
+function _clearMovSelection(){ _movSelection = {}; }
+
+function toggleMovSelect(cb){
+  var id = cb.getAttribute('data-movid');
+  if (!id) return;
+  if (cb.checked) _movSelection[id] = true; else delete _movSelection[id];
+  _syncMovSelectAll();
+  _updateMovActionBar();
+}
+
+// "Todo" es LO QUE SE ESTÁ VIENDO, no las 604 filas del archivo. Marcar en un
+// filtro y borrar sin él sería exactamente el accidente que esta pantalla tiene
+// que hacer imposible.
+function toggleMovSelectAll(cb){
+  document.querySelectorAll('#tableContainer .mov-select-cb').forEach(function(x){
+    if (x.disabled) return;
+    var id = x.getAttribute('data-movid');
+    if (!id) return;
+    x.checked = cb.checked;
+    if (cb.checked) _movSelection[id] = true; else delete _movSelection[id];
+  });
+  _updateMovActionBar();
+}
+
+// El estado intermedio existe porque "algunas" es una respuesta distinta de
+// "ninguna" y de "todas", y una casilla que sólo sabe decir dos de las tres
+// miente en el tercio que falta.
+function _syncMovSelectAll(){
+  var all = document.getElementById('movSelAll');
+  if (!all) return;
+  var boxes = [];
+  document.querySelectorAll('#tableContainer .mov-select-cb').forEach(function(x){
+    if (!x.disabled) boxes.push(x);
+  });
+  var marcadas = boxes.filter(function(x){ return x.checked; }).length;
+  all.checked       = boxes.length > 0 && marcadas === boxes.length;
+  all.indeterminate = marcadas > 0 && marcadas < boxes.length;
+  all.disabled      = boxes.length === 0;
+}
+
+// Los movimientos marcados que TODAVÍA existen en la lista. Uno borrado por
+// otra persona desaparece de aquí solo, sin que nadie tenga que acordarse de
+// limpiar la selección.
+function _selectedMovements(){
+  var out = [];
+  movements.forEach(function(m){ if (m.movId && _movSelection[m.movId]) out.push(m); });
+  return out;
+}
+
+function _updateMovActionBar(){
+  var bar = document.getElementById('movActBar');
+  if (!bar) return;
+  var puede = _movCanAct();
+  bar.style.display = puede ? '' : 'none';
+  if (!puede) return;
+
+  var n    = _selectedMovements().length;
+  var edit = document.getElementById('btnMovEdit');
+  var del  = document.getElementById('btnMovDel');
+  var cnt  = document.getElementById('movSelCount');
+
+  // APAGADOS, NO ESCONDIDOS. Un botón que aparece es un botón que mueve la
+  // página, y mover la página al marcar una casilla es lo que Jose pidió que
+  // dejara de pasar.
+  if (del){
+    del.disabled = n === 0;
+    del.title = n === 0 ? 'Tick a row first' : 'Delete ' + n + ' movement' + (n === 1 ? '' : 's');
+  }
+  if (edit){
+    // Editar sólo tiene sentido con UNA. Con dos no hay un formulario que
+    // pueda decir la verdad sobre las dos a la vez.
+    edit.disabled = n !== 1;
+    edit.title = n === 0 ? 'Tick a row first'
+               : n > 1   ? 'Edit works on one movement at a time'
+                         : 'Edit this movement';
+  }
+  if (cnt) cnt.textContent = n ? (n + ' selected') : '';
+}
+
+function editSelectedMovement(){
+  var sel = _selectedMovements();
+  if (sel.length !== 1) return;
+  openEditMovModal(sel[0].rowIdx);
+}
+
+function deleteSelectedMovements(){
+  var sel = _selectedMovements();
+  if (!sel.length) return;
+  var n = sel.length;
+  _showConfirm({
+    icon: '🗑️', danger: true,
+    title: n === 1 ? 'Delete this movement?' : 'Delete ' + n + ' movements?',
+    message: (n === 1
+        ? (sel[0].qty + ' ' + (sel[0].unit || '') + ' of ' + sel[0].name).replace(/\s+/g, ' ')
+        : n + ' movements') +
+      ' will be removed from the warehouse history.\n\n' +
+      'They go to the trash, so you can put them back from Settings → System.',
+    confirmText: n === 1 ? 'Yes, Delete' : 'Yes, delete ' + n,
+    onConfirm: function(){
+      // De uno en uno por la misma cola de la v11.58 — pedirle al servidor
+      // veinte reconstrucciones del almacén de golpe es justo lo que daba
+      // "System busy". La selección se suelta ya: las filas se ven esperando
+      // por su cuenta, y dejarlas marcadas invitaría a pulsar otra vez.
+      sel.forEach(function(m){
+        delete _movSelection[m.movId];
+        _doDeleteMovementRow(m.rowIdx);
+      });
+      _updateMovActionBar();
+    }
   });
 }
 
@@ -17219,9 +17409,14 @@ document.addEventListener('DOMContentLoaded', function(){
   _safeOn('stockStatusFilter','change', renderStock);
 
   // Movement filters
-  _safeOn('movSearch','input', _debounce(function(){ _movPage=1; renderMovements(); }, 220));
-  _safeOn('movTypeFilter','change', function(){ _movPage=1; renderMovements(); });
-  _safeOn('movCatFilter','change', function(){ _movPage=1; renderMovements(); });
+  // Cambiar el filtro SUELTA la selección. Sin esto, alguien puede marcar tres
+  // filas, filtrar hasta que dejen de verse, y pulsar Delete sobre movimientos
+  // que ya no tiene delante — el accidente exacto que esta pantalla tiene que
+  // hacer imposible. Pasar de página NO la suelta: la página cambia lo que se
+  // ve, no lo que se buscó.
+  _safeOn('movSearch','input', _debounce(function(){ _clearMovSelection(); _movPage=1; renderMovements(); }, 220));
+  _safeOn('movTypeFilter','change', function(){ _clearMovSelection(); _movPage=1; renderMovements(); });
+  _safeOn('movCatFilter','change', function(){ _clearMovSelection(); _movPage=1; renderMovements(); });
 
   // Export
   _safeOn('btnExportCSV','click', exportMovementsCSV);

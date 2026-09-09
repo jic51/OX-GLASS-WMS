@@ -1,11 +1,26 @@
-// Verifies the Movements table's Edit/Delete toggle buttons stay put when
-// clicked — Jose caught them jumping to a new position the instant he turned
-// Edit mode on. Root cause: the hint text that appears next to them ("Click
-// the pencil on a row...") used to share a flex line with the "⚙ Columns"
-// button above the table, and once the hint was long enough to not fit, the
-// whole row-mode bar (buttons included) got shoved down onto a brand new
-// toolbar row. The buttons now live on their own dedicated row from the
-// start, so nothing about them moves when the hint shows up or changes.
+// NADA SE MUEVE AL PULSAR UN BOTÓN.
+//
+// Jose cazó los botones de Edit y Delete saltando a otro sitio en el instante en
+// que encendía el modo Edit. La causa de entonces: el texto de ayuda que
+// aparecía al lado ("Click the pencil on a row...") compartía línea con "⚙
+// Columns", y en cuanto no cabía, empujaba la barra entera —botones incluidos—
+// a una fila nueva de la barra de herramientas.
+//
+// Se arregló dándoles una fila propia. Y en la v11.59 se arregló DE VERDAD, con
+// la corrección de Jose, que era mejor que la mía:
+//
+//   "podemos modificar la app para que nada se mueva al dar clic en el botón...
+//    hacer que el encabezado mida lo mismo antes y después... poner el texto
+//    explicativo en el icono i"
+//
+// La mía escondía el problema debajo de un panel flotante; la suya lo quita. Así
+// que ahora Edit y Delete están EN la fila de Columns, siempre puestos y sólo
+// apagados, el texto largo vive en el icono ⓘ, y no hay ningún modo que haga
+// crecer ni encoger nada.
+//
+// LO QUE ESTE ARCHIVO MIDE, y es una medida y no una lectura: que marcar una
+// casilla no mueva ni un píxel de la fila de herramientas ni de la tabla. Un
+// botón que aparece es un botón que mueve la página.
 //
 // Usage:  node tools/test-rowmode-stable.js [path/to/Index_v3_fixed.html]
 
@@ -35,7 +50,7 @@ Object.assign(window.google,{script:{run:new Proxy({},{get(t,k){
 }})}});
 window.__DATA={ userRole:'ADMIN', userEmail:'jose@ox-glass.com', userName:'Jose Castro',
  serverVersion:'${APP_VERSION}', company:{name:'OX Glass LLC.',domain:'ox-glass.com',logo:''},
- movements:[{rowIdx:2,moveType:'ENTRY',dateRec:'2026-08-01',category:'WINDOW',name:'GLASS',qty:10,unit:'pcs',destLoc:'A1A',timestamp:'2026-08-01 10:00',userEmail:'jose@ox-glass.com'}],
+ movements:[{rowIdx:2,movId:'M-A',moveType:'ENTRY',dateRec:'2026-08-01',category:'WINDOW',name:'GLASS',qty:10,unit:'pcs',destLoc:'A1A',timestamp:'2026-08-01 10:00',userEmail:'jose@ox-glass.com'},{rowIdx:3,movId:'M-B',moveType:'EXIT',dateRec:'2026-08-02',category:'WINDOW',name:'GLASS',qty:4,unit:'pcs',sourceLoc:'A1A',timestamp:'2026-08-02 10:00',userEmail:'jose@ox-glass.com'}],
  stock:{ 'WINDOW|||GLASS': { name:'GLASS', category:'WINDOW', unit:'pcs', warehouseQty:10, siteQty:0,
    availableQty:10, wastedQty:0, reservedQty:0, matId:'WINDOW|||GLASS', warehouseLocs:{ 'A1A': 10 }, status:'OK' } },
  monitoredMaterials:null,
@@ -58,33 +73,92 @@ function check(label, cond) {
   const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || undefined });
   const pageErrors = [];
 
+  const rect = (page, sel) => page.evaluate(s => {
+    const el = document.querySelector(s);
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { top: r.top, left: r.left, height: r.height };
+  }, sel);
+
+  const same = (a, b) => a && b && Math.abs(a.top - b.top) < 1 && Math.abs(a.left - b.left) < 1;
+
   for (const w of [375, 500, 1280]) {
-    console.log('\nScenario: ' + w + 'px — clicking Edit must not move the Edit/Delete buttons');
+    console.log('\nScenario: ' + w + 'px — ticking a row must not move anything');
     const page = await browser.newPage({ viewport: { width: w, height: 800 } });
     page.on('pageerror', e => pageErrors.push(w + ': ' + e.message));
     await page.goto('file://' + f);
     await page.waitForTimeout(300);
     await page.click('#btn-movements');
+    await page.waitForTimeout(250);
+
+    // Con nada marcado, los botones YA ESTÁN. Ésa es la mitad del arreglo: no
+    // hay nada que aparezca.
+    const editBefore = await rect(page, '#btnMovEdit');
+    const delBefore  = await rect(page, '#btnMovDel');
+    const barBefore  = await rect(page, '#movColBar');
+    const tblBefore  = await rect(page, '#tableContainer');
+    check('Edit y Delete están puestos antes de marcar nada', !!editBefore && !!delBefore);
+    check('...y apagados, que es lo que dice que hace falta elegir algo',
+      await page.evaluate(() => document.getElementById('btnMovEdit').disabled &&
+                                document.getElementById('btnMovDel').disabled));
+
+    await page.click('#tableContainer .mov-select-cb');
+    await page.waitForTimeout(150);
+
+    const editAfter = await rect(page, '#btnMovEdit');
+    const barAfter  = await rect(page, '#movColBar');
+    const tblAfter  = await rect(page, '#tableContainer');
+    check('el botón Edit no se mueve al marcar (' + editBefore.top.toFixed(1) +
+          ' → ' + editAfter.top.toFixed(1) + ')', same(editBefore, editAfter));
+    check('la fila de herramientas mantiene su alto (' + barBefore.height.toFixed(1) +
+          ' → ' + barAfter.height.toFixed(1) + ')',
+      Math.abs(barBefore.height - barAfter.height) < 1);
+    check('Y LA TABLA NO SE MUEVE — que es lo que se ve desde la silla de Jose',
+      same(tblBefore, tblAfter));
+
+    check('con una marcada, Edit se enciende',
+      await page.evaluate(() => !document.getElementById('btnMovEdit').disabled));
+    check('...y Delete también',
+      await page.evaluate(() => !document.getElementById('btnMovDel').disabled));
+
+    // Dos marcadas: Delete sigue valiendo, Edit no. No hay un formulario que
+    // pueda decir la verdad sobre dos movimientos a la vez.
+    await page.evaluate(() => {
+      const cbs = document.querySelectorAll('#tableContainer .mov-select-cb');
+      cbs[1].click();
+    });
+    await page.waitForTimeout(150);
+    check('con dos marcadas Edit se apaga, y lo dice al pasar el ratón',
+      await page.evaluate(() => {
+        const b = document.getElementById('btnMovEdit');
+        return b.disabled && /one movement at a time/i.test(b.title || '');
+      }));
+    check('...pero Delete sigue encendido: borrar varias sí tiene sentido',
+      await page.evaluate(() => !document.getElementById('btnMovDel').disabled));
+    check('y la fila SIGUE sin moverse con dos marcadas',
+      same(editBefore, await rect(page, '#btnMovEdit')));
+
+    // La casilla general, y su estado intermedio.
+    check('la casilla general se pone en "todas"',
+      await page.evaluate(() => document.getElementById('movSelAll').checked === true));
+    await page.evaluate(() => document.querySelectorAll('#tableContainer .mov-select-cb')[1].click());
+    await page.waitForTimeout(120);
+    check('al desmarcar una queda en el estado INTERMEDIO — "algunas" es una ' +
+          'respuesta distinta de "ninguna" y de "todas"',
+      await page.evaluate(() => {
+        const a = document.getElementById('movSelAll');
+        return a.indeterminate === true && a.checked === false;
+      }));
+
+    // Y el panel de Columns, que era el que empujaba todo.
+    const colBefore = await rect(page, '#btnMovEdit');
+    await page.click('#btnEditCols_mov');
     await page.waitForTimeout(200);
-
-    const before = await page.evaluate(() => document.querySelector('#rmb-mov .rm-edit').getBoundingClientRect());
-    await page.click('#rmb-mov .rm-edit');
-    await page.waitForTimeout(150);
-    const after = await page.evaluate(() => document.querySelector('#rmb-mov .rm-edit').getBoundingClientRect());
-
-    check('Edit button top stayed put (' + before.top.toFixed(1) + ' -> ' + after.top.toFixed(1) + ')', Math.abs(before.top - after.top) < 1);
-    check('Edit button left stayed put (' + before.left.toFixed(1) + ' -> ' + after.left.toFixed(1) + ')', Math.abs(before.left - after.left) < 1);
-
-    const hintRect = await page.evaluate(() => document.querySelector('#rmb-mov .rm-hint').getBoundingClientRect());
-    const editRect = await page.evaluate(() => document.querySelector('#rmb-mov .rm-edit').getBoundingClientRect());
-    const delRect = await page.evaluate(() => document.querySelector('#rmb-mov .rm-del').getBoundingClientRect());
-    check('hint text renders below both buttons, not beside them', hintRect.top >= Math.max(editRect.bottom, delRect.bottom) - 1);
-
-    // toggling back off (clicking Edit again turns it off) must also not move anything
-    await page.click('#rmb-mov .rm-edit');
-    await page.waitForTimeout(150);
-    const afterOff = await page.evaluate(() => document.querySelector('#rmb-mov .rm-edit').getBoundingClientRect());
-    check('turning Edit back off returns to the exact same spot', Math.abs(before.top - afterOff.top) < 1 && Math.abs(before.left - afterOff.left) < 1);
+    check('abrir Columns tampoco mueve Edit — el texto largo vive en el ⓘ, que ' +
+          'es la corrección de Jose y mejor que mi panel flotante',
+      same(colBefore, await rect(page, '#btnMovEdit')));
+    check('y el botón de guardar dice "Save", no "Done"',
+      await page.evaluate(() => (document.getElementById('btnColDone_mov').textContent || '').trim() === 'Save'));
 
     await page.close();
   }
@@ -93,6 +167,6 @@ function check(label, cond) {
   if (pageErrors.length) pageErrors.forEach(e => console.log('  PAGE ERROR:', e));
 
   await browser.close();
-  console.log('\nrow-mode button stability: ' + (fail === 0 ? 'ok' : (fail + ' FAILED')));
+  console.log('\nnothing moves when you click: ' + (fail === 0 ? 'ok' : (fail + ' FAILED')));
   process.exit(fail === 0 ? 0 : 1);
 })();
