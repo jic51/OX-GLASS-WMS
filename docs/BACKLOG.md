@@ -10,32 +10,7 @@ here once they ship (the commit message is the record of what changed and why).
 De más urgente a menos. Lo de arriba estorba para publicar; lo de abajo puede
 esperar meses sin que pase nada.
 
-**1. EL POPUP DICE "NADA LLEGANDO HOY" HABIENDO LLEGADO TRES COSAS.**
-Jose, 2026-09-10, con captura: *"dice nada llegando hoy, pero la cosa es que yo
-ya recibí 3 materiales hoy que sí estaban en la lista, entonces nada llegando hoy
-no es correcto."*
-
-**LA CAUSA, YA ENCONTRADA — es una línea.** `_thisWeeksDeliveries` filtra con
-`_incStillPending(item)`, así que **una entrega marcada como llegada desaparece
-de la lista del popup por completo**. No es que se ordene distinto: no está.
-
-Se hizo así a propósito, con una lógica que no es tonta —"la semana es lo que
-QUEDA por hacer"— pero produce una frase falsa, y una frase falsa en la primera
-ventana del día es peor que una lista más larga. Jose recuerda bien que antes sí
-se veían.
-
-**LO QUE PIDE, y son tres cosas:**
-
-- **Que las llegadas de hoy vuelvan a salir.** Con su etiqueta de llegadas, no
-  escondidas.
-- **QUE DIGA DÓNDE SE PUSO.** Si ya se hizo el entry, la locación; si no se hizo,
-  nada. Ese "nada" es la parte que importa: **es la señal de que llegó material
-  y todavía no está registrado**, que es exactamente el hueco donde se pierde
-  inventario.
-- **Que el "Arrived" se vea más grande EN EL POPUP.** No en la pestaña de
-  Incoming — ahí está bien como está. Sólo en el popup.
-
-**2. LAS SUGERENCIAS DEL INCOMING — VERIFICAR POR QUÉ NO SIEMPRE SALEN.**
+**1. LAS SUGERENCIAS DEL INCOMING — VERIFICAR POR QUÉ NO SIEMPRE SALEN.**
 **Jose lo aplazó el 2026-09-10:** *"no, déjalo así pero anótalo para estudiarlo
 más tarde, luego de terminar lo importante."* Sigue siendo una INVESTIGACIÓN, no
 una tarea.
@@ -55,7 +30,7 @@ Dos cosas, y la primera es una investigación, no una tarea:
   estado de la entrega, porque no es lo mismo "viene el jueves" que "llegó ayer
   y está sin registrar".
 
-**3. LA COLUMNA "USER": PERSONA, NO CORREO.** Jose, 2026-09-09, con captura:
+**2. LA COLUMNA "USER": PERSONA, NO CORREO.** Jose, 2026-09-09, con captura:
 
 > *"quiero que en lugar del email que aparece en User, aparezca el nombre de la
 >  persona, y el correo en gris abajo pero más pequeño, y al hacer hover
@@ -68,7 +43,7 @@ los dos necesitan lo mismo: **que el navegador sepa el NOMBRE de cada correo.**
 Hoy la tabla sólo tiene el correo; el nombre está en USERS_V3 y no viaja con los
 movimientos.
 
-**4. LA RESPUESTA VISUAL: QUE LA PANTALLA CAMBIE AL PULSAR, NO AL CONTESTAR EL
+**3. LA RESPUESTA VISUAL: QUE LA PANTALLA CAMBIE AL PULSAR, NO AL CONTESTAR EL
 SERVIDOR.** Jose, 2026-09-10, y es la pregunta buena:
 
 > *"siempre veo que al guardar, borrar, o hacer otras cosas la app primero
@@ -148,7 +123,7 @@ no sé por qué"*. Dos cosas distintas y conviene no confundirlas:
   al medirlo resulta que son segundos, la animación tapa el síntoma y hay que
   mirar si el refresco puede esperar al final de la ráfaga.
 
-**5. LAS TARJETAS NARANJAS SE SALEN POR ARRIBA DE LA PANTALLA.**
+**4. LAS TARJETAS NARANJAS SE SALEN POR ARRIBA DE LA PANTALLA.**
 Jose, 2026-09-10, con captura: *"quisiera que al pasar el mouse por las
 tarjetas hubiera un lugar donde se ocultaran, como una pared invisible que las
 oculta cuando se abren todas, pero también quiero que se pueda hacer scroll
@@ -176,26 +151,26 @@ es trabajo pendiente que no se puede ni ver ni pulsar.
   bajo, el arreglo es un mínimo en píxeles (`max(66vh, 420px)`), no subir la
   fracción.
 
-**6. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
+**5. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
 mínimos). Detalle completo más abajo. Es el que cuesta material cargado en una
 camioneta que hay que volver a bajar.
 
-**7. MANAGE USERS — EL REDISEÑO.** La recarga ya está arreglada (v11.58);
+**6. MANAGE USERS — EL REDISEÑO.** La recarga ya está arreglada (v11.58);
 queda cómo se editan los usuarios, la ventana más grande, el correo en una
 línea, y quitar el scroll lateral.
 
-**8. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
+**7. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
 
-**9. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
+**8. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
 enviar correo / videollamada de Meet / chat.
 
-**10. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
+**9. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
 
-**11. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
+**10. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
 
-**12. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
+**11. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
 
-**13. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
+**12. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
 sitio, la política de cobro y el rediseño del modelo de movimientos.
 
 ---

@@ -64,6 +64,7 @@ node tools/test-use-before-var.js
 node tools/test-sysact-followthrough.js
 node tools/test-daily-report.js
 node tools/test-morning-closes.js
+node tools/test-morning-arrivals.js
 node tools/test-selection-survives.js
 node tools/test-site-links.js
 node tools/test-arrived-to-entry.js
@@ -489,6 +490,26 @@ come back from — is invisible to both. Those get a browser test.
   opens the item's own edit window with Arrived pre-selected and the person
   still presses Save, because a delivery marked received by one stray tap is
   worse than one extra click.
+- `test-morning-arrivals.js` — that the morning popup stops saying "Nothing
+  arriving today" on a morning when three deliveries already arrived (v11.71),
+  the real `_todayArrivals`, `_incEntryWhere`, `_incItemHtml`,
+  `showMorningPopup`, `openWeekSchedule` and `_refreshMorningPopup` lifted into
+  a Node vm with only the DOM faked. The cause was one line:
+  `_thisWeeksDeliveries` filters on `_incStillPending`, so a delivery marked
+  Arrived does not sort lower — it vanishes, and the sentence was computed over
+  a list the three arrivals had already been removed from. Half the assertions
+  here are not about finding the entry but about **staying quiet when it cannot
+  be sure**: nothing links a delivery to a movement, so the rack is found by
+  matching, and matching is guessing. Showing the wrong rack silences the alarm
+  that material arrived unregistered; showing none when it was registered only
+  nags. So it checks that an entry from another day with no PO does not count,
+  that a matching PO does count across days but never before the delivery's own
+  date, that a different category disqualifies while a missing one does not,
+  that an EXIT is never mistaken for an ENTRY, and that a split entry names
+  every rack. Plus the two doors — the button opens on arrivals alone, and the
+  window stays open while any arrival still lacks its entry — and that the
+  bigger Arrived badge is hung off `#morningPopupBody` so it cannot reach the
+  Incoming tab, which Jose said explicitly is fine as it is.
 - `test-sysactivity-dismiss.js` — that dismissing a system notice does NOT
   erase it from the maintenance record (`getSystemActivity` + both its
   consumers), backend lifted verbatim into a Node vm with the Sheets API

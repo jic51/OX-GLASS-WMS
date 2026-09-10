@@ -51,6 +51,13 @@ function run(role) {
     console: console,
     userRole: role,
     incoming: items,
+    // Desde la v11.71 showMorningPopup también pregunta qué llegó hoy y dónde
+    // se puso. Aquí no hay ninguna entrega ya llegada ni ningún movimiento, así
+    // que ese bloque sale vacío y no estorba a lo que este archivo mide — pero
+    // las funciones tienen que estar, y se levantan las de verdad: un doble de
+    // _incEntryWhere podría inventarse un estante y esto no se enteraría.
+    movements: [],
+    String: String, Array: Array,
     catBadge: function (c) { return '<span class="cat">' + c + '</span>'; },
     _incOnDay: function (item, day) { return item.estDate === day; },
     _incDateLabel: function (item) { return item.estDate; },
@@ -68,8 +75,10 @@ function run(role) {
   // count says "qty not stated" instead of "0 UNIT" is one of the things this
   // card has to get right, and a stub would only prove the stub works.
   vm.runInContext(extractFn('_he') + '\n' + extractFn('_escAttr') + '\n' +
+                  extractFn('nt') + '\n' +
                   extractFn('_incQtyText') + '\n' + extractFn('_incFirstDocUrl') + '\n' +
                   extractFn('_incItemHtml') + '\n' +
+                  extractFn('_todayArrivals') + '\n' + extractFn('_incEntryWhere') + '\n' +
                   // El saludo cambia con la hora desde la v11.60, y showMorningPopup
                   // lo llama. Sin él, la ventana no se pinta.
                   extractFn('_timeOfDayGreeting') + '\n' + extractFn('_applyMorningGreeting') + '\n' +
@@ -110,6 +119,7 @@ const nasty = [{ id: 'x" onclick="alert(1)', category: 'C', name: 'N', qty: 1, u
 const box = { innerHTML: '' };
 const sb = {
   console: console, userRole: 'ADMIN', incoming: nasty,
+  movements: [], String: String, Array: Array,
   catBadge: function (c) { return c; },
   _incOnDay: function (i, d) { return i.estDate === d; },
   _incDateLabel: function (i) { return i.estDate; },
@@ -122,8 +132,10 @@ const sb = {
 };
 vm.createContext(sb);
 vm.runInContext(extractFn('_he') + '\n' + extractFn('_escAttr') + '\n' +
+                extractFn('nt') + '\n' +
                 extractFn('_incQtyText') + '\n' + extractFn('_incFirstDocUrl') + '\n' +
                 extractFn('_incItemHtml') + '\n' +
+                extractFn('_todayArrivals') + '\n' + extractFn('_incEntryWhere') + '\n' +
                   // El saludo cambia con la hora desde la v11.60, y showMorningPopup
                   // lo llama. Sin él, la ventana no se pinta.
                   extractFn('_timeOfDayGreeting') + '\n' + extractFn('_applyMorningGreeting') + '\n' +

@@ -95,6 +95,24 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.71</span>
+      <span class="tag fix">Fixed</span>
+      <h3>"Nothing arriving today", on a morning when three things arrived</h3>
+      <p>The morning window listed what was still expected, and a delivery you
+         marked as arrived did not move down the list — it left it. So the
+         window could tell you nothing was arriving today while three deliveries
+         had turned up before nine.</p>
+      <p>Today's arrivals now have their own block, and each one says where it
+         was put. If the entry has not been made yet, it says nothing — and that
+         blank is the point: it is how you spot material sitting in the
+         warehouse that the stock numbers know nothing about.</p>
+      <p>Where it was put is worked out by matching the delivery against the
+         entries, since nothing links the two directly. It errs on the side of
+         silence: a wrong rack would tell you something is recorded when it is
+         not, and that is the one mistake this is meant to catch.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.70</span>
       <span class="tag fix">Fixed</span>
       <h3>The reminder card now clears itself when you make the entry</h3>
