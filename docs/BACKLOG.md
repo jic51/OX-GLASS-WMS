@@ -30,20 +30,7 @@ Dos cosas, y la primera es una investigación, no una tarea:
   estado de la entrega, porque no es lo mismo "viene el jueves" que "llegó ayer
   y está sin registrar".
 
-**2. LA COLUMNA "USER": PERSONA, NO CORREO.** Jose, 2026-09-09, con captura:
-
-> *"quiero que en lugar del email que aparece en User, aparezca el nombre de la
->  persona, y el correo en gris abajo pero más pequeño, y al hacer hover
->  aparezcan las opciones de enviar email o llamar por Google Meet."*
-
-Es la misma forma que "Type / Date" y "Category / Name" de la v11.61: el dato
-que se busca arriba, el de apoyo debajo en gris. Y encaja con el punto de la
-FICHA DE USUARIO que ya estaba en la lista — conviene hacerlos juntos, porque
-los dos necesitan lo mismo: **que el navegador sepa el NOMBRE de cada correo.**
-Hoy la tabla sólo tiene el correo; el nombre está en USERS_V3 y no viaja con los
-movimientos.
-
-**3. LA RESPUESTA VISUAL: QUE LA PANTALLA CAMBIE AL PULSAR, NO AL CONTESTAR EL
+**2. LA RESPUESTA VISUAL: QUE LA PANTALLA CAMBIE AL PULSAR, NO AL CONTESTAR EL
 SERVIDOR.** Jose, 2026-09-10, y es la pregunta buena:
 
 > *"siempre veo que al guardar, borrar, o hacer otras cosas la app primero
@@ -123,7 +110,7 @@ no sé por qué"*. Dos cosas distintas y conviene no confundirlas:
   al medirlo resulta que son segundos, la animación tapa el síntoma y hay que
   mirar si el refresco puede esperar al final de la ráfaga.
 
-**4. LAS TARJETAS NARANJAS SE SALEN POR ARRIBA DE LA PANTALLA.**
+**3. LAS TARJETAS NARANJAS SE SALEN POR ARRIBA DE LA PANTALLA.**
 Jose, 2026-09-10, con captura: *"quisiera que al pasar el mouse por las
 tarjetas hubiera un lugar donde se ocultaran, como una pared invisible que las
 oculta cuando se abren todas, pero también quiero que se pueda hacer scroll
@@ -151,26 +138,23 @@ es trabajo pendiente que no se puede ni ver ni pulsar.
   bajo, el arreglo es un mínimo en píxeles (`max(66vh, 420px)`), no subir la
   fracción.
 
-**5. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
+**4. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
 mínimos). Detalle completo más abajo. Es el que cuesta material cargado en una
 camioneta que hay que volver a bajar.
 
-**6. MANAGE USERS — EL REDISEÑO.** La recarga ya está arreglada (v11.58);
+**5. MANAGE USERS — EL REDISEÑO.** La recarga ya está arreglada (v11.58);
 queda cómo se editan los usuarios, la ventana más grande, el correo en una
 línea, y quitar el scroll lateral.
 
-**7. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
+**6. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
 
-**8. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
-enviar correo / videollamada de Meet / chat.
+**7. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
 
-**9. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
+**8. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
 
-**10. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
+**9. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
 
-**11. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
-
-**12. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
+**10. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
 sitio, la política de cobro y el rediseño del modelo de movimientos.
 
 ---

@@ -65,6 +65,7 @@ node tools/test-sysact-followthrough.js
 node tools/test-daily-report.js
 node tools/test-morning-closes.js
 node tools/test-morning-arrivals.js
+node tools/test-user-column.js
 node tools/test-selection-survives.js
 node tools/test-site-links.js
 node tools/test-arrived-to-entry.js
@@ -506,10 +507,41 @@ come back from — is invisible to both. Those get a browser test.
   that a matching PO does count across days but never before the delivery's own
   date, that a different category disqualifies while a missing one does not,
   that an EXIT is never mistaken for an ENTRY, and that a split entry names
-  every rack. Plus the two doors — the button opens on arrivals alone, and the
-  window stays open while any arrival still lacks its entry — and that the
-  bigger Arrived badge is hung off `#morningPopupBody` so it cannot reach the
-  Incoming tab, which Jose said explicitly is fine as it is.
+  every rack. Then Jose narrowed the rule — "when I said nothing shows, I meant
+  the LOCATION; every material this week expects or receives has to be visible
+  in the window" — which exposed two more holes with one cause: both lists only
+  looked forward from today, so a delivery that arrived Monday and still had no
+  entry was gone by Tuesday, and so was one that was due Monday and nobody
+  marked. Now `_weekArrivals` and `_overdueThisWeek` cover the whole week, and
+  this checks that they show up, that today sorts first, that the late block
+  sits at the top, that a delivery's rack is matched against **its own day**
+  rather than today (or everything before today would print blank), that last
+  week's arrivals stay out, and — the part that matters — that neither list
+  counts toward closing the window, since one stale Pending row nobody cleans
+  would otherwise hold it open forever. Plus the button opening on arrivals or
+  late rows alone, and the bigger Arrived badge hung off `#morningPopupBody` so
+  it cannot reach the Incoming tab, which Jose said explicitly is fine as it is.
+- `test-user-column.js` — that the Movements "User" column shows a person and
+  not an address (v11.73), `userDirectory_` lifted out of `Code_v3_fixed.gs`
+  into a Node vm against a fake sheet, the cell builders out of the HTML, and
+  the hover card measured in a real browser. The missing piece was on the
+  server: the name lives in USERS_V3 and does not travel with movements, and
+  `getUsers()` is ADMIN-only, so for a warehouse user the column would have
+  stayed an address no matter what shape it was given. Two decisions are what
+  this file actually protects. **The name is not written into the movement** —
+  it is resolved when the row is drawn, so fixing a spelling in Manage Users
+  corrects every row that person ever saved instead of leaving the old name
+  frozen in thousands of them. And **no name is ever guessed from an address**:
+  splitting on the dot would turn `info@` and `jc@` into people who do not
+  exist, and an invented name on the record of who moved stock is worse than an
+  address. It also pins what leaves the sheet — the fake sheet records the range
+  it was asked for, so a future "just send the whole row and let the browser
+  filter" would fail here rather than quietly shipping everyone's role to
+  everyone — and that `userNames` sits OUTSIDE the `if (auth.role === 'ADMIN')`
+  block, a mistake only Jose would never see, because Jose is an admin. The
+  browser half measures the one thing reading the file cannot: that the card
+  stays open while the mouse crosses the gap from the name to its buttons, which
+  is the whole reason it is not a tooltip.
 - `test-sysactivity-dismiss.js` — that dismissing a system notice does NOT
   erase it from the maintenance record (`getSystemActivity` + both its
   consumers), backend lifted verbatim into a Node vm with the Sheets API

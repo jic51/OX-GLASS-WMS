@@ -78,7 +78,14 @@ function run(role) {
                   extractFn('nt') + '\n' +
                   extractFn('_incQtyText') + '\n' + extractFn('_incFirstDocUrl') + '\n' +
                   extractFn('_incItemHtml') + '\n' +
-                  extractFn('_todayArrivals') + '\n' + extractFn('_incEntryWhere') + '\n' +
+                  // Desde la v11.72 la ventana enseña TODO lo que la semana espera o
+                // recibió, así que showMorningPopup pregunta por tres listas, no
+                // por una. Se levantan las de verdad: un doble de _incEntryWhere
+                // podría inventarse un estante y esto no se enteraría.
+                extractFn('_isoDate') + '\n' + extractFn('_weekBounds') + '\n' +
+                extractFn('_incInWeek') + '\n' + extractFn('_weekArrivals') + '\n' +
+                extractFn('_incStillPending') + '\n' + extractFn('_overdueThisWeek') + '\n' +
+                extractFn('_incEntryWhere') + '\n' +
                   // El saludo cambia con la hora desde la v11.60, y showMorningPopup
                   // lo llama. Sin él, la ventana no se pinta.
                   extractFn('_timeOfDayGreeting') + '\n' + extractFn('_applyMorningGreeting') + '\n' +
@@ -135,7 +142,14 @@ vm.runInContext(extractFn('_he') + '\n' + extractFn('_escAttr') + '\n' +
                 extractFn('nt') + '\n' +
                 extractFn('_incQtyText') + '\n' + extractFn('_incFirstDocUrl') + '\n' +
                 extractFn('_incItemHtml') + '\n' +
-                extractFn('_todayArrivals') + '\n' + extractFn('_incEntryWhere') + '\n' +
+                // Desde la v11.72 la ventana enseña TODO lo que la semana espera o
+                // recibió, así que showMorningPopup pregunta por tres listas, no
+                // por una. Se levantan las de verdad: un doble de _incEntryWhere
+                // podría inventarse un estante y esto no se enteraría.
+                extractFn('_isoDate') + '\n' + extractFn('_weekBounds') + '\n' +
+                extractFn('_incInWeek') + '\n' + extractFn('_weekArrivals') + '\n' +
+                extractFn('_incStillPending') + '\n' + extractFn('_overdueThisWeek') + '\n' +
+                extractFn('_incEntryWhere') + '\n' +
                   // El saludo cambia con la hora desde la v11.60, y showMorningPopup
                   // lo llama. Sin él, la ventana no se pinta.
                   extractFn('_timeOfDayGreeting') + '\n' + extractFn('_applyMorningGreeting') + '\n' +

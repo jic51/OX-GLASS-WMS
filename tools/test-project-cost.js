@@ -49,7 +49,13 @@ function makeDocument(projectValue) {
 
 const sandbox = {
   console: console,
-  google: { visualization: {} }
+  String: String,
+  google: { visualization: {} },
+  // Desde la v11.73 la línea "Last user" enseña el NOMBRE de la persona cuando
+  // se sabe, no su correo. El directorio va vacío aquí a propósito: este
+  // archivo mide el coste del proyecto, y con el directorio vacío la línea
+  // enseña el correo igual que antes, o sea que nada de lo que se mide cambia.
+  userNames: {}
 };
 vm.createContext(sandbox);
 vm.runInContext(
@@ -61,6 +67,8 @@ vm.runInContext(
   extractFn('_escAttr') + '\n' +
   extractFn('_infoIc') + '\n' +
   extractFn('_statLabel') + '\n' +
+  extractFn('_personName') + '\n' +
+  extractFn('_personLabel') + '\n' +
   extractFn('renderProjectView'),
   sandbox
 );

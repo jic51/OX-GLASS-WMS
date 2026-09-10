@@ -68,7 +68,7 @@ const HOY = '2026-09-10';
 // ── El mundo: las funciones DE VERDAD, y sólo el DOM de mentira ──────────────
 //
 // Lo que se sustituye es el navegador, no la app: cada función que decide algo
-// se levanta del archivo tal cual está escrita. Un doble de _todayArrivals o
+// se levanta del archivo tal cual está escrita. Un doble de _weekArrivals o
 // de _incEntryWhere mediría el doble, que es como esta clase de prueba se
 // vuelve decorativa.
 function mundo(){
@@ -96,7 +96,8 @@ function mundo(){
   });
   [ 'nt', '_he', '_escAttr', '_isoDate', '_incOnDay', '_incQtyText',
     '_incDateLabel', '_incFirstDocUrl', '_incStillPending', '_incItemHtml',
-    '_todayArrivals', '_incEntryWhere', '_thisWeeksDeliveries',
+    '_weekBounds', '_incInWeek', '_weekArrivals', '_overdueThisWeek',
+    '_incEntryWhere', '_thisWeeksDeliveries',
     '_timeOfDayGreeting', '_applyMorningGreeting', 'showMorningPopup',
     'openWeekSchedule', '_refreshMorningPopup'
   ].forEach(n => vm.runInContext(fnSrc(n), ctx));
@@ -142,7 +143,7 @@ console.log('\n═══ lo que Jose fotografió ═══\n');
         'dice "Nothing arriving today" — es la frase falsa de su captura',
     html.indexOf('Nothing arriving today') === -1, html.slice(0, 160));
   check('...y las tres salen, en su propio bloque',
-    /Arrived Today/.test(html) &&
+    /morning-done-label/.test(html) &&
     html.indexOf('IGU UNO') !== -1 && html.indexOf('IGU DOS') !== -1 &&
     html.indexOf('IGU TRES') !== -1);
   check('...con su etiqueta de estado, que es lo que se quería ver grande',
@@ -164,7 +165,7 @@ console.log('\n═══ lo que Jose fotografió ═══\n');
             entrega({ id: 'a', name: 'YA LLEGO' }) ], []);
   const html = m.pintar();
   check('lo que espera y lo que llegó no se mezclan: dos bloques, cada uno con ' +
-        'su rótulo', /Arriving Today/.test(html) && /Arrived Today/.test(html));
+        'su rótulo', /Arriving Today/.test(html) && /morning-done-label/.test(html));
   check('...y la lista de PENDIENTES sigue sin incluir las llegadas — es la ' +
         'que decide si el popup se abre, y ahí "lo que queda por hacer" es la ' +
         'pregunta correcta',
@@ -199,7 +200,7 @@ console.log('\n═══ y CALLA cuando no está segura ═══\n');
   check('SIN ENTRADA NO SE DIBUJA NINGUNA LÍNEA DE LOCACIÓN. Es lo que Jose ' +
         'pidió literalmente —"si no se hizo el entry no se muestra nada"— y ' +
         'ese hueco es la señal de que llegó material sin registrar',
-    !/inc-item-where/.test(nada) && /Arrived Today/.test(nada));
+    !/inc-item-where/.test(nada) && /morning-done-label/.test(nada));
 
   m.poner([ entrega({ po: '' }) ], [ entrada({ dateRec: '2026-09-08' }) ]);
   check('una entrada del mismo material de OTRO día, y sin PO que la ate a ' +
@@ -233,6 +234,73 @@ console.log('\n═══ y CALLA cuando no está segura ═══\n');
   m.poner([ entrega() ], [ entrada({ moveType: 'EXIT', destLoc: 'E-1' }) ]);
   check('y una SALIDA no es una entrada, por mucho que coincida todo lo demás',
     !/inc-item-where/.test(m.pintar()));
+}
+
+console.log('\n═══ todo lo que la semana espera o recibió, en la ventana ═══\n');
+{
+  // Jose, cuando le pregunté si el hueco sin locación debía llevar una marca:
+  // "cuando dije no se ve nada, hablaba de la LOCACIÓN; todo material que se
+  // espera o se recibe debe verse en la ventana."
+  //
+  // Contra esa regla había DOS agujeros, y los dos por la misma causa: las dos
+  // listas miraban de hoy en adelante. HOY ES JUEVES en estas pruebas
+  // (2026-09-10 es jueves; el lunes de esa semana es el 2026-09-07).
+  const LUNES = '2026-09-07';
+
+  const m = mundo();
+  m.poner([ entrega({ id: 'lun', name: 'LLEGO EL LUNES', estDate: LUNES }) ], []);
+  const html = m.pintar();
+  check('una entrega que LLEGÓ el lunes y sigue sin entrada se ve el jueves: ' +
+        'no está entre lo pendiente porque ya llegó, ni era de hoy, y era ' +
+        'justo la que más falta hace ver',
+    html.indexOf('LLEGO EL LUNES') !== -1);
+  check('...con su día encima, porque no es de hoy',
+    /inc-item-meta/.test(html));
+  check('...y la frase "Nothing arriving today" SÍ se dice, porque hoy de ' +
+        'verdad no hay nada — el bloque lleno no la calla, sólo la calla algo ' +
+        'de hoy', html.indexOf('Nothing arriving today') !== -1);
+
+  m.poner([ entrega({ id: 'lun', name: 'LLEGO EL LUNES', estDate: LUNES }),
+            entrega({ id: 'hoy', name: 'LLEGO HOY' }) ], []);
+  const dos = m.pintar();
+  check('con una de hoy y una del lunes, la de HOY va primero',
+    dos.indexOf('LLEGO HOY') < dos.indexOf('LLEGO EL LUNES'));
+
+  m.poner([ entrega({ id: 'lun', name: 'LLEGO EL LUNES', estDate: LUNES }) ],
+          [ entrada({ name: 'LLEGO EL LUNES', dateRec: LUNES, destLoc: 'F-4' }) ]);
+  check('y su locación se busca contra SU día, no contra hoy — si no, todo lo ' +
+        'que llegó antes del jueves saldría sin estante por el mero hecho de ' +
+        'no ser de hoy', /→ F-4/.test(m.pintar()));
+
+  m.poner([ entrega({ id: 'lun', name: 'LLEGO EL LUNES', estDate: '2026-08-30' }) ], []);
+  check('una llegada de la SEMANA PASADA no entra: la ventana se llama "esta ' +
+        'semana" y la pestaña de Incoming es la que guarda el historial',
+    m.pintar().indexOf('LLEGO EL LUNES') === -1);
+}
+
+{
+  const LUNES = '2026-09-07';
+  const m = mundo();
+  m.poner([ entrega({ id: 'tarde', name: 'DEBIA LLEGAR EL LUNES',
+                      estDate: LUNES, status: 'Pending' }) ], []);
+  const html = m.pintar();
+  check('lo que se esperaba el lunes y nadie marcó también vuelve a la ' +
+        'ventana: _thisWeeksDeliveries pregunta por "lo que QUEDA de la ' +
+        'semana", así que se caía el martes — y una entrega que debía haber ' +
+        'llegado y no consta es de lo primero que hay que mirar por la mañana',
+    html.indexOf('DEBIA LLEGAR EL LUNES') !== -1 && /morning-late-label/.test(html));
+  check('...y va ARRIBA del todo', html.indexOf('morning-late') < html.indexOf('morning-today'));
+
+  check('pero NO cuenta para cerrar la ventana: si contara, una fila vieja que ' +
+        'nadie limpia la dejaría abierta para siempre, y la regla de cierre es ' +
+        'de Jose',
+    m.run('_thisWeeksDeliveries("' + HOY + '").length') === 0);
+  m.run('openWeekSchedule()');
+  check('...aunque sí basta para ABRIRLA desde el botón — verla es el punto',
+    m.pantalla.abierto === true);
+  m.run('_refreshMorningPopup()');
+  check('...y al refrescarse se cierra igual, porque de lo que viene no queda ' +
+        'nada', m.pantalla.abierto === false);
 }
 
 console.log('\n═══ las dos puertas del popup ═══\n');
@@ -290,6 +358,37 @@ console.log('\n═══ el "Arrived" grande, y sólo en el popup ═══\n');
   check('y va colgada de #morningPopupBody, o sea que no puede alcanzar a la ' +
         'tabla de Incoming ni por accidente',
     enPop.indexOf('#morningPopupBody') === 0);
+}
+
+console.log('\n═══ el recuadro gris, y el color donde hace falta ═══\n');
+{
+  // Jose, con la captura: "no me gusta que todo esté en verde, y las letras
+  // verdes sobre verde no quedan bien. Haz el color de la tarjeta gris y que
+  // sólo el arrived today y el arrived de cada tarjeta sean de fondo verde y
+  // color verde."
+  //
+  // Es fácil de deshacer sin querer —teñir un recuadro es una línea— así que
+  // queda escrito: el fondo del bloque no puede volver a ser verde.
+  const bloque   = cssRule('.morning-done');
+  const rotulo   = cssRule('.morning-done-label');
+  const etiqueta = cssRule('.inc-status-arrived');
+  const donde    = cssRule('.inc-item-where');
+  const tarde    = cssRule('.morning-late');
+
+  check('el recuadro de lo que llegó es GRIS, no verde',
+    /background:var\(--bg\)/.test(bloque) && !/green/.test(bloque), bloque);
+  check('...y su borde tampoco es verde', !/--green/.test(bloque));
+  check('el rótulo "Arrived" SÍ es verde — es donde el color significa algo',
+    /color:var\(--green\)/.test(rotulo));
+  check('y la etiqueta de cada tarjeta se queda como estaba: fondo verde y ' +
+        'letra verde', /background:var\(--green-bg\)/.test(etiqueta) &&
+        /color:var\(--green\)/.test(etiqueta));
+  check('la línea del estante ya NO es verde: era la tercera cosa verde de la ' +
+        'misma tarjeta y encima sobre fondo verde. El estante es un dato que ' +
+        'se lee, no un estado', !/green/.test(donde), donde);
+  check('y el recuadro de lo atrasado sigue la misma receta — gris, y el ámbar ' +
+        'sólo en el rótulo', /background:var\(--bg\)/.test(tarde) &&
+        !/#FEF3C7/.test(tarde));
 }
 
 console.log('\n────────────────────────────────────────────────────────────────────────');
