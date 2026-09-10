@@ -1765,6 +1765,12 @@
        is a positioned value, so it anchors the bubble just as well as relative
        did. */
     thead th.tip{position:sticky;top:0}
+    /* La categoría que se quitó de la tabla, dicha una sola vez en el título.
+       Va pegada al h2 y no en la barra de columnas: es lo que la lista ES, no
+       una opción sobre cómo mirarla. */
+    .cat-badge{display:inline-block;margin-left:.6rem;font-size:.72rem;font-weight:700;
+      letter-spacing:.03em;vertical-align:middle;
+      background:var(--accent2, #1E52A0);color:#fff;border-radius:999px;padding:.2rem .6rem}
     .cfg-pick{margin-right:.5rem;flex-shrink:0;cursor:pointer}
     .cfg-pickbar{display:none;gap:.5rem;align-items:center;flex-wrap:wrap;background:var(--navy);color:#fff;border-radius:8px;padding:.5rem .7rem;margin-bottom:.75rem}
     .cfg-pickbar.show{display:flex}
@@ -2342,7 +2348,9 @@
     <div class="stats" id="statsRow"></div>
     <div class="card">
       <div class="card-header">
-        <h2>Live Inventory Stock</h2>
+        <!-- La categoría elegida va aquí, en el título, porque es donde se lee
+             UNA vez en lugar de repetirse en cada fila. Ver _colSuppressed. -->
+        <h2>Live Inventory Stock<span id="stockCatBadge" class="cat-badge" hidden></span></h2>
         <div class="toolbar">
           <input type="text" id="stockSearch" placeholder="Search name or comment...">
           <select id="stockFilter"><option value="">All Categories</option></select>
@@ -3360,7 +3368,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.67';
+var APP_VERSION = '11.68';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -3372,7 +3380,7 @@ var APP_VERSION = '11.67';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '2b44734f';
+var APP_BUILD = '5100181c';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -4020,6 +4028,34 @@ function _colOrder(t){
   return out;
 }
 
+/* UNA COLUMNA DONDE TODAS LAS FILAS DICEN LO MISMO NO ES INFORMACIÓN, ES MARGEN.
+ *
+ * Idea de Jose, 2026-09-09:
+ *
+ *   "si al seleccionar un material en 'All Categories' en específico ya sabemos
+ *    que solo nos mostrará ese material… solo en ese caso podemos eliminar la
+ *    columna de category y poner la category arriba donde se vea bien, y
+ *    eliminamos ese espacio haciendo la lista más pequeña horizontalmente."
+ *
+ * Es el mismo razonamiento que la v11.61 aplicó a Movements. Con el filtro en
+ * una categoría concreta, la columna Category repite el mismo texto en TODAS
+ * las filas: se va, y su valor pasa al encabezado, donde se lee una vez.
+ *
+ * ESCONDIDA NO ES LO MISMO QUE OCULTA, y la diferencia importa:
+ *
+ *   - No se toca el orden guardado de nadie. La columna sigue en el modelo y
+ *     vuelve sola en cuanto el filtro vuelve a "All Categories" — nadie tiene
+ *     que ir a Columns a recuperarla.
+ *   - En MODO EDICIÓN se ve siempre. No se puede reordenar lo que no está, y
+ *     alguien que abra el editor con un filtro puesto tiene que ver su tabla
+ *     entera, no la de este momento.
+ */
+function _colSuppressed(t){
+  if (t !== 'stock' || _colEdit[t]) return {};
+  var el = document.getElementById('stockFilter');
+  return (el && el.value) ? { category: 1 } : {};
+}
+
 function _colHidden(t){
   var raw = null;
   try { raw = localStorage.getItem(_colCfg(t).hiddenKey); } catch (e) {}
@@ -4055,6 +4091,9 @@ function _visibleColCount(t){
   if (_colEdit[t]) return _colOrder(t).length;      // edit mode shows every column
   var hidden = {};
   _colHidden(t).forEach(function(k){ hidden[k] = 1; });
+  // Las quitadas por el filtro cuentan igual que las ocultas: si no, el
+  // colspan del "no hay resultados" sobra una columna y la fila se descuadra.
+  Object.keys(_colSuppressed(t)).forEach(function(k){ hidden[k] = 1; });
   return _colOrder(t).filter(function(k){ return !hidden[k]; }).length;
 }
 
@@ -4087,6 +4126,8 @@ function _colHeadRowHtml(t){
   var editing = _colEdit[t];
   var hidden = {};
   _colHidden(t).forEach(function(k){ hidden[k] = 1; });
+  var quitadas = _colSuppressed(t);
+  Object.keys(quitadas).forEach(function(k){ hidden[k] = 1; });
   var isAdmin = userRole === 'ADMIN';
 
   var html = cfg.lead();
@@ -5464,13 +5505,42 @@ function _countMoveMaterialLines(){
   return (el && String(el.value || '').trim()) ? 1 : 0;
 }
 
+/* El nombre de la categoría TAL COMO SE ESCRIBIÓ, no como se normaliza.
+ * El valor del filtro viene de nt() —minúsculas, sin acentos— y enseñar eso en
+ * el título sería enseñar la forma interna de un dato en lugar del dato. */
+function _catLabelFor(cfNorm){
+  var found = '';
+  (config.categories || []).forEach(function(c){
+    if (!found && nt(c) === cfNorm) found = c;
+  });
+  if (!found) {
+    for (var k in stockData) {
+      if (!stockData.hasOwnProperty(k)) continue;
+      if (nt(stockData[k].category) === cfNorm) { found = stockData[k].category; break; }
+    }
+  }
+  return found || String(cfNorm).toUpperCase();
+}
+
 // ── Dashboard: Stock Table ────────────────────────────────────────────────────
 function renderStock(){
   // Header and body are drawn from the same order on every pass — rendering one
   // without the other is how a column ends up under the wrong heading.
-  renderColHead('stock');
   var q  = (document.getElementById('stockSearch').value || '').toLowerCase();
   var cf = document.getElementById('stockFilter').value;
+
+  // El título dice la categoría elegida — el mismo dato que se acaba de quitar
+  // de la tabla, y en el sitio donde se lee una vez. Con el filtro en "All
+  // Categories" no hay nada que decir y la insignia no está.
+  var badge = document.getElementById('stockCatBadge');
+  if (badge){
+    badge.textContent = cf ? _catLabelFor(cf) : '';
+    badge.hidden = !cf;
+  }
+
+  // DESPUÉS de leer el filtro, porque la cabecera depende de él: con una
+  // categoría elegida, la columna Category no se dibuja.
+  renderColHead('stock');
   var sf = document.getElementById('stockStatusFilter').value;
 
   var items = Object.values(stockData).filter(function(s){
@@ -5518,6 +5588,12 @@ function renderStock(){
   }
   var canUpload  = userRole !== 'VIEWER';
   var canSelect  = userRole !== 'VIEWER'; // EXIT requires write access, same gate as elsewhere
+
+  // UNA vez por tabla, no una por fila: se leía localStorage y se reconstruía
+  // este mapa para cada material de la lista.
+  var hiddenNow = {};
+  _colHidden('stock').forEach(function(k){ hiddenNow[k] = 1; });
+  Object.keys(_colSuppressed('stock')).forEach(function(k){ hiddenNow[k] = 1; });
 
   document.getElementById('stockBody').innerHTML = items.map(function(s, idx){
     var zero    = s.warehouseQty <= 0 && s.siteQty <= 0;
@@ -5626,8 +5702,6 @@ function renderStock(){
       lastNote:     '<td class="sc-lastNote">'+noteCell+'</td>',
       docs:         '<td class="sc-docs" style="text-align:center">'+summaryCell+'</td>'
     };
-    var hiddenNow = {};
-    _colHidden('stock').forEach(function(k){ hiddenNow[k] = 1; });
     var body = _colOrder('stock').map(function(k){
       if (hiddenNow[k] && !_colEdit.stock) return '';
       return cells[k] || '';

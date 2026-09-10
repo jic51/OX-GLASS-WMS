@@ -33,25 +33,7 @@ números: parece exacta y no lo es.
 **Y ahí va la ayuda flotante**, que ya sabe salir donde se la puede leer desde
 la v11.65.
 
-**2. LA COLUMNA "CATEGORY" QUE SOBRA CUANDO YA ELEGISTE LA CATEGORÍA.** Idea de
-Jose, mismo día:
-
-> *"si al seleccionar un material en 'All Categories' en específico ya sabemos
->  que solo nos mostrará ese material… solo en ese caso podemos eliminar la
->  columna de category y poner la category arriba donde se vea bien, y
->  eliminamos ese espacio haciendo la lista más pequeña horizontalmente."*
-
-Es el mismo razonamiento que la v11.61 aplicó a Movements, y es correcto: **una
-columna en la que todas las filas dicen lo mismo no es información, es margen.**
-Cuando el filtro está en "All Categories" la columna se queda; en cuanto se
-elige una, se va y su nombre pasa al encabezado.
-
-Detalle a decidir al hacerlo: qué pasa con el orden de columnas guardado de cada
-persona cuando la columna vuelve. La v11.61 ya resolvió el caso parecido con
-`COL_MERGES`; aquí es más fácil, porque la columna no desaparece del modelo,
-sólo se oculta.
-
-**3. LA COLUMNA "USER": PERSONA, NO CORREO.** Jose, 2026-09-09, con captura:
+**2. LA COLUMNA "USER": PERSONA, NO CORREO.** Jose, 2026-09-09, con captura:
 
 > *"quiero que en lugar del email que aparece en User, aparezca el nombre de la
 >  persona, y el correo en gris abajo pero más pequeño, y al hacer hover
@@ -64,7 +46,7 @@ los dos necesitan lo mismo: **que el navegador sepa el NOMBRE de cada correo.**
 Hoy la tabla sólo tiene el correo; el nombre está en USERS_V3 y no viaja con los
 movimientos.
 
-**4. LA ANIMACIÓN AL QUITAR UNA FILA — ESTÁNDAR DE LA APP, NO DE UNA PANTALLA.**
+**3. LA ANIMACIÓN AL QUITAR UNA FILA — ESTÁNDAR DE LA APP, NO DE UNA PANTALLA.**
 
 Jose lo dejó claro el 2026-09-09, y cambia el alcance: *"quiero esta animación
 en cada lugar donde se borre algo, ya sea que se corrija, restaure, elimine,
@@ -101,26 +83,26 @@ no sé por qué"*. Dos cosas distintas y conviene no confundirlas:
   al medirlo resulta que son segundos, la animación tapa el síntoma y hay que
   mirar si el refresco puede esperar al final de la ráfaga.
 
-**5. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
+**4. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
 mínimos). Detalle completo más abajo. Es el que cuesta material cargado en una
 camioneta que hay que volver a bajar.
 
-**6. MANAGE USERS — EL REDISEÑO.** La recarga ya está arreglada (v11.58);
+**5. MANAGE USERS — EL REDISEÑO.** La recarga ya está arreglada (v11.58);
 queda cómo se editan los usuarios, la ventana más grande, el correo en una
 línea, y quitar el scroll lateral.
 
-**7. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
+**6. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
 
-**8. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
+**7. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
 enviar correo / videollamada de Meet / chat.
 
-**9. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
+**8. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
 
-**10. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
+**9. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
 
-**11. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
+**10. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
 
-**12. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
+**11. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
 sitio, la política de cobro y el rediseño del modelo de movimientos.
 
 ---
@@ -218,6 +200,76 @@ sólo se ven A TRAVÉS de la app, que los abre como dueño y entrega los bytes. 
 ADMIN de la app no los tiene en su Drive. Su razonamiento se sostiene entero:
 el correo le da *"un poquito más de información pero no la suficiente para ser
 un admin completo"*.
+
+### ✅ HECHO (v11.68) — LA COLUMNA CATEGORY SE APARTA CUANDO SOBRA
+
+Idea de Jose, y correcta: con el filtro del Dashboard en una categoría concreta,
+la columna Category repite el mismo texto en TODAS las filas. **Una columna donde
+todas las filas dicen lo mismo no es información, es espacio desperdiciado.**
+
+Mismo razonamiento que la v11.61 aplicó a Movements.
+
+**ESCONDIDA NO ES LO MISMO QUE OCULTA**, y la diferencia es la que hace que esto
+sea seguro:
+
+- No se toca el orden guardado de nadie. Si esto marcara la columna como oculta,
+  volver a "All Categories" NO la traería de vuelta — sería una pérdida
+  silenciosa de la configuración de esa persona.
+- Vuelve sola en cuanto se quita el filtro.
+- En **modo edición se ve siempre**: no se puede reordenar lo que no está, y
+  quien abra el editor con un filtro puesto tiene que ver su tabla entera, no la
+  de ese instante.
+
+La categoría se dice una vez en el título, con el nombre **tal como se escribió**
+— el valor del filtro viene normalizado por `nt()` y enseñar eso sería enseñar la
+forma interna de un dato en lugar del dato.
+
+**Y DE PASO, UN DESPERDICIO QUE SE VIO AL PASAR:** el mapa de columnas ocultas se
+construía leyendo `localStorage` **una vez por FILA** de la tabla. Ahora una vez
+por tabla.
+
+`tools/test-stock-cat-column.js` — 23 comprobaciones en un navegador de verdad.
+
+**LA PRIMERA VERSIÓN DE ESA PRUEBA MEDÍA NADA**, y la guarda lo cazó: con la
+ventana ancha la tabla CABE, así que quitar una columna no la encoge — las demás
+se reparten el hueco y el ancho total no se mueve. Decía "no se estrecha" sobre
+código correcto.
+
+Lo que Jose pidió es *"que la pantalla no se haga muy larga horizontalmente"*, o
+sea **menos scroll lateral**, y eso sólo se puede medir donde HAY scroll lateral.
+Con la ventana estrecha y midiendo `scrollWidth` en vez del ancho visible: **de
+1179 px a 1050 px.**
+
+**Y el guardián del sitio me atrapó a mí:** escribí "eso no es información, es
+margen" en el changelog, y `test-site-privacy.js` prohíbe la palabra *margen*
+porque existe para que nunca se publique nada sobre márgenes de precio. Falso
+positivo, pero el guardián vale más que mi frase — cambiada a "espacio
+desperdiciado", que además se lee mejor.
+
+---
+
+**LA BARRA DE CANTIDADES SIGUE ABIERTA, con dos preguntas para Jose.** Lo
+prometido era comprobar que las partes suman ANTES de dibujar nada, y no suman
+como él las describió:
+
+**1. `reservedQty` ESTÁ DENTRO de `warehouseQty`.** El código:
+`availableQty = warehouseQty − reservedQty`. Así que una barra
+`[In Warehouse][Used][Reserved]` contaría lo reservado DOS VECES. La forma que no
+se pisa es `[Available │ Reserved │ Used]`, donde Available + Reserved **es** In
+Warehouse.
+
+**2. EL TOTAL NO PUEDE LLAMARSE "lo que el almacén recibió".** ADJUST sube o baja
+`warehouseQty` **sin contrapartida** — a propósito, y está bien: un recuento
+corregido no es material recibido ni desperdiciado. Pero eso rompe la identidad.
+`Warehouse + Used + Wasted` sólo es igual a lo recibido si nunca hubo un ajuste.
+
+Lo que SÍ cierra siempre, porque cada unidad está hoy en exactamente uno de esos
+sitios: **Available + Reserved + Used + Wasted**.
+
+Recomendación dada a Jose: total = "lo que hoy tenemos contado", y Waste dentro
+de la barra (cuatro trozos, uno normalmente invisible). Es la única versión que
+cierra sola, sin trozos grises ni notas al pie. "Lo recibido" puede ir como un
+número al lado, que es donde un dato que no encaja en el reparto hace menos daño.
 
 ### ✅ HECHO (v11.67) — LA CESTA DEL DASHBOARD ENSEÑA LOS NÚMEROS DE HOY
 
