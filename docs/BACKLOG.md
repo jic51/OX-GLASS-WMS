@@ -10,7 +10,35 @@ here once they ship (the commit message is the record of what changed and why).
 De más urgente a menos. Lo de arriba estorba para publicar; lo de abajo puede
 esperar meses sin que pase nada.
 
-**1. LAS SUGERENCIAS DEL INCOMING — VERIFICAR POR QUÉ NO SIEMPRE SALEN.**
+**1. EL POPUP DICE "NADA LLEGANDO HOY" HABIENDO LLEGADO TRES COSAS.**
+Jose, 2026-09-10, con captura: *"dice nada llegando hoy, pero la cosa es que yo
+ya recibí 3 materiales hoy que sí estaban en la lista, entonces nada llegando hoy
+no es correcto."*
+
+**LA CAUSA, YA ENCONTRADA — es una línea.** `_thisWeeksDeliveries` filtra con
+`_incStillPending(item)`, así que **una entrega marcada como llegada desaparece
+de la lista del popup por completo**. No es que se ordene distinto: no está.
+
+Se hizo así a propósito, con una lógica que no es tonta —"la semana es lo que
+QUEDA por hacer"— pero produce una frase falsa, y una frase falsa en la primera
+ventana del día es peor que una lista más larga. Jose recuerda bien que antes sí
+se veían.
+
+**LO QUE PIDE, y son tres cosas:**
+
+- **Que las llegadas de hoy vuelvan a salir.** Con su etiqueta de llegadas, no
+  escondidas.
+- **QUE DIGA DÓNDE SE PUSO.** Si ya se hizo el entry, la locación; si no se hizo,
+  nada. Ese "nada" es la parte que importa: **es la señal de que llegó material
+  y todavía no está registrado**, que es exactamente el hueco donde se pierde
+  inventario.
+- **Que el "Arrived" se vea más grande EN EL POPUP.** No en la pestaña de
+  Incoming — ahí está bien como está. Sólo en el popup.
+
+**2. LAS SUGERENCIAS DEL INCOMING — VERIFICAR POR QUÉ NO SIEMPRE SALEN.**
+**Jose lo aplazó el 2026-09-10:** *"no, déjalo así pero anótalo para estudiarlo
+más tarde, luego de terminar lo importante."* Sigue siendo una INVESTIGACIÓN, no
+una tarea.
 Jose, 2026-09-10: *"la app no siempre muestra como sugerencia lo que tenemos en
 el incoming, ¿por qué? También debería mostrar si ya llegó o no el material de
 incoming."*
@@ -27,7 +55,7 @@ Dos cosas, y la primera es una investigación, no una tarea:
   estado de la entrega, porque no es lo mismo "viene el jueves" que "llegó ayer
   y está sin registrar".
 
-**2. LA COLUMNA "USER": PERSONA, NO CORREO.** Jose, 2026-09-09, con captura:
+**3. LA COLUMNA "USER": PERSONA, NO CORREO.** Jose, 2026-09-09, con captura:
 
 > *"quiero que en lugar del email que aparece en User, aparezca el nombre de la
 >  persona, y el correo en gris abajo pero más pequeño, y al hacer hover
@@ -40,7 +68,50 @@ los dos necesitan lo mismo: **que el navegador sepa el NOMBRE de cada correo.**
 Hoy la tabla sólo tiene el correo; el nombre está en USERS_V3 y no viaja con los
 movimientos.
 
-**3. LA ANIMACIÓN AL QUITAR UNA FILA — ESTÁNDAR DE LA APP, NO DE UNA PANTALLA.**
+**4. LA RESPUESTA VISUAL: QUE LA PANTALLA CAMBIE AL PULSAR, NO AL CONTESTAR EL
+SERVIDOR.** Jose, 2026-09-10, y es la pregunta buena:
+
+> *"siempre veo que al guardar, borrar, o hacer otras cosas la app primero
+>  piensa y luego manda el toast verde y luego le toma otro tiempo y momento
+>  cambiar lo que sea que se hizo… cuando elimino lo que sea que elimine, debe
+>  moverse y desaparecer con la animación en el mismo segundo que el toast."*
+
+**LO QUE SE COMPROBÓ EN EL CÓDIGO, porque una parte de su descripción no es lo
+que pasa:** en `_doDeleteMovementRow`, quitar la fila, repintar y sacar el aviso
+están en el MISMO bloque síncrono. La fila y el toast salen juntos, no uno
+después del otro.
+
+**Así que lo que él ve son los otros dos tiempos, y los dos son reales:**
+
+**(a) LA ESPERA ANTES DEL TOAST.** Borrar UN movimiento hace que el servidor
+reconstruya `LIVE_STOCK`, `SITE_STOCK` y `WASTED_STOCK` **desde el archivo
+entero** (`refreshDerivedSheets_`). Eso es el "primero piensa", y no es un
+adorno: es el precio real de la operación. En un archivo de mil movimientos son
+segundos.
+
+**(b) EL CAMBIO DE DESPUÉS.** Al terminar la ráfaga se pide
+`loadDataFromGoogle`, y cuando llega repinta los totales. Si estás mirando el
+Dashboard, ESE es el momento en que ves cambiar los números — no el toast.
+
+**LO QUE PIDE ES LO CORRECTO Y TIENE NOMBRE: quitar la fila AL PULSAR, no al
+recibir la respuesta.** Y devolverla si el servidor dice que no. Hoy al pulsar la
+fila sólo se atenúa; irse, se va cuando el servidor contesta.
+
+**LAS TRES PIEZAS, y conviene no confundirlas:**
+
+1. **Quitarla al pulsar** (con vuelta atrás si falla). Es lo que hace que se
+   sienta instantáneo, y es independiente de lo que tarde el servidor.
+2. **La animación de salida**, que es la parte fácil — pero ver el punto de
+   abajo, porque hoy no se vería.
+3. **(a), que NO se arregla con nada de lo anterior.** Si reconstruir los
+   totales tarda tres segundos, tarda tres segundos. Lo que cambia es que la
+   persona ya no espera mirando: la fila se fue y el resto se pone al día solo.
+   Si hace falta atacarlo, la vía es que borrar ajuste los totales en vez de
+   recalcularlos desde cero — y eso es un cambio grande, con su propio riesgo.
+
+---
+
+**LA ANIMACIÓN AL QUITAR UNA FILA — ESTÁNDAR DE LA APP, NO DE UNA PANTALLA.**
 
 Jose lo dejó claro el 2026-09-09, y cambia el alcance: *"quiero esta animación
 en cada lugar donde se borre algo, ya sea que se corrija, restaure, elimine,
@@ -77,26 +148,26 @@ no sé por qué"*. Dos cosas distintas y conviene no confundirlas:
   al medirlo resulta que son segundos, la animación tapa el síntoma y hay que
   mirar si el refresco puede esperar al final de la ráfaga.
 
-**4. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
+**5. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
 mínimos). Detalle completo más abajo. Es el que cuesta material cargado en una
 camioneta que hay que volver a bajar.
 
-**5. MANAGE USERS — EL REDISEÑO.** La recarga ya está arreglada (v11.58);
+**6. MANAGE USERS — EL REDISEÑO.** La recarga ya está arreglada (v11.58);
 queda cómo se editan los usuarios, la ventana más grande, el correo en una
 línea, y quitar el scroll lateral.
 
-**6. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
+**7. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
 
-**7. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
+**8. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
 enviar correo / videollamada de Meet / chat.
 
-**8. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
+**9. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
 
-**9. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
+**10. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
 
-**10. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
+**11. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
 
-**11. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
+**12. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
 sitio, la política de cobro y el rediseño del modelo de movimientos.
 
 ---
