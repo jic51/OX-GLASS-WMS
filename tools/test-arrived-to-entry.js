@@ -441,10 +441,63 @@ const ENTREGA = {
     check('...y el formulario de entrada se abre además de la tarjeta, no en ' +
           'vez de ella', /_entryFromIncoming\(\s*payload\s*,\s*todoId/.test(guardar));
 
-    const enviar = fnSrc('submitMovement');
-    check('y la tarjeta se salda en el handler de ÉXITO del movimiento, que ' +
-          'es el único sitio donde consta que la entrada existe',
-      /_entryTodoResolve\(/.test(enviar));
+    // TODOS los caminos de guardado, no uno escogido a mano.
+    //
+    // Hasta la v11.70 aquí ponía `fnSrc('submitMovement')` y buscaba
+    // _entryTodoResolve dentro. Pasaba. Y la tarjeta no se saldaba nunca,
+    // porque submitMovement despacha ENTRY a submitMultiEntry en su PRIMERA
+    // línea: la llamada estaba en un trozo de código al que una entrada no
+    // llega. La prueba miraba el sitio equivocado con la respuesta correcta.
+    //
+    // Así que ya no se nombra ninguna función: se busca en el archivo cada
+    // sitio que manda un movimiento al servidor, se mira de qué función sale
+    // cada uno, y se exige que TODAS salden la tarjeta. Un cuarto camino que
+    // alguien añada mañana entra solo en esta lista y cae solo si se le olvida.
+    const GUARDAN = ['addMovement', 'addMultiEntry', 'addMultiExit'];
+
+    // Dónde empieza cada función de primer nivel del archivo.
+    const decls = [];
+    const reDecl = /^(?:async\s+)?function\s+(\w+)\s*\(/gm;
+    for (let m; (m = reDecl.exec(SRC)); ) decls.push({ at: m.index, name: m[1] });
+
+    function funcionQueContiene(idx){
+      let dueña = null;
+      for (const d of decls){ if (d.at > idx) break; dueña = d; }
+      return dueña ? dueña.name : null;
+    }
+
+    const caminos = new Map();   // función → acciones que manda
+    for (const accion of GUARDAN){
+      const aguja = "processMovement('" + accion + "'";
+      let desde = 0;
+      for (;;){
+        const i = SRC.indexOf(aguja, desde);
+        if (i === -1) break;
+        desde = i + aguja.length;
+        const fn = funcionQueContiene(i);
+        if (!fn) continue;
+        if (!caminos.has(fn)) caminos.set(fn, []);
+        caminos.get(fn).push(accion);
+      }
+    }
+
+    check('el archivo tiene los tres caminos que guardan un movimiento — si ' +
+          'esto cae, o se renombró una acción o esta prueba dejó de encontrar ' +
+          'lo que cree que busca (' + [...caminos.keys()].join(', ') + ')',
+      caminos.size === 3);
+
+    for (const [fn, acciones] of caminos){
+      check('y ' + fn + '() —que manda ' + acciones.join(' y ') + '— salda la ' +
+            'tarjeta al terminar: el ÚNICO momento en que consta que el ' +
+            'movimiento existe de verdad',
+        /_entryTodoResolve\(/.test(fnSrc(fn)));
+    }
+
+    // Y la que importa, dicha por su nombre: es la que faltaba.
+    check('LA ENTRADA MÚLTIPLE LA SALDA — es el camino que toma de verdad ' +
+          'cualquier ENTRY, y el que hasta la v11.70 dejaba la tarjeta viva ' +
+          'para poder repetir el mismo movimiento sin límite',
+      /_entryTodoResolve\(\s*'ENTRY'\s*\)/.test(fnSrc('submitMultiEntry')));
   }
 
   // La parte visual se mide en su propia página, con la HOJA DE ESTILOS ENTERA

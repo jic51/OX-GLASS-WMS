@@ -3395,7 +3395,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.69';
+var APP_VERSION = '11.70';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -3407,7 +3407,7 @@ var APP_VERSION = '11.69';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '9c6a363e';
+var APP_BUILD = '2e08c440';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -9367,6 +9367,13 @@ function submitMultiExit(){
     google.script.run
       .withSuccessHandler(function(res){
         _setModalBusy('moveOverlay', false);
+        // Una salida NO salda una entrada pendiente, y _entryTodoResolve lo
+        // sabe: con 'EXIT' suelta el id y deja la tarjeta donde estaba. Se
+        // llama igual para que los tres caminos de guardado dejen el mismo
+        // rastro —ninguno se va con un id de tarjeta colgando— en vez de que
+        // uno lo limpie y los otros dos dependan de que la próxima apertura
+        // del formulario lo haga por ellos.
+        _entryTodoResolve('EXIT');
         closeModal('moveOverlay');
         if (res && res.refreshError) {
           showToast('✓ '+res.rowCount+' movement record(s) saved — but ⚠ '+res.refreshError, 'warn', 12000);
@@ -9536,6 +9543,20 @@ function submitMultiEntry(){
     google.script.run
       .withSuccessHandler(function(res){
         _setModalBusy('moveOverlay', false);
+        // La entrada existe. Si este formulario venía de una tarjeta de "llegó
+        // y falta su entrada", queda saldada aquí.
+        //
+        // ESTA LÍNEA FALTABA HASTA LA v11.70 y es la que Jose vio fallar. La
+        // tarjeta seguía ahí después de guardar, y con ella su botón "Make the
+        // entry", que volvía a abrir el formulario relleno con lo mismo:
+        // guardar otra vez creaba el mismo movimiento otra vez, y otra, sin
+        // límite. La llamada SÍ estaba escrita —en submitMovement, en el
+        // camino de TRANSFER/RETURN/WASTE/ADJUST— pero ENTRY sale de
+        // submitMovement en su primera línea y nunca llegaba hasta ella: lo
+        // escrito para un camino no estaba conectado a los otros. Es el mismo
+        // fallo que este archivo ya avisa dos veces por su nombre:
+        // "addMultiEntry never got it wired up".
+        _entryTodoResolve('ENTRY');
         closeModal('moveOverlay');
         loadDataFromGoogle(false); // cached numbers show instantly, fresh ones catch up quietly
         setTimeout(function(){

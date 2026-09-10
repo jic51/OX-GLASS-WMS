@@ -148,26 +148,54 @@ no sé por qué"*. Dos cosas distintas y conviene no confundirlas:
   al medirlo resulta que son segundos, la animación tapa el síntoma y hay que
   mirar si el refresco puede esperar al final de la ráfaga.
 
-**5. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
+**5. LAS TARJETAS NARANJAS SE SALEN POR ARRIBA DE LA PANTALLA.**
+Jose, 2026-09-10, con captura: *"quisiera que al pasar el mouse por las
+tarjetas hubiera un lugar donde se ocultaran, como una pared invisible que las
+oculta cuando se abren todas, pero también quiero que se pueda hacer scroll
+vertical para ver todas las tarjetas cuando quiera, no quiero la barra de
+scroll, sólo hacer scroll... la pared puede dejar que las tarjetas se abran
+hasta unos 3/4 del alto o 2/3, no sé, ¿qué piensas tú?"*
+
+Con muchas tarjetas abiertas, la pila crece hacia arriba hasta salirse de la
+ventana: **las de arriba dejan de existir para quien mira**. No es incomodidad,
+es trabajo pendiente que no se puede ni ver ni pulsar.
+
+**Tres piezas:**
+
+- **El techo.** Un alto máximo para la pila, y lo que sobra se desplaza en vez
+  de salirse.
+- **Sin barra de scroll**, pero con scroll de rueda y de dedo. Es exactamente lo
+  que hace `scrollbar-width: none` + `overflow-y: auto`: la barra no se dibuja,
+  el gesto sigue funcionando.
+- **Qué altura.** ÉL PREGUNTA Y YO CONTESTO: **2/3, no 3/4.** Razón: la pila
+  crece desde abajo, y por encima de ella está la barra superior con el avatar,
+  la campana y las pestañas. Con 3/4 la tarjeta más alta queda pegada a esos
+  controles y el ojo no sabe dónde acaba una cosa y empieza la otra. Con 2/3
+  queda un tercio de ventana limpio arriba, que se lee como el borde de la pila
+  sin tener que dibujar ninguna línea. Si con 2/3 se ve corto en un portátil
+  bajo, el arreglo es un mínimo en píxeles (`max(66vh, 420px)`), no subir la
+  fracción.
+
+**6. EL ESTADO DE UN MATERIAL SÓLO SE VE EN EL MAPA** (candados, reservas,
 mínimos). Detalle completo más abajo. Es el que cuesta material cargado en una
 camioneta que hay que volver a bajar.
 
-**6. MANAGE USERS — EL REDISEÑO.** La recarga ya está arreglada (v11.58);
+**7. MANAGE USERS — EL REDISEÑO.** La recarga ya está arreglada (v11.58);
 queda cómo se editan los usuarios, la ventana más grande, el correo en una
 línea, y quitar el scroll lateral.
 
-**7. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
+**8. EL TÍTULO DEL PANEL = NOMBRE DEL MATERIAL**, para teléfonos.
 
-**8. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
+**9. LA FICHA DE USUARIO** — nombre encima del correo, y al pasar el ratón
 enviar correo / videollamada de Meet / chat.
 
-**9. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
+**10. EL MODO RÁPIDO DEL LATIDO** (5 s justo después de un cambio).
 
-**10. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
+**11. LA CALCULADORA DE CUOTA de Apps Script** + intervalo configurable.
 
-**11. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
+**12. LA CALCULADORA DE UNIDADES POR CAJA / PALLET.**
 
-**12. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
+**13. AL FINAL, decidido por Jose:** el logo al arrancar, las imágenes del
 sitio, la política de cobro y el rediseño del modelo de movimientos.
 
 ---
