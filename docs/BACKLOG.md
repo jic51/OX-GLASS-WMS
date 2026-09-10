@@ -10,28 +10,22 @@ here once they ship (the commit message is the record of what changed and why).
 De más urgente a menos. Lo de arriba estorba para publicar; lo de abajo puede
 esperar meses sin que pase nada.
 
-**1. LA BARRA DE CANTIDADES DEL DASHBOARD.** Idea de Jose, 2026-09-09, y es la
-que sustituye al punto viejo de "la forma de mostrar las cantidades":
+**1. LAS SUGERENCIAS DEL INCOMING — VERIFICAR POR QUÉ NO SIEMPRE SALEN.**
+Jose, 2026-09-10: *"la app no siempre muestra como sugerencia lo que tenemos en
+el incoming, ¿por qué? También debería mostrar si ya llegó o no el material de
+incoming."*
 
-> *"una barra de 2 colores que muestra la cantidad que hay con la cantidad que
->  ya se fue, y si hay reservas también metemos esa cantidad ahí en la barra y
->  pasaría a ser de 3 colores. Así unimos IN WAREHOUSE, USED, AVAILABLE, WASTE y
->  RESERVED en una barra de 3 datos… todo junto es lo que el warehouse recibió
->  en algún momento. Al hacer hover podemos mostrar datos o detalles, como el
->  detalle de por qué se reservó."*
+Dos cosas, y la primera es una investigación, no una tarea:
 
-**Lo que la hace buena, y conviene escribirlo antes de construirla:** hoy son
-cinco números sueltos que el ojo tiene que sumar para entender la situación de
-un material. Una barra dice de un vistazo *cuánto había en total* y *qué
-proporción queda* — y la proporción es la pregunta de verdad, no el número.
-
-**El total es lo recibido alguna vez**, y las partes suman ese total. Antes de
-dibujar nada hay que comprobar que esa suma CIERRA con los datos que ya
-tenemos, porque una barra cuyos trozos no llegan al borde es peor que cinco
-números: parece exacta y no lo es.
-
-**Y ahí va la ayuda flotante**, que ya sabe salir donde se la puede leer desde
-la v11.65.
+- **POR QUÉ NO SIEMPRE.** Hay que medirlo antes de tocar nada. Las sospechas a
+  descartar una por una: que la sugerencia compare por nombre exacto y no
+  normalizado (la misma familia que el `nt()` de todo lo demás), que sólo mire
+  las entregas de cierta ventana de fechas, que se salte las que ya están
+  marcadas como llegadas, o que la lista del navegador esté vieja. Ninguna de
+  esas es una respuesta hasta que se compruebe cuál es.
+- **SI YA LLEGÓ O NO.** Esto sí es claro: la sugerencia tiene que decir el
+  estado de la entrega, porque no es lo mismo "viene el jueves" que "llegó ayer
+  y está sin registrar".
 
 **2. LA COLUMNA "USER": PERSONA, NO CORREO.** Jose, 2026-09-09, con captura:
 
@@ -200,6 +194,51 @@ sólo se ven A TRAVÉS de la app, que los abre como dueño y entrega los bytes. 
 ADMIN de la app no los tiene en su Drive. Su razonamiento se sostiene entero:
 el correo le da *"un poquito más de información pero no la suficiente para ser
 un admin completo"*.
+
+### ✅ HECHO (v11.69) — CINCO NÚMEROS EN UNA BARRA QUE CIERRA
+
+Idea de Jose. **Lo primero fue comprobar que las partes suman, y no sumaban como
+él las describió.** Las dos cosas que salieron son la diferencia entre una barra
+verdadera y una que lo parece:
+
+**1. RESERVED ESTÁ DENTRO DE IN WAREHOUSE.** El motor de stock hace
+`availableQty = warehouseQty − reservedQty`. Dibujar
+`[In Warehouse][Used][Reserved]` —que es lo que él pidió, literalmente— contaría
+lo reservado DOS VECES y la barra saldría más larga que la realidad. El reparto
+que no se pisa es **`[Available │ Reserved │ Used │ Wasted]`**, donde Available +
+Reserved **es** In Warehouse.
+
+**2. EL TOTAL NO PUEDE LLAMARSE "lo que el almacén recibió".** ADJUST sube o baja
+`warehouseQty` **sin contrapartida** — a propósito, porque un recuento corregido
+no es material recibido ni desperdiciado. Eso rompe la identidad:
+`Warehouse + Used + Wasted` sólo es igual a lo recibido si nunca hubo un ajuste,
+y en un almacén de verdad siempre lo hay.
+
+Lo que SÍ cierra siempre es la suma de los cuatro trozos, porque cada unidad está
+hoy en exactamente uno de esos sitios. Por eso el total se llama **"accounted
+for"** y no "received": es una promesa que la app puede cumplir.
+
+Jose eligió las dos: total = lo que hoy tenemos contado, y Waste dentro.
+
+**EL NÚMERO SIGUE ESTANDO.** Una barra sin cifras es más bonita y menos útil: en
+un almacén la pregunta es *"¿me alcanza para 40?"*, y eso no se contesta mirando
+una proporción. Va delante, y es el DISPONIBLE — el único de los cinco sobre el
+que se puede actuar ahora mismo.
+
+**EL HOVER DICE EL PORQUÉ.** Los datos de las reservas —obra, cantidad, quién—
+ya viajaban al navegador; sólo había que enseñarlos. Una reserva liberada no
+sale: ya no retiene nada.
+
+**EL "ESCONDIDO" SÓLO SE HEREDA SI ERAN LAS CINCO.** Quien escondió las cinco no
+quería ver cantidades, y la barra tampoco. Pero quien escondió cuatro y dejó
+"Available" SÍ quería ver una cantidad — heredar el escondido de las otras cuatro
+le quitaría justo la que le importaba, y ésa es la peor de las dos
+equivocaciones posibles.
+
+`tools/test-stock-levels-bar.js` — 23 comprobaciones en un navegador de verdad,
+midiendo los trozos EN PÍXELES contra sus proporciones. Comprobado que sirve:
+poniendo `warehouseQty` donde va `availableQty` —el error que Jose describió sin
+querer— el total sale **190 en vez de 160** y fallan 6.
 
 ### ✅ HECHO (v11.68) — LA COLUMNA CATEGORY SE APARTA CUANDO SOBRA
 

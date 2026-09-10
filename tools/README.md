@@ -20,6 +20,7 @@ node tools/test-backup-backfill.js
 node tools/test-tooltip-edge.js
 node tools/test-tip-in-settings.js
 node tools/test-stock-cat-column.js
+node tools/test-stock-levels-bar.js
 node tools/test-splash-notes.js
 node tools/test-account-tooltip.js
 node tools/test-favicon.js
