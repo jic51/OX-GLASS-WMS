@@ -59,6 +59,30 @@ Dashboard, ESE es el momento en que ves cambiar los números — no el toast.
 recibir la respuesta.** Y devolverla si el servidor dice que no. Hoy al pulsar la
 fila sólo se atenúa; irse, se va cuando el servidor contesta.
 
+**Y UNA COSA QUE APARECIÓ AL LEER `refreshDerivedSheets_` (2026-09-10).** El
+comentario de las reparaciones de MatID dice:
+
+> *"One setValues call per affected sheet (archive/history), not per row — same
+>  batching discipline as everything else in this function."*
+
+Y la línea de debajo hace **una escritura por fila**:
+
+```javascript
+archiveFixes.forEach(function(f){ archive.getRange(f.rowNum, AC.MAT_ID + 1).setValue(f.correctMatId); });
+```
+
+Cada `setValue` es un viaje a Sheets. Cien filas con el MatID desincronizado son
+cien viajes en un solo refresco. **Se cura solo** —al refresco siguiente ya no
+hay nada que reparar— así que no se paga en cada borrado, pero el PRIMER
+refresco después de una deriva puede ser durísimo, y es justo la clase de
+lentitud que aparece sin motivo aparente y se va sola antes de que nadie la
+mire. Es además el mismo patrón que ya mordió a este código dos veces: **el
+comentario dice una cosa y el código hace otra.**
+
+`tools/medir-refresco.gs` lo separa a propósito, corriendo el refresco tres
+veces: si la primera vuelta es mucho más lenta que la segunda y la tercera, era
+esto.
+
 **LAS TRES PIEZAS, y conviene no confundirlas:**
 
 1. **Quitarla al pulsar** (con vuelta atrás si falla). Es lo que hace que se
