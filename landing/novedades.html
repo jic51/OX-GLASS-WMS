@@ -97,6 +97,23 @@
        almacén?</p>
 
     <div class="entry">
+      <span class="ver">v11.74</span>
+      <span class="tag fix">Mejorado</span>
+      <h3>Una espera menos en cada guardado</h3>
+      <p>Cada guardado y cada borrado reconstruye tus totales, y parte de eso
+         era leer la hoja de movimientos antiguos incluso cuando estaba vacía.
+         En un almacén real esa lectura costaba medio segundo de no hacer nada,
+         cada vez.</p>
+      <p>Ahora se salta cuando no hay nada. Las instalaciones cuya hoja de
+         movimientos antiguos ya creció no cambian: se sigue leyendo, porque
+         esas filas cuentan.</p>
+      <p>Y la medición detrás de esto vale la pena saberla si alguna vez te
+         preguntas por qué Acopio se queda pensando: leer veinticuatro mil
+         celdas cuesta lo mismo que no leer ninguna. Lo que una hoja de cálculo
+         cobra es el viaje, no los datos.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.73</span>
       <span class="tag new">Nuevo</span>
       <h3>La columna User ya es una persona</h3>

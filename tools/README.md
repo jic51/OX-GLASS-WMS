@@ -66,6 +66,7 @@ node tools/test-daily-report.js
 node tools/test-morning-closes.js
 node tools/test-morning-arrivals.js
 node tools/test-user-column.js
+node tools/test-derived-refresh.js
 node tools/test-selection-survives.js
 node tools/test-site-links.js
 node tools/test-arrived-to-entry.js
@@ -542,6 +543,29 @@ come back from — is invisible to both. Those get a browser test.
   browser half measures the one thing reading the file cannot: that the card
   stays open while the mouse crosses the gap from the name to its buttons, which
   is the whole reason it is not a tooltip.
+- `test-derived-refresh.js` — `refreshDerivedSheets_` executed for real against
+  fake sheets that RECORD what was asked of them (v11.74). Nine files in this
+  directory name that function; none of them ran it — most read it as text and
+  pattern-match inside, and `test-text-stays-text.js` replaces it with an empty
+  stub. So until this file existed, the arithmetic that produces every stock
+  total in the app could be changed and the suite stayed green. It got found
+  while measuring why the app pauses before each toast. The change it guards is
+  small — don't read ARCHIVE_HISTORY when it is empty — but the bug it could
+  introduce is silent and expensive: skip it when it has rows and those
+  movements stop counting, so the warehouse reports less material than it holds
+  and nothing warns. Both halves are checked, and the recording is the point:
+  asserting "the total came out right" would pass on a version that reads the
+  empty sheet anyway and throws the answer away. It also covers the arithmetic
+  nobody was executing — ENTRY/EXIT/TRANSFER/RETURN/WASTE netting in one rack,
+  ADJUST moving stock in both directions without inventing waste or site stock,
+  a zero rack not taking up a row — and the line the source itself marks
+  CRITICAL: `"B1A"` and `" b1a "` are one rack, or a +21 parks under one key
+  while its −21 lands under another and the material never leaves the warehouse.
+  **The measurement that started it, from Jose's file:** reading ARCHIVE_HISTORY
+  with ZERO rows cost 1043/426/422 ms; reading MASTER_ARCHIVE_V3 with 1061 rows
+  × 23 columns cost 964/983/643 ms. What Sheets charges for is the round trip,
+  not the data — so any optimization that starts with "read fewer cells" is
+  looking at the wrong number.
 - `test-sysactivity-dismiss.js` — that dismissing a system notice does NOT
   erase it from the maintenance record (`getSystemActivity` + both its
   consumers), backend lifted verbatim into a Node vm with the Sheets API

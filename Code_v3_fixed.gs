@@ -46,7 +46,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '11.73';
+var APP_VERSION = '11.74';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -58,7 +58,7 @@ var APP_VERSION = '11.73';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '8c3b9710';
+var APP_BUILD = '2ece8f45';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -4894,7 +4894,26 @@ function refreshDerivedSheets_(ss) {
   var history = ensureArchiveHistorySheet_(ss);
 
   var archiveData = archive.getDataRange().getValues();
-  var historyData = history.getDataRange().getValues();
+
+  /* NO SE LEE UNA HOJA VACÍA. Medido en la hoja de Jose el 2026-09-10, tres
+   * corridas seguidas:
+   *
+   *     leer ARCHIVE_HISTORY (0 filas):      1043 / 426 / 422 ms
+   *     leer MASTER_ARCHIVE_V3 (1061 × 23):   964 / 983 / 643 ms
+   *
+   * Leer veinticuatro mil celdas cuesta lo mismo que leer NADA. Lo que se paga
+   * no son los datos: es el viaje a Sheets, unos 400 ms lleve lo que lleve. Y
+   * este viaje se hacía en cada guardado y en cada borrado para traerse una
+   * hoja con la cabecera y nada debajo.
+   *
+   * getLastRow es un viaje también, pero de los baratos, y en una instalación
+   * donde el histórico SÍ tiene filas no cambia nada: se lee igual. Lo que se
+   * quita es pagar por lo que no hay — que es el caso de toda instalación
+   * nueva, y el de Jose después de un año de uso.
+   */
+  var historyData = (history && history.getLastRow() > 1)
+    ? history.getDataRange().getValues()
+    : [[]];
   var data  = archiveData.concat(historyData.slice(1));
   var stock = {};
   // Self-healing MatID: any row whose stored MatID doesn't match what it should

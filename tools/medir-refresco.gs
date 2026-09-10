@@ -1,56 +1,64 @@
 /**
- * MEDIR CUÁNTO TARDA DE VERDAD RECONSTRUIR LOS TOTALES — v2
+ * MEDIR EL REFRESCO — v3: DOS FORMAS DE ESCRIBIR, CRONOMETRADAS
  * ═══════════════════════════════════════════════════════════════════════════
  *
- * Jose, 2026-09-10: "siempre veo que al guardar, borrar, o hacer otras cosas la
- * app primero piensa y luego manda el toast verde." Ese "primero piensa" es
- * refreshDerivedSheets_, que reconstruye LIVE_STOCK, SITE_STOCK y WASTED_STOCK
- * DESDE EL ARCHIVO ENTERO en cada guardado y en cada borrado.
+ * ─── LO QUE YA SABEMOS, medido en la hoja de Jose el 2026-09-10 ────────────
  *
- * LA v1 TENÍA UN FALLO MÍO y hay que decirlo, porque explica el registro raro:
- * buscaba el archivo por el nombre "ARCHIVE", escrito a mano. La hoja se llama
- * MASTER_ARCHIVE_V3. Así que la línea de "sólo leer" midió una hoja que no
- * existe —439 ms de nada— y el "por movimiento" salió dividido entre cero.
+ * El refresco completo cuesta ~3,7 s (una mala racha de Google lo subió a 7,8).
+ * Y los números crudos dijeron algo que ninguno de los dos esperaba:
  *
- * El número grande de la v1 SÍ ERA BUENO: el refresco completo tardó entre 3,1
- * y 6,0 segundos en nueve vueltas. Y dijo algo que ya no hace falta volver a
- * medir: la primera vuelta NO es sistemáticamente más lenta que las otras, así
- * que las reparaciones de MatID —escritas una por fila— no son de donde sale el
- * tiempo.
+ *     leer ARCHIVE_HISTORY (0 filas):      1043 / 426 / 422 ms
+ *     leer MASTER_ARCHIVE_V3 (1061 × 23):   964 / 983 / 643 ms
+ *     escribir WASTED_STOCK (3 filas):      240 / 517 / 346 ms
+ *     escribir LIVE_STOCK (476 filas):      393 / 428 / 507 ms
  *
- * ESTA VERSIÓN CONTESTA LA PREGUNTA QUE QUEDA: de esos ~4,5 segundos, ¿cuánto
- * es LEER el archivo y cuánto es ESCRIBIR las tres hojas derivadas? De eso
- * depende cuál de los dos arreglos vale la pena:
+ * LEER VEINTICUATRO MIL CELDAS CUESTA LO MISMO QUE LEER NADA. El precio no son
+ * los datos: es el viaje a Sheets, unos 400 ms lleve lo que lleve.
  *
- *   si manda LEER  → el arreglo es que borrar AJUSTE los totales en vez de
- *                    recalcularlos desde cero. Cambio grande, con su riesgo.
- *   si manda ESCRIBIR → el arreglo es no reescribir las tres hojas enteras
- *                    cuando sólo cambió un material. Cambio mediano.
+ * (La línea de "veredicto" de la v2 no sirve: dio tres respuestas distintas en
+ * tres corridas seguidas. El ruido era más grande que la diferencia. Por eso
+ * esta versión no opina — pone los dos candidatos a competir y enseña quién
+ * gana.)
+ *
+ * ─── LO QUE ESTA VERSIÓN CONTESTA ──────────────────────────────────────────
+ *
+ * De ahí salió la idea de escribir cada hoja derivada de una vez en lugar de
+ * `clearContents()` + `setValues()`. PERO esa idea da por hecho que cada
+ * llamada es un viaje, y APPS SCRIPT AGRUPA LAS ESCRITURAS SEGUIDAS. En
+ * refreshDerivedSheets_ las seis van seguidas, sin ninguna lectura en medio, así
+ * que puede que ya cuesten un viaje y el cambio no ahorre NADA.
+ *
+ * Y la medición de la v2 tenía ese mismo error: forzaba un flush() después de
+ * cada hoja, o sea que midió tres viajes donde la app real quizá paga uno.
+ *
+ * Así que aquí las dos formas corren de verdad, con UN SOLO flush al final —
+ * como en la app — y por turnos, para que una mala racha de Google no le toque
+ * siempre a la misma:
+ *
+ *     FORMA A (la de hoy):   clearContents() + setValues(), por cada hoja.
+ *     FORMA B (la propuesta): un setValues() por hoja, rellenando con vacíos
+ *                             las filas que sobran.
+ *
+ * Si A y B tardan lo mismo, el cambio no vale la pena y no se hace.
+ *
+ * También mide lo que cuesta un getLastRow(), porque el otro cambio —no leer
+ * ARCHIVE_HISTORY cuando está vacía— cambia una lectura grande por uno de
+ * ésos, y sólo es un ahorro si sale más barato.
  *
  * ─── CÓMO SE USA ───────────────────────────────────────────────────────────
  *
- *  1. Abre tu hoja → Extensiones → Apps Script.
- *  2. Abre el archivo "medir" que ya creaste (o crea uno nuevo: + → Script).
- *  3. Borra lo que tenga y pega TODO este archivo.
- *  4. Guarda (💾).
- *  5. Elige  medirRefresco  arriba → Ejecutar.
- *  6. Mándame el registro entero.
- *  7. Cuando terminemos, borra el archivo "medir". No deja nada puesto.
+ *  1. Abre el archivo "medir" en Apps Script, borra lo que tenga y pega esto.
+ *  2. Guarda 💾 → elige  medirRefresco  → Ejecutar.
+ *  3. Mándame el registro entero. Si puedes, córrelo DOS O TRES VECES: Google
+ *     tiene rachas y una sola corrida ya nos engañó una vez.
  *
- * ─── QUÉ HACE Y QUÉ NO ─────────────────────────────────────────────────────
+ * ─── QUÉ ESCRIBE ───────────────────────────────────────────────────────────
  *
- * NO cambia ningún dato tuyo.
- *
- * La parte de escritura merece una frase, porque es la única que escribe: LEE
- * las tres hojas derivadas, las vacía y VUELVE A ESCRIBIR EXACTAMENTE LO MISMO
- * que acaba de leer. Es la misma operación que la app hace en cada guardado
- * (clearContents + setValues), con el mismo número de filas, pero con los
- * valores de vuelta sin tocar. Y aunque saliera mal, esas tres hojas son una
- * copia calculada del archivo: se rehacen enteras en el siguiente guardado.
+ * Sólo las tres hojas derivadas, y les escribe LO MISMO QUE ACABA DE LEER. Son
+ * una copia calculada del archivo: aunque algo saliera mal, se rehacen enteras
+ * en el siguiente guardado.
  */
 
-// Los nombres SALEN DE LA APP, no de aquí. Escribirlos a mano fue el fallo de
-// la v1, y volver a escribirlos a mano sería repetirlo con otro nombre.
 function _nombresHoja_() {
   try {
     if (typeof SHEETS === 'object' && SHEETS && SHEETS.ARCHIVE) {
@@ -69,102 +77,139 @@ function medirRefresco() {
   function di(t){ L.push(t); Logger.log(t); }
   function ahora(){ return new Date().getTime(); }
 
-  di('═══ ACOPIO — dónde se van los segundos del refresco (v2) ═══');
-  di('Hoja: ' + ss.getName());
-  di('Nombres: ' + (N.deLaApp ? 'leídos de la app ✓' : '⚠ de respaldo — SHEETS no estaba a la vista'));
+  di('═══ ACOPIO — las dos formas de escribir, cronometradas (v3) ═══');
+  di('Hoja: ' + ss.getName() + '   ·   nombres: ' + (N.deLaApp ? 'de la app ✓' : '⚠ de respaldo'));
   di('');
 
-  // ── 1. El tamaño ─────────────────────────────────────────────────────────
-  di('── Tamaño ──');
-  var hojas = {};
-  [['archivo', N.archivo], ['historia', N.historia],
-   ['live', N.live], ['site', N.site], ['waste', N.waste]].forEach(function(par){
-    var h = ss.getSheetByName(par[1]);
-    hojas[par[0]] = h;
-    di('  ' + par[1] + ': ' + (h ? Math.max(0, h.getLastRow() - 1) + ' filas' : '❌ NO EXISTE'));
-  });
-  if (!hojas.archivo) {
-    di('');
-    di('⚠ Sin el archivo no hay nada que medir. Mándame igual este registro.');
+  var live  = ss.getSheetByName(N.live);
+  var site  = ss.getSheetByName(N.site);
+  var waste = ss.getSheetByName(N.waste);
+  var hist  = ss.getSheetByName(N.historia);
+  if (!live || !site || !waste) {
+    di('⚠ Falta alguna hoja derivada. Mándame igual este registro.');
     return L.join('\n');
   }
-  var nMov = Math.max(0, hojas.archivo.getLastRow() - 1) +
-             (hojas.historia ? Math.max(0, hojas.historia.getLastRow() - 1) : 0);
-  di('  → movimientos que se recorren en CADA guardado y CADA borrado: ' + nMov);
-  di('');
 
-  // ── 2. LEER ──────────────────────────────────────────────────────────────
-  di('── Parte 1: LEER el archivo entero ──');
-  var t = ahora();
-  var datosA = hojas.archivo.getDataRange().getValues();
-  var tA = ahora() - t;
-  t = ahora();
-  var datosH = hojas.historia ? hojas.historia.getDataRange().getValues() : [[]];
-  var tH = ahora() - t;
-  di('  ' + N.archivo + ': ' + tA + ' ms  (' + datosA.length + ' filas × ' +
-     ((datosA[0] || []).length) + ' columnas)');
-  di('  ' + N.historia + ': ' + tH + ' ms  (' + datosH.length + ' filas)');
-  var tLeer = tA + tH;
-  di('  TOTAL LEER: ' + tLeer + ' ms');
-  di('');
-
-  // ── 3. ESCRIBIR ──────────────────────────────────────────────────────────
+  // ── 1. ¿Cuánto cuesta preguntar cuántas filas hay? ───────────────────────
   //
-  // Cada hoja derivada se lee, se vacía y se vuelve a escribir CON LO MISMO. Es
-  // el mismo par clearContents + setValues que hace la app, con el mismo número
-  // de filas, pero sin cambiar un solo valor.
-  di('── Parte 2: ESCRIBIR las tres hojas derivadas ──');
-  var tEscribir = 0;
-  ['live', 'site', 'waste'].forEach(function(cual){
-    var h = hojas[cual];
-    if (!h) { di('  ' + cual + ': no existe'); return; }
-    var vals = h.getDataRange().getValues();
-    var t1 = ahora();
-    h.clearContents();
-    if (vals.length && (vals[0] || []).length) {
-      h.getRange(1, 1, vals.length, vals[0].length).setValues(vals);
-    }
+  // El otro cambio cambia una lectura grande por uno de éstos. Si getLastRow
+  // cuesta lo mismo que leer la hoja entera, no hay ahorro y no se hace.
+  //
+  // Con un flush() delante de cada uno: Apps Script recuerda lo que ya
+  // preguntó dentro de una misma ejecución, y sin invalidar mediría cero a
+  // partir del segundo.
+  di('── Cuánto cuesta preguntar "¿cuántas filas tienes?" ──');
+  var tsLast = [];
+  for (var q = 0; q < 3; q++) {
     SpreadsheetApp.flush();
-    var ms = ahora() - t1;
-    tEscribir += ms;
-    di('  ' + h.getName() + ': ' + ms + ' ms  (' + vals.length + ' filas)');
-  });
-  di('  TOTAL ESCRIBIR: ' + tEscribir + ' ms');
+    var tq = ahora();
+    var n = hist ? hist.getLastRow() : 0;
+    tsLast.push(ahora() - tq);
+  }
+  di('  getLastRow() sobre ' + N.historia + ': ' + tsLast.join(' / ') + ' ms');
+  SpreadsheetApp.flush();
+  var tr = ahora();
+  var filasHist = hist ? hist.getDataRange().getValues().length : 0;
+  var tLeerHist = ahora() - tr;
+  di('  leerla entera: ' + tLeerHist + ' ms  (' + filasHist + ' filas)');
+  di('  → ahorro por no leerla cuando está vacía: ' +
+     (tLeerHist - Math.min.apply(null, tsLast)) + ' ms aprox.');
   di('');
 
-  // ── 4. El refresco entero, dos veces ─────────────────────────────────────
-  di('── Parte 3: el refresco completo, como lo hace la app ──');
-  var vueltas = [];
-  for (var v = 1; v <= 2; v++) {
-    var t2 = ahora(), err = '';
+  // ── 2. Las dos formas de escribir ────────────────────────────────────────
+  //
+  // Los valores se leen UNA vez y se vuelven a escribir tal cual, las dos
+  // formas. Ninguna cambia un dato.
+  var copia = [
+    { h: live,  v: live.getDataRange().getValues() },
+    { h: site,  v: site.getDataRange().getValues() },
+    { h: waste, v: waste.getDataRange().getValues() }
+  ];
+
+  function formaA(){                      // lo que hace la app hoy
+    for (var i = 0; i < copia.length; i++) {
+      var c = copia[i];
+      c.h.clearContents();
+      if (c.v.length && (c.v[0] || []).length) {
+        c.h.getRange(1, 1, c.v.length, c.v[0].length).setValues(c.v);
+      }
+    }
+  }
+
+  function formaB(){                      // un setValues por hoja
+    for (var i = 0; i < copia.length; i++) {
+      var c = copia[i];
+      if (!c.v.length || !(c.v[0] || []).length) continue;
+      var ancho = c.v[0].length;
+      var filas = c.v.slice();
+      // Rellenar hasta donde llegaba antes, para borrar lo que sobre. Aquí las
+      // filas son las mismas, así que no rellena nada — pero el código es el
+      // que se usaría de verdad, no una versión simplificada que mediría otra
+      // cosa.
+      var hasta = c.h.getLastRow();
+      while (filas.length < hasta) {
+        var vacia = [];
+        for (var w = 0; w < ancho; w++) vacia.push('');
+        filas.push(vacia);
+      }
+      c.h.getRange(1, 1, filas.length, ancho).setValues(filas);
+    }
+  }
+
+  di('── Las dos formas de escribir las tres hojas ──');
+  di('  A = clearContents + setValues (lo de hoy)   ·   B = un setValues por hoja');
+  di('  Un solo flush() al final de cada una, como en la app. Por turnos, para');
+  di('  que una mala racha de Google no le toque siempre a la misma.');
+  var sumaA = 0, sumaB = 0, detalle = [];
+  for (var v2 = 1; v2 <= 3; v2++) {
+    // A primero en las impares, B primero en las pares.
+    var primero = (v2 % 2 === 1) ? 'A' : 'B';
+    var ms = {};
+    var orden = (primero === 'A') ? ['A', 'B'] : ['B', 'A'];
+    orden.forEach(function(cual){
+      SpreadsheetApp.flush();
+      var t3 = ahora();
+      if (cual === 'A') formaA(); else formaB();
+      SpreadsheetApp.flush();
+      ms[cual] = ahora() - t3;
+    });
+    sumaA += ms.A; sumaB += ms.B;
+    detalle.push('  vuelta ' + v2 + ' (empezó ' + primero + '):  A=' + ms.A + ' ms   B=' + ms.B + ' ms');
+  }
+  detalle.forEach(di);
+  var medA = Math.round(sumaA / 3), medB = Math.round(sumaB / 3);
+  di('  media:  A=' + medA + ' ms   B=' + medB + ' ms');
+  di('');
+
+  // ── 3. El refresco completo, para tener la referencia ────────────────────
+  di('── El refresco completo, como referencia ──');
+  var vs = [];
+  for (var v3 = 1; v3 <= 2; v3++) {
+    var t4 = ahora(), err = '';
     try { refreshDerivedSheets_(ss); SpreadsheetApp.flush(); }
     catch (e) { err = ' ← FALLÓ: ' + e.message; }
-    var ms2 = ahora() - t2;
-    vueltas.push(ms2);
-    di('  vuelta ' + v + ': ' + ms2 + ' ms' + err);
+    vs.push(ahora() - t4);
+    di('  vuelta ' + v3 + ': ' + vs[vs.length - 1] + ' ms' + err);
   }
-  var tTodo = Math.round((vueltas[0] + vueltas[1]) / 2);
   di('');
 
-  // ── 5. La lectura ────────────────────────────────────────────────────────
-  di('── Dónde se van los segundos ──');
-  var resto = tTodo - tLeer - tEscribir;
-  function pct(x){ return tTodo > 0 ? ' (' + Math.round(x / tTodo * 100) + '%)' : ''; }
-  di('  refresco completo:  ' + tTodo + ' ms   ← el precio de cada guardado y cada borrado');
-  di('    leer el archivo:  ' + tLeer + ' ms' + pct(tLeer));
-  di('    escribir las 3:   ' + tEscribir + ' ms' + pct(tEscribir));
-  di('    lo demás:         ' + resto + ' ms' + pct(resto) +
-     '   (recorrer ' + nMov + ' movimientos en JS, y reparaciones)');
-  if (nMov > 0) {
-    di('  por movimiento del archivo: ' +
-       (Math.round(tTodo / nMov * 1000) / 1000) + ' ms');
+  // ── 4. La lectura, sin opinar de más ─────────────────────────────────────
+  di('── Qué dice esto ──');
+  di('  escribir, forma de hoy (A): ' + medA + ' ms');
+  di('  escribir, propuesta   (B): ' + medB + ' ms');
+  var dif = medA - medB;
+  var refresco = Math.round((vs[0] + vs[1]) / 2);
+  if (Math.abs(dif) < Math.max(150, medA * 0.15)) {
+    di('  → EMPATE. Apps Script ya agrupa las escrituras seguidas, así que el');
+    di('    cambio no ahorraría nada y NO SE HACE.');
+  } else if (dif > 0) {
+    di('  → B gana por ' + dif + ' ms, un ' + Math.round(dif / refresco * 100) +
+       '% del refresco completo (' + refresco + ' ms).');
+  } else {
+    di('  → A gana por ' + (-dif) + ' ms. La propuesta es PEOR y no se hace.');
   }
   di('');
-  if (tEscribir > tLeer * 1.5)      di('  → MANDA ESCRIBIR.');
-  else if (tLeer > tEscribir * 1.5) di('  → MANDA LEER.');
-  else                              di('  → LEER Y ESCRIBIR cuestan parecido.');
-  di('');
-  di('── Mándame este texto entero ──');
+  di('── Mándame este texto entero. Y si puedes, córrelo 2 o 3 veces ──');
 
   return L.join('\n');
 }

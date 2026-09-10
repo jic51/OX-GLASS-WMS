@@ -95,6 +95,23 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.74</span>
+      <span class="tag fix">Improved</span>
+      <h3>One fewer wait on every save</h3>
+      <p>Every save and every delete rebuilds your stock totals, and part of
+         that was reading the older-movements sheet even when it was empty. On
+         a real warehouse file that read cost about half a second of doing
+         nothing, every time.</p>
+      <p>It is skipped when there is nothing there. Installations whose older
+         movements sheet has grown are unaffected — it still gets read, because
+         those rows count.</p>
+      <p>The measurement behind this is worth knowing if you ever wonder why
+         Acopio pauses: reading twenty-four thousand cells costs the same as
+         reading none. What a spreadsheet charges for is the trip, not the
+         data.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.73</span>
       <span class="tag new">New</span>
       <h3>The User column is a person now</h3>
