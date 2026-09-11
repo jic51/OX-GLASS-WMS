@@ -160,9 +160,30 @@ console.log('\n═══ every path that rewrites movements must refresh, and mu
   ];
   paths.forEach(([anchor, what]) => {
     const at = HTML.indexOf(anchor);
-    // The handler sits before the .processMovement line for the action anchors
-    // and after it for the function anchors, so look both ways.
-    const seg = HTML.slice(Math.max(0, at - 2500), at + 2000);
+    // A FUNCTION ANCHOR READS THE WHOLE FUNCTION, not a fixed window.
+    //
+    // It used to be `HTML.slice(at - 2500, at + 2000)` for both kinds, and in
+    // v11.75 that broke on working code: _doDeleteMovementRow grew past 2000
+    // characters when the row started leaving on the click, and the reload —
+    // still there, at the bottom of the success handler — fell off the end of
+    // the window. A test whose reach is a character count fails the day a
+    // function gets a paragraph longer, which is never the day something is
+    // actually wrong.
+    //
+    // Action anchors (a quoted server action) still use a window, because there
+    // is no function to bound: the handler sits above the .processMovement line
+    // and the reload can be on either side of it.
+    let seg;
+    if (anchor.indexOf('function ') === 0) {
+      let depth = 0;
+      seg = HTML.slice(at);
+      for (let j = HTML.indexOf('{', at); j < HTML.length; j++) {
+        if (HTML[j] === '{') depth++;
+        else if (HTML[j] === '}') { depth--; if (depth === 0) { seg = HTML.slice(at, j + 1); break; } }
+      }
+    } else {
+      seg = HTML.slice(Math.max(0, at - 2500), at + 2000);
+    }
     check(what + ' refreshes from the server afterwards — the local patch fixes the lists, not the stock',
       at !== -1 && /loadDataFromGoogle\(true/.test(seg));
   });

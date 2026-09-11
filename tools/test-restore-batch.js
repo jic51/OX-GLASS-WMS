@@ -97,7 +97,10 @@ function navegador(opts){
     recargasDeLista: 0,
     // El cuadro dibujado: se guarda lo que _paintTrash produciría por fila.
     pintado: [],
-    document: { getElementById: () => null }
+    // Sin DOM, _rowLeave llama a su callback en el acto — igual que en el
+    // navegador cuando la fila no está pintada. Se levanta LA DE VERDAD, no un
+    // doble: lo que aquí se mide es el orden, y un doble lo cambiaría.
+    document: { getElementById: () => null, querySelector: () => null }
   });
 
   ctx.__servidor = function(handlers, metodo, args){
@@ -124,6 +127,7 @@ function navegador(opts){
     varSrc('BUSY_LABEL'), varSrc('BUSY_MAX_RETRIES'), varSrc('BUSY_BASE_MS'),
     varSrc('BUSY_MAX_MS'), varSrc('BUSY_JITTER_MS'),
     fnSrc('_busyDelay'), fnSrc('_wqPump'), fnSrc('_acWrite'), fnSrc('_reloadWhenIdle'),
+    varSrc('ROW_LEAVE_MS'), fnSrc('_rowLeave'), fnSrc('_he'), fnSrc('_escAttr'),
     fnSrc('_trashDrop'), fnSrc('_restoreMovement')
   ].forEach(code => vm.runInContext(code, ctx));
 

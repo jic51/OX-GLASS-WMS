@@ -67,6 +67,7 @@ node tools/test-morning-closes.js
 node tools/test-morning-arrivals.js
 node tools/test-user-column.js
 node tools/test-derived-refresh.js
+node tools/test-row-leave.js
 node tools/test-selection-survives.js
 node tools/test-site-links.js
 node tools/test-arrived-to-entry.js
@@ -566,6 +567,25 @@ come back from — is invisible to both. Those get a browser test.
   × 23 columns cost 964/983/643 ms. What Sheets charges for is the round trip,
   not the data — so any optimization that starts with "read fewer cells" is
   looking at the wrong number.
+- `test-row-leave.js` — the one way a row leaves, and the row leaving on the
+  CLICK rather than on the server's answer (v11.75), measured in a real browser.
+  Jose asked for the motion everywhere something disappears — "debe ser estándar
+  en la app" — so this is not "animate deleting movements", it is `_rowLeave`,
+  one function whose `done` callback is what lets eight different places share
+  one shape instead of eight similar ones. The assertion that matters measures
+  the row's real HEIGHT mid-animation, not the presence of a class: **the trap
+  this file exists to catch is the v11.66 lesson** — a caller that redraws its
+  whole list wipes out the element being animated in the same frame, the row
+  never shrinks, the list just flickers, and a class-based check would pass
+  anyway. It also pins that a table row shrinks the TABLE with it (so the rows
+  below genuinely rise), that a card both shrinks and slides (a `<td>` cannot
+  take a transform, which is why there are two classes), that `done` always
+  fires exactly once — no element, detached element, reduced motion — and that
+  `prefers-reduced-motion` gets the callback immediately instead of 240 ms
+  later. The source half checks ORDER, not mentions: `_rowLeave` before
+  `_delEnqueue`, the redraw INSIDE the callback, and the rollback putting a
+  refused row back at its own index rather than at the end — the end would tell
+  someone their movement is the newest when it is a month old.
 - `test-sysactivity-dismiss.js` — that dismissing a system notice does NOT
   erase it from the maintenance record (`getSystemActivity` + both its
   consumers), backend lifted verbatim into a Node vm with the Sheets API

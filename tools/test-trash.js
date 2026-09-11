@@ -164,6 +164,9 @@ function mundo(){
   const c = vm.createContext({
     Date, Math, String, Number, JSON, Array, Object, console,
     AC, AC_WIDTH, TR, TRASH_WIDTH,
+    // La marca que distingue "no está" de cualquier otro no. Se toma del
+    // archivo, no se escribe aquí: si allí cambia, esto tiene que caerse.
+    GONE_PREFIX: /var GONE_PREFIX = '([^']+)'/.exec(GS)[1],
     SHEETS: { ARCHIVE: 'MASTER_ARCHIVE_V3', ARCHIVE_HISTORY: 'ARCHIVE_HISTORY',
               TRASH: 'MOVEMENT_TRASH' },
     Session: { getScriptTimeZone: () => 'UTC' },
@@ -354,15 +357,46 @@ console.log('\n═══ y en pantalla, al instante ═══\n');
   check('manda el nombre del movimiento', /movId: mov\.movId \|\| ''/.test(del));
   check('...y sale antes si no encuentra el movimiento, que es lo que permite ' +
         'leerlo sin comprobar nada más abajo', /if \(!mov\) return;/.test(del));
-  check('LA FILA SE QUITA EN EL MANEJADOR DE ÉXITO — el servidor ya lo hizo, así ' +
-        'que esperar a que una recarga entera nos lo repita es hacer esperar a ' +
-        'alguien por algo que ya se sabe',
+  /* ESTA REGLA CAMBIÓ EN LA v11.75, Y ESTE ARCHIVO LA CAZÓ.
+     Decía: "no se quita nada en el de FALLO: primero el servidor, luego la
+     pantalla. Al revés, un 'ya lo borró otro' dejaría la fila desaparecida en
+     una cuenta y presente en la otra."
+     La primera mitad se cayó a propósito: la fila se va AL PULSAR, porque
+     esperar al servidor son cuatro segundos medidos en la hoja de Jose, y
+     vuelve a su sitio si el servidor dice que no.
+     La SEGUNDA MITAD SEGUÍA SIENDO VERDAD y por poco se pierde con ella: hay
+     dos noes —"ya lo borró otro" y "ya no está ahí"— donde devolver la fila
+     sería peor que no haberla quitado. El servidor los marca con GONE| desde la
+     v11.75, y lo que se comprueba aquí es justo eso. */
+  check('la fila se va AL PULSAR: el splice optimista está ANTES de encolar la ' +
+        'petición, no dentro del manejador de éxito',
+    del.indexOf('_rowLeave(') !== -1 &&
+    del.indexOf('_rowLeave(') < del.indexOf('_delEnqueue('));
+  check('...y el manejador de éxito conserva su splice como seguro, por si la ' +
+        'animación no llegó a correr (pestaña en segundo plano, movimiento ' +
+        'reducido, una fila que no estaba pintada)',
     /movements\.splice\(at, 1\)/.test(del) && /renderAll\(\)/.test(del));
-  check('...y no se quita nada en el de FALLO: primero el servidor, luego la ' +
-        'pantalla. Al revés, un "ya lo borró otro" dejaría la fila desaparecida ' +
-        'en una cuenta y presente en la otra',
-    del.indexOf('splice') > del.indexOf('withSuccessHandler') &&
-    del.indexOf('splice') < del.indexOf('withFailureHandler'));
+  {
+    const fallo = del.slice(del.indexOf('withFailureHandler'));
+    check('si el servidor dice que no, la fila VUELVE a su sitio — no al final, ' +
+          'que sería decirle a alguien que su movimiento es el más reciente ' +
+          'cuando es de hace un mes',
+      /splice\(\s*Math\.max\(0,\s*Math\.min\(donde/.test(fallo), fallo.slice(0, 200));
+    check('PERO UN "YA LO BORRÓ OTRO" NO LA DEVUELVE. Es la mitad de la vieja ' +
+          'regla que seguía siendo verdad: devolverla enseñaría un movimiento ' +
+          'que ya no existe, en la pantalla que acaba de dar a entender que sí',
+      /_isGoneError\(err\)/.test(fallo), fallo.slice(0, 400));
+    check('...y en ese caso se quita de la lista si seguía puesta, en vez de ' +
+          'dejarla a medias', /movements\.splice\(yaAt, 1\)/.test(fallo));
+  }
+  check('y el servidor marca esos dos noes con GONE|, en vez de que el navegador ' +
+        'los reconozca por el texto del mensaje — un texto se le cambia una ' +
+        'palabra y la marca no',
+    /GONE_PREFIX \+ 'Already deleted by/.test(GS) &&
+    /GONE_PREFIX \+ 'This movement is no longer there/.test(GS));
+  check('...y la marca NO se le enseña nunca a nadie: _stripTags la quita, igual ' +
+        'que quita SYSTEM_BUSY|',
+    /replace\('GONE\|', ''\)/.test(fnSrc(HTML, '_stripTags')));
   check('la recarga silenciosa sigue ahí, para los totales que calcula el servidor',
     /loadDataFromGoogle\(true, true\)/.test(del));
 

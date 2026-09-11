@@ -95,6 +95,25 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.75</span>
+      <span class="tag new">New</span>
+      <h3>A deleted row leaves the moment you press the bin</h3>
+      <p>It used to sit there, dimmed, until the server came back — which on a
+         real warehouse file is about four seconds, because every delete
+         rebuilds your stock totals from the whole archive. Now the row shrinks
+         away as you press, and the rows below it move up. If the server
+         refuses, the row comes back to exactly where it was and says so.</p>
+      <p>The shrinking is the part that matters. A row that only fades leaves
+         its gap behind, and the rows below jump when the gap finally closes.
+         Shrinking, they rise — and that movement is what reads as "this is
+         happening" instead of as a flicker.</p>
+      <p>Restoring from the trash uses the same motion. The other places a row
+         disappears — merges, emptying the trash, removing a catalogue value —
+         are next; several of them redraw their whole list today, and a list
+         that redraws cannot show a row leaving.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.74</span>
       <span class="tag fix">Improved</span>
       <h3>One fewer wait on every save</h3>

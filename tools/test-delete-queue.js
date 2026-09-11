@@ -93,11 +93,21 @@ function mundo(){
     _sysCacheDrop: () => {},
     BUSY_MAX_RETRIES: 4,
     _busyDelay: () => 10,
-    _isBusyError: (e) => String(e && e.message || e).indexOf('SYSTEM_BUSY|') !== -1
+    _isBusyError: (e) => String(e && e.message || e).indexOf('SYSTEM_BUSY|') !== -1,
+    // Sin DOM no hay fila que animar, así que _movRowEl devuelve null y
+    // _rowLeave llama a su callback en el acto — que es exactamente lo que hace
+    // en el navegador cuando la fila no está pintada. Se levantan LAS DE VERDAD
+    // y no dobles: lo que este archivo mide es el ORDEN de las cosas, y un
+    // doble de _rowLeave que llamara al callback antes o después cambiaría
+    // justo eso.
+    document: { querySelector: () => null },
+    CSS: { escape: (x) => x }
   });
   vm.runInContext([
     varSrc('_delQueue'), varSrc('_delRunning'), varSrc('_delPending'),
     fnSrc('_delEnqueue'), fnSrc('_delPump'),
+    varSrc('ROW_LEAVE_MS'),
+    fnSrc('_rowLeave'), fnSrc('_movRowEl'), fnSrc('_isGoneError'),
     fnSrc('_movByRowIdx'), fnSrc('_doDeleteMovementRow')
   ].join('\n'), c);
 
@@ -123,16 +133,29 @@ console.log('\n═══ cuatro papeleras seguidas, una sola llamada ═══\n
     m.pendientes.length === 1);
   check('y es la primera que se pulsó', m.pendientes[0].data.movId === 'M-1');
   check('las otras tres esperan turno', m.cola() === 3);
-  check('las cuatro filas se ven esperando — siguen en la tabla porque TODAVÍA ' +
-        'no se han borrado, y atenuarlas es la verdad',
+  /* ESTO CAMBIÓ EN LA v11.75, y conviene decir en qué.
+     Antes las cuatro filas SE QUEDABAN en la tabla, atenuadas, hasta que a cada
+     una le contestaba el servidor. Era la verdad —todavía no se habían
+     borrado— y era insoportable: medido en la hoja de Jose, cada borrado son
+     ~4 segundos, así que la cuarta fila se iba dieciséis segundos después de
+     pulsarla. Sus palabras: "debe desaparecer en el mismo segundo".
+     Ahora las cuatro se van AL PULSAR. La que el servidor rechace vuelve a su
+     sitio. Y _delPending sigue existiendo, pero ya sólo como cerrojo: impide
+     encolar dos borrados del mismo movimiento. */
+  check('las cuatro se marcan como en camino — el cerrojo que impide encolar ' +
+        'dos borrados del mismo movimiento sigue puesto',
     m.pend().length === 4);
+  check('LAS CUATRO FILAS SE VAN AL PULSAR, sin esperar turno ni respuesta. La ' +
+        'cuarta estaba la tercera en la cola: con la regla vieja se habría ido ' +
+        'dieciséis segundos después de pulsarla',
+    m.movs.length === 0, m.movs.map(x => x.movId));
 
   m.pendientes[0].ok({ status: 'success' });
   check('al contestar la primera sale la segunda, en orden',
     m.pendientes.length === 2 && m.pendientes[1].data.movId === 'M-2');
   check('y esa fila ya no está esperando', m.pend().indexOf('M-1') === -1);
-  check('la fila desaparece de la lista al instante, no al recargar',
-    m.movs.length === 3 && !m.movs.some(x => x.movId === 'M-1'));
+  check('...y sigue sin estar en la lista, claro',
+    !m.movs.some(x => x.movId === 'M-1'));
 
   m.pendientes[1].ok({ status: 'success' });
   m.pendientes[2].ok({ status: 'success' });
