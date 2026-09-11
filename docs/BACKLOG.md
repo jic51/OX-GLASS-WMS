@@ -48,8 +48,55 @@ después del otro.
 **(a) LA ESPERA ANTES DEL TOAST.** Borrar UN movimiento hace que el servidor
 reconstruya `LIVE_STOCK`, `SITE_STOCK` y `WASTED_STOCK` **desde el archivo
 entero** (`refreshDerivedSheets_`). Eso es el "primero piensa", y no es un
-adorno: es el precio real de la operación. En un archivo de mil movimientos son
-segundos.
+adorno: es el precio real de la operación.
+
+**MEDIDO, en la hoja de Jose, el 2026-09-10 y el 2026-09-11.** 1060 movimientos
+en `MASTER_ARCHIVE_V3`, `ARCHIVE_HISTORY` vacía, 475 + 178 + 2 filas en las
+derivadas. `tools/medir-refresco.gs`, doce corridas:
+
+| | |
+|---|---|
+| refresco completo | **3,1 – 5,1 s** (un mal momento de Google lo subió a 12,1) |
+| leer el archivo entero (1061 × 23) | 643 – 983 ms |
+| leer `ARCHIVE_HISTORY`, **0 filas** | 422 – 1043 ms |
+| escribir las tres derivadas | 684 – 1093 ms |
+| `getLastRow()` sobre una hoja | 225 – 435 ms |
+
+**LA CONCLUSIÓN QUE CAMBIA TODO EL PLANTEAMIENTO: leer veinticuatro mil celdas
+cuesta lo mismo que leer NADA.** Sheets no cobra los datos, cobra el VIAJE — unos
+300–400 ms lleve lo que lleve. `refreshDerivedSheets_` hace unos nueve viajes, y
+nueve por 400 ms es clavado lo que se mide.
+
+**Eso descarta el cambio grande.** Que borrar AJUSTE los totales en vez de
+recalcularlos quitaría **una lectura de nueve llamadas**, y es el cambio con más
+riesgo de todos: un error ahí no se ve hasta que los números no cuadran. No vale
+la pena.
+
+**Y descarta también el mediano, medido el 2026-09-11.** La idea era un
+`setValues` por hoja en lugar de `clearContents` + `setValues`. Se pusieron las
+dos formas a competir de verdad, por turnos, tres vueltas en cada una de tres
+corridas — **la propuesta perdió las nueve veces**:
+
+| | A (lo de hoy) | B (la propuesta) |
+|---|---|---|
+| corrida 1 | 1093 ms | 3282 ms |
+| corrida 2 | 684 ms | 1478 ms |
+| corrida 3 | 799 ms | 2064 ms |
+
+Y la razón es exacta: B tiene que preguntar `getLastRow()` en cada hoja para
+saber hasta dónde rellenar con vacíos. Tres viajes extra de ~265 ms ≈ los 794 ms
+de diferencia de la corrida 2. **`clearContents()` sale más barato que
+`getLastRow()`**: la propuesta cambiaba una llamada barata por una cara y encima
+no quitaba la otra.
+
+**Lo único que sí se hizo (v11.74):** no leer `ARCHIVE_HISTORY` cuando está
+vacía. Ahorra ~300 ms de los ~4 s — modesto, pero es un viaje menos en cada
+guardado y cada borrado, y no tiene contrapartida.
+
+**LO QUE QUEDA, Y ES EL ÚNICO LEVER GRANDE QUE SIGUE EN PIE: refrescar UNA VEZ
+al final de la ráfaga, no en cada operación.** Borrar diez movimientos son hoy
+diez reconstrucciones completas del almacén: ~40 segundos de servidor para un
+trabajo que, hecho una sola vez al final, cuesta 4.
 
 **(b) EL CAMBIO DE DESPUÉS.** Al terminar la ráfaga se pide
 `loadDataFromGoogle`, y cuando llega repinta los totales. Si estás mirando el
@@ -79,9 +126,13 @@ lentitud que aparece sin motivo aparente y se va sola antes de que nadie la
 mire. Es además el mismo patrón que ya mordió a este código dos veces: **el
 comentario dice una cosa y el código hace otra.**
 
-`tools/medir-refresco.gs` lo separa a propósito, corriendo el refresco tres
-veces: si la primera vuelta es mucho más lenta que la segunda y la tercera, era
-esto.
+**MEDIDO, y NO es de aquí de donde sale el tiempo.** `tools/medir-refresco.gs`
+corría el refresco tres veces seguidas a propósito: como se cura solo, sólo la
+primera vuelta puede llevar reparaciones. En nueve vueltas la primera NO fue
+sistemáticamente más lenta —en una corrida la segunda fue la más lenta de las
+tres—, así que las reparaciones no explican los ~4 s. **Sigue siendo un fallo
+real que hay que arreglar** (el comentario promete un `setValues` y el código
+hace `setValue` por fila), pero es un arreglo de corrección, no de velocidad.
 
 **LAS TRES PIEZAS, y conviene no confundirlas:**
 
