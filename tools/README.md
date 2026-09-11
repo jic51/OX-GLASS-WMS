@@ -68,6 +68,7 @@ node tools/test-morning-arrivals.js
 node tools/test-user-column.js
 node tools/test-derived-refresh.js
 node tools/test-row-leave.js
+node tools/test-bell-count.js
 node tools/test-selection-survives.js
 node tools/test-site-links.js
 node tools/test-arrived-to-entry.js
@@ -586,6 +587,22 @@ come back from — is invisible to both. Those get a browser test.
   `_delEnqueue`, the redraw INSIDE the callback, and the rollback putting a
   refused row back at its own index rather than at the end — the end would tell
   someone their movement is the newest when it is a month old.
+- `test-bell-count.js` — that the bell's number and the bell's list are the same
+  thing (v11.77), the real `_syncCfgBell` run against a fake DOM that remembers
+  what was put into it. Jose photographed a bell reading 3 that opened onto 2:
+  the count summed all three kinds of card, the panel was built from two of
+  them, and the comment directly above the line promised "The panel lists ALL
+  of them" — the third comment in two days claiming what its code does not do.
+  The assertion is the INVARIANT, not that one fix: badge number equals row
+  count. A counter that disagrees with its own list teaches people not to trust
+  the bell, which the counter's own comment already said the last time this
+  happened with a different card kind. The fake `querySelectorAll` really
+  searches the HTML it was handed rather than returning an empty list — without
+  that, the second bug here would have shipped: the deck's button handlers are
+  bound with `deck.querySelectorAll(...)`, so putting the same attribute in the
+  panel and assuming the behaviour comes with it leaves two buttons that do
+  nothing. Also pins that the panel lists ALL of them while the pile rations to
+  five, and that the orange ones sort first.
 - `test-sysactivity-dismiss.js` — that dismissing a system notice does NOT
   erase it from the maintenance record (`getSystemActivity` + both its
   consumers), backend lifted verbatim into a Node vm with the Sheets API

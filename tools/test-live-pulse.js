@@ -60,14 +60,26 @@ console.log('\n═══ qué mueve el sello, y sobre todo qué no ═══\n')
     .map(s => s.trim().replace(':', '')) : [];
   console.log('  mueven el sello: ' + dentro.join(', ') + '\n');
 
-  // Lo que TIENE que estar: si después de la acción el AVAILABLE de un material
-  // puede ser distinto, va dentro.
+  /* LA REGLA, TAL COMO QUEDÓ EL 2026-09-11. La que había estaba mal escrita:
+     "si después de la acción el AVAILABLE de un material puede ser distinto".
+     Por eso las entregas esperadas quedaron fuera, con una nota que decía
+     "discutible".
+     Jose encontró lo que costaba: con dos ventanas abiertas y dos cuentas,
+     marcó una entrega como llegada en una y la otra siguió enseñándola como
+     Pending. No se enteraba nunca.
+     AVAILABLE nunca fue la pregunta. La pregunta es si alguien que tiene la app
+     abierta VERÍA algo distinto — y las entregas salen en la pestaña de
+     Incoming, en la ventana de la semana y en la tarjeta de la esquina. */
   [['addMovement', 'entradas, salidas, transfers, waste, adjust'],
    ['addMultiEntry', 'una entrada con varios materiales'],
    ['addMultiExit',  'una salida con varios materiales'],
    ['modifyMovement','editar un movimiento guardado'],
    ['manageMaterial','borrar una fila, renombrar o fusionar'],
-   ['commitImport',  'una importación son entradas de verdad']
+   ['commitImport',  'una importación son entradas de verdad'],
+   ['updateIncoming','marcar una entrega como llegada — la que Jose vio fallar ' +
+                     'con dos ventanas abiertas'],
+   ['addIncoming',   'una entrega nueva sale en la pantalla de otra persona'],
+   ['deleteIncoming','y una borrada tiene que desaparecer de ella']
   ].forEach(([a, que]) => {
     check('SÍ mueve el sello: ' + a + ' — ' + que, dentro.indexOf(a) !== -1);
   });
@@ -88,6 +100,17 @@ console.log('\n═══ qué mueve el sello, y sobre todo qué no ═══\n')
   ].forEach(([a, por]) => {
     check('NO mueve el sello: ' + a + ' — ' + por, dentro.indexOf(a) === -1);
   });
+
+  /* Y EL COSTE, que es lo que impide que esta lista crezca sola: cada sello
+     nuevo hace que TODAS las demás sesiones se traigan los datos enteros. Con
+     las entregas está bien —se tocan unas pocas veces al día— y por eso el
+     catálogo y los permisos siguen fuera, aunque también "se ven".
+     La lista corta es la defensa; si un día tiene quince entradas, el latido
+     habrá dejado de ser un latido. */
+  check('la lista sigue siendo CORTA (' + dentro.length + ') — cada entrada ' +
+        'cuesta una carga entera en cada sesión abierta, así que crecer sin ' +
+        'medir convierte el latido en una recarga continua',
+    dentro.length <= 12, dentro);
 
   // El sello se pone en UN sitio. Repartirlo por las funciones que escriben
   // habría significado cuatro funciones con varios `return` cada una, que es
