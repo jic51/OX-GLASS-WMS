@@ -236,8 +236,27 @@ const refresh = extractFn('_refreshMorningPopup');
 check('an open popup redraws itself when the data behind it changes',
   /classList\.contains\('show'\)/.test(refresh) && /showMorningPopup\(/.test(refresh));
 check('...and nothing happens when it is closed', /return;/.test(refresh));
-check('the redraw is wired to the Incoming render, which runs after a save',
-  /_refreshMorningPopup\(\);/.test(extractFn('renderIncoming')));
+/* THIS ASSERTION WAS PINNING THE BUG, and said so in its own words: "wired to
+   the Incoming render, which runs after a save". The second half was never
+   true. renderAll() redraws ONLY THE ACTIVE TAB, so renderIncoming runs after a
+   save only when Incoming happens to be the tab in front — which is the one
+   case where the popup matters least, because the data is already on screen.
+
+   Jose found it on 2026-09-11: he marked a delivery arrived from the popup,
+   recorded its entry, and the popup went on showing Pending with its "Mark
+   arrived" button. "Tuve que cerrar la ventana y volverla a abrir para que
+   cambie." He was on the Movements tab.
+
+   The popup floats over every tab, so its redraw cannot hang off any one of
+   them. It hangs off renderAll, which is the place that means "the data
+   changed". */
+check('the redraw hangs off renderAll — the place that means "the data changed"',
+  /_refreshMorningPopup\(\);/.test(extractFn('renderAll')));
+check('...and NOT off renderIncoming, which only runs when that tab is in front',
+  !/_refreshMorningPopup\(\);/.test(extractFn('renderIncoming')));
+check('...and renderAll still draws only the active tab: the fix is not to draw ' +
+      'everything, which would cost on every heartbeat',
+  /_activeTab\(\)/.test(extractFn('renderAll')));
 
 // ── El saludo, según la hora que es ─────────────────────────────────────────
 // Jose, a las ocho de la tarde: "la ventana de los incomings me dice buenos

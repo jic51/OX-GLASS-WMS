@@ -360,6 +360,34 @@ console.log('\n═══ el "Arrived" grande, y sólo en el popup ═══\n');
     enPop.indexOf('#morningPopupBody') === 0);
 }
 
+console.log('\n═══ el popup no es de ninguna pestaña ═══\n');
+{
+  /* Jose, 2026-09-11, con captura: marcó una entrega como llegada desde el
+     popup, registró su entrada, y el popup siguió enseñándola como Pending con
+     su botón "Mark arrived". "Tuve que cerrar la ventana y volverla a abrir
+     para que cambie."
+     LA CAUSA ERA DE UNA LÍNEA Y DE UN SITIO. renderAll repinta SÓLO LA PESTAÑA
+     ACTIVA, y la llamada a _refreshMorningPopup vivía dentro de renderIncoming.
+     Jose estaba en Movements & History, así que renderIncoming no corría nunca.
+     Funcionaba sólo si la pestaña de Incoming resultaba ser la de delante — que
+     es precisamente la que menos falta hace, porque ahí los datos ya se ven.
+     Se lee del archivo porque lo que importa es DÓNDE está la llamada, y eso no
+     se puede ejercitar sin la app entera. */
+  const render = fnSrc('renderAll');
+  const inc    = fnSrc('renderIncoming');
+  check('renderAll refresca el popup — es el sitio que significa "los datos ' +
+        'cambiaron", y el popup flota sobre cualquier pestaña',
+    /_refreshMorningPopup\(\)/.test(render), render);
+  check('...y ya NO cuelga de renderIncoming, que sólo corre si esa pestaña es ' +
+        'la activa', !/_refreshMorningPopup\(\)/.test(inc), inc);
+  check('renderAll sigue repintando sólo la pestaña activa — el arreglo NO es ' +
+        'repintarlo todo, que costaría en cada latido', /_activeTab\(\)/.test(render));
+  // Y que siga siendo gratis con el popup cerrado, que es casi siempre.
+  const refresh = fnSrc('_refreshMorningPopup');
+  check('y con el popup cerrado se va en la primera línea, sin calcular nada',
+    /classList\.contains\('show'\)\) return/.test(refresh), refresh.slice(0, 200));
+}
+
 console.log('\n═══ el recuadro gris, y el color donde hace falta ═══\n');
 {
   // Jose, con la captura: "no me gusta que todo esté en verde, y las letras

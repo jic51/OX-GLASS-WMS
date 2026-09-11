@@ -95,6 +95,26 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.76</span>
+      <span class="tag fix">Fixed</span>
+      <h3>A PO on an expected delivery stayed empty</h3>
+      <p>Type <code>08-4885</code> into an expected delivery's PO field, save,
+         reopen it, and the field was blank. Type it again, same thing.
+         Spreadsheets read <code>08-4885</code> as a date — month 08, year 4885
+         — and store that instead of your text; reading it back, the app
+         refused to show a garbled date where a PO belongs, so it showed
+         nothing.</p>
+      <p>Expected deliveries now store what you typed, exactly as movements
+         already did. Existing rows whose PO was eaten cannot be recovered from
+         the cell — the text is not in there any more — so those need typing in
+         once more, and this time they stay.</p>
+      <p>Also: the week's window now updates while you work in it. Marking a
+         delivery arrived from the popup and recording its entry left the popup
+         showing the old state until you closed and reopened it — it only
+         refreshed if the Incoming tab happened to be the one behind it.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.75</span>
       <span class="tag new">New</span>
       <h3>A deleted row leaves the moment you press the bin</h3>

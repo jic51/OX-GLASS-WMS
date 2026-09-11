@@ -97,6 +97,27 @@
        almacén?</p>
 
     <div class="entry">
+      <span class="ver">v11.76</span>
+      <span class="tag fix">Arreglado</span>
+      <h3>El PO de una entrega esperada se quedaba vacío</h3>
+      <p>Escribías <code>08-4885</code> en el PO de una entrega esperada,
+         guardabas, la volvías a abrir y el campo estaba en blanco. Lo escribías
+         otra vez, lo mismo. Las hojas de cálculo leen <code>08-4885</code> como
+         una fecha —mes 08, año 4885— y guardan eso en lugar de tu texto; al
+         leerlo de vuelta, la app se negaba a enseñar una fecha destrozada donde
+         va un PO, así que no enseñaba nada.</p>
+      <p>Las entregas esperadas ya guardan lo que escribes, igual que los
+         movimientos desde hace tiempo. Las filas viejas cuyo PO se comió no se
+         pueden recuperar de la celda —el texto ya no está ahí— así que hay que
+         escribirlos una vez más, y esta vez se quedan.</p>
+      <p>Además: la ventana de la semana ya se actualiza mientras trabajas en
+         ella. Marcar una entrega como llegada desde el popup y registrar su
+         entrada dejaba el popup enseñando el estado viejo hasta cerrarlo y
+         volverlo a abrir — sólo se refrescaba si la pestaña de Incoming
+         resultaba ser la que estaba detrás.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.75</span>
       <span class="tag new">Nuevo</span>
       <h3>La fila borrada se va en el momento en que pulsas</h3>

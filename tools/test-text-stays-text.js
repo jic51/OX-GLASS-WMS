@@ -221,6 +221,13 @@ function mundo(){
   };
 }
 
+// appendRow: la hoja falsa no la tenía porque hasta ahora nada de lo que se
+// medía aquí la usaba. addIncoming sí — y ésa es media explicación de por qué
+// el fallo del PO sobrevivió en Incoming mientras el archivo quedaba protegido.
+Hoja.prototype.appendRow = function(vals){
+  this.getRange(this.rows.length + 1, 1, 1, vals.length).setValues([vals]);
+};
+
 function poDe(hoja, movId){
   const f = hoja.rows.find(r => r && r[AC.MOV_ID] === movId);
   return f ? f[AC.PO] : undefined;
@@ -332,6 +339,88 @@ console.log('\n═══ los demás caminos que escriben una fila ═══\n');
     !/textSafeRow_|textCell_/.test(l) &&
     /newRows|newActive|newHistory|saved|restored|rowVals|liveRows|siteRows|wasteRows/.test(l));
   check('no queda ninguna escritura de filas sin proteger', sueltos.length === 0);
+}
+
+// ── LA ENTREGA ESPERADA: EL SITIO DONDE UNA PERSONA TECLEA EL PO A MANO ──────
+//
+// Jose, 2026-09-11, con cuatro capturas: escribió el PO "08-4885" en una
+// entrega esperada, guardó, volvió a abrirla y el campo estaba VACÍO. Lo
+// escribió otra vez, y otra vez.
+//
+// ES EL MISMO FALLO DE ESTE ARCHIVO, EN UN SITIO DONDE NO SE CABLEÓ. La v11.63
+// protegió el archivo, la papelera, el histórico y CONFIG; addIncoming y
+// updateIncoming se quedaron fuera — y son justo las dos pantallas donde una
+// persona escribe un PO con los dedos.
+//
+// sheetSafe_ no bastaba y conviene entender por qué, porque el nombre engaña:
+// protege de las FÓRMULAS (= + - @), no del parseo de fechas. "08-4885" empieza
+// por un cero, así que pasaba limpio, y Sheets lo guardaba como "mes 08, año
+// 4885". Al leerlo, safeStr_ ve un Date y devuelve '' — las dos mitades que
+// Jose ya había descrito: "está dando un dato que no existe y borrando uno que
+// sí".
+//
+// Se ejercitan las funciones DE VERDAD contra una hoja que parsea como Sheets.
+// Comprobar que el código "menciona textSafeRow_" habría pasado con la llamada
+// puesta en el sitio equivocado.
+console.log('\n═══ el PO de una entrega esperada sobrevive a ida y vuelta ═══\n');
+{
+  const PO_INC = '08-4885';          // el de Jose, tal cual
+
+  function mundoInc(){
+    const cab = new Array(17).fill('');
+    const inc = new Hoja('INCOMING_V3', [cab]);
+    const c = vm.createContext({
+      Date, Math, String, Number, JSON, Array, Object, console,
+      Session: { getScriptTimeZone: () => 'UTC' },
+      Utilities: { formatDate: (d) => '2026-09-11' },
+      Logger: { log: () => {} },
+      SpreadsheetApp: { getActiveSpreadsheet: () => ({ getSheetByName: () => inc }) },
+      ensureIncomingSheet_: () => inc,
+      getUserRole: () => ({ role: 'ADMIN', email: 'jose@ox.com' }),
+      uploadIncomingDoc_: () => '',
+      INCOMING_STATUSES: ['Pending', 'Arrived', 'Cancelled']
+    });
+    // La constante se levanta DEL ARCHIVO, no se copia aquí: una copia a mano
+    // se queda vieja sin avisar.
+    vm.runInContext(/var INCOMING_DATE_MODES = [^;]+;/.exec(GS)[0], c);
+    vm.runInContext([
+      fnSrc(GS, 'textCell_'), fnSrc(GS, 'textSafeRow_'), fnSrc(GS, 'sheetSafe_'),
+      fnSrc(GS, 'safeStr_'), fnSrc(GS, 'incomingStatus_'),
+      fnSrc(GS, 'incomingDateMode_'), fnSrc(GS, 'incomingDateCell_'),
+      fnSrc(GS, 'incomingCellDate_'),
+      fnSrc(GS, 'addIncoming'), fnSrc(GS, 'updateIncoming')
+    ].join('\n'), c);
+    return {
+      inc,
+      añadir: (d) => vm.runInContext('addIncoming(' + JSON.stringify(d) + ')', c),
+      editar: (d) => vm.runInContext('updateIncoming(' + JSON.stringify(d) + ')', c),
+      // Cómo lo leería getIncoming: la misma línea, columna 7.
+      poLeido: () => { c.__v = inc.rows[1][7]; return vm.runInContext('safeStr_(__v)', c); }
+    };
+  }
+
+  const m = mundoInc();
+  const r = m.añadir({ name: 'SGD-MISC-A.Sultz-MO', category: 'WINDOW', qty: 2,
+                       unit: 'UNIT', supplier: 'AMSCO', po: PO_INC,
+                       estDate: '2026-09-11', dateMode: 'exact', status: 'Pending' });
+  check('la celda del PO guarda TEXTO, no una fecha — que es lo que Sheets ' +
+        'habría hecho con "08-4885" sin protección',
+    typeof m.inc.rows[1][7] === 'string' && !(m.inc.rows[1][7] instanceof Date),
+    m.inc.rows[1][7]);
+  check('...y al leerla vuelve el PO que Jose escribió, no una cadena vacía',
+    m.poLeido() === PO_INC, m.poLeido());
+
+  // Y editar sin tocar el PO no puede perderlo: es el paso 3 de sus capturas.
+  m.editar({ id: r.id, name: 'SGD-MISC-A.Sultz-MO', category: 'WINDOW', qty: 2,
+             unit: 'UNIT', supplier: 'AMSCO', po: PO_INC,
+             estDate: '2026-09-11', dateMode: 'exact', status: 'Arrived' });
+  check('y sobrevive también al EDITAR — que es donde Jose lo vio desaparecer ' +
+        'por segunda vez', m.poLeido() === PO_INC, m.poLeido());
+
+  check('el nombre del material también va protegido: "3-4 TEMP" es un nombre ' +
+        'real y Sheets lo leería como una fecha',
+    /textSafeRow_/.test(fnSrc(GS, 'addIncoming')) &&
+    /textSafeRow_/.test(fnSrc(GS, 'updateIncoming')));
 }
 
 console.log('\n' + (fail ? '✗ ' + fail + ' fallo(s), ' : '✓ ') + ok + ' comprobacion(es) ok\n');
