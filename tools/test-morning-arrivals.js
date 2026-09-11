@@ -97,7 +97,7 @@ function mundo(){
   [ 'nt', '_he', '_escAttr', '_isoDate', '_incOnDay', '_incQtyText',
     '_incDateLabel', '_incFirstDocUrl', '_incStillPending', '_incItemHtml',
     '_weekBounds', '_incInWeek', '_weekArrivals', '_overdueThisWeek',
-    '_incEntryWhere', '_thisWeeksDeliveries',
+    '_incMatchesMove', '_incEntryWhere', '_thisWeeksDeliveries',
     '_timeOfDayGreeting', '_applyMorningGreeting', 'showMorningPopup',
     'openWeekSchedule', '_refreshMorningPopup'
   ].forEach(n => vm.runInContext(fnSrc(n), ctx));

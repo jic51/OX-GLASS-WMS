@@ -85,7 +85,7 @@ function run(role) {
                 extractFn('_isoDate') + '\n' + extractFn('_weekBounds') + '\n' +
                 extractFn('_incInWeek') + '\n' + extractFn('_weekArrivals') + '\n' +
                 extractFn('_incStillPending') + '\n' + extractFn('_overdueThisWeek') + '\n' +
-                extractFn('_incEntryWhere') + '\n' +
+                extractFn('_incMatchesMove') + '\n' + extractFn('_incEntryWhere') + '\n' +
                   // El saludo cambia con la hora desde la v11.60, y showMorningPopup
                   // lo llama. Sin él, la ventana no se pinta.
                   extractFn('_timeOfDayGreeting') + '\n' + extractFn('_applyMorningGreeting') + '\n' +
@@ -149,7 +149,7 @@ vm.runInContext(extractFn('_he') + '\n' + extractFn('_escAttr') + '\n' +
                 extractFn('_isoDate') + '\n' + extractFn('_weekBounds') + '\n' +
                 extractFn('_incInWeek') + '\n' + extractFn('_weekArrivals') + '\n' +
                 extractFn('_incStillPending') + '\n' + extractFn('_overdueThisWeek') + '\n' +
-                extractFn('_incEntryWhere') + '\n' +
+                extractFn('_incMatchesMove') + '\n' + extractFn('_incEntryWhere') + '\n' +
                   // El saludo cambia con la hora desde la v11.60, y showMorningPopup
                   // lo llama. Sin él, la ventana no se pinta.
                   extractFn('_timeOfDayGreeting') + '\n' + extractFn('_applyMorningGreeting') + '\n' +

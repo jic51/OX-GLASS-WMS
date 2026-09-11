@@ -69,6 +69,7 @@ node tools/test-user-column.js
 node tools/test-derived-refresh.js
 node tools/test-row-leave.js
 node tools/test-bell-count.js
+node tools/test-also-arrived.js
 node tools/test-selection-survives.js
 node tools/test-site-links.js
 node tools/test-arrived-to-entry.js
@@ -603,6 +604,28 @@ come back from — is invisible to both. Those get a browser test.
   panel and assuming the behaviour comes with it leaves two buttons that do
   nothing. Also pins that the panel lists ALL of them while the pile rations to
   five, and that the orange ones sort first.
+- `test-also-arrived.js` — the offer to mark the OTHER expected deliveries that
+  a multi-material entry just covered (v11.78), the real matcher and dialog
+  logic lifted into a Node vm with a DOM that remembers what it was given. Jose
+  received a truckload, entered all four materials at once because he had the
+  paperwork in hand, and only the delivery he came in through stopped being
+  "expected" — his screenshot has `ENTRY · IGU-KUNA-JA · +1` in the table behind
+  a popup still calling `IGU-KUNA-JA` Pending. **What this file protects is not
+  that it finds things, it is that it does not invent them.** Nothing links a
+  delivery to a movement, so the match is a guess, and the two possible errors
+  cost very different amounts: missing one means marking it by hand as before,
+  while marking one that is still on the road means you stop waiting for
+  material that never came and nobody notices until it is missing. So half the
+  assertions require that NOTHING appears — a delivery from another day, one
+  already arrived or cancelled, one whose category disagrees, a PO match dated
+  in the future, and the delivery the form itself came from (already saved as
+  Arrived, though the browser's copy has not caught up yet). It also pins that
+  the offer writes nothing, that only ticked boxes are saved, that the whole
+  17-column row goes back rather than the status alone, and that the matching
+  rule exists exactly ONCE — `_incEntryWhere` and this share
+  `_incMatchesMove`, because two similar copies means the day one is tuned the
+  app says "it is in A-3" about a delivery it is simultaneously offering to
+  mark as arrived.
 - `test-sysactivity-dismiss.js` — that dismissing a system notice does NOT
   erase it from the maintenance record (`getSystemActivity` + both its
   consumers), backend lifted verbatim into a Node vm with the Sheets API
