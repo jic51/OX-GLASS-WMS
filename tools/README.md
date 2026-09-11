@@ -70,6 +70,7 @@ node tools/test-derived-refresh.js
 node tools/test-row-leave.js
 node tools/test-bell-count.js
 node tools/test-also-arrived.js
+node tools/test-labels.js
 node tools/test-selection-survives.js
 node tools/test-site-links.js
 node tools/test-arrived-to-entry.js
@@ -626,6 +627,27 @@ come back from — is invisible to both. Those get a browser test.
   `_incMatchesMove`, because two similar copies means the day one is tuned the
   app says "it is in A-3" about a delivery it is simultaneously offering to
   mark as arrived.
+- `test-labels.js` — the 4"×6" labels printed as an entry is saved (v11.79),
+  measured in a real browser against the real `_labelHtml` in the real print
+  sheet. A label is not a screen: the paper is the size it is, so checking that
+  the CSS "says 101.6mm" proves nothing — what matters is the rectangle the
+  browser draws and whether the content fits INSIDE it. The case that breaks
+  this if it breaks is a very long material name: push the quantity off the
+  paper and the printer produces a label with no count on it, stuck to a bundle,
+  and nobody finds out until there are fifty of them. So it prints a name long
+  enough to overflow and asserts the label does not grow, the content still
+  fits, and the quantity block is still on the paper. Half the file measures the
+  PRINT rule, which has no second chance: with `page.emulateMedia('print')` it
+  checks that NO sibling of `<body>` is still visible — otherwise six pages of
+  dashboard come out ahead of the first label, on stock that is bought in rolls
+  — that each label breaks to its own page while the LAST one does not (or every
+  batch ends by spitting a blank page), and that the reserved code area prints
+  with no border and no text, because a printed empty box reads as a half-made
+  label. Plus one label per RACK rather than per material — "44 · C2A, B4A"
+  would be lying in both places at once — copies defaulting to 1, and the
+  chaining that makes the "did these arrive too?" question fire exactly once
+  after the label dialog closes, including when there was nothing to label at
+  all and no dialog appeared.
 - `test-sysactivity-dismiss.js` — that dismissing a system notice does NOT
   erase it from the maintenance record (`getSystemActivity` + both its
   consumers), backend lifted verbatim into a Node vm with the Sheets API
