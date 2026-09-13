@@ -46,7 +46,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '11.79';
+var APP_VERSION = '11.80';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -58,7 +58,7 @@ var APP_VERSION = '11.79';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '4651f018';
+var APP_BUILD = 'bc6218aa';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -2660,10 +2660,6 @@ var DATA_STAMP_KEY = 'WMS_DATA_STAMP';
  *   dismissSystemCard                    — "nuevas tarjetas", también
  *   updateConfig, mergeConfigValues,
  *   mergeLocations, saveLocationLayout   — catálogo: nombres, no existencias
- *   lockMaterial, unlockMaterial         — cambian permisos sobre el material,
- *                                          no cuánto hay. (Que el candado se
- *                                          vea al momento es una petición
- *                                          aparte, anotada en el backlog.)
  *   todo lo que empieza por get…         — no escriben nada
  *
  * LA REGLA CAMBIÓ EL 2026-09-11, y la que había estaba mal escrita. Decía: "si
@@ -2700,7 +2696,16 @@ var DATA_STAMP_ACTIONS = {
   // ventana de la semana.
   addIncoming:         true,
   updateIncoming:      true,
-  deleteIncoming:      true
+  deleteIncoming:      true,
+  // Los candados. Estuvieron fuera con esta razón escrita: "cambian permisos
+  // sobre el material, no cuánto hay". Esa razón era la regla vieja —la de
+  // AVAILABLE— aplicada a otra cosa, y con la regla nueva no se sostiene: el
+  // candado SE VE (en el cajón del estante, en el formulario de salida, y desde
+  // la v11.80 en la tabla del dashboard) y además CAMBIA LO QUE LA OTRA PERSONA
+  // PUEDE HACER. Que se entere en su siguiente carga es justo lo que no sirve:
+  // para cuando recargue ya intentó sacar el material y se comió el error.
+  lockMaterial:        true,
+  unlockMaterial:      true
 };
 
 function bumpDataStamp_() {

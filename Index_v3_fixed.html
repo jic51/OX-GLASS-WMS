@@ -245,6 +245,11 @@
     .badge-teal{background:#CCFBF1;color:#0F766E}
     .badge-pink{background:#FCE7F3;color:#BE185D}
     .badge-navy{background:#DBEAFE;color:#1E3A8A}
+    /* El candado de la columna Location en el Stock Dashboard. Un pelo más
+       grande que el texto de la celda (.78rem) porque es lo único de esa celda
+       que hay que ver sin leer, y cursor:help porque el motivo está en el
+       title de la celda, no en una burbuja aparte. */
+    .sc-lock{font-size:.85rem;cursor:help}
     /* ── WAREHOUSE MAP ── */
     .rack-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;padding:1.25rem}
     /* ── WAREHOUSE MAP — RACK GRID ── */
@@ -3677,7 +3682,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.79';
+var APP_VERSION = '11.80';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -3689,7 +3694,7 @@ var APP_VERSION = '11.79';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '4651f018';
+var APP_BUILD = 'bc6218aa';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -5602,6 +5607,40 @@ function stockBadge(item){
   return '<span class="badge badge-gray">Zero Stock</span>';
 }
 
+/** Los candados que afectan a ESTE material en los estantes donde HOY tiene
+ *  existencias. Un candado sobre un estante que ya se vació no bloquea nada
+ *  —no queda nada que sacar de ahí— y marcarlo sería ruido.
+ *
+ *  Jose lo pidió después de trabar MH 145 en B2A y no encontrar el candado en
+ *  ninguna parte del dashboard: estaba sólo en el cajón del estante y en el
+ *  formulario de salida, es decir, sólo donde ya era tarde. */
+function _stockLocks(s){
+  var out  = [];
+  var locs = (s && s.warehouseLocs) || {};
+  for (var r in locs){
+    if (!locs.hasOwnProperty(r) || !(locs[r] > 0)) continue;
+    var l = _findLock(s.matId, r);
+    if (l) out.push(l);
+  }
+  return out;
+}
+
+/** Lo que dice el candado, en las palabras de lo que de verdad impide. La regla
+ *  está en Code_v3_fixed.gs, sobre MATERIAL_LOCKS: EXIT y WASTE desde ese
+ *  estante siempre bloqueados; TRANSFER permitido, y si el candado trae lista
+ *  de destinos, sólo a esos. Una lista vacía NO significa "nada": significa
+ *  "muévelo donde quieras dentro de la bodega, pero no lo saques". */
+function _lockLines(ls){
+  return ls.map(function(l){
+    var quien = l.lockedBy ? ' (by ' + l.lockedBy + ')' : '';
+    var mover = (l.allowedDest && l.allowedDest.length)
+      ? '    Can only be moved to: ' + l.allowedDest.join(', ')
+      : '    Can be moved to any rack, but not taken out.';
+    return '🔒 Locked at ' + l.rack + ' — ' + (l.reason || 'no reason given') + quien +
+           '\n    No exits, no waste.' + '\n' + mover;
+  });
+}
+
 function rowClass(mt){
   var map = {ENTRY:'row-entry',EXIT:'row-exit',TRANSFER:'row-transfer',RETURN:'row-return',WASTE:'row-waste',ADJUST:'row-adjust'};
   return map[normMT(mt)] || '';
@@ -6186,13 +6225,25 @@ function renderStock(){
       ' onclick="event.stopPropagation()" onchange="toggleStockSelect(this)"' +
       (selDisabled ? ' title="No available stock to exit"' : ' title="Select for Exit"') + '>';
 
+    // El candado va DELANTE del texto a propósito: la celda recorta con puntos
+    // suspensivos, y un candado al final es un candado que desaparece justo en
+    // las filas con más estantes, que son las que más lo necesitan. El motivo no
+    // va en una burbuja propia sino en el MISMO title que ya tenía la celda —
+    // dos tooltips encima del mismo cuadrito es peor que uno.
+    var locTxt   = locSummary(s.warehouseLocs);
+    var locLocks = _stockLocks(s);
+    var lockMark = locLocks.length ? '<span class="sc-lock">🔒</span> ' : '';
+    var locTip   = locLocks.length
+      ? locTxt + '\n\n' + _lockLines(locLocks).join('\n')
+      : locTxt;
+
     // Cells are built by NAME and then emitted in the user's own order, so the
     // row can never drift out of step with the header it sits under.
     var cells = {
       category:     '<td class="sc-category">'+catBadge(s.category)+'</td>',
       name:         '<td class="sc-name"><strong>'+_he(s.name)+'</strong>'+(s.project&&s.project!=='GENERIC'?'<br><span style="font-size:.72rem;color:var(--muted)">'+_he(s.project)+'</span>':'')+'</td>',
       levels:       _levelsCell(s),
-      location:     '<td class="sc-location" style="color:var(--muted);font-size:.78rem;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+_escAttr(locSummary(s.warehouseLocs))+'">'+_he(locSummary(s.warehouseLocs))+'</td>',
+      location:     '<td class="sc-location" style="color:var(--muted);font-size:.78rem;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+_escAttr(locTip)+'">'+lockMark+_he(locTxt)+'</td>',
       status:       '<td class="sc-status">'+stockBadge(s)+'</td>',
       dateReceived: '<td class="sc-dateReceived">'+dateCell+'</td>',
       lastNote:     '<td class="sc-lastNote">'+noteCell+'</td>',

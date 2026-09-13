@@ -79,7 +79,19 @@ console.log('\n═══ qué mueve el sello, y sobre todo qué no ═══\n')
    ['updateIncoming','marcar una entrega como llegada — la que Jose vio fallar ' +
                      'con dos ventanas abiertas'],
    ['addIncoming',   'una entrega nueva sale en la pantalla de otra persona'],
-   ['deleteIncoming','y una borrada tiene que desaparecer de ella']
+   ['deleteIncoming','y una borrada tiene que desaparecer de ella'],
+   /* LOS CANDADOS ENTRARON EL 2026-09-12, y hasta ese día esta misma prueba los
+      pinaba FUERA con esta razón: "cambia permisos sobre el material, no cuánto
+      hay". Esa frase es la regla VIEJA —la de AVAILABLE— escrita sobre otra
+      cosa, y con la regla nueva no se sostiene.
+      Jose trabó MH 145 en B2A desde una cuenta y la otra no se enteró. Un
+      candado SE VE (cajón del estante, formulario de salida, y desde la v11.80
+      la tabla del dashboard) y además CAMBIA LO QUE EL OTRO PUEDE HACER:
+      enterarse en la siguiente carga es enterarse después de haber intentado
+      sacar el material y haberse comido el error. */
+   ['lockMaterial',  'trabar un material se ve Y cambia lo que el otro puede hacer'],
+   ['unlockMaterial','y destrabarlo también — si no, el candado se queda en ' +
+                     'la pantalla del otro para siempre']
   ].forEach(([a, que]) => {
     check('SÍ mueve el sello: ' + a + ' — ' + que, dentro.indexOf(a) !== -1);
   });
@@ -94,8 +106,6 @@ console.log('\n═══ qué mueve el sello, y sobre todo qué no ═══\n')
    ['updateConfig',      'catálogo: nombres, no existencias'],
    ['mergeConfigValues', 'lo mismo'],
    ['saveLocationLayout','lo mismo'],
-   ['lockMaterial',      'cambia permisos sobre el material, no cuánto hay'],
-   ['unlockMaterial',    'lo mismo'],
    ['getSettings',       'no escribe nada']
   ].forEach(([a, por]) => {
     check('NO mueve el sello: ' + a + ' — ' + por, dentro.indexOf(a) === -1);
@@ -106,7 +116,11 @@ console.log('\n═══ qué mueve el sello, y sobre todo qué no ═══\n')
      las entregas está bien —se tocan unas pocas veces al día— y por eso el
      catálogo y los permisos siguen fuera, aunque también "se ven".
      La lista corta es la defensa; si un día tiene quince entradas, el latido
-     habrá dejado de ser un latido. */
+     habrá dejado de ser un latido.
+     CON LOS CANDADOS DENTRO LA LISTA LLEGÓ AL TECHO: son doce y el tope son
+     doce. El tope NO se sube porque toque — se sube midiendo, o no se sube.
+     La siguiente acción que alguien quiera meter aquí rompe esta prueba a
+     propósito, para que haya una conversación en vez de una línea más. */
   check('la lista sigue siendo CORTA (' + dentro.length + ') — cada entrada ' +
         'cuesta una carga entera en cada sesión abierta, así que crecer sin ' +
         'medir convierte el latido en una recarga continua',

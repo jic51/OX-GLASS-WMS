@@ -81,6 +81,7 @@ node tools/test-product-link.js
 node tools/test-quiet-reload.js
 node tools/test-busy-retry.js
 node tools/test-live-pulse.js
+node tools/test-lock-visible.js
 node tools/test-short-stock.js
 node tools/test-settings-boxes.js
 node tools/test-toast-and-buttons.js
@@ -627,6 +628,28 @@ come back from — is invisible to both. Those get a browser test.
   `_incMatchesMove`, because two similar copies means the day one is tuned the
   app says "it is in A-3" about a delivery it is simultaneously offering to
   mark as arrived.
+- `test-lock-visible.js` — a locked material has to say so on the screen the
+  person is actually looking at, and it has to say so to EVERYONE (v11.80).
+  Jose locked MH 145 at B2A from one account and the other account showed
+  nothing, before or after a reload. Two separate holes, in two files, and this
+  file guards both together on purpose: `lockMaterial`/`unlockMaterial` were
+  outside `DATA_STAMP_ACTIONS` (so no other session ever heard), AND
+  `renderStock` did not mention locks on any line (so there was nowhere to
+  hear it). Fixing either one alone leaves the report exactly as invisible as
+  it was. The screen half is not checked by grepping for the word "lock" —
+  that trap already shipped two green bugs this week — it lifts the real
+  `_stockLocks` / `_lockLines` and the Location cell EXTRACTED from
+  `renderStock`, and reads the string that comes out. So it pins that the
+  padlock goes BEFORE the text (the cell is `text-overflow:ellipsis`, and
+  anything at the end vanishes first on exactly the rows with most racks),
+  that a lock on a rack the material has since left is NOT marked (marking
+  locks that no longer stop anything teaches people to distrust the padlock —
+  the same damage as the bell that said 3), that the hover still carries the
+  rack summary it always carried, and that a reason typed with a quote in it
+  does not blow the attribute open. Plus the wording matches what the backend
+  really enforces: EXIT and WASTE always blocked, an empty destination list
+  meaning "move it anywhere in the warehouse, just don't take it out" rather
+  than "nowhere".
 - `test-labels.js` — the 4"×6" labels printed as an entry is saved (v11.79),
   measured in a real browser against the real `_labelHtml` in the real print
   sheet. A label is not a screen: the paper is the size it is, so checking that
