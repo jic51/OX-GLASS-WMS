@@ -82,6 +82,8 @@ node tools/test-quiet-reload.js
 node tools/test-busy-retry.js
 node tools/test-live-pulse.js
 node tools/test-lock-visible.js
+node tools/test-inc-supplier.js
+node tools/test-no-caduca.js
 node tools/test-short-stock.js
 node tools/test-settings-boxes.js
 node tools/test-toast-and-buttons.js
@@ -628,6 +630,34 @@ come back from — is invisible to both. Those get a browser test.
   `_incMatchesMove`, because two similar copies means the day one is tuned the
   app says "it is in A-3" about a delivery it is simultaneously offering to
   mark as arrived.
+- `test-no-caduca.js` — the only test in the repo whose subject is the other
+  tests. On Monday 2026-09-14 the suite went red with nothing changed:
+  `test-morning-arrivals` pinned its deliveries to Thursday the 10th and ran
+  `openWeekSchedule()`, which does not RECEIVE the date — it reads `new Date()`.
+  It passed while the real day fell in the same Sunday-to-Saturday week and went
+  permanently red once it did not. A test that turns red on its own is worse
+  than no test: it teaches people to glance at the suite and think "that one
+  again", and the day a real red arrives it gets the same glance. So the rule is
+  enforced rather than remembered: a test that hardcodes a date AND executes
+  product code that reads the clock must neutralise the clock (three ways are
+  accepted, all three already in use). Counting it by hand is what does not
+  work — looking for it manually, three more files seemed to share the shape and
+  all three were already fine. It carries a reviewed-and-cleared list with a
+  written reason per entry, and that list fails if an entry stops being flagged,
+  the same treatment `test-cost-privacy` gives its INTERNAL list: an exception
+  nobody revisits stops being an exception and becomes a hole.
+- `test-inc-supplier.js` — the delivery card reads *material - supplier* on ONE
+  line (v11.82), measured in a real browser with the whole stylesheet rather
+  than read off the CSS. What decides "did it drop to a second line?" is the
+  height the browser gives the row, not the word `nowrap` appearing somewhere.
+  It measures all four combinations, and the measurement is what caught the
+  first design being wrong: with `flex-shrink` on both halves, flex divides the
+  shrinking in PROPORTION to size, so a very long material name next to "AMSCO"
+  clipped AMSCO too — "AMSC…" with room to spare. The rule that does what was
+  asked is that the supplier does not shrink and is capped at 55% of the line,
+  so whichever half is genuinely too long is the one that gives way. Both halves
+  carry a `title`: shortening on screen must never mean losing what the person
+  typed.
 - `test-lock-visible.js` — a locked material has to say so on the screen the
   person is actually looking at, and it has to say so to EVERYONE (v11.80).
   Jose locked MH 145 at B2A from one account and the other account showed

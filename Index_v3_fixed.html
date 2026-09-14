@@ -1266,7 +1266,29 @@
     /* min-width:0 so a long material name wraps instead of shoving the
        quantity column off the card. */
     .inc-item-main{flex:1;min-width:0}
-    .inc-item-name{font-size:.82rem;line-height:1.35;color:var(--text);overflow-wrap:anywhere}
+    /* NOMBRE - SUPPLIER, en UNA sola línea, y CEDE EL QUE SOBRA.
+       El primer intento dejaba encoger a los dos (flex-shrink en ambos), que es
+       lo que parece razonable y no lo es: flex reparte el encogimiento EN
+       PROPORCIÓN al tamaño, así que con un nombre larguísimo y "AMSCO" al lado,
+       AMSCO también perdía su parte y salía "AMSC…" habiendo sitio de sobra.
+       Lo cazó la medición en el navegador, no la lectura del CSS.
+       La regla que sí hace lo que Jose pidió: el supplier NO encoge (flex 0 0)
+       y está topado al 55% de la línea; el nombre se queda con el resto. Los
+       cuatro casos salen bien —nombre largo, supplier largo, los dos, ninguno—
+       y el único número inventado es ese 55%, que existe para que el nombre del
+       material, que es como se reconoce la tarjeta, nunca baje de casi la mitad.
+       El recorte va en cada trozo y NO en .inc-item-name: puesto en el padre,
+       los puntos suspensivos saldrían una sola vez al final de la línea y el
+       supplier desaparecería entero en vez de acortarse.
+       Los dos llevan title, porque recortar en pantalla no puede ser perder el
+       dato — el texto completo se lee pasando el mouse. */
+    .inc-item-name{font-size:.82rem;line-height:1.35;color:var(--text);
+                   display:flex;align-items:baseline;min-width:0;flex-wrap:nowrap}
+    .inc-name-txt,.inc-name-sup{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .inc-name-txt{flex:1 1 auto;min-width:0}
+    .inc-name-sup{flex:0 0 auto;max-width:55%;color:var(--muted)}
+    /* El clip nunca encoge: es un objetivo de toque, no texto. */
+    .inc-item-name > a{flex:none}
     .inc-item-meta{color:var(--muted);font-size:.72rem;line-height:1.4;margin-top:.1rem;overflow-wrap:anywhere}
     /* The right column never shrinks and never wraps its own contents: a
        quantity broken across two lines is unreadable, and the whole reason it
@@ -3682,7 +3704,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.81';
+var APP_VERSION = '11.82';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -3694,7 +3716,7 @@ var APP_VERSION = '11.81';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '1e43bcc5';
+var APP_BUILD = 'f63543ad';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -16993,11 +17015,26 @@ function _incItemHtml(item, opts){
   var when = opts.showDate ? _he(_incDateLabel(item)) : '';
   var meta = [when, item.notes ? _he(item.notes) : ''].filter(Boolean).join(' · ');
 
+  // NOMBRE - SUPPLIER, y en la MISMA línea. Jose: "si el nombre es muy largo,
+  // se lo acorta con ... y se pone el supplier en la misma línea, no en la
+  // siguiente", y después: "el supplier también se acorta si es larguísimo".
+  //
+  // Sin supplier no hay guion. Un guion suelto al final de un nombre se lee
+  // como un dato que se perdió, y aquí no se perdió nada: esa entrega nunca
+  // tuvo proveedor escrito.
+  var prov = String(item.supplier || '').trim();
+  var sup  = prov
+    ? '<span class="inc-name-sup" title="' + _escAttr(prov) + '"> - ' + _he(prov) + '</span>'
+    : '';
+
   return '<div class="inc-item">' +
       '<div class="inc-item-cat">' + catBadge(item.category) + '</div>' +
       '<div class="inc-item-body">' +
         '<div class="inc-item-main">' +
-          '<div class="inc-item-name">' + _he(item.name) + doc + '</div>' +
+          '<div class="inc-item-name">' +
+            '<span class="inc-name-txt" title="' + _escAttr(item.name) + '">' + _he(item.name) + '</span>' +
+            sup + doc +
+          '</div>' +
           (meta ? '<div class="inc-item-meta">' + meta + '</div>' : '') +
         '</div>' +
         '<div class="inc-item-side">' +
