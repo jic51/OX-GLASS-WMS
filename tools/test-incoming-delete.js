@@ -40,6 +40,11 @@ const code = [
   // del cambio. Es el mismo corte que hubo que arreglar en test-button-states,
   // y la segunda vez que el mismo descuido pasa por dos sitios distintos.
   slice('function _btnHideSiblings(', '\nfunction showToast(', '_btnHideSiblings…_btnDone'),
+  // _stripTags con su constante: desde la v11.84 el manejador de error pasa
+  // por ella, y sin levantarla la página reventaría por el andamio en vez
+  // de medir el producto.
+  "var SHORT_PREFIX = 'SHORT_STOCK|';",
+  slice('function _stripTags(', '\nfunction ', '_stripTags'),
   slice('function _doDeleteIncomingItem(', '// ── Read an email into expected deliveries', '_doDeleteIncomingItem')
 ].join('\n');
 

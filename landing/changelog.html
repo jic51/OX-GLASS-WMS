@@ -95,6 +95,22 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.84</span>
+      <span class="tag fix">Fixed</span>
+      <h3>Error messages never show the app's own wiring</h3>
+      <p>When something goes wrong the server sometimes marks the message for
+         the app to read — text like <code>SYSTEM_BUSY|</code> in front of the
+         real sentence. Most screens stripped that marker before showing it.
+         Six did not, including the entry form, whose twin the exit form
+         already did.</p>
+      <p>None of them could show it yet — the actions those screens call do not
+         produce marked errors today — but the mismatch was the trap, not the
+         symptom. All fifteen error messages now go through the same filter, and
+         a new one written without it fails the checks on purpose, so the
+         decision happens while somebody is looking.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.83</span>
       <span class="tag safe">Safer</span>
       <h3>The duplicate-entry bug now has a test that would have caught it</h3>

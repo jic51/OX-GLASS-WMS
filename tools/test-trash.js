@@ -397,6 +397,28 @@ console.log('\n═══ y en pantalla, al instante ═══\n');
   check('...y la marca NO se le enseña nunca a nadie: _stripTags la quita, igual ' +
         'que quita SYSTEM_BUSY|',
     /replace\('GONE\|', ''\)/.test(fnSrc(HTML, '_stripTags')));
+
+  /* Y QUE NO QUEDE NI UN AVISO DE ERROR SIN PASAR POR ELLA.
+     Encontrado el 2026-09-14 comparando caminos hermanos: submitMultiExit
+     enseñaba _stripTags(err) y submitMultiEntry enseñaba el msg crudo. Otros
+     cinco avisos hacían lo mismo. Ninguno era visible todavía —comprobado: hoy
+     ninguna acción de esos caminos lanza un error marcado— pero la asimetría
+     ES la trampa: el día que el servidor marque un error de entrada, el
+     usuario lee "SYSTEM_BUSY|" en su pantalla.
+     Se cuenta en vez de recordarse. Un aviso de error nuevo escrito sin la
+     llamada rompe esto a propósito, que es cuando hay que decidir, no después.
+     El toast de _busyRetry se queda fuera por su nombre: su texto lo escribe
+     él, no viene del servidor, así que no hay marca que quitar. */
+  const avisos = [...HTML.matchAll(/showToast\(\s*'[^']*Error[^']*'\s*\+\s*([^,]+),/g)]
+    .map(m => m[1].trim());
+  const crudos = avisos.filter(a => !/_stripTags\(/.test(a));
+  check('TODOS los avisos de error pasan por _stripTags (' + avisos.length +
+        ' encontrados) — uno solo que no, y el usuario acaba leyendo el ' +
+        'cableado de la app' +
+        (crudos.length ? ' — sin limpiar: ' + crudos.join(' | ') : ''),
+    crudos.length === 0);
+  check('...y de verdad se encontraron avisos que contar, no cero',
+    avisos.length >= 6, avisos.length);
   check('la recarga silenciosa sigue ahí, para los totales que calcula el servidor',
     /loadDataFromGoogle\(true, true\)/.test(del));
 

@@ -155,6 +155,9 @@ function mundo(opciones){
   // _h de verdad: es quien cuelga el token de sesión del payload. Doblarla
   // habría dejado sin comprobar que el token viaja.
   vm.runInContext(fnSrc('_h'), ctx);
+  // _stripTags de verdad, con su constante: el manejador de error pasa por
+  // ella desde la v11.84, y así el camino de fallo se ejercita entero.
+  vm.runInContext("var SHORT_PREFIX = 'SHORT_STOCK|';\n" + fnSrc('_stripTags'), ctx);
 
   ctx.__capturar = (accion, payload, alOk, alNo) => {
     visto.accion  = accion;

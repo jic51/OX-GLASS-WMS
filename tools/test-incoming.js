@@ -127,8 +127,11 @@ console.log('\n═══ deleting says something, and cannot be pressed twice �
     /getElementById\('btnDeleteIncoming'\)/.test(del));
   check('"Incoming item not found" is treated as done, not as an error',
     /Incoming item not found/.test(del) && /_incomingDeleted\(btn\); return;/.test(del));
+  // _stripTags desde la v11.84: los quince avisos de error pasan por el mismo
+  // filtro, para que ninguno le enseñe al usuario una marca del servidor como
+  // "SYSTEM_BUSY|". Antes éste enseñaba msg crudo.
   check('a REAL error still restores the button and still shows the error',
-    /_btnReset\(btn\);/.test(del) && /showToast\('Error: ' \+ msg, 'err'/.test(del));
+    /_btnReset\(btn\);/.test(del) && /showToast\('Error: ' \+ _stripTags\(err\), 'err'/.test(del));
   check('a successful delete confirms itself — there was no toast at all before',
     /showToast\('Expected delivery deleted\.', 'ok'\)/.test(del));
   // Decía "exactly as before" y exigía `loadDataFromGoogle(true)`, o sea el modo

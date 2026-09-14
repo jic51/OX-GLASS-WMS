@@ -97,6 +97,22 @@
        almacén?</p>
 
     <div class="entry">
+      <span class="ver">v11.84</span>
+      <span class="tag fix">Arreglado</span>
+      <h3>Los mensajes de error no enseñan el cableado de la app</h3>
+      <p>Cuando algo falla, el servidor a veces marca el mensaje para que la app
+         lo lea — texto como <code>SYSTEM_BUSY|</code> delante de la frase de
+         verdad. Casi todas las pantallas quitaban esa marca antes de
+         enseñarlo. Seis no, incluido el formulario de entrada, cuyo gemelo el
+         de salida sí lo hacía.</p>
+      <p>Ninguna podía enseñarlo todavía —las acciones que llaman esas
+         pantallas no producen hoy errores marcados— pero la trampa era el
+         desajuste, no el síntoma. Los quince mensajes de error pasan ahora por
+         el mismo filtro, y uno nuevo escrito sin él rompe las comprobaciones a
+         propósito, para que la decisión se tome mientras alguien mira.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.83</span>
       <span class="tag safe">Más seguro</span>
       <h3>El fallo de las entradas duplicadas ya tiene una prueba que lo habría cazado</h3>
