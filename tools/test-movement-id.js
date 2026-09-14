@@ -42,6 +42,14 @@ const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.join(__dirname, '..');
 const GS   = fs.readFileSync(path.join(ROOT, 'Code_v3_fixed.gs'), 'utf8');
 
+// COMO SHEETS: la comilla de delante es un FORMATO, no parte del valor. Una
+// hoja de mentira que la guardara dentro del dato mediría algo que no pasa —
+// getValue() de verdad devuelve "WINDOW", nunca "'WINDOW". Hizo falta el
+// 2026-09-14, cuando el guardián de texto pasó a aplicarse también aquí.
+function literal(v){
+  return (typeof v === 'string' && v.charAt(0) === "'") ? v.slice(1) : v;
+}
+
 let ok = 0, fail = 0;
 function check(label, cond) {
   if (cond) { ok++; console.log('  ok  ', label); }
@@ -263,9 +271,9 @@ function hojaFalsa(filas, maxCols){
       return {
         getValue: () => (cells[row - 1] || [])[col - 1],
         setValue(v){
-          escrituras.push({ row, col, v });
+          escrituras.push({ row, col, v: literal(v) });
           if (!cells[row - 1]) cells[row - 1] = [];
-          cells[row - 1][col - 1] = v;
+          cells[row - 1][col - 1] = literal(v);
           return { setFontWeight: () => {} };
         },
         getValues(){
@@ -279,9 +287,9 @@ function hojaFalsa(filas, maxCols){
         setValues(vals){
           for (let i = 0; i < vals.length; i++) {
             for (let j = 0; j < vals[i].length; j++) {
-              escrituras.push({ row: row + i, col: col + j, v: vals[i][j] });
+              escrituras.push({ row: row + i, col: col + j, v: literal(vals[i][j]) });
               if (!cells[row + i - 1]) cells[row + i - 1] = [];
-              cells[row + i - 1][col + j - 1] = vals[i][j];
+              cells[row + i - 1][col + j - 1] = literal(vals[i][j]);
             }
           }
         }
@@ -300,7 +308,9 @@ function mundoBackfill(hoja){
     auditLog_: function(){ auditadas.push(Array.prototype.slice.call(arguments, 1)); },
     ss: { getSheetByName: (n) => (n === 'MASTER_ARCHIVE_V3' ? hoja : null) }
   });
-  vm.runInContext(fnSrc('newMovId_') + '\n' + fnSrc('uniqueMovId_') + '\n' +
+  // textCell_: desde la v11.81 el relleno devuelve la columna de ids citada.
+  vm.runInContext(fnSrc('textCell_') + '\n' +
+                  fnSrc('newMovId_') + '\n' + fnSrc('uniqueMovId_') + '\n' +
                   fnSrc('ensureArchiveWidth_') + '\n' +
                   fnSrc('backfillMovementIds_'), c);
   return { c, auditadas,

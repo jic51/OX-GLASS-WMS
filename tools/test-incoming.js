@@ -205,11 +205,16 @@ console.log('\n═══ the category of a delivery cannot go missing ═══\
   // Anchored on a line only the CONFIG rename has: `data.op === 'rename'`
   // appears earlier in the file for a different kind of rename, and indexOf
   // finds that one.
-  const rename = GS.slice(GS.indexOf('var nvStored = sheetSafe_(nv.toUpperCase());'),
+  const ANCLA = 'var nvStored = textCell_(nv.toUpperCase());';
+  const rename = GS.slice(GS.indexOf(ANCLA),
                           GS.indexOf("} else if (data.op === 'delete')",
-                                     GS.indexOf('var nvStored = sheetSafe_(nv.toUpperCase());')));
+                                     GS.indexOf(ANCLA)));
+  // EL VALOR VA CRUDO DESDE LA v11.81, y eso es el arreglo, no un descuido:
+  // renameIncomingCategory_ pone él la comilla al devolver la columna a la
+  // hoja, así que mandarla ya puesta dejaba DOS y la hoja guardaba la segunda
+  // dentro del nombre de la categoría. Se cita una vez, en el borde.
   check('renaming a category now reaches the expected deliveries too',
-    /renameIncomingCategory_\(ss, val, nvStored\)/.test(rename));
+    /renameIncomingCategory_\(ss, val, nv\.toUpperCase\(\)\)/.test(rename));
   check('...alongside the archive and its history, in the same lock',
     /renameCategoryColumn_/.test(rename) && rename.indexOf('renameIncomingCategory_') > rename.indexOf('withStockLock_'));
 

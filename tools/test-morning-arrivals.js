@@ -65,6 +65,27 @@ function cssRule(selector){
 
 const HOY = '2026-09-10';
 
+// ── EL RELOJ SE CONGELA ─────────────────────────────────────────────────────
+//
+// openWeekSchedule() y _refreshMorningPopup() no RECIBEN la fecha: la leen con
+// new Date(). Con el reloj de verdad, estas pruebas comparaban entregas fijadas
+// en la semana del 10 de septiembre contra el día real, así que estuvieron
+// verdes del domingo 6 al sábado 12 de septiembre de 2026 y rojas para siempre
+// desde el 13 — sin que nadie rompiera nada.
+//
+// Una prueba que caduca es peor que ninguna: se pone roja sola y enseña a
+// ignorarla. Encontrado el 2026-09-14, el primer día que se cayó.
+const RelojReal = Date;
+function Reloj(){
+  if (!arguments.length) return new RelojReal(HOY + 'T12:00:00');
+  return new (Function.prototype.bind.apply(
+    RelojReal, [null].concat([].slice.call(arguments))))();
+}
+Reloj.now       = () => new RelojReal(HOY + 'T12:00:00').getTime();
+Reloj.UTC       = RelojReal.UTC;
+Reloj.parse     = RelojReal.parse;
+Reloj.prototype = RelojReal.prototype;
+
 // ── El mundo: las funciones DE VERDAD, y sólo el DOM de mentira ──────────────
 //
 // Lo que se sustituye es el navegador, no la app: cada función que decide algo
@@ -74,7 +95,7 @@ const HOY = '2026-09-10';
 function mundo(){
   const pantalla = { html: '', abierto: false, titulo: '', avisos: [] };
   const ctx = vm.createContext({
-    Object, String, Number, Array, Date, JSON, Math, RegExp, console,
+    Object, String, Number, Array, Date: Reloj, JSON, Math, RegExp, console,
     incoming: [], movements: [], userRole: 'ADMIN',
     showToast: (m) => pantalla.avisos.push(String(m)),
     localStorage: { getItem: () => null, setItem: () => {} },

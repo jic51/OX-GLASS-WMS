@@ -51,6 +51,15 @@ function extractVar(name) {
   throw new Error('unbalanced brackets in ' + name);
 }
 
+// COMO SHEETS: la comilla de delante es un FORMATO, no parte del valor. Una
+// hoja de mentira que la guardara dentro del dato mediría algo que no pasa —
+// getValue() de verdad devuelve "WINDOW", nunca "'WINDOW". Hizo falta el
+// 2026-09-14, cuando el guardián de texto pasó a aplicarse también aquí.
+function literal(v){
+  return (typeof v === 'string' && v.charAt(0) === "'") ? v.slice(1) : v;
+}
+const literalFila = f => (f || []).map(literal);
+
 let ok = 0, fail = 0;
 function check(label, cond) {
   if (cond) { ok++; console.log('  ok  ', label); }
@@ -87,7 +96,7 @@ function run(props) {
       // one meant each new bit of styling in the function broke the test with
       // a TypeError that said nothing about the behaviour being tested.
       const api = {
-        setValues: function (v) { if (!written.values) written.values = v; return proxy; },
+        setValues: function (v) { if (!written.values) written.values = v.map(literalFila); return proxy; },
         setFontWeight: function () { written.bold.push(r); return proxy; }
       };
       const proxy = new Proxy(api, { get: function (t, k) {
@@ -125,6 +134,8 @@ function run(props) {
     // useful as the sentences in it, and a fake list would test the plumbing
     // while saying nothing about whether a reader learns anything.
     extractVar('PROPERTY_GUIDE'),
+    // Desde la v11.81 el volcado también pasa por el guardián de texto.
+    extractFn('textCell_'), extractFn('textSafeRow_'),
     extractFn('writeConfigSnapshot_')
   ].join('\n'), ctx);
   const count = vm.runInContext('writeConfigSnapshot_(SpreadsheetApp.getActiveSpreadsheet())', ctx);

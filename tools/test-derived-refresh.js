@@ -87,7 +87,14 @@ Hoja.prototype.getRange = function(r, c, nr, nc){
     setValue(v){
       self.pedidos.push('setValue');
       while (self.rows.length < r) self.rows.push([]);
-      self.rows[r - 1][c - 1] = v;
+      // La comilla también se la come por AQUÍ. Estaba puesta sólo en
+      // setValues, y la reparación de MatID escribe celda a celda con
+      // setValue — así que desde la v11.81 esta rama guardaba "'WINDOW|||W 1"
+      // y la de al lado no. Una hoja falsa con dos reglas distintas para lo
+      // mismo no modela nada.
+      let lv = v;
+      if (typeof lv === 'string' && lv.charAt(0) === "'") lv = lv.slice(1);
+      self.rows[r - 1][c - 1] = lv;
       return { setFontWeight: () => {} };
     },
     setValues(vals){

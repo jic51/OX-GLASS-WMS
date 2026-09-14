@@ -139,7 +139,7 @@ function buildSandbox() {
   ].forEach(function (code) { vm.runInContext(code, sandbox); });
 
   [
-    'round2_', 'normalizeString', 'cleanDisplay_', 'sheetSafe_', 'textCell_', 'textSafeRow_', 'getMaterialId',
+    'round2_', 'normalizeString', 'cleanDisplay_', 'textCell_', 'textSafeRow_', 'getMaterialId',
     'statusForMoveType_', 'buildStockSnapshot_', 'applyMovementToSnapshot_',
     'getActiveLocksMap_', 'enforceMaterialLock_', 'loadConfig', 'saveAvgCostUpdates_',
     'ensureArchiveWidth_', 'newMovId_', 'uniqueMovId_', 'dedupeMovementIds_',

@@ -97,6 +97,31 @@
        almacén?</p>
 
     <div class="entry">
+      <span class="ver">v11.81</span>
+      <span class="tag safe">Más seguro</span>
+      <h3>Renombrar un material ya no puede borrar otro</h3>
+      <p>Renombrar, fusionar o cambiar de categoría cualquier cosa reescribe una
+         columna entera del archivo — incluidas todas las filas que no tocaste.
+         Al pasar, los valores con forma de fecha se convertían en fecha, y un
+         material llamado "07-6329" dejaba de contar en el stock sin avisar.
+         Siete acciones normales hacían esto, y el material que desaparecía no
+         tenía por qué ser el que estabas editando.</p>
+      <p>Ahora el texto sigue siendo texto en esas reescrituras, y también en la
+         hoja de packs, en la reparación de ids de movimiento y en el volcado de
+         diagnóstico, que tenían el mismo hueco.</p>
+      <p>Por debajo, dos guardianes pasaron a ser uno. El viejo sólo protegía de
+         las fórmulas, no de las fechas, y tener los dos significaba que cada
+         trozo de código nuevo era una elección entre el fuerte y el débil —
+         cuarenta y seis sitios habían elegido el débil. El débil ya no está.
+         Una consecuencia visible: un PO escrito "12345" se guarda ahora como
+         texto, así que se ve pegado a la izquierda de la celda en vez de a la
+         derecha. Un PO es una etiqueta, no una cantidad.</p>
+      <p>Esto protege lo que se escriba de aquí en adelante. Lo que ya se
+         convirtió en el pasado no se puede sacar de la celda — sólo de otras
+         filas que todavía lo tengan.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.80</span>
       <span class="tag fix">Arreglado</span>
       <h3>Un material trabado ahora lo dice donde estás mirando</h3>

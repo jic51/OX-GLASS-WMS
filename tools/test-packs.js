@@ -28,6 +28,15 @@ const fs = require('fs'), path = require('path'), vm = require('vm');
 const GS   = fs.readFileSync(path.join(__dirname, '..', 'Code_v3_fixed.gs'), 'utf8');
 const HTML = fs.readFileSync(path.join(__dirname, '..', 'Index_v3_fixed.html'), 'utf8');
 
+// COMO SHEETS: la comilla de delante es un FORMATO, no parte del valor. Una
+// hoja de mentira que la guardara dentro del dato mediría algo que no pasa —
+// getValue() de verdad devuelve "WINDOW", nunca "'WINDOW". Hizo falta el
+// 2026-09-14, cuando el guardián de texto pasó a aplicarse también aquí.
+function literal(v){
+  return (typeof v === 'string' && v.charAt(0) === "'") ? v.slice(1) : v;
+}
+const literalFila = f => (f || []).map(literal);
+
 let ok = 0, fail = 0;
 function check(label, cond) {
   if (cond) { ok++; console.log('  ok  ', label); }
@@ -55,12 +64,12 @@ function build(rows) {
     getLastRow: () => data.length,
     getLastColumn: () => 7,
     setFrozenRows: () => {},
-    appendRow: r => { data.push(r.slice()); },
+    appendRow: r => { data.push(literalFila(r)); },
     deleteRow: n => { data.splice(n - 1, 1); },
     getRange(r, c, nr, nc) {
       return {
         getValues: () => data.slice(r - 1, r - 1 + nr).map(row => row.slice(c - 1, c - 1 + nc)),
-        setValues: v => { for (let i = 0; i < v.length; i++) data[r - 1 + i] = v[i].slice(); },
+        setValues: v => { for (let i = 0; i < v.length; i++) data[r - 1 + i] = literalFila(v[i]); },
         setFontWeight: () => {}
       };
     }
@@ -82,6 +91,10 @@ function build(rows) {
   vm.runInContext([
     pick(/var PACK_COLS = \{[^}]*\};/),
     pick(/var PACK_DECIMALS = \d+;/),
+    // Desde la v11.81 saveMaterialPack protege sus dos escrituras: PACKS
+    // guarda categoría y nombre de material, que es justo lo que Sheets
+    // mastica, y no tenía ni la protección débil.
+    extractFn('textCell_'), extractFn('textSafeRow_'),
     extractFn('ensurePacksSheet_'), extractFn('roundQty_'), extractFn('packKey_'),
     extractFn('readPacks_'), extractFn('saveMaterialPack'), extractFn('deleteMaterialPack'),
     extractFn('packMath_')

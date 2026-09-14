@@ -21,6 +21,14 @@
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const GS = fs.readFileSync(path.join(__dirname, '..', 'Code_v3_fixed.gs'), 'utf8');
 
+// COMO SHEETS: la comilla de delante es un FORMATO, no parte del valor. Una
+// hoja de mentira que la guardara dentro del dato mediría algo que no pasa —
+// getValue() de verdad devuelve "WINDOW", nunca "'WINDOW". Hizo falta el
+// 2026-09-14, cuando el guardián de texto pasó a aplicarse también aquí.
+function literal(v){
+  return (typeof v === 'string' && v.charAt(0) === "'") ? v.slice(1) : v;
+}
+
 let ok = 0, fail = 0;
 function check(label, cond) {
   if (cond) { ok++; console.log('  ok  ', label); }
@@ -46,6 +54,10 @@ const sandbox = { console };
 vm.createContext(sandbox);
 vm.runInContext([
   AC_MATCH[0], AC_W_MATCH[0],
+  // textCell_ entra con ellas: desde la v11.81 rewriteArchiveColumn_ cita lo
+  // que devuelve a la hoja, así que sin levantarlo la prueba reventaría por el
+  // sandbox en vez de medir el producto.
+  extractFn('textCell_'),
   extractFn('rewriteArchiveColumn_'),     // the engine
   extractFn('renameCategoryColumn_')      // the category caller, a thin wrapper over it
 ].join('\n'), sandbox);
@@ -84,7 +96,7 @@ function makeSheet(categoryColumn) {
         setValues(v) {
           calls.setValues++;
           for (let i = 0; i < v.length; i++)
-            for (let j = 0; j < numCols; j++) rows[i][startCol - 1 + j] = v[i][j];
+            for (let j = 0; j < numCols; j++) rows[i][startCol - 1 + j] = literal(v[i][j]);
         },
         setValue() { calls.setValue++; }
       };
@@ -170,10 +182,24 @@ console.log('\n═══ the callers — both sheets, and the cache rebuilt afte
 {
   const start = GS.indexOf('function updateConfig(');
   const body  = GS.slice(start, GS.indexOf('\nfunction ', start + 10));
-  check('CONFIG and the archive are written from the SAME uppercased value — the mismatch that put "IGU (isolated glass unit)" in the catalog and "IGU (ISOLATED GLASS UNIT)" in the movements cannot recur',
-    /var nvStored = sheetSafe_\(nv\.toUpperCase\(\)\);/.test(body) &&
+  // DOS VARIABLES DESDE LA v11.81, Y LA INVARIANTE ES LA MISMA. La celda de
+  // CONFIG se escribe directa, así que va citada; los reescritores de columna
+  // citan ellos, así que a ellos va el valor CRUDO. Citar en los dos sitios
+  // dejaba DOS comillas y la hoja guardaba la segunda DENTRO del dato.
+  //
+  // Lo que esta comprobación protege NO es cómo se llaman las variables: es que
+  // las dos salgan de nv.toUpperCase(), que es lo que impide volver a tener
+  // "IGU (isolated glass unit)" en el catálogo y "IGU (ISOLATED GLASS UNIT)" en
+  // los movimientos.
+  check('CONFIG y el archivo se escriben del MISMO valor en mayúsculas',
+    /var nvStored = textCell_\(nv\.toUpperCase\(\)\);/.test(body) &&
     /setValue\(nvStored\)/.test(body) &&
-    /renameCategoryColumn_\([\s\S]{0,80}?,\s*val,\s*nvStored\)/.test(body));
+    /var nvCrudo = nv\.toUpperCase\(\);/.test(body) &&
+    /renameCategoryColumn_\([\s\S]{0,80}?,\s*val,\s*nvCrudo\)/.test(body));
+  check('...y al reescritor de columna va el valor CRUDO, porque cita él — ' +
+        'citar dos veces guarda una comilla dentro del nombre de la categoría',
+    !/renameCategoryColumn_\([^)]*nvStored\)/.test(body) &&
+    !/renameIncomingCategory_\([^)]*nvStored\)/.test(body));
 }
 
 console.log('\n═══ manageMaterial: matching on one column, writing another ═══\n');

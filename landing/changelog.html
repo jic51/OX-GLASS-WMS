@@ -95,6 +95,31 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.81</span>
+      <span class="tag safe">Safer</span>
+      <h3>Renaming one material can no longer erase another</h3>
+      <p>Renaming, merging or re-categorising anything rewrites a whole column
+         of the archive — including every row you did not touch. On the way
+         through, values that look like a date to a spreadsheet were being
+         converted into one, and a material called "07-6329" would quietly stop
+         counting toward stock. Seven everyday actions did this, and the
+         material that vanished did not have to be the one you were editing.</p>
+      <p>Text now stays text through those rewrites, and through the packs
+         sheet, the movement-id repair and the diagnostics dump, which had the
+         same gap.</p>
+      <p>Underneath, two guards became one. The older one only protected
+         against spreadsheet formulas, not against dates, and having both meant
+         every new piece of code was a choice between the strong one and the
+         weak one — forty-six places had picked the weak one. The weak one is
+         gone. One visible consequence: a purchase order typed as "12345" is
+         now stored as text, so it sits on the left of the cell rather than the
+         right. A PO is a label, not a quantity.</p>
+      <p>This protects what gets written from now on. Values already converted
+         in the past cannot be recovered from the cell — only from other rows
+         that still hold them.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.80</span>
       <span class="tag fix">Fixed</span>
       <h3>A locked material now says so where you are looking</h3>

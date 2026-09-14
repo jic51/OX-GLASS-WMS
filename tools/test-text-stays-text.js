@@ -117,6 +117,11 @@ Hoja.prototype.getName        = function(){ return this.nombre; };
 Hoja.prototype.getLastRow     = function(){ return this.rows.length; };
 Hoja.prototype.getMaxRows     = function(){ return Math.max(this.rows.length, 200); };
 Hoja.prototype.getMaxColumns  = function(){ return this._maxCols; };
+// La usa rewriteArchiveColumn_ para saber cuánto ancho leer. Faltaba, y sin
+// ella la ida y vuelta por columna no se podía ejercitar aquí en absoluto.
+Hoja.prototype.getLastColumn  = function(){
+  return this.rows.reduce(function(m, r){ return Math.max(m, r.length); }, 0);
+};
 Hoja.prototype.insertColumnsAfter = function(a, n){ this._maxCols += n; };
 Hoja.prototype.insertRowsAfter    = function(){};
 Hoja.prototype.setFrozenRows  = function(){};
@@ -352,12 +357,19 @@ console.log('\n═══ los demás caminos que escriben una fila ═══\n');
 // updateIncoming se quedaron fuera — y son justo las dos pantallas donde una
 // persona escribe un PO con los dedos.
 //
-// sheetSafe_ no bastaba y conviene entender por qué, porque el nombre engaña:
-// protege de las FÓRMULAS (= + - @), no del parseo de fechas. "08-4885" empieza
-// por un cero, así que pasaba limpio, y Sheets lo guardaba como "mes 08, año
-// 4885". Al leerlo, safeStr_ ve un Date y devuelve '' — las dos mitades que
-// Jose ya había descrito: "está dando un dato que no existe y borrando uno que
-// sí".
+// sheetSafe_ no bastaba y conviene entender por qué, porque el nombre engañaba:
+// protegía de las FÓRMULAS (= + - @), no del parseo de fechas. "08-4885"
+// empieza por un cero, así que pasaba limpio, y Sheets lo guardaba como "mes
+// 08, año 4885". Al leerlo, safeStr_ ve un Date y devuelve '' — las dos mitades
+// que Jose ya había descrito: "está dando un dato que no existe y borrando uno
+// que sí".
+//
+// EL 2026-09-14 sheetSafe_ SE BORRÓ. Mientras existieran los dos, cada sitio
+// nuevo era una elección entre el guardián fuerte y el débil, y esa elección se
+// hace una vez por sitio y para siempre: cuarenta y seis sitios habían elegido
+// el débil. textCell_ cubre las fórmulas enteras (pone comilla a TODA cadena,
+// incluidas las cuatro), así que borrarlo no perdió nada — perdió la
+// posibilidad de volver a elegir mal.
 //
 // Se ejercitan las funciones DE VERDAD contra una hoja que parsea como Sheets.
 // Comprobar que el código "menciona textSafeRow_" habría pasado con la llamada
@@ -384,7 +396,7 @@ console.log('\n═══ el PO de una entrega esperada sobrevive a ida y vuelta 
     // se queda vieja sin avisar.
     vm.runInContext(/var INCOMING_DATE_MODES = [^;]+;/.exec(GS)[0], c);
     vm.runInContext([
-      fnSrc(GS, 'textCell_'), fnSrc(GS, 'textSafeRow_'), fnSrc(GS, 'sheetSafe_'),
+      fnSrc(GS, 'textCell_'), fnSrc(GS, 'textSafeRow_'),
       fnSrc(GS, 'safeStr_'), fnSrc(GS, 'incomingStatus_'),
       fnSrc(GS, 'incomingDateMode_'), fnSrc(GS, 'incomingDateCell_'),
       fnSrc(GS, 'incomingCellDate_'),
@@ -421,6 +433,138 @@ console.log('\n═══ el PO de una entrega esperada sobrevive a ida y vuelta 
         'real y Sheets lo leería como una fecha',
     /textSafeRow_/.test(fnSrc(GS, 'addIncoming')) &&
     /textSafeRow_/.test(fnSrc(GS, 'updateIncoming')));
+}
+
+// ── LA IDA Y VUELTA POR COLUMNA ─────────────────────────────────────────────
+//
+// Encontrado el 2026-09-14 revisando los 46 sitios de sheetSafe_, y resultó ser
+// más grande que los 46: rewriteArchiveColumn_ LEE UNA COLUMNA ENTERA Y LA
+// VUELVE A ESCRIBIR ENTERA.
+//
+// La comilla que protege una celda es un formato, no parte del valor —
+// getValues() devuelve "07-6329", nunca "'07-6329", y eso está escrito en el
+// propio textCell_. Así que la columna salía protegida de la hoja y volvía
+// desnuda, y Sheets la masticaba otra vez.
+//
+// LO GRAVE NO ES LA FILA QUE SE CAMBIA, ES LA QUE NO. La rama de abajo
+// —out.push([rows[i][col]])— reescribe las filas que nadie tocó. O sea: para
+// perder un material llamado "07-6329" no hacía falta tocarlo; bastaba
+// renombrar CUALQUIER otro material de la misma columna.
+//
+// Siete acciones normales pasan por aquí: renombrar un material, cambiarle la
+// categoría, fusionar dos materiales, renombrar una categoría, fusionar
+// proyectos, fusionar proveedores, fusionar locaciones, y los arreglos de
+// "Check my data".
+//
+// Se prueba con la función DE VERDAD contra la hoja que parsea como Sheets. Una
+// aserción sobre el texto del código no habría distinguido las dos ramas, y la
+// rama que importa es justo la que no cambia nada.
+console.log('\n═══ renombrar un material no puede borrar otro ═══\n');
+{
+  const c = vm.createContext({ Date, String, Number, Math, Array, Object, console });
+  vm.runInContext([fnSrc(GS, 'textCell_'), fnSrc(GS, 'textSafeRow_'),
+                   fnSrc(GS, 'safeStr_'),
+                   fnSrc(GS, 'rewriteArchiveColumn_')].join('\n'), c);
+  c.Hoja = Hoja;
+
+  // Dos materiales en la misma columna. Sólo se renombra el primero.
+  const cab = new Array(AC_WIDTH).fill('');
+  const f1 = fila('M-UNO', '');  f1[AC.NAME] = 'VIEJO';
+  const f2 = fila('M-DOS', '');  f2[AC.NAME] = PO_ROTO;   // "07-6329" como NOMBRE
+
+  // Las filas ENTRAN por donde entran de verdad: textSafeRow_ y luego un
+  // setValues que la hoja falsa parsea como Sheets. Meterlas directas en el
+  // constructor habría dejado la comilla dentro del valor —cosa que en Sheets
+  // no pasa nunca— y la prueba habría medido otra cosa. Primer intento de esta
+  // sección, corregido.
+  const hoja = new Hoja('MASTER_ARCHIVE_V3', [cab]);
+  [f1, f2].forEach(function(r, i){
+    c.__r = r;
+    hoja.getRange(2 + i, 1, 1, AC_WIDTH)
+        .setValues([vm.runInContext('textSafeRow_(__r)', c)]);
+  });
+
+  // Comprobamos que el punto de partida es sano antes de medir el daño.
+  const antes = hoja.rows[2][AC.NAME];
+  check('punto de partida: un material llamado "07-6329" está guardado como ' +
+        'TEXTO, que es lo que hace textSafeRow_ al escribirlo',
+    typeof antes === 'string' && antes === PO_ROTO, antes);
+
+  // EL CONTRATO: el que decide devuelve el valor CRUDO, y rewriteArchiveColumn_
+  // pone la comilla. Citar en los dos sitios deja DOS comillas, la hoja se come
+  // una y guarda la otra DENTRO del valor — el material pasaría a llamarse
+  // "'NUEVO". Eso es exactamente lo que hizo el primer intento de este arreglo,
+  // porque los seis llamadores ya venían citando; esta aserción es la que lo
+  // cazó, y por eso sigue aquí.
+  c.__hoja = hoja; c.__col = AC.NAME;
+  vm.runInContext(
+    'rewriteArchiveColumn_(__hoja, __col, function(row){' +
+    '  return String(row[__col] || "") === "VIEJO" ? "NUEVO" : null; })', c);
+
+  check('lo que se pidió cambiar, cambió', hoja.rows[1][AC.NAME] === 'NUEVO',
+    hoja.rows[1][AC.NAME]);
+  check('...y sin una comilla pegada delante — citar dos veces guarda la ' +
+        'segunda DENTRO del dato',
+    String(hoja.rows[1][AC.NAME]).charAt(0) !== "'", hoja.rows[1][AC.NAME]);
+
+  // Y que los llamadores de verdad cumplan el contrato. Sin esto, la prueba
+  // mediría una función que nadie usa así.
+  ['mergeLocationsLocked_', 'mergeConfigValuesLocked_', 'manageMaterialLocked_',
+   'dqFillGapLocked_'].forEach(function(fn){
+    const src = fnSrc(GS, fn);
+    check(fn + ' entrega el valor crudo al reescritor, no uno ya citado',
+      !/=\s*textCell_\(/.test(src.replace(/\n\s*\/\/[^\n]*/g, '')), fn);
+  });
+
+  // LA ASERCIÓN DEL FALLO. Antes de este arreglo, aquí había un Date.
+  const despues = hoja.rows[2][AC.NAME];
+  check('y el material que NADIE tocó sigue llamándose "07-6329" — no se ' +
+        'convirtió en fecha de camino',
+    despues === PO_ROTO, despues);
+  check('...o sea que no es un Date, que es lo que era antes del arreglo',
+    !(despues instanceof Date), despues);
+
+  // Y la mitad que lo convierte en pérdida de datos y no en un dato feo.
+  c.__v = despues;
+  check('...y por tanto la app lo sigue leyendo: safeStr_ devuelve un Date ' +
+        'como cadena VACÍA, así que el material habría desaparecido del stock',
+    vm.runInContext('safeStr_(__v)', c) === PO_ROTO);
+
+  // DOS VUELTAS. Una sola no distingue "no se rompe" de "se rompe una vez".
+  vm.runInContext(
+    'rewriteArchiveColumn_(__hoja, __col, function(row){' +
+    '  return String(row[__col] || "") === "NUEVO" ? textCell_("OTRO") : null; })', c);
+  check('sobrevive a una SEGUNDA reescritura de la misma columna',
+    hoja.rows[2][AC.NAME] === PO_ROTO, hoja.rows[2][AC.NAME]);
+}
+
+console.log('\n═══ y el guardián débil ya no está para elegirlo ═══\n');
+{
+  // Mientras existieran los dos, cada sitio nuevo era una elección, y la
+  // elección se hace una vez y para siempre. Que no se pueda volver a hacer
+  // mal es la mitad duradera de este arreglo.
+  check('sheetSafe_ ya no se define en ninguna parte',
+    !/^function sheetSafe_\s*\(/m.test(GS));
+  check('...y nadie lo llama', !/\bsheetSafe_\(/.test(GS));
+  check('la razón por la que existía —las fórmulas— quedó escrita donde estaba, ' +
+        'para que nadie la vuelva a descubrir desde cero',
+    /inyecci[oó]n de f[oó]rmulas/i.test(GS) && /IMPORTXML/.test(GS));
+  check('...y textCell_ de verdad cubre esas cuatro: pone comilla a TODA cadena',
+    (function(){
+      const c2 = vm.createContext({ String });
+      vm.runInContext(fnSrc(GS, 'textCell_'), c2);
+      c2.__x = '=IMPORTXML("evil","//x")';
+      return vm.runInContext('textCell_(__x)', c2).charAt(0) === "'";
+    })());
+
+  // Los otros dos round trips que se taparon el mismo día.
+  check('renameIncomingCategory_ también vuelve a la hoja con la comilla puesta',
+    /textCell_/.test(fnSrc(GS, 'renameIncomingCategory_')));
+  check('saveMaterialPack protege sus dos escrituras — PACKS guarda categoría y ' +
+        'nombre de material, y no tenía ni la protección débil',
+    (fnSrc(GS, 'saveMaterialPack').match(/textSafeRow_\(row\)/g) || []).length === 2);
+  check('writeMovIdColumn_ tampoco reescribe la columna de ids sin comilla',
+    /textCell_/.test(fnSrc(GS, 'writeMovIdColumn_')));
 }
 
 console.log('\n' + (fail ? '✗ ' + fail + ' fallo(s), ' : '✓ ') + ok + ' comprobacion(es) ok\n');
