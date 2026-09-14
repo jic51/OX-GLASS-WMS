@@ -95,6 +95,23 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.83</span>
+      <span class="tag safe">Safer</span>
+      <h3>The duplicate-entry bug now has a test that would have caught it</h3>
+      <p>In September a delivery card could be settled and come back, letting
+         the same movement be saved over and over. It was fixed in v11.70 — but
+         there had been a test passing over that bug the whole time, because it
+         checked that the fix was WRITTEN rather than that it RAN.</p>
+      <p>That save path is now exercised for real: the entry form runs against
+         a stand-in browser and server, and the checks are about what actually
+         happened — the card is settled only after the server accepted the
+         movement, a failed save settles nothing, and the label window comes
+         before "did these arrive too?" instead of both at once. Nothing about
+         how the app behaves changes; what changes is that this class of bug
+         cannot pass unnoticed again.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.82</span>
       <span class="tag new">New</span>
       <h3>Deliveries now say who they are coming from</h3>

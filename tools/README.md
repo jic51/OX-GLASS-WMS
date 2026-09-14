@@ -84,6 +84,7 @@ node tools/test-live-pulse.js
 node tools/test-lock-visible.js
 node tools/test-inc-supplier.js
 node tools/test-no-caduca.js
+node tools/test-entry-todo-corre.js
 node tools/test-short-stock.js
 node tools/test-settings-boxes.js
 node tools/test-toast-and-buttons.js
@@ -630,6 +631,29 @@ come back from — is invisible to both. Those get a browser test.
   `_incMatchesMove`, because two similar copies means the day one is tuned the
   app says "it is in A-3" about a delivery it is simultaneously offering to
   mark as arrived.
+- `test-entry-todo-corre.js` — the orange "it arrived, its entry is missing"
+  card is cleared because we WATCHED IT HAPPEN, not because the call appears in
+  the source. Until v11.70 saving an ENTRY never cleared it, so the card kept
+  its "Make the entry" button, which reopened the form pre-filled with the same
+  thing: saving again created the same movement again, without limit — Jose
+  caught a duplicated M-KUNA D-JA +44 PO 2444540. What makes this worth its own
+  file is not the bug but that A GREEN TEST SAT ON TOP OF IT: it checked that
+  `_entryTodoResolve` APPEARED inside `submitMovement`, and it did — in code no
+  ENTRY ever walks, because `submitMovement` leaves for `submitMultiEntry` on
+  its third line. Trying to catch that with a detector does not work: scanning
+  for "code after an unconditional return" as text raises 66 warnings on this
+  healthy file, nearly all false (a multi-line return throws off the brace
+  count), and doing it properly needs a real JavaScript parser, which this repo
+  has no dependency for. Executing is simpler and needs no detector — a call in
+  dead code does not happen. So the REAL `submitMultiEntry` runs against
+  fourteen fake form boxes and a `google.script.run` that answers the way Apps
+  Script does, and the assertions are about what occurred: the card is settled,
+  it is settled AFTER the server accepted the movement (settling it for a save
+  that could still fail would clear it on a lie), the failure path settles
+  nothing, and the labels come before "did these arrive too?" rather than both
+  at once. Verified by breaking the app on purpose in both directions: delete
+  the line and both tests go red; leave the line written but put a `return`
+  in front of it and the text test stays GREEN while this one fails.
 - `test-no-caduca.js` — the only test in the repo whose subject is the other
   tests. On Monday 2026-09-14 the suite went red with nothing changed:
   `test-morning-arrivals` pinned its deliveries to Thursday the 10th and ran

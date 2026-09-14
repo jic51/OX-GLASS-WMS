@@ -97,6 +97,24 @@
        almacén?</p>
 
     <div class="entry">
+      <span class="ver">v11.83</span>
+      <span class="tag safe">Más seguro</span>
+      <h3>El fallo de las entradas duplicadas ya tiene una prueba que lo habría cazado</h3>
+      <p>En septiembre una tarjeta de entrega podía saldarse y volver, dejando
+         guardar el mismo movimiento una y otra vez. Se arregló en la v11.70 —
+         pero había una prueba pasando por encima de ese fallo todo el tiempo,
+         porque comprobaba que el arreglo estuviera ESCRITO, no que se
+         EJECUTARA.</p>
+      <p>Ahora ese camino de guardado se ejercita de verdad: el formulario de
+         entrada corre contra un navegador y un servidor de mentira, y lo que se
+         comprueba es lo que ocurrió — la tarjeta se salda sólo después de que
+         el servidor aceptó el movimiento, un guardado fallido no salda nada, y
+         la ventana de etiquetas sale antes del "¿también llegó esto?" en vez de
+         las dos encima. No cambia nada de cómo se comporta la app; lo que
+         cambia es que esta clase de fallo ya no puede pasar desapercibida.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.82</span>
       <span class="tag new">Nuevo</span>
       <h3>Las entregas dicen de quién vienen</h3>
