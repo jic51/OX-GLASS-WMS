@@ -23,70 +23,24 @@
 //
 // Uso:  node tools/test-carrera-incoming.js
 
-const fs = require('fs'), path = require('path'), vm = require('vm');
-const RAIZ = path.join(__dirname, '..');
-const GS   = fs.readFileSync(path.join(RAIZ, 'Code_v3_fixed.gs'), 'utf8');
-const HTML = fs.readFileSync(path.join(RAIZ, 'Index_v3_fixed.html'), 'utf8');
+const vm = require('vm');
+const A  = require('./andamio.js');
+const GS   = A.fuente('gs');
+const HTML = A.fuente('html');
+const fnSrc = A.fnSrc;
 
-let ok = 0, fail = 0;
-function check(label, cond, extra) {
-  if (cond) { ok++; console.log('  ok  ', label); }
-  else { fail++; console.log('  FAIL ', label, extra === undefined ? '' : '→ ' + JSON.stringify(extra)); }
-}
+// PRIMERA PRUEBA QUE USA EL ANDAMIO COMPARTIDO (2026-09-15). Antes, cada
+// archivo llevaba su propia copia de fnSrc, su propia hoja falsa y su propia
+// lista de dependencias A MANO — y esa lista se quedó vieja seis veces en una
+// semana, cada una con la suite roja por "X is not defined". Aquí las
+// dependencias se buscan solas: A.levantar() lee la función pedida, mira qué
+// otras funciones del archivo nombra, y las trae. Ver tools/andamio.js.
+const marca = A.marcador('carrera incoming');
+const check = marca.check;
 
-function fnSrc(src, name){
-  const ini = src.indexOf('function ' + name + '(');
-  if (ini === -1) throw new Error('no encontrada: ' + name);
-  let d = 0;
-  for (let j = src.indexOf('{', ini); j < src.length; j++) {
-    if (src[j] === '{') d++;
-    else if (src[j] === '}') { d--; if (d === 0) return src.slice(ini, j + 1); }
-  }
-  throw new Error('sin cerrar: ' + name);
-}
-
-// ── Una hoja que se comporta como Sheets en lo que importa aquí ─────────────
-// deleteRow desplaza de verdad. Una hoja de mentira que no desplazara no podría
-// enseñar este fallo jamás.
-function Hoja(filas){ this.rows = filas.map(r => r.slice()); }
-Hoja.prototype.getLastRow    = function(){ return this.rows.length; };
-Hoja.prototype.getLastColumn = function(){ return 17; };
-Hoja.prototype.setFrozenRows = function(){};
-Hoja.prototype.getDataRange  = function(){
-  const self = this;
-  return { getValues: () => self.rows.map(r => r.slice()) };
-};
-Hoja.prototype.deleteRow = function(r){ this.rows.splice(r - 1, 1); };
-Hoja.prototype.appendRow = function(r){ this.rows.push(r.slice()); };
-Hoja.prototype.getRange  = function(r, c, nr, nc){
-  const self = this; nr = nr || 1; nc = nc || 1;
-  return {
-    getValues(){
-      const out = [];
-      for (let i = 0; i < nr; i++){
-        const f = self.rows[r - 1 + i] || [];
-        const s = [];
-        for (let j = 0; j < nc; j++) s.push(f[c - 1 + j] !== undefined ? f[c - 1 + j] : '');
-        out.push(s);
-      }
-      return out;
-    },
-    setValues(vals){
-      for (let i = 0; i < vals.length; i++){
-        while (self.rows.length <= r - 1 + i) self.rows.push([]);
-        for (let j = 0; j < vals[i].length; j++){
-          let v = vals[i][j];
-          if (typeof v === 'string' && v.charAt(0) === "'") v = v.slice(1);
-          self.rows[r - 1 + i][c - 1 + j] = v;
-        }
-      }
-      return this;
-    },
-    setValue(v){ return this.setValues([[v]]); },
-    setNumberFormat(){ return this; },
-    setFontWeight(){ return this; }
-  };
-};
+// La hoja es la del andamio: parsea como Sheets, se come la comilla de delante
+// y su deleteRow DESPLAZA de verdad, que es lo que deja ver la carrera.
+const Hoja = A.Hoja;
 
 function entrega(id, nombre){
   const f = new Array(17).fill('');
@@ -99,7 +53,7 @@ function entrega(id, nombre){
 // ── El mundo del servidor, con un candado que lleva la cuenta ───────────────
 function mundo(){
   const cab = new Array(17).fill('');
-  const hoja = new Hoja([cab,
+  const hoja = new Hoja('INCOMING_V3', [cab,
     entrega('INC-1', 'PRIMERA'),
     entrega('INC-2', 'SEGUNDA'),
     entrega('INC-3', 'TERCERA'),
@@ -126,10 +80,15 @@ function mundo(){
     uploadIncomingDoc_: () => '',
     INCOMING_STATUSES: ['Pending', 'Arrived', 'Cancelled']
   });
-  vm.runInContext([fnSrc(GS, 'textCell_'), fnSrc(GS, 'textSafeRow_'),
-                   fnSrc(GS, 'safeStr_'),
-                   fnSrc(GS, 'addIncoming'), fnSrc(GS, 'updateIncoming'),
-                   fnSrc(GS, 'deleteIncoming')].join('\n'), ctx);
+  // Se piden las TRES que se quieren ejercitar y nada más: textCell_,
+  // textSafeRow_, safeStr_ y withStockLock_ vienen solas porque el archivo dice
+  // que hacen falta. El día que una de ellas crezca una dependencia nueva, esta
+  // prueba la tendrá sin que nadie la toque.
+  vm.runInContext(A.levantar(GS, ['addIncoming', 'updateIncoming', 'deleteIncoming'], {
+    dobles: ['ensureIncomingSheet_', 'getUserRole', 'uploadIncomingDoc_',
+             'incomingStatus_', 'incomingDateMode_', 'incomingDateCell_',
+             'withStockLock_']
+  }), ctx);
 
   return {
     hoja, candado, ctx,
@@ -275,13 +234,14 @@ console.log('\n═══ y quitar un usuario ya no borra una fila de CONFIG ═�
     /getRange\(i \+ 1, 6, 1, 2\)\.setValues\(\[\['', ''\]\]\)/.test(cuerpo));
 
   // Y que de verdad haga lo que dice, ejecutándolo.
-  const cfg = new Hoja([
+  const cfg = new Hoja('CONFIG', [
     ['Proyectos','Categorias','Proveedores','Locaciones','','Email','Rol'],
     ['SUNBRIDGE','WINDOW','AMSCO','B2A','','bob@ox','WAREHOUSE'],
     ['KOTTER','MIRROR','WESTERN','A3A','','ana@ox','ADMIN']
   ]);
   const c = vm.createContext({ String, Object, Array, Error });
-  vm.runInContext('var SHEETS = { CONFIG: "CONFIG" };\n' + fnSrc(GS, 'removeUser_'), c);
+  vm.runInContext('var SHEETS = { CONFIG: "CONFIG" };\n' +
+                  A.levantar(GS, ['removeUser_']), c);
   c.__ss = { getSheetByName: () => cfg };
   vm.runInContext('removeUser_(__ss, { email: "bob@ox" })', c);
 
@@ -302,5 +262,4 @@ console.log('arreglo y se comprueba aquí — sin él, esto sólo habría cambia
 console.log('carrera silenciosa por un error visible.');
 console.log('────────────────────────────────────────────────────────────────────────\n');
 
-console.log((fail ? 'carrera incoming: ' + fail + ' FALLO(S)' : 'carrera incoming: ok (' + ok + ')') + '\n');
-process.exit(fail ? 1 : 0);
+marca.fin();

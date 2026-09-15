@@ -92,6 +92,11 @@ const SE_ALINEA_SOLA = /new\s+Date\s*\(\s*\)/;
 // test-cost-privacy a su lista INTERNAL, y por la misma razón — una excepción
 // que nadie vuelve a mirar deja de ser una excepción y pasa a ser un agujero.
 const REVISADAS = {
+  'test-andamio.js':
+    'La "fecha" es parte del TEXTO de una etiqueta —"la doble cita del ' +
+    '2026-09-15 sería invisible aquí"—, no un dato. Y aunque nombra ' +
+    'addIncoming, no la EJECUTA: sólo lee su código para comprobar que el ' +
+    'andamio le resuelve las dependencias. Nada se compara con el reloj.',
   'test-carrera-incoming.js':
     'Las fechas son el campo estDate de las entregas de mentira, que nunca se ' +
     'compara con nada. El new Date() está dentro de addIncoming y sólo sirve ' +
@@ -129,10 +134,23 @@ for (const f of archivos) {
   revisadas++;
 
   // Qué funciones del producto levanta esta prueba, por su nombre.
+  //
+  // DOS FORMAS, y la segunda hizo falta el mismo día que se creó el andamio:
+  // al migrar test-carrera-incoming a A.levantar([...]) este detector dejó de
+  // verla — y la excepción que tenía se quedó vieja, que es justo lo que la
+  // otra comprobación de abajo cazó. Un detector que sólo entiende la forma
+  // vieja se apaga solo según se moderniza el código que vigila.
   const nombres = new Set();
-  const re = /(?:fnSrc|extractFn)\s*\(\s*(?:[A-Za-z_$][\w$]*\s*,\s*)?['"]([A-Za-z0-9_$]+)['"]/g;
+  const porFnSrc = /(?:fnSrc|extractFn)\s*\(\s*(?:[A-Za-z_$][\w$]*\s*,\s*)?['"]([A-Za-z0-9_$]+)['"]/g;
   let m;
-  while ((m = re.exec(src))) nombres.add(m[1]);
+  while ((m = porFnSrc.exec(src))) nombres.add(m[1]);
+  // levantar(GS, ['a', 'b'], …) y montar(ctx, GS, ['a'], …): los nombres van en
+  // una lista, no de uno en uno.
+  const porAndamio = /(?:levantar|montar)\s*\([^)]*?\[([^\]]*)\]/g;
+  while ((m = porAndamio.exec(src))) {
+    (m[1].match(/['"]([A-Za-z0-9_$]+)['"]/g) || [])
+      .forEach(x => nombres.add(x.replace(/['"]/g, '')));
+  }
   if (!nombres.size) continue;
 
   const conReloj = [...nombres].filter(n => LEE_EL_RELOJ.test(cuerpoDe(n)));

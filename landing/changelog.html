@@ -95,6 +95,20 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.88</span>
+      <span class="tag safe">Safer</span>
+      <h3>The checks stop breaking for reasons that are not bugs</h3>
+      <p>Nothing in the app changes. This is about the checks that run before
+         anything reaches you.</p>
+      <p>Six times in one week they went red without anything being wrong: each
+         check carried its own hand-written list of which pieces of the app it
+         needed, and those lists went stale every time a piece grew a new
+         dependency. They now work it out from the source instead. A check that
+         goes red on its own teaches people to stop reading the checks, and the
+         day a real one goes red it gets the same shrug.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.87</span>
       <span class="tag fix">Fixed</span>
       <h3>The apostrophe again — this time when editing</h3>

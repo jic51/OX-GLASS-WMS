@@ -765,5 +765,71 @@ console.log('\n═══ nadie cita dos veces ═══\n');
     /out\.push\(\[textCell_\(/.test(GS));
 }
 
+// ── LO QUE NO ES TEXTO TAMBIÉN TIENE QUE SOBREVIVIR ─────────────────────────
+//
+// El barrido de idas y vueltas del 2026-09-15 buscó tres pérdidas más allá del
+// texto: ANCHO DE FILA, CERO CONTRA VACÍO, y el TIPO de las fechas.
+//
+// NO ENCONTRÓ NINGÚN FALLO, y eso también hay que decirlo — un barrido que
+// siempre encuentra algo es un barrido que se está inventando cosas. Lo que se
+// comprobó leyendo queda aquí ejecutándose, porque una comprobación que sólo
+// vive en la cabeza de quien la hizo se pierde con él.
+console.log('\n═══ el ancho, el vacío y las fechas ═══\n');
+{
+  const c = vm.createContext({ Date, String, Number, Math, Array, Object, console });
+  vm.runInContext([fnSrc(GS, 'textCell_'), fnSrc(GS, 'textSafeRow_'),
+                   fnSrc(GS, 'padRow_'), fnSrc(GS, 'safeStr_')].join('\n'), c);
+
+  // (a) EL ANCHO. Una fila vieja —escrita antes de que el archivo creciera con
+  // las dos columnas de coste— se lee CORTA. Si se copiara así a la papelera,
+  // las tres columnas de la papelera (borrado por, cuándo, de qué hoja)
+  // caerían encima de datos reales.
+  c.__corta = [1, 2, 3];
+  const rellenada = vm.runInContext('padRow_(__corta, ' + AC_WIDTH + ')', c);
+  check('una fila corta se rellena hasta el ancho del archivo antes de tocarla',
+    rellenada.length === AC_WIDTH, rellenada.length);
+  check('...y se rellena con VACÍO, no con cero — un hueco no es una cantidad',
+    rellenada[AC_WIDTH - 1] === '' && rellenada[5] === '');
+  check('...y lo que ya estaba no se mueve de sitio',
+    rellenada[0] === 1 && rellenada[2] === 3);
+  check('la papelera escribe en AC_WIDTH, AC_WIDTH+1 y AC_WIDTH+2, justo detrás',
+    TR.DELETED_AT === AC_WIDTH && TR.FROM_SHEET === AC_WIDTH + 2);
+  check('y quien busca un movimiento lo devuelve ya rellenado, no crudo',
+    /row:\s*padRow_\(/.test(fnSrc(GS, 'findMovementById_')));
+
+  // Y una fila LARGA de más tampoco descuadra: se recorta.
+  c.__larga = new Array(AC_WIDTH + 9).fill('x');
+  check('una fila más ancha de la cuenta se recorta en vez de desbordar',
+    vm.runInContext('padRow_(__larga, ' + AC_WIDTH + ')', c).length === AC_WIDTH);
+
+  // (b) CERO CONTRA VACÍO. El archivo distingue "no costó nada" de "no hay
+  // cifra": el coste de un ADJUST se deja EN BLANCO a propósito, porque
+  // escribir 0 diría que costó cero dólares, que es otra afirmación.
+  c.__fila = ['WINDOW', '', 0, new Date(1757000000000), null, undefined, 'X'];
+  const pasada = vm.runInContext('textSafeRow_(__fila)', c);
+  check('el vacío sigue vacío al escribirlo — no se convierte en cero',
+    pasada[1] === '' && pasada[1] !== 0);
+  check('...y el cero de verdad sigue siendo cero, no vacío',
+    pasada[2] === 0 && typeof pasada[2] === 'number');
+  check('un null y un undefined se guardan como vacío, no como la palabra "null"',
+    pasada[4] === '' && pasada[5] === '');
+
+  // (c) LAS FECHAS. textCell_ deja pasar lo que no es cadena, así que una fecha
+  // sigue siendo una FECHA y no se convierte en texto: si se convirtiera, la
+  // hoja dejaría de poder ordenarla.
+  check('una fecha atraviesa el guardián SIENDO una fecha',
+    pasada[3] instanceof Date && pasada[3].getTime() === 1757000000000);
+  check('...y no se le pega una comilla, que la habría hecho texto',
+    typeof pasada[3] !== 'string');
+
+  // Y la fecha de recepción se guarda como TEXTO ISO a propósito, no como
+  // fecha: así no hay zona horaria que la corra un día. El lector admite las
+  // dos formas, que es lo que permite que convivan filas viejas y nuevas.
+  const leer = fnSrc(GS, 'parseArchiveRow');
+  check('el lector de filas admite la fecha de recepción como fecha Y como texto',
+    /row\[AC\.DATE_REC\] instanceof Date/.test(leer) &&
+    /else if \(row\[AC\.DATE_REC\]\)/.test(leer));
+}
+
 console.log('\n' + (fail ? '✗ ' + fail + ' fallo(s), ' : '✓ ') + ok + ' comprobacion(es) ok\n');
 process.exit(fail ? 1 : 0);

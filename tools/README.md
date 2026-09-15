@@ -86,6 +86,7 @@ node tools/test-inc-supplier.js
 node tools/test-no-caduca.js
 node tools/test-entry-todo-corre.js
 node tools/test-carrera-incoming.js
+node tools/test-andamio.js
 node tools/test-short-stock.js
 node tools/test-settings-boxes.js
 node tools/test-toast-and-buttons.js
@@ -632,6 +633,30 @@ come back from — is invisible to both. Those get a browser test.
   `_incMatchesMove`, because two similar copies means the day one is tuned the
   app says "it is in A-3" about a delivery it is simultaneously offering to
   mark as arrived.
+- `andamio.js` — NOT a test: the shared scaffolding the vm-based tests are
+  built on. It exists because the suite went red six times in one week for the
+  same reason: a test lifts function X out of the source, somebody adds a call
+  to Y inside X, the sandbox has no Y, and the test dies on "Y is not defined" —
+  measuring the scaffolding instead of the product. Each time the fix was to add
+  the missing name BY HAND to that one sandbox, i.e. to maintain by hand a
+  dependency list the source already knows. `levantar()` resolves them
+  transitively instead. Two things it got wrong first, both kept in the comments
+  because they are the interesting part: it matched `name(` and so missed
+  `textCell_`, which `textSafeRow_` passes to map as a bare REFERENCE (the same
+  shape that slipped past me twice hunting the double-quote), and without stubs
+  it drags 147 KB of the 553 KB file because `getUserRole` pulls a quarter of it
+  — so `dobles` is not only where you fake things, it is where the search stops.
+  `montar()` is the recommended entry point: a `function X(){}` declared inside
+  the box SHADOWS the X a test put in the context, so a test could believe it
+  was measuring its own double while actually running the product. It refuses
+  loudly instead of letting that pass. Also ships the Sheets-parsing fake sheet
+  (it parses dates, eats the leading apostrophe, and its deleteRow really
+  shifts) and the scorekeeper.
+- `test-andamio.js` — the only test whose subject is the scaffolding. It pins
+  ALL SIX of the real breakages by name, checking the dependency that was
+  missing each time is now resolved on its own, plus that the resolver knows how
+  to fail: a renamed function must blow up rather than return nothing, a shadowed
+  double must be refused, and what comes out must actually compile.
 - `test-carrera-incoming.js` — two people at once cannot make one person's edit
   land on somebody else's delivery (v11.85). `deleteIncoming` removed the row by
   NUMBER — `deleteRow(i + 1)`, and everything below shifts up — while
