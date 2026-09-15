@@ -205,6 +205,7 @@ function mundo(){
     Utilities: { formatDate: () => 'Sep 9, 10:45 AM' },
     auditLog_: function(){ auditadas.push(Array.prototype.slice.call(arguments, 1)); },
     refreshDerivedSheets_: function(){},
+    refreshOrDefer_: function(){},   // v11.89: el portero del refresco
     rewriteArchiveColumn_: () => 0,
     ss: {
       getSheetByName: (n) => hojas[n] || null,

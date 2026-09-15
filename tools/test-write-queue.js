@@ -97,7 +97,7 @@ function navegador(opts){
 
   [ varSrc('BUSY_LABEL'), varSrc('BUSY_MAX_RETRIES'), varSrc('BUSY_BASE_MS'),
     varSrc('BUSY_MAX_MS'), varSrc('BUSY_JITTER_MS'), varSrc('SHORT_PREFIX'),
-    varSrc('_wq'), varSrc('_wqBusy'),
+    varSrc('_wq'), varSrc('_wqBusy'), varSrc('_refrescoAplazado'),
     fnSrc(HTML, '_isBusyError'), fnSrc(HTML, '_stripTags'), fnSrc(HTML, '_humanErr'),
     fnSrc(HTML, '_busyDelay'), fnSrc(HTML, '_wqPump'), fnSrc(HTML, '_acWrite')
   ].forEach(code => vm.runInContext(code, ctx));

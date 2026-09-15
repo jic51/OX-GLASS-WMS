@@ -97,6 +97,25 @@
        almacén?</p>
 
     <div class="entry">
+      <span class="ver">v11.89</span>
+      <span class="tag fix">Arreglado</span>
+      <h3>Una tanda de cambios deja de reconstruirlo todo, cada vez</h3>
+      <p>Después de cada cambio —borrar un movimiento, aplicar un arreglo de
+         "Check my data", fusionar dos cosas— la app reconstruía sus tablas de
+         existencias desde cero. Eso son unos nueve viajes a la hoja de cálculo,
+         y hacer diez cambios seguidos lo pagaba diez veces: unos cuarenta
+         segundos de trabajo que sólo necesitaba unos pocos.</p>
+      <p>Ahora una tanda reconstruye dos veces en vez de diez — una al principio,
+         porque todavía no hay nada detrás, y otra al final. Un cambio suelto se
+         comporta exactamente igual que antes.</p>
+      <p>Esto no puede hacer que se saque material que ya no está: si alcanza o
+         no para una salida se comprueba contra el historial de movimientos, no
+         contra las tablas que se aplazan. Y si una tanda se corta —se cierra la
+         ventana, se cae la conexión—, la siguiente persona que abra la app pone
+         las tablas al día antes de enseñar ningún número.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.88</span>
       <span class="tag safe">Más seguro</span>
       <h3>Las comprobaciones dejan de romperse por cosas que no son fallos</h3>

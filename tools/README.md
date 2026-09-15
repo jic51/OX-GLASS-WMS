@@ -87,6 +87,7 @@ node tools/test-no-caduca.js
 node tools/test-entry-todo-corre.js
 node tools/test-carrera-incoming.js
 node tools/test-andamio.js
+node tools/test-refresco-tanda.js
 node tools/test-short-stock.js
 node tools/test-settings-boxes.js
 node tools/test-toast-and-buttons.js
@@ -652,6 +653,29 @@ come back from — is invisible to both. Those get a browser test.
   loudly instead of letting that pass. Also ships the Sheets-parsing fake sheet
   (it parses dates, eats the leading apostrophe, and its deleteRow really
   shifts) and the scorekeeper.
+- `test-refresco-tanda.js` — ten deletes in a row cost TWO rebuilds of the
+  derived sheets, not ten (v11.89). Jose after testing two accounts: "everything
+  updates, NOT at the speed I would like" — and there was a number behind it.
+  `refreshDerivedSheets_` rebuilds LIVE_STOCK/SITE_STOCK/WASTED_STOCK, about
+  nine round trips to Google, measured on HIS sheet at 3.7 s. Every operation
+  paid it alone, so deleting ten rows cost ~40 s of work that needed one. The
+  browser already batched its own reload; the SERVER's work was not batched.
+  The question that had to be answered before writing any of it — can this be
+  deferred without letting somebody take out material that is no longer there? —
+  is answered in the code: the derived sheets are for DISPLAY, while validating
+  a movement reads the ARCHIVE through `buildStockSnapshot_`. Deferring can make
+  numbers lag; it cannot pass an impossible exit. TWO and not one, stated that
+  way on purpose: the FIRST cannot defer because nothing is behind it yet (the
+  other nine queue up while it travels) and the LAST refreshes itself because
+  nothing follows — rounding that to "one" would be rounding in my favour. Both
+  halves are pinned: that the batching happens, and that the refresh ACTUALLY
+  OCCURS, including the safety net where a burst cut short leaves a mark that
+  the next `getInitialData` clears BEFORE reading the derived sheets. Two test
+  mistakes are kept in the comments because they are the interesting part: a
+  synchronous fake server made all ten look un-deferred (with an instant reply
+  each job finishes before the next is queued, so the queue never has depth),
+  and `_refrescoAplazado` is a VARIABLE, not a function, so the harness does not
+  lift it — module state is asked for by name.
 - `test-andamio.js` — the only test whose subject is the scaffolding. It pins
   ALL SIX of the real breakages by name, checking the dependency that was
   missing each time is now resolved on its own, plus that the resolver knows how

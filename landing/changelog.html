@@ -95,6 +95,25 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.89</span>
+      <span class="tag fix">Fixed</span>
+      <h3>A run of changes stops rebuilding everything, every time</h3>
+      <p>After each change — deleting a movement, applying a "Check my data"
+         fix, merging two things — the app rebuilt its stock tables from
+         scratch. That is about nine round trips to the spreadsheet, and doing
+         ten changes in a row paid it ten times: roughly forty seconds of work
+         that only needed a few.</p>
+      <p>Now a run of changes rebuilds twice instead of ten times — once at the
+         start, because nothing is behind it yet, and once at the end. A single
+         change on its own behaves exactly as before.</p>
+      <p>Nothing can be oversold because of this: whether there is enough stock
+         to take something out is checked against the movement history, not
+         against the tables being deferred. And if a run is cut short — the
+         window closes, the connection drops — the next person to open the app
+         brings the tables up to date before showing any number.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.88</span>
       <span class="tag safe">Safer</span>
       <h3>The checks stop breaking for reasons that are not bugs</h3>

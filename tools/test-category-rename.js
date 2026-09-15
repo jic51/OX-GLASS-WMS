@@ -171,10 +171,20 @@ console.log('\n═══ the callers — both sheets, and the cache rebuilt afte
     /renameCategoryColumn_\(\s*ss\.getSheetByName\(SHEETS\.ARCHIVE\)/.test(body));
   check('...AND in ARCHIVE_HISTORY — refreshDerivedSheets_ reads the two concatenated, so renaming only one splits a category into two materials the first time old rows are archived',
     /renameCategoryColumn_\(\s*ensureArchiveHistorySheet_\(ss\)/.test(body));
+  // v11.89 PARTIO ESTA LLAMADA EN DOS. La reconstruccion sigue siendo
+  // obligatoria, pero ahora puede APLAZARSE: si el navegador manda diez
+  // operaciones seguidas, las nueve primeras marcan la bandera y solo la
+  // ultima reconstruye. La regla es la de siempre — dentro de una accion el
+  // que llama ya tiene el candado, asi que se usa refreshOrDefer_(ss, data);
+  // suelta (al vaciar la bandera) se usa refreshDerivedSheetsSafely_, que
+  // toma el candado el mismo. Lo que se guarda aqui es que la llamada EXISTE,
+  // en cualquiera de las dos formas.
+  const RECONSTRUYE = /refreshDerivedSheets_\(ss\)|refreshOrDefer_\(ss, data\)/;
+
   check('...and rebuilds LIVE_STOCK / SITE_STOCK / WASTED_STOCK afterwards — every screen reads that cache, not the archive, so without this the rename is invisible until someone saves a movement',
-    /refreshDerivedSheets_\(ss\)/.test(body));
+    RECONSTRUYE.test(body));
   check('...with all of it inside the stock lock, so a save cannot land against a half-renamed archive',
-    /withStockLock_\(function[\s\S]*renameCategoryColumn_[\s\S]*refreshDerivedSheets_\(ss\)/.test(body));
+    /withStockLock_\(function[\s\S]*renameCategoryColumn_[\s\S]*(refreshDerivedSheets_\(ss\)|refreshOrDefer_\(ss, data\))/.test(body));
 }
 
 // The bug that started this: CONFIG stored what was typed, the archive stored
@@ -246,8 +256,9 @@ console.log('\n═══ manageMaterial: matching on one column, writing another
     const i = body.indexOf("op === '" + op + "'");
     const next = ops.map(o => body.indexOf("op === '" + o + "'")).filter(x => x > i);
     const seg = body.slice(i, next.length ? Math.min.apply(null, next) : body.indexOf("op === 'deleteRow'"));
+    // Igual que arriba: desde la v11.89 vale la forma aplazable.
     check(op + ' rebuilds the derived sheets — without it the change is invisible on every screen until someone saves a movement',
-      /refreshDerivedSheets_\(ss\)/.test(seg));
+      /refreshDerivedSheets_\(ss\)|refreshOrDefer_\(ss, data\)/.test(seg));
     check('...and ' + op + ' writes in bulk, with no setValue-per-row left behind',
       !/\.setValue\(/.test(seg));
   });

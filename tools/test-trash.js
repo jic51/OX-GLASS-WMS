@@ -174,6 +174,14 @@ function mundo(){
     Utilities: { formatDate: (d) => 'Sep 8, 10:45 AM' },
     auditLog_: function(){ auditadas.push(Array.prototype.slice.call(arguments, 1)); },
     refreshDerivedSheets_: function(){ c.refrescos++; },
+    // v11.89: las acciones ya no llaman al refresco directo, llaman a este
+    // portero. El doble copia la regla real — si el navegador avisa que
+    // vienen más operaciones detrás, se aplaza; si no, reconstruye ahora.
+    // Aquí nadie manda _skipRefresh, así que la cuenta de arriba no cambia.
+    refreshOrDefer_: function(ss, data){
+      if (data && data._skipRefresh) return;
+      c.refrescos++;
+    },
     rewriteArchiveColumn_: () => 0,
     refrescos: 0,
     ss: {

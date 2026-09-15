@@ -206,7 +206,7 @@ console.log('\nThe paths that change stock and do NOT hold it — the gap');
 // sixth, both force this list to be updated by hand instead of quietly
 // passing.
 const KNOWN_GAPS = {
-  refreshDerivedSheets_: 'rewriting LIVE_STOCK / SITE_STOCK / WASTED_STOCK — but see below: every caller that matters now holds the lock while calling it, so a lock of its own would deadlock rather than help',
+  refreshDerivedSheets_: 'rewriting LIVE_STOCK / SITE_STOCK / WASTED_STOCK — see below: callers INSIDE an action already hold the lock, so a lock of its own would deadlock; callers on their own go through refreshDerivedSheetsSafely_, which does take it',
   menuNormalizeStatus: 'the one-off Status clean-up from the Sheet menu — owner-run and rare, but it does rewrite the archive'
 };
 Object.keys(KNOWN_GAPS).forEach(fn => {
@@ -233,18 +233,49 @@ Object.keys(KNOWN_GAPS).forEach(fn => {
     fixed.length === 0);
 }
 
-// refreshDerivedSheets_ is called from INSIDE the paths that hold the lock.
-// This was first read the wrong way round — as proof that any fix needed a
+// The rebuild of the derived sheets happens from INSIDE the paths that hold the
+// lock. This was first read the wrong way round — as proof that any fix needed a
 // re-entrant lock. It is the opposite: because the call is nested inside the
 // caller, locking the caller already covers it, and giving refreshDerivedSheets_
-// a plain waitLock of its own is what would deadlock. Step 3 of the fix is
-// therefore mostly already done by steps 1 and 2, for free.
+// a plain waitLock of its own is what would deadlock.
+//
+// v11.89 PUT A HOLE IN THAT, AND THIS BLOCK IS WHAT CAUGHT IT. Batching the
+// rebuild means the LAST one of a run happens on its own, outside any action —
+// and outside the lock. That is not harmless: refreshDerivedSheets_ does
+// clearContents() then setValues(), so two at once interleave as "A clears, B
+// clears, A writes 100 rows, B writes 98" and A's last two are left dangling
+// under B's. Not a stale number — a number nobody wrote.
+//
+// So the rule is now split in two, and both halves are pinned here:
+//   · called from inside an action → no lock of its own (the caller holds it)
+//   · called on its own            → refreshDerivedSheetsSafely_, which takes it
 {
   const callers = ['addMovementsBatch_', 'modifyMovementLocked_'];
   callers.forEach(c => {
-    check(c + ' calls refreshDerivedSheets_ from inside itself, so the lock it holds covers that rewrite too — no second lock, and no re-entrancy machinery',
-      /refreshDerivedSheets_\(/.test(bodyOf(c) || ''));
+    const cuerpo = bodyOf(c) || '';
+    check(c + ' rebuilds from inside itself, so the lock it holds covers that ' +
+          'rewrite too — no second lock, and no re-entrancy machinery',
+      /refreshDerivedSheets_\(|refreshOrDefer_\(/.test(cuerpo));
   });
+
+  // Y las dos puertas por las que ahora se entra SIN acción alrededor.
+  const router = bodyOf('processMovementInner_') || '';
+  check("the end-of-run rebuild ('refreshNow') goes through the locking wrapper " +
+        '— it runs on its own, so nothing else is holding the lock for it',
+    /refreshNow'[\s\S]{0,400}refreshDerivedSheetsSafely_/.test(router), router.length);
+
+  const inicio = bodyOf('getInitialData') || '';
+  check('...and so does the safety net in getInitialData',
+    /refreshPending_\(\)[\s\S]{0,200}refreshDerivedSheetsSafely_/.test(inicio));
+  check('...which, when it cannot get the lock, does NOT trust the derived ' +
+        'sheets: it falls back to the full scan. Slow beats invented',
+    /derivadasAlDia[\s\S]{0,200}buildStockFromDerivedSheets_[\s\S]{0,300}calculateStock/.test(inicio));
+
+  const seguro = bodyOf('refreshDerivedSheetsSafely_') || '';
+  check('the wrapper uses tryLock and gives up rather than queueing behind a ' +
+        'save — a rebuild that waits is worse than one that happens later',
+    /tryLock\(/.test(seguro) && /return false/.test(seguro));
+  check('...and always releases it', /releaseLock\(\)/.test(seguro));
 }
 
 console.log('\n═══ PART 2 — a MODEL of what those gaps do ═══');

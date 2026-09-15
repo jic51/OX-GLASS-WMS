@@ -425,7 +425,14 @@ console.log('\n═══ applying, and what it refuses ═══\n');
   check('...and says the data changed rather than writing something nobody proposed',
     /The data changed since this was found/.test(extractFn('dqFillGapLocked_')));
   check('a fix is written to the audit log', /DATA_FIX/.test(gap));
-  check('...and the derived stock sheets are rebuilt after it', /refreshDerivedSheets_/.test(gap));
+  // v11.89 split this call in two. The rebuild is still mandatory, but it can
+  // be DEFERRED: when the browser sends several fixes back to back, the ones
+  // with somebody queued behind them just raise the flag and the last one
+  // rebuilds for all of them. What is guarded here is that the rebuild is
+  // asked for — in either shape. Dropping it altogether would leave the fix
+  // invisible on every screen until somebody saved a movement.
+  check('...and the derived stock sheets are rebuilt after it',
+    /refreshDerivedSheets_|refreshOrDefer_\(ss, data\)/.test(gap));
 }
 
 {
