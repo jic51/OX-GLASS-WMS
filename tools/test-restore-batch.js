@@ -60,6 +60,10 @@ function varSrc(name){
 function navegador(opts){
   opts = opts || {};
   const avisos = [], llamadas = [], timers = [];
+  // v11.91: restaurar ya no saca un toast por movimiento — los cuenta la
+  // línea de progreso. Lo que aquí se mide es CUÁNTOS se restauraron, así
+  // que el contador se muda al mismo sitio donde la app lo lleva ahora.
+  const restaurados = [];
   let ahora = 0, idSeq = 0, recargas = 0;
 
   // Los botones son objetos: lo que importa es su ESTADO, que es lo que Jose vio
@@ -78,6 +82,9 @@ function navegador(opts){
     },
     console: { warn(){}, log(){}, error(){} },
     showToast: (msg, kind) => avisos.push({ msg: String(msg), kind }),
+    _progStart: () => {},
+    _progStep:  (ok) => restaurados.push(!!ok),
+    _progFinRestaurado: () => '',
     _btnBusy:  (b, t) => { if (b) { b.estado = 'busy'; b.texto = t; } },
     _btnReset: (b)    => { if (b) { b.estado = 'idle'; b.texto = '↩ Put back'; } },
     _btnLabel: (b, t) => { if (b) { b.estado = 'label'; b.texto = t; } },
@@ -155,7 +162,7 @@ function navegador(opts){
   }
 
   return {
-    ctx, avisos, llamadas, correr, boton,
+    ctx, avisos, restaurados, llamadas, correr, boton,
     get recargas(){ return recargas; },
     run: (e) => vm.runInContext(e, ctx),
     pulsar: (movId) => {
@@ -194,7 +201,7 @@ console.log('\n═══ el primer "Done" NO desarma a los demás ═══\n');
   n.correr();
 
   check('los cinco acabaron llegando al servidor', n.llamadas.length === 5, n.llamadas.length);
-  check('los cinco se restauraron', n.avisos.filter(a => /✓ Movement restored/.test(a.msg)).length === 5);
+  check('los cinco se restauraron', n.restaurados.filter(Boolean).length === 5);
   check('y la lista quedó vacía', (n.ctx._cache.trash || []).length === 0);
 }
 
@@ -247,7 +254,7 @@ console.log('\n═══ pulsar dos veces el mismo ═══\n');
   check('no encola dos restauraciones del mismo movimiento', n.llamadas.length === 1);
   n.correr();
   check('...y sólo se restaura una vez',
-        n.avisos.filter(a => /✓ Movement restored/.test(a.msg)).length === 1);
+        n.restaurados.filter(Boolean).length === 1);
 }
 
 console.log('\n═══ una recarga, no cinco ═══\n');
@@ -277,7 +284,7 @@ console.log('\n═══ y si uno falla ═══\n');
   check('el fallo se explica con palabras, sin marcas internas',
         n.avisos.some(a => /already back/.test(a.msg)));
   check('y los otros dos sí se restauraron — un fallo no arrastra a la ráfaga',
-        n.avisos.filter(a => /✓ Movement restored/.test(a.msg)).length === 2);
+        n.restaurados.filter(Boolean).length === 2);
   check('tras un fallo sí se vuelve a pedir la lista: la de pantalla ya no es de fiar',
         n.ctx.recargasDeLista >= 1);
 }

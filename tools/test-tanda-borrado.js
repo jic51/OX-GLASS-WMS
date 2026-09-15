@@ -418,4 +418,96 @@ m.seccion('el latido no pide lo que va a tirar');
     !/_dataStamp\s*=/.test(p));
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+m.seccion('restaurar también cuenta, y no avisa uno por uno');
+
+/* Jose, viendo restaurar cinco movimientos: "también quiero que los toast no
+   aparezcan al hacer otras cosas que no necesitan, ejemplo: restaurar
+   movimientos... y como todos los movimientos van desapareciendo, al final
+   debería decir cuántos fueron restaurados".
+
+   Restaurar NO va por la cola de borrados, va por la cola de escrituras, y cada
+   clic es suyo: no hay botón de "restaurar todos". Así que la línea tiene que
+   saber sumar clics sueltos a una tanda viva. */
+{
+  const ctx = {
+    Math, Date, String, Number, JSON, Array, Object,
+    setTimeout: () => 1, clearTimeout: () => {},
+    console: { log(){}, warn(){}, error(){} }
+  };
+  const pantalla = { icono: '', texto: '', contador: '', clases: '' };
+  ctx.document = { getElementById: (id) => ({
+    progWrap:  { set className(v){ pantalla.clases = v; }, get className(){ return pantalla.clases; } },
+    progIcon:  { set className(v){}, get className(){ return ''; },
+                 set textContent(v){ pantalla.icono = v; }, get textContent(){ return pantalla.icono; } },
+    progMsg:   { set textContent(v){ pantalla.texto = v; }, get textContent(){ return pantalla.texto; } },
+    progCount: { set textContent(v){ pantalla.contador = v; }, get textContent(){ return pantalla.contador; } }
+  }[id] || null) };
+  ctx._prog = null; ctx._progHideT = null;
+
+  const caja = A.montar(ctx, HTML,
+    ['_progStart', '_progStep', '_progPaint', '_progFinish', '_progHide',
+     '_progFinBorrado', '_progFinRestaurado'], {});
+
+  // Cinco clics sueltos en "Put back", uno detrás de otro.
+  for (let i = 0; i < 5; i++) caja._progStart(1, 'Restoring movements', caja._progFinRestaurado);
+  m.check('cinco clics sueltos son UNA tanda de cinco, no cinco de uno',
+    pantalla.contador === '0 of 5', pantalla.contador);
+  m.check('...y la línea dice qué está pasando',
+    pantalla.texto === 'Restoring movements…', pantalla.texto);
+
+  for (let i = 0; i < 5; i++) caja._progStep(true);
+  m.check('al final dice CUÁNTOS fueron restaurados, que es lo que Jose pidió',
+    pantalla.texto === '5 movements put back.', pantalla.texto);
+  m.check('...con el check verde', pantalla.icono === '✅');
+
+  /* Y CADA TANDA TERMINA COMO LO SUYO. Sin esto, restaurar cinco habría dicho
+     "5 movements moved to the trash" — lo contrario de lo que pasó. */
+  m.check('el final del borrado y el de restaurar son frases distintas',
+    caja._progFinBorrado(5, 0) !== caja._progFinRestaurado(5, 0));
+  m.check('...y ninguno dice lo del otro',
+    !/trash/.test(caja._progFinRestaurado(5, 0)) &&
+    !/put back/.test(caja._progFinBorrado(5, 0)));
+  m.check('restaurar uno solo va en singular',
+    caja._progFinRestaurado(1, 0) === 'Movement put back.');
+  m.check('...y con fallos dice los dos números',
+    caja._progFinRestaurado(3, 2) === '3 put back · 2 could not be restored');
+
+  /* DOS TRABAJOS DISTINTOS NO COMPARTEN CONTADOR. Si borrar y restaurar
+     sumaran en la misma tanda, el final contaría una cosa de la otra. */
+  caja._progStart(4, 'Restoring movements', caja._progFinRestaurado);
+  caja._progStep(true);
+  caja._progStart(2, 'Deleting movements');
+  m.check('empezar otro trabajo abre tanda nueva en vez de sumar a la anterior',
+    pantalla.contador === '0 of 2', pantalla.contador);
+  caja._progStep(true); caja._progStep(true);
+  m.check('...y termina con la frase del trabajo que de verdad se hizo',
+    pantalla.texto === '2 movements moved to the trash.', pantalla.texto);
+
+  // Un clic la cierra: seis segundos delante de algo que quieres leer son seis
+  // segundos.
+  caja._progHide();
+  m.check('un clic la cierra', pantalla.clases === '');
+}
+
+{
+  // Y que el camino de restaurar de verdad haya dejado de avisar uno por uno.
+  const rest = A.fnSrc(HTML, '_restoreMovement');
+  m.check('restaurar abre la tanda al pulsar',
+    /_progStart\(1, 'Restoring movements', _progFinRestaurado\)/.test(rest));
+  m.check('...cuenta el éxito en la línea, sin toast', /_progStep\(true\)/.test(rest));
+  m.check('...y ya no saca "Movement restored"', !/Movement restored/.test(rest));
+  m.check('pero un FALLO sigue siendo un aviso, porque hay que leerlo',
+    /_progStep\(false\)[\s\S]{0,200}showToast\(/.test(rest));
+}
+
+{
+  // El sitio. A la derecha se sentaba encima de las tarjetas en pantalla grande.
+  const css = HTML.slice(HTML.indexOf('#progWrap{'), HTML.indexOf('#progWrap{') + 400);
+  m.check('la línea va a la IZQUIERDA, no encima de las tarjetas',
+    /left:1\.25rem/.test(css) && !/right:1\.25rem/.test(css), css.slice(0, 60));
+  m.check('...y el final se queda seis segundos, no dos y medio',
+    /fallados \? 10000 : 6000/.test(A.fnSrc(HTML, '_progFinish')));
+}
+
 m.fin();
