@@ -676,5 +676,94 @@ console.log('\n═══ lo que se guarda es lo que se escribió, sin comillas �
   check('...no una fecha', !(po instanceof Date));
 }
 
+// ── NADIE CITA DOS VECES ────────────────────────────────────────────────────
+//
+// TERCERA VEZ QUE EL MISMO FALLO SALE POR OTRA PUERTA, y por eso deja de
+// buscarse a mano y pasa a contarse.
+//
+//   1. rewriteArchiveColumn_ — los llamadores citaban y el reescritor volvía a
+//      citar. Lo cacé escribiendo su prueba.
+//   2. addMovementsBatch_    — trece valores citados y la fila citada otra vez.
+//      Lo encontró Jose en su historial: 'WINDOW, 'JOSE JOSE, 'UNIT, '16598.
+//   3. modifyMovementLocked_ — el campo editado citado y la fila citada otra
+//      vez. Lo encontró Jose OTRA VEZ, al día siguiente, editando un nombre:
+//      'JOSE I. Mi barrido de la segunda vez no lo vio porque buscaba
+//      "= textCell_(" al principio de la línea y aquí está dentro de un
+//      ternario.
+//
+// Buscar a ojo se equivocó las tres veces. La regla, dicha entera:
+//
+//     UNA FUNCIÓN QUE ESCRIBE LA FILA CON textSafeRow_ NO CITA SUS VALORES.
+//     Se cita UNA VEZ, EN EL BORDE.
+//
+// Lo que Sheets hace con dos comillas no es "poner dos": se come la primera
+// —es su marca de "esto es texto"— y guarda la segunda DENTRO del dato. Y
+// cuando el dato es la categoría o el nombre, el MatID se compone de ellos, así
+// que el material deja de ser el mismo y sus existencias se parten.
+console.log('\n═══ nadie cita dos veces ═══\n');
+{
+  /* Revisadas y descartadas, con su motivo, y la lista falla si se queda vieja
+     — el mismo trato que test-no-caduca y test-cost-privacy dan a las suyas. */
+  const REVISADAS = {
+    refreshDerivedSheets_:
+      'No es doble: el textCell_ escribe el MatID celda a celda con setValue ' +
+      '(reparación de MatID), y los textSafeRow_ escriben OTRAS hojas — ' +
+      'LIVE_STOCK, SITE_STOCK y WASTED_STOCK. Son escrituras distintas a ' +
+      'sitios distintos; ninguna fila pasa dos veces.'
+  };
+
+  const LINEAS = GS.split('\n');
+  let fn = '(top)';
+  const info = {};
+  for (let i = 0; i < LINEAS.length; i++){
+    const m = /^function ([A-Za-z0-9_]+)/.exec(LINEAS[i]);
+    if (m){ fn = m[1]; info[fn] = { val: [], esc: [] }; }
+    if (!info[fn]) continue;
+    const l = LINEAS[i];
+    if (/^\s*\/\//.test(l) || /^\s*\*/.test(l)) continue;   // comentarios fuera
+    const citaValor = /textCell_\(/.test(l);
+    const citaFila  = /textSafeRow_|map\(textCell_\)/.test(l);
+    if (citaValor && !citaFila) info[fn].val.push(i + 1);
+    if (citaFila) info[fn].esc.push(i + 1);
+  }
+
+  const sospechosas = Object.keys(info).filter(k => info[k].val.length && info[k].esc.length);
+  const culpables   = sospechosas.filter(k => !REVISADAS[k]);
+  const descartadas = sospechosas.filter(k => REVISADAS[k]);
+
+  check('ninguna función cita el valor Y la fila — la que lo haga guarda una ' +
+        'comilla DENTRO del dato' +
+        (culpables.length ? ' → ' + culpables.join(', ') : ''),
+    culpables.length === 0, culpables.map(k => k + ': valor ' + info[k].val.join(',') +
+                                              ' / fila ' + info[k].esc.join(',')));
+
+  const rancias = Object.keys(REVISADAS).filter(k => descartadas.indexOf(k) === -1);
+  check('y ninguna excepción se ha quedado vieja', rancias.length === 0, rancias);
+  descartadas.forEach(k => console.log('    · revisada y descartada — ' + k + ': ' + REVISADAS[k]));
+
+  // El detector tiene que poder encontrar algo. Uno que no sabe buscar pasa
+  // siempre, y eso se parece mucho a estar funcionando.
+  const falsa = ['function f(){',
+                 "  rowVals[c] = (k === 'qty') ? 0 : textCell_(nuevo);",
+                 '  range.setValues([textSafeRow_(rowVals)]);', '}'].join('\n');
+  const lf = falsa.split('\n');
+  let v = 0, e = 0;
+  lf.forEach(l => {
+    if (/textCell_\(/.test(l) && !/textSafeRow_/.test(l)) v++;
+    if (/textSafeRow_/.test(l)) e++;
+  });
+  check('una función de mentira con la forma EXACTA que tenía ' +
+        'modifyMovementLocked_ —el ternario— sería señalada', v === 1 && e === 1);
+
+  // Y las tres que ya se arreglaron, por su nombre: una regla que no recuerda
+  // sus propios casos se afloja en la primera discusión.
+  ['addMovementsBatch_', 'modifyMovementLocked_'].forEach(n => {
+    check(n + ' entrega los valores CRUDOS a la escritura',
+      info[n] && info[n].val.length === 0, info[n] && info[n].val);
+  });
+  check('rewriteArchiveColumn_ cita él, y sus llamadores le dan el valor crudo',
+    /out\.push\(\[textCell_\(/.test(GS));
+}
+
 console.log('\n' + (fail ? '✗ ' + fail + ' fallo(s), ' : '✓ ') + ok + ' comprobacion(es) ok\n');
 process.exit(fail ? 1 : 0);

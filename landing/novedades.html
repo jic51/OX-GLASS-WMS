@@ -97,6 +97,24 @@
        almacén?</p>
 
     <div class="entry">
+      <span class="ver">v11.87</span>
+      <span class="tag fix">Arreglado</span>
+      <h3>La comilla otra vez — ahora al editar</h3>
+      <p>La versión anterior arregló guardar un movimiento. Editar uno seguía
+         metiendo una comilla, y sólo en los campos que de verdad cambiabas —
+         por eso crear una entrada se veía bien y editarla no.</p>
+      <p>Aquí importa más que en el otro camino: cuando cambia la categoría o el
+         nombre, la identidad del material se recompone a partir de ellos, así
+         que una comilla ahí habría hecho que la fila dejara de coincidir con su
+         propio material.</p>
+      <p>Tercera vez que el mismo fallo sale por otra puerta, así que deja de
+         buscarse a mano: ahora lo cuenta una comprobación. La regla que exige
+         cabe en una línea — una función que escribe la fila con el guardián de
+         texto no cita además sus propios valores. Se cita una vez, en el
+         borde.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.86</span>
       <span class="tag fix">Arreglado</span>
       <h3>Una comilla delante de todo lo guardado</h3>

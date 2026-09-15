@@ -95,6 +95,23 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.87</span>
+      <span class="tag fix">Fixed</span>
+      <h3>The apostrophe again — this time when editing</h3>
+      <p>The previous version fixed saving a movement. Editing one still added
+         an apostrophe, and only to the fields you actually changed, which is
+         why creating an entry looked fine and editing one did not.</p>
+      <p>It matters more on this path than on the other: when the category or
+         name changes, the material's identity is rebuilt from them, so an
+         apostrophe there would have made the row stop matching its own
+         material.</p>
+      <p>Third time the same mistake came out through a different door, so it
+         is no longer looked for by hand — a check now counts them. The rule it
+         enforces is one line: a function that writes the row through the text
+         guard does not also guard its own values. Quote once, at the edge.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.86</span>
       <span class="tag fix">Fixed</span>
       <h3>An apostrophe in front of everything just saved</h3>
