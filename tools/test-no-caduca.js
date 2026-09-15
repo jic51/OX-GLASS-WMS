@@ -92,6 +92,12 @@ const SE_ALINEA_SOLA = /new\s+Date\s*\(\s*\)/;
 // test-cost-privacy a su lista INTERNAL, y por la misma razón — una excepción
 // que nadie vuelve a mirar deja de ser una excepción y pasa a ser un agujero.
 const REVISADAS = {
+  'test-carrera-incoming.js':
+    'Las fechas son el campo estDate de las entregas de mentira, que nunca se ' +
+    'compara con nada. El new Date() está dentro de addIncoming y sólo sirve ' +
+    'para componer el id (INC-<milisegundos>). Señalada por este mismo guardia ' +
+    'el día que se escribió, que es exactamente para lo que está: la forma ' +
+    'estaba, el daño no.',
   'test-config-snapshot.js':
     'La fecha es el VALOR de LAST_BACKUP_AT, y lo que la prueba comprueba es ' +
     'que ese valor NO salga en el volcado. El new Date() de writeConfigSnapshot_ ' +

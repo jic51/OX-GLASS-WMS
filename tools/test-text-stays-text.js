@@ -400,6 +400,11 @@ console.log('\n═══ el PO de una entrega esperada sobrevive a ida y vuelta 
       fnSrc(GS, 'safeStr_'), fnSrc(GS, 'incomingStatus_'),
       fnSrc(GS, 'incomingDateMode_'), fnSrc(GS, 'incomingDateCell_'),
       fnSrc(GS, 'incomingCellDate_'),
+      // withStockLock_ de mentira: desde la v11.85 las tres acciones de
+      // entregas esperadas van dentro del candado. Aquí sólo hace falta que
+      // deje pasar — lo que el candado impide se mide en
+      // test-carrera-incoming.js, que es su sitio.
+      'function withStockLock_(fn){ return fn(); }',
       fnSrc(GS, 'addIncoming'), fnSrc(GS, 'updateIncoming')
     ].join('\n'), c);
     return {

@@ -85,6 +85,7 @@ node tools/test-lock-visible.js
 node tools/test-inc-supplier.js
 node tools/test-no-caduca.js
 node tools/test-entry-todo-corre.js
+node tools/test-carrera-incoming.js
 node tools/test-short-stock.js
 node tools/test-settings-boxes.js
 node tools/test-toast-and-buttons.js
@@ -631,6 +632,30 @@ come back from — is invisible to both. Those get a browser test.
   `_incMatchesMove`, because two similar copies means the day one is tuned the
   app says "it is in A-3" about a delivery it is simultaneously offering to
   mark as arrived.
+- `test-carrera-incoming.js` — two people at once cannot make one person's edit
+  land on somebody else's delivery (v11.85). `deleteIncoming` removed the row by
+  NUMBER — `deleteRow(i + 1)`, and everything below shifts up — while
+  `updateIncoming` wrote by its own, and neither took the lock: A opens delivery
+  #5 (found at row 6), B deletes #2, A saves into row 6, which is now a
+  different delivery. Both actions are ADMIN and Jose works with two accounts
+  open. It is the same lesson he confirmed live on 2026-09-07 about movements —
+  "a row number is what made this dangerous" — applied there and never wired in
+  here. The test runs the REAL functions against a fake sheet whose `deleteRow`
+  actually shifts, and INTERLEAVES the delete at the exact moment the edit has
+  read and not yet written. The first version of this test was wrong and the
+  mistake is worth keeping: it called `deleteRow` straight on the sheet from
+  inside the write, which bypasses the lock entirely — forcing a failure
+  underneath the fix proves the test is broken, not that the fix is missing. It
+  now models what really happens, two separate Apps Script executions, by having
+  the fake lock refuse re-entry the way `tryLock` does. It also guards the other
+  half: the script lock is ONE for the whole script, so an incoming edit can now
+  wait behind a movement save, and without the browser retry this would have
+  traded a silent race for a visible error — which is not a fix. Including the
+  trap that nearly shipped: the delete's retry must re-SEND, not re-enter
+  `_doDeleteIncomingItem`, because `_busyRetry` deliberately leaves the button
+  busy and the re-entry would have turned around at `if (btn && btn.disabled)
+  return` and lost the delete in silence. Verified by removing the lock and
+  watching four assertions go red.
 - `test-entry-todo-corre.js` — the orange "it arrived, its entry is missing"
   card is cleared because we WATCHED IT HAPPEN, not because the call appears in
   the source. Until v11.70 saving an ENTRY never cleared it, so the card kept

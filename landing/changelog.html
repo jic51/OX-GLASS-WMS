@@ -95,6 +95,25 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.85</span>
+      <span class="tag safe">Safer</span>
+      <h3>Two people at once can no longer overwrite each other's deliveries</h3>
+      <p>Editing an expected delivery and deleting one were not coordinated. If
+         somebody deleted a delivery while you had another one open, your save
+         could land on a different delivery than the one you edited — and the
+         colleague whose delivery you overwrote would never find out.</p>
+      <p>The three delivery actions now take turns properly, and the screens
+         wait their turn and retry instead of showing an error. The same lesson
+         was applied to movements in September; this is where it had not been
+         wired in.</p>
+      <p>Separately, removing a user through the old admin path deleted a whole
+         row of the settings sheet — where each column is a different list — so
+         it could have taken a project, a category, a supplier and a location
+         with it. No button in the app reaches that path, so it never happened;
+         it now clears just the user's own two cells.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.84</span>
       <span class="tag fix">Fixed</span>
       <h3>Error messages never show the app's own wiring</h3>

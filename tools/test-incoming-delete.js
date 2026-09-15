@@ -45,6 +45,15 @@ const code = [
   // de medir el producto.
   "var SHORT_PREFIX = 'SHORT_STOCK|';",
   slice('function _stripTags(', '\nfunction ', '_stripTags'),
+  // Y el reintento: desde la v11.85 deleteIncoming toma el candado del
+  // script, así que puede contestar "ocupado" y esta pantalla tiene que
+  // saber esperar turno. Sin levantarlo, la página revienta por el andamio.
+  "var BUSY_PREFIX = 'SYSTEM_BUSY|';",
+  "var BUSY_MAX_RETRIES = 8;",
+  "var BUSY_LABEL = 'Waiting…';",
+  slice('function _isBusyError(', '\nfunction ', '_isBusyError'),
+  slice('function _busyDelay(',   '\nfunction ', '_busyDelay'),
+  slice('function _busyRetry(',   '\nfunction ', '_busyRetry'),
   slice('function _doDeleteIncomingItem(', '// ── Read an email into expected deliveries', '_doDeleteIncomingItem')
 ].join('\n');
 

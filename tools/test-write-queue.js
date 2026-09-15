@@ -293,14 +293,29 @@ console.log('\n═══ un error de verdad se explica, no se reintenta ══�
         n.avisos[0].msg.indexOf('Error:') === -1);
 }
 
-console.log('\n═══ los ocho caminos con candado ═══\n');
+console.log('\n═══ los caminos con candado ═══\n');
 {
-  // El servidor: exactamente estas ocho funciones toman withStockLock_ y por
-  // tanto pueden contestar SYSTEM_BUSY. Si alguien añade una novena, esta
-  // cuenta lo dice y hay que protegerla en el navegador.
+  /* El servidor: estas funciones toman withStockLock_ y por tanto pueden
+     contestar SYSTEM_BUSY. La cuenta está aquí para que añadir una NOVENA
+     rompa la prueba a propósito — porque cada una necesita que su pantalla
+     sepa esperar turno, y ese cableado es justo el que se olvida.
+
+     SUBIÓ A ONCE EL 2026-09-14, y funcionó como debía: al meter las tres
+     acciones de entregas esperadas dentro del candado, esta cuenta se cayó y
+     obligó a comprobar que las dos pantallas que las llaman reintentan. Lo
+     hacen — ver test-carrera-incoming.js, que lo ejecuta. */
   const conCandado = (GS.match(/withStockLock_\(/g) || []).length - 1;  // -1: la definición
-  check('siguen siendo ocho las funciones del servidor que pueden decir "ocupado"',
-        conCandado === 7 || conCandado === 8);
+  check('la cuenta de funciones que pueden decir "ocupado" es la esperada (' +
+        conCandado + ') — si sube, la nueva necesita reintento en su pantalla',
+        conCandado >= 10 && conCandado <= 11, conCandado);
+  check('las tres entregas esperadas están entre ellas, y sus dos pantallas ' +
+        'reintentan — el candado sin reintento cambia una carrera silenciosa ' +
+        'por un error visible, que no es un arreglo',
+    /function addIncoming[\s\S]{0,900}withStockLock_/.test(GS) &&
+    /function updateIncoming[\s\S]{0,900}withStockLock_/.test(GS) &&
+    /function deleteIncoming[\s\S]{0,900}withStockLock_/.test(GS) &&
+    /_busyRetry\(/.test(fnSrc(HTML, 'saveIncomingItem')) &&
+    /_busyRetry\(/.test(fnSrc(HTML, '_doDeleteIncomingItem')));
 
   const sitios = [
     ['Check my data → Apply', /_acWrite\(\{\s*\n?\s*args: \['applyDataQualityFix'/],
