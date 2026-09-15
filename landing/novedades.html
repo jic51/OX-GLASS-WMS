@@ -97,6 +97,28 @@
        almacén?</p>
 
     <div class="entry">
+      <span class="ver">v11.86</span>
+      <span class="tag fix">Arreglado</span>
+      <h3>Una comilla delante de todo lo guardado</h3>
+      <p>Los movimientos guardados con la versión anterior metían una comilla
+         delante de cada texto — <code>'WINDOW</code>, <code>'UNIT</code>,
+         <code>'16598</code>. Se estaban aplicando dos protecciones donde hacía
+         falta una, y la hoja de cálculo se quedaba la segunda DENTRO del
+         dato.</p>
+      <p>Y no era sólo feo: la identidad de un material se compone de su
+         categoría y su nombre, así que una fila guardada así no coincidía con
+         el mismo material guardado antes, y sus existencias se habrían partido
+         en dos. El guardado está corregido, y la prueba que existe para esto
+         ahora ejecuta el guardado de punta a punta en vez de leer el código —
+         que es justamente por lo que lo había dejado pasar.</p>
+      <p>Además: la ventana de salida ya no se abre sólo para decir que no.
+         Elegir un material trabado contesta con el motivo ANTES del
+         formulario, en vez de abrirlo y enseñar "locked" en letra pequeña. Y el
+         proveedor en la tarjeta de entrega es ahora una insignia, de un solo
+         color para todos, en vez de texto detrás de un guion.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.85</span>
       <span class="tag safe">Más seguro</span>
       <h3>Dos personas a la vez ya no pueden pisarse las entregas</h3>

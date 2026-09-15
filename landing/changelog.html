@@ -95,6 +95,26 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.86</span>
+      <span class="tag fix">Fixed</span>
+      <h3>An apostrophe in front of everything just saved</h3>
+      <p>Movements saved on the previous version stored an apostrophe in front
+         of every text value — <code>'WINDOW</code>, <code>'UNIT</code>,
+         <code>'16598</code>. Two protections were being applied where one was
+         needed, and the spreadsheet kept the second one inside the data.</p>
+      <p>It was not only ugly: a material's identity is built from its category
+         and name, so a row saved that way did not match the same material saved
+         before it, and its stock would have split in two. Saving is corrected,
+         and the check that exists for this now runs the save end to end instead
+         of reading the code — which is exactly why it had let this through.</p>
+      <p>Also: the exit window no longer opens just to say no. Choosing a
+         material that is locked now answers with the reason before the form,
+         instead of opening it and showing "locked" in small print. And the
+         supplier on a delivery card is now a badge, in one colour for every
+         supplier, instead of text after a dash.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.85</span>
       <span class="tag safe">Safer</span>
       <h3>Two people at once can no longer overwrite each other's deliveries</h3>

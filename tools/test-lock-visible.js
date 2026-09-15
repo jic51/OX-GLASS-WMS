@@ -219,6 +219,58 @@ console.log('\n═══ y existe el estilo del candado ═══\n');
     /\.sc-lock\{[^}]*cursor:help/.test(HTML));
 }
 
+console.log('\n═══ y la ventana de salida NO se abre para decir que no ═══\n');
+{
+  /* Jose, 2026-09-15, con dos capturas: marcó 44 NORTH —trabado en C3B—, pulsó
+     "Exit Selected", y la app abrió el formulario ENTERO de salida para luego
+     decirle "locked" en letra pequeña al lado de la cantidad. Sus palabras:
+     "la ventana no debería abrirse sólo para decir que no se puede".
+     No es sólo estética: un formulario abierto es una invitación a rellenarlo,
+     y enseñarlo cuando la respuesta ya es no cuesta el tiempo dos veces. */
+  const c = vm.createContext({ console });
+  vm.createContext(c);
+  ['_normKey', '_rebuildLocksIndex', '_findLock', '_exitBloqueado'].forEach(
+    n => vm.runInContext(fnSrc(n), c));
+  vm.runInContext('var materialLocks = []; var _locksByKey = {};', c);
+
+  const material = (locs) => ({ matId: 'SCREEN|||44 NORTH', name: '44 NORTH',
+                                category: 'SCREEN', warehouseLocs: locs });
+  const trabar = (l) => vm.runInContext(
+    'materialLocks = ' + JSON.stringify(l) + '; _rebuildLocksIndex();', c);
+  const motivo = (m) => { c.__s = m; return vm.runInContext('_exitBloqueado(__s)', c); };
+
+  trabar([]);
+  check('sin candado, nada bloquea la salida', motivo(material({ C3B: 142 })) === '');
+
+  trabar([{ id: 'L1', matId: 'SCREEN|||44 NORTH', rack: 'C3B', allowedDest: [],
+            reason: 'NEEDED FOR OTHER PROJECT', lockedBy: 'jose@ox' }]);
+  const m1 = motivo(material({ C3B: 142 }));
+  check('con su ÚNICO estante trabado, la salida está bloqueada', m1 !== '', m1);
+  check('...y el motivo viaja con el bloqueo, que es lo que Jose pidió ver',
+    /NEEDED FOR OTHER PROJECT/.test(m1) && /C3B/.test(m1), m1);
+
+  // LA MITAD QUE EVITA PASARSE. Con un estante libre el formulario SÍ sirve.
+  const m2 = motivo(material({ C3B: 142, A1A: 8 }));
+  check('con un estante libre NO se bloquea — ahí la salida sigue teniendo ' +
+        'sentido y cerrarle la puerta sería peor que abrirla de más',
+    m2 === '', m2);
+
+  // Y el camino de verdad: que exitSelectedStock avise ANTES de abrir.
+  const salir = fnSrc('exitSelectedStock');
+  check('exitSelectedStock mira los candados antes de abrir nada',
+    salir.indexOf('_exitBloqueado') < salir.indexOf('openMoveModal'), salir.length);
+  check('...y con todo trabado NO llama a openMoveModal en absoluto',
+    /if \(!libres\.length\)\{[\s\S]*?return;/.test(salir.replace(/\s+/g, ' ').replace(/if \(!libres.length\) \{/, 'if (!libres.length){')) ||
+    /!libres\.length[\s\S]{0,600}return;/.test(salir));
+  check('el aviso lleva el candado por icono y el motivo dentro',
+    /icon: '🔒'/.test(salir) && /lista/.test(salir));
+  check('...y no ofrece un "Cancel" que no cancela nada',
+    /soloAviso:\s*true/.test(salir) &&
+    /cancelBtn\.hidden = !!opts\.soloAviso/.test(fnSrc('_showConfirm')));
+  check('con algunos libres se puede seguir con el resto en vez de perderlos',
+    /confirmText: 'Continue'/.test(salir) && /_fillExitLinesFrom\(libres\)/.test(salir));
+}
+
 console.log('\n═══ mitad 2: el candado LLEGA a la otra sesión ═══\n');
 {
   const m = /var DATA_STAMP_ACTIONS = \{([\s\S]*?)\};/.exec(GS);

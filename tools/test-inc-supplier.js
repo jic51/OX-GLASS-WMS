@@ -103,16 +103,66 @@ const PROV_LARGO   = 'WESTERN ARCHITECTURAL GLASS AND ALUMINUM SUPPLY COMPANY LL
   {
     const r = await pintar(Object.assign({}, base, { name: 'MH 145', supplier: 'AMSCO' }));
     check('el supplier sale', r.supVisible, r.textoSup);
-    check('...con el guion delante, como lo pidió', /^\s*-\s*AMSCO/.test(r.textoSup), r.textoSup);
+    // EL GUION SE FUE EL 2026-09-15. Jose lo vio puesto y pidió otra cosa:
+    // "mejor quiero que lo hagas como las categorías, pero dale un solo color
+    // para todas". Con forma de insignia el guion sobra — la caja ya dice que
+    // es otra cosa.
+    check('...sin guion delante: el texto es el proveedor y nada más',
+      r.textoSup === 'AMSCO', r.textoSup);
     check('...y en la MISMA línea que el nombre', r.mismaLinea === true);
     check('con todo corto no se recorta nada',
       !r.nombreRecortado && !r.supRecortado);
+    // Desde que el proveedor es una INSIGNIA, la fila mide un poco más que el
+    // texto suelto: la píldora lleva su propio relleno. Eso no es una segunda
+    // línea. Lo que contesta "¿se envolvió?" es que los dos trozos empiecen a
+    // la misma altura —ya comprobado arriba— y que la fila no llegue a medir lo
+    // que medirían dos. El primer intento comparaba contra la altura del NOMBRE
+    // y se caía por los cuatro píxeles del relleno.
     const unaLinea = r.altoNombre;
-    check('la línea mide lo que mide UNA línea', unaLinea > 0 && r.alto <= unaLinea + 2,
-      { alto: r.alto, unaLinea });
+    check('la fila sigue siendo UNA línea, no dos — la insignia la engorda un ' +
+          'poco, envolverse la doblaría',
+      unaLinea > 0 && r.alto < unaLinea * 1.8, { alto: r.alto, unaLinea });
   }
 
-  console.log('\n═══ nombre larguísimo: se acorta ÉL, y el supplier no baja ═══\n');
+  console.log('\n═══ y es una insignia, de un solo color ═══\n');
+{
+  const r = await pintar(Object.assign({}, base, { name: 'MH 145', supplier: 'AMSCO' }));
+  const est = await page.evaluate(() => {
+    const el = document.querySelector('.inc-name-sup');
+    const c  = getComputedStyle(el);
+    const cat = document.querySelector('.inc-item-cat span');
+    return { fondo: c.backgroundColor, letra: c.color, radio: c.borderRadius,
+             tieneCaja: c.paddingLeft !== '0px' };
+  });
+  check('tiene fondo propio, no es texto suelto',
+    est.fondo !== 'rgba(0, 0, 0, 0)' && est.fondo !== 'transparent', est.fondo);
+  check('...oscuro', (() => {
+    const m = est.fondo.match(/\d+/g).map(Number);
+    return (m[0] + m[1] + m[2]) / 3 < 110;   // media de canales: oscuro
+  })(), est.fondo);
+  check('...con la letra blanca, que es lo que contrasta con él',
+    est.letra === 'rgb(255, 255, 255)', est.letra);
+  check('...y forma de píldora, como las categorías', parseFloat(est.radio) >= 8, est.radio);
+  check('...con su caja alrededor, no pegado al nombre', est.tieneCaja);
+
+  // UN SOLO COLOR PARA TODOS. La categoría se colorea porque el color dice qué
+  // tipo de material es; el proveedor no tiene tipos, y darle colores distintos
+  // inventaría un significado que no existe.
+  const otro = await page.evaluate(() => {
+    const el = document.querySelector('.inc-name-sup');
+    return getComputedStyle(el).backgroundColor;
+  });
+  const r2 = await pintar(Object.assign({}, base, { name: 'X', supplier: 'HARTUNG' }));
+  const otro2 = await page.evaluate(() => {
+    const el = document.querySelector('.inc-name-sup');
+    return getComputedStyle(el).backgroundColor;
+  });
+  check('dos proveedores distintos, el MISMO color — el color no significa nada ' +
+        'aquí, y fingir que sí es inventarle un dato al usuario',
+    otro === otro2, { AMSCO: otro, HARTUNG: otro2 });
+}
+
+console.log('\n═══ nombre larguísimo: se acorta ÉL, y el supplier no baja ═══\n');
   {
     const corto = await pintar(Object.assign({}, base, { name: 'MH 145', supplier: 'AMSCO' }));
     const r = await pintar(Object.assign({}, base, { name: NOMBRE_LARGO, supplier: 'AMSCO' }));

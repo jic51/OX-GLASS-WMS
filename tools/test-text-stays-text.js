@@ -572,5 +572,109 @@ console.log('\n═══ y el guardián débil ya no está para elegirlo ══�
     /textCell_/.test(fnSrc(GS, 'writeMovIdColumn_')));
 }
 
+// ── EL GUARDADO, DE PUNTA A PUNTA ───────────────────────────────────────────
+//
+// ESTE ARCHIVO DEJÓ PASAR UN FALLO EN LA v11.81, Y HAY QUE DECIR POR QUÉ.
+//
+// Su cabecera promete, punto 4: "que la comilla NO forme parte del valor". Y lo
+// comprobaba... sobre la hoja falsa suelta, escribiéndole "'07-6329" a mano.
+// El CAMINO DE GUARDADO no lo ejecutaba nunca: lo miraba por el texto del
+// código, buscando que apareciera textSafeRow_.
+//
+// Así que cuando addMovementsBatch_ pasó a citar DOS veces —textCell_ en cada
+// valor al construir la fila, y textSafeRow_ otra vez al escribirla— esta
+// prueba siguió verde. Jose lo encontró en su historial: 'WINDOW, 'JOSE JOSE,
+// 'UNIT, '16598, '16598, 'B. Una comilla guardada DENTRO del dato.
+//
+// Y no era un detalle estético: el matId se compone de categoría y nombre, así
+// que "'WINDOW|||'JOSE JOSE" no es el mismo material que "WINDOW|||JOSE JOSE".
+// Las existencias se parten en dos sin que nadie lo pida.
+//
+// Lo que sigue EJECUTA el bloque real que arma la fila —sacado del archivo, no
+// copiado— y la escribe con la línea real, contra la hoja que parsea como
+// Sheets. Lo que se afirma es lo que quedó en la celda.
+console.log('\n═══ lo que se guarda es lo que se escribió, sin comillas ═══\n');
+{
+  const ini = GS.indexOf('      var row = new Array(AC_WIDTH);');
+  const fin = GS.indexOf('newRows.push(row);', ini);
+  const armar = GS.slice(ini, fin + 'newRows.push(row);'.length);
+  check('el bloque que arma la fila se pudo sacar del archivo', ini !== -1 && fin !== -1);
+
+  const escribir = (GS.match(/archive\.getRange\(startRow, 1, newRows\.length, AC_WIDTH\)\.setValues\([^;]+\);/) || [])[0];
+  check('...y la línea que la escribe también', !!escribir);
+
+  const cab = new Array(AC_WIDTH).fill('');
+  const archive = new Hoja('MASTER_ARCHIVE_V3', [cab]);
+
+  const c = vm.createContext({
+    Date, String, Number, Math, Array, Object, JSON, console,
+    AC, AC_WIDTH, archive, startRow: 2, newRows: [],
+    now: new Date(1757000000000), tzDate: new Date(1755000000000),
+    qty: 25, statusVal: 'In Stock', mt: 'ENTRY',
+    src: '', dest: 'B', proj: '', matId: 'WINDOW|||JOSE JOSE',
+    unitCost: null, totalCost: null, takenIds: {},
+    auth: { email: 'jose@ox-glass.com' },
+    cleanDisplay_: (v) => String(v || '').toUpperCase().trim().replace(/\s+/g, ' '),
+    uniqueMovId_: () => 'M-0001',
+    // Los datos tal como los tecleó Jose en la captura que lo encontró.
+    d: { category: 'WINDOW', name: 'JOSE JOSE', gc: '', po: '16598',
+         unit: 'UNIT', supplier: '', comments: '', responsible: '', pm: '',
+         dateRec: new Date(1757000000000) }
+  });
+  vm.runInContext(fnSrc(GS, 'textCell_') + '\n' + fnSrc(GS, 'textSafeRow_') + '\n' +
+                  fnSrc(GS, 'safeStr_'), c);
+  vm.runInContext('(function(){' + armar + '})();', c);
+  vm.runInContext(escribir, c);
+
+  const fila = archive.rows[1];
+  const leer = (col) => { c.__v = fila[col]; return vm.runInContext('safeStr_(__v)', c); };
+
+  // LAS ASERCIONES DEL FALLO DE JOSE, una por cada cosa que él vio con comilla.
+  check('la categoría se guarda sin comilla delante', leer(AC.CATEGORY) === 'WINDOW', fila[AC.CATEGORY]);
+  check('el nombre del material tampoco', leer(AC.NAME) === 'JOSE JOSE', fila[AC.NAME]);
+  check('la unidad tampoco', leer(AC.UNIT) === 'UNIT', fila[AC.UNIT]);
+  check('el PO tampoco', leer(AC.PO) === '16598', fila[AC.PO]);
+  check('el estante de destino tampoco', leer(AC.DEST_LOC) === 'B', fila[AC.DEST_LOC]);
+
+  // Y LA QUE CONVIERTE ESTO EN PÉRDIDA DE DATOS Y NO EN FEALDAD.
+  check('el MatID guardado es el mismo que compone getMaterialId — con comilla ' +
+        'sería otro material, y las existencias se partirían en dos',
+    leer(AC.MAT_ID) === 'WINDOW|||JOSE JOSE', fila[AC.MAT_ID]);
+
+  // Ninguna celda de texto puede empezar por comilla. Dicho como invariante y
+  // no como lista, para que valga también para las columnas que se añadan.
+  const conComilla = [];
+  for (let k2 = 0; k2 < AC_WIDTH; k2++){
+    if (typeof fila[k2] === 'string' && fila[k2].charAt(0) === "'") conComilla.push(k2);
+  }
+  check('NINGUNA celda de la fila guardada empieza por comilla',
+    conComilla.length === 0, conComilla);
+
+  // Y la otra mitad, que es la razón de que todo esto exista: un PO con forma
+  // de fecha sigue siendo texto, no una fecha.
+  const c2 = vm.createContext(Object.assign({}, {
+    Date, String, Number, Math, Array, Object, JSON, console,
+    AC, AC_WIDTH, archive: new Hoja('A', [cab]), startRow: 2, newRows: [],
+    now: new Date(1757000000000), tzDate: new Date(1755000000000),
+    qty: 25, statusVal: 'In Stock', mt: 'ENTRY',
+    src: '', dest: 'B', proj: '', matId: 'WINDOW|||X',
+    unitCost: null, totalCost: null, takenIds: {},
+    auth: { email: 'jose@ox' },
+    cleanDisplay_: (v) => String(v || '').toUpperCase().trim().replace(/\s+/g, ' '),
+    uniqueMovId_: () => 'M-0002',
+    d: { category: 'WINDOW', name: 'X', gc: '', po: PO_ROTO, unit: 'UNIT',
+         supplier: '', comments: '', responsible: '', pm: '',
+         dateRec: new Date(1757000000000) }
+  }));
+  vm.runInContext(fnSrc(GS, 'textCell_') + '\n' + fnSrc(GS, 'textSafeRow_') + '\n' +
+                  fnSrc(GS, 'safeStr_'), c2);
+  vm.runInContext('(function(){' + armar + '})();', c2);
+  vm.runInContext(escribir.replace('archive.', 'archive.'), c2);
+  const po = c2.archive.rows[1][AC.PO];
+  check('y un PO con forma de fecha sigue siendo el texto que se escribió',
+    po === PO_ROTO, po);
+  check('...no una fecha', !(po instanceof Date));
+}
+
 console.log('\n' + (fail ? '✗ ' + fail + ' fallo(s), ' : '✓ ') + ok + ' comprobacion(es) ok\n');
 process.exit(fail ? 1 : 0);
