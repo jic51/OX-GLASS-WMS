@@ -95,6 +95,37 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.90</span>
+      <span class="tag fix">Fixed</span>
+      <h3>Deleted rows stop coming back</h3>
+      <p>Deleting several movements at once looked wrong, and in one case was
+         wrong. The rows left the screen right away, as they should. Then, a few
+         seconds later, they came back — one by one, greyed out, to leave all
+         over again. Some came back not greyed out at all, and could be selected
+         and deleted a second time, which then failed with "already deleted".</p>
+      <p>Nothing was ever deleted twice: the app recognises each movement by its
+         own name and refuses the second attempt, saying who deleted it and
+         when. But the screen was showing rows that no longer existed, which is
+         its own kind of wrong.</p>
+      <p>The cause was a refresh that arrived mid-run carrying a picture of the
+         warehouse taken before the run finished. A refresh no longer paints
+         while a deletion is still in the air.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.90</span>
+      <span class="tag new">New</span>
+      <h3>One progress line instead of a stack of notices</h3>
+      <p>Deleting thirteen movements used to put thirteen notices on the screen,
+         one on top of another, over the very table you were looking at — and
+         none of them said the one thing worth knowing while you wait: how much
+         is left.</p>
+      <p>Now a single line in the corner counts them off — "4 of 13" — and ends
+         in a green check. A deletion that fails still gets its own notice,
+         because that one has to be read.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.89</span>
       <span class="tag fix">Fixed</span>
       <h3>A run of changes stops rebuilding everything, every time</h3>

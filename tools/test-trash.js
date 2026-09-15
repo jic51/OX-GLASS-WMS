@@ -363,8 +363,12 @@ console.log('\n═══ y en pantalla, al instante ═══\n');
 {
   const del = sinComentarios(fnSrc(HTML, '_doDeleteMovementRow'));
   check('manda el nombre del movimiento', /movId: mov\.movId \|\| ''/.test(del));
+  // Desde la v11.90 la salida temprana devuelve FALSE, no nada: quien llama
+  // cuenta la tanda con lo que de verdad se encoló, y un `return` pelado se lee
+  // como "sí se encoló" — la línea de progreso se quedaría esperando a una
+  // respuesta que no viene. La garantía de aquí no cambia: sale antes.
   check('...y sale antes si no encuentra el movimiento, que es lo que permite ' +
-        'leerlo sin comprobar nada más abajo', /if \(!mov\) return;/.test(del));
+        'leerlo sin comprobar nada más abajo', /if \(!mov\) return false;/.test(del));
   /* ESTA REGLA CAMBIÓ EN LA v11.75, Y ESTE ARCHIVO LA CAZÓ.
      Decía: "no se quita nada en el de FALLO: primero el servidor, luego la
      pantalla. Al revés, un 'ya lo borró otro' dejaría la fila desaparecida en

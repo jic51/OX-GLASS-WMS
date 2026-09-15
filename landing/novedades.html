@@ -97,6 +97,36 @@
        almacén?</p>
 
     <div class="entry">
+      <span class="ver">v11.90</span>
+      <span class="tag fix">Arreglado</span>
+      <h3>Las filas borradas dejan de volver</h3>
+      <p>Borrar varios movimientos a la vez se veía mal, y en un caso estaba
+         mal. Las filas se iban de la pantalla enseguida, como toca. Y unos
+         segundos después volvían —una por una, en gris, a irse otra vez—.
+         Algunas volvían sin gris siquiera, y se podían seleccionar y borrar una
+         segunda vez, que entonces fallaba con "ya está borrado".</p>
+      <p>Nunca se borró nada dos veces: la app reconoce cada movimiento por su
+         nombre propio y rechaza el segundo intento, diciendo quién lo borró y
+         cuándo. Pero la pantalla estaba enseñando filas que ya no existían, y
+         eso también está mal.</p>
+      <p>La causa era un refresco que llegaba a mitad de la tanda con una foto
+         del almacén tomada antes de que la tanda terminara. Un refresco ya no
+         pinta mientras quede un borrado en el aire.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.90</span>
+      <span class="tag new">Nuevo</span>
+      <h3>Una línea de progreso en vez de una pila de avisos</h3>
+      <p>Borrar trece movimientos ponía trece avisos en pantalla, uno encima de
+         otro, sobre la misma tabla que estabas mirando — y ninguno decía lo
+         único que interesa saber mientras esperas: cuánto falta.</p>
+      <p>Ahora una sola línea en la esquina los va contando —"4 of 13"— y termina
+         en un check verde. Un borrado que falla sigue teniendo su aviso aparte,
+         porque ése hay que leerlo.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.89</span>
       <span class="tag fix">Arreglado</span>
       <h3>Una tanda de cambios deja de reconstruirlo todo, cada vez</h3>

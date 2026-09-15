@@ -88,6 +88,7 @@ node tools/test-entry-todo-corre.js
 node tools/test-carrera-incoming.js
 node tools/test-andamio.js
 node tools/test-refresco-tanda.js
+node tools/test-tanda-borrado.js
 node tools/test-short-stock.js
 node tools/test-settings-boxes.js
 node tools/test-toast-and-buttons.js
@@ -676,6 +677,34 @@ come back from — is invisible to both. Those get a browser test.
   each job finishes before the next is queued, so the queue never has depth),
   and `_refrescoAplazado` is a VARIABLE, not a function, so the harness does not
   lift it — module state is asked for by name.
+- `test-tanda-borrado.js` — deleting several movements at once, and the two
+  things Jose filmed on 2026-09-15 (v11.90). The rows left the screen on click,
+  as they should, and then CAME BACK a few seconds later to leave one by one —
+  some of them not even greyed out, selectable, and failing with `GONE|` on the
+  second try. His own error log closed it: deleted at 3:08 PM, refused at
+  3:09:50 PM, SAME ACCOUNT, same movement. That is not two people colliding,
+  it is one screen showing the same row twice. Cause, one for both symptoms:
+  every delete moves the data stamp, this window's own heartbeat sees it
+  changed and asks for a silent reload, and that reload carries a picture taken
+  before the run finished. The v11.53 sequence guard does not cover it and that
+  is worth stating, because it looks like it should: that rule drops responses
+  that arrive OUT OF ORDER, and this one arrives in turn — it is the newest
+  there is. What is stale is not the response, it is the moment the picture was
+  taken. So the rule added is not about order, it is about timing: while a
+  delete is in the air, no reload paints. The test does not read the file for
+  phrases — it EXTRACTS the real guard out of `loadDataFromGoogle` and executes
+  it, and runs the real delete queue against a fake server that answers on
+  demand, which is the only way the queue ever has depth (the same mistake
+  `test-refresco-tanda` made first). It also pins the old rule alone letting the
+  mid-run picture through, so the bug is demonstrated and not just asserted.
+  Second half: thirteen deletes used to raise thirteen toasts stacked over the
+  table; now one line counts them off and ends in a green check, and a FAILED
+  delete still gets its own toast because that one has to be read. The counter
+  counts what was actually QUEUED, not what was selected — a row already being
+  deleted does not queue a second time, and counting it would leave the line
+  stuck at "12 of 13" waiting for an answer that never comes. Writing the test
+  is what caught `_doDeleteMovementRow` returning nothing at all on the happy
+  path, so every caller read it as "did not queue".
 - `test-andamio.js` — the only test whose subject is the scaffolding. It pins
   ALL SIX of the real breakages by name, checking the dependency that was
   missing each time is now resolved on its own, plus that the resolver knows how

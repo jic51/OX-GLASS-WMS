@@ -93,7 +93,11 @@ console.log('\n═══ y las que guardan algo, no ═══\n');
 // nombran uno a uno: "hay N silenciosas" pasaría igual si una de éstas
 // desapareciera y apareciera otra en cualquier parte.
 const DEBEN_SER_SILENCIOSAS = [
-  ['borrar un movimiento',        /Movement deleted[\s\S]{0,400}?loadDataFromGoogle\(true, true\)/],
+  // Desde la v11.90 el borrado no anuncia con un toast: trece borrados daban
+  // trece avisos apilados sobre la tabla, y ahora los cuenta una sola línea. El
+  // ancla pasa a ser esa línea; la garantía que protege esta prueba —que el
+  // refresco de después NO desarma el tablero— no ha cambiado.
+  ['borrar un movimiento',        /_progStep\(true\)[\s\S]{0,400}?loadDataFromGoogle\(true, true\)/],
   ['editar un movimiento',        /Movement updated[\s\S]{0,400}?loadDataFromGoogle\(true, true\)/],
   ['borrar una entrega esperada', /Expected delivery deleted[\s\S]{0,400}?loadDataFromGoogle\(true, true\)/],
   ['importar un archivo',         /importFileInput[\s\S]{0,400}?loadDataFromGoogle\(true, true\)/],

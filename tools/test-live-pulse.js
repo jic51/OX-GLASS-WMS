@@ -171,6 +171,9 @@ function escenario(op){
       addEventListener: () => {}
     },
     _sessionToken: 'tok',
+    // v11.90: el latido no pide recargas mientras se está borrando —
+    // se descartarían al llegar. Sin tanda, se porta como siempre.
+    _delQueue: [], _delRunning: false,
     _recargas: [],
     _usuariosPintados: null,
     _estados: [],

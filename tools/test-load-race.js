@@ -71,6 +71,10 @@ function mundo(){
     movements: [], stockData: {},
     _pintados: [],
     lastLoadTime: null,
+    // v11.90: el guardián de la carga mira además si hay una tanda de
+    // borrados en el aire. En esta prueba nunca la hay — lo que se mide
+    // aquí es la OTRA regla, la del orden de las respuestas.
+    _delQueue: [], _delRunning: false, _delGen: 0,
     _dataStamp: null,
     _applyData: (d) => { ctx._pintados.push(d.marca); ctx.movements = d.movements; },
     _saveCache: () => {}, _announceSystemActivity: () => {},
@@ -170,8 +174,14 @@ console.log('\n═══ y el sello sólo se aprende de una carga aplicada ═�
   check('...lo compara, nada más', /res\.stamp !== _dataStamp/.test(pulso));
   check('y quien lo apunta es la carga, cuando ya tiene los datos en la mano',
     /if \(data\.dataStamp\) _dataStamp = data\.dataStamp;/.test(fnSrc('loadDataFromGoogle')));
+  // El `!_loadBusy` dejó de ser el último de la condición en la v11.90: se le
+  // sumó la tanda de borrados (pedir una recarga que se va a descartar sólo
+  // gasta cuota). Lo que esta prueba guarda sigue siendo lo mismo — que el
+  // latido mire si ya hay una carga en camino.
   check('el latido tampoco amontona cargas si ya hay una en camino',
-    /&& !_loadBusy\)/.test(pulso));
+    /&& !_loadBusy(\)| &&)/.test(pulso));
+  check('...y desde la v11.90 tampoco pide nada mientras se está borrando',
+    /!_delQueue\.length && !_delRunning\)/.test(pulso));
 }
 
 console.log('\n' + '─'.repeat(72));
