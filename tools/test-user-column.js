@@ -294,8 +294,22 @@ window.addEventListener('DOMContentLoaded', function(){
     /Jose Castro/.test(r.texto) && /jose@oxglass\.com/.test(r.texto));
   check('...entera dentro de la ventana', r.dentro);
 
-  check('el botón de correo es un mailto de verdad al correo de esa persona',
-    r.enlaces.some(h => h.indexOf('mailto:jose@oxglass.com') === 0), r.enlaces);
+  /* v11.92: DEJÓ DE SER UN mailto. Jose pulsó este botón, Windows le preguntó
+     con qué app abrirlo, marcó "Always" sobre Outlook — y desde entonces el
+     botón sólo abre una app que no usa nunca. mailto depende de una
+     configuración POR COMPUTADORA, y una elección hecha una vez sin querer lo
+     deja inservible para siempre. Gmail no.
+
+     Se comprueba con el navegador de verdad, así que lo que se mide es el href
+     YA RESUELTO: el correo escapado dentro de la URL, que es donde se rompería
+     un arroba sin codificar. */
+  check('el botón de correo abre Gmail con esa persona ya puesta',
+    r.enlaces.some(h => h.indexOf('https://mail.google.com/mail/?view=cm') === 0 &&
+                        h.indexOf('to=jose%40oxglass.com') !== -1), r.enlaces);
+  check('...y los tres botones de la tarjeta van a Google, sin salirse a la ' +
+        'configuración de la computadora',
+    r.enlaces.filter(h => /^https:\/\/(mail\.google|meet\.new|calendar\.google)/.test(h)).length === 3 &&
+    !r.enlaces.some(h => h.indexOf('mailto:') === 0), r.enlaces);
   check('el de Meet abre una reunión nueva de Google (meet.new) — Google NO ' +
         'publica ninguna dirección que llame a una persona por su correo, así ' +
         'que el botón hace lo que dice y nada más',

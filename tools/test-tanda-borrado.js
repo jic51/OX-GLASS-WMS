@@ -495,10 +495,14 @@ m.seccion('restaurar también cuenta, y no avisa uno por uno');
   const rest = A.fnSrc(HTML, '_restoreMovement');
   m.check('restaurar abre la tanda al pulsar',
     /_progStart\(1, 'Restoring movements', _progFinRestaurado\)/.test(rest));
-  m.check('...cuenta el éxito en la línea, sin toast', /_progStep\(true\)/.test(rest));
+  // Desde la v11.92 no cuenta a mano: lo hace la cola de escrituras, que es la
+  // única que sabe de verdad si el trabajo salió bien. Contarlo en cada
+  // manejador es justo donde se olvida.
+  m.check('...cuenta por la cola, sin toast y sin contar a mano',
+    /prog: true/.test(rest) && !/_progStep\(/.test(rest));
   m.check('...y ya no saca "Movement restored"', !/Movement restored/.test(rest));
   m.check('pero un FALLO sigue siendo un aviso, porque hay que leerlo',
-    /_progStep\(false\)[\s\S]{0,200}showToast\(/.test(rest));
+    /fail: function[\s\S]{0,300}showToast\(/.test(rest));
 }
 
 {
@@ -508,6 +512,132 @@ m.seccion('restaurar también cuenta, y no avisa uno por uno');
     /left:1\.25rem/.test(css) && !/right:1\.25rem/.test(css), css.slice(0, 60));
   m.check('...y el final se queda seis segundos, no dos y medio',
     /fallados \? 10000 : 6000/.test(A.fnSrc(HTML, '_progFinish')));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+m.seccion('los avisos que sobraban, y los que no');
+
+/* Jose revisó los 47 avisos de "salió bien" y decidió dos grupos:
+   quitar los que la pantalla ya dice, y pasar a la línea los de tanda.
+
+   Esta sección los CUENTA en vez de buscarlos a ojo. Un aviso que vuelve a
+   colarse en uno de estos sitios no se nota mirando —ya pasó tres veces en
+   este archivo con otras cosas— pero sí se nota contando. */
+{
+  const QUITADOS = [
+    ['renombrar columnas',            'Column names saved for everyone'],
+    ['guardar datos de la empresa',   'Company details saved'],
+    ['fusionar ubicaciones',          "entr(ies) updated"],
+    ['fusionar valores del catálogo', "Merged ✓"],
+    ['renombrar/fusionar material',   "Done ✓ — "],
+    ['añadir un PM',                  '✓ PM added'],
+    ['quitar un PM',                  'PM removed.'],
+    ['añadir desde la tarjeta',       "'Added to your '"],
+    ['restaurar un movimiento',       'Movement restored'],
+    ['borrar un movimiento',          'Movement deleted. It is in the trash'],
+    // Estos dos textos siguen en el archivo A PROPÓSITO: se mudaron a la
+    // línea de progreso. Lo que tiene que haber desaparecido es el AVISO, así
+    // que se busca la llamada entera y no la frase suelta.
+    ['marcar entregas como llegadas', "' deliveries marked as arrived.', 'ok')"],
+    ['añadir todos a las listas',     'to your lists' + "' + (failed"],
+    ['importar un archivo',           "showToast('✓ Imported '"],
+    ['foto de un estante',            '📷 Photo saved for'],
+    ['subiendo la foto',              '📷 Uploading photo'],
+    ['vaciar la papelera',            "deleted movement' + (n === 1 ? '' : 's') + ' discarded.', 'ok'"]
+  ];
+  QUITADOS.forEach(([que, texto]) => {
+    m.check('ya no hay aviso al ' + que, HTML.indexOf(texto) === -1, texto);
+  });
+
+  /* Y EL QUE GUARDA PERMISOS. No se puede buscar por su texto —'Saved ✓' lo
+     usan otros sitios que Jose sí quiere— así que se mira su función. */
+  const perm = A.fnSrc(HTML, '_savePermSwitch');
+  m.check('guardar un permiso ya no avisa al salir bien',
+    !/showToast\('Saved ✓'/.test(perm));
+  m.check('...pero un fallo sí, y además devuelve el interruptor a su sitio',
+    /sw\.checked = !want;[\s\S]{0,120}showToast\(/.test(perm));
+}
+
+{
+  /* LOS DOS QUE NO QUITÉ, Y POR QUÉ. Jose los puso en el grupo de "quitar" y
+     los dos se quedan, con el motivo escrito: lo que anuncian NO se ve en
+     ninguna parte. Si mañana alguien los quita creyendo que se olvidaron, esto
+     se cae y le cuenta la razón. */
+  const mapa = A.fnSrc(HTML, '_renderLocationsTab') || HTML;
+  m.check('guardar el mapa ya no dice "guardado" — eso sí se ve',
+    HTML.indexOf('Location layout saved') === -1);
+  m.check('...pero SÍ nombra lo que borró, que es lo único de esa pantalla que ' +
+          'no se deshace arrastrando de vuelta',
+    /if \(gone\.length\) showToast\('Deleted ' \+ gone\.join/.test(HTML));
+
+  const cajon = A.fnSrc(HTML, '_refreshOpenRackDrawer');
+  m.check('un estante que se queda vacío sigue avisando',
+    /is now empty/.test(cajon));
+  m.check('...porque el cajón SE CIERRA SOLO, y cerrarse sin decir nada parece ' +
+          'una avería', /closeRackDrawer\(\);[\s\S]{0,120}is now empty/.test(cajon));
+}
+
+{
+  // Los cinco que pasaron a la línea, cada uno por su nombre.
+  const EN_LA_LINEA = [
+    ['vaciar la papelera',            '_emptyTrash',                  "_progStart(1, 'Emptying the trash')"],
+    ['añadir todos a las listas',     '_cfgAddAll',                   "_progStart(queue.length, 'Adding to your lists'"],
+    ['marcar entregas como llegadas', '_alsoArrivedSave',             "_progStart(voy.length, 'Marking as arrived'"],
+    ['importar un archivo',           '_commitImport',                "_progStart(1, 'Importing rows')"],
+    ['subir la foto de un estante',   '_handleRackPhotoFileChange',   "_progStart(1, 'Uploading photo')"]
+  ];
+  EN_LA_LINEA.forEach(([que, fn, marca]) => {
+    const cuerpo = A.fnSrc(HTML, fn);
+    m.check(que + ': abre la línea al pulsar', !!cuerpo && cuerpo.indexOf(marca) !== -1);
+  });
+
+  // Y que TERMINEN. Una línea que se abre y no se cierra deja el reloj girando
+  // para siempre, que es peor que no tener línea.
+  [['_emptyTrash', 2], ['_commitImport', 2], ['_handleRackPhotoFileChange', 3]].forEach(([fn, n]) => {
+    const cuerpo = A.fnSrc(HTML, fn);
+    const cierres = (cuerpo.match(/_progEnd\(/g) || []).length;
+    m.check(fn + ' cierra la línea en TODOS sus caminos (' + n + ')',
+      cierres === n, cierres);
+  });
+
+  // Los de tanda no cierran a mano: los cierra la cuenta al llegar al total.
+  const arr = A.fnSrc(HTML, '_alsoArrivedSave');
+  m.check('marcar llegadas no cuenta a mano: lo hace la cola de escrituras',
+    /prog: true/.test(arr) && !/_progStep\(/.test(arr));
+}
+
+{
+  /* LA COLA CUENTA POR SU CUENTA, y cuenta también los fallos. Contar sólo los
+     éxitos dejaría la línea esperando para siempre a una llamada que ya
+     contestó que no. */
+  const ac = A.fnSrc(HTML, '_acWrite');
+  m.check('la cola de escrituras cuenta los éxitos',
+    /if \(o\.prog\) _progStep\(true\)/.test(ac));
+  m.check('...y los fallos', /if \(o\.prog\) _progStep\(false\)/.test(ac));
+  m.check('...y cuenta el fallo ANTES de desviarse al manejador de quien llama, ' +
+          'que puede salirse con un return',
+    ac.indexOf('_progStep(false)') < ac.indexOf('if (o.fail)'));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+m.seccion('el botón de email va a Gmail');
+
+{
+  /* Jose: pulsó ✉ Email, Windows le preguntó con qué app, marcó "Always" sobre
+     Outlook — y desde entonces el botón sólo abre una app que no usa. mailto
+     depende de una configuración POR COMPUTADORA; Gmail no. */
+  m.check('no queda ningún mailto en la app', HTML.indexOf('mailto:') === -1);
+  const card = A.fnSrc(HTML, '_personShow');
+  m.check('el botón abre una ventana nueva de Gmail',
+    /mail\.google\.com\/mail\/\?view=cm/.test(card));
+  m.check('...con el destinatario escapado para la URL',
+    /to=' \+\s*encodeURIComponent\(mail\)/.test(card));
+  m.check('...y el asunto, que ya venía escapado', /su=' \+ asunto/.test(card));
+  m.check('...en pestaña nueva y sin dejar que la de destino toque ésta',
+    /target="_blank" rel="noopener noreferrer"/.test(card));
+  m.check('...y ahora los TRES botones de la tarjeta van a Google, que era la ' +
+          'rareza: Meet y Schedule ya iban',
+    (card.match(/https:\/\/(mail\.google|meet\.new|calendar\.google)/g) || []).length === 3);
 }
 
 m.fin();

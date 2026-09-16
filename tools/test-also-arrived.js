@@ -86,6 +86,11 @@ function mundo(entregas){
     String, Number, Array, Object, Date, JSON, Math, console,
     incoming: entregas || [],
     showToast: (m) => pantalla.avisos.push(String(m)),
+    // v11.92: marcar llegadas ya no avisa una por una — las cuenta la
+    // línea de progreso. Se anota igual, para que la comprobación de
+    // "cuando no hay nada que hacer, no se enseña nada" siga midiendo.
+    _progStart: (n) => { if (n) pantalla.avisos.push('linea:' + n); },
+    _progFinLlegadas: () => '',
     renderAll: () => {},
     _reloadWhenIdle: () => { pantalla.recarga = true; },
     _h: (d) => d,

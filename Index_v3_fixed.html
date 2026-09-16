@@ -3767,7 +3767,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.91';
+var APP_VERSION = '11.92';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -3779,7 +3779,7 @@ var APP_VERSION = '11.91';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '49d78bcb';
+var APP_BUILD = '8b2aea69';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -4675,7 +4675,8 @@ function finishColEdit(t){
     var changed = JSON.stringify(labels) !== JSON.stringify(columnPrefs.labels || {});
     if (changed){
       google.script.run
-        .withSuccessHandler(function(){ showToast('Column names saved for everyone ✓', 'ok'); })
+        // Sin aviso: las cabeceras de la tabla ya enseñan el nombre nuevo.
+        .withSuccessHandler(function(){})
         .withFailureHandler(function(e){ showToast('Could not save names: ' + (e.message || e), 'err', 6000); })
         .processMovement('saveColumnPrefs', _h({ labels: labels, hidden: [] }));
       columnPrefs.labels = labels;
@@ -8517,6 +8518,11 @@ function _acWrite(o){
       var run = google.script.run
         .withSuccessHandler(function(res){
           done();
+          // `prog: true` = este trabajo va en la línea de progreso. Se cuenta
+          // AQUÍ y no en cada sitio porque la cola es la única que sabe de
+          // verdad si un trabajo terminó bien o mal — y porque contarlo abajo,
+          // en el manejador de cada quien, es exactamente donde se olvida.
+          if (o.prog) _progStep(true);
           try { if (o.ok) o.ok(res); } catch (e) {}
         })
         .withFailureHandler(function(err){
@@ -8530,6 +8536,10 @@ function _acWrite(o){
             return;
           }
           done();
+          // Va ANTES del desvío a o.fail: un trabajo que falló cuenta como
+          // hecho-mal pase lo que pase, y si se contara después del `return` la
+          // línea se quedaría esperándolo para siempre.
+          if (o.prog) _progStep(false);
           if (o.btn) _btnReset(o.btn);
           if (o.fail) { try { o.fail(err, _isBusyError(err)); } catch (e) {} return; }
 
@@ -10687,7 +10697,9 @@ function _savePermSwitch(sw){
     .withSuccessHandler(function(res){
       sw.disabled = false;
       rolePerms = res.perms;
-      showToast('Saved ✓', 'ok');
+      // Sin aviso: el interruptor se queda donde lo pusiste. Mientras
+      // guarda está apagado, y si falla vuelve solo con su error — o sea
+      // que su POSICIÓN ya es la respuesta.
     })
     .withFailureHandler(function(e){
       sw.checked = !want; sw.disabled = false;   // put it back
@@ -10785,8 +10797,8 @@ function _saveCompanyProfile(){
       }
       applyCompanyBranding(c);
       _coLogo = null; _coLogoRemove = false;
+      // Sin aviso: la pestaña se repinta y el logo aparece en la cabecera.
       _renderCompanyTab();
-      showToast('Company details saved ✓', 'ok');
     })
     .withFailureHandler(function(e){
       _btnLabel(btn, 'Save changes');
@@ -11188,6 +11200,10 @@ function _emptyTrash(){
     confirmText: 'Empty it',
     onConfirm: function(){
       _btnBusy(btn, 'Emptying…');
+      // La línea gira mientras tanto y termina con el número que dé el
+      // servidor: vaciar una papelera con cincuenta dentro tarda, y hasta
+      // ahora no se veía nada hasta el final.
+      _progStart(1, 'Emptying the trash');
       _acWrite({
         args: ['manageMaterial', _h({ op: 'emptyTrash' })],
         btn:  btn,
@@ -11195,9 +11211,15 @@ function _emptyTrash(){
         ok: function(res){
           _btnReset(btn);
           var n = (res && res.removed) || 0;
-          showToast('✓ ' + n + ' deleted movement' + (n === 1 ? '' : 's') + ' discarded.', 'ok');
+          _progEnd(n + ' deleted movement' + (n === 1 ? '' : 's') + ' discarded.');
           _sysCacheDrop('trash');
           _loadTrash();
+        },
+        fail: function(e, ocupado){
+          _progEnd('The trash was not emptied.', true);
+          showToast(ocupado
+            ? 'The system has been busy for a while — nothing was lost. Try again in a few seconds.'
+            : 'Could not empty the trash: ' + _humanErr(e), ocupado ? 'warn' : 'err', 8000);
         }
       });
     }
@@ -11233,12 +11255,12 @@ function _restoreMovement(btn){
   _acWrite({
     args: ['manageMaterial', _h({ op: 'restoreMovement', movId: movId })],
     btn:  btn,
+    // Antes: un toast por movimiento. Restaurar cinco daba cinco avisos sobre
+    // la ventana de Ajustes que la persona está usando — y la fila ya se va
+    // sola, así que el aviso no contaba nada que no se viera.
+    prog: true,
     ok: function(){
       delete _trashPending[movId];
-      // Antes: un toast por movimiento. Restaurar cinco daba cinco avisos sobre
-      // la ventana de Ajustes que la persona está usando — y la fila ya se va
-      // sola, así que el aviso no contaba nada que no se viera.
-      _progStep(true);
       // AL INSTANTE Y EN LOCAL. El servidor YA lo hizo — esto es el manejador
       // de ÉXITO — así que volver a pedirle la lista para enterarnos de algo
       // que ya sabemos es lo que borraba el "Restoring…" de los demás.
@@ -11250,9 +11272,8 @@ function _restoreMovement(btn){
     fail: function(e, ocupado){
       delete _trashPending[movId];
       _btnReset(btn);
-      // El fallo SÍ sigue siendo un aviso, porque hay que leerlo. La línea sólo
-      // lo cuenta, para que el total del final no mienta.
-      _progStep(false);
+      // El fallo SÍ sigue siendo un aviso, porque hay que leerlo. Contarlo ya
+      // lo hizo la cola (prog: true), para que el total del final no mienta.
       showToast(ocupado
         ? 'The system has been busy for a while — nothing was lost. Try again in a few seconds.'
         : '⚠ ' + _humanErr(e), ocupado ? 'warn' : 'err', 8000);
@@ -12172,19 +12193,27 @@ function _commitImport(){
   if (!validRows.length) return;
   var btn = document.getElementById('btnCommitImport');
   _btnBusy(btn, 'Importing…');
+  // Importar doscientas filas tarda, y hasta ahora la pantalla se quedaba
+  // quieta hasta el final. La línea gira mientras tanto y termina con el
+  // número que dé el servidor.
+  _progStart(1, 'Importing rows');
   google.script.run
     .withSuccessHandler(function(res){
-      showToast('✓ Imported ' + res.rowCount + ' row(s) as new ENTRY movements.', 'ok', 6000);
+      _progEnd('Imported ' + res.rowCount + ' row' + (res.rowCount === 1 ? '' : 's') +
+               ' as new ENTRY movements.');
       _importParsedRows = [];
       var box = document.getElementById('importPreviewBox'); if (box) box.innerHTML = '';
       var fi  = document.getElementById('importFileInput');  if (fi)  fi.value = '';
       // Silencioso aunque una importación cambie mucho: sigue siendo el
-      // resultado de algo que se acaba de pulsar, y el aviso dice cuántas filas
+      // resultado de algo que se acaba de pulsar, y la línea dice cuántas filas
       // entraron.
       loadDataFromGoogle(true, true);
     })
     .withFailureHandler(function(err){
       _btnLabel(btn, '✓ Import ' + validRows.length + ' Valid Row(s)');
+      _progEnd('Nothing was imported.', true);
+      // El porqué sigue siendo un aviso: una importación que falla suele
+      // fallar por algo del archivo, y eso hay que leerlo.
       showToast('Import failed: ' + (err.message || err).replace(/^Error:\s*/i,''), 'err', 8000);
     })
     .processMovement('commitImport', _h({ rows: validRows }));
@@ -12697,7 +12726,7 @@ function _wireLocMerge(){
           _btnBusy(btn, 'Merging…');
           google.script.run
             .withSuccessHandler(function(res){
-              showToast('Merged ✓ — ' + res.rowsChanged + ' entr(ies) updated.', 'ok', 5000);
+              // Sin aviso: las ubicaciones fusionadas desaparecen de la lista.
               var gone = {};
               from.forEach(function(v){ gone[v.toUpperCase()] = 1; });
               _locLayout = _locLayout.filter(function(l){ return !gone[l.name.toUpperCase()]; });
@@ -12802,9 +12831,16 @@ function _locMarkDirty(){
       .withSuccessHandler(function(res){
         // Names the deletions rather than reporting a generic save: deleting is
         // the one thing on this screen that cannot be undone by dragging back.
+        /* SÓLO CUANDO BORRÓ ALGO. Guardar el mapa se ve: la barra de "Save
+           layout" desaparece y el mapa se queda como lo dejaste, así que
+           decirlo otra vez sobra — ésa es la parte que Jose pidió quitar.
+
+           Pero lo que se BORRÓ no se ve en ninguna parte, y es lo único de
+           esta pantalla que no se deshace arrastrando de vuelta. Una ubicación
+           que desaparece sin que nadie la nombre es una ubicación que nadie
+           sabe que perdió. Esa mitad se queda. */
         var gone = (res && res.deleted) || [];
-        showToast('Location layout saved ✓' +
-          (gone.length ? ' — deleted ' + gone.join(', ') : ''), 'ok', gone.length ? 5000 : 3000);
+        if (gone.length) showToast('Deleted ' + gone.join(', '), 'warn', 6000);
         bar.classList.remove('show'); bar.innerHTML = ''; bar.dataset.dirty = '0';
         // Local mirror so other screens see the new types without a full reload.
         _settingsData.locations     = _locLayout.map(function(l){ return l.name; });
@@ -12862,7 +12898,7 @@ function _wireManualMerge(tab, label){
           _btnBusy(btn, 'Merging…');
           google.script.run
             .withSuccessHandler(function(res){
-              showToast('Merged ✓ — ' + res.rowsChanged + ' movement(s) updated.', 'ok', 5000);
+              // Sin aviso: los nombres fusionados desaparecen de la lista.
               _applyMergeLocally(tab, from, into);
               bar.innerHTML = ''; bar.classList.remove('show');
               // Same reason as the location merge below: the local patch fixes
@@ -13020,7 +13056,8 @@ function _wireSimilarGroups(tab){
           _btnBusy(btn, 'Merging…');
           google.script.run
             .withSuccessHandler(function(res){
-              showToast('Merged ✓ — ' + res.rowsChanged + ' movement(s) updated.', 'ok', 5000);
+              // Sin aviso: el grupo de duplicados se quita de la lista aquí
+              // mismo (g.remove(), abajo), y ésa es la respuesta.
               // Deliberately NOT _loadSettings() + loadDataFromGoogle(): both
               // re-read and repaint everything, which took seconds and made
               // working through a list of duplicates painful. The server has
@@ -13232,8 +13269,8 @@ function _pmDirAdd() {
   google.script.run
     .withSuccessHandler(function() {
       _pmDirectoryData = null; // force refetch
+      // Sin aviso: la fila nueva aparece en la lista.
       _renderPmDirectoryTab();
-      showToast('✓ PM added.', 'ok');
     })
     .withFailureHandler(function(e) { showToast('⚠ Error: ' + _stripTags(e), 'err', 6000); })
     .processMovement('managePmDirectory', _h({ op: 'add', name: name, email: email }));
@@ -13249,8 +13286,8 @@ function _pmDirDelete(name) {
       google.script.run
         .withSuccessHandler(function() {
           _pmDirectoryData = null;
+          // Sin aviso: la fila desaparece de la lista.
           _renderPmDirectoryTab();
-          showToast('PM removed.', 'ok');
         })
         .withFailureHandler(function(e) { showToast('⚠ Error: ' + _stripTags(e), 'err', 6000); })
         .processMovement('managePmDirectory', _h({ op: 'delete', name: name }));
@@ -13681,8 +13718,8 @@ function _matCall(payload) {
     args: ['manageMaterial', _h(payload)],
     ok: function(res) {
       _matSetBusy(false);
+      // Sin aviso: el material cambiado se ve en la lista en el acto.
       _applyMatChangeLocally(payload);
-      showToast('Done ✓ — ' + (res.updated || res.merged || 1) + ' row(s) updated.', 'ok');
       loadDataFromGoogle(true, true);   // skipCache, quiet
     },
     fail: function(e, ocupado){
@@ -13979,7 +14016,25 @@ function _personShow(el){
     (nombre ? '<div class="ap-name">' + _he(nombre) + '</div>' : '') +
     '<div class="ap-mail">' + _he(mail) + '</div>' +
     '<div class="ap-acts">' +
-      '<a class="ap-btn" href="mailto:' + _escAttr(mail) + '?subject=' + asunto + '">✉ Email</a>' +
+      /* GMAIL, NO EL mailto DEL SISTEMA.
+         Jose, 2026-09-15: pulsó ✉ Email y Windows le preguntó con qué app
+         abrirlo; eligió "Always" sobre Outlook, y desde entonces ya no le
+         ofrece nada más — "sólo la app del escritorio y yo no la uso nunca".
+
+         El problema de fondo no es Outlook: es que mailto depende de una
+         configuración POR COMPUTADORA, y una elección hecha una vez sin querer
+         deja el botón inservible para siempre. Y sus dos vecinos de esta misma
+         tarjeta —Meet y Schedule— ya van a Google directamente; el correo era
+         el único que se salía de la app.
+
+         Todo el que entra a Acopio entra con una cuenta de Google, así que
+         esto funciona igual en su computadora, en la de la bodega y en el
+         teléfono. Y a quien tenga su Outlook enganchado a Gmail no le quita
+         nada: el correo le sigue llegando a su bandeja igual. */
+      '<a class="ap-btn" href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=' +
+         encodeURIComponent(mail) + '&amp;su=' + asunto + '" ' +
+         'target="_blank" rel="noopener noreferrer" ' +
+         'title="Opens a new Gmail message to them">✉ Email</a>' +
       '<a class="ap-btn" href="https://meet.new" target="_blank" rel="noopener noreferrer" ' +
          'title="Opens a new Google Meet — send them the link">📹 Meet</a>' +
       '<a class="ap-btn" href="https://calendar.google.com/calendar/render?action=TEMPLATE&amp;add=' +
@@ -15179,18 +15234,18 @@ function _cfgAddAll(){
     confirmText: 'Add all',
     onConfirm: function(){
       _cfgAddAllRunning = true;
-      var ok = 0, failed = 0;
+      // Una llamada por valor, de una en una. La línea va contando "3 of 12"
+      // en vez de dejar la pantalla quieta hasta el último.
+      _progStart(queue.length, 'Adding to your lists', _progFinListas);
       (function next(){
         if (!queue.length){
           _cfgAddAllRunning = false;
-          showToast('Added ' + ok + ' to your lists' + (failed ? ' · ' + failed + ' failed' : '') + ' ✓',
-            failed ? 'warn' : 'ok', 6000);
           _recomputeCfgDeck();
           return;
         }
         var p = queue.shift();
         _cfgAddValue(p.type, p.value, function(good){
-          if (good) ok++; else failed++;
+          _progStep(!!good);
           setTimeout(next, 120);   // paced, not hammered
         });
       })();
@@ -15221,7 +15276,7 @@ function _cfgCardAction(act, key, btn){
   if (btn){ _btnBusy(btn, 'Adding…'); }
   _cfgAddValue(p.type, p.value, function(ok, err){
     if (ok){
-      showToast('Added to your ' + (p.type === 'suppliers' ? 'suppliers' : 'projects') + ' ✓', 'ok');
+      // Sin aviso: la tarjeta sale del mazo, que es la respuesta.
     } else {
       _btnLabel(btn, '+ Add to list');
       showToast('Could not add: ' + err, 'err', 5000);
@@ -16357,12 +16412,15 @@ function _handleRackPhotoFileChange(){
   // BEFORE the upload finished, leaving the user staring at nothing with zero
   // feedback. Now it stays up (long fallback duration) until we explicitly
   // dismiss it the moment we know the real outcome.
-  var uploadToastId = showToast('📷 Uploading photo…', 'info', 20000);
+  // ESTO YA ERA UNA LÍNEA DE PROGRESO HECHA A MANO: un toast con duración
+  // larguísima que se cerraba a mano al saber el resultado, porque Drive tarda
+  // uno a tres segundos en compartir el archivo. Ahora es la de verdad, y ya
+  // no hace falta acordarse de cerrarla.
+  _progStart(1, 'Uploading photo');
   _compressImage(file, 1280, 0.82, function(b64, mime){
     google.script.run
       .withSuccessHandler(function(res){
-        dismissToast(uploadToastId);
-        if (!res || !res.photo) { showToast('Upload failed.', 'err', 5000); return; }
+        if (!res || !res.photo) { _progEnd('The photo was not saved.', true); return; }
         rackPhotos[rack.toUpperCase()] = res.photo;
         // Re-render the stock table (rebuilds the photo grid inline) while keeping
         // whichever detail row(s) the user currently has expanded open.
@@ -16370,10 +16428,10 @@ function _handleRackPhotoFileChange(){
         renderStock();
         openIds.forEach(function(id){ var el = document.getElementById(id); if (el) el.classList.add('open'); });
         renderWarehouseMap();
-        showToast('📷 Photo saved for ' + rack, 'ok');
+        _progEnd('Photo saved for ' + rack + '.');
       })
       .withFailureHandler(function(err){
-        dismissToast(uploadToastId);
+        _progEnd('The photo was not saved.', true);
         showToast('Error uploading photo: ' + _stripTags(err), 'err', 6000);
       })
       .processMovement('uploadRackPhoto', _h({ location: rack, fileData: b64, fileMimeType: mime }));
@@ -18279,6 +18337,12 @@ function _alsoArrivedSave(){
   _alsoArrivedClose();
   if (!voy.length) return;     // las desmarcó todas: no pasa nada, y está bien
 
+  // ANTES de encolar, para que la cuenta esté abierta cuando llegue el primer
+  // ✓. (No puede llegar antes —google.script.run no contesta hasta que este
+  // código suelte el hilo— pero abrirla después es confiar en eso, y no hace
+  // falta confiar en nada.)
+  _progStart(voy.length, 'Marking as arrived', _progFinLlegadas);
+
   voy.forEach(function(it){
     // LA FILA ENTERA con el estado cambiado: updateIncoming reescribe las
     // diecisiete columnas, así que mandar sólo el estado borraría el resto.
@@ -18292,6 +18356,7 @@ function _alsoArrivedSave(){
     _acWrite({
       args: ['updateIncoming', _h(payload)],
       what: 'marking "' + it.name + '" as arrived',
+      prog: true,
       ok: function(){
         // La copia del navegador, al día en el acto: la recarga llegará, pero
         // el popup y la pestaña de Incoming ya pueden decir la verdad.
@@ -18302,9 +18367,10 @@ function _alsoArrivedSave(){
       }
     });
   });
-  showToast(voy.length === 1
-    ? '✓ Marked as arrived.'
-    : '✓ ' + voy.length + ' deliveries marked as arrived.', 'ok');
+  // ANTES SE ANUNCIABA AQUÍ, al final del bucle, y aquí todavía no había
+  // pasado nada: el aviso salía en el mismo instante en que se ENCOLABAN las
+  // llamadas, así que decía "marcadas" de algo que aún no había salido del
+  // navegador. La línea cuenta las que el servidor confirma, que es otra cosa.
   _reloadWhenIdle();
 }
 
@@ -19778,6 +19844,19 @@ function _progFinRestaurado(hechos, fallados){
                     : hechos + ' movements put back.');
 }
 
+function _progFinListas(hechos, fallados){
+  return fallados
+    ? (hechos + ' added · ' + fallados + ' failed')
+    : (hechos === 1 ? 'Added to your lists.' : hechos + ' added to your lists.');
+}
+
+function _progFinLlegadas(hechos, fallados){
+  return fallados
+    ? (hechos + ' marked as arrived · ' + fallados + ' failed')
+    : (hechos === 1 ? 'Marked as arrived.'
+                    : hechos + ' deliveries marked as arrived.');
+}
+
 /* n      — cuántos se acaban de pedir
    label  — lo que se está haciendo, en presente ("Deleting movements")
    fin    — cómo se cuenta el final; por defecto, el del borrado
@@ -19801,6 +19880,26 @@ function _progStart(n, label, fin){
 
   w.className = 'show';
   _progPaint();
+}
+
+/* TERMINAR CON UNA FRASE QUE VIENE DEL SERVIDOR.
+ *
+ * _progStep sirve cuando el navegador cuenta: una llamada por cosa, y al final
+ * la suma. Pero hay trabajos que son UNA llamada y el número lo trae la
+ * respuesta — vaciar la papelera, importar un archivo. Ahí no hay nada que
+ * contar aquí; hay que enseñar el número que dio el servidor.
+ *
+ * El patrón es: _progStart(1, 'Emptying the trash') al pulsar, y _progEnd con
+ * la frase de verdad cuando conteste. Mientras tanto la línea gira, que es lo
+ * que faltaba: importar tarda, y antes no se veía nada hasta el final.
+ */
+function _progEnd(texto, hayFallo){
+  var w = document.getElementById('progWrap');
+  if (!w) return;
+  if (_progHideT){ clearTimeout(_progHideT); _progHideT = null; }
+  _prog = { total: 1, done: hayFallo ? 0 : 1, failed: hayFallo ? 1 : 0,
+            label: '', fin: function(){ return texto; } };
+  _progFinish();
 }
 
 /** Quitarla a mano. La línea se va sola, pero seis segundos delante de algo que
