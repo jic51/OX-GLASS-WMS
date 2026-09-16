@@ -1057,8 +1057,13 @@
        algo, ya sea que se corrija, restaure, elimine, haga merge, etc. Debe ser
        estándar en la app."
        Así que no es "la animación de borrar movimientos": es CÓMO SE VA UNA
-       FILA, escrito una vez. Los ocho sitios donde algo desaparece la usan por
-       _rowLeave.
+       FILA, escrito una vez. Todos los sitios donde algo desaparece pasan por
+       _rowLeave (una fila) o _rowLeaveAll (varias a la vez): borrar y restaurar
+       un movimiento, vaciar la papelera, las cuatro fusiones, borrar una
+       ubicación y quitar un valor del catálogo o un contacto del directorio.
+       Este comentario decía "los ocho sitios" cuando sólo había DOS — se
+       escribió con la intención y nunca se volvió. Ahora lo cuenta una prueba,
+       que es lo único que no se queda viejo en silencio.
        Se encoge además de desvanecerse, y eso no es adorno: una fila que se
        desvanece deja su hueco y las de abajo saltan de golpe cuando el hueco se
        cierra. Encogiéndose, las de abajo SUBEN, y ese movimiento es lo que se
@@ -3767,7 +3772,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.93';
+var APP_VERSION = '11.94';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -3779,7 +3784,7 @@ var APP_VERSION = '11.93';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '6465849a';
+var APP_BUILD = '12e4a97e';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -11216,7 +11221,12 @@ function _emptyTrash(){
           var n = (res && res.removed) || 0;
           _progEnd(n + ' deleted movement' + (n === 1 ? '' : 's') + ' discarded.');
           _sysCacheDrop('trash');
-          _loadTrash();
+          // Todas a la vez, y la lista se repinta cuando la última terminó.
+          // Vaciar la papelera es lo más definitivo que hace la app; que se vea
+          // vaciarse, en vez de aparecer vacía, es parte de decir qué pasó.
+          var caja = document.getElementById('trashBox');
+          _rowLeaveAll(caja ? Array.prototype.slice.call(caja.querySelectorAll('[data-trash]')) : [],
+            function(){ _loadTrash(); });
         },
         fail: function(e, ocupado){
           _progEnd('The trash was not emptied.', true);
@@ -12532,9 +12542,11 @@ function _locDelete(name){
     confirmText: 'Delete',
     danger: true,
     onConfirm: function(){
-      _locLayout = _locLayout.filter(function(l){ return l.name !== name; });
-      _redrawLocGroups();
-      _locMarkDirty();
+      _rowLeaveAll(_itemsBy('locGroups', 'li.loc-item', 'data-name', [name]), function(){
+        _locLayout = _locLayout.filter(function(l){ return l.name !== name; });
+        _redrawLocGroups();
+        _locMarkDirty();
+      });
     }
   });
 }
@@ -12730,6 +12742,8 @@ function _wireLocMerge(){
           google.script.run
             .withSuccessHandler(function(res){
               // Sin aviso: las ubicaciones fusionadas desaparecen de la lista.
+              // Se las ve irse ANTES de que el repintado se las lleve.
+              var seVan = _itemsBy('locGroups', 'li.loc-item', 'data-name', from);
               var gone = {};
               from.forEach(function(v){ gone[v.toUpperCase()] = 1; });
               _locLayout = _locLayout.filter(function(l){ return !gone[l.name.toUpperCase()]; });
@@ -12739,7 +12753,8 @@ function _wireLocMerge(){
               });
               config.locations = (config.locations || []).filter(function(l){ return !gone[String(l.name).toUpperCase()]; });
               bar.innerHTML = ''; bar.classList.remove('show');
-              _redrawLocGroups();
+              // El repintado espera a que las que se van terminen de encogerse.
+              _rowLeaveAll(seVan, function(){ _redrawLocGroups(); });
               refreshDropdowns();
               // The patches above fix the LISTS. They cannot fix the stock,
               // which is where a location merge actually shows: the Warehouse
@@ -12901,8 +12916,12 @@ function _wireManualMerge(tab, label){
           _btnBusy(btn, 'Merging…');
           google.script.run
             .withSuccessHandler(function(res){
-              // Sin aviso: los nombres fusionados desaparecen de la lista.
-              _applyMergeLocally(tab, from, into);
+              // Sin aviso: los nombres fusionados desaparecen de la lista —
+              // y ahora se los ve irse, que es lo que hace legible CUÁLES se
+              // fueron cuando se fusionan tres de golpe.
+              _rowLeaveAll(
+                _itemsBy('settingsTabContent', 'li.cfg-item', 'data-val', from),
+                function(){ _applyMergeLocally(tab, from, into); });
               bar.innerHTML = ''; bar.classList.remove('show');
               // Same reason as the location merge below: the local patch fixes
               // the catalog list, but the movements and the project/supplier
@@ -13068,7 +13087,10 @@ function _wireSimilarGroups(tab){
               // which is exact and instant.
               _applyMergeLocally(tab, from, into);
               var g = btn.closest('.sim-group');
-              if (g) g.remove();
+              // Antes: g.remove(), de golpe. Es la única lista donde se
+              // trabaja seguido —un duplicado detrás de otro— y ver irse el
+              // que acabas de resolver es lo que dice por dónde vas.
+              _rowLeave(g, function(){ if (g) g.remove(); });
               _refreshSimHeader();
             })
             .withFailureHandler(_mergeFailed(btn, 'Merge into selected'))
@@ -13247,7 +13269,9 @@ function _renderPmDirectoryTab() {
 function _drawPmDirectory() {
   var content = document.getElementById('settingsTabContent');
   var rows = _pmDirectoryData.map(function(p) {
-    return '<li class="cfg-item">' +
+    // data-val en la FILA y no sólo en su botón: es por donde se la encuentra
+    // para animarla al irse.
+    return '<li class="cfg-item" data-val="'+_he(p.name)+'">' +
       '<span class="cfg-item-name" style="flex:1"><strong>'+_he(p.name)+'</strong> <span style="color:var(--muted);font-size:.78rem">'+_he(p.email)+'</span></span>' +
       '<button class="cfg-btn cfg-btn-danger" data-rowact="del" data-action="pm-dir-delete" data-val="'+_he(p.name)+'">🗑</button>' +
     '</li>';
@@ -13288,9 +13312,13 @@ function _pmDirDelete(name) {
     onConfirm: function(){
       google.script.run
         .withSuccessHandler(function() {
-          _pmDirectoryData = null;
-          // Sin aviso: la fila desaparece de la lista.
-          _renderPmDirectoryTab();
+          // Sin aviso: la fila desaparece de la lista, y ahora se la ve irse.
+          _rowLeaveAll(
+            _itemsBy('settingsTabContent', 'li.cfg-item', 'data-val', [name]),
+            function(){
+              _pmDirectoryData = null;
+              _renderPmDirectoryTab();
+            });
         })
         .withFailureHandler(function(e) { showToast('⚠ Error: ' + _stripTags(e), 'err', 6000); })
         .processMovement('managePmDirectory', _h({ op: 'delete', name: name }));
@@ -13386,7 +13414,16 @@ function _cfgCall(payload, onDone) {
     .withSuccessHandler(function() {
       done();
       if (onDone) onDone();
-      _applyCfgChangeLocally(payload);   // re-renders the tab, rebuilding the buttons enabled
+      // La fila se encoge y SÓLO DESPUÉS se repinta la pestaña. Al revés no se
+      // ve nada: el repintado se lleva por delante el elemento que se estaba
+      // animando (la trampa de la v11.66).
+      _rowLeaveAll(
+        payload.op === 'delete'
+          ? _itemsBy('settingsTabContent', 'li.cfg-item', 'data-val', [payload.value])
+          : [],
+        function(){
+          _applyCfgChangeLocally(payload);   // re-renders the tab, rebuilding the buttons enabled
+        });
       _settingMsg('Saved ✓', 'ok');
     })
     .withFailureHandler(function(e){
@@ -13721,8 +13758,12 @@ function _matCall(payload) {
     args: ['manageMaterial', _h(payload)],
     ok: function(res) {
       _matSetBusy(false);
-      // Sin aviso: el material cambiado se ve en la lista en el acto.
-      _applyMatChangeLocally(payload);
+      // Sin aviso: el material cambiado se ve en la lista en el acto. Y si fue
+      // una FUSIÓN, el que se va se ve irse antes de que el repintado se lo
+      // lleve — los otros dos cambios (renombrar, cambiar de categoría) no
+      // quitan ninguna fila, así que ahí no hay nada que animar.
+      _rowLeaveAll(payload.op === 'merge' ? _matItemEls(payload.name, payload.category) : [],
+        function(){ _applyMatChangeLocally(payload); });
       loadDataFromGoogle(true, true);   // skipCache, quiet
     },
     fail: function(e, ocupado){
@@ -13752,6 +13793,25 @@ function _matSetBusy(on) {
   // one-cell edit.
   if (on) _settingMsg('Updating every matching movement and rebuilding stock totals — this can take a few seconds…', 'info');
   else    _settingMsg('Done ✓', 'ok');
+}
+
+/* LA FILA DE UN MATERIAL, por nombre Y categoría.
+ *
+ * Las dos cosas, no sólo el nombre: el MatID se compone de categoría + nombre,
+ * así que "SILICONE" en SEALANT y "SILICONE" en WINDOW son dos materiales
+ * distintos y animar el equivocado enseñaría que se fue uno que sigue ahí.
+ */
+function _matItemEls(name, cat){
+  var box = document.getElementById('matListContainer');
+  if (!box) return [];
+  var n = String(name || '').toUpperCase();
+  var c = String(cat  || '').toUpperCase();
+  try {
+    return Array.prototype.filter.call(box.querySelectorAll('.mat-item'), function(el){
+      return String(el.getAttribute('data-name') || '').toUpperCase() === n &&
+             String(el.getAttribute('data-cat')  || '').toUpperCase() === c;
+    });
+  } catch (e) { return []; }
 }
 
 function _applyMatChangeLocally(p){
@@ -19738,6 +19798,44 @@ function _rowLeave(el, done){
     el.classList.add('card-leaving');
   }
   setTimeout(una, ROW_LEAVE_MS);
+}
+
+/* VARIAS A LA VEZ, CON UN SOLO AVISO AL TERMINAR.
+ *
+ * Una fusión se lleva dos, tres o cinco filas de golpe, y vaciar la papelera se
+ * las lleva todas. Animarlas una por una y repintar tras la primera se llevaría
+ * por delante las demás a mitad de camino — la trampa de la v11.66 otra vez.
+ * Todas corren a la vez y el repintado espera a la última.
+ */
+function _rowLeaveAll(els, done){
+  els = (els || []).filter(Boolean);
+  if (!els.length){ if (done) done(); return; }
+  var faltan = els.length;
+  els.forEach(function(el){
+    _rowLeave(el, function(){ if (--faltan === 0 && done) done(); });
+  });
+}
+
+/* LAS FILAS DE UNA LISTA, POR SU VALOR.
+ *
+ * Se comparan atributos EN JAVASCRIPT en vez de meter el valor dentro de un
+ * selector. Los nombres los escribe una persona en una hoja de cálculo —
+ * "JOSE'S HOUSE", 'BAY "A"'— y cualquiera de esos dos rompe un selector, que
+ * además LANZA: el borrado entero se caería por querer animarlo. Comparar no
+ * puede romperse.
+ *
+ * En mayúsculas porque es como el catálogo compara en todas partes.
+ */
+function _itemsBy(scope, sel, attr, vals){
+  var box = (typeof scope === 'string') ? document.getElementById(scope) : scope;
+  if (!box) return [];
+  var quiero = {};
+  (vals || []).forEach(function(v){ quiero[String(v).toUpperCase()] = 1; });
+  try {
+    return Array.prototype.filter.call(box.querySelectorAll(sel), function(el){
+      return quiero[String(el.getAttribute(attr) || '').toUpperCase()] === 1;
+    });
+  } catch (e) { return []; }
 }
 
 /** La fila de un movimiento en la tabla, si está pintada. */

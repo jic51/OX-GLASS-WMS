@@ -346,6 +346,12 @@ function pantalla(opts){
     _locNewKind:  'location',
     _locTypesInOrder: () => ['ALL LOCATIONS'],
     _redrawLocGroups: () => {},
+    // v11.94: borrar una ubicación la anima al irse y repinta DENTRO del
+    // callback. El doble lo llama en el acto, que es lo que hace la app de
+    // verdad cuando la fila no está pintada — y es justo el caso de esta caja,
+    // que no tiene lista en pantalla.
+    _rowLeaveAll: (els, hecho) => { if (hecho) hecho(); },
+    _itemsBy: () => [],
     _locMarkDirty:    () => { c.sucio = true; },
     sucio: false,
     showToast: (msg, kind) => avisos.push({ msg, kind }),

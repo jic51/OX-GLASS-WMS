@@ -89,6 +89,7 @@ node tools/test-carrera-incoming.js
 node tools/test-andamio.js
 node tools/test-refresco-tanda.js
 node tools/test-tanda-borrado.js
+node tools/test-salidas-animadas.js
 node tools/test-short-stock.js
 node tools/test-settings-boxes.js
 node tools/test-toast-and-buttons.js
@@ -705,6 +706,27 @@ come back from — is invisible to both. Those get a browser test.
   stuck at "12 of 13" waiting for an answer that never comes. Writing the test
   is what caught `_doDeleteMovementRow` returning nothing at all on the happy
   path, so every caller read it as "did not queue".
+- `test-salidas-animadas.js` — every place a row disappears, it is seen to
+  disappear (v11.94). The animation existed since v11.66 for deleting a movement
+  and putting one back, and the CSS above it said, word for word, "the eight
+  places where something disappears use it through _rowLeave". There were TWO.
+  That comment was written with the intention and never revisited — which is
+  exactly what a comment cannot hold, because it does not fall over when it
+  stops being true. A counted number does, and that is what this file is.
+  It pins the ORDER at each of the ten sites by running it, not by finding the
+  call: repaint-then-animate shows nothing, because the repaint takes away the
+  element being animated (the v11.66 trap, which has now cost two versions), so
+  the repaint has to live inside the callback. Also pinned: several rows animate
+  together and the repaint waits for the LAST one; nothing painted still does
+  the work, immediately; reduced-motion gets no animation and no delay; a row
+  already detached does not block the delete; and the callback cannot fire
+  twice. The lookup is a separate guard with its own reason — values are typed
+  by a person into a spreadsheet, and "JOSE'S HOUSE" inside a querySelector does
+  not return null, it THROWS, which would take the whole delete down for the
+  sake of animating it. So the helper compares attributes in JavaScript instead
+  of building a selector, and the test carries an apostrophe and a double quote.
+  Merging materials looks at name AND category, because the MatID is made of
+  both and animating by name alone would show the wrong one leaving.
 - `test-andamio.js` — the only test whose subject is the scaffolding. It pins
   ALL SIX of the real breakages by name, checking the dependency that was
   missing each time is now resolved on its own, plus that the resolver knows how
