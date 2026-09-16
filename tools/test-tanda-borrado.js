@@ -640,4 +640,63 @@ m.seccion('el botón de email va a Gmail');
     (card.match(/https:\/\/(mail\.google|meet\.new|calendar\.google)/g) || []).length === 3);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+m.seccion('los que se quedan, pero cortos');
+
+/* Jose, sobre los doce avisos que confirman algo que él mismo acaba de pulsar:
+   "sí, hazlo así" — dejarlos, pero que duren dos segundos en vez de tres y
+   medio.
+
+   Lo que se guarda aquí NO es que existan dos segundos en alguna parte: es que
+   estén EXACTAMENTE en los sitios que son. Un número suelto se copia al
+   siguiente aviso sin pensarlo, y ahí empieza a acortar cosas que hay que
+   leer. */
+{
+  const RAPIDOS = [
+    ['guardar una entrada o salida',        "showToast('Saved ✓', 'ok', TOAST_QUICK)"],
+    ['salida de varios materiales',         "movement record(s) saved.','ok',TOAST_QUICK)"],
+    ['entrada de varios materiales',        "archive row' + (rows===1?'':'s') + ')', 'ok', TOAST_QUICK)"],
+    ['editar un movimiento',                "field(s) changed. Email sent.', 'ok', TOAST_QUICK)"],
+    ['borrar una entrega esperada',         "showToast('Expected delivery deleted.', 'ok', TOAST_QUICK)"],
+    ['cargar el historial viejo',           "archived movement(s).', 'ok', TOAST_QUICK)"],
+    ['...y pedirlo dos veces',              "movements).', 'ok', TOAST_QUICK)"],
+    ['autorrellenar estantes',              "auto-filled — enter quantities.','ok',TOAST_QUICK)"],
+    ['guardar documentos',                  "showToast('Documents updated ✓', 'ok', TOAST_QUICK)"],
+    ['la semana sin entregas',              "rest of this week.', 'ok', TOAST_QUICK)"]
+  ];
+  RAPIDOS.forEach(([que, marca]) => {
+    m.check(que + ': dura dos segundos', HTML.indexOf(marca) !== -1, marca);
+  });
+
+  m.check('y el número lleva nombre, para que se lea lo que significa',
+    /var TOAST_QUICK = 2000;/.test(HTML));
+
+  /* NI UNO MÁS. Diez es la cuenta que Jose aprobó; si mañana alguien se lo pone
+     a un error, esto se cae. Un aviso corto en un error es peor que ninguno:
+     parpadea, y quien no llegó a leerlo no sabe siquiera que hubo algo. */
+  const usos = (HTML.match(/TOAST_QUICK\)/g) || []).length;
+  m.check('y son DIEZ, ni uno más: el resto de los avisos no se tocó', usos === 10, usos);
+
+  // El valor por defecto sigue donde estaba: bajarlo habría acortado los 126
+  // de golpe y en silencio.
+  m.check('el resto de los avisos conserva su duración de siempre',
+    /duration = duration \|\| 3500;/.test(HTML));
+}
+
+{
+  /* LOS DOS QUE JOSE PUSO EN ESE GRUPO Y NO ACORTÉ. Desde fuera parecen iguales
+     a los diez de arriba, y por eso llevan el motivo escrito al lado: sin la
+     nota, el siguiente que pase los "arregla". */
+  const inc = A.fnSrc(HTML, '_entryFromIncoming');
+  m.check('el que dice qué falta por hacer conserva sus seis segundos',
+    /say which rack it went to\.', 'info', 6000\)/.test(inc));
+  m.check('...con el motivo escrito al lado: instruye, no confirma',
+    /no confirma, INSTRUYE/.test(inc));
+
+  m.check('el que explica por qué NO pasó nada conserva sus cinco',
+    /nothing to correct\.', 'ok', 5000\)/.test(HTML));
+  m.check('...con su motivo: en dos segundos parecería que el ajuste se perdió',
+    /contrario de confirmar algo/.test(HTML));
+}
+
 m.fin();

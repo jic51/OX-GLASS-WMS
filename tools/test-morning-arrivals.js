@@ -95,6 +95,11 @@ Reloj.prototype = RelojReal.prototype;
 function mundo(){
   const pantalla = { html: '', abierto: false, titulo: '', avisos: [] };
   const ctx = vm.createContext({
+    // v11.93: los avisos que sólo confirman llevan una duración corta. A
+    // esta caja sólo le hace falta que el nombre EXISTA — aquí no se mide
+    // cuánto dura nada. El valor de verdad lo guarda test-tanda-borrado,
+    // que lo lee del archivo; éste es un relleno y da igual cuál sea.
+    TOAST_QUICK: 0,
     Object, String, Number, Array, Date: Reloj, JSON, Math, RegExp, console,
     incoming: [], movements: [], userRole: 'ADMIN',
     showToast: (m) => pantalla.avisos.push(String(m)),

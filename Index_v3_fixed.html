@@ -3767,7 +3767,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '11.92';
+var APP_VERSION = '11.93';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -3779,7 +3779,7 @@ var APP_VERSION = '11.92';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '8b2aea69';
+var APP_BUILD = '6465849a';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -6823,7 +6823,7 @@ function renderMovements(){
 
 function _loadOlderHistoryClicked() {
   var btn = document.getElementById('btnLoadOlderHistory');
-  if (_oldHistoryLoaded) { showToast('Older history already loaded (' + oldMovements.length + ' movements).', 'ok'); return; }
+  if (_oldHistoryLoaded) { showToast('Older history already loaded (' + oldMovements.length + ' movements).', 'ok', TOAST_QUICK); return; }
   _btnBusy(btn, 'Loading…');
   google.script.run
     .withSuccessHandler(function(rows) {
@@ -6832,7 +6832,7 @@ function _loadOlderHistoryClicked() {
       _btnLabel(btn, '📜 Older History (' + oldMovements.length + ')');
       _movPage = 1;
       renderMovements();
-      showToast('✓ Loaded ' + oldMovements.length + ' archived movement(s).', 'ok');
+      showToast('✓ Loaded ' + oldMovements.length + ' archived movement(s).', 'ok', TOAST_QUICK);
     })
     .withFailureHandler(function(e) {
       _btnLabel(btn, '📜 Load Older History');
@@ -8688,6 +8688,9 @@ async function submitMovement(){
     if (!adjust.rack){ alert('Enter the rack you counted.'); return; }
     if (!adjust.hasCount){ alert('Enter what you counted.'); return; }
     if (adjust.delta === 0){
+      // NO va a TOAST_QUICK: esto explica por qué NO pasó nada, que es lo
+      // contrario de confirmar algo. Si se va en dos segundos, la persona se
+      // queda creyendo que su ajuste se perdió.
       showToast('The count matches what the app already says — nothing to correct.', 'ok', 5000);
       return;
     }
@@ -8869,7 +8872,7 @@ async function submitMovement(){
               ' removed. Remaining warehouse stock: ' + remaining +
               '.\n⚠️ Row saved with Status = "Damaged" in master sheet.', 'warn', 8000);
           } else {
-            showToast('Saved ✓', 'ok');
+            showToast('Saved ✓', 'ok', TOAST_QUICK);
           }
         }, 400);
       })
@@ -10039,7 +10042,7 @@ function autoFillExitMatRows(n){
   // Focus first qty field
   var firstQty = locsDiv.querySelector('.el-qty');
   if (firstQty) firstQty.focus();
-  showToast(racks.length + ' rack(s) auto-filled — enter quantities.','ok');
+  showToast(racks.length + ' rack(s) auto-filled — enter quantities.','ok',TOAST_QUICK);
 }
 
 function submitMultiExit(){
@@ -10115,7 +10118,7 @@ function submitMultiExit(){
         if (res && res.refreshError) {
           showToast('✓ '+res.rowCount+' movement record(s) saved — but ⚠ '+res.refreshError, 'warn', 12000);
         } else {
-          showToast('✓ '+res.rowCount+' movement record(s) saved.','ok');
+          showToast('✓ '+res.rowCount+' movement record(s) saved.','ok',TOAST_QUICK);
         }
         loadDataFromGoogle(false); // cached numbers show instantly, fresh ones catch up quietly
       })
@@ -10311,7 +10314,7 @@ function submitMultiEntry(){
             if (res.refreshError) msgs.push('⚠ ' + res.refreshError);
             showToast('Saved ✓ — ' + count + ' material(s), ' + rows + ' row(s) — ' + msgs.join(' | '), 'warn', res.refreshError ? 12000 : 8000);
           } else {
-            showToast('Saved ✓ — ' + count + ' material(s) received (' + rows + ' archive row' + (rows===1?'':'s') + ')', 'ok', 5000);
+            showToast('Saved ✓ — ' + count + ' material(s) received (' + rows + ' archive row' + (rows===1?'':'s') + ')', 'ok', TOAST_QUICK);
           }
           /* DOS COSAS DESPUÉS DE GUARDAR, Y EN ESTE ORDEN.
              Las dos van al final y no antes: los movimientos ya están
@@ -14181,7 +14184,7 @@ function submitAttachment() {
     .withSuccessHandler(function() {
       _setModalBusy('attachOverlay', false);
       _btnDone(btn, true, function(){ closeModal('attachOverlay'); });
-      showToast('Documents updated ✓', 'ok');
+      showToast('Documents updated ✓', 'ok', TOAST_QUICK);
       loadDataFromGoogle(false);
     })
     .withFailureHandler(function(err) {
@@ -17210,6 +17213,8 @@ function _entryFromIncoming(item, todoId){
     }
   }, 120);
 
+  // NO va a TOAST_QUICK: esto no confirma, INSTRUYE. Son quince palabras y
+  // la última es la única que importa — qué falta por hacer.
   showToast('Everything the delivery already knew is filled in — say which rack it went to.', 'info', 6000);
 }
 
@@ -17516,7 +17521,7 @@ function _doDeleteIncomingItem(id){
 function _incomingDeleted(btn){
   _btnDone(btn, true, function(){
     closeModal('incomingOverlay');
-    showToast('Expected delivery deleted.', 'ok');
+    showToast('Expected delivery deleted.', 'ok', TOAST_QUICK);
   });
   // Silencioso: la ventana se cierra con su tick y el aviso lo confirma.
   loadDataFromGoogle(true, true);
@@ -18382,7 +18387,7 @@ function openWeekSchedule(){
   // "nothing expected" y la lista de lo que llegó —la que dice cuál está sin
   // registrar— no hay forma de verla.
   if (!items.length && !_weekArrivals(todayStr).length && !_overdueThisWeek(todayStr).length){
-    showToast('Nothing expected for the rest of this week.', 'ok');
+    showToast('Nothing expected for the rest of this week.', 'ok', TOAST_QUICK);
     return;
   }
   showMorningPopup(items, todayStr);
@@ -19960,6 +19965,24 @@ function _progFinish(){
   }, fallados ? 10000 : 6000);
 }
 
+/* CUÁNTO SE QUEDA UN AVISO, Y POR QUÉ HAY UN NÚMERO CON NOMBRE.
+ *
+ * Jose, repasando la lista de los 47 avisos de "salió bien": los que confirman
+ * algo que él mismo acaba de pulsar se quedan, "pero que duren menos".
+ *
+ * Es el caso en que la persona YA SABE lo que pidió y sólo quiere ver que
+ * ocurrió. Dos segundos alcanzan de sobra para eso —son cuatro o cinco
+ * palabras— y evitan que tres confirmaciones seguidas se apilen encima de la
+ * tabla, que es de donde salió toda esta revisión.
+ *
+ * NO SE TOCA EL VALOR POR DEFECTO. Un error o una advertencia hay que leerlos,
+ * y algunos avisos no confirman: EXPLICAN, o dicen qué hacer a continuación
+ * ("say which rack it went to"). Ésos se quedan con lo suyo. Bajar el defecto
+ * los habría acortado a todos de golpe, en silencio, que es justo la clase de
+ * cambio que parece pequeño y no lo es.
+ */
+var TOAST_QUICK = 2000;
+
 function showToast(msg, type, duration) {
   type     = type     || 'ok';
   duration = duration || 3500;
@@ -20941,7 +20964,7 @@ function saveEditMov() {
       // guardar la fila seguía marcada y la barra seguía ofreciendo Edit y
       // Delete sobre algo que la persona ya había terminado de tocar.
       _clearMovSelection();
-      showToast('Movement updated — ' + res.changes + ' field(s) changed. Email sent.', 'ok');
+      showToast('Movement updated — ' + res.changes + ' field(s) changed. Email sent.', 'ok', TOAST_QUICK);
       // Silencioso: mismo caso que borrar un movimiento.
       loadDataFromGoogle(true, true);
     },

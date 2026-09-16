@@ -132,8 +132,11 @@ console.log('\n═══ deleting says something, and cannot be pressed twice �
   // "SYSTEM_BUSY|". Antes éste enseñaba msg crudo.
   check('a REAL error still restores the button and still shows the error',
     /_btnReset\(btn\);/.test(del) && /showToast\('Error: ' \+ _stripTags\(err\), 'err'/.test(del));
+  // v11.93: sigue confirmando, pero en dos segundos. Jose: los avisos que
+  // confirman algo que uno mismo acaba de pulsar se quedan, "pero que duren
+  // menos". Lo que se guarda aquí es que la confirmación EXISTA.
   check('a successful delete confirms itself — there was no toast at all before',
-    /showToast\('Expected delivery deleted\.', 'ok'\)/.test(del));
+    /showToast\('Expected delivery deleted\.', 'ok', TOAST_QUICK\)/.test(del));
   // Decía "exactly as before" y exigía `loadDataFromGoogle(true)`, o sea el modo
   // con esqueletos y el aviso de los 10-20 segundos. Era correcto cuando se
   // escribió: entonces ése ERA el comportamiento de antes. Jose pidió quitarlo
