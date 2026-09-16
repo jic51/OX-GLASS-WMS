@@ -46,6 +46,10 @@ function navegador(){
     setTimeout: (fn) => { visto.timers = visto.timers || []; visto.timers.push(fn); },
     clearTimeout: () => {},
     _wq: [], _wqBusy: false,
+    // v11.96: los borrados tienen su propia cola y también aplazan, así que
+    // "¿queda trabajo detrás?" mira las dos. Esta prueba sólo ejercita la de
+    // escrituras; la otra existe vacía.
+    _delQueue: [], _delRunning: false,
     _sessionToken: 'tok',
     BUSY_LABEL: 'Waiting…', BUSY_MAX_RETRIES: 8,
     _btnBusy: () => {}, _btnReset: () => {},

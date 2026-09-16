@@ -431,8 +431,11 @@ console.log('\n═══ y en pantalla, al instante ═══\n');
     crudos.length === 0);
   check('...y de verdad se encontraron avisos que contar, no cero',
     avisos.length >= 6, avisos.length);
+  // v11.96: por _reloadWhenIdle, que espera a las dos colas antes de pedirla —
+  // una tanda de borrados aplaza el refresco del servidor y traerse los datos
+  // antes daría las hojas derivadas a medias. Que la recarga se pida no cambia.
   check('la recarga silenciosa sigue ahí, para los totales que calcula el servidor',
-    /loadDataFromGoogle\(true, true\)/.test(del));
+    /_reloadWhenIdle\(\)/.test(del));
 
   const conf = sinComentarios(fnSrc(HTML, 'deleteMovementRow'));
   check('el aviso ya NO dice "no se puede deshacer", porque ahora sí se puede — ' +

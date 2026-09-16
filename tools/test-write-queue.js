@@ -98,8 +98,15 @@ function navegador(opts){
   [ varSrc('BUSY_LABEL'), varSrc('BUSY_MAX_RETRIES'), varSrc('BUSY_BASE_MS'),
     varSrc('BUSY_MAX_MS'), varSrc('BUSY_JITTER_MS'), varSrc('SHORT_PREFIX'),
     varSrc('_wq'), varSrc('_wqBusy'), varSrc('_refrescoAplazado'),
+    // v11.96: "¿queda trabajo detrás?" mira las DOS colas, así que la de
+    // borrados tiene que existir aquí aunque esta prueba no la use. Se
+    // declara vacía a mano: su declaración en el archivo lleva comentario al
+    // final de línea y varSrc se pasaría de largo.
+    'var _delQueue = []; var _delRunning = false;',
     fnSrc(HTML, '_isBusyError'), fnSrc(HTML, '_stripTags'), fnSrc(HTML, '_humanErr'),
-    fnSrc(HTML, '_busyDelay'), fnSrc(HTML, '_wqPump'), fnSrc(HTML, '_acWrite')
+    fnSrc(HTML, '_busyDelay'), fnSrc(HTML, '_hayMasEscrituras'),
+    fnSrc(HTML, '_marcarAplazable'), fnSrc(HTML, '_cierreDeTanda'),
+    fnSrc(HTML, '_wqPump'), fnSrc(HTML, '_acWrite')
   ].forEach(code => vm.runInContext(code, ctx));
 
   // El servidor falso: cada llamada consulta `respuestas` y contesta lo que

@@ -97,6 +97,26 @@
        almacén?</p>
 
     <div class="entry">
+      <span class="ver">v11.96</span>
+      <span class="tag fix">Arreglado</span>
+      <h3>Borrar varios a la vez deja de ser lento</h3>
+      <p>Una versión anterior hizo que una tanda de cambios reconstruyera las
+         tablas de existencias dos veces en vez de una por cambio. Funcionaba —
+         para los guardados. Los borrados tienen su propia cola desde hace
+         tiempo y nunca pasaron por ese código, así que borrar trece movimientos
+         seguía pagando trece reconstrucciones enteras.</p>
+      <p>Cronometrado sobre una grabación: tres hechos en 1:20, seis en 2:00,
+         diez en 2:40. Unos doce segundos cada uno. Eso es también la mayor
+         parte de lo que parecía "la otra cuenta tarda en actualizarse" — la
+         otra ventana no puede enseñar la verdad hasta que el trabajo termine, y
+         el trabajo tardaba dos minutos y medio.</p>
+      <p>Trece borrados cuestan ahora dos reconstrucciones. Dos y no una, y vale
+         la pena decir por qué: la primera no puede esperar, porque cuando sale
+         los otros doce todavía no se han encolado, y la última refresca sola
+         porque detrás de ella ya no viene nadie.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.95</span>
       <span class="tag fix">Arreglado</span>
       <h3>Los checks dejan de borrarse solos</h3>

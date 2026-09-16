@@ -174,6 +174,11 @@ function navegador(opts) {
     // —que está dentro del comentario de arriba— y metería basura en la caja.
     _delQueue: [], _delRunning: false, _delPending: {}, _delGen: 0,
     _prog: null, _progHideT: null,
+    // v11.96: la pregunta "¿queda trabajo detrás?" mira LAS DOS colas, así que
+    // la de escrituras también tiene que existir aquí. Vacía salvo donde una
+    // prueba la llene a propósito.
+    _wq: [], _wqBusy: false, _refrescoAplazado: false,
+    _reloadWhenIdle: () => { pantalla.recargas = (pantalla.recargas || 0) + 1; },
 
     // Dobles de todo lo que es pintar o avisar. Lo que se mide es la cola y la
     // línea, no el DOM de la tabla.
@@ -190,9 +195,7 @@ function navegador(opts) {
     _h: (o) => o,
     BUSY_MAX_RETRIES: 3,
 
-    // La recarga de cierre. Se cuenta, porque el número importa: la gracia de
-    // la cola es que trece borrados cuesten UNA recarga, no trece.
-    loadDataFromGoogle: () => { pantalla.recargas = (pantalla.recargas || 0) + 1; },
+    loadDataFromGoogle: () => {},
 
     // El servidor. Guarda la llamada y NO contesta hasta que la prueba lo diga.
     google: { script: { run: null } }
@@ -216,7 +219,12 @@ function navegador(opts) {
      '_progStart', '_progStep', '_progPaint', '_progFinish'],
     { dobles: ['_movByRowIdx', '_movRowEl', '_rowLeave', 'renderAll',
                '_sysCacheDrop', 'showToast', '_isBusyError', '_isGoneError',
-               '_busyDelay', '_stripTags', '_h', 'loadDataFromGoogle'] });
+               '_busyDelay', '_stripTags', '_h', 'loadDataFromGoogle',
+               // v11.96: la recarga de cierre se cuenta, no se ejecuta — el
+               // número es lo que importa. El andamio avisó de este choque en
+               // vez de dejarme medir el producto creyendo medir el doble,
+               // que es exactamente para lo que se escribió.
+               '_reloadWhenIdle'] });
 
   return {
     ctx: caja, toasts, pantalla, enCola, movimientos, fallan,
@@ -697,6 +705,138 @@ m.seccion('los que se quedan, pero cortos');
     /nothing to correct\.', 'ok', 5000\)/.test(HTML));
   m.check('...con su motivo: en dos segundos parecería que el ajuste se perdió',
     /contrario de confirmar algo/.test(HTML));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+m.seccion('las DOS colas, que es lo que la v11.89 no miró');
+
+/* EL VIDEO DE JOSE, CRONOMETRADO. 2026-09-16, borrando trece con dos cuentas
+   abiertas; su propia línea de progreso da los tiempos:
+
+       3 de 13 …… 1:20
+       6 de 13 …… 2:00
+      10 de 13 …… 2:40
+
+   Doce segundos por borrado. La v11.89 tenía que haber dejado la tanda entera
+   en DOS reconstrucciones del almacén y estaba pagando TRECE.
+
+   La causa: el aplazamiento se escribió dentro de _acWrite, la cola de
+   ESCRITURAS. Los borrados tienen la suya desde la v11.58 y llamaban a
+   google.script.run directamente. La optimización existía y el camino que más
+   la necesitaba no la tocaba.
+
+   Esto se mide contando lo que de verdad sale por el cable: cuántas cargas
+   llevan _skipRefresh y cuántas no. */
+{
+  const n = navegador();
+  for (let i = 1; i <= 13; i++) n.movimientos.push({ rowIdx: i, movId: 'M' + i, qty: 1, name: 'X' });
+  let pedidos = 0;
+  for (let i = 1; i <= 13; i++) if (n.ctx._doDeleteMovementRow(i)) pedidos++;
+  n.ctx._progStart(pedidos, 'Deleting movements');
+
+  const cargas = [];
+  // Se contesta una a una, apuntando la carga que salió en cada envío.
+  while (n.enCola.length){
+    cargas.push(JSON.parse(JSON.stringify(n.enCola[0].carga)));
+    n.contestar();
+  }
+
+  m.check('salieron las trece', cargas.length === 13, cargas.length);
+
+  const aplazadas = cargas.filter(c => c._skipRefresh === true).length;
+  const refrescan = cargas.filter(c => !c._skipRefresh).length;
+
+  m.check('once de las trece le dicen al servidor que NO refresque todavía — ' +
+          'antes se lo decían CERO y el almacén se reconstruía trece veces',
+    aplazadas === 11, aplazadas);
+
+  /* DOS, NO UNA. Y el número importa decirlo bien.
+   *
+   * Escribí esta prueba esperando UNA, y salieron dos. La prueba tenía razón y
+   * yo no: LA PRIMERA NO PUEDE APLAZAR. _delPump la saca de la cola y la manda
+   * en el mismo instante, cuando las otras doce todavía no se han encolado —
+   * el bucle que las encola sigue corriendo. Así que cuando sale, de verdad no
+   * hay nadie detrás.
+   *
+   * Y la ÚLTIMA refresca ella misma, porque ya no viene nadie. Es la misma
+   * forma que tiene la cola de escrituras (ver test-refresco-tanda), por la
+   * misma razón, y redondearlo a "una" sería redondear a mi favor.
+   *
+   * De trece a dos. Eso es lo que se gana.
+   */
+  m.check('la PRIMERA refresca: cuando sale, las otras doce todavía no se han ' +
+          'encolado', !cargas[0]._skipRefresh);
+  m.check('...y la ÚLTIMA también, porque ya no viene nadie detrás',
+    !cargas[12]._skipRefresh);
+  m.check('trece borrados cuestan DOS reconstrucciones del almacén, no trece',
+    refrescan === 2, refrescan);
+}
+
+{
+  // Y el cierre de tanda se pide una vez, al final, no una por borrado.
+  const n = navegador();
+  for (let i = 1; i <= 5; i++) n.movimientos.push({ rowIdx: i, movId: 'M' + i, qty: 1, name: 'X' });
+  for (let i = 1; i <= 5; i++) n.ctx._doDeleteMovementRow(i);
+  n.ctx._progStart(5, 'Deleting movements');
+
+  let cierres = 0;
+  while (n.enCola.length){
+    if (n.enCola[0].accion === 'refreshNow') cierres++;
+    n.contestar();
+  }
+  /* CERO, y está bien. El cierre existe para cuando la ÚLTIMA operación aplazó
+     —o sea, cuando quedaba algo detrás y luego no vino—. Aquí la última no
+     aplaza: refresca ella misma, apaga la bandera, y pedir un refreshNow
+     encima sería un viaje entero a Google para rehacer lo que se acaba de
+     hacer. Que salga cero es la prueba de que no sobra ninguno. */
+  m.check('no se pide ningún cierre de más: la última ya refrescó', cierres === 0, cierres);
+  m.check('...y la cola queda vacía, sin nada en el aire',
+    n.ctx._delQueue.length === 0 && n.ctx._delRunning === false);
+  m.check('...y la bandera del aplazamiento queda apagada, que es lo que hace ' +
+          'que no se pida', n.ctx._refrescoAplazado === false);
+}
+
+{
+  /* LA PREGUNTA MIRA LAS DOS COLAS. Si mirara sólo la suya, un borrado con un
+     guardado esperando detrás diría "soy el último" y refrescaría en medio —
+     el gasto que se quería quitar. Y al revés es peor: la última operación de
+     verdad aplazaría creyendo que viene alguien, no vendría nadie, y los
+     números se quedarían viejos hasta que alguien recargara a mano. */
+  const n = navegador();
+  n.ctx._wq = [function(){}];          // una escritura esperando turno
+  n.movimientos.push({ rowIdx: 1, movId: 'M1', qty: 1, name: 'X' });
+  n.ctx._doDeleteMovementRow(1);
+
+  const carga = n.enCola[0].carga;
+  m.check('un borrado con un guardado detrás SÍ aplaza, aunque su propia cola ' +
+          'esté vacía', carga._skipRefresh === true, carga);
+
+  const fuente = A.fnSrc(HTML, '_hayMasEscrituras');
+  m.check('la pregunta está escrita una vez y mira las dos colas',
+    /_wq\.length > 0 \|\| _delQueue\.length > 0/.test(fuente));
+
+  const cierre = A.fnSrc(HTML, '_cierreDeTanda');
+  m.check('y el cierre espera a las dos, y a lo que esté en el aire',
+    /_wqBusy \|\| _wq\.length \|\| _delRunning \|\| _delQueue\.length/.test(cierre));
+
+  const espera = A.fnSrc(HTML, '_reloadWhenIdle');
+  m.check('la recarga del navegador también espera a las dos — miraba sólo una',
+    /_wq\.length \|\| _wqBusy \|\| _delQueue\.length \|\| _delRunning/.test(espera));
+}
+
+{
+  // La marca se decide AL ENVIAR, no al encolar. Con un solo borrado no hay
+  // nadie detrás, así que refresca él mismo: aplazar sería no refrescar nunca.
+  const n = navegador();
+  n.movimientos.push({ rowIdx: 1, movId: 'M1', qty: 1, name: 'X' });
+  n.ctx._doDeleteMovementRow(1);
+  m.check('un borrado suelto NO aplaza: refresca él, porque no viene nadie',
+    !n.enCola[0].carga._skipRefresh, n.enCola[0].carga);
+
+  const cuerpo = A.fnSrc(HTML, '_doDeleteMovementRow');
+  m.check('...y la marca se pone en cada intento, no una vez al encolar — un ' +
+          '"ocupado" puede reintentarse medio minuto después, con la cola ya vacía',
+    /function attempt\(\)\{[\s\S]{0,900}_marcarAplazable\(carga\);/.test(cuerpo));
 }
 
 m.fin();

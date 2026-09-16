@@ -184,8 +184,15 @@ console.log('\n═══ every path that rewrites movements must refresh, and mu
     } else {
       seg = HTML.slice(Math.max(0, at - 2500), at + 2000);
     }
+    /* EITHER SHAPE COUNTS, and the reason is worth writing down. Since v11.96
+       the delete path asks through `_reloadWhenIdle()` rather than calling the
+       load directly: a burst of deletes now tells the server to hold its
+       rebuild until the last one, so fetching immediately would bring back
+       half-built stock tables. What this test guards has not changed — that a
+       refresh from the SERVER is asked for at all, because the local patch
+       fixes the lists and cannot fix the stock. */
     check(what + ' refreshes from the server afterwards — the local patch fixes the lists, not the stock',
-      at !== -1 && /loadDataFromGoogle\(true/.test(seg));
+      at !== -1 && /loadDataFromGoogle\(true|_reloadWhenIdle\(\)/.test(seg));
   });
 }
 

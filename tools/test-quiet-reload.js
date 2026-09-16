@@ -97,7 +97,12 @@ const DEBEN_SER_SILENCIOSAS = [
   // trece avisos apilados sobre la tabla, y ahora los cuenta una sola línea. El
   // ancla pasa a ser esa línea; la garantía que protege esta prueba —que el
   // refresco de después NO desarma el tablero— no ha cambiado.
-  ['borrar un movimiento',        /_progStep\(true\)[\s\S]{0,400}?loadDataFromGoogle\(true, true\)/],
+  // v11.96: este camino pide la recarga por _reloadWhenIdle, que espera a que
+  // las dos colas se vacíen — una tanda de borrados aplaza el refresco del
+  // servidor, y traerse los datos antes daría las hojas derivadas a medias. La
+  // garantía de esta prueba es la misma: refrescar SIN desarmar el tablero, y
+  // _reloadWhenIdle termina en loadDataFromGoogle(true, true).
+  ['borrar un movimiento',        /_progStep\(true\)[\s\S]{0,600}?_reloadWhenIdle\(\)/],
   ['editar un movimiento',        /Movement updated[\s\S]{0,400}?loadDataFromGoogle\(true, true\)/],
   ['borrar una entrega esperada', /Expected delivery deleted[\s\S]{0,400}?loadDataFromGoogle\(true, true\)/],
   ['importar un archivo',         /importFileInput[\s\S]{0,400}?loadDataFromGoogle\(true, true\)/],

@@ -86,6 +86,13 @@ function mundo(){
     // v11.90: el borrado sube _delGen para que una recarga pedida antes no
     // pinte filas que ya no están. Aquí sólo hace falta que exista.
     _delGen: 0,
+    // v11.96: los borrados también aplazan el refresco del servidor, y la
+    // pregunta mira las dos colas. Aquí sólo hace falta que existan.
+    _wq: [], _wqBusy: false, _refrescoAplazado: false,
+    _marcarAplazable: () => {},
+    _cierreDeTanda: () => {},
+    _hayMasEscrituras: () => false,
+    _reloadWhenIdle: () => { eventos.push('reload'); },
     // Y el aviso de "borrado" ya no es un toast, es una línea que cuenta —
     // trece borrados daban trece avisos apilados. Se anota como evento para que
     // el ORDEN, que es lo que mide este archivo, se siga viendo entero.

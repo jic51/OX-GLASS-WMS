@@ -95,6 +95,25 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.96</span>
+      <span class="tag fix">Fixed</span>
+      <h3>Deleting several at once stops being slow</h3>
+      <p>An earlier version made a run of changes rebuild the stock tables twice
+         instead of once per change. It worked — for saves. Deletes have had
+         their own queue since a while back and never went through that code, so
+         deleting thirteen movements still paid for thirteen full rebuilds.</p>
+      <p>Timed off a recording: three done at 1:20, six at 2:00, ten at 2:40.
+         About twelve seconds each. That is also most of what looked like "the
+         other account is slow to update" — the other window cannot show the
+         truth until the work is finished, and the work was taking two and a
+         half minutes.</p>
+      <p>Thirteen deletes now cost two rebuilds. Two and not one, and it is
+         worth saying why: the first cannot wait, because when it leaves the
+         other twelve have not been queued yet, and the last refreshes on its
+         own because nothing follows it.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.95</span>
       <span class="tag fix">Fixed</span>
       <h3>Ticked rows stop clearing themselves</h3>

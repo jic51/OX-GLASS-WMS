@@ -83,6 +83,10 @@ function navegador(opts){
     console: { warn(){}, log(){}, error(){} },
     showToast: (msg, kind) => avisos.push({ msg: String(msg), kind }),
     _progStart: () => {},
+    // v11.96: _acWrite marca la carga como aplazable mirando las dos colas.
+    _marcarAplazable: () => {},
+    _cierreDeTanda: () => {},
+    _delQueue: [], _delRunning: false,
     _progStep:  (ok) => restaurados.push(!!ok),
     _progFinRestaurado: () => '',
     _btnBusy:  (b, t) => { if (b) { b.estado = 'busy'; b.texto = t; } },
