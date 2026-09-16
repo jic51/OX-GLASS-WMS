@@ -97,6 +97,25 @@
        almacén?</p>
 
     <div class="entry">
+      <span class="ver">v11.97</span>
+      <span class="tag fix">Arreglado</span>
+      <h3>El último movimiento de una tanda llega a la otra cuenta</h3>
+      <p>Al borrar trece movimientos desde una cuenta, el último no desaparecía
+         nunca de la otra. No lento — nunca. Se quedaba en pantalla todo el
+         tiempo que uno quisiera esperar.</p>
+      <p>La app le pregunta al servidor "¿ha cambiado algo?" comparando un
+         sello. La carga que trae los datos leía los movimientos primero y ese
+         sello al final, así que un borrado que cayera entre las dos lecturas
+         dejaba al navegador con la lista vieja y el sello nuevo. A partir de
+         ahí cada comprobación decía "no ha cambiado nada" y no volvía a
+         preguntar.</p>
+      <p>Ahora el sello se lee antes que los datos. Cuando ocurre la misma
+         carrera, al navegador le queda el sello viejo, nota la diferencia en su
+         siguiente comprobación y vuelve a pedir. Cuesta una consulta de más; lo
+         que evita es una pantalla equivocada para siempre.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.96</span>
       <span class="tag fix">Arreglado</span>
       <h3>Borrar varios a la vez deja de ser lento</h3>

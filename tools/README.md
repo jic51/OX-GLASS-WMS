@@ -91,6 +91,7 @@ node tools/test-refresco-tanda.js
 node tools/test-tanda-borrado.js
 node tools/test-salidas-animadas.js
 node tools/test-seleccion-viva.js
+node tools/test-sello-antes.js
 node tools/test-short-stock.js
 node tools/test-settings-boxes.js
 node tools/test-toast-and-buttons.js
@@ -707,6 +708,32 @@ come back from — is invisible to both. Those get a browser test.
   stuck at "12 of 13" waiting for an answer that never comes. Writing the test
   is what caught `_doDeleteMovementRow` returning nothing at all on the happy
   path, so every caller read it as "did not queue".
+- `test-sello-antes.js` — the stamp is read BEFORE the data, never after
+  (v11.97). Jose, after deleting thirteen movements with two accounts open: "the
+  last one never updates in the other account, NEVER" — confirmed over eight
+  minutes of recording plus the time to compress it, download it and write the
+  message. Not slow: permanent, and the cause was the order of two reads.
+  `getInitialData` read the whole archive and then, in the returned object,
+  read the data stamp. A delete committing between those two reads left the
+  browser holding the movement list from BEFORE together with the stamp from
+  AFTER — and the heartbeat compares stamps, so from then on its own and the
+  server's matched, it concluded nothing had changed, and it never asked again.
+  The row stayed on screen forever. It hit the LAST of a batch specifically
+  because the first twelve are corrected by the reload that the next delete's
+  bump triggers, and the thirteenth has nothing behind it; since v11.96 it is
+  also the slowest, being the only one that rebuilds, so its window is the
+  widest. v11.96 did not create this — it removed the noise that was hiding it.
+  The order is not symmetric, which is the whole point: stamp-after-data gives a
+  new stamp with old data, a lie that never corrects itself; stamp-before-data
+  gives an old stamp with new data, which costs one wasted fetch. The test runs
+  the race in both orders against the real `_pulseOk`, proves fifty heartbeats
+  never recover from the old order, and pins that the product uses the new one —
+  including that `dataStamp_()` is called exactly ONCE inside `getInitialData`,
+  because a second call would reintroduce the bug without touching the fixed
+  line. Writing it caught my own wrong expectation: with the stamp read first
+  the data can come back already fresh, so the guarantee is not "the screen is
+  stale" but "the stored stamp is never newer than the stored data", and both
+  interleavings are tested.
 - `test-seleccion-viva.js` — what is ticked is what is on screen (v11.95). Jose:
   "while ticking more movements, all the ticks cleared, that is strange". Not
   strange — reproducible, and it had two halves. `_TAB_RENDERS.movements` did

@@ -95,6 +95,24 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.97</span>
+      <span class="tag fix">Fixed</span>
+      <h3>The last movement of a batch reaches the other account</h3>
+      <p>Deleting thirteen movements from one account, the last one never
+         disappeared from the other. Not slowly — never. It stayed on screen for
+         as long as anyone cared to wait.</p>
+      <p>The app asks the server "has anything changed?" by comparing a stamp.
+         The load that fetches your data was reading the movements first and
+         that stamp last, so a deletion landing between those two reads left a
+         browser holding the old list together with the new stamp. From then on
+         every check said "nothing changed" and it never asked again.</p>
+      <p>The stamp is now read before the data. When the same race happens the
+         browser ends up with an old stamp instead, notices the difference on
+         its next check, and asks once more. The cost is one extra fetch; what
+         it replaces is a screen that was wrong for good.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.96</span>
       <span class="tag fix">Fixed</span>
       <h3>Deleting several at once stops being slow</h3>
