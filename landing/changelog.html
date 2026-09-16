@@ -95,6 +95,37 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v11.95</span>
+      <span class="tag fix">Fixed</span>
+      <h3>Ticked rows stop clearing themselves</h3>
+      <p>Ticking several movements to delete them, the ticks would sometimes all
+         vanish at once. The table was folding back to its first page every time
+         fresh data arrived — which, with two people working, is every twenty
+         seconds — so anything ticked past the first page stopped being drawn.</p>
+      <p>The half that did not show was the one worth fixing: the selection
+         itself survived, so Delete stayed armed on rows that were no longer on
+         screen. Ticking eight, seeing none, and having Delete take eight is
+         worse than losing the selection, because losing it is at least
+         visible.</p>
+      <p>Fresh data no longer changes which page you are on — that still happens
+         when you switch screens or change a filter, where it means something.
+         And the rule is now simple: what is ticked is what is on screen. A row
+         that leaves the view, for any reason, leaves the selection with it.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v11.95</span>
+      <span class="tag new">New</span>
+      <h3>The name card is always the same size</h3>
+      <p>Hovering a name in the User column opened a card whose width followed
+         the length of the email — and because a wider card has to shift further
+         to stay inside the window, it also appeared in a different place each
+         time. One cause, both complaints.</p>
+      <p>Fixed width now, with the name and email on one line. Anything too long
+         is shortened and can still be read in full by hovering it.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.94</span>
       <span class="tag new">New</span>
       <h3>Everything that disappears is seen to disappear</h3>

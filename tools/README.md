@@ -90,6 +90,7 @@ node tools/test-andamio.js
 node tools/test-refresco-tanda.js
 node tools/test-tanda-borrado.js
 node tools/test-salidas-animadas.js
+node tools/test-seleccion-viva.js
 node tools/test-short-stock.js
 node tools/test-settings-boxes.js
 node tools/test-toast-and-buttons.js
@@ -706,6 +707,29 @@ come back from — is invisible to both. Those get a browser test.
   stuck at "12 of 13" waiting for an answer that never comes. Writing the test
   is what caught `_doDeleteMovementRow` returning nothing at all on the happy
   path, so every caller read it as "did not queue".
+- `test-seleccion-viva.js` — what is ticked is what is on screen (v11.95). Jose:
+  "while ticking more movements, all the ticks cleared, that is strange". Not
+  strange — reproducible, and it had two halves. `_TAB_RENDERS.movements` did
+  `_movPage = 1` before painting, and that map is called by `renderAll`, which
+  runs on EVERY silent reload — with two accounts working, every twenty seconds.
+  The table folded back to page one and anything ticked beyond it stopped being
+  drawn. The half that did not show is the one that mattered: the selection
+  survived, because `_selectedMovements` walks the whole list rather than what is
+  painted, so Delete stayed armed on rows nobody could see. Ticking eight, seeing
+  none, and having Delete take eight is worse than losing the selection, because
+  losing it is at least visible. Two rules now, tested separately: fresh data
+  does not change your page (that belongs to switching screens and changing
+  filters, which already do it), and a row that is not painted is not selected —
+  which also covers the other account deleting a row you had ticked. The test
+  EXECUTES the real pagination block, lifted out of `renderMovements` by markers
+  rather than regex, against a fake table; asserting the `_movPage = 1` line is
+  gone would test the fix instead of the bug. Also pins the hover card: it was
+  `width:max-content`, so it measured whatever the email measured, and a wider
+  card shifts further to stay inside the window — one cause for both of Jose's
+  complaints, the size and the moving. Writing that check taught its own lesson:
+  the first version searched the whole CSS block for `width:max-content` and
+  failed, because the comment explaining the fix NAMES what was removed. A test
+  that reads prose measures prose; it strips comments first now.
 - `test-salidas-animadas.js` — every place a row disappears, it is seen to
   disappear (v11.94). The animation existed since v11.66 for deleting a movement
   and putting one back, and the CSS above it said, word for word, "the eight
