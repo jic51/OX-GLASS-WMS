@@ -365,9 +365,18 @@ console.log('\n═══ el check no sobrevive a irse de la pantalla ═══\n
   check('junto al limpiado de los modos de fila, que ya lo hacía por el mismo motivo',
         tab.indexOf('_clearRowModes()') < tab.indexOf('_clearMovSelection()'));
 
-  const guardar = HTML.slice(HTML.indexOf("args: ['modifyMovement'"));
-  check('GUARDAR UNA EDICIÓN LO LIMPIA',
-        guardar.slice(0, 1200).indexOf('_clearMovSelection()') !== -1);
+  // LA FUNCIÓN ENTERA, contando llaves — no una ventana de N caracteres desde
+  // el principio. Esto era `HTML.slice(...).slice(0, 1200)` y se puso rojo sobre
+  // código sano en cuanto saveEditMov creció: el parche que pinta la fila
+  // editada en el acto empujó _clearMovSelection() más allá del carácter 1200.
+  // Es la misma trampa que andamio.js advierte en su cabecera, y la ventana no
+  // medía nada que la función no mida mejor.
+  const guardar = fnSrc(HTML, 'saveEditMov');
+  check('GUARDAR UNA EDICIÓN LO LIMPIA', guardar.indexOf('_clearMovSelection()') !== -1);
+  // Y en la rama del SÍ, no en la del error: limpiar el check cuando el guardado
+  // falló borraría la selección de algo que todavía hay que volver a guardar.
+  check('...en la rama del sí, no en la del error',
+        guardar.indexOf('_clearMovSelection()') < guardar.indexOf('fail:'));
 
   // Y lo que NO debe limpiarlo: "load more" deja a la persona en la misma
   // pantalla mirando las mismas filas, sólo que con más debajo.

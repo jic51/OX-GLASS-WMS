@@ -97,6 +97,25 @@
        almacén?</p>
 
     <div class="entry">
+      <span class="ver">v12.00</span>
+      <span class="tag fix">Arreglado</span>
+      <h3>La pantalla cambia en cuanto se guarda</h3>
+      <p>Marcar una entrega como llegada tardaba unos once segundos en verse,
+         mucho después de que el guardado ya hubiera pasado. Había dos cosas mal
+         en la misma línea: nada actualizaba la copia de la que dibuja la
+         pantalla, y el refresco que venía después leía del caché — así que
+         pintaba la respuesta vieja por segunda vez y sólo se corregía cuando
+         terminaba una recarga completa.</p>
+      <p>Ahora la pantalla cambia en el momento en que el guardado llega. No se
+         dibuja nada antes de que el servidor lo acepte; se dibuja justo cuando
+         lo hace. El mismo arreglo cubre adjuntar un documento a un movimiento y
+         editar los datos de un movimiento. Una excepción que conviene saber: al
+         editar una cantidad, la fila cambia al instante, pero el total del
+         material sigue esperando el refresco — eso sólo lo puede calcular el
+         servidor.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.99</span>
       <span class="tag fix">Arreglado</span>
       <h3>El mazo de la esquina cuenta lo que tiene, y abre por la más nueva</h3>

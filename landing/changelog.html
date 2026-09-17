@@ -95,6 +95,24 @@
        once, does everyone see the same warehouse?</p>
 
     <div class="entry">
+      <span class="ver">v12.00</span>
+      <span class="tag fix">Fix</span>
+      <h3>The screen changes the moment the save lands</h3>
+      <p>Marking a delivery arrived took about eleven seconds to show up, long
+         after the save had already gone through. Two things were wrong in the
+         same line: nothing updated the copy the screen draws from, and the
+         refresh that followed read from the cache — so it painted the old
+         answer a second time and only corrected itself once a full reload
+         finished.</p>
+      <p>Now the screen updates as the save lands. Nothing is drawn before the
+         server agrees; it is drawn the instant it does. The same fix covers
+         attaching a document to a movement and editing a movement's details.
+         One exception worth knowing: editing a quantity updates that row
+         immediately, but the material's total still waits for the refresh —
+         only the server can work that out.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v11.99</span>
       <span class="tag fix">Fix</span>
       <h3>The corner pile counts what it holds, and opens on the newest card</h3>
