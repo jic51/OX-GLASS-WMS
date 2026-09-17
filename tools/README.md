@@ -112,9 +112,26 @@ node tools/test-stock-basket.js
 node tools/test-headers-repair.js
 node tools/build-site.js && node tools/test-site-privacy.js
 node tools/check-changelog.js
+node tools/check-publicado.js
 node tools/sync-legal.js --check
 node tools/build-fingerprint.js --check
 ```
+
+Y cuando el release toca la landing, el changelog o los documentos públicos,
+falta un paso más — **el que se olvidó durante catorce días**:
+
+```
+node tools/publish-site.js          # dice qué cambiaría
+node tools/publish-site.js --push   # lo publica
+```
+
+Escribir el cambio y publicarlo son dos actos en dos repositorios: las fuentes
+viven aquí, en `landing/`, y el sitio que la gente ve se sirve desde
+`jic51/acopio-site`. En septiembre de 2026 las fuentes estuvieron corregidas y
+probadas dos semanas mientras acopio.net seguía enseñando la página del día 3 —
+la suite en verde, el changelog al día, y nada mirando el segundo paso. Lo
+encontró Jose abriendo su propia web. `check-publicado.js` es lo que ahora pone
+la suite roja cuando vuelve a pasar.
 
 `tools/audit-responsive.js` and `tools/test-scale.js` are tape measures, not
 tests — run them when the thing they measure changes, read the numbers, fix
