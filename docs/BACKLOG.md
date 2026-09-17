@@ -5,6 +5,162 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+# ══ ANOTADO EL 2026-09-17 — PARA REVISAR AL FINAL ══
+
+Jose: *"HAY QUE MEJORAR LAS VENTANAS (TODAS) QUE SE ABREN DENTRO DE LA APP. HAY
+QUE DARLES UN ESTÁNDAR A CADA UNA Y REVISAR QUÉ DEBE Y NO DEBE SER DIFERENTE EN
+CADA TAMAÑO DE PANTALLA, POR QUÉ, QUÉ DEBE Y NO DEBE SER DIFERENTE POR CADA TIPO
+DE MOVIMIENTO Y POR TIPO DE MATERIAL, PORQUE VEO COSAS DE ESCALAS DISTINTAS Y
+TAMAÑOS DISTINTOS EN ALGUNOS LUGARES DONDE DEBERÍAN SER LO MISMO. HAZ UNA LISTA
+DE TODO LO QUE DEBEMOS REVISAR Y ANÓTALO PARA REVISARLO AL FINAL."*
+
+**Él dijo "al final". Esto no se empieza hasta que lo diga.**
+
+## A. EL ESTÁNDAR DE LAS VENTANAS
+
+### De dónde salió — y la parte que hay que decirle
+
+Jose, con la captura del popup de la mañana: *"las palabras 'PENDING' y
+'ARRIVED' son distintas, cantidad de letras igual, color distinto y eso está
+bien, pero tienen tamaño de letra distinto, ocupan espacios distintos y ARRIVED
+parece más grande, no sé si yo te pedí que fuera así."*
+
+**SÍ LO PIDIÓ ÉL**, y su frase está en el comentario del código
+(`Index_v3_fixed.html`, junto a la regla): *"no quiero más grande el arrived aquí
+en incomings, sino más grande el arrived en el popup"*. La regla es una sola
+línea:
+
+```css
+#morningPopupBody .inc-status-arrived{font-size:.82rem;padding:.18rem .7rem}
+```
+
+**Lo que nunca se decidió es si `Pending` debía seguirla.** El override se
+escribió para `arrived` solo, `pending` se quedó en la base (`.68rem`,
+`padding:.1rem .5rem`), y en ese popup las dos etiquetas se ven juntas
+contradiciéndose. O sea: no es un despiste suelto, es **una decisión tomada para
+la mitad de un par**. Es exactamente la forma del problema que él describe, y por
+eso el arreglo no es "igualar esas dos" sino tener una regla.
+
+**LA PREGUNTA QUE HAY QUE CONTESTAR PRIMERO, y es de Jose, no técnica:** ¿la
+etiqueta de estado es *el mismo objeto* leído en dos sitios (entonces las dos
+crecen en el popup y ninguna crece en la tabla), o el popup tiene su propia
+escala porque se lee de pie con el teléfono en la mano (entonces TODO lo del
+popup crece, no una etiqueta)? Las dos respuestas son defendibles; lo que no se
+sostiene es la mitad.
+
+### Lo medido, para que la revisión no empiece a ciegas
+
+| | |
+|---|---|
+| ventanas con su propio `id="…Overlay"` | **20** |
+| anchos `max-width` distintos en el archivo | **20+** (420, 430, 460, 480, 520, 560, 600, 640, 720, 768, 900…) |
+| puntos de quiebre `@media` distintos | **11** (520, 560, 600, 640, 720, 768, 900, 1000, 1100 px, + `min-width:769`) |
+| tamaños de letra distintos | **18**, entre `.58rem` y `.9rem` |
+
+Los tamaños de letra son el dato que más habla: hay `.72`, `.74`, `.75`, `.76`,
+`.78`, `.8`, `.82`, `.84`, `.85`, `.86`, `.88`. **Nadie ve una diferencia de
+`.01rem`.** No son once decisiones: son once veces que alguien escribió "pequeño"
+sin mirar lo que ya había. Lo mismo con los once puntos de quiebre — cada uno se
+eligió donde se rompió una cosa concreta, no como sistema.
+
+### La lista de revisión
+
+**1. Una escala de texto, y que sea corta.** Cuatro o cinco tamaños con nombre
+(`--t-dato`, `--t-etiqueta`, `--t-titulo`…) en vez de dieciocho números sueltos.
+La prueba que lo sostiene no es "existen las variables": es **contar los
+`font-size:` literales que quedan fuera de la escala** y que ese número no pueda
+subir. Un comentario no aguanta esta invariante; un número contado sí.
+
+**2. Un juego de anchos de ventana, no veinte.** Probablemente tres: la de
+confirmar (estrecha), la de un formulario (media), la de una tabla o Settings
+(ancha). Y escrito POR QUÉ cada ventana es de su clase, porque eso es lo que
+evita que la siguiente ventana traiga su propio número.
+
+**3. Los puntos de quiebre, reducidos a los de verdad.** Hay que mirar los once y
+decidir cuáles son el mismo umbral con dos números distintos. Sospecha a
+comprobar, no conclusión: 600/640, 720/768 y 900/1000/1100 huelen a tres
+umbrales, no a nueve.
+
+**4. Qué cambia por tamaño de pantalla — y qué NO debe cambiar.** Esta es la
+mitad que él pide explícitamente y que no está escrita en ningún sitio. Lo que
+seguro cambia: los anchos, si una tabla se vuelve tarjetas, si el mazo de la
+esquina desaparece a favor de la campana (ya pasa por debajo de 900px). Lo que
+seguro NO debería: el significado de un color, el tamaño RELATIVO de dos cosas
+que están juntas (el caso de `Pending`/`Arrived`), y el orden de los botones.
+
+**5. Qué cambia por tipo de movimiento — comprobado: hoy NADA.** Ningún ancho ni
+ninguna escala depende de `moveType`; se midió y no hay una sola regla que lo
+haga. Así que la tarea aquí no es arreglar, es **decidir si eso está bien** y
+escribirlo. Lo que sí cambia hoy por tipo son los CAMPOS que pide el formulario
+(un TRANSFER pide dos estantes, una ENTRY pide costo), y eso es contenido, no
+escala. Merece quedar dicho para que nadie lo "unifique" por error.
+
+**6. Qué cambia por tipo de material.** Hay que mirarlo: el factor de unidades
+por caja, la etiqueta de costo y el selector de unidad se comportan distinto
+según la unidad del material. Averiguar si alguna de esas diferencias se filtró
+al TAMAÑO de algo en vez de quedarse en el contenido.
+
+**7. El barrido de las parejas.** El caso del popup no va a ser el único: hay que
+buscar sitios donde dos cosas que se leen JUNTAS tengan escalas distintas.
+Candidatos a mirar uno por uno, no a suponer: las píldoras de categoría contra
+las de estado, los seis colores de tipo de movimiento, el nombre sobre el correo
+en Movements contra el de Manage Users contra el de la tarjeta de la persona, y
+los tres tamaños de botón (`btn-sm`, normal, `btn-primary`).
+
+**8. Lo que ya está en la lista y es parte de esto** — no se arregla aparte:
+- el tamaño de la ventana de Add User / Edit User, que Jose pidió el 2026-09-17:
+  *"la ventana del Add User es muy grande, no debe ser tan grande si lo que tiene
+  dentro no es tanto, y lo mismo cuando se edita un usuario, debemos estandarizar
+  eso."* Es el punto 2 visto desde una ventana concreta.
+- `ADDED BY` con el nombre de la persona, apilado *"exactamente igual"* que en
+  Movements. Es el punto 7 visto desde una columna concreta.
+
+**Y una advertencia para cuando se haga:** esto toca CSS que sostiene cosas que
+Jose pidió una por una y que están defendidas en sus comentarios (el gris del
+popup en vez del verde, el `--card-h` de `.todo-card` que tiene que venir después
+de `.deck-card`, el ancho fijo de la tarjeta de la persona). Un barrido que
+"limpie" sin leer esos comentarios va a deshacer decisiones suyas. Cada regla que
+se toque hay que leerla antes.
+
+## B. INCOMING — BUSCADOR Y AVISO DE DUPLICADO
+
+Jose, 2026-09-17: *"hay que poner un buscador en los incoming y una forma de
+aviso si ingresamos un incoming que ya estaba enlistado o anotado, si es igual en
+nombre solo proponer una edición y darle la opción para hacerlo enseguida."*
+
+**1. El buscador.** La pestaña de Incoming es la única lista grande de la app sin
+uno — Movements tiene su caja de búsqueda y el listado de materiales también. El
+molde ya existe; es llevarlo, no inventarlo. Hay que decidir sobre qué busca:
+nombre y proveedor seguro, PO casi seguro, y las notas es una decisión (buscar en
+las notas encuentra más y ensucia los resultados).
+
+**2. El aviso de duplicado.** Lo importante es que Jose ya dijo la regla completa:
+**mismo nombre → proponer editar la que existe, con el botón para hacerlo en el
+acto.** No bloquear, no preguntar en abstracto: enseñar la que ya está y ofrecer
+abrirla.
+
+Lo que hay que resolver antes de escribirlo:
+
+- **¿Qué es "igual en nombre"?** Tiene que ser la misma normalización que usa el
+  resto de la app (`nt()` / `cleanDisplay_`: mayúsculas, espacios colapsados), o
+  el aviso no saltará con `"YOGU YOGU"` contra `"Yogu  Yogu"`, que es justo el
+  caso que importa. **Comparar en crudo sería un aviso decorativo.**
+- **¿Cuenta el proveedor?** Dos entregas del mismo material de dos proveedores
+  distintos son dos entregas de verdad, no un duplicado. Sospecha: la señal buena
+  es nombre + proveedor + una fecha cercana, y el nombre solo es demasiado ancho.
+  **Hay que preguntarle a Jose**, porque es su operación.
+- **¿Y las ya llegadas?** Si la que existe está en `Arrived`, "propón editarla"
+  puede ser el consejo equivocado — lo que llegó llegó, y esto podría ser una
+  segunda entrega real. Probablemente el aviso debe decir el estado de la que
+  encontró, no sólo que la encontró.
+- **Dónde salta.** Al escribir el nombre (como el aviso de material nuevo, que ya
+  funciona así) o al guardar. Lo primero es mejor y es más trabajo.
+
+**Esto se cruza con el punto 1 de la lista del 2026-09-09** (por qué las
+sugerencias del Incoming no siempre salen): las dos son "¿ya conocemos esto?", y
+una parte de la respuesta —la normalización del nombre— es la misma
+investigación. Conviene hacerlas juntas.
+
 # ══ LA LISTA, ORDENADA — 2026-09-09 ══
 
 De más urgente a menos. Lo de arriba estorba para publicar; lo de abajo puede
