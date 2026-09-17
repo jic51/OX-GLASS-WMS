@@ -92,6 +92,7 @@ node tools/test-tanda-borrado.js
 node tools/test-salidas-animadas.js
 node tools/test-seleccion-viva.js
 node tools/test-sello-antes.js
+node tools/test-usuarios-barra.js
 node tools/test-short-stock.js
 node tools/test-settings-boxes.js
 node tools/test-toast-and-buttons.js
@@ -708,6 +709,25 @@ come back from — is invisible to both. Those get a browser test.
   stuck at "12 of 13" waiting for an answer that never comes. Writing the test
   is what caught `_doDeleteMovementRow` returning nothing at all on the happy
   path, so every caller read it as "did not queue".
+- `test-usuarios-barra.js` — Manage Users, the orange wall and the drawer title
+  (v11.98). Jose asked for the movements-table pattern in Manage Users: name
+  over email, role over date, the Add User form behind a button, and Edit /
+  Deactivate switching on only when somebody is ticked. Three decisions on top
+  of that are mine and each is pinned by execution, because none is visible by
+  looking: your own row cannot be ticked (the server already refuses
+  self-removal — the disabled checkbox is that rule said before you press);
+  Edit needs exactly one while deactivating takes several; and the button reads
+  Deactivate or Reactivate depending on what is ticked, switching OFF on a mixed
+  selection rather than picking a half for you. Reactivating is new to the app —
+  `updateUser` has always accepted `active`, nobody was asking it, and the
+  window's footer sent people to edit the spreadsheet by hand. The bar is what
+  runs here: it holds the decision about what may be done to a selection, and it
+  is what breaks silently. Writing it caught two mistakes of mine worth keeping:
+  the harness never called `_updateUsrActionBar()` on construction, so the
+  "nothing ticked" state it measured was really "nobody has painted anything",
+  which is not a state the product has; and counting `<th` matched `<thead` too,
+  reporting six columns where there are five — a check that counts tags has to
+  count tags, not prefixes.
 - `test-sello-antes.js` — the stamp is read BEFORE the data, never after
   (v11.97). Jose, after deleting thirteen movements with two accounts open: "the
   last one never updates in the other account, NEVER" — confirmed over eight
