@@ -53,6 +53,7 @@
 // Usage:  node tools/test-endpoint-auth.js
 
 const fs = require('fs'), path = require('path');
+const A  = require('./andamio.js');
 const GS = fs.readFileSync(path.join(__dirname, '..', 'Code_v3_fixed.gs'), 'utf8');
 
 let ok = 0, fail = 0;
@@ -78,9 +79,15 @@ function bodyOf(name) {
 // those explanations quote the very function names and guard names being
 // searched for. Matching them would report a door as locked because the
 // paragraph above it discusses locking. So the detector reads code only.
+// The block-comment half is shared now, and the old one had a real blind spot:
+// a naive /\/\*[\s\S]*?\*\// treats the `/*` in `legal/*.md` — which sits
+// inside a LINE comment in Code_v3_fixed.gs — as the start of a block comment,
+// and eats 19,762 characters before it finds the next real `*/`. Every function
+// in that span was invisible to this guard, which is the worst file in the repo
+// to be blind in: an unguarded endpoint in there would have been reported as
+// having no door to guard. See andamio.sinComentarios for the rule.
 function codeOnly(src) {
-  return String(src || '')
-    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+  return A.sinComentarios(src)
     .split('\n').map(l => l.replace(/\/\/.*$/, '')).join('\n');
 }
 

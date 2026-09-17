@@ -284,8 +284,13 @@ m.seccion('la tarjeta del hover, siempre del mismo tamaño');
      "width:max-content" en el bloque entero y fallaba — porque el comentario
      que explica el arreglo NOMBRA lo que se quitó. Una prueba que lee prosa
      mide prosa. */
-  const css = HTML.slice(HTML.indexOf('#acPerson{'), HTML.indexOf('#acPerson{') + 1600)
-                  .replace(/\/\*[\s\S]*?\*\//g, '');
+  // Con el limpiador compartido, no con el regex a mano: éste era el octavo
+  // sitio con la misma copia, y la copia tomaba el `/*` de accept="image/*" por
+  // una apertura de comentario. En este trozo de CSS concreto no hacía daño —no
+  // hay ningún tipo MIME dentro—, pero dejar la copia mala aquí es dejarla para
+  // el siguiente que copie de aquí. Ver andamio.sinComentarios.
+  const css = A.sinComentarios(
+    HTML.slice(HTML.indexOf('#acPerson{'), HTML.indexOf('#acPerson{') + 1600));
   m.check('la tarjeta ya no mide lo que mida el correo',
     !/width:max-content/.test(css), css.slice(0, 120));
   m.check('...tiene un ancho fijo', /width:min\(300px,90vw\)/.test(css));

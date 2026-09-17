@@ -45,9 +45,11 @@ function check(label, cond, extra) {
   else { fail++; console.log('  FAIL ', label, extra === undefined ? '' : '→ ' + JSON.stringify(extra)); }
 }
 
-function sinComentarios(s){
-  return s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ');
-}
+// Del andamio, no una copia: la copia ingenua toma el `/*` de accept="image/*"
+// por una apertura de bloque y borra 38.780 caracteres del archivo, lo que
+// dejaría este recuento midiendo sólo parte de la app. Ver
+// andamio.sinComentarios.
+const sinComentarios = A.sinComentarios;
 
 // ── EL RELOJ SE CONGELA ─────────────────────────────────────────────────────
 //

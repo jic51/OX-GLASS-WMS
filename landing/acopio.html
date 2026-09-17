@@ -404,12 +404,27 @@
         <li data-i18n="t45"><div><strong>Photos and PDFs</strong> attached to any movement, filed privately in your Drive.</div></li>
         <li data-i18n="t46"><div><strong>Roles and permissions</strong> — decide who sees costs, who can edit history, who's read-only.</div></li>
         <li data-i18n="t47"><div><strong>Nightly backups</strong> to your own Drive, kept 30 days.</div></li>
+        <!-- Everything from here down shipped after this page was first written.
+             Each one is a feature a customer can open today, not a plan: the
+             changelog entry that shipped it is named in the comment so that
+             "does Acopio really do this?" has an answer without a demo. -->
+        <li data-i18n="t205"><div><strong>Labels printed as you receive</strong> — 4×6 thermal, with the material, the quantity, the rack and the PO.</div></li><!-- v11.79 -->
+        <li data-i18n="t206"><div><strong>A warehouse map you can tap</strong>, racks laid out the way they stand on your floor — and a material can be locked to one, with the reason and who locked it.</div></li><!-- v9.82, v11.60 -->
+        <li data-i18n="t207"><div><strong>Paste a supplier's email</strong>, or a photo of an invoice, and the expected delivery comes out filled in.</div></li><!-- v9.61, v10.8 -->
+        <li data-i18n="t208"><div><strong>Check my data</strong> — the same material written two ways, found and corrected with one press.</div></li><!-- v11.23 -->
+        <li data-i18n="t209"><div><strong>Deleting can be undone</strong>. Movements go to a trash for 30 days, not away.</div></li><!-- v11.55 -->
+        <li data-i18n="t210"><div><strong>An evening report</strong>, emailed on its own, of everything that moved that day.</div></li>
+        <li data-i18n="t211"><div><strong>Every edit keeps its reason</strong> — who changed what, from what to what, and the change goes out by email.</div></li><!-- v11.17 -->
       </ul>
     </div>
     <div class="notyet rise">
       <h3 data-i18n="t48">What it doesn't do yet</h3>
       <ul>
-        <li data-i18n="t49">Barcode scanning and label printing</li>
+        <!-- Label PRINTING moved out of this list in v11.79 and into the one
+             above. Barcode SCANNING stays: the label leaves a space for a QR or
+             a barcode, but nothing in Acopio reads one yet, and the two used to
+             sit in the same line as if they were one feature. -->
+        <li data-i18n="t49">Barcode scanning — the labels leave room for a code, nothing reads one yet</li>
         <li data-i18n="t50">Cycle counting</li>
         <li data-i18n="t51">Accounting or e-commerce integrations</li>
         <li data-i18n="t52">A native phone app — it's a web app, and works on a phone</li>
@@ -429,7 +444,17 @@
         <p class="l" data-i18n="t56">Acopio has run a real window-installation warehouse floor, in production, since 2026 — the same build customers get.</p>
       </div>
       <div class="proof-item">
-        <div class="n" id="verCount">144</div>
+        <!-- SE CUENTA, no se estima. El número son las versiones DISTINTAS que
+             han salido, y se recalcula así:
+
+               git log --format=%s --all | grep -oE '^v[0-9]+\.[0-9]+' \
+                 | sort -u | wc -l
+
+             Decía 144 desde que se escribió esta página, cuando la app iba por
+             la v11.2 y pico. Hoy va por la v12.00 y son 232. Un número que sólo
+             se toca a mano se queda viejo callando, así que queda escrito de
+             dónde sale. -->
+        <div class="n" id="verCount">232</div>
         <p class="l" data-i18n="t57">Releases shipped so far. Every fix and improvement is included in support — see <a href="/changelog.html">what's new</a>.</p>
       </div>
       <div class="proof-item">
@@ -685,8 +710,15 @@ var ACOPIO_ES = {
   "t45": "<div><strong>Fotos y PDFs</strong> adjuntos a cualquier movimiento, guardados en privado en tu Drive.</div>",
   "t46": "<div><strong>Roles y permisos</strong> — decide quién ve costos, quién puede editar el historial y quién es solo lectura.</div>",
   "t47": "<div><strong>Respaldos cada noche</strong> en tu propio Drive, guardados 30 días.</div>",
+  "t205": "<div><strong>Etiquetas que imprimes al recibir</strong> — térmicas de 4×6, con el material, la cantidad, el rack y el PO.</div>",
+  "t206": "<div><strong>Un mapa de la bodega que se toca</strong>, con los racks puestos como están en tu piso — y un material se puede bloquear a uno, con el motivo y quién lo bloqueó.</div>",
+  "t207": "<div><strong>Pega el correo del proveedor</strong>, o una foto de la factura, y el pedido por llegar sale ya lleno.</div>",
+  "t208": "<div><strong>Check my data</strong> — el mismo material escrito de dos formas, encontrado y corregido con un clic.</div>",
+  "t209": "<div><strong>Borrar se puede deshacer</strong>. Los movimientos van a una papelera por 30 días, no se van.</div>",
+  "t210": "<div><strong>Un reporte cada tarde</strong>, que llega solo por correo, con todo lo que se movió ese día.</div>",
+  "t211": "<div><strong>Cada edición guarda su motivo</strong> — quién cambió qué, de qué a qué, y el cambio sale por correo.</div>",
   "t48": "Lo que todavía no hace",
-  "t49": "Códigos de barras e impresión de etiquetas",
+  "t49": "Leer códigos de barras — las etiquetas dejan espacio para un código, pero nada lo lee todavía",
   "t50": "Conteo cíclico",
   "t51": "Integraciones con contabilidad o e-commerce",
   "t52": "App nativa de celular — es una app web, y funciona en el celular",

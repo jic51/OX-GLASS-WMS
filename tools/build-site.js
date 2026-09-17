@@ -285,8 +285,26 @@ function collect() {
   const files = [];
   PAGES.forEach(p => files.push({ out: p.out, kind: 'page', src: p.src }));
   DOCS.forEach(d => files.push({ out: d.out, kind: 'doc', src: d.src }));
-  if (haveLogo) files.push({ out: 'logo.png',    kind: 'asset', src: 'landing/assets/logo.png' });
-  if (haveFavi) files.push({ out: 'favicon.svg', kind: 'asset', src: 'landing/assets/favicon.svg' });
+  // Se miran AQUÍ, no en las constantes de más abajo.
+  //
+  // `--list` reventaba con "Cannot access 'haveLogo' before initialization":
+  // collect() se llama en la línea 298 y los `const haveLogo/haveFavi` están en
+  // la 330, así que en modo lista caían en la zona muerta del `const` y el
+  // comando salía con un volcado de pila en vez de la lista. El build normal
+  // nunca lo vio porque llama a collect() al final, cuando ya existen — que es
+  // justamente por qué llevaba roto sin que nadie se enterara.
+  //
+  // Las rutas se componen aquí desde ROOT —que sí está arriba— en vez de usar
+  // LOGO_SRC/FAVI_SRC, que están en la misma zona muerta por el mismo motivo.
+  // Así esta función no depende del orden de ninguna línea, que es la clase de
+  // arreglo que no se puede volver a romper moviendo código.
+  const activos = [
+    { out: 'logo.png',    src: 'landing/assets/logo.png' },
+    { out: 'favicon.svg', src: 'landing/assets/favicon.svg' }
+  ];
+  activos.forEach(a => {
+    if (fs.existsSync(path.join(ROOT, a.src))) files.push({ out: a.out, kind: 'asset', src: a.src });
+  });
   files.push({ out: 'CNAME', kind: 'generated', src: '(the custom domain)' });
   files.push({ out: '.nojekyll', kind: 'generated', src: '(stops GitHub Pages processing the files)' });
   files.push({ out: 'README.md', kind: 'generated', src: '(what this repo is, and what it must never contain)' });

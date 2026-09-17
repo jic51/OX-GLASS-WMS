@@ -237,6 +237,19 @@
           comentarios.</li>
         <li><b>Editar o borrar un movimiento guardado</b> — con permiso, y cada
           cambio queda en el registro de auditoría con quién y cuándo.</li>
+        <!-- v11.79. Estaba listado como pendiente en "Meses / Producto"; la
+             mitad de imprimir salió, la de escanear no. Ver el bloque de huecos. -->
+        <li><b>Etiquetas al guardar la entrada.</b> Acopio ofrece imprimir una
+          etiqueta térmica de 4"×6" de lo que se acaba de meter: material,
+          cantidad, estante y PO, con sitio reservado para el código. Una
+          etiqueta por estante, no por material — si cuarenta y cuatro unidades
+          fueron a dos estantes, son dos bultos y cada uno lleva su cantidad.</li>
+        <!-- v9.61 (correo) y v10.8 (clave de IA del cliente). -->
+        <li><b>Pegar el correo del proveedor, o la foto de la factura</b>, y que
+          los renglones salgan ya llenos. La clave de IA es del cliente y se
+          pone desde dentro de la app.</li>
+        <li><b>Borrar se puede deshacer.</b> Un movimiento borrado va a una
+          papelera durante 30 días y se restaura con un clic; también en tanda.</li>
       </ul>
     </div>
 
@@ -359,6 +372,16 @@
         <li><b>Protección contra cambios simultáneos:</b> si dos personas tocan
           lo mismo en el mismo segundo, al segundo se le pide reintentar en vez
           de pisar al primero en silencio.</li>
+        <!-- Salió del plan a lo hecho en las v11.89–v11.97. El mecanismo es un
+             sello de versión del dato: cada pantalla lee el sello, y cuando
+             cambia se trae los datos nuevos ella sola, en silencio. Antes estaba
+             listado en "Meses / Producto" como pendiente. -->
+        <li><b>Las ventanas abiertas se ponen al día solas.</b> Dos personas
+          mirando el mismo tablero desde cuentas distintas ven lo mismo sin que
+          nadie recargue: cada pantalla vigila un sello de versión del dato y se
+          actualiza cuando cambia.</li>
+        <li><b>Y la pantalla cambia en cuanto el servidor confirma</b>, no cuando
+          termina de recargar. Lo que acabas de guardar se ve guardado.</li>
         <li><b>Registro de errores</b> visible para el administrador.</li>
       </ul>
     </div>
@@ -368,9 +391,13 @@
     <p class="kicker">Lo que todavía no hace</p>
     <h2>Los huecos, dichos antes de que los encuentres</h2>
     <div class="honest">
-      <h3>Códigos de barras y etiquetas</h3>
-      <p>No existen todavía. Es de las primeras cosas que pregunta un jefe de
-        bodega con experiencia, y está en el plan como pieza grande.</p>
+      <h3>Leer códigos de barras</h3>
+      <p>Las <b>etiquetas ya se imprimen</b> desde la v11.79 — térmicas de 4×6,
+        con el material, la cantidad, el rack y el PO, y con un espacio reservado
+        para el código. Lo que falta es la otra mitad: que la app <em>lea</em> un
+        código con la cámara y registre el movimiento sin teclear. Es de las
+        primeras cosas que pregunta un jefe de bodega con experiencia, y sigue en
+        el plan como pieza grande.</p>
 
       <h3>Conteo cíclico</h3>
       <p>El proceso de contar físicamente una parte del inventario cada semana y
@@ -423,14 +450,13 @@
       <h3><span class="flag next">Meses</span> Producto</h3>
       <p>Funciones que un comprador nota y que sostienen una subida de precio.</p>
       <ul>
-        <li><b>Códigos de barras y QR, con impresión de etiquetas.</b> La pieza
-          que más se pide. Convierte el registro de un movimiento en escanear en
-          vez de escribir, y elimina la fuente principal de error.</li>
+        <li><b>Leer códigos de barras y QR con la cámara.</b> La pieza que más
+          se pide. La impresión de etiquetas ya salió en la v11.79 y deja el
+          espacio del código listo; lo que falta es escanear en vez de escribir,
+          que es lo que elimina la fuente principal de error.</li>
         <li><b>Conteo cíclico completo:</b> la corrección con su motivo ya
           existe; falta que el sistema proponga qué contar cada semana y lleve
           la cuenta de lo ya cubierto.</li>
-        <li><b>Sincronización entre ventanas abiertas</b> — que dos personas
-          mirando el mismo tablero vean lo mismo sin recargar.</li>
         <li><b>Visor de documentos dentro de la app</b>, en vez de abrir Drive
           en otra pestaña.</li>
         <li><b>Plantillas por industria</b> — que un taller de vidrio, una

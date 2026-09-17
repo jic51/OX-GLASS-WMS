@@ -40,6 +40,7 @@
 // Uso:  node tools/test-morning-closes.js
 
 const fs = require('fs'), path = require('path'), vm = require('vm');
+const A  = require('./andamio.js');
 const ROOT = path.join(__dirname, '..');
 const SRC  = fs.readFileSync(path.join(ROOT, 'Index_v3_fixed.html'), 'utf8');
 const GS   = fs.readFileSync(path.join(ROOT, 'Code_v3_fixed.gs'), 'utf8');
@@ -156,9 +157,10 @@ console.log('\n═══ una sola definición, no tres ═══\n');
 {
   // Fuera de su propia definición y de los comentarios que cuentan la historia,
   // 'received' no debe volver a decidir nada.
-  const codigo = SRC
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/^\s*\/\/.*$/gm, '');
+  // El limpiador compartido: el ingenuo tomaba el `/*` de accept="image/*" por
+  // una apertura de bloque y borraba 38.780 caracteres de este mismo archivo.
+  // Ver andamio.sinComentarios.
+  const codigo = A.sinComentarios(SRC);
   // 'received' NO se prohíbe, y la primera versión de esta comprobación lo
   // prohibía — habría obligado a borrar una defensa buena.
   //

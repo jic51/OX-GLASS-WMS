@@ -8,6 +8,7 @@
 // Usage:  node tools/test-button-states.js [path/to/Index_v3_fixed.html]
 
 const fs = require('fs'), path = require('path'), os = require('os');
+const A  = require('./andamio.js');
 const HTML   = process.argv[2] || path.join(__dirname, '..', 'Index_v3_fixed.html');
 const CHROME = process.env.CHROME_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 
@@ -244,9 +245,10 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   // Comments are stripped first, both kinds. The comment above this very check
   // contains the forbidden line because it EXPLAINS it, and a guard that trips
   // on its own explanation is a guard that gets deleted.
-  const raw = fs.readFileSync(HTML, 'utf8')
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/^[ \t]*\/\/.*$/gm, '');
+  // Shared stripper: the naive one treated the `/*` in accept="image/*" as a
+  // block-comment opener and blanked 38,780 characters of this very file, so
+  // any offending line inside that span went unseen. See andamio.sinComentarios.
+  const raw = A.sinComentarios(fs.readFileSync(HTML, 'utf8'));
   const lines = raw.split('\n');
   const offenders = [];
   lines.forEach((line, i) => {

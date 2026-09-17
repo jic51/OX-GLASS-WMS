@@ -198,6 +198,57 @@ function constantes(src, nombres) {
   }).join('\n');
 }
 
+/**
+ * EL MISMO CÓDIGO, SIN SUS COMENTARIOS. Una sola implementación, porque la
+ * versión ingenua está mal y estaba copiada en ocho pruebas.
+ *
+ * PARA QUÉ SIRVE: buscar algo EN EL CÓDIGO, no en la prosa que lo explica. Los
+ * comentarios de este proyecto nombran lo que arreglan —"ya no se usa
+ * loadDataFromGoogle(false)", "el conteo cíclico no existe"— así que una
+ * búsqueda en crudo encuentra la explicación y cree que encontró el código. Ya
+ * pasó dos veces: una con una regla de CSS y otra contando recargas.
+ *
+ * POR QUÉ LA VERSIÓN INGENUA ESTÁ MAL, medido:
+ *
+ *     .replace(/\/\*[\s\S]*?\*\//g, ' ')
+ *
+ * Index_v3_fixed.html tiene esto en un atributo de un <input>:
+ *
+ *     accept="image/*,.pdf,video/*"
+ *
+ * Ese `/*` no abre ningún comentario — pero para el regex sí, y el "comentario"
+ * corre hasta el siguiente `*​/` de verdad, 38.780 caracteres más allá. Se
+ * llevaba por delante aiExtractFromModal, medio módulo de documentos y el mazo
+ * entero. Nada fallaba: las pruebas simplemente dejaban de ver ese trozo del
+ * archivo y daban por bueno lo que no habían mirado.
+ *
+ * Y no es sólo el HTML. Code_v3_fixed.gs tiene "legal/" seguido de asterisco y
+ * ".md" DENTRO de un comentario de línea, y ahí el regex ingenuo se comía
+ * 19.762 caracteres — con las funciones de ese tramo invisibles para
+ * test-endpoint-auth, que es el guardia de la autenticación de los endpoints.
+ * El peor archivo del repositorio para tener un punto ciego.
+ *
+ * LA REGLA: una apertura de bloque sólo cuenta si lo que tiene delante NO es
+ * parte de una ruta ni de un tipo MIME. Los falsos positivos de estos dos
+ * archivos son todos de la forma "palabra/" + asterisco (los accept de un
+ * <input>, una ruta con comodín), así que basta con exigir que el carácter
+ * anterior no sea alfanumérico, ni punto, ni guión, ni barra. Con eso el bloque
+ * más largo del HTML pasa de 38.780 caracteres a 2.137, y el del .gs de 19.762
+ * a 2.267 — que ya son comentarios de verdad.
+ *
+ * (Este comentario no puede escribir esas secuencias literales: cerrarían el
+ *  bloque en el que está. El tercer sitio donde el mismo carácter significa dos
+ *  cosas distintas, en la misma tarde.)
+ */
+function sinComentarios(src) {
+  return String(src)
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    // El carácter de delante se conserva ($1): es del código, no del comentario.
+    .replace(/(^|[^A-Za-z0-9_.\-\/])\/\*[\s\S]*?\*\//g, '$1 ')
+    // Sólo líneas que EMPIEZAN por //, para no partir 'https://…' por la mitad.
+    .replace(/^\s*\/\/.*$/gm, ' ');
+}
+
 // ── UNA HOJA QUE SE PORTA COMO SHEETS ───────────────────────────────────────
 //
 // Las dos cosas que tiene que imitar, porque son las dos que han roto datos de
@@ -316,4 +367,4 @@ function marcador(titulo) {
 }
 
 module.exports = { fuente, fnSrc, nombresDe, levantar, montar, constantes,
-                   Hoja, comoSheets, marcador };
+                   sinComentarios, Hoja, comoSheets, marcador };
