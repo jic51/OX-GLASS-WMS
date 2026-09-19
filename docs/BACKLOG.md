@@ -5,6 +5,122 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+# ══ ANOTADO EL 2026-09-19 — DE LA PRUEBA DE LA v12.00 ══
+
+Jose probó los cuatro cambios de la v12.00 y **los cuatro pasan**: "mark arrived
+completado y trabajando bien", "adjuntar un documento esto funciona muy bien…
+cuando se cierra la ventana ya el icono del documento ya está en la fila del
+movimiento, también al borrar los documentos se hace instantáneo", el edit de un
+movimiento "sí funciona", y "el mazo, sí funciona todo".
+
+De esa misma sesión salieron cuatro cosas a anotar. Tres son del estándar de las
+ventanas (sección A, más abajo) y una es de datos.
+
+## 1. LOS NOMBRES DEL INCOMING NO SE NORMALIZAN — y esto NO es cosmético
+
+Jose: *"en el incoming no se regularizan los nombres como en un entry, en el
+entry al escribir un nombre este se hace todo mayúscula, deberíamos hacer lo
+mismo en los incomings."*
+
+**Confirmado en el código, y la diferencia es una llamada:**
+
+| | |
+|---|---|
+| un MOVIMIENTO | `row[AC.NAME] = cleanDisplay_(d.name)` — mayúsculas, trim, espacios colapsados |
+| una ENTREGA ESPERADA | `String(data.name \|\| '').trim()` — **sin `cleanDisplay_`** |
+
+Es otra vez el patrón de siempre: comportamiento escrito para un camino y no
+cableado en el otro.
+
+**POR QUÉ ESTO IMPORTA MÁS DE LO QUE PARECE, y hay que hacerlo ANTES que el aviso
+de duplicado del 2026-09-17:** el aviso de duplicado que pidió Jose compara por
+nombre. Mientras las entregas guarden `"Yogu Yogu"` y `"YOGU YOGU"` como cosas
+distintas, **ese aviso no saltaría nunca en el caso que lo justifica**. Y lo
+mismo vale para la sugerencia del Incoming en el formulario de entrada (punto 1
+de la lista del 2026-09-09, "por qué no siempre salen"): si los dos lados no
+normalizan igual, la comparación falla en silencio.
+
+Las tres cosas son la misma cosa. **Orden: normalizar primero, y las otras dos
+encima.**
+
+Lo que hay que mirar al hacerlo:
+- Normalizar **al guardar** en el servidor, como los movimientos, no sólo con
+  `text-transform` en el CSS — eso sólo pinta, y lo que se guarda sigue sucio.
+- Las entregas **que ya están guardadas** en minúsculas. ¿Se corrigen de una
+  pasada, o se deja que se arreglen al editarlas? Decisión de Jose. Hay
+  precedente: la autorreparación de MatID hace lo primero.
+- El campo de Incoming usa `list="matNameList"`, o sea el autocompletado de
+  materiales que YA vienen en mayúsculas. Parte del desajuste sale de ahí.
+
+## 2. LA COLUMNA DOC: DOS AL LADO, Y UNA FLECHA PARA EL RESTO
+
+Jose, con la imagen: *"no quiero que los documentos se pongan en columna, porque
+si en algún momento un movimiento llega a tener 10 documentos eso ocupará toda
+la pantalla… como quiero que se vean: los documentos uno al lado del otro,
+máximo 2, y cuando haya más de 2 aparece una flecha o un símbolo '>' que indica
+que hay más y al tocar se mueve para mostrar los documentos."*
+
+Hoy `renderDocLinks` devuelve un contenedor con `flex-wrap:wrap`. En una celda
+estrecha de la tabla eso no pone los recortes al lado: los **envuelve**, o sea
+los apila en columna y la fila crece tanto como documentos haya. Con diez
+documentos la fila ocupa la pantalla, que es justo lo que él describe.
+
+Lo que hay que decidir al construirlo:
+- El carrusel va dentro de una celda de tabla, que es lo más estrecho de la app.
+  `overflow-x` con desplazamiento por pasos, no un `wrap`.
+- La flecha tiene que decir CUÁNTOS faltan, no sólo que faltan. "2 de 10" se lee;
+  una flecha sola no.
+- Y en el teléfono la tabla ya se comporta distinto — hay que mirar si ahí el
+  carrusel estorba o ayuda.
+
+## 3. TRES COSAS QUE SON DEL ESTÁNDAR DE LAS VENTANAS
+
+Van a la sección A de abajo, pero con la causa ya encontrada:
+
+**a) LAS VENTANAS SON DEMASIADO GRANDES — y es UNA LÍNEA, para las 20.**
+
+Jose, sobre Manage Documents: *"la ventana pop-up del ingreso de documentos es
+muy grande para la información que lleva."* Y el 17, sobre Add/Edit User, lo
+mismo.
+
+**No es el ancho. Es esto:**
+
+```css
+.modal{ … height:min(82vh,700px); … }
+```
+
+**`height`, no `max-height`.** Toda ventana de la app mide el 82% del alto de la
+pantalla aunque tenga cuatro campos dentro. Por eso Manage Documents, que lleva
+unos 350px de contenido, se dibuja como una caja de 700px con el hueco debajo de
+los botones.
+
+Cambiar `height` por `max-height` arregla las 20 de golpe. **Pero hay que
+comprobar antes qué se apoyaba en esa altura fija** — Settings y el formulario de
+movimiento son largos y pueden estar contando con un alto estable para su propio
+scroll. No es "cambiar una palabra y ya": es cambiar una palabra y volver a mirar
+las veinte.
+
+**b) EL BOTÓN CAMBIA DE TAMAÑO AL GUARDAR.**
+
+Jose, con dos capturas del Edit de un movimiento: *"al momento de guardar, el
+botón cambia no sólo lo que dice sino de tamaño, eso no debe pasar."*
+
+**Medido en sus capturas, y el ancho NO es el problema:** el borde derecho no se
+mueve, porque `_btnBusy` ya fija `minWidth` antes de cambiar la etiqueta —
+alguien ya se topó con esta mitad. Lo que cambia es **el alto**: unos 4px menos.
+
+**La causa es el emoji.** La etiqueta original es `💾 Save Changes` y la de
+ocupado es una rueda dibujada con CSS más `Saving…`. La caja de línea de un emoji
+es más alta que la de texto normal, así que al quitarlo la línea encoge y el
+botón con ella. `.is-busy` no toca el alto — sólo cambia el cursor.
+
+El arreglo es del estándar, no del parche: los botones necesitan un alto que no
+dependa de lo que lleven dentro. Y sirve para todos los botones con emoji de la
+app, que son muchos.
+
+**c) Y las dos que ya estaban anotadas** — el tamaño de Add/Edit User y el
+`ADDED BY` con el nombre — se resuelven con (a) y con el punto 7 de la sección A.
+
 # ══ ANOTADO EL 2026-09-17 — PARA REVISAR AL FINAL ══
 
 Jose: *"HAY QUE MEJORAR LAS VENTANAS (TODAS) QUE SE ABREN DENTRO DE LA APP. HAY
