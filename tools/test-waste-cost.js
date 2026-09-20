@@ -65,9 +65,17 @@ vm.runInContext(
   extractFn('_escAttr') + '\n' +
   extractFn('_infoIc') + '\n' +
   extractFn('_statLabel') + '\n' +
+  // La tarjeta de Reserved (v12.01) se arma dentro de renderStats, así que su
+  // cuenta tiene que existir en la caja. Se levantan las de verdad, no un
+  // doble: con materialLocks vacío devuelven cero y la tarjeta no se dibuja,
+  // que es el caso que esta prueba mide — y así, si mañana la cuenta cambia,
+  // esta prueba lo nota en vez de medir un doble que se quedó viejo.
+  extractFn('_reservasActivas') + '\n' +
+  extractFn('_reservasResumen') + '\n' +
   extractFn('renderStats'),
   sandbox
 );
+sandbox.materialLocks = [];
 sandbox._buildStockDetailPanel = function () {}; // unrelated to waste cost; no-op stub
 
 function run(label, opts, expectTile) {

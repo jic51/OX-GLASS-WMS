@@ -141,7 +141,8 @@ function buildSandbox() {
   [
     'round2_', 'normalizeString', 'cleanDisplay_', 'textCell_', 'textSafeRow_', 'getMaterialId',
     'statusForMoveType_', 'buildStockSnapshot_', 'applyMovementToSnapshot_',
-    'getActiveLocksMap_', 'enforceMaterialLock_', 'loadConfig', 'saveAvgCostUpdates_',
+    'getActiveLocksMap_', 'enforceMaterialLock_', 'reservedQtyFromRacks_',
+    'loadConfig', 'saveAvgCostUpdates_',
     'ensureArchiveWidth_', 'newMovId_', 'uniqueMovId_', 'dedupeMovementIds_',
     'writeMovIdColumn_', 'addMovementsBatch_'
   ].forEach(function (name) { vm.runInContext(extractFn(name), sandbox); });

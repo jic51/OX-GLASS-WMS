@@ -178,7 +178,7 @@ console.log('\n═══ dos estantes trabados, dos líneas ═══\n');
   const title = /title="([^"]*)"/.exec(pintar(dos))[1];
   check('los dos motivos salen, no sólo el primero',
     title.indexOf('QC') !== -1 && title.indexOf('Damaged') !== -1, title);
-  check('...uno por línea', (title.match(/Locked at/g) || []).length === 2);
+  check('...uno por línea', (title.match(/Reserved at/g) || []).length === 2);
   check('un solo candado en la celda aunque sean dos — el dibujo dice "algo ' +
         'está trabado" y el hover dice qué',
     (pintar(dos).match(/sc-lock/g) || []).length === 1);

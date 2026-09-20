@@ -56,12 +56,17 @@ function check(label, cond, extra) {
 
 // warehouseQty INCLUYE reservedQty, igual que en el servidor. Si esta prueba
 // los pusiera separados estaría midiendo un modelo inventado.
-function mat(name, wh, site, waste, resv){
+function mat(name, wh, site, waste, resv, locs){
+  // LOS ESTANTES YA NO SON DECORADO. Desde la v12.01 una reserva aparta un
+  // ESTANTE, y la cantidad reservada se deriva de lo que hay en él — así que un
+  // material con 100 unidades todas en A1A y "30 reservadas" es un estado que
+  // no puede existir. El reparto de abajo lo respeta: lo libre en A1A y lo
+  // apartado en los estantes que las reservas nombran.
   return { matId: 'window|||' + name.toLowerCase(), name: name, category: 'WINDOW',
            project: '', unit: 'UNIT',
            warehouseQty: wh, siteQty: site, wastedQty: waste, reservedQty: resv,
            availableQty: Math.max(0, wh - resv), totalQty: wh + site,
-           warehouseLocs: { A1A: wh }, status: 'OK' };
+           warehouseLocs: locs || { A1A: wh }, status: 'OK' };
 }
 
 const DATA = {
@@ -70,20 +75,27 @@ const DATA = {
   stock: {
     // 100 en almacén (30 de ellos reservados), 50 fuera, 10 de baja.
     // Reparto: 70 disponible + 30 reservado + 50 fuera + 10 baja = 160.
-    'window|||mh 145': mat('MH 145', 100, 50, 10, 30),
+    // 70 libres en A1A, 20 apartados en B2B y 10 en C3C → 30 reservados.
+    'window|||mh 145': mat('MH 145', 100, 50, 10, 30, { A1A: 70, B2B: 20, C3C: 10 }),
     // Sin reservas ni bajas: dos trozos.
     'window|||mh 200': mat('MH 200', 80, 20, 0, 0),
     // Nada en ninguna parte.
     'window|||mh vacio': mat('MH VACIO', 0, 0, 0, 0)
   },
-  reservations: [
-    { id:'R1', category:'WINDOW', name:'MH 145', project:'SUNBRIDGE PHASE 1', qty:20,
-      by:'jose@ox.com', date:'09/01/2026', status:'Active', release:'' },
-    { id:'R2', category:'WINDOW', name:'MH 145', project:'KOTTER RESIDENCE', qty:10,
-      by:'kim@ox.com', date:'09/02/2026', status:'Active', release:'' },
+  // Las reservas viajan como materialLocks: la hoja RESERVATIONS y sus dos
+  // endpoints se borraron el 2026-09-20 porque nada en la app podía llenarla.
+  // La OBRA ya no es un campo aparte — va en el motivo, que es texto libre y es
+  // lo que la persona escribe al apartar.
+  materialLocks: [
+    { id:'L1', matId:'window|||mh 145', category:'WINDOW', name:'MH 145', rack:'B2B',
+      reason:'SUNBRIDGE PHASE 1', lockedBy:'jose@ox.com', lockedAt:'09/01/2026 08:00',
+      allowedDest:[] },
+    { id:'L2', matId:'window|||mh 145', category:'WINDOW', name:'MH 145', rack:'C3C',
+      reason:'KOTTER RESIDENCE', lockedBy:'kim@ox.com', lockedAt:'09/02/2026 08:00',
+      allowedDest:[] },
     // Una liberada: no cuenta y no debe salir en la ayuda.
-    { id:'R3', category:'WINDOW', name:'MH 145', project:'VIEJA', qty:99,
-      by:'x@ox.com', date:'08/01/2026', status:'Released', release:'08/20/2026' }
+    { id:'L3', matId:'window|||mh 145', category:'WINDOW', name:'MH 145', rack:'D4D',
+      reason:'VIEJA', lockedBy:'x@ox.com', status:'Released', allowedDest:[] }
   ],
   monitoredMaterials: null,
   config: { categories:['WINDOW'], projects:[], suppliers:[],

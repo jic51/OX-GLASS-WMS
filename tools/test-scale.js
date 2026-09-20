@@ -42,6 +42,9 @@ vm.runInContext(
   extractFn('normalizeString') + '\n' +
   extractFn('getMaterialId') + '\n' +
   extractFn('findFirstWarehouseLoc') + '\n' +
+  // Desde el 2026-09-20 applyReservationsAndFinalize_ deriva lo apartado de los
+  // estantes con esta función, en vez de leerlo de la hoja RESERVATIONS.
+  extractFn('reservedQtyFromRacks_') + '\n' +
   extractFn('applyReservationsAndFinalize_') + '\n' +
   extractFn('calculateStock'),
   ctx
@@ -101,7 +104,7 @@ for (const n of sizes) {
   if (global.gc) global.gc();
   const before = process.memoryUsage().heapUsed;
   const t0 = process.hrtime.bigint();
-  const stock = vm.runInContext('calculateStock', ctx)(movs, []);
+  const stock = vm.runInContext('calculateStock', ctx)(movs, {});   // {} = sin reservas
   const t1 = process.hrtime.bigint();
   const peak = (process.memoryUsage().heapUsed - before) / 1048576;
 

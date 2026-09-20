@@ -215,7 +215,7 @@ console.log('\n── EL SERVIDOR: qué retiene una locación ──────
 
   const razon = (n) => m.run('locationBlockReason_(' + JSON.stringify(use) + ', ' + JSON.stringify(n) + ')');
   check('con stock, la razón nombra las unidades',      /142 unit/.test(razon('A1A')));
-  check('con candado, la razón lo dice',                /locked/.test(razon('A1B')));
+  check('con reserva, la razón lo dice',                /reserved/.test(razon('A1B')));
   check('como destino permitido, la razón lo dice',     /allowed destination/.test(razon('A1C')));
   check('una locación libre no da ninguna razón',       razon('Z9Z') === '');
   check('la razón no distingue mayúsculas',             /142 unit/.test(razon('a1a')));
@@ -425,7 +425,7 @@ function pantalla(opts){
   });
   const why = (n) => p.run('_locWhyKept(' + JSON.stringify(n) + ', _locUsage())');
   check('el navegador ve el stock',                     /142 in stock/.test(why('A1A')));
-  check('el navegador ve el candado',                   /locked/.test(why('A1B')));
+  check('el navegador ve la reserva',                   /reserved/.test(why('A1B')));
   check('el navegador ve el destino permitido',         /allows moving/.test(why('A1C')));
   check('y una vacía no da razón',                      why('A1D') === '');
 }

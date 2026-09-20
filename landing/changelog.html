@@ -97,6 +97,27 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.01</span>
+      <span class="tag fix">Fix</span>
+      <h3>Locking a material is now called reserving it</h3>
+      <p>The app had two half-features that meant the same thing. "Lock a
+         material" worked — it holds material at a rack so it cannot leave the
+         warehouse — but it was called locking. "Reservations" had the friendlier
+         name and no way to create one: the screen for it never existed, which is
+         why Reserved on the dashboard always read zero.</p>
+      <p>They are one thing now, and it is called reserving. Nothing you had
+         changes: what you locked is what is reserved. The difference is that the
+         dashboard finally shows it, and you can see every reservation in the
+         warehouse from three places — a card on the Stock Dashboard, a strip
+         above the Warehouse Map that takes you to the rack, and a mark on each
+         location in Settings.</p>
+      <p>A reservation holds whatever is in that rack, so the number moves with
+         the stock by itself. And the check that refuses to take out reserved
+         material was already written — it had simply never had anything to
+         count.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.00</span>
       <span class="tag fix">Fix</span>
       <h3>The screen changes the moment the save lands</h3>

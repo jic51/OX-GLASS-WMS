@@ -195,7 +195,7 @@ console.log('\n═══ desbloquear algo que otro ya desbloqueó no es un error
         'palabras', /res && res\.alreadyGone/.test(cli));
   check('...y no dice "Error" en ninguno de los dos',
     !/showToast\('Error[\s\S]{0,80}alreadyGone/.test(cli) &&
-    /Already unlocked/.test(cli));
+    /Already released/.test(cli));
 
   // LO QUE DE VERDAD ARREGLA EL CANDADO PINTADO: que este caso pase por el
   // manejador de ÉXITO, que ya quitaba el candado y repintaba. El de FALLO no
@@ -222,7 +222,10 @@ console.log('\n═══ desbloquear algo que otro ya desbloqueó no es un error
 // momento en que todavía puede parar.
 {
   const conf = fnSrc(SRC, 'unlockMaterialConfirm');
-  check('el aviso de desbloqueo dice QUIÉN lo cerró', /Locked by/.test(conf) && /lock\.lockedBy/.test(conf));
+  // "Reserved by", no "Locked by": la función se llama reservar de cara al
+  // usuario desde la v12.01. Lo que la prueba defiende no es la palabra sino
+  // que el aviso diga QUIÉN lo apartó antes de dejarte quitarlo.
+  check('el aviso de liberación dice QUIÉN lo apartó', /Reserved by/.test(conf) && /lock\.lockedBy/.test(conf));
   check('...y CUÁNDO', /lock\.lockedAt/.test(conf));
   check('...y SU RAZÓN, entre comillas y tal cual la escribió — es lo que dijo ' +
         'una persona, no un estado que la app calculó',

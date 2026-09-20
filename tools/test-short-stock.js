@@ -79,7 +79,11 @@ console.log('\n═══ el contrato entre servidor y navegador ═══\n');
   check('el mensaje sigue empezando por INSUFFICIENT, así que se registra como ' +
         'WARN y no ensucia el registro de errores de verdad',
     /throw new Error\('INSUFFICIENT/.test(GS) &&
-    /'INSUFFICIENT', 'LOCKED'/.test(GS));
+    // PERTENENCIA A LA LISTA, no quién es su vecino. Esto decía
+    // /'INSUFFICIENT', 'LOCKED'/ y se puso rojo sobre código sano el día que
+    // 'LOCKED' pasó a 'RESERVED' — la prueba había fijado el ORDEN de una lista
+    // cuando lo que le importa es que su prefijo ESTÉ en ella.
+    new RegExp("_KNOWN_VALIDATION_PREFIXES[\\s\\S]{0,600}'INSUFFICIENT'").test(GS));
 }
 
 // ── 2. El arreglo, ejecutado ────────────────────────────────────────────────

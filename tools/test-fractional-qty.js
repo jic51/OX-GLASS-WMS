@@ -177,8 +177,22 @@ console.log('\n═══ the other half: the browser has to allow the keystroke 
 console.log('\n═══ the backend never had this bug, and still does not ═══\n');
 {
   const gs = codeOnly(GS);
+  // ESTO APUNTABA AL SITIO EQUIVOCADO, y sólo se vio al borrar aquel código.
+  //
+  // La expresión era /var qty = Number(data.qty || 0)/ y la única línea del
+  // archivo que la cumplía estaba dentro de addReservation_ — un endpoint que
+  // NO TENÍA NI UN LLAMADOR en la interfaz y que se borró el 2026-09-20. Es
+  // decir: la comprobación se llamaba "the save path" y llevaba desde que se
+  // escribió midiendo un camino por el que no pasaba ni un solo movimiento.
+  //
+  // El camino de guardado de verdad es addMovementsBatch_, y lee así:
+  //     var qty = Math.abs(Number(d.qty || 0));
+  // Math.abs porque la dirección va en el tipo de movimiento, no en el signo; y
+  // Number —no parseInt— es lo que conserva el 2,5 que esta prueba defiende.
   check('the save path reads the quantity with Number(), which keeps fractions',
-    /var qty\s*=\s*Number\(data\.qty\s*\|\|\s*0\)/.test(gs));
+    /var qty\s*=\s*Math\.abs\(Number\(d\.qty\s*\|\|\s*0\)\)/.test(gs));
+  check('...and it is the batch save, the one every movement actually goes through',
+    gs.indexOf('function addMovementsBatch_') !== -1);
   check('no parseInt on a quantity anywhere in Code_v3_fixed.gs',
     (gs.match(/parseInt\([^;\n]*[qQ]ty/g) || []).length === 0);
 }
