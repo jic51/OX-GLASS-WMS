@@ -97,6 +97,37 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.06</span>
+      <span class="tag new">New</span>
+      <h3>Incoming: a search box, and a warning before you enter the same
+          delivery twice</h3>
+      <p>Expected deliveries were the one long list in the app without a search
+         box. There is one now, in the same place and working the same way as
+         the one in Movements — type and the list narrows. It looks through the
+         name, PO number, supplier, PM and notes.</p>
+      <p>And before a delivery is saved, the app checks whether it is already on
+         the list. <b>The PO number decides:</b> a supplier issues a new PO for
+         a new order, so the same material under the same PO twice is almost
+         always the same delivery written down twice — and two different POs are
+         two real orders, which the app now knows not to complain about. When
+         there is no PO to compare, it falls back to the same material, from the
+         same supplier, within a week of the same date, and says so more
+         softly.</p>
+      <p>The warning shows both deliveries side by side, field by field, with
+         whatever differs marked — so the comparison is the review, rather than
+         sending you off to find the other one. From there you can open the one
+         that already exists and edit it instead (no second delivery is
+         created), decide they really are different and add it anyway, or
+         cancel. The same material from two different suppliers is never
+         flagged; it is two real deliveries.</p>
+      <p>Underneath both of those: names in Incoming are now tidied the way a
+         movement's name always has been — uppercase, extra spaces collapsed.
+         Deliveries already on the list keep what was typed until you edit them,
+         and the search and the duplicate check compare regardless of case, so
+         nothing older is missed.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.05</span>
       <span class="tag fix">Fix</span>
       <h3>Reservations: a list that folds away, columns that hold still, and a

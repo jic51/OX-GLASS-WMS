@@ -115,6 +115,7 @@ node tools/test-mazo-contador.js
 node tools/test-pintar-al-confirmar.js
 node tools/test-reservas.js
 node tools/test-reservas-tira.js
+node tools/test-incoming-duplicado.js
 node tools/test-landing-verdad.js
 node tools/build-site.js && node tools/test-site-privacy.js
 node tools/check-changelog.js

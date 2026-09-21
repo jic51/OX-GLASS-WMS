@@ -185,41 +185,20 @@ movimiento "sí funciona", y "el mazo, sí funciona todo".
 De esa misma sesión salieron cuatro cosas a anotar. Tres son del estándar de las
 ventanas (sección A, más abajo) y una es de datos.
 
-## 1. LOS NOMBRES DEL INCOMING NO SE NORMALIZAN — y esto NO es cosmético
+## ✅ HECHO (v12.06) — LOS NOMBRES DEL INCOMING SE NORMALIZAN
 
-Jose: *"en el incoming no se regularizan los nombres como en un entry, en el
-entry al escribir un nombre este se hace todo mayúscula, deberíamos hacer lo
-mismo en los incomings."*
+`addIncoming` y `updateIncoming` guardan ahora `cleanDisplay_(name)` y
+`cleanDisplay_(category)`, exactamente igual que un movimiento, y el navegador
+tiene el gemelo `_limpiarNombre` para que lo que pinta al instante sea ya lo que
+se va a guardar. Una prueba ejecuta las dos y compara sus salidas letra por
+letra sobre las mismas siete entradas, así que no pueden separarse en silencio.
 
-**Confirmado en el código, y la diferencia es una llamada:**
-
-| | |
-|---|---|
-| un MOVIMIENTO | `row[AC.NAME] = cleanDisplay_(d.name)` — mayúsculas, trim, espacios colapsados |
-| una ENTREGA ESPERADA | `String(data.name \|\| '').trim()` — **sin `cleanDisplay_`** |
-
-Es otra vez el patrón de siempre: comportamiento escrito para un camino y no
-cableado en el otro.
-
-**POR QUÉ ESTO IMPORTA MÁS DE LO QUE PARECE, y hay que hacerlo ANTES que el aviso
-de duplicado del 2026-09-17:** el aviso de duplicado que pidió Jose compara por
-nombre. Mientras las entregas guarden `"Yogu Yogu"` y `"YOGU YOGU"` como cosas
-distintas, **ese aviso no saltaría nunca en el caso que lo justifica**. Y lo
-mismo vale para la sugerencia del Incoming en el formulario de entrada (punto 1
-de la lista del 2026-09-09, "por qué no siempre salen"): si los dos lados no
-normalizan igual, la comparación falla en silencio.
-
-Las tres cosas son la misma cosa. **Orden: normalizar primero, y las otras dos
-encima.**
-
-Lo que hay que mirar al hacerlo:
-- Normalizar **al guardar** en el servidor, como los movimientos, no sólo con
-  `text-transform` en el CSS — eso sólo pinta, y lo que se guarda sigue sucio.
-- Las entregas **que ya están guardadas** en minúsculas. ¿Se corrigen de una
-  pasada, o se deja que se arreglen al editarlas? Decisión de Jose. Hay
-  precedente: la autorreparación de MatID hace lo primero.
-- El campo de Incoming usa `list="matNameList"`, o sea el autocompletado de
-  materiales que YA vienen en mayúsculas. Parte del desajuste sale de ahí.
+**Lo que NO se hizo, y es decisión de Jose:** las entregas que YA están
+guardadas en minúsculas se quedan como están hasta que alguien las edite.
+Reescribir de una pasada lo que ya hay cambia datos que él tecleó, y su regla es
+que los datos se mantienen como el usuario los ingresó. No hace falta para nada:
+el aviso de duplicado y el buscador comparan normalizando al vuelo, así que las
+viejas funcionan igual. Si quiere la pasada, es una línea.
 
 ## 2. LA COLUMNA DOC: DOS AL LADO, Y UNA FLECHA PARA EL RESTO
 
@@ -407,92 +386,36 @@ de `.deck-card`, el ancho fijo de la tarjeta de la persona). Un barrido que
 "limpie" sin leer esos comentarios va a deshacer decisiones suyas. Cada regla que
 se toque hay que leerla antes.
 
-## B. INCOMING — BUSCADOR Y AVISO DE DUPLICADO
+## ✅ HECHO (v12.06) — INCOMING: BUSCADOR Y AVISO DE DUPLICADO
 
-Jose, 2026-09-17: *"hay que poner un buscador en los incoming y una forma de
-aviso si ingresamos un incoming que ya estaba enlistado o anotado, si es igual en
-nombre solo proponer una edición y darle la opción para hacerlo enseguida."*
+**El buscador** es el mismo molde de Movements: `#incSearch`, escribe y filtra,
+sin botón. Busca en nombre, PO, proveedor, PM, notas y categoría — y el marcador
+de posición nombra los cinco primeros, con una prueba que comprueba que lo que
+se busca y lo que se anuncia son lo mismo. No toca la vista de semana, que es un
+calendario y no una lista. El vacío dice por qué está vacío y cuántas hay en
+total.
 
-**1. El buscador.** La pestaña de Incoming es la única lista grande de la app sin
-uno — Movements tiene su caja de búsqueda y el listado de materiales también. El
-molde ya existe; es llevarlo, no inventarlo. Hay que decidir sobre qué busca:
-nombre y proveedor seguro, PO casi seguro, y las notas es una decisión (buscar en
-las notas encuentra más y ensucia los resultados).
+**El aviso de duplicado**, con la regla que dio Jose el 2026-09-21:
 
-**2. El aviso de duplicado.** Lo importante es que Jose ya dijo la regla completa:
-**mismo nombre → proponer editar la que existe, con el botón para hacerlo en el
-acto.** No bloquear, no preguntar en abstracto: enseñar la que ya está y ofrecer
-abrirla.
+| Señal | Trato |
+|---|---|
+| Mismo PO + mismo material | Aviso fuerte. El PO es la identidad. |
+| Dos PO y distintos | No se avisa: son dos pedidos. |
+| Sin PO: nombre + proveedor + fecha a ±7 días | Aviso suave, "posible duplicado". |
+| Mismo nombre, otro proveedor | No se avisa. Lo pidió él expresamente. |
+| Una cancelada | No cuenta: volver a anotarla es lo correcto. |
 
-**LA REGLA, CONTESTADA POR JOSE EL 2026-09-21.** Se le preguntó si "duplicado"
-es el nombre solo o nombre + proveedor + fecha cercana. Su respuesta, que es más
-precisa que la pregunta:
+El cuadro enseña las dos entregas en columnas, campo a campo, con lo que difiere
+marcado — la comparación ES la revisión, en vez de un botón que lleva a otra
+pantalla. Tres salidas: editar la que ya existe (y no crear una segunda), crear
+igual, o cancelar. Salta al guardar, nunca mientras se teclea.
 
-> *"Un duplicado es mismo nombre + mismo proveedor + fecha cercana + mismo PO.
-> EL PO ES LO QUE EN REALIDAD DICE SI ES EL MISMO O NO, ya que cada empresa crea
-> uno nuevo para una entrega nueva. Pero si no hay PO, entonces el nombre con
-> los demás datos trabajan bien. Debemos recordar que los materiales pueden
-> venir con el mismo nombre y misma cantidad de diferentes proveedores, así que
-> ahí no creo que debamos avisar de un duplicado, pero no está de más avisar
-> igual: podemos mostrar un pop-up de advertencia que diga POSIBLE DUPLICADO y
-> mostrar el que ya estaba con el que se está creando, y preguntar si se desea
-> proceder o revisar la información."*
+**Lo que queda de esta sección, y sigue abierto:** la sugerencia que acompaña
+mientras se escribe el nombre en el formulario de Incoming —enseñar debajo las
+últimas entregas de ese material— que es la forma de PREVENIR el duplicado en
+vez de avisarlo. Se cruza con el punto 1 de la lista del 2026-09-09 (por qué las
+sugerencias del Incoming no siempre salen).
 
-Eso da **dos grados de certeza**, y merecen dos tratos distintos:
-
-| Señal | Qué es | Qué hace la app |
-|---|---|---|
-| **Mismo PO + mismo material** | Casi seguro la misma entrega escrita dos veces | Aviso fuerte. El PO es la identidad. |
-| **Sin PO: nombre + proveedor + fecha cercana** | Probable, no seguro | Aviso suave: "posible duplicado". |
-| **Nombre igual, proveedor distinto** | Dos entregas reales | No es duplicado. Jose: *"ahí no creo que debamos avisar"*. |
-
-**MI OPINIÓN SOBRE EL "REVISAR", que Jose pidió.** Su idea —enseñar los dos y
-ofrecer *proceder* o *revisar*— es la correcta en lo que importa: enseñar el que
-ya estaba **al lado** del que se está creando. Donde yo cambiaría una cosa es en
-el botón de "revisar": si lleva a otra pantalla, añade un clic y no añade
-información, porque la comparación **ya está delante**. Propongo que el mismo
-cuadro sea la revisión, con las diferencias marcadas, y tres salidas que son las
-tres decisiones reales:
-
-- **"It's the same one — edit that one"** → abre la que existe para editarla y
-  **no crea una segunda**. Es el caso que Jose describió desde el principio.
-- **"They're different — create it anyway"** → sigue adelante, sin regañar.
-- **Cancel** → no pasa nada.
-
-La razón de fondo es la misma lección que la reserva huérfana de esta misma
-tarde: **un aviso que no ofrece el arreglo es medio arreglo.** Decir "posible
-duplicado" y dejar al usuario buscar el otro a mano es lo que hay que evitar.
-
-**Y la otra pregunta de Jose —"¿qué otra opción podemos dar para que el usuario
-revise lo que tiene?"— tiene una respuesta mejor que el aviso: no llegar a él.**
-Mientras se escribe el nombre en el formulario de Incoming, enseñar debajo las
-últimas entregas de ese material (proveedor, PO, fecha, estado). Eso previene el
-duplicado en vez de avisarlo, y de paso contesta "¿esto ya lo pedimos?" sin abrir
-nada. El buscador del punto 1 es la tercera pata: sirve para mirar a propósito.
-
-Lo que queda por resolver al escribirlo:
-
-- **¿Qué es "igual en nombre"?** Tiene que ser la misma normalización que usa el
-  resto de la app (`nt()` / `cleanDisplay_`: mayúsculas, espacios colapsados), o
-  el aviso no saltará con `"YOGU YOGU"` contra `"Yogu  Yogu"`, que es justo el
-  caso que importa. **Comparar en crudo sería un aviso decorativo.** Por eso la
-  normalización de nombres va PRIMERO: sin ella, esto no puede funcionar.
-- **¿Qué es "fecha cercana"?** Propuesta: ±7 días sobre la fecha estimada. Una
-  ventana corta deja escapar la entrega que alguien anotó con una semana de
-  margen; una larga marca como duplicado dos pedidos mensuales del mismo
-  material al mismo proveedor, que es lo normal en un almacén.
-- **¿Y las ya llegadas?** Si la que existe está en `Arrived`, "propón editarla"
-  puede ser el consejo equivocado — lo que llegó llegó, y esto podría ser una
-  segunda entrega real. El aviso debe decir el ESTADO de la que encontró, no sólo
-  que la encontró.
-- **Dónde salta.** Al guardar, no mientras se teclea. Un aviso de duplicado que
-  aparece a media palabra interrumpe a quien todavía está escribiendo el nombre;
-  la sugerencia de arriba es la que acompaña mientras se escribe.
-
-**Esto se cruza con el punto 1 de la lista del 2026-09-09** (por qué las
-sugerencias del Incoming no siempre salen): las dos son "¿ya conocemos esto?", y
-una parte de la respuesta —la normalización del nombre— es la misma
-investigación. Conviene hacerlas juntas.
 
 # ══ LA LISTA, ORDENADA — 2026-09-09 ══
 

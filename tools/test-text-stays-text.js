@@ -401,6 +401,12 @@ console.log('\n═══ el PO de una entrega esperada sobrevive a ida y vuelta 
       fnSrc(GS, 'safeStr_'), fnSrc(GS, 'incomingStatus_'),
       fnSrc(GS, 'incomingDateMode_'), fnSrc(GS, 'incomingDateCell_'),
       fnSrc(GS, 'incomingCellDate_'),
+      // v12.06: addIncoming y updateIncoming normalizan el nombre y la
+      // categoría con la misma cleanDisplay_ que un movimiento. Sin ella en el
+      // contexto las dos revientan — que es lo que pasó el día del cambio. Por
+      // eso esta lista se escribe a mano: dice exactamente de qué depende este
+      // mundo de mentira, y se queja cuando el producto gana una dependencia.
+      fnSrc(GS, 'cleanDisplay_'),
       // withStockLock_ de mentira: desde la v11.85 las tres acciones de
       // entregas esperadas van dentro del candado. Aquí sólo hace falta que
       // deje pasar — lo que el candado impide se mide en

@@ -46,7 +46,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.05';
+var APP_VERSION = '12.06';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -58,7 +58,7 @@ var APP_VERSION = '12.05';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '4993bba6';
+var APP_BUILD = '3c1d41ea';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -10568,11 +10568,23 @@ function addIncoming(data) {
      *
      * textCell_ además sustituye a sheetSafe_ sin perder nada: una comilla
      * delante hace la celda literal, así que también neutraliza las fórmulas. */
+    /* cleanDisplay_, LA MISMA QUE UN MOVIMIENTO. Jose, 2026-09-17: *"en el
+     * incoming no se regularizan los nombres como en un entry; en el entry, al
+     * escribir un nombre, éste se hace todo mayúscula. Deberíamos hacer lo
+     * mismo en los incomings."*
+     *
+     * Y no era cosa de gusto: un movimiento guarda `cleanDisplay_(d.name)` y
+     * una entrega esperada guardaba `String(data.name||'').trim()`. Otra vez el
+     * mismo patrón —conducta escrita para un camino y no cableada en el otro—,
+     * y esta vez con consecuencia: el aviso de duplicado y la sugerencia del
+     * formulario de entrada comparan por nombre, así que mientras una entrega
+     * guardara "Yogu Yogu" y otra "YOGU YOGU" no saltarían NUNCA en el caso que
+     * las justifica. La normalización tenía que ir primero. */
     sheet.appendRow(textSafeRow_([
       id,
       estDate,
-      String(data.category || '').toUpperCase().trim(),
-      String(data.name     || '').trim(),
+      cleanDisplay_(data.category),
+      cleanDisplay_(data.name),
       Number(data.qty      || 0),
       String(data.unit     || 'UNIT'),
       String(data.supplier || ''),
@@ -10623,11 +10635,15 @@ function updateIncoming(data) {
           : (values[i][13] || '');
         // textSafeRow_ por el mismo motivo que en addIncoming: sin él, un PO con
         // forma de fecha —"08-4885"— se guarda como fecha y vuelve vacío.
+        // cleanDisplay_ aquí también, y por eso mismo: si sólo normalizara al
+        // crear, editar una entrega la devolvería a como se tecleó. La mitad de
+        // los arreglos de este archivo son de conductas puestas en un camino y
+        // no en el otro; ésta es la misma conducta en sus dos caminos.
         sheet.getRange(i + 1, 1, 1, 17).setValues([textSafeRow_([
           data.id,
           estDate,
-          String(data.category || '').toUpperCase().trim(),
-          String(data.name     || '').trim(),
+          cleanDisplay_(data.category),
+          cleanDisplay_(data.name),
           Number(data.qty      || 0),
           String(data.unit     || 'UNIT'),
           String(data.supplier || ''),
