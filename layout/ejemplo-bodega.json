@@ -1,0 +1,319 @@
+{
+  "meta": {
+    "name": "OX Glass — Bodega (ejemplo)",
+    "units": "in",
+    "rev": 1,
+    "updated": "2026-09-21",
+    "notes": "Ejemplo para probar la pestaña Plano 3D sin haber medido todavía. Reemplázalo con tu captura real."
+  },
+  "building": {
+    "outline": [
+      [
+        0,
+        0
+      ],
+      [
+        1200,
+        0
+      ],
+      [
+        1200,
+        720
+      ],
+      [
+        0,
+        720
+      ]
+    ],
+    "clearH": 192,
+    "columns": [
+      {
+        "id": "C1",
+        "x": 594,
+        "y": 234,
+        "w": 8,
+        "d": 8
+      },
+      {
+        "id": "C2",
+        "x": 594,
+        "y": 474,
+        "w": 8,
+        "d": 8
+      }
+    ],
+    "openings": [
+      {
+        "id": "BAY-1",
+        "type": "ROLLUP",
+        "wall": "S",
+        "x": 456,
+        "y": 720,
+        "w": 168,
+        "h": 168
+      },
+      {
+        "id": "MAN-1",
+        "type": "MAN",
+        "wall": "S",
+        "x": 60,
+        "y": 720,
+        "w": 36,
+        "h": 84
+      }
+    ],
+    "obstacles": [
+      {
+        "id": "OF",
+        "name": "Oficina",
+        "type": "OFFICE",
+        "x": 0,
+        "y": 0,
+        "w": 240,
+        "d": 180,
+        "h": 108,
+        "rot": 0
+      }
+    ]
+  },
+  "survey": {
+    "diagA": 1399.43,
+    "diagB": 1399.43,
+    "method": "",
+    "notes": ""
+  },
+  "zones": [
+    {
+      "id": "Z-STG",
+      "name": "STAGING / DESPACHO",
+      "family": "STAGING",
+      "x": 0,
+      "y": 561.6,
+      "w": 1200,
+      "d": 158.39999999999998
+    },
+    {
+      "id": "Z-SF",
+      "name": "STOREFRONT",
+      "family": "STOREFRONT",
+      "x": 0,
+      "y": 0,
+      "w": 36,
+      "d": 561.6
+    },
+    {
+      "id": "Z-MIR",
+      "name": "ESPEJOS",
+      "family": "MIRROR",
+      "x": 1152,
+      "y": 0,
+      "w": 48,
+      "d": 166.46400000000003
+    },
+    {
+      "id": "Z-SHW",
+      "name": "SHOWER DOORS",
+      "family": "SHOWER",
+      "x": 1152,
+      "y": 202.46400000000003,
+      "w": 48,
+      "d": 161.568
+    },
+    {
+      "id": "Z-SCR",
+      "name": "SCREENS (WINDOW + DOOR)",
+      "family": "SCREEN",
+      "x": 1152,
+      "y": 400.03200000000004,
+      "w": 48,
+      "d": 161.568
+    },
+    {
+      "id": "Z-WIN",
+      "name": "VENTANAS",
+      "family": "WINDOW",
+      "x": 108,
+      "y": 0,
+      "w": 972,
+      "d": 561.6
+    }
+  ],
+  "racks": [
+    {
+      "id": "SF1",
+      "zone": "Z-SF",
+      "family": "STOREFRONT",
+      "type": "CANT",
+      "x": -163.3,
+      "y": 348.3,
+      "w": 366.6,
+      "d": 36.00000000000003,
+      "h": 120,
+      "rot": 90,
+      "levels": 4,
+      "slot": 0,
+      "bays": [],
+      "label": ""
+    },
+    {
+      "id": "M1",
+      "zone": "Z-MIR",
+      "family": "MIRROR",
+      "type": "ARACK",
+      "x": 1096.768,
+      "y": 59.23200000000001,
+      "w": 154.46400000000003,
+      "d": 48,
+      "h": 84,
+      "rot": 90,
+      "levels": 1,
+      "slot": 0,
+      "bays": [],
+      "label": ""
+    },
+    {
+      "id": "SD1",
+      "zone": "Z-SHW",
+      "family": "SHOWER",
+      "type": "PALLET",
+      "x": 1099.216,
+      "y": 259.24800000000005,
+      "w": 149.568,
+      "d": 48,
+      "h": 144,
+      "rot": 90,
+      "levels": 3,
+      "slot": 0,
+      "bays": [],
+      "label": ""
+    },
+    {
+      "id": "S1",
+      "zone": "Z-SCR",
+      "family": "SCREEN",
+      "type": "VRACK",
+      "x": 1108.216,
+      "y": 465.81600000000003,
+      "w": 149.568,
+      "d": 30,
+      "h": 96,
+      "rot": 90,
+      "levels": 1,
+      "slot": 0,
+      "bays": [],
+      "label": ""
+    },
+    {
+      "id": "W1",
+      "zone": "Z-WIN",
+      "family": "WINDOW",
+      "type": "ARACK",
+      "x": 243,
+      "y": 0,
+      "w": 837,
+      "d": 48,
+      "h": 84,
+      "rot": 0,
+      "levels": 1,
+      "slot": 0,
+      "bays": [],
+      "label": ""
+    },
+    {
+      "id": "W2",
+      "zone": "Z-WIN",
+      "family": "WINDOW",
+      "type": "ARACK",
+      "x": 243,
+      "y": 108,
+      "w": 837,
+      "d": 48,
+      "h": 84,
+      "rot": 0,
+      "levels": 1,
+      "slot": 0,
+      "bays": [],
+      "label": ""
+    },
+    {
+      "id": "W3",
+      "zone": "Z-WIN",
+      "family": "WINDOW",
+      "type": "ARACK",
+      "x": 108,
+      "y": 216,
+      "w": 483,
+      "d": 48,
+      "h": 84,
+      "rot": 0,
+      "levels": 1,
+      "slot": 0,
+      "bays": [],
+      "label": ""
+    },
+    {
+      "id": "W3-2",
+      "zone": "Z-WIN",
+      "family": "WINDOW",
+      "type": "ARACK",
+      "x": 605,
+      "y": 216,
+      "w": 475,
+      "d": 48,
+      "h": 84,
+      "rot": 0,
+      "levels": 1,
+      "slot": 0,
+      "bays": [],
+      "label": ""
+    },
+    {
+      "id": "W4",
+      "zone": "Z-WIN",
+      "family": "WINDOW",
+      "type": "ARACK",
+      "x": 108,
+      "y": 324,
+      "w": 972,
+      "d": 48,
+      "h": 84,
+      "rot": 0,
+      "levels": 1,
+      "slot": 0,
+      "bays": [],
+      "label": ""
+    },
+    {
+      "id": "W5",
+      "zone": "Z-WIN",
+      "family": "WINDOW",
+      "type": "ARACK",
+      "x": 108,
+      "y": 432,
+      "w": 483,
+      "d": 48,
+      "h": 84,
+      "rot": 0,
+      "levels": 1,
+      "slot": 0,
+      "bays": [],
+      "label": ""
+    },
+    {
+      "id": "W5-2",
+      "zone": "Z-WIN",
+      "family": "WINDOW",
+      "type": "ARACK",
+      "x": 605,
+      "y": 432,
+      "w": 475,
+      "d": 48,
+      "h": 84,
+      "rot": 0,
+      "levels": 1,
+      "slot": 0,
+      "bays": [],
+      "label": ""
+    }
+  ]
+}

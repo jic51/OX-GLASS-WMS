@@ -864,6 +864,7 @@ function _processMovementInner(ss, action, data, auth) {
   if (action === 'modifyMovement')        return modifyMovement(data, auth);
   if (action === 'setMonitoredMaterials') return setMonitoredMaterials(data.names, auth);
   if (action === 'uploadRackPhoto')       return uploadRackPhoto(data, auth);
+  if (action === 'saveWarehouseLayout')   return saveWarehouseLayout(data, auth);
   if (action === 'lockMaterial')          return lockMaterial(data, auth);
   if (action === 'unlockMaterial')        return unlockMaterial(data, auth);
   if (action === 'updateMinStockBulk')    return updateMinStockBulk(data, auth);
@@ -2019,6 +2020,73 @@ function uploadRackPhoto(data, auth) {
       uploadedAt: Utilities.formatDate(now, Session.getScriptTimeZone(), 'MM/dd/yyyy HH:mm')
     }
   };
+}
+
+// ─── WAREHOUSE LAYOUT (Plano 3D / planos a escala) ───────────────────────────
+// One sheet holds the measured shell, the fixed obstacles, the zones and every
+// rack, in the flat row format the Plan3D engine round-trips (see
+// tools/plan3d-engine.js → toRows/fromRows). Everything is stored in INCHES.
+var LAYOUT_SHEET = 'WAREHOUSE_LAYOUT';
+var LAYOUT_HEADER = ['kind','id','name','family','type','x','y','w','d','h','rot','levels','zone','extra'];
+
+function _ensureLayoutSheet(ss) {
+  var sheet = ss.getSheetByName(LAYOUT_SHEET);
+  if (!sheet) {
+    sheet = ss.insertSheet(LAYOUT_SHEET);
+    sheet.appendRow(LAYOUT_HEADER);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, LAYOUT_HEADER.length).setFontWeight('bold');
+    sheet.hideSheet();   // machine-written: edit it from the Plano 3D tab, not by hand
+  }
+  return sheet;
+}
+
+// Returns the raw rows (header included) so the frontend engine can parse them.
+function getWarehouseLayout(sessionToken) {
+  var auth = getUserRole(sessionToken);
+  if (auth.role === 'NO_SESSION') throw new Error('Not authenticated.');
+  if (auth.role === 'DENIED')     throw new Error('Access denied.');
+  return _cacheGet('whLayoutV1', 300, _getWarehouseLayoutUncached);
+}
+
+function _getWarehouseLayoutUncached() {
+  var ss    = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(LAYOUT_SHEET);
+  if (!sheet || sheet.getLastRow() < 2) return [];
+  return sheet.getDataRange().getValues().map(function (row) {
+    return row.map(function (c) { return c === null || c === undefined ? '' : String(c); });
+  });
+}
+
+// Replaces the whole layout in one shot — the plan is edited as a single drawing,
+// so a partial write would leave racks pointing at zones that no longer exist.
+// ADMIN only: moving a rack on the plan changes where everyone is told to look.
+function saveWarehouseLayout(data, auth) {
+  if (auth.role !== 'ADMIN') throw new Error('Only an admin can change the warehouse plan.');
+  var rows = (data && data.rows) || [];
+  if (!rows.length) throw new Error('Nothing to save.');
+  if (rows.length > 5000) throw new Error('Layout too large (' + rows.length + ' rows).');
+
+  var clean = rows.map(function (r) {
+    var out = [];
+    for (var i = 0; i < LAYOUT_HEADER.length; i++) {
+      var v = r[i];
+      out.push(v === null || v === undefined ? '' : String(v).slice(0, 4000));
+    }
+    return out;
+  });
+  if (String(clean[0][0]).toLowerCase() !== 'kind') clean.unshift(LAYOUT_HEADER.slice());
+
+  var ss    = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = _ensureLayoutSheet(ss);
+  var oldCount = Math.max(0, sheet.getLastRow() - 1);
+  sheet.clearContents();
+  sheet.getRange(1, 1, clean.length, LAYOUT_HEADER.length).setValues(clean);
+  sheet.getRange(1, 1, 1, LAYOUT_HEADER.length).setFontWeight('bold');
+
+  _auditLog(ss, 'SAVE_WAREHOUSE_LAYOUT', auth.email, (clean.length - 1) + ' elementos', oldCount, clean.length - 1);
+  CacheService.getScriptCache().remove('whLayoutV1');
+  return { status: 'success', rows: clean.length - 1 };
 }
 
 // Turns a DOC_LINKS string ("Name||https://...\nName2||https://...") into a
