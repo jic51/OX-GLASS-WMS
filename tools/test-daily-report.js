@@ -232,13 +232,100 @@ console.log('\n═══ un día sin movimientos ═══\n');
     !/movs\.length\s*(===?\s*0|<\s*1)\s*\)\s*return/.test(run) &&
     /if \(!cfg\.enabled\) return/.test(run) &&
     /if \(!to\.length\) return/.test(run));
+  // EN INGLÉS desde la v12.03. El correo llevaba meses saliendo en español —lo
+  // encontró Jose el 2026-09-21— contra su instrucción de que la app esté toda
+  // en inglés. Lo que estas tres comprueban no es el idioma (de eso se encarga
+  // test-solo-ingles, que mira los dos archivos enteros) sino que las tres
+  // frases SIGAN ESTANDO: que se diga con palabras, que se explique por qué
+  // llega igual, y que el asunto lo avise sin abrirlo.
   check('el correo de un día vacío lo dice con palabras',
-    /no se registró ningún movimiento/i.test(html));
+    /No movements were recorded/i.test(html));
   check('...y explica por qué llega igual, para que el primero no parezca un ' +
         'error y el segundo no se archive sin leer',
-    /a propósito/i.test(html));
+    /on purpose/i.test(html));
   check('el asunto avisa desde la bandeja de entrada, sin abrirlo',
-    /\(sin movimientos\)/.test(run));
+    /\(no movements\)/.test(run));
+}
+
+// ── 5b. LAS DOS PERSONAS DE UN MOVIMIENTO, SEPARADAS ────────────────────────
+//
+// Jose, 2026-09-21, mirando su propio reporte: *"el quién, ¿qué significa
+// quién?"* y *"quiero adjuntar una columna más que diga quién hizo el
+// movimiento, ahí se llamaría user, y quiero el nombre y el correo, no sólo el
+// correo."*
+//
+// La columna decía `m.responsible || m.userEmail`, o sea contestaba DOS
+// preguntas distintas según la fila: normalmente el Received By del movimiento,
+// y si estaba vacío, el correo de quien lo registró — otra persona. En su
+// captura una fila decía "JOSE" y la otra "James Williams" bajo el mismo
+// encabezado.
+//
+// ESTO SE EJECUTA, no se busca en el texto. Una comprobación que mirase si el
+// código "contiene m.responsible" pasaría en verde con la caída al correo
+// puesta, que es justamente el fallo.
+console.log('\n═══ Received by y User son dos columnas distintas ═══\n');
+{
+  const ctx = vm.createContext({
+    console,
+    escHtml_: v => String(v === null || v === undefined ? '' : v)
+                     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'),
+    PRODUCT_NAME: 'Acopio'
+  });
+  vm.runInContext(fn('dailyReportHtml_'), ctx);
+
+  const mov = (extra) => Object.assign({
+    moveType:'ENTRY', name:'MH 145', category:'WINDOW', qty:3, unit:'UNIT',
+    destLoc:'A', sourceLoc:'', responsible:'', userEmail:''
+  }, extra);
+
+  const pinta = (movs, dir) => {
+    ctx.movs = movs; ctx.dir = dir || {};
+    return vm.runInContext(
+      "dailyReportHtml_('21/09/2026', { name:'OX Glass LLC.' }, movs, [], [], {}, dir)", ctx);
+  };
+
+  // 1. El campo del movimiento manda, y NO cae al correo.
+  let html = pinta([ mov({ responsible:'JOSE', userEmail:'jc@ox.com' }) ],
+                   { 'jc@ox.com':'Jose Castro' });
+  check('Received by enseña el campo del movimiento', /JOSE/.test(html));
+  check('...y User, quien lo registró: nombre Y correo',
+    html.indexOf('Jose Castro') !== -1 && html.indexOf('jc@ox.com') !== -1);
+
+  // 2. EL FALLO QUE JOSE VIO: con el campo vacío, la columna NO puede rellenarse
+  //    con el correo — es otra persona y otra pregunta.
+  html = pinta([ mov({ responsible:'', userEmail:'jc@ox.com' }) ], { 'jc@ox.com':'Jose Castro' });
+  const celdas = html.split('<td').slice(1).map(c => c.slice(c.indexOf('>') + 1));
+  check('con Received by vacío se dice vacío, no el correo de quien registró',
+    celdas[4].indexOf('—') !== -1 && celdas[4].indexOf('jc@ox.com') === -1, celdas[4]);
+  check('...y el correo sigue estando, pero en User, que es su columna',
+    celdas[5].indexOf('jc@ox.com') !== -1, celdas[5]);
+
+  // 3. Quien no está en el directorio sale con su correo, no con un hueco.
+  html = pinta([ mov({ responsible:'KIM', userEmail:'nuevo@ox.com' }) ], { 'jc@ox.com':'Jose Castro' });
+  check('un correo que no está en el directorio se enseña tal cual',
+    html.indexOf('nuevo@ox.com') !== -1);
+
+  // 4. Y un movimiento sin usuario no inventa uno.
+  html = pinta([ mov({ responsible:'KIM', userEmail:'' }) ], {});
+  check('sin correo, User dice — y no queda en blanco',
+    html.split('<td').slice(1).map(c => c.slice(c.indexOf('>') + 1))[5].indexOf('—') !== -1);
+
+  // 5. LOS TÍTULOS CAMBIAN CON LA TABLA, porque la pregunta cambia: quien
+  //    RECIBE en lo que llega, quien SE LLEVA en lo que sale.
+  const tres = vm.runInContext(
+    "dailyReportHtml_('21/09/2026', { name:'OX' }, " +
+    "[{moveType:'ENTRY',name:'A',qty:1,unit:'UNIT',destLoc:'A',responsible:'x',userEmail:''}], " +
+    "[{moveType:'EXIT', name:'B',qty:1,unit:'UNIT',sourceLoc:'B',responsible:'y',userEmail:''}], " +
+    "[{moveType:'TRANSFER',name:'C',qty:1,unit:'UNIT',sourceLoc:'C',responsible:'z',userEmail:''}], {}, {})", ctx);
+  check('la tabla de entradas pregunta "Received by"', tres.indexOf('Received by') !== -1);
+  check('la de salidas pregunta "Taken by"',           tres.indexOf('Taken by') !== -1);
+  check('la de movimientos internos, "Handled by"',    tres.indexOf('Handled by') !== -1);
+
+  // 6. EL NÚMERO DEL TÍTULO dice qué cuenta. Jose tuvo que preguntar qué era
+  //    el (1): era la cuenta de filas, sin nada que lo dijera.
+  check('el título dice "1 movement" en singular', /\(1 movement\)/.test(tres), tres.slice(0, 200));
+  const dos = pinta([ mov({ responsible:'a' }), mov({ responsible:'b' }) ], {});
+  check('...y "2 movements" en plural', /\(2 movements\)/.test(dos));
 }
 
 // ── 6. La puerta ────────────────────────────────────────────────────────────

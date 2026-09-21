@@ -113,6 +113,7 @@ node tools/test-headers-repair.js
 node tools/build-site.js && node tools/test-site-privacy.js
 node tools/check-changelog.js
 node tools/check-publicado.js
+node tools/test-solo-ingles.js
 node tools/sync-legal.js --check
 node tools/build-fingerprint.js --check
 ```
