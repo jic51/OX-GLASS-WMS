@@ -198,6 +198,99 @@ console.log('\n── 3. El navegador cuenta LO MISMO que el servidor ──');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+console.log('\n── 3b. Una reserva que no retiene nada lo DICE ──');
+//
+// Jose, 2026-09-21, con cinco capturas: "hay un material llamado EVELYN A
+// QUINONEZ que no tiene cantidad pero sí aparece como reservado, pero no hay un
+// lugar donde esté."
+//
+// Tenía razón y eran DOS cosas en una:
+//
+//   1. _he(0) devolvía CADENA VACÍA, porque 0 es falsy y el escapador hacía
+//      String(s||''). La cantidad era 0 y se dibujaba un hueco. No pasaba sólo
+//      en la tira: toda la app pasa cantidades por _he.
+//
+//   2. La reserva era real y estaba activa desde el 5 de septiembre, pero el
+//      estante no tenía ese material y el material no tenía NI UNA fila de
+//      stock. Aparta lo que haya en el estante, y no había nada: 0 es la
+//      respuesta correcta. Lo que estaba mal era callarlo.
+
+{
+  const ctx = {
+    console,
+    _normKey: s2 => String(s2 || '').toUpperCase().trim().replace(/\s+/g, ' '),
+    nt: s2 => String(s2 || '').toUpperCase().trim(),
+    materialLocks: [
+      // El caso de Jose: material sin ninguna fila de stock.
+      { id:'V1', matId:'WINDOW|||EVELYN A QUINONEZ', category:'WINDOW',
+        name:'EVELYN A QUINONEZ', rack:'B', reason:'Si',
+        lockedBy:'joseisrael5101@gmail.com', lockedAt:'09/05/2026 17:06', allowedDest:[] },
+      // El otro caso: el material existe, pero ya no está en ESE estante.
+      { id:'V2', matId:'WINDOW|||MH 145', category:'WINDOW', name:'MH 145', rack:'B2A',
+        reason:'para enero', lockedBy:'jose@ox.com', lockedAt:'', allowedDest:[] },
+      // Y una que sí retiene.
+      { id:'V3', matId:'WINDOW|||44 NORTH', category:'WINDOW', name:'44 NORTH', rack:'C3B',
+        reason:'otra obra', lockedBy:'jose@ox.com', lockedAt:'', allowedDest:[] }
+    ],
+    stockData: {
+      'WINDOW|||MH 145':   { unit:'UNIT', warehouseQty: 51, warehouseLocs:{ C1C: 51 } },
+      'WINDOW|||44 NORTH': { unit:'UNIT', warehouseQty: 142, warehouseLocs:{ C3B: 142 } }
+    }
+  };
+  vm.createContext(ctx);
+  vm.runInContext(A.levantar(HTML, ['_reservasActivas', '_reservasResumen'],
+                             { dobles: ['_normKey', 'nt'] }), ctx);
+
+  const l = vm.runInContext('_reservasActivas()', ctx);
+  const porId = {};
+  l.forEach(r => { porId[r.id] = r; });
+
+  check('la reserva sigue apareciendo — está activa en la hoja', l.length === 3, l.length);
+  check('sin fila de stock: se marca "sin-material"', porId.V1.vacia === 'sin-material',
+        porId.V1.vacia);
+  check('...y su cantidad es 0, no undefined', porId.V1.qty === 0, porId.V1.qty);
+  check('material que se mudó de estante: se marca "sin-stock-aqui"',
+        porId.V2.vacia === 'sin-stock-aqui', porId.V2.vacia);
+  check('...y dice DÓNDE está ahora, que es lo accionable',
+        porId.V2.otrosEstantes.join(',') === 'C1C', porId.V2.otrosEstantes);
+  check('la que sí retiene no se marca', porId.V3.vacia === '' && porId.V3.qty === 142,
+        { v: porId.V3.vacia, q: porId.V3.qty });
+
+  const res = vm.runInContext('_reservasResumen()', ctx);
+  check('el resumen cuenta cuántas no retienen nada', res.vacias === 2, res.vacias);
+  check('...y el total de unidades sólo suma lo que de verdad se retiene',
+        res.unidades === 142, res.unidades);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+console.log('\n── 3c. El escapador no se come el cero ──');
+//
+// La mitad de abajo del hallazgo de Jose, y la que afecta a TODA la app: el
+// cajón del estante, las tarjetas de llegada y el "% used" del indicador de
+// espacio pasan cantidades por _he. Con String(s||''), un 0 salía como un
+// hueco en todos ellos, y un hueco parece un dato perdido.
+{
+  const ctx = { console };
+  vm.createContext(ctx);
+  vm.runInContext(A.levantar(HTML, ['_he', '_escAttr']), ctx);
+  const he = v => vm.runInContext('_he(' + JSON.stringify(v) + ')', ctx);
+  const ea = v => vm.runInContext('_escAttr(' + JSON.stringify(v) + ')', ctx);
+
+  check('_he(0) escribe "0"', he(0) === '0', he(0));
+  check('_escAttr(0) escribe "0"', ea(0) === '0', ea(0));
+  check('_he(false) escribe "false"', he(false) === 'false', he(false));
+  // Lo que SÍ tiene que desaparecer: lo que no existe.
+  check('_he(null) sigue vacío', vm.runInContext('_he(null)', ctx) === '');
+  check('_he(undefined) sigue vacío', vm.runInContext('_he(undefined)', ctx) === '');
+  check('_escAttr(null) sigue vacío', vm.runInContext('_escAttr(null)', ctx) === '');
+  // Y que siga escapando, que es para lo que existe.
+  check('_he sigue escapando < > & y comillas',
+        he('<a href="x">&') === '&lt;a href=&quot;x&quot;&gt;&amp;', he('<a href="x">&'));
+  check('_escAttr sigue escapando comillas y <',
+        ea('a"<b&') === 'a&quot;&lt;b&amp;', ea('a"<b&'));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 console.log('\n── 4. Las reservas muertas ya no existen ──');
 
 const gsLimpio   = A.sinComentarios(GS);
@@ -346,6 +439,24 @@ console.log('\n── 6. Las tres pantallas la enseñan, y comparten la cuenta �
   // roba sitio al plano, que es a lo que se viene al mapa.
   ctx.materialLocks = [];
   check('sin reservas no dibuja nada', vm.runInContext('_reservasTiraHtml()', ctx) === '');
+
+  // LA QUE NO RETIENE NADA, DIBUJADA. No basta con que _reservasActivas la
+  // marque: si la tira no lo pinta, Jose vuelve a ver el mismo hueco.
+  ctx.materialLocks = [
+    { id:'V1', matId:'WINDOW|||EVELYN A QUINONEZ', category:'SCREEN',
+      name:'EVELYN A QUINONEZ', rack:'B', reason:'Si',
+      lockedBy:'joseisrael5101@gmail.com', lockedAt:'09/05/2026 17:06', allowedDest:[] }
+  ];
+  const vacio = vm.runInContext('_reservasTiraHtml()', ctx);
+  check('la fila vacía se dibuja, no se esconde', vacio.indexOf('EVELYN A QUINONEZ') !== -1);
+  check('...con un 0 visible, no con un hueco', /resv-qty">0 UNIT/.test(vacio), vacio);
+  check('...marcada como que no retiene nada', vacio.indexOf('resv-vacia') !== -1);
+  check('...y diciendo POR QUÉ, en el sitio del motivo',
+        vacio.indexOf('no stock recorded for this material anywhere') !== -1);
+  check('...y qué hacer con ella, en la ayuda',
+        vacio.indexOf('Release it if it is no longer needed') !== -1);
+  check('la cabecera avisa de cuántas no retienen nada',
+        /1 holds nothing and can be released/.test(vacio), vacio.slice(0, 400));
 }
 
 // Las otras dos pantallas se comprueban EN SU PROPIO TROZO de código, no en el

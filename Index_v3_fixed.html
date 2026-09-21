@@ -300,6 +300,13 @@
     .resv-name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .resv-qty{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
     .resv-why{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    /* La reserva que no retiene nada. Se APAGA en vez de gritar: sigue siendo
+       una reserva de verdad —el material no puede salir— sólo que ahora mismo
+       no hay nada que retener. Un rojo de alarma la pondría por encima de las
+       que sí están reteniendo material, que son las que importan. */
+    .resv-row.resv-vacia{opacity:.72;border-style:dashed}
+    .resv-vacia .resv-qty{color:var(--muted)}
+    .resv-alerta{color:var(--orange);font-weight:600}
     /* En pantalla estrecha la rejilla de cuatro no cabe sin recortarlo todo a
        nada, así que se parte en dos renglones y el motivo pasa entero debajo. */
     @media (max-width:640px){
@@ -3889,7 +3896,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.01';
+var APP_VERSION = '12.02';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -3901,7 +3908,7 @@ var APP_VERSION = '12.01';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '37eb6f06';
+var APP_BUILD = '2b472be6';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -4074,11 +4081,39 @@ function _reservasActivas(){
     if (String(l.status || 'Active').toLowerCase() !== 'active') return;
     var s   = stockData[l.matId] || null;
     var qty = s ? Math.max(0, Number((s.warehouseLocs || {})[l.rack]) || 0) : 0;
+    /* UNA RESERVA PUEDE NO RETENER NADA, y la app lo sabe: hay que decirlo.
+     *
+     * Jose, 2026-09-21: *"hay un material llamado EVELYN A QUINONEZ que no
+     * tiene cantidad pero sí aparece como reservado, pero no hay un lugar donde
+     * esté."* Tenía razón: la reserva estaba activa en la hoja desde el 5 de
+     * septiembre, el estante B no tenía ese material, y el material no tenía ni
+     * una sola fila de stock ni un solo movimiento.
+     *
+     * No es un fallo de cuenta — la reserva aparta lo que haya en el estante, y
+     * ahí no había nada, así que 0 es la respuesta correcta. Lo que estaba mal
+     * era CALLARLO: una fila con un hueco parece un dato perdido.
+     *
+     * Y es información que se puede usar: una reserva que no retiene nada es
+     * una reserva que alguien debería soltar. Los dos motivos se distinguen
+     * porque lo que hay que hacer es distinto — si el material se movió de
+     * estante, la reserva se quedó atrás; si no existe en ninguna parte, se
+     * borraron sus movimientos o nunca los tuvo. */
+    var vacia = '';
+    if (qty === 0) {
+      vacia = !s ? 'sin-material' : 'sin-stock-aqui';
+    }
     out.push({
       id: l.id, matId: l.matId, category: l.category, name: l.name,
       rack: l.rack, qty: qty, unit: (s && s.unit) || 'UNIT',
       reason: l.reason || '', by: l.lockedBy || '', at: l.lockedAt || '',
-      allowedDest: l.allowedDest || []
+      allowedDest: l.allowedDest || [],
+      vacia: vacia,
+      // El total del material, para poder decir "ya no está en B, está en C3C".
+      totalDelMaterial: s ? Math.max(0, Number(s.warehouseQty) || 0) : 0,
+      otrosEstantes: s ? Object.keys(s.warehouseLocs || {}).filter(function(r){
+        return _normKey(r) !== _normKey(l.rack) &&
+               Math.max(0, Number(s.warehouseLocs[r]) || 0) > 0;
+      }) : []
     });
   });
   // Por estante, que es como se recorre un almacén: quien mira esta lista está
@@ -4093,10 +4128,14 @@ function _reservasActivas(){
 /** El resumen que necesitan el tablero y el mapa: cuántas, cuántas unidades y
  *  en cuántos estantes. Sale de _reservasActivas para que no haya dos cuentas. */
 function _reservasResumen(){
-  var lista = _reservasActivas(), unidades = 0, estantes = {};
-  lista.forEach(function(r){ unidades += r.qty; estantes[r.rack] = 1; });
+  var lista = _reservasActivas(), unidades = 0, estantes = {}, vacias = 0;
+  lista.forEach(function(r){
+    unidades += r.qty;
+    estantes[r.rack] = 1;
+    if (r.vacia) vacias++;
+  });
   return { lista: lista, n: lista.length, unidades: unidades,
-           estantes: Object.keys(estantes).length };
+           estantes: Object.keys(estantes).length, vacias: vacias };
 }
 
 /** Cuántas reservas hay en una ubicación concreta. Lo usa Settings → Locations,
@@ -6106,8 +6145,13 @@ function renderStats(){
           'rack, so the number moves with the stock.\n\n' +
           resumen.lista.map(function(r){
             return '· ' + r.qty + ' ' + r.unit + ' — ' + r.name + ' at ' + r.rack +
-                   (r.reason ? ' — ' + r.reason : '') + (r.by ? ' (' + r.by + ')' : '');
+                   (r.vacia ? ' — HOLDS NOTHING, can be released'
+                            : (r.reason ? ' — ' + r.reason : '')) +
+                   (r.by ? ' (' + r.by + ')' : '');
           }).join('\n') +
+          (resumen.vacias ? '\n\n' + resumen.vacias + ' of them hold nothing: the material ' +
+                            'left the rack, or it has no stock recorded at all. Releasing ' +
+                            'them changes no numbers — it just tidies the list.' : '') +
           '\n\nSee them on the Warehouse Map.')+
         '<div class="val">'+resumen.unidades.toLocaleString()+'</div>'+
         '<div class="sub">'+resumen.n+' reservation'+(resumen.n===1?'':'s')+
@@ -14191,8 +14235,29 @@ function _applyMatChangeLocally(p){
 // removing that feature took a helper used 26 times across the app with it. A
 // missing function is not a syntax error, so every check passed and the app
 // simply stopped part-way through its first render.
-function _he(s){ return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function _escAttr(s){ return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+/* EL CERO ES UN NÚMERO, NO UNA AUSENCIA.
+ *
+ * Esto era `String(s||'')`, y con eso `_he(0)` devolvía CADENA VACÍA — porque 0
+ * es falsy en JavaScript. Jose lo encontró el 2026-09-21 en la tira de reservas
+ * del mapa: una fila que decía "EVELYN A QUINONEZ ___ UNIT", con el hueco donde
+ * tenía que ir la cantidad. La cantidad era 0 y el escapador se la comió.
+ *
+ * No era sólo ahí. Toda la app pasa cantidades por aquí —el cajón del estante,
+ * las tarjetas de llegada, el "% used" del indicador de espacio— y en todas,
+ * un cero se dibujaba como un hueco. Un hueco parece un dato que se perdió; un
+ * 0 es una respuesta.
+ *
+ * Sólo lo que NO EXISTE se vuelve cadena vacía: null y undefined. Un 0, un
+ * false o un NaN se escriben, porque alguien los mandó a propósito. */
+function _he(s){
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+// Mismo arreglo y por lo mismo que _he: un 0 en un atributo es un 0.
+function _escAttr(s){
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
 
 // The "i" badge used everywhere a field used to carry a paragraph of always-
 // visible help text: same explanation, shown on hover/focus instead of taking
@@ -16377,21 +16442,38 @@ function _reservasTiraHtml(){
   var res = _reservasResumen();
   if (!res.n) return '';
   var filas = res.lista.map(function(r){
-    return '<button class="resv-row" data-action="open-rack" data-rack="' + _escAttr(r.rack) + '" ' +
+    // La fila que no retiene nada se dice con palabras, no con un hueco. Y el
+    // motivo va en el sitio del motivo: lo que la persona escribió al apartar
+    // sigue estando, porque es lo que le dice si todavía tiene sentido.
+    var aviso = r.vacia === 'sin-material'
+      ? 'holds nothing — no stock recorded for this material anywhere'
+      : r.vacia === 'sin-stock-aqui'
+        ? ('holds nothing — the material is no longer at ' + r.rack +
+           (r.otrosEstantes.length ? ' (it is at ' + r.otrosEstantes.join(', ') + ')' : ''))
+        : '';
+    return '<button class="resv-row' + (r.vacia ? ' resv-vacia' : '') + '" ' +
+             'data-action="open-rack" data-rack="' + _escAttr(r.rack) + '" ' +
              'title="' + _escAttr((r.reason || 'no reason given') +
                                   (r.by ? ' — ' + r.by : '') +
-                                  (r.at ? ' · ' + r.at : '')) + '">' +
+                                  (r.at ? ' · ' + r.at : '') +
+                                  (aviso ? '\n\n' + aviso + '. Release it if it is no longer needed.' : '')) + '">' +
              '<span class="resv-rack">' + _he(r.rack) + '</span>' +
              '<span class="resv-name">' + _he(r.name) + '</span>' +
              '<span class="resv-qty">' + _he(r.qty) + ' ' + _he(r.unit) + '</span>' +
-             '<span class="resv-why">' + _he(r.reason || '—') + '</span>' +
+             '<span class="resv-why">' +
+               (aviso ? '<span class="resv-alerta">⚠ ' + _he(aviso) + '</span>'
+                      : _he(r.reason || '—')) +
+             '</span>' +
            '</button>';
   }).join('');
   return '<div class="resv-strip">' +
            '<div class="resv-strip-hdr">🔒 Reserved — ' + res.unidades.toLocaleString() +
              ' unit' + (res.unidades === 1 ? '' : 's') + ' held across ' + res.estantes +
              ' rack' + (res.estantes === 1 ? '' : 's') +
-             '<span class="resv-hint">nothing here can leave the warehouse until it is released</span>' +
+             '<span class="resv-hint">nothing here can leave the warehouse until it is released' +
+               (res.vacias ? ' · ' + res.vacias + ' hold' + (res.vacias === 1 ? 's' : '') +
+                             ' nothing and can be released' : '') +
+             '</span>' +
            '</div>' +
            '<div class="resv-rows">' + filas + '</div>' +
          '</div>';

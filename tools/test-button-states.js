@@ -22,11 +22,17 @@ function extract(file){
   const a = src.indexOf('function _btnHideSiblings(');
   if (a === -1) throw new Error('_btnHideSiblings not found');
   const b = src.indexOf('\n}', src.indexOf('function _btnDone(', a)) + 2;
-  // _he() is the escaper the helpers use for the label. It is written on a
-  // single line, so it ends at the newline, not at the next "\n}".
-  const h = src.indexOf('function _he(');
-  const hEnd = src.indexOf('\n', h);
-  return src.slice(h, hEnd) + '\n' + src.slice(a, b);
+  // _he() is the escaper the helpers use for the label.
+  //
+  // THIS USED TO ASSUME IT WAS ONE LINE — it read to the next newline instead
+  // of to the closing brace — and it broke the day _he grew a body, on
+  // 2026-09-21, when `String(s||'')` was replaced because it turned a 0 into an
+  // empty string. The sandbox then held `function _he(s){` and nothing else,
+  // and the whole file died with "_he is not defined".
+  //
+  // Counting braces costs the same and cannot be broken by reformatting. It is
+  // the rule andamio.js opens with, for exactly this reason.
+  return A.fnSrc(src, '_he') + '\n' + src.slice(a, b);
 }
 
 const page = code => `<!doctype html><html><head><meta charset="utf-8"><style>

@@ -13,6 +13,7 @@
 // Usage:  node tools/test-incoming-delete.js [path/to/Index_v3_fixed.html]
 
 const fs = require('fs'), path = require('path'), os = require('os');
+const A  = require('./andamio.js');
 const SRC    = process.argv[2] || path.join(__dirname, '..', 'Index_v3_fixed.html');
 const CHROME = process.env.CHROME_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 
@@ -29,7 +30,13 @@ function slice(from, to, label){
 // The real helpers and the real handler — a hand-written copy would only prove
 // I can write one that passes.
 const code = [
-  slice('function _he(', '\n', '_he'),
+  // CONTANDO LLAVES, no hasta el salto de línea. El corte viejo daba por hecho
+  // que _he cabía en una línea, y se rompió el 2026-09-21 en cuanto _he creció
+  // un cuerpo —String(s||'') convertía un 0 en cadena vacía y hubo que
+  // cambiarlo—. La caja se quedó con `function _he(s){` a secas y el archivo
+  // entero murió con "_he is not defined". El mismo corte por longitud que ya
+  // rompió test-write-queue y test-button-states.
+  A.fnSrc(html, '_he'),
   // Desde _btnHideSiblings, no desde _btnBusy: los ayudantes que esconden los
   // botones vecinos (v11.34) están ENCIMA de _btnBusy y _btnBusy los llama, así
   // que cortar desde _btnBusy construía una página que lanzaba

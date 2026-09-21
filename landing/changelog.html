@@ -97,6 +97,22 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.02</span>
+      <span class="tag fix">Fix</span>
+      <h3>A zero was being drawn as a blank</h3>
+      <p>A quantity of zero showed up as an empty gap instead of a 0 —
+         anywhere in the app that printed a number: rack contents, delivery
+         cards, the storage-space meter. A gap looks like data that went
+         missing; a 0 is an answer.</p>
+      <p>Jose found it on a reservation that was holding nothing. That is a real
+         situation — the material left the rack, or its movements were deleted —
+         and the app now says so in plain words instead of showing an empty
+         space, tells you where the material went if it is still somewhere, and
+         points out that the reservation can be released. Releasing one of those
+         changes no numbers; it just tidies the list.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.01</span>
       <span class="tag fix">Fix</span>
       <h3>Locking a material is now called reserving it</h3>
