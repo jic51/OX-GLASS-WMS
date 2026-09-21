@@ -97,6 +97,32 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.05</span>
+      <span class="tag fix">Fix</span>
+      <h3>Reservations: a list that folds away, columns that hold still, and a
+          way to clear the dead ones</h3>
+      <p>The reserved list on the Warehouse Map now starts folded. The heading
+         still says everything you read at a glance — how many units are held,
+         across how many racks, how many hold nothing — and the list itself
+         opens when you click it. With a hundred reservations that heading is
+         the whole point. Whether you leave it open or closed is remembered.</p>
+      <p>Its columns no longer move. Every column is a fixed width, so adding a
+         reservation with a longer name doesn't shift every other row sideways.
+         Text that doesn't fit steps down one or two sizes and, if it still
+         doesn't fit, wraps to a second line — it is never cut off with dots,
+         because the end of a rack name is where the letter and number that
+         tell it apart live.</p>
+      <p>And a reservation that holds nothing can now be released. Until now the
+         only Release button lived inside a rack's drawer, on the material's
+         row — and a reservation holding nothing has no row there, so the app
+         warned you about it and gave you no way to act. Every row on the list
+         now has its own <b>Release</b>, and when several hold nothing the
+         heading offers to clear them all at once, naming each one first.
+         Releasing these changes no quantity anywhere; it only tidies the
+         list.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.04</span>
       <span class="tag new">New</span>
       <h3>Labels: only the ones you want, one per piece, and printable later</h3>

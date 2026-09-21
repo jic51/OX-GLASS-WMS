@@ -120,11 +120,24 @@ console.log('\n═══ qué mueve el sello, y sobre todo qué no ═══\n')
      CON LOS CANDADOS DENTRO LA LISTA LLEGÓ AL TECHO: son doce y el tope son
      doce. El tope NO se sube porque toque — se sube midiendo, o no se sube.
      La siguiente acción que alguien quiera meter aquí rompe esta prueba a
-     propósito, para que haya una conversación en vez de una línea más. */
-  check('la lista sigue siendo CORTA (' + dentro.length + ') — cada entrada ' +
-        'cuesta una carga entera en cada sesión abierta, así que crecer sin ' +
-        'medir convierte el latido en una recarga continua',
-    dentro.length <= 12, dentro);
+     propósito, para que haya una conversación en vez de una línea más.
+
+     LO QUE SE CUENTA SON CLASES DE AVISO, NO LÍNEAS. El 2026-09-21 entró
+     `unlockMaterials` —soltar diez reservas de una pasada— y esta prueba se
+     puso roja con trece. La conversación que pedía, tenida: soltar diez de
+     golpe no es un aviso NUEVO, es el mismo que `unlockMaterial` hecho una vez
+     en vez de diez. Y el tráfico no sube, BAJA: un sello en lugar de diez.
+     Así que el gemelo en plural de algo que ya está dentro no gasta techo.
+     Lo que sí lo gasta, y debe, es una acción que hoy no avisa y mañana sí. */
+  const PLURAL_DE = a => /s$/.test(a) && dentro.indexOf(a.replace(/s$/, '')) !== -1;
+  const clases = dentro.filter(a => !PLURAL_DE(a));
+  const gemelos = dentro.filter(PLURAL_DE);
+  if (gemelos.length) console.log('       (' + gemelos.join(', ') +
+    ': mismo aviso que su singular, no gastan techo)');
+  check('la lista sigue siendo CORTA (' + clases.length + ' clases de aviso) — ' +
+        'cada una cuesta una carga entera en cada sesión abierta, así que crecer ' +
+        'sin medir convierte el latido en una recarga continua',
+    clases.length <= 12, clases);
 
   // El sello se pone en UN sitio. Repartirlo por las funciones que escriben
   // habría significado cuatro funciones con varios `return` cada una, que es

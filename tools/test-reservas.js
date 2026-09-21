@@ -412,6 +412,22 @@ console.log('\n── 6. Las tres pantallas la enseñan, y comparten la cuenta �
                  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'),
     _escAttr: s2 => String(s2 === undefined || s2 === null ? '' : s2)
                  .replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'),
+    // La tira pinta botones que sólo un ADMIN puede pulsar, así que el rol es
+    // parte del dibujo. Se prueban los dos roles más abajo.
+    userRole: 'ADMIN',
+    // La tira arranca plegada. Es un `var` del archivo, no una función, así que
+    // el andamio no lo levanta: viaja en el contexto.
+    _resvAbierta: false,
+    // Y el ancho de letra medido SE LEE DEL ARCHIVO, no se copia aquí. Copiarlo
+    // dejaría la prueba midiendo un número que ya nadie usa el día que alguien
+    // cambie el del producto — que es la forma más silenciosa de que un test
+    // deje de medir el producto.
+    _RESV_PX_LETRA: (function(){
+      const m = /var _RESV_PX_LETRA = ([\d.]+)/.exec(HTML);
+      if (!m) throw new Error('test-reservas: _RESV_PX_LETRA ya no está en el archivo. ' +
+        'Si se renombró, esta prueba tiene que enterarse.');
+      return Number(m[1]);
+    })(),
     materialLocks: [
       { id:'L1', matId:'SCREEN', category:'SCREEN', name:'YOGU', rack:'A1A',
         reason:'obra 12', lockedBy:'jose@ox-glass.com', lockedAt:'', allowedDest:[] },
@@ -425,15 +441,72 @@ console.log('\n── 6. Las tres pantallas la enseñan, y comparten la cuenta �
                              { dobles: ['_normKey', 'nt', '_he', '_escAttr'] }), ctx);
 
   const html = vm.runInContext('_reservasTiraHtml()', ctx);
+  // El corchete excluye a propósito `resv-row-wrap`, que empieza igual: contar
+  // envoltorios en vez de filas daría el número bueno por la razón equivocada.
   check('el mapa dibuja una fila por reserva',
-        (html.match(/class="resv-row"/g) || []).length === 2,
-        (html.match(/class="resv-row"/g) || []).length);
+        (html.match(/class="resv-row["' ]/g) || []).length === 2,
+        (html.match(/class="resv-row["' ]/g) || []).length);
   check('...con el total de unidades en la cabecera', html.indexOf('50 units') !== -1);
   check('...y los estantes contados', html.indexOf('2 racks') !== -1);
   check('cada fila lleva a su estante — el mapa ya sabe abrir el cajón',
         html.indexOf('data-action="open-rack"') !== -1 &&
         html.indexOf('data-rack="A1A"') !== -1);
   check('el motivo viaja en la fila', html.indexOf('obra 12') !== -1);
+
+  /* ── 6b. PLEGADA ──────────────────────────────────────────────────────────
+   * Jose: "si existen 100 materiales reservados habrá una lista de 100 cosas,
+   * será bien larga; debemos hacerlo expandible como el Low Stock." */
+  check('arranca plegada — las filas vienen ocultas',
+        /<div class="resv-rows" hidden>/.test(html), html.slice(0, 900));
+  check('...y la cabecera dice cómo verlas', html.indexOf('click to see them') !== -1);
+  check('...sin dejar de contar cuántas hay sin abrirla',
+        /2 reservations/.test(html), html.slice(0, 900));
+  ctx._resvAbierta = true;
+  const abierta = vm.runInContext('_reservasTiraHtml()', ctx);
+  check('abierta, las filas se ven', /<div class="resv-rows">/.test(abierta));
+  check('...y la tira se marca abierta para girar la flecha',
+        /class="resv-strip abierta"/.test(abierta));
+  check('...y el texto cambia a cerrar', abierta.indexOf('click to hide') !== -1);
+  ctx._resvAbierta = false;
+
+  /* ── 6c. COLUMNAS FIJAS, Y LO LARGO SE ENCOGE ANTES DE PARTIRSE ───────────
+   * Jose: "todo depende del tamaño de los nombres, cada cosa se mueve si se
+   * ponen más letras; démosle un espacio horizontal fijo a cada uno y si tiene
+   * más letras que se encoja hasta un punto que se pueda leer, y si es mucha
+   * letra entonces doble línea."
+   *
+   * La parte de "espacio fijo" vive en el CSS y se comprueba allí; lo que se
+   * ejecuta aquí es la escalera, que es donde se puede equivocar uno. Los 120px
+   * son los de la columna del estante, escritos en el CSS. */
+  check('un nombre corto no se toca', vm.runInContext('_resvFit("B1B", 120)', ctx) === '');
+  check('DELIVERY SHELF entra entero a tamaño normal',
+        vm.runInContext('_resvFit("DELIVERY SHELF", 120)', ctx) === '');
+  // Uno que cabe justo con el peldaño de en medio, para que el peldaño exista
+  // de verdad y no sea una rama que nunca se toma.
+  check('lo que cabe encogiendo un poco, encoge un poco',
+        vm.runInContext('_resvFit("MIRRORS SHOWERS", 120)', ctx) === 'fit-sm',
+        vm.runInContext('_resvFit("MIRRORS SHOWERS", 120)', ctx));
+  // WINDOW WAREHOUSE —el de la captura de Jose— necesita el peldaño de abajo:
+  // 16 letras no entran en 120px ni al tamaño de en medio. Al pequeño sí, y la
+  // prueba de navegador confirma que sale en UNA línea y entero.
+  check('WINDOW WAREHOUSE baja al peldaño pequeño, no se corta',
+        vm.runInContext('_resvFit("WINDOW WAREHOUSE", 120)', ctx) === 'fit-xs');
+  check('y uno muy largo también, dejando que el CSS lo parta',
+        vm.runInContext('_resvFit("MIRRORS/SHOWERS BACK WALL", 120)', ctx) === 'fit-xs');
+  check('el vacío no revienta', vm.runInContext('_resvFit(null, 120)', ctx) === '');
+  check('...y el cero tampoco — es texto, no ausencia',
+        vm.runInContext('_resvFit(0, 120)', ctx) === '');
+  // Y que la tira la use de verdad: la escalera sólo sirve si llega al HTML, y
+  // sólo mide bien si recibe EL ANCHO DE SU COLUMNA. Pasar el mismo número a
+  // las cuatro sería volver a los umbrales a ojo.
+  const anchos = (A.sinComentarios(A.fnSrc(HTML, '_reservasTiraHtml'))
+                   .match(/_resvFit\([^,]+,\s*(\d+)\)/g) || []);
+  check('cada columna se mide con SU ancho, no con uno cualquiera',
+        anchos.length === 4 && new Set(anchos.map(s => /(\d+)\)/.exec(s)[1])).size >= 3,
+        anchos);
+  check('y los nombres de clase siguen llegando a las cuatro celdas',
+        /class="resv-rack /.test(html) && /class="resv-name /.test(html) &&
+        /class="resv-qty /.test(html) && /class="resv-why /.test(html));
 
   // Sin reservas, NADA. Una tira que dice "0 reservations" todos los días le
   // roba sitio al plano, que es a lo que se viene al mapa.
@@ -449,14 +522,126 @@ console.log('\n── 6. Las tres pantallas la enseñan, y comparten la cuenta �
   ];
   const vacio = vm.runInContext('_reservasTiraHtml()', ctx);
   check('la fila vacía se dibuja, no se esconde', vacio.indexOf('EVELYN A QUINONEZ') !== -1);
-  check('...con un 0 visible, no con un hueco', /resv-qty">0 UNIT/.test(vacio), vacio);
+  check('...con un 0 visible, no con un hueco', /class="resv-qty[^"]*">0 UNIT/.test(vacio), vacio);
   check('...marcada como que no retiene nada', vacio.indexOf('resv-vacia') !== -1);
   check('...y diciendo POR QUÉ, en el sitio del motivo',
         vacio.indexOf('no stock recorded for this material anywhere') !== -1);
-  check('...y qué hacer con ella, en la ayuda',
-        vacio.indexOf('Release it if it is no longer needed') !== -1);
   check('la cabecera avisa de cuántas no retienen nada',
-        /1 holds nothing and can be released/.test(vacio), vacio.slice(0, 400));
+        /1 holds nothing/.test(vacio), vacio.slice(0, 900));
+
+  /* ── 6d. Y AHORA SE PUEDE ARREGLAR ───────────────────────────────────────
+   * Jose, 2026-09-21: "no veo solución para el material EVELYN A QUINONEZ,
+   * ¿por qué sigue en hold y por qué no lo puedo borrar? ¿Qué propósito tiene
+   * ponerle una advertencia?"
+   *
+   * Ninguno. El único botón de soltar vivía DENTRO del cajón del estante, en la
+   * fila del material — y una reserva que no retiene nada no tiene fila ahí. El
+   * aviso describía el problema y no daba salida. Estas cuatro comprobaciones
+   * son la salida, y están aquí para que nadie la vuelva a quitar. */
+  check('cada fila trae su propio botón de soltar',
+        vacio.indexOf('data-action="unlock-material"') !== -1);
+  check('...con la reserva concreta, no con el material',
+        /data-lock-id="V1"/.test(vacio), vacio);
+  check('...y el botón vive FUERA del botón de abrir el estante',
+        vacio.indexOf('</button><button class="resv-soltar"') !== -1);
+  check('y la cabecera ofrece soltar de golpe las que no retienen nada',
+        vacio.indexOf('data-action="release-empty"') !== -1 &&
+        /Release the 1 holding nothing/.test(vacio));
+
+  // QUIEN NO PUEDE, NO VE EL BOTÓN. El servidor exige ADMIN en las dos puertas;
+  // pintarle a un WAREHOUSE un botón que sólo le puede devolver un error es
+  // peor que no pintarlo.
+  ctx.userRole = 'WAREHOUSE';
+  const sinPermiso = vm.runInContext('_reservasTiraHtml()', ctx);
+  check('un WAREHOUSE no ve el botón de soltar',
+        sinPermiso.indexOf('data-action="unlock-material"') === -1);
+  check('...ni el de soltar de golpe',
+        sinPermiso.indexOf('data-action="release-empty"') === -1);
+  check('...pero sigue viendo la reserva y su aviso',
+        sinPermiso.indexOf('EVELYN A QUINONEZ') !== -1 &&
+        sinPermiso.indexOf('holds nothing') !== -1);
+  check('...y su fila no deja el hueco de la columna que no hay',
+        sinPermiso.indexOf('resv-row-wrap sin-accion') !== -1);
+  ctx.userRole = 'ADMIN';
+}
+
+/* ── 6e. SOLTAR DE GOLPE: UNA LLAMADA, Y NOMBRANDO LO QUE SE SUELTA ─────────
+ *
+ * Jose: "¿y cuándo tenga 10 cosas así?" Diez llamadas de una en una son diez
+ * viajes al servidor. Y como soltar no se deshace —hay que volver a apartar a
+ * mano, con su motivo— lo que se va a soltar se LEE antes de soltarlo. */
+{
+  const ctx = {
+    console,
+    _normKey: s2 => String(s2 || '').toUpperCase().trim().replace(/\s+/g, ' '),
+    userRole: 'ADMIN',
+    stockData: { 'HAY': { unit:'UNIT', warehouseLocs:{ A1A: 12 } } },
+    materialLocks: [
+      { id:'V1', matId:'NADA1', category:'C', name:'EVELYN A QUINONEZ', rack:'B',
+        reason:'Si', lockedBy:'j@x.com', lockedAt:'', allowedDest:[] },
+      { id:'V2', matId:'NADA2', category:'C', name:'KOTTER RESIDENCE', rack:'B',
+        reason:'', lockedBy:'j@x.com', lockedAt:'', allowedDest:[] },
+      { id:'OK', matId:'HAY',   category:'C', name:'MH 159', rack:'A1A',
+        reason:'Ordered wrong', lockedBy:'j@x.com', lockedAt:'', allowedDest:[] }
+    ],
+    showToast: () => {},
+    confirmado: null
+  };
+  ctx._showConfirm = function(o){ ctx.confirmado = o; };
+  ctx._doUnlockMany = function(ids){ ctx.soltadas = ids; };
+  vm.createContext(ctx);
+  vm.runInContext(A.levantar(HTML, ['releaseEmptyReservationsConfirm'],
+                             { dobles: ['_normKey', '_showConfirm', '_doUnlockMany',
+                                        'showToast'] }), ctx);
+
+  vm.runInContext('releaseEmptyReservationsConfirm()', ctx);
+  check('propone soltar SÓLO las que no retienen nada',
+        /Release 2 reservations holding nothing\?/.test(ctx.confirmado.title),
+        ctx.confirmado && ctx.confirmado.title);
+  check('...nombrándolas una por una, no "2 reservations"',
+        ctx.confirmado.message.indexOf('EVELYN A QUINONEZ @ B') !== -1 &&
+        ctx.confirmado.message.indexOf('KOTTER RESIDENCE @ B') !== -1);
+  check('...y sin arrastrar la que sí retiene material',
+        ctx.confirmado.message.indexOf('MH 159') === -1);
+  check('...diciendo que no cambia ninguna cantidad',
+        /changes no quantity/.test(ctx.confirmado.message));
+  check('...y que volver atrás es apartar otra vez a mano',
+        /reserve it again/.test(ctx.confirmado.message));
+  check('no suelta nada hasta que se confirma', ctx.soltadas === undefined);
+  ctx.confirmado.onConfirm();
+  check('al confirmar manda las dos de un tirón, en UNA llamada',
+        Array.isArray(ctx.soltadas) && ctx.soltadas.length === 2 &&
+        ctx.soltadas.indexOf('V1') !== -1 && ctx.soltadas.indexOf('V2') !== -1,
+        ctx.soltadas);
+
+  // Y si no hay ninguna vacía no abre un diálogo vacío: lo dice y se acaba.
+  ctx.materialLocks = ctx.materialLocks.filter(l => l.id === 'OK');
+  ctx.confirmado = null;
+  vm.runInContext('releaseEmptyReservationsConfirm()', ctx);
+  check('sin ninguna vacía no abre diálogo', ctx.confirmado === null);
+}
+
+/* ── 6f. EL SERVIDOR DE SOLTAR VARIAS ──────────────────────────────────────
+ * Mismo permiso, misma marca, y UNA línea de auditoría POR RESERVA: cuando
+ * alguien pregunte dentro de seis meses por qué se soltó ésta en concreto, la
+ * respuesta tiene que estar en su propia línea, no en un "soltó diez". */
+{
+  const src = A.sinComentarios(A.fnSrc(GS, 'unlockMaterials'));
+  check('exige ADMIN, igual que soltar una', /requireAuth_\('ADMIN'\)/.test(src));
+  check('sólo toca las que siguen activas', /!==\s*'ACTIVE'/.test(src));
+  check('marca quién y cuándo, como unlockMaterial',
+        /'Removed', auth\.email/.test(src));
+  check('deja una línea de auditoría por reserva, dentro del bucle',
+        /for \([\s\S]*auditLog_\(ss, 'UNLOCK_MATERIAL'[\s\S]*\}/.test(src));
+  check('tira la caché de candados para que los demás lo vean',
+        /remove\('materialLocksV1'\)/.test(src));
+  check('una lista vacía es un error, no un no-op silencioso',
+        /No reservations were selected/.test(src));
+  check('que alguna ya estuviera suelta NO es un error',
+        /alreadyGone/.test(src) && !/throw[\s\S]{0,120}already/i.test(src));
+  check('y está enrutada', /action === 'unlockMaterials'/.test(A.sinComentarios(GS)));
+  check('...y avisa a las demás sesiones, como soltar una',
+        /unlockMaterials:\s*true/.test(A.sinComentarios(GS)));
 }
 
 // Las otras dos pantallas se comprueban EN SU PROPIO TROZO de código, no en el
@@ -473,6 +658,32 @@ console.log('\n── 6. Las tres pantallas la enseñan, y comparten la cuenta �
   const cachoLoc = stats.slice(loc, loc + 2500);
   check('Settings → Locations pregunta por su propio estante',
         loc !== -1 && /_reservasDeEstante\(l\.name\)/.test(cachoLoc));
+}
+
+/* ── 6g. EL ANCHO DE LAS COLUMNAS ESTÁ EN PÍXELES ──────────────────────────
+ *
+ * Ésta es la mitad que no se puede ejecutar, y es justo la que Jose vio: con
+ * `grid-template-columns:auto …` la columna del estante mide lo que mida el
+ * nombre de estante más largo DE LA LISTA, así que añadir una reserva mueve
+ * todas las demás. La escalera de tamaños de arriba no arregla eso: por muy
+ * bien que se encoja el texto, la rejilla sigue bailando.
+ *
+ * Se mira sobre el bloque .resv-row concreto, no sobre el archivo, porque el
+ * archivo tiene cuarenta rejillas y cualquiera de ellas daría un falso verde. */
+{
+  const css   = A.sinComentarios(HTML);
+  const i     = css.indexOf('.resv-row{');
+  const bloque = i === -1 ? '' : css.slice(i, css.indexOf('}', i));
+  const cols  = /grid-template-columns:([^;}]+)/.exec(bloque);
+  check('la fila de reservas define sus columnas', !!cols, bloque.slice(0, 200));
+  check('...y ninguna es `auto` — ahí es donde bailaban',
+        !!cols && cols[1].indexOf('auto') === -1, cols && cols[1]);
+  check('...el estante y la cantidad miden lo mismo tenga la tira 1 fila o 100',
+        !!cols && (cols[1].match(/\d+px/g) || []).length >= 2, cols && cols[1]);
+  check('...y lo que se parte en dos líneas se para a las dos',
+        /-webkit-line-clamp:2/.test(css));
+  check('el botón de soltar tiene su propia columna fija, no empuja al texto',
+        /\.resv-row-wrap\{[^}]*grid-template-columns:minmax\(0,1fr\) \d+px/.test(css));
 }
 
 check('y no se añadió ninguna pestaña nueva al topbar',

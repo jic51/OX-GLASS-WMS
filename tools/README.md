@@ -110,13 +110,27 @@ node tools/test-write-queue.js
 node tools/test-restore-batch.js
 node tools/test-stock-basket.js
 node tools/test-headers-repair.js
+node tools/test-incoming-week.js
+node tools/test-mazo-contador.js
+node tools/test-pintar-al-confirmar.js
+node tools/test-reservas.js
+node tools/test-reservas-tira.js
+node tools/test-landing-verdad.js
 node tools/build-site.js && node tools/test-site-privacy.js
 node tools/check-changelog.js
 node tools/check-publicado.js
 node tools/test-solo-ingles.js
 node tools/sync-legal.js --check
 node tools/build-fingerprint.js --check
+node tools/check-suite.js
 ```
+
+Seis de esas pruebas llevaban entre uno y cuatro días escritas y **ninguna
+estaba en esta lista**. Corrían porque yo me acordaba de correrlas, que es
+exactamente la garantía que no tiene ninguna. Es el agujero que
+`test-endpoint-auth` describe para las funciones públicas —nada contaba las
+puertas— aplicado a las propias pruebas. `check-suite.js` es lo que ahora pone
+la suite en rojo cuando alguien escribe una prueba y se olvida de esta lista.
 
 Y cuando el release toca la landing, el changelog o los documentos públicos,
 falta un paso más — **el que se olvidó durante catorce días**:

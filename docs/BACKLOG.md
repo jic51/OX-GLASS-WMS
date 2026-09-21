@@ -5,6 +5,39 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+# ══ ANOTADO EL 2026-09-21 (tarde) ══
+
+## EL MENÚ DEL USUARIO SE ABRE DETRÁS DE LAS TARJETAS
+
+Jose, con dos capturas de una pantalla ancha y baja (tipo iPad apaisado):
+
+> *"al abrir el menú del usuario éste se abre DETRÁS de las tarjetas. Creo yo
+> que este menú debe tener prioridad y posicionarse sobre todo lo demás, ya que
+> sólo se abre si damos clic en el avatar y eso significa que queremos hacer
+> algo ahí. Entonces al abrir el menú del usuario y hacer hover y tenerlo
+> abierto, las tarjetas de atrás no deben abrirse y tampoco la app de atrás debe
+> moverse o hacer scroll (actualmente lo hace)."*
+
+Son **tres cosas distintas**, y conviene separarlas porque se arreglan en
+sitios distintos:
+
+1. **La pila (`z-index`).** El mazo de tarjetas está por encima del panel del
+   avatar. Su razonamiento es correcto y va más allá de este caso: un menú que
+   se abre por un clic deliberado gana a cualquier cosa que se abra sola.
+2. **El hover de las tarjetas de detrás.** Con el panel abierto, pasar el ratón
+   por encima sigue abriendo el mazo. Es el mismo problema que ya resuelve
+   `_modalShield` para las ventanas — el escudo existe y este panel no lo usa.
+3. **El scroll del fondo.** Igual: el bloqueo de scroll ya está escrito para las
+   ventanas y el mazo; el panel del avatar quedó fuera.
+
+O sea que lo más probable es que **no haya que inventar nada**: hay que meter el
+panel del avatar en el mecanismo que ya tienen las demás ventanas. Es el mismo
+patrón de fallo de siempre (una conducta escrita para un camino y no cableada en
+los otros), así que el arreglo debe ir con una prueba que recorra **todas** las
+capas flotantes y no sólo ésta.
+
+Va con el **estándar de las ventanas** (sección A de abajo): es el mismo trabajo.
+
 # ══ ANOTADO EL 2026-09-21 ══
 
 ## A. EL CORREO DIARIO — TRES PREGUNTAS DE JOSE, CONTESTADAS
@@ -391,22 +424,70 @@ las notas encuentra más y ensucia los resultados).
 acto.** No bloquear, no preguntar en abstracto: enseñar la que ya está y ofrecer
 abrirla.
 
-Lo que hay que resolver antes de escribirlo:
+**LA REGLA, CONTESTADA POR JOSE EL 2026-09-21.** Se le preguntó si "duplicado"
+es el nombre solo o nombre + proveedor + fecha cercana. Su respuesta, que es más
+precisa que la pregunta:
+
+> *"Un duplicado es mismo nombre + mismo proveedor + fecha cercana + mismo PO.
+> EL PO ES LO QUE EN REALIDAD DICE SI ES EL MISMO O NO, ya que cada empresa crea
+> uno nuevo para una entrega nueva. Pero si no hay PO, entonces el nombre con
+> los demás datos trabajan bien. Debemos recordar que los materiales pueden
+> venir con el mismo nombre y misma cantidad de diferentes proveedores, así que
+> ahí no creo que debamos avisar de un duplicado, pero no está de más avisar
+> igual: podemos mostrar un pop-up de advertencia que diga POSIBLE DUPLICADO y
+> mostrar el que ya estaba con el que se está creando, y preguntar si se desea
+> proceder o revisar la información."*
+
+Eso da **dos grados de certeza**, y merecen dos tratos distintos:
+
+| Señal | Qué es | Qué hace la app |
+|---|---|---|
+| **Mismo PO + mismo material** | Casi seguro la misma entrega escrita dos veces | Aviso fuerte. El PO es la identidad. |
+| **Sin PO: nombre + proveedor + fecha cercana** | Probable, no seguro | Aviso suave: "posible duplicado". |
+| **Nombre igual, proveedor distinto** | Dos entregas reales | No es duplicado. Jose: *"ahí no creo que debamos avisar"*. |
+
+**MI OPINIÓN SOBRE EL "REVISAR", que Jose pidió.** Su idea —enseñar los dos y
+ofrecer *proceder* o *revisar*— es la correcta en lo que importa: enseñar el que
+ya estaba **al lado** del que se está creando. Donde yo cambiaría una cosa es en
+el botón de "revisar": si lleva a otra pantalla, añade un clic y no añade
+información, porque la comparación **ya está delante**. Propongo que el mismo
+cuadro sea la revisión, con las diferencias marcadas, y tres salidas que son las
+tres decisiones reales:
+
+- **"It's the same one — edit that one"** → abre la que existe para editarla y
+  **no crea una segunda**. Es el caso que Jose describió desde el principio.
+- **"They're different — create it anyway"** → sigue adelante, sin regañar.
+- **Cancel** → no pasa nada.
+
+La razón de fondo es la misma lección que la reserva huérfana de esta misma
+tarde: **un aviso que no ofrece el arreglo es medio arreglo.** Decir "posible
+duplicado" y dejar al usuario buscar el otro a mano es lo que hay que evitar.
+
+**Y la otra pregunta de Jose —"¿qué otra opción podemos dar para que el usuario
+revise lo que tiene?"— tiene una respuesta mejor que el aviso: no llegar a él.**
+Mientras se escribe el nombre en el formulario de Incoming, enseñar debajo las
+últimas entregas de ese material (proveedor, PO, fecha, estado). Eso previene el
+duplicado en vez de avisarlo, y de paso contesta "¿esto ya lo pedimos?" sin abrir
+nada. El buscador del punto 1 es la tercera pata: sirve para mirar a propósito.
+
+Lo que queda por resolver al escribirlo:
 
 - **¿Qué es "igual en nombre"?** Tiene que ser la misma normalización que usa el
   resto de la app (`nt()` / `cleanDisplay_`: mayúsculas, espacios colapsados), o
   el aviso no saltará con `"YOGU YOGU"` contra `"Yogu  Yogu"`, que es justo el
-  caso que importa. **Comparar en crudo sería un aviso decorativo.**
-- **¿Cuenta el proveedor?** Dos entregas del mismo material de dos proveedores
-  distintos son dos entregas de verdad, no un duplicado. Sospecha: la señal buena
-  es nombre + proveedor + una fecha cercana, y el nombre solo es demasiado ancho.
-  **Hay que preguntarle a Jose**, porque es su operación.
+  caso que importa. **Comparar en crudo sería un aviso decorativo.** Por eso la
+  normalización de nombres va PRIMERO: sin ella, esto no puede funcionar.
+- **¿Qué es "fecha cercana"?** Propuesta: ±7 días sobre la fecha estimada. Una
+  ventana corta deja escapar la entrega que alguien anotó con una semana de
+  margen; una larga marca como duplicado dos pedidos mensuales del mismo
+  material al mismo proveedor, que es lo normal en un almacén.
 - **¿Y las ya llegadas?** Si la que existe está en `Arrived`, "propón editarla"
   puede ser el consejo equivocado — lo que llegó llegó, y esto podría ser una
-  segunda entrega real. Probablemente el aviso debe decir el estado de la que
-  encontró, no sólo que la encontró.
-- **Dónde salta.** Al escribir el nombre (como el aviso de material nuevo, que ya
-  funciona así) o al guardar. Lo primero es mejor y es más trabajo.
+  segunda entrega real. El aviso debe decir el ESTADO de la que encontró, no sólo
+  que la encontró.
+- **Dónde salta.** Al guardar, no mientras se teclea. Un aviso de duplicado que
+  aparece a media palabra interrumpe a quien todavía está escribiendo el nombre;
+  la sugerencia de arriba es la que acompaña mientras se escribe.
 
 **Esto se cruza con el punto 1 de la lista del 2026-09-09** (por qué las
 sugerencias del Incoming no siempre salen): las dos son "¿ya conocemos esto?", y
