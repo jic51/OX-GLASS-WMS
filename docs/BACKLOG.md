@@ -5,6 +5,142 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+# ══ ANOTADO EL 2026-09-21 ══
+
+## A. EL CORREO DIARIO — TRES PREGUNTAS DE JOSE, CONTESTADAS
+
+### 1. Qué es el (1)
+
+`lista.length` — **cuántos movimientos hay en esa tabla**. "Llegó a la bodega (1)"
+es una entrada en todo el día. Jose lo leyó bien pero tuvo que preguntar, y eso
+ya dice que está mal puesto: es un número desnudo pegado a un título, sin nada
+que diga qué cuenta. Debería decirlo, o no estar.
+
+### 2. Qué es "Quién" — y por qué confunde
+
+Es `m.responsible || m.userEmail`. O sea **DOS COSAS DISTINTAS en una columna**:
+
+- lo normal, el campo *Received By* del movimiento — quien recibió o se llevó el
+  material, que es como Jose lo leyó;
+- y si ese campo está vacío, **el correo de quien registró el movimiento**, que
+  es otra persona y otra pregunta.
+
+Por eso en su captura una fila dice `JOSE` y la otra `James Williams`: son el
+mismo campo, pero nada garantiza que las dos filas estén contestando lo mismo.
+
+Lo que pidió Jose, y arregla las dos mitades:
+- la columna pasa a llamarse **Received by / Taken by** (según el tipo: quien
+  recibe en las entradas, quien se lo lleva en las salidas), y deja de caer al
+  correo — si está vacío, se dice vacío;
+- se añade **una columna nueva, `User`**, con **nombre Y correo** de quien
+  registró el movimiento. La app ya tiene los dos: `userNames` mapea correo →
+  nombre, y es lo mismo que hace la columna User de Movements desde la v11.73.
+  Hay que reusarlo, no escribir otra forma de resolverlo.
+
+### 3. Por qué está en español — y NO es tu Gmail
+
+**Lo manda así la app.** Está escrito en duro en `Code_v3_fixed.gs`: el asunto,
+los tres títulos de tabla, las cinco cabeceras, el mensaje del día sin
+movimientos y el pie.
+
+**BARRIDO HECHO, para saber cuánto más hay.** Se extrajeron las cadenas y el
+texto entre etiquetas de los dos archivos (sin comentarios — los comentarios en
+español están bien) y se buscaron palabras inequívocamente españolas:
+
+| | |
+|---|---|
+| `Code_v3_fixed.gs` | **16 frases**, y las 16 son el correo diario |
+| `Index_v3_fixed.html` | **1**: `<th>In Bodega</th>`, una cabecera de tabla |
+
+O sea: **las pantallas ya están en inglés**; el español está concentrado en un
+solo sitio y es fácil de cerrar. Lo que hay que hacer es traducir el correo
+entero y cambiar esa cabecera por `In Warehouse`.
+
+**Y que no vuelva.** Esto se coló porque nada lo miraba: una prueba que extraiga
+las frases visibles y falle si alguna lleva palabras españolas cierra la clase
+entera, igual que la de "ninguna frase dice lock" de test-reservas. Sin eso, el
+siguiente correo nuevo vuelve a nacer en español.
+
+## B. LAS ETIQUETAS — CUATRO COSAS
+
+Jose: *"esta parte de los labels no se ve profesional, si ingreso 10 materiales
+me van a salir las 10 previsualizaciones."*
+
+### 1. Elegir CUÁLES llevan etiqueta, y poder imprimirlas después
+
+Hoy el cuadro se abre con TODO lo que se acaba de guardar y una previsualización
+por cada bulto. Con diez materiales son diez.
+
+Lo que pidió:
+- **una casilla en el formulario de entrada**, por material, para decir cuál
+  quiere etiquetar — así la app ya sabe cuáles sin preguntar al final;
+- **y poder imprimir después**: seleccionar un material o un movimiento y sacarle
+  la etiqueta cuando haga falta. Hoy la única puerta es el momento de guardar; si
+  la cierras, no hay segunda oportunidad sin repetir el movimiento.
+
+La segunda parte es la que más vale: la barra de selección de Movements ya
+existe (v11.59) y ya sabe actuar sobre varias filas. Imprimir etiquetas es una
+acción más de esa barra, no una pantalla nueva.
+
+### 2. Cinco puertas, cinco etiquetas de 1 — no una de 5
+
+*"Hay 5 door screens que voy a poner en un mismo lugar, pero quiero imprimir un
+label para cada una, entonces debe tener 1 en la cantidad."*
+
+Hoy el `× N` del cuadro imprime **N copias de la misma etiqueta**, y todas dicen
+la cantidad del bulto. Lo que hace falta es lo otro: **partir el bulto en N
+etiquetas de 1**.
+
+**Y hay que decirle a Jose lo que eso cambia**, porque no es sólo un número: hoy
+la cantidad de la etiqueta significa *"cuánto hay de esto en este estante"*, y
+partida significa *"cuánto hay en este bulto"*. Las dos son útiles y no son la
+misma; si conviven, la etiqueta tiene que dejar claro cuál está diciendo, o un
+día alguien sumará cinco etiquetas de 1 y creerá que hay 5 donde hay 5 bultos de
+1. Probablemente la respuesta es un texto distinto en la etiqueta partida
+("1 of 5"), no el mismo formato con otro número.
+
+### 3. El recuadro de la locación — MI OPINIÓN, que Jose pidió
+
+*"Podemos poner el cuadro de la locación sobre el cuadro de la cantidad y hacer
+el cuadrado un rectángulo… ¿qué piensas tú?"*
+
+**Tiene razón, y el motivo es medible.** Hoy los dos recuadros son `flex:1`, o
+sea media etiqueta cada uno, y su contenido no se parece en nada:
+
+- una cantidad son **1 a 4 caracteres** (`54`, `5`, `142`);
+- una locación son **2 a 16** (`B1B`, `P4C`, `WINDOW WAREHOUSE`).
+
+Repartir el ancho a partes iguales garantiza que uno desperdicie el 80% de su
+caja mientras al otro no le cabe. Es exactamente lo de la captura.
+
+**Y hay un fallo concreto detrás:** la clase que encoge la letra (`.sm`) se pone
+**sólo cuando la locación está VACÍA**, nunca por longitud. Así que
+`WINDOW WAREHOUSE` se dibuja a 10mm, el tamaño pensado para `B1B`, y parte en
+tres líneas. Eso es un fallo, no una decisión.
+
+Lo que yo haría, que es su idea afinada:
+- **Locación arriba, ancho completo.** Con el bulto en la mano la pregunta es
+  "¿a dónde va esto?"; la cantidad es la comprobación, no la búsqueda.
+- **Cada recuadro, una sola línea**: la etiqueta pequeña a la izquierda y el
+  valor a la derecha, en vez de etiqueta encima y valor debajo. Dos filas de una
+  línea ocupan casi lo mismo que la pareja de dos líneas de hoy, así que **no se
+  pierde sitio vertical** — que es lo que hay que cuidar, porque el nombre ya se
+  lleva 29mm y el hueco del código 34.
+- **La letra se encoge por LONGITUD**, con dos o tres escalones, no por "está
+  vacío". Es el arreglo del fallo de arriba y es lo que hace que
+  `WINDOW WAREHOUSE` quepa en una línea legible.
+
+Lo que NO haría: bajar el tamaño de todas las locaciones para que quepa la más
+larga. `B1B` se lee desde tres metros y así dejaría de leerse, para que se vea
+bien un caso de cada diez.
+
+### 4. Y de paso
+
+El nombre del material se recorta a tres líneas (`max-height:29mm`). Con
+`GHH-SCENICMTN-P2,5P-TT` entra justo. Merece una mirada cuando se toque esto,
+porque si la locación gana altura, el nombre la pierde.
+
+
 # ══ ANOTADO EL 2026-09-19 — DE LA PRUEBA DE LA v12.00 ══
 
 Jose probó los cuatro cambios de la v12.00 y **los cuatro pasan**: "mark arrived
