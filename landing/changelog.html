@@ -97,6 +97,31 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.07</span>
+      <span class="tag safe">Privacy</span>
+      <h3>The setup check-in now sends exactly what the Privacy Policy says it
+          sends</h3>
+      <p>The setup check-in is the one thing your installation sends without you
+         asking: if no movement has been recorded three and seven days after
+         setup, it emails your support address so somebody reaches out instead
+         of letting you quietly give up. Our Privacy Policy describes it field
+         by field and promises <b>exactly four things — your company name, your
+         administrator's email, how many users are registered, and how many days
+         it has been — and nothing else.</b></p>
+      <p>It was sending a fifth: a link to your installation. Nothing left your
+         control that shouldn't have — the email only ever goes to the support
+         address configured in your own installation — but the policy was
+         narrower than the code, and the policy is the promise. The link is
+         gone. Four things, as written.</p>
+      <p>A check now runs on every release that reads the email the code
+         actually produces and fails if it carries anything the policy does not
+         list. The two checks that existed could not have caught this: one
+         compares the two copies of the legal text against each other, the other
+         verifies when the email fires and how often. Neither looked inside
+         it.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.06</span>
       <span class="tag new">New</span>
       <h3>Incoming: a search box, and a warning before you enter the same

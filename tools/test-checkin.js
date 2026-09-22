@@ -157,5 +157,78 @@ console.log('\nScenario: SETUP_COMPLETED_AT missing (pre-existing install) — b
   check('SETUP_COMPLETED_AT backfilled', props.SETUP_COMPLETED_AT, '2026-06-15T09:00:00.000Z');
 }
 
+/* ══ LO QUE LLEVA DENTRO, CONTRA LO QUE LA POLÍTICA PROMETE ═════════════════
+ *
+ * Esto faltaba, y el 2026-09-22 se vio lo que costaba que faltara.
+ *
+ * Este correo es LO ÚNICO que sale de la instalación de un cliente sin que él
+ * lo pida, así que la Política de Privacidad lo describe campo por campo. Su
+ * sección 3 dice "exactamente cuatro cosas… nada más", y el código mandaba
+ * CINCO: esas cuatro y un enlace a la app del cliente.
+ *
+ * NO LO VIO NADIE, Y NO POR DESCUIDO — no había con qué verlo:
+ *
+ *   · test-legal-sync compara las DOS COPIAS del texto legal entre sí, para que
+ *     la de la hoja y la de dentro de la app no divergan. Las dos pueden estar
+ *     idénticas y las dos equivocadas.
+ *   · test-checkin (todo lo de arriba) comprueba CUÁNDO se manda, A QUIÉN y
+ *     CUÁNTAS VECES. Nunca miró el cuerpo.
+ *
+ * Entre los dos cubrían el texto y el calendario, y dejaban fuera justo aquello
+ * de lo que va la promesa: el CONTENIDO. Es el agujero que test-endpoint-auth
+ * describe para las funciones públicas —nada contaba las puertas— sobre un
+ * documento legal en vez de sobre el código.
+ *
+ * La lista de abajo no es una lista de campos permitidos: es la promesa, citada.
+ * Cambiar el correo obliga a cambiar la política, y cambiar la política obliga a
+ * cambiar esta lista. Que sea incómodo es el punto. */
+console.log('\nScenario: what the email actually carries — the privacy policy counts it');
+{
+  const POLITICA = fs.readFileSync(
+    path.join(__dirname, '..', 'legal', 'PRIVACY-POLICY.md'), 'utf8');
+
+  // Primero: la promesa sigue siendo la que esta prueba cree. Si alguien la
+  // reescribe, esta comprobación cae y la lista de abajo se vuelve a discutir
+  // — en vez de quedarse midiendo una promesa que ya nadie hace.
+  check('la política sigue prometiendo "exactamente cuatro cosas"',
+        /exactly four things/i.test(POLITICA), true);
+  check('...y sigue diciendo "nada más"', /Nothing else/i.test(POLITICA), true);
+
+  const { sandbox, sentMail } = newSandbox({
+    movementCount: 0, userCount: 4, supportEmail: 'jose@personal.com',
+    setupCompletedAt: '2026-06-12T09:00:00.000Z',
+    now: Date.parse('2026-06-15T09:00:00Z')
+  });
+  vm.runInContext('runCheckin_()', sandbox);
+  const cuerpo = (sentMail[0] && sentMail[0].htmlBody) || '';
+
+  // LAS CUATRO QUE PROMETE, una por una. Un guardia que sólo prohibiera se
+  // cumpliría con un correo vacío, y eso tampoco sirve: el correo existe para
+  // que Jose pueda llamar a quien se quedó atascado en la instalación.
+  check('lleva el nombre de la empresa',     /OX Glass LLC\./.test(cuerpo), true);
+  check('lleva el correo del administrador', /jose@ox-glass\.com/.test(cuerpo), true);
+  check('lleva cuántos usuarios hay',        /Users registered<\/td><td>4</.test(cuerpo), true);
+  check('lleva cuántos días van',            /Days since setup<\/td><td>3</.test(cuerpo), true);
+
+  // Y NADA MÁS. El doble de savedWebAppUrl_ devuelve una URL de mentira a
+  // propósito: si el código volviera a meterla, aparecería aquí.
+  check('NO lleva la URL de la app del cliente — la política dice "nada más"',
+        /FAKE|script\.google\.com/.test(cuerpo), false);
+  check('ni la URL de su hoja de cálculo', /docs\.google\.com|spreadsheets/.test(cuerpo), false);
+
+  /* Y NI UN DATO DEL ALMACÉN. El correo sólo se manda cuando no hay ni un
+   * movimiento, así que hoy no hay inventario que filtrar ni aunque se
+   * quisiera. Se comprueba igual, y a propósito: el día que alguien cambie la
+   * condición —"mandémoslo también a los 30 días, aunque ya lo esté usando"—
+   * este correo saldría de una instalación CON datos dentro, y esa línea no
+   * lleva escrito en ninguna parte que habría que revisar el cuerpo. Ahora sí:
+   * estas comprobaciones se ponen rojas. */
+  ['material', 'supplier', 'inventory', 'price', 'cost', 'rack', 'location']
+    .forEach(p => {
+      check('ni nada del inventario: "' + p + '"',
+            new RegExp(p, 'i').test(cuerpo), false);
+    });
+}
+
 if (fails.length) { console.error('\nFAILED:\n  ' + fails.join('\n  ')); process.exit(1); }
 console.log('\ncheck-in: ok');

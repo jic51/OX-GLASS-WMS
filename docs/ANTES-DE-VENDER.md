@@ -24,15 +24,35 @@ una vez para ver lo que ve un cliente**. Ver `docs/MASTER-TEMPLATE.md`.
 
 ### 3. Probar una restauración de backup, de principio a fin
 
-**Nunca se ha hecho.** El procedimiento está escrito y auditado contra el
-código en `docs/RESTAURAR-UN-BACKUP.md`, y ya reveló un hallazgo serio: el
-backup copia la hoja, pero **las Script Properties no viven en la hoja**, así
-que una restauración recupera todos los datos y **ninguna** de la
-configuración — incluido `FOLDER_PREFIX`, sin el cual **todos los adjuntos
-dejan de abrir**.
+**A medias — y esta entrada estuvo desactualizada once versiones.** Decía
+"nunca se ha hecho" cuando Jose ya había corrido el simulacro. Corregida el
+2026-09-22. Una lista de bloqueantes que se equivoca en los dos sentidos es
+peor que no tenerla: hace creer que algo está roto cuando está arreglado, y de
+paso esconde lo que de verdad falta.
 
-Hacerlo una vez en una copia de prueba. Un backup que nunca se restauró no es
-un backup.
+**Lo que YA está resuelto.** El hallazgo original —el backup copia la hoja, y
+las Script Properties no viven en la hoja, así que una restauración recuperaba
+todos los datos y **ninguna** de la configuración, incluido `FOLDER_PREFIX`,
+sin el cual **todos los adjuntos dejan de abrir**— ya no aplica:
+`writeConfigSnapshot_` escribe las propiedades en la pestaña
+`ACOPIO_CONFIG_SNAPSHOT` de la hoja VIVA justo antes de copiar, para que la
+copia la herede, con una tercera columna que explica qué es cada propiedad y
+con `FOLDER_PREFIX` nombrado primero. Lo guarda `tools/test-config-snapshot.js`.
+
+Y el simulacro de Jose (v11.13) sirvió exactamente para lo que sirve un
+simulacro: **descubrió que esa función nunca había funcionado en producción**
+—abría la copia terminada con un permiso que el manifiesto no concede, y el
+error se tragaba en un `Logger.log` que nadie lee—, así que de v9.97 a v11.13
+todos los backups salieron con los datos, sin los ajustes, y **con aspecto
+perfectamente sano**. Arreglado en v11.14.
+
+**Lo que FALTA.** Pasos 0, 1 y 2 confirmados en producción. Del 3 en adelante
+sigue sin ejecutarse de principio a fin: recuperar la copia, pegarle las
+propiedades, republicar, y comprobar que los adjuntos abren. Es lo pendiente de
+más consecuencia que queda, y es la única cosa de esta lista que **ninguna
+prueba automática puede sustituir** — hay que hacerla a mano una vez, sobre una
+copia de prueba. Un backup que nunca se restauró no es un backup; es un
+archivo. Paso a paso en `docs/RESTAURAR-UN-BACKUP.md`.
 
 ### 4. acopio.net y la página de novedades
 

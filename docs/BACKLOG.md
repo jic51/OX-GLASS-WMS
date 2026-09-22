@@ -5,6 +5,38 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+# ══ ANOTADO EL 2026-09-22 ══
+
+## SI ALGÚN DÍA SE ENCIENDE EL ESCÁNER DE GMAIL, HAY QUE REESCRIBIR LA POLÍTICA
+
+Salió revisando las salidas de datos para contestarle a Jose *"¿hay algo más que
+tenga que ver con seguridad, datos o manipulación de la información del
+cliente?"*. **No es un problema hoy** y por eso está anotado y no arreglado:
+
+- `scanGmailForDeliveries` **no está enrutado** en `processMovement` (el
+  despachador lo dice en un comentario: "se queda para el día que salga como
+  add-on de verdad").
+- Está detrás de `GMAIL_SCAN_ENABLED`, que por defecto es `false`.
+- No tiene interfaz: `getInitialData` manda `gmailScanEnabled: false` fijo.
+
+O sea que hoy nadie puede ejecutarlo. Lo que hay que recordar es **qué cambia el
+día que se encienda**: la sección 4 de la Política de Privacidad dice que lo que
+se manda a Gemini son *"los documentos que tú eliges escanear"*, y ese escáner
+no es eso — **busca en el buzón** (`GmailApp.search`) y manda los cuerpos de los
+correos que encuentre. Un barrido del buzón no es una elección por documento.
+
+Las dos rutas de IA que SÍ corren hoy sí encajan con el texto: un correo que la
+persona **pega** a mano (`parseIncomingEmail`) y un archivo que **adjunta**
+(`extractDocumentInfo`).
+
+**Lo que hay que hacer si se enciende, antes de encenderlo:** reescribir la
+sección 4 en `legal/PRIVACY-POLICY.md` (que `sync-legal.js` propaga a las dos
+copias) para describir el barrido del buzón por lo que es, y decir con qué
+consulta busca y qué manda. Y añadir al guardia de `test-checkin` —el que desde
+la v12.07 lee el correo de instalación campo por campo— el mismo trato para esta
+ruta. El escáner también pide el scope de Gmail y una auditoría anual pagada
+para poder distribuirse, que es la razón original de que esté apagado.
+
 # ══ ANOTADO EL 2026-09-21 (tarde) ══
 
 ## EL MENÚ DEL USUARIO SE ABRE DETRÁS DE LAS TARJETAS
