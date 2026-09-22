@@ -142,18 +142,47 @@ no sabrás dónde registrar la URL de alguien.
 
 ### Pared 2 — el modo "Testing" del consentimiento ⚠️ REVISAR YA
 
-Un cliente OAuth en modo **Testing** tiene dos límites brutales: **máximo 100
-usuarios** y, mucho peor, **las autorizaciones caducan a los 7 días**. Eso
-significaría que cada usuario externo tiene que volver a autorizar cada
-semana.
+> **CORREGIDO el 2026-09-22.** Esta entrada decía que en modo Testing *"las
+> autorizaciones caducan a los 7 días"*. **Para Acopio eso es falso**, y lo
+> dijimos once meses sin comprobarlo. La regla de los 7 días de Google es sobre
+> el **refresh token**, y Acopio **nunca pide uno**: `access_type` no aparece
+> ni una sola vez en todo el proyecto (comprobado con `grep` sobre los dos
+> archivos), así que Google no emite refresh token. El código se canjea una vez
+> por un `id_token`, se lee el correo, y a partir de ahí **la sesión es nuestra**
+> — `makeSessionToken_` firma un token con HMAC y le pone **30 días**
+> (`Code_v3_fixed.gs:1171`). La duración de la sesión no depende del estado de
+> publicación de Google.
+>
+> **Que la app lleve meses funcionando en OX no prueba nada sobre esto**, y es
+> el error de razonamiento que hay que evitar: la gente de `@ox-glass.com` entra
+> por la **puerta automática** (`Session.getActiveUser()`), que **no toca el
+> cliente OAuth**. Ver `ACCESO-Y-LOGIN.md`, "son DOS puertas". El camino OAuth
+> puede llevar meses sin ejercitarse de verdad.
 
-Acopio solo pide scopes básicos (`email`, `profile`), y esos **se pueden
-publicar en Producción sin verificación de Google**.
+**El límite real del modo Testing es otro, y es peor para vender:** en Testing,
+**sólo pueden iniciar sesión los correos que estén en la lista de usuarios de
+prueba**, y esa lista tiene **tope de 100**. Cualquier otra persona no ve un
+aviso: ve un **bloqueo**. O sea que el día que se instale en casa de un cliente,
+su gente con Gmail personal **no podrá entrar en absoluto** hasta que alguien
+añada uno por uno sus correos en la consola de Jose. Eso no escala ni a dos
+clientes.
 
-**Acción inmediata, antes de cualquier cliente externo:** en Cloud Console,
-OAuth consent screen, confirmar que el estado es **"In production"** y no
-"Testing". Si está en Testing, el login externo está con reloj de 7 días
-ahora mismo.
+Acopio sólo pide scopes básicos (`openid email profile`), y esos **se pueden
+publicar en Producción sin verificación de Google**: no hay trámite, es un
+botón.
+
+**Acción inmediata, antes de cualquier cliente externo:** confirmar que el
+estado es **"In production"** y no "Testing" — en Cloud Console, en
+*Google Auth Platform → Audience* (el nombre viejo de esa pantalla era
+*APIs & Services → OAuth consent screen*).
+
+**La comprobación que no depende de saber navegar la consola**, y que además
+prueba lo que de verdad importa: pedirle a alguien con un **Gmail personal que
+NO esté en la lista de usuarios de prueba y NO sea del dominio de la empresa**
+que intente entrar.
+
+- Entra → está **In production**.
+- Ve *"Access blocked… is currently being tested"* → está en **Testing**.
 
 ---
 

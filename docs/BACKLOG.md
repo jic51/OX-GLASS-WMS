@@ -91,6 +91,67 @@ Mi propuesta, independiente de cuál de las cuatro salidas se elija:
   «Type, Name and Qty are what a movement IS — a row without them says nothing».
 - **Seguir permitiendo renombrarlas** (eso sí se puede, y es útil).
 
+### A-bis. UNIR QTY CON UNIT — idea de Jose (2026-09-22). **A FAVOR.**
+
+Jose: *"también podemos unir qty con unit, ya que van de la mano; tampoco se
+debería poder cambiar o mover, la cantidad debe tener una unidad para ser
+entendible… pero estas 2 columnas deben tener un lugar específico al ser
+mostradas, una al lado de la otra, y toda la columna debe verse igual, ejemplo:
+`14 | units`, `150 | box`, `243 | bags`, todas alineadas por la barra del medio
+(aunque no tenemos que poner la barra, sólo es para entender la idea)."*
+
+**Sí, y encima tapa un agujero que nadie había visto.** Hoy `qty` está
+bloqueada (`lock:true`) y `unit` **no** (`lock:false`, línea 4951). O sea que
+**hoy se puede esconder Unit y dejar Qty**, y la tabla queda mostrando `+25` sin
+decir veinticinco de qué. Por la regla que el propio Jose fijó —el dato tiene
+que seguir significando lo que él escribió— eso es un defecto, no un gusto.
+
+**La maquinaria ya existe y ya está probada.** `COL_MERGES` se construyó para
+esto: ya fusionó `type`+`date` → `when` y `category`+`name` → `what` en
+Movements, y las **cinco** columnas de stock en la barra de niveles (idea de
+Jose, v9.x). Añadir `{ unit: null }` al mapa de `mov` es el mismo patrón de una
+línea, y traduce solo el orden que cada persona ya tiene guardado en su
+navegador, sin que nadie tenga que tocar nada.
+
+**La alineación que pide sale de una regla, no del contenido.** Para que la
+costura quede en el mismo sitio en TODAS las filas, el reparto dentro de la
+celda tiene que ser **fijo**, no automático:
+
+```
+td.mc-qty { display:grid; grid-template-columns:<N>px 1fr; gap:6px; }
+  › el número:  text-align:right   (columna 1)
+  › la unidad:  text-align:left    (columna 2)
+```
+
+Con `1fr` para el número en vez de `<N>px` la costura bailaría de fila en fila,
+que es justo lo que él no quiere.
+
+**Lo que hay que MEDIR antes de escribir el CSS** (no elegirlo a ojo — dos veces
+esta semana un número elegido a ojo se quedó corto):
+
+1. El `qty` más largo que puede salir, con su signo: `−9999` son 5 caracteres.
+2. La unidad más larga del catálogo real (ver `UNIDADES-Y-CONVERSIONES.md`).
+
+Ahorro estimado: hoy `58 + 58 = 116px`; unidas, alrededor de **96px**. Son ~20px
+— poco por sí solo, pero va en la misma dirección que el punto C y **quita una
+columna de la lista de reordenar**, que vale más que los píxeles.
+
+**Consecuencias, dichas antes de hacerlo:**
+
+- **Un solo nombre editable en vez de dos.** Hoy un admin puede renombrar `Qty`
+  y `Unit` por separado; después será un nombre para las dos.
+- **A quien hoy tenga Unit escondida, la unidad le vuelve a aparecer.** Es
+  intencionado —es el agujero que se está tapando— pero es un cambio visible sin
+  que él lo haya pedido.
+- **El color y el signo siguen siendo del número, no de la unidad.** Hoy el qty
+  va en verde con `+` o en rojo con `−`; la unidad seguirá en gris pequeño. Eso
+  mejora, porque hoy el `+`/`−` y la unidad compiten por la misma mirada.
+
+**Y responde lo del "lugar específico":** con la unión, el bloque bloqueado de
+Movements queda en **tres columnas, siempre las primeras y siempre en este
+orden** — `Type/Date` · `Category/Name` · `Qty+Unit`. Eso es exactamente lo que
+pidió, y encaja con el trato distinto para las bloqueadas del punto A.
+
 ---
 
 ## B. EL FILTRO DE ESTADO SÓLO CONOCE DOS DE LOS CUATRO ESTADOS
@@ -173,6 +234,15 @@ la ayuda al pasar el ratón: `IGU` en la insignia, `IGU (ISOLATED GLASS UNIT)` a
 pasar por encima). Para el nombre y el proyecto sí la escalera, porque ahí el
 texto es del usuario y no se puede acortar por él.
 
+> **Jose, 2026-09-22: *"podemos intentarlo, anótalo."* APROBADO.** Queda una
+> decisión para cuando se construya, y es suya porque es del negocio: el nombre
+> corto de cada categoría **lo tiene que poder editar un admin**, igual que el
+> largo, o sería Acopio quien decide cómo se llaman las cosas en la empresa del
+> cliente. Propuesta: un campo más en la pantalla de categorías; si se deja
+> vacío, que el corto se calcule solo con la regla "lo que haya antes del primer
+> paréntesis o del primer `_`" — `IGU (ISOLATED GLASS UNIT)` → `IGU` y
+> `SHOWER_HARDWARE` → `SHOWER` salen bien de ahí, sin que nadie escriba nada.
+
 Va junto con el punto 1 de la lista anterior (anchos fijos en las otras tres
 tablas) — es la misma tabla.
 
@@ -214,6 +284,112 @@ tratar todo lo demás como v2. Con dos condiciones:
 Lo demás de este documento —los anchos de las otras tablas, los grupos de
 Incoming, la ventana de Edit, los nombres del dashboard, el conteo cíclico, los
 códigos de barras— es v2 legítima: mejora lo que ya sirve, no arregla nada roto.
+
+### D-bis. EL CONSENT SCREEN — nuestra propia nota estaba MAL, y la creímos once meses
+
+Jose, 2026-09-22: *"creo que ya está activo, porque llevamos meses usando la app
+para OX y la de testing y no ha pasado nada; igual dime cómo revisamos eso."*
+
+**Su duda estaba justificada y su razonamiento tiene un agujero — pero el error
+grande era nuestro, no suyo.**
+
+**Lo que decía la nota:** que en modo Testing *"las autorizaciones caducan a los
+7 días"*. **Es falso para Acopio.** Esa regla de Google es sobre el **refresh
+token**, y Acopio **nunca pide uno**: `access_type` no aparece **ni una vez** en
+los dos archivos del proyecto (comprobado con `grep`). El flujo real es:
+
+1. Se abre el popup de Google pidiendo sólo `openid email profile`
+   (`Index_v3_fixed.html:20904`).
+2. El código se canjea **una sola vez** por un `id_token`
+   (`handleOAuthCallback_`), del que se lee el correo.
+3. A partir de ahí **la sesión es nuestra**: `makeSessionToken_` firma un token
+   con HMAC y le pone **30 días** (`Code_v3_fixed.gs:1171`).
+
+No hay refresh token que caducar. La duración de la sesión no depende del estado
+de publicación de Google. **Corregido en `PLAN-5-ANIOS.md` y `ANTES-DE-VENDER.md`.**
+
+**El agujero del razonamiento de Jose**, que es una lección aparte: que OX lleve
+meses sin problemas **no prueba que esté en producción**. La gente de
+`@ox-glass.com` entra por la **puerta automática** (`Session.getActiveUser()`),
+que **no toca el cliente OAuth** — ver `ACCESO-Y-LOGIN.md`, "son DOS puertas".
+El camino OAuth puede llevar meses sin ejercitarse de verdad.
+
+**El límite real del modo Testing es otro, y para vender es peor:** sólo pueden
+entrar los correos que estén en la **lista de usuarios de prueba**, con tope de
+100. Quien no esté no recibe un aviso: recibe un **bloqueo**. El día de la
+primera instalación, la gente del cliente con Gmail personal **no podría entrar
+en absoluto** hasta que Jose añadiera uno por uno sus correos en su consola.
+
+**Cómo revisarlo, dos formas:**
+
+- **En la consola:** Cloud Console → *Google Auth Platform → Audience* (el
+  nombre viejo de esa pantalla era *APIs & Services → OAuth consent screen*).
+  Dice "Testing" o "In production", con un botón para publicar.
+- **Sin la consola, y esto prueba lo que de verdad importa:** que alguien con un
+  **Gmail personal que NO esté en la lista de prueba y NO sea del dominio**
+  intente entrar. Si entra → producción. Si ve *"Access blocked… is currently
+  being tested"* → Testing.
+
+Publicar no es un trámite: con scopes básicos no hay verificación de Google.
+
+---
+
+## D-ter. STRIPE — lo que hay que decidir antes de tocar nada
+
+Jose, 2026-09-22: *"usaremos Stripe desde el día 1, hay que configurarlo."*
+**Decisión tomada.** Esto es el desglose, no una propuesta alternativa.
+
+> **Nota de honestidad:** aquí NO van comisiones ni descripciones de pantallas
+> de Stripe. Cambian por país y por producto, y una cifra inventada en un
+> documento de negocio es de las mentiras que más caro salen. Las comisiones se
+> leen en la página de precios de Stripe el día que se configure.
+
+### Lo que NO hace falta para la primera venta
+
+**Acopio no necesita enterarse de si alguien pagó.** Hoy cada cliente tiene su
+propia copia del Sheet en su propio Drive; no hay servidor de Acopio que
+consultar. Conectar Stripe con la app —que deje de funcionar si dejan de
+pagar— es **un proyecto aparte**, con webhooks y un sitio donde guardar el
+estado, y **no bloquea nada**. Para los primeros clientes, que el cobro y la app
+vivan separados está bien y es lo normal.
+
+(Cuando llegue el momento, engancha con la **tarjeta de reenganche** que ya
+está diseñada más abajo en este mismo documento.)
+
+### Lo mínimo para cobrar
+
+1. **Cuenta de Stripe a nombre del negocio**, no personal. Pide datos fiscales
+   y una cuenta de banco. Es el paso más lento y **sólo lo puede hacer Jose**.
+2. **Un producto con precio recurrente mensual**, en el precio que ya está
+   publicado en la landing. Que coincidan, porque alguien va a comparar.
+3. **Un Payment Link.** Es una URL que cobra, sin escribir una línea de código y
+   sin servidor. Se le manda al cliente después de la llamada de instalación.
+4. **Decidir qué pasa si una tarjeta falla.** Stripe reintenta y avisa solo; hay
+   que elegir cuántas veces y qué pasa al final. Es un ajuste, no código.
+
+### Lo que hay que decidir, y es de Jose
+
+- **¿Prueba gratis o no?** Si hay prueba, cuántos días, y si se pide la tarjeta
+  al principio o al final. Cambia el texto de la landing, así que decidirlo
+  antes de anunciar nada.
+- **¿Mensual, anual, o los dos?** El anual cobra por adelantado y reduce las
+  bajas, pero complica devolver dinero — y la política de devoluciones ya está
+  escrita en `SOPORTE-Y-DEVOLUCIONES.md`; **hay que releerla contra lo que se
+  configure en Stripe para que no se contradigan.**
+- **¿Se cobra aparte la instalación?** Hoy la landing promete "la configuramos
+  contigo", que son horas de Jose. Si eso es un pago único, va en Stripe también.
+- **Impuestos.** Si Utah grava el software como servicio es una pregunta para un
+  contador, no para mí ni para Stripe. Stripe puede calcularlo, pero alguien
+  tiene que decirle qué cobrar.
+
+### Lo que sí toca el producto (pequeño, y para después)
+
+La landing tendrá que llevar el botón a la URL de Stripe, y la página de precios
+tiene que decir **exactamente** lo que se configure. `test-landing-verdad.js` ya
+impide que la landing prometa lo que el producto no hace; cuando exista el
+precio real en Stripe, **esa prueba debería comprobar también que el precio de
+la página y el del enlace de pago son el mismo**. Es la clase de cosa que se
+desincroniza sola.
 
 ---
 

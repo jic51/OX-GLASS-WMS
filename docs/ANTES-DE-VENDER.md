@@ -62,18 +62,38 @@ del nombre "Acopio" dentro de la app y la tarjeta de reenganche. Ver
 
 ### 5. Verificar que el consent screen esté "In production"
 
-Un cliente OAuth en modo **Testing** limita a 100 usuarios y **las
-autorizaciones caducan a los 7 días** — el login externo se rompería solo cada
-semana. Acopio solo pide scopes básicos (`email`, `profile`), que se pueden
-publicar sin verificación de Google. Es un interruptor, no un trámite: Cloud
-Console → OAuth consent screen → confirmar **"In production"**. Detalle en
-`docs/PLAN-5-ANIOS.md`.
+> **Corregido el 2026-09-22.** Esta entrada decía que en Testing *"las
+> autorizaciones caducan a los 7 días"*. **Falso para Acopio**: esa regla es
+> sobre el refresh token y Acopio nunca pide uno (`access_type` no aparece en
+> todo el proyecto). La sesión es nuestra, firmada con HMAC, y dura 30 días.
+> Detalle y comprobación en `docs/PLAN-5-ANIOS.md`, "Pared 2".
 
-### 6. Cómo se cobra
+**El límite real es otro y es peor para vender:** en modo Testing **sólo entran
+los correos que estén en la lista de usuarios de prueba** (tope 100). La gente
+de un cliente nuevo con Gmail personal quedaría **bloqueada**, no avisada.
+Acopio sólo pide scopes básicos (`openid email profile`), publicables sin
+verificación de Google: es un botón, no un trámite. Cloud Console →
+*Google Auth Platform → Audience* (antes *APIs & Services → OAuth consent
+screen*) → **"In production"**.
 
-Ni decidido ni construido. Para los primeros clientes, factura manual está
-bien — pero hay que decidir el mecanismo y que la instalación no dependa de
-que Jose recuerde cobrar.
+**Comprobación sin depender de la consola:** que alguien con Gmail personal,
+fuera del dominio y fuera de la lista de prueba, intente entrar. Si entra, está
+en producción. Si ve *"Access blocked… is currently being tested"*, está en
+Testing.
+
+**Ojo con el falso positivo:** que OX lleve meses sin problemas **no prueba
+nada**, porque la gente de `@ox-glass.com` entra por la puerta automática, que
+no toca el cliente OAuth (`ACCESO-Y-LOGIN.md`).
+
+### 6. Cómo se cobra — DECIDIDO (2026-09-22): Stripe desde el día 1
+
+Jose: *"usaremos Stripe desde el día 1, hay que configurarlo."* Decisión
+tomada; falta configurarlo. El desglose está en `BACKLOG.md`, sección
+**"Stripe — lo que hay que decidir antes de tocar nada"**. Lo importante para
+esta lista: **para los primeros clientes NO hace falta escribir código** — un
+Payment Link cobra sin que Acopio se entere, y conectar el pago con la app
+(apagarla si dejan de pagar) es un proyecto aparte que **no** bloquea la primera
+venta.
 
 ---
 
