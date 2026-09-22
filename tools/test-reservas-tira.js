@@ -193,6 +193,40 @@ const LEER_COLUMNAS = () => {
                            catch(e){ return null; } })()
   }));
   check('y se vuelve a cerrar con otro clic', !recerrada.visibles);
+
+  /* EL VERBO TIENE QUE CAMBIAR, Y ÉSTE ES EL FALLO QUE JOSE ENCONTRÓ.
+   *
+   * 2026-09-22: *"'click to hide' está siempre fijo, aun cuando está
+   * escondido."* Cierto: toggleReservasTira cambiaba clases y el atributo
+   * `hidden` sobre el DOM ya pintado, y nunca volvía a pasar por el sitio donde
+   * se elige ese verbo. La frase decía la verdad exactamente una vez, al cargar.
+   *
+   * Se mide LEYENDO LA PANTALLA después de cada clic, no el HTML que genera la
+   * función: el HTML siempre dijo el verbo correcto — lo que no ocurría era
+   * escribirlo en la página. Una prueba sobre la cadena habría dado verde. */
+  const verbo = () => page.evaluate(() =>
+    (document.getElementById('resvHintToggle') || {}).textContent || '');
+
+  check('plegada, la cabecera invita a ABRIR', /click to show/.test(await verbo()),
+        await verbo());
+  await page.click('.resv-toggle');
+  await page.waitForTimeout(250);
+  check('...y al abrirla cambia a CERRAR', /click to hide/.test(await verbo()),
+        await verbo());
+  await page.click('.resv-toggle');
+  await page.waitForTimeout(250);
+  check('...y al volver a plegarla, otra vez a ABRIR', /click to show/.test(await verbo()),
+        await verbo());
+
+  // Y la ⓘ, que es donde se mudó la frase larga.
+  const info = await page.evaluate(() => {
+    const i = document.querySelector('.resv-info');
+    return i ? { existe: true, dentroDelBoton: !!i.closest('.resv-toggle'),
+                 tip: i.getAttribute('data-tip') || '' } : { existe: false };
+  });
+  check('la explicación vive en una ⓘ', info.existe && /can leave the warehouse/.test(info.tip),
+        info);
+  check('...y la ⓘ está FUERA del botón de plegar', info.existe && !info.dentroDelBoton, info);
   check('...guardando también ese "no"', recerrada.guardado === '0');
 
   console.log('\n═══ 2. Las columnas no se mueven ═══\n');

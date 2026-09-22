@@ -458,9 +458,22 @@ console.log('\n── 6. Las tres pantallas la enseñan, y comparten la cuenta �
    * será bien larga; debemos hacerlo expandible como el Low Stock." */
   check('arranca plegada — las filas vienen ocultas',
         /<div class="resv-rows" hidden>/.test(html), html.slice(0, 900));
-  check('...y la cabecera dice cómo verlas', html.indexOf('click to see them') !== -1);
+  check('...y la cabecera dice cómo verlas', html.indexOf('click to show') !== -1);
   check('...sin dejar de contar cuántas hay sin abrirla',
         /2 reservations/.test(html), html.slice(0, 900));
+  /* EL ORDEN QUE PIDIÓ JOSE: los números seguidos, y la frase larga fuera de la
+   * cabecera, en una ⓘ. Antes la explicación iba EN MEDIO de las cifras. */
+  check('los tres números van seguidos, sin la explicación en medio',
+        /50 units · 2 reservations · in 2 racks/.test(html), html.slice(0, 700));
+  check('la explicación larga ya no está en la cabecera',
+        html.indexOf('>nothing here can leave') === -1);
+  check('...sino en la ⓘ que la app ya usa en otros sitios',
+        /class="info-ic tip resv-info"[^>]*data-tip="Nothing here can leave/.test(html),
+        html.slice(0, 900));
+  // Y la ⓘ FUERA del botón: es enfocable, y algo enfocable dentro de un
+  // <button> no es HTML válido — el navegador desarma la pareja.
+  check('...y fuera del botón de plegar, que si no es HTML inválido',
+        html.indexOf('</button><span class="info-ic') !== -1, html.slice(0, 900));
   ctx._resvAbierta = true;
   const abierta = vm.runInContext('_reservasTiraHtml()', ctx);
   check('abierta, las filas se ven', /<div class="resv-rows">/.test(abierta));
