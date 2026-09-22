@@ -5,6 +5,176 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+# ══ ANOTADO EL 2026-09-22 (noche) — CINCO COSAS, NINGUNA TOCADA AÚN ══
+
+> Jose: *"NO QUIERO QUE CAMBIES NADA POR AHORA, SOLO ANALIZA, ANOTA, COMENTA Y
+> SUGIERE."* Esto es eso. Todo lo de aquí está comprobado en el código o medido
+> en los vídeos; lo que es opinión mía va dicho como opinión.
+
+## 1. LAS COLUMNAS SALTAN AL CAMBIAR DE FILTRO — y es el mismo fallo de la tira
+
+Jose, con dos vídeos (Movements y Dashboard): *"quiero quitar todos los saltos
+que da la pantalla y dejar cada cosa en su propio lugar sin que tengan que
+moverse todas. Cuando cambio de categoría, todas las columnas se mueven
+horizontalmente, porque no tienen su espacio fijo sino que están condicionadas a
+la cantidad de caracteres y tamaño de letra."*
+
+**Diagnóstico suyo, y es exacto.** Medido sobre los fotogramas del vídeo de
+Movements, la columna `PROJECT` empieza en:
+
+| Filtro | x de `PROJECT` |
+|---|---|
+| Return (2 filas) | ≈ 476 |
+| SCREEN | ≈ 1318 |
+| MIRROR | ≈ 415 |
+
+O sea que **la misma columna cambia de sitio casi 900px** según qué filas haya
+debajo. Una `<table>` normal reparte el ancho por el contenido; eso está bien
+para un documento y mal para algo que se lee todos los días, porque no se puede
+aprender dónde mirar. Aparece y desaparece además la barra horizontal.
+
+**ES EXACTAMENTE EL MISMO FALLO QUE JOSE ENCONTRÓ EN LA TIRA DE RESERVAS** y que
+se arregló en la v12.05 con `grid-template-columns` en píxeles y la escalera de
+`_resvFit`. Lo que allí se hizo para seis filas hay que hacerlo aquí para las
+cuatro tablas grandes: Movements, Dashboard, Incoming y Project View.
+
+**Lo que hay que resolver antes de escribirlo, y no es poco:**
+
+- `table-layout:fixed` + un ancho por columna es el mecanismo, pero **las
+  columnas son configurables** (`⚙ Columns`, `_colHidden`, `COL_MERGES`), así
+  que el ancho no puede vivir en el CSS por posición: tiene que ir con la
+  definición de cada columna, junto a su `key` y su `def`.
+- Con una columna escondida, su ancho tiene que repartirse — o la tabla deja un
+  hueco. Decidir cuál es la columna elástica de cada tabla (sospecha: `NAME`).
+- La escalera de tamaño (`_resvFit`) ya existe y está medida. **Reutilizarla,
+  no escribir otra**: ahí hay una constante de ancho de letra medida en el
+  navegador que no debe duplicarse.
+- Y la prueba tiene que ser la de la v12.05: **medir la x de cada columna con un
+  filtro y con otro, y exigir que no se mueva**. Comparar CSS no vale.
+
+## 2. MOVEMENTS: LA CATEGORÍA ARRIBA, COMO EN EL DASHBOARD
+
+Jose: *"quiero hacer en Movements lo mismo que hicimos en Dashboard: seleccionar
+una categoría y que la columna de categoría desaparezca y la categoría aparezca
+arriba, eso da espacio a lo demás."*
+
+**Ya está construido, sólo que sólo para el Dashboard.** `_colSuppressed(t)`
+empieza literalmente con `if (t !== 'stock' || _colEdit[t]) return {};`, y el
+badge se pinta en `#stockCatBadge`. Son dos piezas:
+
+1. Quitar ese `t !== 'stock'` y que también mire el filtro de Movements
+   (`movCatFilter`), que es otro `<select>`.
+2. Un `#movCatBadge` junto al título "Movement History", igual que el del
+   Dashboard.
+
+Ojo con un detalle del vídeo: en Movements la columna se llama
+`CATEGORY / NAME` y lleva **las dos cosas juntas**, no sólo la categoría. Así
+que no es "esconder una columna", es **dejar de pintar el badge dentro de la
+celda** y sacarlo al título. Es un poco más que en el Dashboard, donde la
+categoría sí tiene columna propia.
+
+Y va DESPUÉS del punto 1, o al revés: si primero se fijan los anchos, esconder
+una columna es sólo repartir su ancho.
+
+## 3. MOVEMENTS: SELECCIONAR UNA FILA Y ABRIR UN MOVIMIENTO NUEVO CON SUS DATOS
+
+Jose: *"quiero poder seleccionar un movimiento con el checkbox, dar clic en Exit
+y que la información aparezca en la ventana, poder cambiar a Transfer o Return o
+Waste o Adjust y que la información siga en la ventana para poder
+manipularla."*
+
+Entendido como lo que es: **no es editar**, es **partir de uno que ya existe**
+para crear otro. El material, la categoría, el proyecto, el proveedor y la
+locación ya están escritos; volver a teclearlos es el trabajo que esto quita.
+
+Lo que hay que decidir al escribirlo:
+
+- **Qué se copia y qué no.** La cantidad seguro que NO (sacar 5 de un ingreso de
+  40 es lo normal). La fecha, la de hoy, no la del movimiento original. Los
+  documentos adjuntos, no.
+- **Qué sobrevive al cambiar de tipo.** Es el corazón de lo que pide: cambiar
+  ENTRY→EXIT→TRANSFER sin perder lo tecleado. Hoy el formulario se reconstruye
+  al cambiar de tipo; hay que ver qué campos son comunes y conservarlos.
+- **Ya existe medio camino**: `_entryFromIncoming` rellena el formulario de
+  entrada desde una entrega. El molde de "abrir el formulario con datos puestos"
+  está hecho.
+
+## 4. INCOMING: AGRUPAR POR FECHA — MI OPINIÓN, QUE JOSE PIDIÓ
+
+Jose: *"creo que si agrupamos por fecha y le ponemos una sola fecha a cada grupo
+en los incomings en el pop-up y en la pestaña se vería mucho mejor, y en esta
+última podríamos eliminar una columna, así podemos poner una columna de PO, PM,
+etc., que nos daría más información al buscar. ¿Qué piensas?"*
+
+**De acuerdo, y el argumento del buscador es el mejor de los dos.** Desde la
+v12.06 el buscador mira en PO y PM, pero esas dos columnas **no se ven**: buscas
+"7788", sale una fila, y no hay nada en pantalla que diga por qué salió. Poner
+PO y PM es cerrar ese hueco, no sólo aprovechar el sitio.
+
+**Dos cosas que hay que decidir, y las dos se ven en su propia captura:**
+
+- **Ya hay grupos, y son por ESTADO** (Overdue / Expected / No date yet /
+  Arrived / Cancelled), ordenados por lo que hay que hacer con cada uno. Si la
+  fecha pasa a ser el grupo, ¿desaparece el estado? **Mi opinión: no.** El
+  estado contesta *"¿qué va tarde?"*, que es la pregunta urgente; la fecha
+  contesta *"¿qué llega el viernes?"*. Yo dejaría el estado como grupo grande y
+  la fecha como subtítulo dentro de él. Con dos niveles el ahorro de columna se
+  mantiene igual.
+- **Las entregas con VENTANA de fechas no tienen una fecha.** En su captura:
+  `2026-09-11 → 2026-10-09`. ¿A qué grupo va? Propuesta: al de su fecha de
+  inicio, con la ventana escrita en la fila. Y las de "sin fecha" ya tienen su
+  grupo, que sigue valiendo.
+
+En el popup de la mañana el cambio es más simple y se gana más: hoy cada tarjeta
+repite `2026-09-21` debajo del nombre (tres veces seguidas en su imagen 1).
+
+## 5. LA VENTANA DE EDIT — DOS CAUSAS MEDIDAS Y UNA OPINIÓN
+
+Jose: *"la ventana de Edit es muy pequeña incluso cuando la pantalla es grande,
+lo que hace que siempre haya una scroll bar vertical a un lado."*
+
+**Las dos causas están en el CSS y son de una línea cada una:**
+
+1. **Edit es más estrecha que la ventana donde se creó el movimiento.**
+   `#editMovOverlay` usa `.modal-md` (640px) y `#moveOverlay` —Entry/Exit— usa
+   `.modal-lg` (760px). Los mismos campos en 120px menos se apilan más alto, y
+   por eso hay que hacer scroll.
+2. **`.modal{height:min(82vh,700px)}` es `height`, no `max-height`.** Toda
+   ventana de la app mide el 82% de la pantalla **aunque su contenido ocupe la
+   cuarta parte**. Y con `scrollbar-gutter:stable`, el carril de la barra se
+   reserva siempre — por eso *"siempre"* hay barra, incluso cuando no hace falta
+   desplazar nada. Esto no es sólo de Edit: es **las veinte ventanas**, y es el
+   punto 2 de la sección A del estándar, con su causa por fin localizada.
+
+**Y su propuesta de fondo: que Edit reabra la ventana donde se creó el
+movimiento. Estoy de acuerdo, y con ganas.** Hoy hay dos formularios para el
+mismo objeto, y ya han divergido: distinto ancho, distinto orden de campos y
+distinto aspecto. Eso es exactamente lo que él dice — *"puede causar
+confusión"*— y además es el patrón de fallo que más veces ha mordido este
+archivo: **dos caminos para lo mismo, y sólo uno recibe los arreglos.**
+
+**Sobre si el Edit debe dejar cambiar el TIPO de movimiento: estoy con él, no
+debe.** Tres razones, en orden de peso:
+
+1. **Cambiar ENTRY por EXIT no es editar, es borrar y crear otro.** Un ENTRY
+   tiene estante de destino y costo; un EXIT tiene estante de origen y obra de
+   destino. Reinterpretar los campos de uno como los del otro es la vía directa
+   a un número de stock equivocado, que es lo único que esta app no se puede
+   permitir.
+2. **La auditoría deja de decir la verdad.** Un cambio de tipo escondido
+   detrás de "editar" y su motivo se lee, seis meses después, como si aquel
+   movimiento siempre hubiera sido así.
+3. **El camino honesto ya existe y es reversible:** borrar (la papelera guarda
+   30 días) y crear el correcto. Un cambio de tipo, en cambio, no se deshace.
+
+**Lo que sí hay que resolver, y es el trabajo de verdad de este punto:** el
+formulario de Entry admite **varios materiales y varias locaciones a la vez**, y
+un movimiento guardado es **una sola fila**. Así que reabrirlo significa abrirlo
+en un modo restringido —un material, una locación, sin el botón de añadir otro—
+y ahí es donde esto se puede torcer. No es "llamar a la otra función": es darle
+al formulario un modo que hoy no tiene.
+
+
 # ══ DECISIONES DE JOSE — 2026-09-22 ══
 
 Contestadas de una vez, todas. **Cerradas: no se vuelven a proponer.** Si alguna
