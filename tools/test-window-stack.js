@@ -45,13 +45,35 @@ function check(label, cond) {
   else { fail++; console.log('  FAIL ', label); }
 }
 
+/* LA TABLA DE CAPAS, RESUELTA. Desde la v12.08 las capas flotantes no llevan el
+ * número escrito en su regla: llevan `z-index:var(--z-overlay)` y el número vive
+ * una sola vez, en la tabla del `:root`. Ver el comentario de esa tabla y
+ * tools/test-capas.js.
+ *
+ * Este fichero se puso rojo entero el día del cambio —diez comprobaciones, todas
+ * devolviendo `null`— y eso está bien: leía `z-index:\d+` y de pronto no había
+ * dígitos que leer. Lo que NO estaría bien es "arreglarlo" bajando la exigencia.
+ * Resuelve el nombre contra la tabla, y de paso comprueba algo que antes no
+ * podía: que la regla esté enchufada a la tabla y no a un número suelto. */
+const TABLA = (function () {
+  const raiz = /:root\{([\s\S]*?)\}/.exec(HTML);
+  const t = {};
+  ((raiz && raiz[1]) || '').replace(/(--z-[a-z-]+):\s*(\d+)/g,
+    function (_, k, v) { t[k] = Number(v); return ''; });
+  return t;
+})();
+
 // Read the declared z-index of a CSS class out of the shipping file. Anchored
 // on the class's own rule so a z-index belonging to some neighbouring selector
 // cannot be picked up by accident.
 function zOf(cls) {
-  const re = new RegExp('\\.' + cls.replace('.', '\\.') + '\\s*\\{[^}]*?z-index:\\s*(\\d+)');
+  const re = new RegExp('\\.' + cls.replace('.', '\\.') +
+                        '\\s*\\{[^}]*?z-index:\\s*(?:(\\d+)|var\\((--z-[a-z-]+)\\))');
   const m = re.exec(HTML);
-  return m ? Number(m[1]) : null;
+  if (!m) return null;
+  if (m[1]) return Number(m[1]);        // un número suelto: se sigue admitiendo
+  const v = TABLA[m[2]];                // …o el nombre, resuelto contra la tabla
+  return v === undefined ? null : v;    // nombre que la tabla no define → falla, y debe
 }
 
 const LAYERS = {

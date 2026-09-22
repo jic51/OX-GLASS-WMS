@@ -97,6 +97,28 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.08</span>
+      <span class="tag fix">Fix</span>
+      <h3>Your account menu opens in front, and the app behind it holds still</h3>
+      <p>On a wide, short screen — a tablet held sideways — opening the account
+         menu put it <b>behind</b> the notification cards in the corner. The
+         cards stayed live underneath it too: moving the mouse over them opened
+         the pile, and the page behind scrolled.</p>
+      <p>All three are fixed, and they are one thing now: a menu you opened on
+         purpose takes priority over anything that appears on its own. It does
+         not take priority over a window you opened — a form you are filling in
+         still covers it, which is the right way round.</p>
+      <p>Underneath that, every floating layer in the app — the cards, the
+         bell, the rack drawer, windows, confirmations, document previews,
+         alerts — now takes its position from a <b>single ordered list</b>
+         instead of each carrying its own number. That is what made this bug
+         possible to miss: the menu declared a number higher than the cards' and
+         still lost, because a number like that only competes inside its own
+         group. A check now measures which one is actually in front, rather than
+         comparing the numbers.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.07</span>
       <span class="tag safe">Privacy</span>
       <h3>The setup check-in now sends exactly what the Privacy Policy says it

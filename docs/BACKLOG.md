@@ -179,7 +179,24 @@ para poder distribuirse, que es la razón original de que esté apagado.
 
 # ══ ANOTADO EL 2026-09-21 (tarde) ══
 
-## EL MENÚ DEL USUARIO SE ABRE DETRÁS DE LAS TARJETAS
+## ✅ HECHO (v12.08) — EL MENÚ DEL USUARIO SE ABRE DETRÁS DE LAS TARJETAS
+
+> **Las tres cosas, hechas.** El menú se pinta delante, el fondo no se mueve y
+> las tarjetas de atrás no responden al ratón. Y la causa NO era la que parecía:
+> `.acct-menu` declaraba `z-index:600` contra el `399` del mazo y aun así
+> perdía, porque vive dentro de `.topbar`, que es `position:sticky` con
+> `z-index:100` y abre su propio contexto de apilado — hacia fuera el menú valía
+> 100. Subir el 600, que es lo primero que uno intenta, no habría hecho nada.
+> Lo que sube es la barra, y sólo mientras el menú está abierto.
+>
+> De paso salió la **tabla de capas** que este mismo documento pedía: los
+> veinticuatro `z-index` sueltos se cambiaron por una lista ordenada en el
+> `:root`, y `tools/test-capas.js` mide con `elementFromPoint` cuál está delante
+> de verdad en vez de comparar números. Quedan de este barrido los puntos 1 a 8
+> de la sección A (la escala de texto, los anchos de ventana, los puntos de
+> quiebre y las parejas descuadradas).
+
+### El análisis, tal como se anotó
 
 Jose, con dos capturas de una pantalla ancha y baja (tipo iPad apaisado):
 

@@ -98,6 +98,30 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.08</span>
+      <span class="tag fix">Arreglado</span>
+      <h3>El menú de tu cuenta se abre delante, y la app de atrás se queda
+          quieta</h3>
+      <p>En una pantalla ancha y baja —una tableta apaisada— abrir el menú de la
+         cuenta lo ponía <b>detrás</b> de las tarjetas de avisos de la esquina. Y
+         las tarjetas seguían vivas debajo: pasar el ratón por encima abría el
+         mazo, y la página de atrás se movía.</p>
+      <p>Las tres están arregladas, y ahora son una sola cosa: un menú que
+         abriste tú tiene prioridad sobre cualquier cosa que aparezca sola. Lo
+         que no tiene es prioridad sobre una ventana que también abriste tú —un
+         formulario a medio llenar te lo sigue tapando, que es el orden
+         correcto.</p>
+      <p>Y por debajo, todas las capas flotantes de la app —las tarjetas, la
+         campana, el cajón del estante, las ventanas, las confirmaciones, la
+         vista de documentos, los avisos— toman su sitio de <b>una sola lista
+         ordenada</b> en vez de llevar cada una su número. Eso es lo que hacía
+         este fallo difícil de ver: el menú declaraba un número más alto que el
+         de las tarjetas y aun así perdía, porque un número así sólo compite
+         dentro de su propio grupo. Ahora una comprobación mide cuál está
+         delante de verdad, en vez de comparar los números.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.07</span>
       <span class="tag safe">Privacidad</span>
       <h3>El aviso de instalación manda exactamente lo que dice la Política de
