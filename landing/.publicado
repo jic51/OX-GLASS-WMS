@@ -2,6 +2,6 @@
 # Lo lee check-publicado.js para poner la suite roja cuando el sitio
 # publicado se queda atrás de las fuentes — que es lo que pasó durante
 # catorce días en septiembre de 2026 sin que nada avisara.
-version=12.10
-build=db9e330c
+version=12.11
+build=09961335
 fecha=2026-09-22
