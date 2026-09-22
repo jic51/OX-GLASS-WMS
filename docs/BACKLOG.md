@@ -5,6 +5,116 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+# ══ ANOTADO EL 2026-09-22 (tarde) — LA COLUMNA LAST NOTE Y EL NOMBRE ══
+
+Jose, con tres capturas del Stock Dashboard: *"muestran la diferencia y la
+repetición de comentarios en el mismo material, comentarios con formatos
+diferentes, comentarios repetidos en 2 lugares y comentarios extra que aparecen
+de 2 en 2."*
+
+Son **cuatro cosas distintas** y hay que separarlas porque se arreglan en sitios
+distintos. Las cuatro están confirmadas en el código, no supuestas.
+
+### 1. EL NOMBRE SE ESCRIBE DOS VECES — `Index_v3_fixed.html:6903`
+
+```js
+name: '<td class="sc-name"><strong>'+_he(s.name)+'</strong>'+
+      (s.project && s.project!=='GENERIC'
+        ? '<br><span …>'+_he(s.project)+'</span>' : '')+'</td>',
+```
+
+Debajo del nombre se imprime **la obra**. Cuando el material se llama igual que
+su obra —y en el almacén de Jose pasa mucho, porque los materiales de una obra
+se nombran por la obra— sale el mismo texto dos veces:
+
+| Se ve | Es |
+|---|---|
+| `44 NORTH` / `44 NORTH` | nombre = obra |
+| `ALTA VISTA` / `ALTA VISTA` | nombre = obra |
+| `2PER SAGE@COMPASS` / `2PER SAGE@COMPASS` | nombre = obra |
+| `HIGHLAND ROW TOWNHOMES` / `HIGHLAND ROW` | **distintas — ésta SÍ aporta** |
+| `HF 156` / `GOO HF 156` | **distintas — ésta SÍ aporta** |
+
+**Arreglo:** no imprimir la obra cuando, normalizada, es igual al nombre —
+`nt(s.project) !== nt(s.name)`. Es una condición, no un rediseño. Ojo con
+comparar en crudo: `"44 NORTH"` contra `"44 north"` tiene que contar como igual,
+y es el mismo tropiezo del aviso de duplicado del Incoming.
+
+### 2. LOS COMENTARIOS SALEN CON EL FORMATO QUE SE TECLEÓ
+
+`LAST NOTE` es el campo `comments` del último movimiento que tuvo comentario
+(`Index_v3_fixed.html:6773`, "last wins"). Y `comments` se guarda con
+`String(d.comments || '').trim()` — **sin normalizar**. Resultado en la misma
+columna, en la captura:
+
+```
+WINDOW AND DOOR SEALANT     ← mayúsculas
+white SEALANT               ← minúsculas
+WINDOW SCREENS
+CLAY WINDOWS IN FRONT O…
+```
+
+Es la misma familia que los nombres del Incoming de la v12.06, pero **la
+decisión NO es la misma**, y conviene que quede escrito por qué:
+
+- Un NOMBRE de material es una etiqueta, casi una clave. Ponerlo en mayúsculas
+  no le quita nada: por eso la v12.06 lo hace en el servidor.
+- Un COMENTARIO es una frase que escribió una persona. La regla de Jose —*"mantener
+  los datos como el usuario los ingresó siempre"*— pega más fuerte aquí que en
+  ningún otro campo de la app.
+
+**Arreglo propuesto (decisión de Jose, ver la lista de decisiones):** guardar el
+comentario **tal cual se escribió**, y pintar **la columna** con una sola
+convención (mayúsculas, como el resto de esa tabla) para que la lista se lea
+pareja. El texto completo y original sigue en la ayuda al pasar el ratón y en la
+ventana del movimiento. Lo único que se normaliza al guardar es lo inofensivo:
+espacios de sobra.
+
+La alternativa —mayúsculas al guardar, como los nombres— es más simple y deja el
+dato y la pantalla diciendo lo mismo, pero reescribe lo que Jose tecleó. Por eso
+se pregunta en vez de decidirse.
+
+### 3. EL MISMO NOMBRE EN DOS CATEGORÍAS, CON DOS COMENTARIOS DISTINTOS
+
+En la captura, `RAIN BUSTER 450` sale dos veces:
+
+| Categoría | Stock | Comentario |
+|---|---|---|
+| SEALANT/CAULK | 90 de 90 @ O4A | WINDOW AND DOOR SEALANT |
+| FLASHING PAPER | 88 de 90 @ O1B | white SEALANT |
+
+**Esto NO es un fallo de la app.** El identificador de un material es
+categoría + nombre, así que son dos materiales distintos y la app los cuenta
+bien. Lo que casi seguro pasa es que **uno de los dos está mal categorizado** —
+un sellante en FLASHING PAPER—, y entonces el stock de ese producto está
+partido en dos filas que nunca se suman.
+
+**Arreglo:** no tocar el código. Esto es exactamente para lo que existe el
+barrido de **Data Quality** (familia `similar`), que ya sabe encontrar nombres
+parecidos y no aplica nada por su cuenta. Hay que comprobar si hoy compara
+**entre categorías distintas** o sólo dentro de una; si es lo segundo, ése es el
+cambio, y es en la prueba antes que en el barrido. Y la unión la hace Jose desde
+Data Quality (`manageMaterial` op `merge`), que ya mueve las filas del archivo.
+
+### 4. LAS TARJETAS NARANJAS TAPAN LA TABLA, Y DE DOS EN DOS
+
+La tarjeta `ARRIVED · ENTRY NOT MADE` (la que recuerda que una entrega llegó y
+le falta su entrada — `_todoAdd`) sale abajo a la derecha **encima de la tabla**,
+y con el contador en 7 se ven dos apiladas con el texto de las filas
+transparentándose por detrás: se lee `ginseng 456` mezclado con
+`WHITE WHINDOW SCREENS` y `…DE ST DE FRONT` de las celdas.
+
+**Es el mismo problema que el menú del avatar** anotado ayer, en otra capa: una
+cosa flotante que no se apila bien sobre lo de abajo. Va con el **estándar de
+las ventanas** y se arregla en el mismo barrido, no antes: tocar un `z-index`
+suelto es como se llegó aquí. Lo que el barrido tiene que producir es **una
+tabla de capas** —quién va encima de quién y por qué— y una prueba que la
+recorra entera, no una regla nueva por cada cosa que aparezca tapada.
+
+Y una cosa que NO es nuestra y conviene no "arreglar": `WHITE WHINDOW SCREENS`
+está mal escrito en el dato. Es de Data Quality (familia `spelling`), no del
+render.
+
 # ══ ANOTADO EL 2026-09-22 ══
 
 ## SI ALGÚN DÍA SE ENCIENDE EL ESCÁNER DE GMAIL, HAY QUE REESCRIBIR LA POLÍTICA
