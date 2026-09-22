@@ -1284,10 +1284,76 @@
     /* Las dos celdas de dos líneas de Movements. La de arriba es por la que se
        encuentra la fila; la de abajo se lee después, y por eso va más pequeña y
        en gris — salvo el nombre del material, que es lo que la gente busca. */
-    td.mc-when, td.mc-what{white-space:nowrap;vertical-align:top}
+    td.mc-when, td.mc-what{vertical-align:top}
+    td.mc-when{white-space:nowrap}
     .mc-sub{font-size:.72rem;color:var(--muted);margin-top:.15rem}
-    .mc-main{font-weight:700;margin-top:.15rem;white-space:normal;
-      max-width:22ch;overflow-wrap:anywhere}
+    /* Sin `max-width:22ch`: ahora el ancho lo pone la COLUMNA, no la celda. Un
+       tope en ch dentro de una columna de ancho fijo son dos topes discutiendo,
+       y gana el más pequeño de los dos sin que nadie lo haya decidido. */
+    .mc-main{font-weight:700;margin-top:.15rem;white-space:normal;overflow-wrap:anywhere}
+
+    /* ══ LOS ANCHOS DE LA TABLA DE MOVIMIENTOS ═══════════════════════════════
+       Jose, 2026-09-22, con dos vídeos: *"quiero quitar todos los saltos que da
+       la pantalla y dejar cada cosa en su propio lugar sin que tengan que
+       moverse todas. Cuando cambio de categoría, todas las columnas se mueven
+       horizontalmente, porque no tienen su espacio fijo sino que están
+       condicionadas a la cantidad de caracteres y tamaño de letra."*
+
+       Su diagnóstico es exacto. Una `<table>` normal reparte el ancho según lo
+       que haya DENTRO, así que la misma columna cambia de sitio según qué filas
+       estén filtradas. Medido sobre sus propios fotogramas, la columna Project
+       empezaba en x=476 con un filtro, en x=1318 con otro y en x=415 con un
+       tercero: casi 900px de diferencia por mirar otra categoría. No se puede
+       aprender dónde mirar en una tabla así.
+
+       `table-layout:fixed` es lo que corta la relación entre el contenido y el
+       ancho. A partir de ahí, el reparto es una decisión y no un accidente:
+
+         · CADA COLUMNA LLEVA SU ANCHO, en píxeles, colgado de su propia clase
+           (`mc-<key>`) y no de su posición. Eso importa porque las columnas se
+           pueden reordenar y esconder: un ancho por posición se rompería en
+           cuanto alguien tocara "⚙ Columns".
+         · UNA SOLA COLUMNA SIN ANCHO — `mc-what`, el material. En reparto fijo,
+           la que no declara ancho se queda con TODO lo que sobre, así que es la
+           única que se mueve al esconder o enseñar otra. El nombre del material
+           es lo que más varía de largo y lo que más se lee: es la que tiene que
+           llevarse el hueco.
+         · `min-width` EN LA TABLA, no en las celdas: en reparto fijo un
+           `min-width` de celda no se respeta. Es lo que garantiza que el
+           material nunca se quede sin sitio en una pantalla estrecha; por
+           debajo de eso la tabla se desplaza de lado, que es lo que ya hacía.
+
+       LOS NÚMEROS SON MEDIDOS, no elegidos: se dibujó la tabla con datos del
+       almacén de Jose bajo siete filtros distintos y se tomó el ancho máximo que
+       alcanzaba cada columna. Ver tools/test-columnas.js, que vuelve a medir y
+       falla si alguna columna se mueve al cambiar de filtro. */
+    #tableContainer table{table-layout:fixed;width:100%;min-width:1300px}
+    /* 112 y 160 SON MEDIDOS, y los dos se corrigieron al alza porque la prueba
+       encontró que se salían: la insignia `⇄ TRANSFER` no cabía en 100px, y el
+       correo más largo del almacén de Jose —joseisrael5101@gmail.com— mide
+       135px, que con el relleno de la celda no entra en 140. */
+    #tableContainer th.mc-when{width:112px}
+    #tableContainer th.mc-qty{width:58px}
+    #tableContainer th.mc-unit{width:58px}
+    #tableContainer th.mc-po{width:86px}
+    #tableContainer th.mc-locFlow{width:150px}
+    #tableContainer th.mc-rawLoc{width:120px}
+    #tableContainer th.mc-gc{width:110px}
+    #tableContainer th.mc-project{width:140px}
+    #tableContainer th.mc-supplier{width:120px}
+    #tableContainer th.mc-resp{width:110px}
+    #tableContainer th.mc-comment{width:150px}
+    #tableContainer th.mc-pm{width:110px}
+    #tableContainer th.mc-sysDate{width:112px}
+    #tableContainer th.mc-user{width:160px}
+    #tableContainer th.mc-doc{width:76px}
+    /* Y lo que no cabe SE PARTE, no se recorta. Es la misma regla que Jose fijó
+       para la tira de reservas: el final de un nombre es donde están la letra y
+       el número que lo distinguen, así que esconderlo con puntos suspensivos es
+       perder justo el dato. El comentario es la excepción y ya lo era: es texto
+       de una persona, puede ser larguísimo, y tiene su ayuda al pasar el ratón. */
+    #tableContainer td{overflow-wrap:anywhere}
+    #tableContainer td.mc-comment{max-width:none}
     .col-bar-right{margin-left:auto;display:inline-flex;align-items:center;gap:.4rem}
     /* Mismo alto, mismo ancho, mismo sitio: sólo cambia el color. */
     .btn.col-open{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -4231,7 +4297,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.10';
+var APP_VERSION = '12.11';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -4243,7 +4309,7 @@ var APP_VERSION = '12.10';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'db9e330c';
+var APP_BUILD = '09961335';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -4946,7 +5012,12 @@ var COL_TABLES = {
     // La columna de acciones ya NO va y viene: aparecía y desaparecía con el
     // modo, y eso era justo lo que hacía saltar la tabla al pulsar un botón.
     // Ahora está siempre para quien puede usarla, y para nadie más.
-    tail: function(){ return _movCanAct() ? '<th></th>' : ''; },
+    // CON ANCHO. Sin él era la segunda columna elástica de la tabla, y en
+    // reparto fijo las que no declaran ancho se reparten el hueco A PARTES
+    // IGUALES: el nombre del material se quedaba con la mitad de lo que le
+    // tocaba (100px medidos, para nombres de veinte letras) por culpa de una
+    // columna que sólo lleva dos botones.
+    tail: function(){ return _movCanAct() ? '<th style="width:44px"></th>' : ''; },
     refresh: function(){ renderMovements(); }                             // rebuilds its own header
   }
 };

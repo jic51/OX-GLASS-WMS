@@ -97,6 +97,27 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.11</span>
+      <span class="tag fix">Fix</span>
+      <h3>The movements table stops jumping when you change the filter</h3>
+      <p>Pick a different category and every column used to slide sideways. The
+         <b>Project</b> column started 476 pixels from the left on one filter,
+         1,318 on another and 415 on a third — the same column, nearly 900
+         pixels apart, because the table sized itself from whatever rows
+         happened to be showing. You could not learn where to look.</p>
+      <p>Every column now has its own width and keeps it, whatever you filter
+         to. One column stays flexible — the material name, because it is the
+         one that varies most and the one you read — and it absorbs the space
+         when you hide or show another column. Nothing else moves, at all.</p>
+      <p>The widths are measured, not guessed: the table was drawn with real
+         warehouse data under seven different filters and each column was given
+         the width it actually reached. Two came back too narrow the first time
+         and were corrected — the <b>TRANSFER</b> badge and the longest email
+         were being cut off. A check now re-measures every column under every
+         filter and fails if a single one moves by one pixel.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.10</span>
       <span class="tag fix">Fix</span>
       <h3>The reserved strip says which way it opens</h3>

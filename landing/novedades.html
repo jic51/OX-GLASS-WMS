@@ -98,6 +98,27 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.11</span>
+      <span class="tag fix">Arreglado</span>
+      <h3>La tabla de movimientos deja de saltar al cambiar el filtro</h3>
+      <p>Elegías otra categoría y todas las columnas se corrían de lado. La
+         columna <b>Project</b> empezaba a 476 píxeles del borde con un filtro,
+         a 1.318 con otro y a 415 con un tercero — la misma columna, casi 900
+         píxeles de diferencia, porque la tabla se repartía el ancho según las
+         filas que hubiera debajo. Así no se puede aprender dónde mirar.</p>
+      <p>Ahora cada columna tiene su ancho y lo conserva, filtres lo que
+         filtres. Una sola queda elástica —el nombre del material, que es el que
+         más varía y el que se lee— y es la que se queda con el hueco cuando
+         escondes o enseñas otra columna. Lo demás no se mueve nada.</p>
+      <p>Los anchos están medidos, no elegidos a ojo: se dibujó la tabla con
+         datos reales de almacén bajo siete filtros distintos y a cada columna
+         se le dio el ancho que de verdad alcanzaba. Dos se quedaron cortas a la
+         primera y se corrigieron — la insignia de <b>TRANSFER</b> y el correo
+         más largo se salían. Una comprobación vuelve a medir cada columna con
+         cada filtro y falla si una sola se mueve un píxel.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.10</span>
       <span class="tag fix">Arreglado</span>
       <h3>La tira de reservas dice hacia dónde se abre</h3>

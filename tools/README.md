@@ -118,6 +118,7 @@ node tools/test-reservas-tira.js
 node tools/test-incoming-duplicado.js
 node tools/test-capas.js
 node tools/test-ventanas.js
+node tools/test-columnas.js
 node tools/test-landing-verdad.js
 node tools/build-site.js && node tools/test-site-privacy.js
 node tools/check-changelog.js
