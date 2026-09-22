@@ -5,6 +5,218 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+# ══ ANOTADO EL 2026-09-22 (tras la v12.11) — TRES COSAS + LA PREGUNTA DEL LANZAMIENTO ══
+
+> Jose, con dos vídeos y una imagen: *"anota todo, no hagas nada hasta que me
+> respondas las preguntas."* Esto es eso. Lo de aquí está **medido**, no
+> supuesto; lo que es opinión mía va dicho como opinión.
+
+## A. REGRESIÓN DE LA v12.11 — en modo edición el nombre del material se queda en 0px
+
+**Es un fallo nuevo, y lo introduje yo ayer.** Jose lo grabó (vídeo
+`Recording_2026-09-22_141433.mov`): al pulsar **⚙ Columns**, la columna
+`CATEGORY / NAME` se aplasta y el nombre se dibuja **una letra por renglón**
+(`0 / 7 / - / 6 / 3 / 2 / 9`), y las filas pasan de 68px a 428px de alto.
+
+**Medido** (`scratchpad/medir.js`, Chromium, datos como los suyos):
+
+| | ventana 1198px | ventana 1600px |
+|---|---|---|
+| `mc-what` en modo normal | 124px | 184px |
+| `mc-what` en modo edición | **0px** | **0px** |
+| fila más alta, normal | 83px | 68px |
+| fila más alta, edición | **428px** | **428px** |
+
+**Por qué.** La v12.11 puso `table-layout:fixed` y un ancho en píxeles a cada
+columna menos una, `mc-what`, que es la elástica a propósito. La suma de los
+anchos declarados de **todas** las columnas es **1748px**:
+
+```
+32(casillas) + 112 + 58 + 58 + 86 + 150 + 120 + 110 + 140 + 120
++ 110 + 150 + 110 + 112 + 160 + 76 + 44(acciones) = 1748
+```
+
+En uso normal cinco columnas están escondidas de fábrica (`rawLoc`, `gc`,
+`supplier`, `pm`, `sysDate` = 572px), así que la suma baja a 1176px y sobra
+hueco para el material. Pero `_visibleColCount` dice, literalmente,
+*"edit mode shows every column"*: al abrir el editor **aparecen las dieciséis**,
+la suma sube a 1748 y lo que le queda a la elástica es
+`max(0, disponible − 1748)` = **0 en cualquier pantalla**. No es que la ventana
+de Jose sea estrecha: a 1600px pasa exactamente igual.
+
+**Y no es sólo estético.** Con 0px de ancho el nombre no se puede leer *mientras
+decides qué columnas quieres*, que es justo el momento en que hay que verlo.
+
+**LO IMPORTANTE: esto bloquea lo siguiente de la lista.** El plan era llevar los
+anchos fijos a Dashboard, Incoming y Project View. Hoy sólo Movements tiene
+`table-layout:fixed` (una sola línea en todo el archivo, la 1330), así que las
+otras tres no tienen el fallo — **pero lo heredarán en cuanto se les aplique**.
+Hay que resolver la regla antes de extenderla, no después.
+
+### Cuatro salidas, con su consecuencia
+
+1. **Que el modo edición no obligue a la tabla a caber.** Quitar el
+   `width:100%` mientras el editor está abierto y dejar que la tabla mida sus
+   1748px con barra horizontal. Cada columna conserva su ancho real y el
+   material recupera los suyos. *Consecuencia:* aparece barra horizontal al
+   abrir el editor — pero el editor ya es un modo aparte, con sus botones Save y
+   Reset, así que que se ensanche no sorprende. **Es la que yo haría.**
+2. **Dar ancho declarado también a `what`** (p.ej. 216px) y que la elástica
+   pase a ser `comment`, que es la que puede recortarse sin perder nada (ya se
+   recorta con puntos suspensivos y guarda el texto entero en la ayuda).
+   *Consecuencia:* el nombre deja de crecer en pantallas grandes — hoy gana
+   hueco al ensanchar la ventana, y dejaría de hacerlo.
+3. **En modo edición, no dibujar el cuerpo de la tabla**: sólo la cabecera, con
+   las dieciséis columnas y sus nombres. *Consecuencia:* se pierde la vista
+   previa; hoy se ve cómo queda la tabla mientras se arrastra, y eso es útil.
+4. **Las escondidas, en una lista aparte** debajo de la tabla, en vez de
+   metidas en la cabecera. *Consecuencia:* es el cambio más grande de los
+   cuatro y cambia una interfaz que ya funciona.
+
+### Y la pregunta que hizo Jose, que es otra
+
+*"Qué pasa con las columnas que NO se pueden editar y cómo mantenerlas o
+mostrarlas al activar la edición."* Hoy las bloqueadas son tres —`when`
+(Type/Date), `what` (Category/Name) y `qty`— y en modo edición se dibujan
+**igual que las demás**: con el asa de arrastre `⋮⋮`, el nombre editable y, en
+lugar del ojo, un 🔒. O sea que **parecen arrastrables y no lo son**, y el
+candado se lee sólo si te fijas.
+
+Mi propuesta, independiente de cuál de las cuatro salidas se elija:
+
+- **Quitarles el asa `⋮⋮`** — no se pueden mover, no deben ofrecer que se muevan.
+- **Fondo distinto** (un gris un punto más oscuro), para que se vean como un
+  bloque fijo y no como parte de lo que se está reordenando.
+- **Dejar el candado**, con su ayuda al pasar el ratón explicando *por qué*:
+  «Type, Name and Qty are what a movement IS — a row without them says nothing».
+- **Seguir permitiendo renombrarlas** (eso sí se puede, y es útil).
+
+---
+
+## B. EL FILTRO DE ESTADO SÓLO CONOCE DOS DE LOS CUATRO ESTADOS
+
+Vídeo `Recording_2026-09-22_150944.mp4`. Jose: *"en la app solo se puede filtrar
+por 2 estados (zero stock e in stock) y por todo, pero en la app existen también
+los estados at site y reserved, así que hay un fallo ahí."*
+
+**Comprobado, y es peor que eso: además uno de los dos que hay está mal
+definido.** La insignia sale de `stockBadge` (línea ~6325) y tiene **cuatro**
+estados, en cascada:
+
+| Insignia | Condición |
+|---|---|
+| `In Stock` | `availableQty > 0` |
+| `Reserved` | `availableQty = 0` y `warehouseQty > 0` |
+| `All at Site` | lo anterior no, y `siteQty > 0` |
+| `Zero Stock` | nada de lo anterior |
+
+El filtro (líneas 3160-3162 y 6948-6949) ofrece tres opciones y filtra así:
+
+| Opción | Filtra por | ¿Coincide con la insignia? |
+|---|---|---|
+| `All Status` | nada | sí |
+| `In Stock only` | `warehouseQty > 0` | **NO** — deja pasar las `Reserved`, que tienen `warehouseQty > 0` y `availableQty = 0` |
+| `Zero Stock only` | `warehouseQty<=0 && siteQty<=0` | sí |
+| — | — | **falta `Reserved`** |
+| — | — | **falta `All at Site`** |
+
+Son **tres arreglos, no dos**: añadir las dos opciones que faltan y **corregir
+`in` para que signifique lo mismo que la insignia verde** (`availableQty > 0`).
+Hoy alguien que filtra "In Stock only" para saber qué puede sacar del almacén
+ve material que **no puede sacar**, y eso es un error de los que hacen perder un
+viaje al estante.
+
+Lo correcto es que las opciones del desplegable **salgan de la misma fuente que
+la insignia**, para que no puedan volver a separarse — igual que se hizo con la
+tabla de capas en la v12.08. Y una prueba que recorra los cuatro estados y
+compruebe que cada filtro deja exactamente las filas cuya insignia coincide.
+
+Tamaño: chico (una sesión corta). **Es un fallo de verdad, no un pulido.**
+
+---
+
+## C. LOS NOMBRES Y LAS CATEGORÍAS DEL DASHBOARD, A UN ALTO FIJO
+
+Jose, sobre la imagen del dashboard: *"podemos mejorar o ajustar cómo se manejan
+los nombres y así reducir el espacio que tienen; también podemos hacer lo mismo
+con el espacio que utilizan las categorías con más palabras, pero esto tiene
+sentido sólo si se mantiene el mismo alto de las celdas, o sea los nombres deben
+ajustarse al mismo tamaño, y los nombres de los proyectos deben ajustarse
+también según el número de palabras."*
+
+**La condición que puso es la correcta y es la parte difícil.** Estrechar una
+columna sin más no ahorra nada: el texto se parte en dos renglones y la fila
+crece, así que se gana a lo ancho lo que se pierde a lo alto. Lo que pide —
+misma altura siempre — es lo que hace que el ahorro sea real.
+
+**Ya existe la herramienta y ya está probada en producción:** la escalera
+`_resvFit` de la v12.05, que mide `nº de letras × 8.5px` contra el ancho
+disponible y baja un punto el tamaño (`fit-sm`) o dos (`fit-xs`) sólo cuando
+hace falta. Ahí se hizo para seis filas; esto es lo mismo para tres sitios:
+
+1. **El nombre** (`NAME / DESCRIPTION`, renglón de arriba, en negrita).
+2. **El proyecto** (el renglón gris de abajo) — y aquí Jose pide algo más fino:
+   ajustar **según el número de palabras**, no sólo según el largo. Tiene
+   sentido: `LIBERTY WELLS TOWNHOMES` (3 palabras) puede partirse por un espacio
+   y `PREMIUMSHOWERDOORHEADER` no, así que el mismo largo necesita tratos
+   distintos.
+3. **La insignia de categoría** — la que marcó en rojo es
+   `IGU (ISOLATED GLASS UNIT)`, con diferencia la más larga, y detrás
+   `SHOWER_HARDWARE` y `WINDOW_PARTS`.
+
+**Una pregunta que hay que resolver antes de construir, no después:** si la
+insignia encoge la letra, dos categorías distintas se ven con dos tamaños
+distintos en la misma columna, y eso se lee como si una importara más que la
+otra. **Mi opinión:** para la categoría no encoger la letra sino **acortar el
+texto** (un nombre corto por categoría, decidido una vez, con el nombre largo en
+la ayuda al pasar el ratón: `IGU` en la insignia, `IGU (ISOLATED GLASS UNIT)` al
+pasar por encima). Para el nombre y el proyecto sí la escalera, porque ahí el
+texto es del usuario y no se puede acortar por él.
+
+Va junto con el punto 1 de la lista anterior (anchos fijos en las otras tres
+tablas) — es la misma tabla.
+
+---
+
+## D. ¿QUÉ FALTA PARA LANZAR? — respuesta en `ANTES-DE-VENDER.md`
+
+Jose: *"¿Qué nos hace falta para lanzar el producto? Dime lo mínimo que
+necesitamos. Si lo que falta no es tan importante ni restrictivo, podemos
+empezar a trabajar en la v2, o sea lanzar el producto como está ahora y lo que
+mejoremos de aquí en adelante será la siguiente versión que les demos a los
+clientes que pagan."*
+
+La respuesta larga vive en `docs/ANTES-DE-VENDER.md`, que ya estaba escrita y
+ordenada por riesgo. Resumen del estado real al 2026-09-22:
+
+| # | Bloqueante | Estado | ¿Quién? |
+|---|---|---|---|
+| 1 | Política de Privacidad | ✅ hecho (v9.96, revisada v12.07) | — |
+| 2 | Plantilla maestra limpia | ⬜ **falta** — sólo Jose puede | Jose, ~1 h |
+| 3 | Restaurar un backup de principio a fin | 🟡 pasos 0-2 sí, del 3 en adelante **no** | Jose, ~1 h |
+| 4 | acopio.net y novedades | ✅ hecho | — |
+| 5 | Consent screen "In production" | ⬜ **falta** — es un interruptor | Jose, ~5 min |
+| 6 | Cómo se cobra | ⬜ **falta decidir** | Jose |
+
+**O sea: de los seis bloqueantes, cuatro siguen abiertos y los cuatro son de
+Jose, no míos.** Ninguno es construir código. Eso responde su pregunta: **no
+hay nada del producto que impida lanzar.** Lo que impide lanzar es media tarde
+de trámites.
+
+**Mi recomendación, y va como opinión:** sí, lanzar con lo de arriba resuelto y
+tratar todo lo demás como v2. Con dos condiciones:
+
+- **El filtro de estado (punto B) entra en la v1**, porque es un dato
+  equivocado en pantalla, no una mejora.
+- **La regresión del modo edición (punto A) entra en la v1**, porque la
+  introduje ayer y hoy el editor de columnas está roto a la vista.
+
+Lo demás de este documento —los anchos de las otras tablas, los grupos de
+Incoming, la ventana de Edit, los nombres del dashboard, el conteo cíclico, los
+códigos de barras— es v2 legítima: mejora lo que ya sirve, no arregla nada roto.
+
+---
+
 # ══ ANOTADO EL 2026-09-22 (noche) — CINCO COSAS, NINGUNA TOCADA AÚN ══
 
 > Jose: *"NO QUIERO QUE CAMBIES NADA POR AHORA, SOLO ANALIZA, ANOTA, COMENTA Y
