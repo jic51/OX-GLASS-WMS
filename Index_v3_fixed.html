@@ -2208,24 +2208,30 @@ function planSVG(layout, opts) {
     o.push('<line x1="' + X(bb.x0).toFixed(1) + '" y1="' + Y(gy).toFixed(1) + '" x2="' + X(bb.x1).toFixed(1) + '" y2="' + Y(gy).toFixed(1) + '"/>');
   o.push('</g>');
 
-  // Zones (wash + label)
+  // Zones (wash now, labels in a top layer at the end so racks never cover them)
+  var zoneLabels = [];
   (layout.zones || []).forEach(function (z) {
     if (z.w <= 0 || z.d <= 0) return;
     var c = famColor(z.family);
     var zw = z.w * k, zh = z.d * k;
     var lbl;
     if (zw < 150 && zh > zw) {
-      // Narrow strip: run the name down the strip, anchored at the far end so it
-      // never lands on top of the rack tag sitting in the middle.
-      var lx = X(z.x) + 14, ly = Y(z.y + z.d) - 10;
+      // Narrow strip: the rack fills it, so the name goes in the margin just
+      // outside the wall the strip sits on, running down the strip.
+      var flushW = z.x <= bb.x0 + 2, lx;
+      // Vertical text reads bottom-to-top, the usual convention on a plan, and
+      // starts at the far end of the strip so it never runs into a corner.
+      lx = flushW ? X(z.x) - 6 : X(z.x + z.w) + 13;
+      var ly = Y(z.y + z.d) - 6;
       lbl = '<text x="' + lx.toFixed(1) + '" y="' + ly.toFixed(1) + '" font-size="11" font-weight="700" fill="' + c +
-            '" text-anchor="end" transform="rotate(90 ' + lx.toFixed(1) + ' ' + ly.toFixed(1) + ')">' + esc(z.name) + '</text>';
+            '" text-anchor="start" transform="rotate(-90 ' + lx.toFixed(1) + ' ' + ly.toFixed(1) + ')">' + esc(z.name) + '</text>';
     } else {
       lbl = '<text x="' + (X(z.x) + 8).toFixed(1) + '" y="' + (Y(z.y) + 20).toFixed(1) +
             '" font-size="13" font-weight="700" fill="' + c + '">' + esc(z.name) + '</text>';
     }
-    o.push('<g><rect x="' + X(z.x).toFixed(1) + '" y="' + Y(z.y).toFixed(1) + '" width="' + zw.toFixed(1) + '" height="' + zh.toFixed(1) +
-      '" fill="' + c + '" fill-opacity="' + (dark ? .18 : .10) + '" stroke="' + c + '" stroke-width="1.5" stroke-dasharray="8 5"/>' + lbl + '</g>');
+    o.push('<rect x="' + X(z.x).toFixed(1) + '" y="' + Y(z.y).toFixed(1) + '" width="' + zw.toFixed(1) + '" height="' + zh.toFixed(1) +
+      '" fill="' + c + '" fill-opacity="' + (dark ? .18 : .10) + '" stroke="' + c + '" stroke-width="1.5" stroke-dasharray="8 5"/>');
+    zoneLabels.push(lbl);
   });
 
   // Door aprons (keep-clear hatch)
@@ -2284,6 +2290,8 @@ function planSVG(layout, opts) {
   layout.building.columns.forEach(function (c) {
     o.push('<rect x="' + X(c.x).toFixed(1) + '" y="' + Y(c.y).toFixed(1) + '" width="' + Math.max(4, c.w * k).toFixed(1) + '" height="' + Math.max(4, c.d * k).toFixed(1) + '" fill="' + wall + '"/>');
   });
+
+  o.push(zoneLabels.join(''));
 
   // Overall dimensions
   var dimY = Y(bb.y1) + 34, dimX = X(bb.x1) + 34;
