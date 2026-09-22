@@ -52,7 +52,19 @@ cuatro tablas grandes: Movements, Dashboard, Incoming y Project View.
 - Y la prueba tiene que ser la de la v12.05: **medir la x de cada columna con un
   filtro y con otro, y exigir que no se mueva**. Comparar CSS no vale.
 
-## 2. MOVEMENTS: LA CATEGORÍA ARRIBA, COMO EN EL DASHBOARD
+## 2. ⏸ APARCADO POR JOSE — MOVEMENTS: LA CATEGORÍA ARRIBA
+
+> **Jose, 2026-09-22, dos veces en el mismo mensaje:** *"olvida eso, o mejor
+> déjalo anotado para revisarlo bien cuando ya tengamos la app bien creada"* y
+> *"recuerda, ya no haremos esto ahora, lo revisaremos después para ver si es
+> buena idea o no, déjalo afuera por ahora."*
+>
+> **No se hace.** No es que se posponga por falta de tiempo: él quiere volver a
+> decidir SI es buena idea, con la app más asentada. El análisis se queda entero
+> porque servirá ese día, pero nadie lo empieza sin que él lo reabra.
+>
+> Y hay una razón técnica que lo apoya: esto depende del punto 1. Con las
+> columnas todavía bailando, esconder una no se puede medir.
 
 Jose: *"quiero hacer en Movements lo mismo que hicimos en Dashboard: seleccionar
 una categoría y que la columna de categoría desaparezca y la categoría aparezca
@@ -111,7 +123,26 @@ v12.06 el buscador mira en PO y PM, pero esas dos columnas **no se ven**: buscas
 "7788", sale una fila, y no hay nada en pantalla que diga por qué salió. Poner
 PO y PM es cerrar ese hueco, no sólo aprovechar el sitio.
 
-**Dos cosas que hay que decidir, y las dos se ven en su propia captura:**
+**✅ LAS DOS, DECIDIDAS POR JOSE EL 2026-09-22:**
+
+| Se propuso | Decidió |
+|---|---|
+| Dejar el ESTADO como grupo grande y la fecha como subtítulo dentro | **"Listo, me gusta la idea."** Se hace así. |
+| Las de fecha no fija, al grupo de su fecha de inicio | **No: van ARRIBA.** *"Los que no tienen fecha fija deben aparecer arriba, justo donde está ésta."* |
+
+**La segunda corrige mi propuesta, y tiene razón.** Yo iba a meter la entrega
+con ventana `2026-09-11 → 2026-10-09` entre las del 11 de septiembre, ordenada
+como si fuera de ese día. Lo que él pide es mejor para lo que se hace con esta
+pantalla: **lo que no tiene día fijo va primero, dentro de su grupo de estado.**
+Una entrega sin fecha cerrada es la que hay que llamar para confirmar, así que
+es la que tiene que verse sin buscarla — y enterrada entre las de fecha exacta
+se pierde. En su propia captura sale así, la primera de "Expected".
+
+Aplica a las tres formas de fecha blanda que ya distingue el código
+(`dateMode`): `window` (una ventana), `about` (aproximada) y `unknown` (sin
+fecha). Las tres arriba, y las de fecha exacta debajo, en orden de día.
+
+**Lo que queda por resolver:**
 
 - **Ya hay grupos, y son por ESTADO** (Overdue / Expected / No date yet /
   Arrived / Cancelled), ordenados por lo que hay que hacer con cada uno. Si la
@@ -167,7 +198,20 @@ debe.** Tres razones, en orden de peso:
 3. **El camino honesto ya existe y es reversible:** borrar (la papelera guarda
    30 días) y crear el correcto. Un cambio de tipo, en cambio, no se deshace.
 
-**Lo que sí hay que resolver, y es el trabajo de verdad de este punto:** el
+**✅ Y JOSE RESOLVIÓ EL PROBLEMA QUE YO SEÑALÉ, 2026-09-22:** *"había olvidado
+ese detalle. Entonces, así como sólo le dejamos al usuario reabrir el mismo tipo
+de movimiento que hizo, también le restringimos la cantidad de materiales que
+puede ingresar: como editará sólo un movimiento, entonces sólo será la
+información de ese material y movimiento. Si necesita cambiar algo más, que lo
+borre y lo haga de nuevo."*
+
+Es la misma regla aplicada dos veces, y por eso encaja: **un movimiento guardado
+es una fila, así que editarlo abre el formulario en modo de una fila.** Sin
+cambiar el tipo y sin poder añadir un segundo material ni una segunda locación.
+Lo que no cabe en esa fila no es una edición — es otro movimiento, y el camino
+para eso es borrar y rehacer, que la papelera guarda 30 días.
+
+**Lo que queda por resolver al escribirlo:** el
 formulario de Entry admite **varios materiales y varias locaciones a la vez**, y
 un movimiento guardado es **una sola fila**. Así que reabrirlo significa abrirlo
 en un modo restringido —un material, una locación, sin el botón de añadir otro—

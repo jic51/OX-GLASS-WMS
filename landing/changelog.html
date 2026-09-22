@@ -97,6 +97,27 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.09</span>
+      <span class="tag fix">Fix</span>
+      <h3>Every window is now the size of what is inside it</h3>
+      <p>Every window in the app was the same height — 82% of your screen —
+         whether it held four fields or twenty. A short one, like Add User, left
+         a huge empty space below the last field. A long one, like Edit
+         Movement, scrolled even on a big screen, because the limit had nothing
+         to do with the content.</p>
+      <p>One line caused both, and it had been written that way on purpose, so
+         that every window would match. The rule now is the one that actually
+         helps: <b>a window is as tall as its contents, and never taller than
+         your screen.</b> Add User went from 700 pixels to 277. Edit Movement
+         now opens complete, with no scrolling, on a normal screen.</p>
+      <p>Edit Movement is also as wide as the window the movement was created
+         in — it was 120 pixels narrower, which is why the same fields stacked
+         taller and had to be scrolled. A check now opens every window in the
+         app and measures it against its own contents, so no window can quietly
+         go back to filling the screen for no reason.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.08</span>
       <span class="tag fix">Fix</span>
       <h3>Your account menu opens in front, and the app behind it holds still</h3>

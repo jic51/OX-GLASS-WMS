@@ -550,11 +550,46 @@
        leaves the list exactly where it was. */
     html.modal-open{overflow:hidden}
     .app-inert{pointer-events:none}
-    /* height (not max-height): the box is ALWAYS this size, tied only to the
-       viewport — never shrinks for a short form, never grows for a long one.
-       Short content just leaves empty space at the bottom; long content scrolls
-       inside via overflow-y. Every .modal instance shares this one fixed size. */
-    .modal{--mpad:1.75rem;background:var(--card);border-radius:14px;padding:0 var(--mpad) var(--mpad);width:100%;max-width:min(640px,92vw);height:min(82vh,700px);overflow-y:auto;scrollbar-gutter:stable;box-shadow:0 12px 30px rgba(0,0,0,.25)}
+    /* ── LA REGLA DE JOSE, 2026-09-22 ───────────────────────────────────────
+       *"Toda ventana debe aparecer completa si la pantalla se lo permite, pero
+        completa significa que se vea todo el contenido. Si una ventana tiene
+        poco contenido (como Add User), entonces la ventana sólo debe tener el
+        tamaño necesario para mostrar el contenido, no ocupar toda la pantalla
+        porque sí."*
+
+       AQUÍ DECÍA `height` Y ERA A PROPÓSITO. El comentario anterior lo
+       defendía así: *"la caja es SIEMPRE de este tamaño, atada sólo a la
+       pantalla — nunca encoge para un formulario corto ni crece para uno
+       largo. El contenido corto deja espacio vacío abajo."* La idea era que
+       todas las ventanas midieran igual, y como idea se sostiene.
+
+       Lo que no se sostiene es el resultado, y Jose lo vio en dos sitios
+       distintos antes de dar con la causa: *"la ventana del Add User es muy
+       grande, no debe ser tan grande si lo que tiene dentro no es tanto"*
+       (2026-09-17) y *"la ventana de Edit es muy pequeña incluso cuando la
+       pantalla es grande, lo que hace que siempre haya una scroll bar
+       vertical"* (2026-09-22). Son la misma línea: con `height` fijo, las
+       VEINTE ventanas de la app miden el 82% de la pantalla — la que lleva
+       cuatro campos deja medio metro de vacío, y la que lleva veinte scrollea
+       igual porque el tope no depende de lo que haya dentro.
+
+       `max-height` es la regla entera en una palabra: crece con su contenido
+       hasta donde la pantalla aguanta, y ni un píxel más.
+
+       Y EL TOPE PASA A SER SÓLO LA PANTALLA, sin los 700px que lo acompañaban.
+       Ese número era el segundo techo y contradecía la primera mitad de la
+       regla —*"debe aparecer completa SI LA PANTALLA SE LO PERMITE"*—: el
+       formulario de Edit mide 762px, así que con un tope de 700 no se vería
+       entero ni en un monitor de dos metros. Medido: con 82vh en una pantalla
+       de 1200px de alto caben 984px, y ese formulario entra completo, que es
+       justo lo que Jose pidió. El 82% se queda porque una ventana tan alta como
+       la pantalla no deja ver que hay algo detrás ni dónde pulsar para cerrarla.
+
+       `overflow-y` sigue estando para lo que de verdad no quepa —en una pantalla
+       baja—, y `scrollbar-gutter:stable` también: reserva el carril para que un
+       formulario que crece, al añadir otro material, no dé un salto lateral
+       cuando aparezca la barra. */
+    .modal{--mpad:1.75rem;background:var(--card);border-radius:14px;padding:0 var(--mpad) var(--mpad);width:100%;max-width:min(640px,92vw);max-height:82vh;overflow-y:auto;scrollbar-gutter:stable;box-shadow:0 12px 30px rgba(0,0,0,.25)}
     /* Standardized size tiers (scale with viewport via min(), never grow past
        that from content) — every popup uses one of these three instead of an
        ad-hoc per-modal pixel value. Content still picks the tier that fits it
@@ -3561,8 +3596,16 @@
 </div>
 
 <!-- ══ EDIT MOVEMENT MODAL ════════════════════════════════════════════════════ -->
+<!-- modal-lg, LA MISMA CLASE QUE #moveOverlay, y eso es la mitad de la queja de
+     Jose del 2026-09-22: *"la ventana de Edit es muy pequeña incluso cuando la
+     pantalla es grande."* Lo era literalmente — .modal-md son 640px y la
+     ventana donde se CREÓ ese mismo movimiento usa .modal-lg, 760px. Los mismos
+     campos en 120px menos se apilan más alto, y por eso había que desplazar.
+     Dos formularios para el mismo objeto, con dos tamaños distintos.
+     Está previsto que esta ventana desaparezca y que Edit reabra la de Entry o
+     Exit (ver el backlog); mientras tanto, al menos miden lo mismo. -->
 <div class="overlay" id="editMovOverlay">
-  <div class="modal modal-md">
+  <div class="modal modal-lg">
     <div class="mhdr">
       <h3>✏️ Edit Movement</h3>
       <span id="editMovRowTag" style="font-size:.72rem;background:var(--border);padding:2px 10px;border-radius:10px;color:var(--muted);flex-shrink:0"></span>
@@ -4181,7 +4224,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.08';
+var APP_VERSION = '12.09';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -4193,7 +4236,7 @@ var APP_VERSION = '12.08';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '075ec9e9';
+var APP_BUILD = '568d37af';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
