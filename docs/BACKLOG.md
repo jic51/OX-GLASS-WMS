@@ -5,6 +5,27 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+# ══ DECISIONES DE JOSE — 2026-09-22 ══
+
+Contestadas de una vez, todas. **Cerradas: no se vuelven a proponer.** Si alguna
+se reabre tiene que ser porque Jose la reabra, no porque a alguien le parezca
+mejor idea.
+
+| Se le preguntó | Decidió |
+|---|---|
+| ¿Borro las páginas viejas de acopio.net? | **Dejarlas.** |
+| El enlace a la app en el correo de aviso | **Quitarlo.** Hecho en v12.07. |
+| ¿Mayúsculas a los comentarios al guardar? | **No. Dejar todo como está** — ni al guardar ni al pintar. |
+| El nombre repetido debajo del material | **Dejarlo. "Eso no es un problema."** |
+| Los nombres viejos del Incoming en minúsculas | **Dejarlos.** *"Yo los corrijo."* |
+| El simulacro de restauración | **Esta semana, si se puede.** Él avisa. |
+
+Dos de ésas —el nombre repetido y el formato de los comentarios— tenían arreglo
+escrito y medido abajo. **Se quedan escritas a propósito**, marcadas como
+descartadas: el análisis sirve si algún día cambia de opinión, y borrarlo
+significaría volver a hacerlo. Lo que NO puede pasar es que alguien lea el
+"arreglo propuesto" y lo aplique.
+
 # ══ ANOTADO EL 2026-09-22 (tarde) — LA COLUMNA LAST NOTE Y EL NOMBRE ══
 
 Jose, con tres capturas del Stock Dashboard: *"muestran la diferencia y la
@@ -15,7 +36,12 @@ de 2 en 2."*
 Son **cuatro cosas distintas** y hay que separarlas porque se arreglan en sitios
 distintos. Las cuatro están confirmadas en el código, no supuestas.
 
-### 1. EL NOMBRE SE ESCRIBE DOS VECES — `Index_v3_fixed.html:6903`
+### 1. ~~EL NOMBRE SE ESCRIBE DOS VECES~~ — ❌ DESCARTADO POR JOSE (2026-09-22)
+
+> **"Deja el nombre repetido, eso no es un problema."** No se toca. Lo de abajo
+> queda como el análisis de por qué pasa, por si algún día se reabre.
+
+`Index_v3_fixed.html:6903`
 
 ```js
 name: '<td class="sc-name"><strong>'+_he(s.name)+'</strong>'+
@@ -40,7 +66,11 @@ se nombran por la obra— sale el mismo texto dos veces:
 comparar en crudo: `"44 NORTH"` contra `"44 north"` tiene que contar como igual,
 y es el mismo tropiezo del aviso de duplicado del Incoming.
 
-### 2. LOS COMENTARIOS SALEN CON EL FORMATO QUE SE TECLEÓ
+### 2. ~~LOS COMENTARIOS SALEN CON EL FORMATO QUE SE TECLEÓ~~ — ❌ DESCARTADO POR JOSE (2026-09-22)
+
+> Preguntado entre mayúsculas al guardar y pintar la columna pareja, contestó
+> **"déjalos así como está"**: ninguna de las dos. Ni se normaliza al guardar ni
+> se repinta la columna. El análisis se queda por si cambia de opinión.
 
 `LAST NOTE` es el campo `comments` del último movimiento que tuvo comentario
 (`Index_v3_fixed.html:6773`, "last wins"). Y `comments` se guarda con
