@@ -664,12 +664,31 @@ contradiciéndose. O sea: no es un despiste suelto, es **una decisión tomada pa
 la mitad de un par**. Es exactamente la forma del problema que él describe, y por
 eso el arreglo no es "igualar esas dos" sino tener una regla.
 
-**LA PREGUNTA QUE HAY QUE CONTESTAR PRIMERO, y es de Jose, no técnica:** ¿la
-etiqueta de estado es *el mismo objeto* leído en dos sitios (entonces las dos
-crecen en el popup y ninguna crece en la tabla), o el popup tiene su propia
-escala porque se lee de pie con el teléfono en la mano (entonces TODO lo del
-popup crece, no una etiqueta)? Las dos respuestas son defendibles; lo que no se
-sostiene es la mitad.
+**✅ CONTESTADA POR JOSE — 2026-09-22.** Se le hizo en dos preguntas separadas,
+porque la primera vez estaban mezcladas y no se entendió:
+
+| Pregunta | Respuesta |
+|---|---|
+| ¿El popup debe tener letra más grande que el resto de la app? | **No. Igual que las tablas.** |
+| ¿`PENDING` y `ARRIVED` deben medir lo mismo entre ellas? | **Sí, las dos iguales.** |
+
+**Qué significa eso para el código, exactamente:**
+
+1. Se BORRA el override `#morningPopupBody .inc-status-arrived{font-size:.82rem;
+   padding:.18rem .7rem}`. No se le añade el gemelo para `pending` — que era la
+   otra salida— porque la primera respuesta dice que el popup no tiene escala
+   propia.
+2. La etiqueta de estado pasa a ser **un solo objeto**, del mismo tamaño en el
+   popup y en la tabla, cambiando sólo el color.
+3. Y hay que revisar si algo MÁS del popup lleva un tamaño propio. Si aparece,
+   se quita por la misma razón, no se discute otra vez.
+
+**Ojo al borrarlo:** ese override nació de una petición suya de hace meses —*"no
+quiero más grande el arrived aquí en incomings, sino más grande el arrived en el
+popup"*—, y su frase está en el comentario junto a la regla. La decisión de hoy
+la sustituye, pero el comentario hay que reescribirlo diciendo eso, no borrarlo
+a secas: dentro de seis meses, "por qué desapareció esto" tiene que tener
+respuesta.
 
 ### Lo medido, para que la revisión no empiece a ciegas
 
