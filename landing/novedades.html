@@ -98,6 +98,35 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.12</span>
+      <span class="tag fix">Arreglado</span>
+      <h3>Enseñar una columna más ya no deja el nombre del material sin sitio</h3>
+      <p>Enseñabas una columna de más en <b>Movements</b> —Supplier, por
+         ejemplo— y el nombre del material se quedaba sin apenas ancho: se
+         dibujaba una letra por renglón y las filas pasaban de 83 píxeles de
+         alto a 428. Bastaba con enseñar UNA columna, y estaba ahí desde que las
+         columnas tienen ancho fijo.</p>
+      <p>La culpa era de un número escrito a mano. La tabla tenía un mínimo de
+         1.300 píxeles, pero los anchos de las dieciséis columnas suman 1.748.
+         Un número escrito en la hoja de estilos no puede saber cuántas columnas
+         has decidido ver, y eso lo elige cada persona con el ojo de
+         <b>⚙ Columns</b>. Con Supplier enseñada, los anchos declarados sumaban
+         1.296 y al material le quedaban <b>cuatro píxeles</b>.</p>
+      <p>Ahora el ancho de cada columna vive al lado de la columna, y no en un
+         bloque de estilos aparte, y la tabla calcula su propio mínimo cada vez
+         que se dibuja: los anchos que de verdad están en pantalla, más un suelo
+         para el nombre del material. El suelo también está medido — 192
+         píxeles, que es lo que necesita la insignia de categoría más larga para
+         no salirse de su celda. Por debajo de eso la tabla se desplaza de lado,
+         que es lo correcto: dieciséis columnas no caben en una pantalla
+         estrecha, y una barra es mejor que un texto que no se puede leer.</p>
+      <p>Una comprobación mide ahora el ancho del material con dos tamaños de
+         ventana, en cuatro combinaciones de columnas y por los dos caminos que
+         dibujan la cabecera. Devolver el número fijo la hace fallar diecisiete
+         veces.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.11</span>
       <span class="tag fix">Arreglado</span>
       <h3>La tabla de movimientos deja de saltar al cambiar el filtro</h3>

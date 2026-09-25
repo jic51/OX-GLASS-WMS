@@ -11,7 +11,52 @@ here once they ship (the commit message is the record of what changed and why).
 > respondas las preguntas."* Esto es eso. Lo de aquí está **medido**, no
 > supuesto; lo que es opinión mía va dicho como opinión.
 
-## A. REGRESIÓN DE LA v12.11 — en modo edición el nombre del material se queda en 0px
+## A. ✅ ARREGLADO EN LA v12.12 — y era MÁS GRANDE de lo que dice esta entrada
+
+> **Lo de abajo se quedó corto, y lo encontró Jose en producción el 2026-09-25**
+> con dos ventanas lado a lado: la copia de OX y la de desarrollo, **misma
+> versión y misma huella**, una bien y la otra con el nombre en vertical.
+>
+> Yo escribí que el fallo aparecía **al abrir el editor**. **Falso: aparece en
+> uso normal**, en cuanto alguien enseña columnas con el ojo de "⚙ Columns".
+> Jose tenía **Supplier** enseñada en su copia de OX y no en la de desarrollo —
+> las preferencias de columnas viven en el navegador, y eran dos perfiles de
+> Chrome distintos. Ésa era toda la diferencia.
+>
+> Medido: los anchos declarados con Supplier suman **1296px** contra un mínimo
+> de tabla de **1300**. Al material le quedaban **4px**. Exactamente lo de su
+> captura.
+>
+> | Ventana | Columnas | Material | Alto de fila |
+> |---|---|---|---|
+> | 960 | de fábrica | 124px | 83px |
+> | 960 | **+ Supplier** | **4px** | **428px** |
+> | 1600 | + Supplier + Raw Loc | **0px** | **428px** |
+>
+> **El arreglo (v12.12)** no es ninguna de las cuatro salidas de abajo, porque
+> ninguna atacaba la causa: los anchos vivían en el CSS y la lista de columnas
+> en el JavaScript, dos listas que tenían que decir lo mismo sin nada que lo
+> obligara, y encima el mínimo era un número escrito a mano. Ahora el ancho vive
+> en `MOV_COLS`, al lado de su columna, y el mínimo se recalcula en cada
+> dibujado: `suma de los anchos que SE VEN + _MOV_MIN_WHAT`.
+>
+> **`_MOV_MIN_WHAT = 192` también está medido**, y de paso destapó otra cosa: a
+> 184px —lo que le tocaba al material en la v12.11 con las columnas de fábrica
+> en una pantalla de 1600— había **15 celdas desbordadas**, la insignia
+> `IGU (ISOLATED GLASS UNIT)` saliéndose 3px de su celda. `test-columnas.js` no
+> lo veía porque medía los desbordes **después** de esconder una columna, o sea
+> en el estado más cómodo. Corregido: ahora mide en el más apretado.
+>
+> **Dependencia que queda anotada:** ese 192 lo fija el nombre de categoría más
+> largo, que es dato del cliente. Un cliente con una categoría más larga volvería
+> a desbordar. Lo arregla de verdad el nombre corto de categoría del punto C;
+> cuando exista, hay que volver a **medir** este suelo, no adivinarlo.
+>
+> **LO QUE SIGUE ABIERTO de esta entrada:** el trato de las columnas
+> **bloqueadas** en el editor (el asa `⋮⋮` que ofrece mover lo que no se mueve,
+> el fondo, el candado con su explicación). Eso no se ha tocado.
+
+### Diagnóstico original (2026-09-22) — incompleto, se conserva por lo que enseña
 
 **Es un fallo nuevo, y lo introduje yo ayer.** Jose lo grabó (vídeo
 `Recording_2026-09-22_141433.mov`): al pulsar **⚙ Columns**, la columna

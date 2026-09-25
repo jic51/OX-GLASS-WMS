@@ -1326,27 +1326,36 @@
        LOS NÚMEROS SON MEDIDOS, no elegidos: se dibujó la tabla con datos del
        almacén de Jose bajo siete filtros distintos y se tomó el ancho máximo que
        alcanzaba cada columna. Ver tools/test-columnas.js, que vuelve a medir y
-       falla si alguna columna se mueve al cambiar de filtro. */
-    #tableContainer table{table-layout:fixed;width:100%;min-width:1300px}
-    /* 112 y 160 SON MEDIDOS, y los dos se corrigieron al alza porque la prueba
-       encontró que se salían: la insignia `⇄ TRANSFER` no cabía en 100px, y el
-       correo más largo del almacén de Jose —joseisrael5101@gmail.com— mide
-       135px, que con el relleno de la celda no entra en 140. */
-    #tableContainer th.mc-when{width:112px}
-    #tableContainer th.mc-qty{width:58px}
-    #tableContainer th.mc-unit{width:58px}
-    #tableContainer th.mc-po{width:86px}
-    #tableContainer th.mc-locFlow{width:150px}
-    #tableContainer th.mc-rawLoc{width:120px}
-    #tableContainer th.mc-gc{width:110px}
-    #tableContainer th.mc-project{width:140px}
-    #tableContainer th.mc-supplier{width:120px}
-    #tableContainer th.mc-resp{width:110px}
-    #tableContainer th.mc-comment{width:150px}
-    #tableContainer th.mc-pm{width:110px}
-    #tableContainer th.mc-sysDate{width:112px}
-    #tableContainer th.mc-user{width:160px}
-    #tableContainer th.mc-doc{width:76px}
+       falla si alguna columna se mueve al cambiar de filtro.
+
+       ── EL MÍNIMO DE LA TABLA SE CALCULA, NO SE ESCRIBE (v12.12) ────────────
+
+       Aquí había `min-width:1300px` —un número escrito a mano— y los anchos de
+       cada columna estaban en este bloque de CSS. Las dos cosas eran un fallo,
+       y Jose lo encontró en producción tres días después: en su copia de OX
+       tenía ENSEÑADA la columna Supplier, y con ella la suma de los anchos
+       declarados daba 1296px contra un mínimo de 1300. Al material —la única
+       columna elástica— le quedaban **CUATRO PÍXELES**, así que el nombre se
+       dibujaba UNA LETRA POR RENGLÓN y las filas pasaban de 83px a 428px.
+
+       Un número fijo no puede saber cuántas columnas hay a la vista, y eso lo
+       decide cada persona con el ojo de "⚙ Columns". Así que ahora:
+
+         · LOS ANCHOS VIVEN EN `MOV_COLS`, al lado de la columna a la que
+           pertenecen, y se emiten en el `<th>`. Un solo sitio. Antes estaban
+           aquí y la lista de columnas estaba en el JavaScript, así que añadir
+           una columna en un sitio y olvidar el otro daba exactamente este
+           fallo, en silencio.
+         · EL MÍNIMO DE LA TABLA SE RECALCULA EN CADA DIBUJADO:
+
+               mínimo = suma de los anchos que SE VEN + _MOV_MIN_WHAT
+
+       Con eso el material nunca baja de su mínimo: ni enseñando las dieciséis
+       columnas, ni con el editor abierto, ni en la ventana de un teléfono.
+       Cuando no cabe, la tabla se desplaza de lado — que es lo correcto:
+       dieciséis columnas no caben en 960px, y una barra horizontal es mejor que
+       un texto que no se puede leer. */
+    #tableContainer table{table-layout:fixed;width:100%}
     /* Y lo que no cabe SE PARTE, no se recorta. Es la misma regla que Jose fijó
        para la tira de reservas: el final de un nombre es donde están la letra y
        el número que lo distinguen, así que esconderlo con puntos suspensivos es
@@ -4297,7 +4306,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.11';
+var APP_VERSION = '12.12';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -4309,7 +4318,7 @@ var APP_VERSION = '12.11';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '09961335';
+var APP_BUILD = '6930a7eb';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -4944,24 +4953,53 @@ var STOCK_COLS = [
 //
 // Las dos siguen siendo `lock:true`: no se pueden esconder. Un movimiento sin
 // tipo ni fecha, o sin nombre, no es una fila que sirva para nada.
+/* `w` es el ancho en píxeles, y está AQUÍ y no en el CSS a propósito: es dato de
+ * la columna, como su nombre o su candado. Mientras vivió en un bloque de CSS
+ * aparte, nada obligaba a que las dos listas dijeran lo mismo, y de ahí salió el
+ * fallo de la v12.11 —el mínimo de la tabla era un número escrito a mano que no
+ * sabía cuántas columnas había a la vista—. Ahora la suma se calcula de aquí.
+ *
+ * `what` es la ÚNICA sin `w`: es la elástica, se queda con lo que sobre, y su
+ * suelo es `_MOV_MIN_WHAT`.
+ *
+ * LOS NÚMEROS SON MEDIDOS, no elegidos. 112 y 160 se corrigieron al alza porque
+ * la prueba encontró que se salían: la insignia `⇄ TRANSFER` no cabía en 100px,
+ * y el correo más largo del almacén de Jose mide 135px, que con el relleno de la
+ * celda no entra en 140. */
 var MOV_COLS = [
-  { key:'when',     def:'Type / Date',     lock:true  },
-  { key:'what',     def:'Category / Name', lock:true  },
-  { key:'qty',      def:'Qty',         lock:true  },
-  { key:'unit',     def:'Unit',        lock:false },
-  { key:'po',       def:'PO#',         lock:false },
-  { key:'locFlow',  def:'Src→Dest',    lock:false },
-  { key:'rawLoc',   def:'Raw Loc',     lock:false },
-  { key:'gc',       def:'GC',          lock:false },
-  { key:'project',  def:'Project',     lock:false },
-  { key:'supplier', def:'Supplier',    lock:false },
-  { key:'resp',     def:'Received By', lock:false },
-  { key:'comment',  def:'Comments',    lock:false },
-  { key:'pm',       def:'PM',          lock:false },
-  { key:'sysDate',  def:'Sys Date',    lock:false },
-  { key:'user',     def:'User',        lock:false },
-  { key:'doc',      def:'Doc',         lock:false }
+  { key:'when',     def:'Type / Date',     lock:true,  w:112 },
+  { key:'what',     def:'Category / Name', lock:true          },  // la elástica
+  { key:'qty',      def:'Qty',         lock:true,  w:58  },
+  { key:'unit',     def:'Unit',        lock:false, w:58  },
+  { key:'po',       def:'PO#',         lock:false, w:86  },
+  { key:'locFlow',  def:'Src→Dest',    lock:false, w:150 },
+  { key:'rawLoc',   def:'Raw Loc',     lock:false, w:120 },
+  { key:'gc',       def:'GC',          lock:false, w:110 },
+  { key:'project',  def:'Project',     lock:false, w:140 },
+  { key:'supplier', def:'Supplier',    lock:false, w:120 },
+  { key:'resp',     def:'Received By', lock:false, w:110 },
+  { key:'comment',  def:'Comments',    lock:false, w:150 },
+  { key:'pm',       def:'PM',          lock:false, w:110 },
+  { key:'sysDate',  def:'Sys Date',    lock:false, w:112 },
+  { key:'user',     def:'User',        lock:false, w:160 },
+  { key:'doc',      def:'Doc',         lock:false, w:76  }
 ];
+
+/* EL SUELO DEL MATERIAL, Y ESTÁ MEDIDO.
+ *
+ * 187px es lo que mide la insignia de categoría más larga del almacén de Jose
+ * —`IGU (ISOLATED GLASS UNIT)`— con su relleno. Es una píldora que no se parte,
+ * así que por debajo de eso se sale de su celda: medidos 15 desbordes de 3px
+ * con la columna a 184px, que es justo lo que le tocaba en la v12.11 con las
+ * columnas de fábrica en una pantalla de 1600. 192 deja cinco píxeles de margen
+ * para que la misma letra dibujada en otra máquina no lo tire.
+ *
+ * OJO A LA DEPENDENCIA: este número lo fija el nombre de categoría MÁS LARGO, y
+ * eso es dato del cliente, no nuestro. Un cliente con una categoría más larga
+ * volvería a desbordar. La solución de verdad es el nombre corto de categoría
+ * que Jose aprobó el 2026-09-22 (ver BACKLOG, punto C); cuando exista, este
+ * suelo puede bajar y hay que volver a medirlo, no adivinarlo. */
+var _MOV_MIN_WHAT = 192;
 
 var STOCK_COL_TIPS = {
   levels:       'Everything this material is accounted for as today, in one bar: ' +
@@ -5018,6 +5056,10 @@ var COL_TABLES = {
     // tocaba (100px medidos, para nombres de veinte letras) por culpa de una
     // columna que sólo lleva dos botones.
     tail: function(){ return _movCanAct() ? '<th style="width:44px"></th>' : ''; },
+    // El suelo de la columna elástica. Su presencia es lo que dice
+    // "esta tabla reparte en fijo y calcula su mínimo"; Stock no lo declara
+    // porque reparte por contenido y no tiene columna elástica.
+    minWhat: _MOV_MIN_WHAT,
     refresh: function(){ renderMovements(); }                             // rebuilds its own header
   }
 };
@@ -5233,9 +5275,11 @@ function _colHeadRowHtml(t){
     if (!c) return;
     if (hidden[key] && !editing) return;           // gone entirely until edit mode
 
+    var anchoAttr = c.w ? ' style="width:' + c.w + 'px"' : '';
+
     if (editing){
       html += '<th class="' + cfg.prefix + key + (hidden[key] ? ' col-off' : '') + ' col-edit" ' +
-              'draggable="true" data-col="' + key + '">' +
+              anchoAttr + ' draggable="true" data-col="' + key + '">' +
         '<span class="col-drag" title="Drag to move">⋮⋮</span>' +
         (isAdmin
           ? '<input class="col-rename" data-col="' + key + '" value="' + _escAttr(_colLabel(t, key)) + '" ' +
@@ -5248,7 +5292,7 @@ function _colHeadRowHtml(t){
       '</th>';
     } else {
       var tip = cfg.tips[key];
-      html += '<th class="' + cfg.prefix + key + (tip ? ' tip' : '') + '"' +
+      html += '<th class="' + cfg.prefix + key + (tip ? ' tip' : '') + '"' + anchoAttr +
               (tip ? ' data-tip="' + _escAttr(tip) + '"' : '') + '>' +
               _he(_colLabel(t, key)) + '</th>';
     }
@@ -5256,10 +5300,40 @@ function _colHeadRowHtml(t){
   return html + cfg.tail();
 }
 
+/* El mínimo de la tabla, calculado de la cabecera que se acaba de construir.
+ *
+ * Se suman los `width:Npx` del HTML en lugar de recorrer otra vez MOV_COLS, y
+ * es a propósito: así entran también los anchos de la casilla de selección y de
+ * la columna de acciones, que los pone `lead()`/`tail()` y no están en la lista
+ * de columnas. Recorrer la lista los habría dejado fuera —76px— y el material
+ * habría vuelto a quedarse corto, que es EXACTAMENTE la forma del fallo que
+ * esto arregla: dos listas que tienen que decir lo mismo y nada que lo obligue. */
+function _anchoDeclarado(html){
+  var suma = 0, re = /width:(\d+)px/g, m;
+  while ((m = re.exec(html))) suma += Number(m[1]);
+  return suma;
+}
+
+/* Se llama desde LOS DOS sitios que construyen la cabecera: `renderColHead`, y
+ * `renderMovements`, que se dibuja la tabla entera de una pieza y por eso no
+ * pasa por el otro. Que sean dos caminos es justo la forma de fallo que más
+ * veces ha aparecido en este proyecto —una conducta escrita para un camino y
+ * nunca enchufada en los demás—, así que la regla vive en una sola función y
+ * `tools/test-columnas.js` mide los dos caminos por separado. */
+function _fijarMinTabla(t, headHtml){
+  var cfg = _colCfg(t);
+  if (!cfg.minWhat) return;                 // Stock reparte por contenido
+  var row = document.getElementById(cfg.head);
+  var tabla = row && row.closest('table');
+  if (tabla) tabla.style.minWidth = (_anchoDeclarado(headHtml) + cfg.minWhat) + 'px';
+}
+
 function renderColHead(t){
   var row = document.getElementById(_colCfg(t).head);
   if (!row) return;
-  row.innerHTML = _colHeadRowHtml(t);
+  var html = _colHeadRowHtml(t);
+  row.innerHTML = html;
+  _fijarMinTabla(t, html);
   if (_colEdit[t]) _wireColEdit(t);
 }
 
@@ -7503,8 +7577,14 @@ function renderMovements(){
     : '';
 
   var tc = document.getElementById('tableContainer');
-  tc.innerHTML = '<table><thead><tr id="movHeadRow">' + _colHeadRowHtml('mov') + '</tr></thead>' +
+  var headHtml = _colHeadRowHtml('mov');
+  tc.innerHTML = '<table><thead><tr id="movHeadRow">' + headHtml + '</tr></thead>' +
                  '<tbody>' + rows + '</tbody>' + foot + '</table>' + loadMoreBtn;
+
+  // El mínimo de la tabla depende de QUÉ columnas se están viendo, y eso cambia
+  // en cada dibujado: con el ojo de "⚙ Columns", con el editor abierto (que las
+  // enseña todas) y con el filtro de categoría (que esconde la suya).
+  _fijarMinTabla('mov', headHtml);
 
   // The header is rebuilt with the table, so its drag/hide/rename handlers have
   // to be attached again each time.

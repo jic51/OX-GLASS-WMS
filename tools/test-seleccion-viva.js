@@ -137,9 +137,19 @@ function mundo(nMovs){
     "<input class=\"mov-select-cb\" data-movid=\"' + m.movId + '\"></td></tr>'; }).join('');");
   trozo = cortar(trozo, 'var foot = total',       '\n  var loadMoreBtn', "var foot = '';\n  var loadMoreBtn");
   trozo = cortar(trozo, 'var loadMoreBtn',        '\n\n  var tc',        "var loadMoreBtn = '';\n\n  var tc");
-  trozo = trozo
-    .replace("if (_colEdit.mov) _wireColEdit('mov');", '')
-    .replace(/_colHeadRowHtml\('mov'\)/g, "''");
+  /* Lo de la cabecera se quita porque aquí no se mide la cabecera — pero se
+   * quita EXIGIENDO que esté. Un `.replace` que no encuentra su marca no avisa:
+   * devuelve el texto igual, y la caja revienta más tarde por otra cosa o, peor,
+   * pasa en verde midiendo algo distinto de lo que dice medir. */
+  function quitar(txt, marca, por){
+    if (txt.indexOf(marca) === -1) throw new Error('renderMovements cambió: no está "' + marca + '"');
+    return txt.split(marca).join(por === undefined ? '' : por);
+  }
+  trozo = quitar(trozo, "if (_colEdit.mov) _wireColEdit('mov');");
+  trozo = quitar(trozo, "_colHeadRowHtml('mov')", "''");
+  // El mínimo de la tabla es reparto de anchos, y eso sólo existe con un
+  // navegador delante. Lo mide tools/test-columnas.js, que abre uno.
+  trozo = quitar(trozo, "_fijarMinTabla('mov', headHtml);");
 
   const caja = A.montar(ctx, HTML, ['_syncMovSelectAll', '_updateMovActionBar',
                                     '_selectedMovements', '_movCanAct',

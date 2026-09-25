@@ -208,17 +208,25 @@ window.__DATA=${JSON.stringify(DATA)};
   await page.waitForTimeout(250);
 
   const css = (html.match(/<style>([\s\S]*?)<\/style>/g) || []).join('\n');
-  const declarados = (css.match(/#tableContainer th\.mc-([a-zA-Z]+)\{width:/g) || [])
-    .map(s => /mc-([a-zA-Z]+)/.exec(s)[1]);
-  const MOV_COLS = (/var MOV_COLS = \[([\s\S]*?)\];/.exec(html) || [])[1] || '';
-  const todasLasCols = (MOV_COLS.match(/key:'([a-zA-Z]+)'/g) || []).map(s => /'([a-zA-Z]+)'/.exec(s)[1]);
-  const sinAncho = todasLasCols.filter(k => declarados.indexOf(k) === -1);
+  /* Los anchos se leen de MOV_COLS, que desde la v12.12 es el único sitio donde
+   * viven. Antes esta prueba los buscaba en el CSS — y eso era parte del
+   * problema: había DOS listas que tenían que decir lo mismo (las columnas en el
+   * JavaScript, sus anchos en el CSS) y nada que lo obligara. */
+  const MOV_COLS = (/var MOV_COLS = \[([\s\S]*?)\n\];/.exec(html) || [])[1] || '';
+  const filas = MOV_COLS.split('\n').filter(l => /key:'/.test(l));
+  const todasLasCols = filas.map(l => /key:'([a-zA-Z]+)'/.exec(l)[1]);
+  const sinAncho = filas.filter(l => !/\bw:\s*\d+/.test(l))
+                        .map(l => /key:'([a-zA-Z]+)'/.exec(l)[1]);
 
   check('la tabla reparte por reglas y no por contenido',
         /#tableContainer table\{[^}]*table-layout:fixed/.test(css));
+  check('se leyeron las dieciséis columnas de Movements',
+        todasLasCols.length === 16, todasLasCols.length);
   check('hay exactamente UNA columna sin ancho declarado', sinAncho.length === 1, sinAncho);
   check('...y es la del material, que es la que más varía y más se lee',
         sinAncho[0] === 'what', sinAncho);
+  check('ningún ancho quedó suelto en el CSS, donde nadie lo sumaría',
+        !/#tableContainer th\.mc-[a-zA-Z]+\{width:/.test(css));
 
   const anchos = await page.evaluate(() => window.__leerCols());
   check('la columna de acciones también lleva ancho — si no, se reparte el ' +
@@ -254,6 +262,19 @@ window.__DATA=${JSON.stringify(DATA)};
 
   console.log('\n═══ 4. Nada se sale de su columna ═══\n');
 
+  /* EL ESTADO MÁS APRETADO, Y ESO ES EL ARREGLO DE ESTA COMPROBACIÓN.
+   *
+   * Antes esta sección medía tal cual quedaba la tabla al terminar la sección 3
+   * — o sea CON UNA COLUMNA ESCONDIDA, que le regala 86px al material. Medía el
+   * caso cómodo y daba verde. Con las columnas de fábrica había 15 celdas
+   * desbordadas y esta prueba no las veía. Es el mismo fallo de siempre: la
+   * prueba miraba donde no dolía. */
+  await page.evaluate(() => {
+    localStorage.removeItem(_colCfg('mov').hiddenKey);   // vuelta a las de fábrica
+    renderMovements();
+  });
+  await page.waitForTimeout(250);
+
   /* EL COMENTARIO ES LA EXCEPCIÓN, y ya lo era antes de esto: se recorta con
    * puntos suspensivos y lleva el texto entero en la ayuda al pasar el ratón.
    * Es texto libre de una persona y puede tener doscientas palabras; darle
@@ -281,6 +302,117 @@ window.__DATA=${JSON.stringify(DATA)};
   });
   check('el comentario, que sí se recorta, conserva su ayuda con el texto entero',
         comentario && comentario.recorta && comentario.ayuda, comentario);
+
+  /* ══════════════════════════════════════════════════════════════════════════
+   * 5. EL MATERIAL NUNCA SE QUEDA SIN SITIO — el fallo que Jose fotografió
+   *
+   * La v12.11 puso `min-width:1300px` en la tabla, un número escrito a mano. La
+   * suma de los anchos declarados de las DIECISÉIS columnas es 1748. En cuanto
+   * alguien enseñaba columnas con el ojo de "⚙ Columns", la suma pasaba de
+   * 1300 y al material —la única elástica— le quedaba lo que sobrara, que era
+   * NADA. Medido en la copia de OX de Jose: con Supplier enseñada, 4px de
+   * ancho y filas de 428px de alto, el nombre dibujado una letra por renglón.
+   *
+   * Y le pasaba en su trabajo, no en un caso raro: le bastó ENSEÑAR UNA COLUMNA.
+   *
+   * Esto lo mide en los cuatro estados que importan, a dos anchos de ventana, y
+   * por los DOS caminos que construyen la cabecera: `renderMovements`, que se
+   * dibuja la tabla entera de una pieza, y `renderColHead`. Que sean dos es la
+   * forma de fallo más repetida de este proyecto —una conducta enchufada en un
+   * camino y no en los otros—, así que se comprueban por separado.
+   * ══════════════════════════════════════════════════════════════════════════ */
+  console.log('\n═══ 5. El material nunca se queda sin sitio ═══\n');
+
+  const SUELO = Number((/var _MOV_MIN_WHAT = (\d+)/.exec(html) || [])[1] || 0);
+  check('el suelo del material está declarado y es un número creíble',
+        SUELO >= 150 && SUELO <= 400, SUELO);
+
+  const ESTADOS = [
+    ['de fábrica',            []],
+    ['+ Supplier (lo de Jose)', ['supplier']],
+    ['+ las cinco escondidas', ['supplier', 'rawLoc', 'gc', 'pm', 'sysDate']]
+  ];
+
+  for (const W of [960, 1600]) {
+    const p = await browser.newPage({ viewport: { width: W, height: 900 } });
+    p.on('pageerror', e => errores.push(e.message));
+    await p.goto('file://' + pagina());
+    await p.waitForTimeout(800);
+    await p.evaluate(() => showTab('movements', 'btn-movements'));
+    await p.waitForTimeout(300);
+
+    for (const [nombre, mostrar] of ESTADOS) {
+      await p.evaluate((m) => {
+        // Por el camino de la persona: la lista de escondidas de su navegador.
+        const l = _colHidden('mov').filter(k => m.indexOf(k) === -1);
+        localStorage.setItem(_colCfg('mov').hiddenKey, JSON.stringify(l));
+        renderMovements();
+      }, mostrar);
+      await p.waitForTimeout(220);
+      const r = await p.evaluate(() => {
+        const th = document.querySelector('#movHeadRow th.mc-what');
+        let alto = 0;
+        document.querySelectorAll('#tableContainer tbody tr').forEach(tr => {
+          const h = tr.getBoundingClientRect().height; if (h > alto) alto = h;
+        });
+        return { w: th ? Math.round(th.getBoundingClientRect().width) : -1, alto: Math.round(alto) };
+      });
+      check('ventana ' + W + ', ' + nombre + ': el material conserva su sitio',
+            r.w >= SUELO, r);
+      /* El alto de fila es la otra cara de lo mismo y es lo que se VE: cuando la
+       * columna se estruja, el texto se pone vertical y la fila se dispara a
+       * 428px. Medirlo aparte hace que la prueba falle por el síntoma que Jose
+       * fotografió, no sólo por el número que lo causa. */
+      check('ventana ' + W + ', ' + nombre + ': las filas no se disparan de alto',
+            r.alto > 0 && r.alto < 140, r);
+    }
+
+    // Y con el editor abierto, que es donde se ven las dieciséis a la vez.
+    await p.evaluate(() => {
+      localStorage.removeItem(_colCfg('mov').hiddenKey);
+      renderMovements();
+      toggleColEdit('mov');
+    });
+    await p.waitForTimeout(350);
+    const ed = await p.evaluate(() => {
+      const th = document.querySelector('#movHeadRow th.mc-what');
+      let alto = 0;
+      document.querySelectorAll('#tableContainer tbody tr').forEach(tr => {
+        const h = tr.getBoundingClientRect().height; if (h > alto) alto = h;
+      });
+      return { w: th ? Math.round(th.getBoundingClientRect().width) : -1, alto: Math.round(alto),
+               cols: document.querySelectorAll('#movHeadRow th').length };
+    });
+    check('ventana ' + W + ', editor abierto: se ven las dieciséis columnas',
+          ed.cols >= 18, ed.cols);          // 16 + casilla + acciones
+    check('ventana ' + W + ', editor abierto: el material conserva su sitio',
+          ed.w >= SUELO, ed);
+    check('ventana ' + W + ', editor abierto: las filas no se disparan de alto',
+          ed.alto > 0 && ed.alto < 140, ed);
+
+    // El OTRO camino: renderColHead, que redibuja sólo la cabecera.
+    await p.evaluate(() => { toggleColEdit('mov'); renderColHead('mov'); });
+    await p.waitForTimeout(250);
+    const rc = await p.evaluate(() => {
+      const th = document.querySelector('#movHeadRow th.mc-what');
+      const tb = document.querySelector('#tableContainer table');
+      return { w: th ? Math.round(th.getBoundingClientRect().width) : -1,
+               min: tb ? tb.style.minWidth : '' };
+    });
+    check('ventana ' + W + ': renderColHead también fija el mínimo de la tabla',
+          /^\d+px$/.test(rc.min) && rc.w >= SUELO, rc);
+
+    await p.close();
+  }
+
+  /* LA MUTACIÓN QUE TIENE QUE MATAR ESTA PRUEBA: devolver el mínimo a un número
+   * fijo. Se comprueba que el código NO lo lleva escrito, porque un `min-width`
+   * en el CSS de la tabla volvería a ser un número que no sabe cuántas columnas
+   * hay a la vista — que es exactamente el fallo de la v12.11. */
+  check('el mínimo de la tabla se calcula, no está escrito en el CSS',
+        !/#tableContainer table\{[^}]*min-width:/.test(css));
+  check('...y se calcula sumando los anchos que SE VEN',
+        /_fijarMinTabla/.test(html) && /_anchoDeclarado/.test(html));
 
   check('y la página no tiró ningún error', errores.length === 0, errores);
 

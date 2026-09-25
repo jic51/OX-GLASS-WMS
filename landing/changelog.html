@@ -97,6 +97,34 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.12</span>
+      <span class="tag fix">Fix</span>
+      <h3>Showing one more column no longer squeezes the material name to nothing</h3>
+      <p>Show an extra column in <b>Movements</b> — Supplier, say — and the
+         material name could collapse to almost no width at all, printing one
+         letter per line and stretching rows from 83 pixels tall to 428. It took
+         showing a single column to trigger it, and it was there from the moment
+         the columns were given fixed widths.</p>
+      <p>The cause was one number written by hand. The table had a minimum width
+         of 1,300 pixels, but the widths of all sixteen columns add up to 1,748.
+         A number typed into a stylesheet cannot know how many columns you have
+         chosen to see, and that is a choice each person makes with the eye icon
+         in <b>⚙ Columns</b>. With Supplier showing, the declared widths came to
+         1,296 and the material was left with <b>four pixels</b>.</p>
+      <p>Each column's width now lives beside the column itself instead of in a
+         separate block of styling, and the table works out its own minimum on
+         every redraw: the widths actually on screen, plus a floor for the
+         material name. The floor is measured too — 192 pixels, which is what
+         the longest category badge needs so it does not spill out of its own
+         cell. Below that the table scrolls sideways instead, which is the right
+         answer: sixteen columns do not fit on a narrow screen, and a scrollbar
+         beats text you cannot read.</p>
+      <p>A check now measures the material's width at two window sizes, in four
+         column layouts, through both of the paths that draw the header. Putting
+         the old fixed number back fails it seventeen times.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.11</span>
       <span class="tag fix">Fix</span>
       <h3>The movements table stops jumping when you change the filter</h3>
