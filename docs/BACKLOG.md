@@ -199,6 +199,42 @@ pidió, y encaja con el trato distinto para las bloqueadas del punto A.
 
 ---
 
+## A-ter. LAS ETIQUETAS SALEN SIEMPRE, Y NO HAY FORMA DE APAGARLAS
+
+Jose, 2026-09-25: *"aunque desactivo el checkbox de los labels, estos siempre
+aparecen al final después del ingreso de un material."*
+
+**Comprobado, y no es un fallo: es algo que nunca se construyó.** En
+`_doMultiSubmit` (línea ~11341) la llamada es incondicional:
+
+```javascript
+_openLabels(_labelsFromEntry(materials, payload), function(){ … });
+```
+
+No hay ni una preferencia ni un interruptor en todo el archivo — busqué
+`acopio_labels`, `labelsPref`, `skipLabels`: **nada**. Las casillas que Jose
+desmarca están **dentro** de la ventana de etiquetas y sirven para elegir
+*cuáles* imprimir; no impiden que la ventana se abra, y **no se recuerdan**:
+`_openLabels` se redibuja desde cero, con todo marcado, en cada entrada.
+
+O sea que las dos lecturas de su queja llevan al mismo sitio: **ni hay memoria
+ni hay forma de decir que no.**
+
+**Propuesta (chica, una sesión):**
+
+1. Un ajuste en App Settings — *"Ask about labels after an entry"*, **encendido
+   de fábrica**, para no cambiarle el flujo a nadie sin avisar. Apagado, la
+   ventana no se abre y se pasa directo a lo de las entregas.
+2. Un botón **"Don't ask again"** dentro de la propia ventana, que apaga ese
+   mismo ajuste. Es donde la persona está cuando se le ocurre pedirlo.
+
+**Lo que NO haría:** recordar qué casillas quedaron marcadas la última vez. Las
+etiquetas son del camión de hoy, no del de la semana pasada, y una casilla que
+viene marcada por algo que pasó hace tres días es de las que hacen imprimir de
+más sin que nadie entienda por qué.
+
+---
+
 ## B. EL FILTRO DE ESTADO SÓLO CONOCE DOS DE LOS CUATRO ESTADOS
 
 Vídeo `Recording_2026-09-22_150944.mp4`. Jose: *"en la app solo se puede filtrar

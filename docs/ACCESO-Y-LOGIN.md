@@ -30,6 +30,44 @@ formas de averiguarlo:
 Si ninguna de las dos da un correo → el usuario ve la pantalla de
 **"Sign in with your Google account"**.
 
+> ⚠️ **LA PRIMERA FILA ESTÁ EN DUDA desde el 2026-09-25. Hay que comprobarla
+> antes de instalarle a un cliente.**
+>
+> Jose entró a la app de OX con su **Gmail personal** y con su cuenta de
+> `@ox-glass.com` **a la vez**, las dos como ADMIN y las dos listadas en
+> "Active users". Al mismo tiempo, la consola de Cloud dice
+> **`0 users (0 test, 0 other) / 100`** —y ese contador es de toda la vida del
+> cliente OAuth— con la lista de usuarios de prueba **vacía**.
+>
+> Las dos cosas no pueden ser ciertas a la vez si esta tabla lo es. O el Gmail
+> personal entró por la puerta automática —y entonces esa puerta es **más
+> ancha** de lo que dice esta fila—, o entró por OAuth y el contador no cuenta
+> lo que creemos.
+>
+> **No es un agujero de seguridad, y eso sí está comprobado en el código:**
+> venga el correo por donde venga, `getUserRole()` (línea ~1494) exige que esté
+> en `USERS_V3` y **activo**, o devuelve `DENIED`. Quien no está en la lista no
+> entra. La pregunta es **por qué camino** entra quien sí está.
+>
+> **Importa para vender, y mucho.** Si la puerta automática sirve para Gmail
+> personales, **OAuth puede no hacer falta** para la mayoría de los clientes y
+> el bloqueante nº 5 de `ANTES-DE-VENDER.md` deja de serlo. Si no sirve, hay que
+> publicar el consent screen sí o sí.
+>
+> **El experimento que lo resuelve, y sólo lo puede hacer Jose:** coger a **otra
+> persona** con Gmail personal, darla de alta en `USERS_V3` y pedirle que abra
+> la app.
+>
+> - **Entra directa**, sin pantalla de "Sign in with Google" → la puerta
+>   automática cubre Gmail personales, y esta tabla hay que reescribirla.
+> - **Ve la pantalla de "Sign in with Google"** → la tabla es correcta, y lo de
+>   Jose se explica por algo suyo: su Gmail personal tiene historia con ese
+>   archivo o con el proyecto de Apps Script (por ejemplo, haberlo abierto
+>   alguna vez desde el editor, o figurar como colaborador del Sheet).
+>
+> **Tiene que ser OTRA persona.** Con las dos cuentas de Jose el experimento no
+> dice nada: las dos tienen historia con ese archivo.
+
 > **La regla que casi nadie espera:** la forma automática funciona por la
 > relación real de Workspace entre el visitante y el **dueño del archivo
 > copiado**. No tiene nada que ver con la propiedad `COMPANY_DOMAIN` — esa
