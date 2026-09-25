@@ -405,6 +405,122 @@ window.__DATA=${JSON.stringify(DATA)};
     await p.close();
   }
 
+  /* ══════════════════════════════════════════════════════════════════════════
+   * 6. EL EDITOR DE COLUMNAS — el ojo se ve, y lo fijo ni se mueve ni lo aparenta
+   *
+   * Jose, con vídeo (2026-09-25): *"no se muestra el botón del ojo al editar, o
+   * queda debajo de la columna de al lado."* Era literal: la cabecera en
+   * edición lleva asa, campo de nombre y ojo, y en Qty o Unit todo eso vivía en
+   * 58px con `white-space:nowrap`. El ojo no se envolvía: se salía y la celda
+   * vecina lo tapaba. El botón para esconder una columna era invisible justo en
+   * las columnas más estrechas.
+   *
+   * Y lo otro que pidió: *"tampoco se debería poder cambiar o mover."* `lock`
+   * significaba sólo "no se puede esconder" — las bloqueadas llevaban asa Y SE
+   * ARRASTRABAN DE VERDAD. Ahora no se mueven, no se puede soltar nada encima,
+   * y van pegadas al principio en su orden de fábrica.
+   *
+   * SE MIDE LA POSICIÓN DEL BOTÓN, no que exista. Que el `<button>` esté en el
+   * HTML era cierto ANTES del arreglo, mientras Jose no podía pulsarlo.
+   * ══════════════════════════════════════════════════════════════════════════ */
+  console.log('\n═══ 6. El editor de columnas ═══\n');
+
+  const EDIT_MIN = Number((/var _COL_EDIT_MIN = (\d+)/.exec(html) || [])[1] || 0);
+  check('el ancho mínimo de una cabecera en edición está declarado',
+        EDIT_MIN >= 100 && EDIT_MIN <= 300, EDIT_MIN);
+  /* Si el suelo del material bajara de lo que miden los mandos, la elástica
+   * —que en edición no lleva ancho— se quedaría sin sitio para su propio ojo.
+   * Hoy 192 > 176; esto lo deja escrito para que nadie lo rompa sin enterarse. */
+  check('el suelo del material cubre lo que miden los mandos del editor',
+        SUELO >= EDIT_MIN, { SUELO, EDIT_MIN });
+
+  for (const W of [960, 1600]) {
+    const p = await browser.newPage({ viewport: { width: W, height: 900 } });
+    p.on('pageerror', e => errores.push(e.message));
+    await p.goto('file://' + pagina());
+    await p.waitForTimeout(800);
+    await p.evaluate(() => showTab('movements', 'btn-movements'));
+    await p.waitForTimeout(300);
+    await p.evaluate(() => toggleColEdit('mov'));
+    await p.waitForTimeout(400);
+
+    const e6 = await p.evaluate(() => {
+      const fuera = [], conAsa = [], arrastrables = [];
+      let ojos = 0, dentro = 0, candados = 0, fijas = 0, apretadas = [];
+      const orden = [];
+      document.querySelectorAll('#movHeadRow th.col-edit').forEach(th => {
+        const k = th.getAttribute('data-col');
+        orden.push(k);
+        const rTh = th.getBoundingClientRect();
+        const esFija = th.classList.contains('col-fija');
+        if (esFija){
+          fijas++;
+          if (th.querySelector('.col-drag')) conAsa.push(k);
+          if (th.getAttribute('draggable') !== 'false') arrastrables.push(k);
+        }
+        if (th.querySelector('.col-lock')) candados++;
+        const ojo = th.querySelector('.col-eye');
+        if (ojo){
+          ojos++;
+          const rO = ojo.getBoundingClientRect();
+          // Dentro de su celda POR LOS CUATRO LADOS, y con tamaño real.
+          if (rO.width > 0 && rO.height > 0 &&
+              rO.right <= rTh.right + 0.5 && rO.left >= rTh.left - 0.5) dentro++;
+          else fuera.push(k + ' se sale ' + Math.round(rO.right - rTh.right) + 'px');
+        }
+        if (th.scrollWidth > th.clientWidth + 1) apretadas.push(k);
+      });
+      const cand = document.querySelector('#movHeadRow .col-lock');
+      return { ojos, dentro, fuera: fuera.slice(0,6), candados, fijas, conAsa,
+               arrastrables, apretadas: apretadas.slice(0,6), orden,
+               tieneAyuda: !!(cand && (cand.getAttribute('data-tip') || '').length > 20) };
+    });
+
+    check('ventana ' + W + ': se abrieron las dieciséis con sus mandos',
+          e6.ojos + e6.candados === 16, e6);
+    check('ventana ' + W + ': TODOS los ojos caben dentro de su celda' +
+          (e6.fuera.length ? ' — SE SALEN: ' + e6.fuera.join('; ') : ''),
+          e6.ojos > 0 && e6.dentro === e6.ojos, { ojos: e6.ojos, dentro: e6.dentro });
+    check('ventana ' + W + ': ninguna cabecera va más apretada que sus mandos' +
+          (e6.apretadas.length ? ' — APRETADAS: ' + e6.apretadas.join(', ') : ''),
+          e6.apretadas.length === 0);
+    check('ventana ' + W + ': las tres bloqueadas se ven como un bloque aparte',
+          e6.fijas === 3, e6.fijas);
+    check('ventana ' + W + ': ninguna bloqueada ofrece asa de arrastre',
+          e6.conAsa.length === 0, e6.conAsa);
+    check('ventana ' + W + ': ...y ninguna es arrastrable de verdad — quitar el ' +
+          'asa sola no bastaba, `draggable` es del elemento entero',
+          e6.arrastrables.length === 0, e6.arrastrables);
+    check('ventana ' + W + ': el candado explica POR QUÉ, no sólo que lo está',
+          e6.tieneAyuda);
+    check('ventana ' + W + ': las bloqueadas van pegadas al principio',
+          e6.orden.slice(0, 3).join(',') === 'when,what,qty', e6.orden.slice(0, 5));
+
+    await p.close();
+  }
+
+  /* Y que el orden guardado NO pueda dejar una bloqueada en medio: alguien que
+   * ya la hubiera movido —se podía— tiene ese orden en su navegador ahora mismo. */
+  const pOrden = await browser.newPage({ viewport: { width: 1400, height: 900 } });
+  pOrden.on('pageerror', e => errores.push(e.message));
+  await pOrden.goto('file://' + pagina());
+  await pOrden.waitForTimeout(800);
+  await pOrden.evaluate(() => showTab('movements', 'btn-movements'));
+  await pOrden.waitForTimeout(300);
+  const reparado = await pOrden.evaluate(() => {
+    // Un orden como el que tendría quien arrastró Category/Name al final.
+    localStorage.setItem(_colCfg('mov').orderKey, JSON.stringify(
+      ['unit', 'po', 'when', 'locFlow', 'project', 'qty', 'resp', 'comment',
+       'user', 'doc', 'rawLoc', 'gc', 'supplier', 'pm', 'sysDate', 'what']));
+    renderMovements();
+    return _colOrder('mov');
+  });
+  check('un orden guardado con las bloqueadas desperdigadas se normaliza solo',
+        reparado.slice(0, 3).join(',') === 'when,what,qty', reparado.slice(0, 6));
+  check('...sin perder ninguna columna por el camino',
+        reparado.length === 16 && new Set(reparado).size === 16, reparado.length);
+  await pOrden.close();
+
   /* LA MUTACIÓN QUE TIENE QUE MATAR ESTA PRUEBA: devolver el mínimo a un número
    * fijo. Se comprueba que el código NO lo lleva escrito, porque un `min-width`
    * en el CSS de la tabla volvería a ser un número que no sabe cuántas columnas

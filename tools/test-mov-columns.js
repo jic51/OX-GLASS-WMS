@@ -99,6 +99,10 @@ function orden(guardado){
     varSrc('COL_MERGES'),
     'function _colCfg(t){ return COL_TABLES[t]; }',
     'function _defaultColOrder(t){ return _colCfg(t).cols.map(function(c){ return c.key; }); }',
+    // Desde la v12.13 `_colOrder` mira el candado de cada columna, para pegar las
+    // bloqueadas al principio, así que necesita `_colDef`. Se SACA del archivo,
+    // como todo lo demás en esta caja, para que no haya una copia que envejezca.
+    fnSrc('_colDef'),
     fnSrc('_colOrder')
   ].join('\n'), c);
   return vm.runInContext("_colOrder('mov')", c);
@@ -122,18 +126,38 @@ function orden(guardado){
     keys.every(k => nuevo.indexOf(k) !== -1));
 }
 
+/* ─── EL CONTRATO CAMBIÓ EN LA v12.13, A PETICIÓN DE JOSE ────────────────────
+ *
+ * Las tres comprobaciones de aquí abajo exigían lo contrario de lo que exigen
+ * ahora, y eso hay que decirlo en voz alta en vez de doblarlas en silencio.
+ *
+ * Decían: *"quien había puesto Name delante conserva su sitio"*. Era verdad y
+ * era deliberado — `lock` significaba sólo "no se puede esconder", así que
+ * Category/Name podía ir donde su dueño quisiera.
+ *
+ * Jose, 2026-09-25: *"tampoco se debería poder cambiar o mover… deben tener un
+ * lugar específico al ser mostradas."* Con eso, `lock` pasa a significar las dos
+ * cosas, y las tres bloqueadas van pegadas al principio en su orden de fábrica.
+ *
+ * LO QUE SE PIERDE, dicho claro: ya NO se puede poner el nombre del material
+ * antes del tipo y la fecha. Era una libertad real y la quita esta decisión. Si
+ * Jose la quiere de vuelta, lo que hay que hacer es permitir reordenar DENTRO
+ * del bloque fijo — y eso obliga a devolverles el asa, que es justo lo que
+ * pidió quitar.
+ * ─────────────────────────────────────────────────────────────────────────── */
 {
   // Alguien que SÍ movió las columnas: puso el nombre delante del todo.
   const personal = ['name','category','type','date','qty','project','unit'];
   const nuevo = orden(personal);
-  check('quien había puesto Name delante conserva su sitio: la columna que lo ' +
-        'contiene sigue siendo la primera (' + nuevo[0] + ')',
-    nuevo[0] === 'what');
-  check('...y "when" hereda el sitio de "type", no el de "date" — "type SOBRE ' +
-        'date" también quiere decir cuál de las dos manda',
-    nuevo[1] === 'when');
+  check('un orden con las bloqueadas movidas se normaliza: van las tres ' +
+        'primeras y en su orden de fábrica (' + nuevo.slice(0,3).join(', ') + ')',
+    nuevo.slice(0, 3).join(',') === 'when,what,qty', nuevo.slice(0, 5));
+  check('...y lo que NO está bloqueado conserva el orden que su dueño le dio',
+    nuevo.indexOf('project') < nuevo.indexOf('unit'), nuevo);
   check('y nada se duplica al fusionar dos columnas que estaban separadas',
     new Set(nuevo).size === nuevo.length);
+  check('...ni se pierde ninguna al normalizar',
+    keys.every(k => nuevo.indexOf(k) !== -1));
 }
 
 {
@@ -146,8 +170,14 @@ function orden(guardado){
   // persona abrió la app después de actualizar y el editor las guardó.
   const yaNuevo = ['what','when','qty','unit'];
   const nuevo = orden(yaNuevo);
-  check('un orden que YA está traducido se deja como está — traducir dos veces ' +
-        'no puede cambiar nada', nuevo[0] === 'what' && nuevo[1] === 'when');
+  check('traducir dos veces no cambia nada, y el bloque fijo queda en su orden',
+    nuevo.slice(0, 3).join(',') === 'when,what,qty', nuevo.slice(0, 4));
+  /* La normalización tiene que ser IDEMPOTENTE: el editor guarda lo que dibuja,
+   * así que si cada pasada moviera algo, la app pelearía con su propio guardado
+   * en cada dibujado y el orden bailaría solo delante de la persona. */
+  check('...y aplicarla sobre su propio resultado da lo mismo — si no, el orden ' +
+        'bailaría solo en cada dibujado',
+    orden(nuevo).join(',') === nuevo.join(','), { una: nuevo, dos: orden(nuevo) });
 }
 
 // ── Las celdas ──────────────────────────────────────────────────────────────

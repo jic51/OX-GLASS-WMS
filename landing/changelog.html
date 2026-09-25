@@ -97,6 +97,42 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.13</span>
+      <span class="tag fix">Fix</span>
+      <h3>The eye button in the column editor is reachable again</h3>
+      <p>Open <b>⚙ Columns</b> and the button that hides a column was missing on
+         the narrow ones, or tucked under the heading next to it. It was literal:
+         a heading in edit mode carries a drag handle, a name field and the eye,
+         and on <b>Qty</b> or <b>Unit</b> all of that lived in 58 pixels. The eye
+         did not wrap — it spilled out and the neighbouring cell covered it. The
+         control for hiding a column was invisible on exactly the columns you
+         would most want to hide.</p>
+      <p>Headings are now sized by their controls while the editor is open, not
+         by their data. The table gets wider and scrolls sideways for as long as
+         the panel is open, which is the right trade: a button you cannot press
+         is worse than a scrollbar.</p>
+      <p>The measurement turned up something reading the code would not have:
+         a hidden column draws 🚫 instead of 👁, and 🚫 is two pixels wider. At
+         the first value tried, the five columns that ship hidden spilled by one
+         pixel while the other eleven were fine — so testing with any one column
+         would have come back clean.</p>
+
+      <h3>Type, Name and Qty stay put</h3>
+      <p>Those three carry a lock in the column editor, and the lock only ever
+         meant "cannot be hidden". They still had a drag handle, and dragging
+         them <b>actually worked</b> — so they looked movable because they were.
+         A movement without its type, its material or its quantity is not a row
+         that says anything, so now they are genuinely fixed: no handle, nothing
+         can be dropped on them, a darker heading so they read as one block, and
+         the lock explains why instead of only stating it.</p>
+      <p>What this costs, plainly: the material name can no longer be placed
+         before the type and date. That was possible before and some people may
+         have set it up that way; their saved layout is corrected on the next
+         redraw. Every column that is not locked keeps the order its owner gave
+         it.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.12</span>
       <span class="tag fix">Fix</span>
       <h3>Showing one more column no longer squeezes the material name to nothing</h3>

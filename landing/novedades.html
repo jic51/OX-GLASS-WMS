@@ -98,6 +98,42 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.13</span>
+      <span class="tag fix">Arreglado</span>
+      <h3>El botón del ojo del editor de columnas se puede volver a pulsar</h3>
+      <p>Abrías <b>⚙ Columns</b> y el botón para esconder una columna no
+         aparecía en las estrechas, o quedaba debajo de la cabecera de al lado.
+         Y era literal: una cabecera en edición lleva asa, campo de nombre y
+         ojo, y en <b>Qty</b> o <b>Unit</b> todo eso vivía en 58 píxeles. El ojo
+         no se envolvía: se salía y la celda vecina lo tapaba. El mando para
+         esconder una columna era invisible justo en las columnas que más ganas
+         dan de esconder.</p>
+      <p>Ahora, mientras el panel está abierto, las cabeceras miden lo que miden
+         sus mandos y no lo que mide su dato. La tabla se ensancha y se desplaza
+         de lado mientras dure, que es el cambio correcto: un botón que no se
+         puede pulsar es peor que una barra.</p>
+      <p>Y medirlo destapó algo que leyendo el código no se ve: una columna
+         escondida dibuja 🚫 en vez de 👁, y 🚫 es dos píxeles más ancho. Con el
+         primer valor que probamos, las cinco columnas que vienen escondidas se
+         salían por un píxel y las otras once estaban bien — o sea que probar
+         con una columna cualquiera habría dado verde.</p>
+
+      <h3>Type, Name y Qty se quedan donde están</h3>
+      <p>Esas tres llevan candado en el editor de columnas, y el candado sólo
+         quería decir "no se puede esconder". Seguían teniendo asa, y arrastrarlas
+         <b>funcionaba de verdad</b> — así que parecían movibles porque lo eran.
+         Un movimiento sin tipo, sin material o sin cantidad no es una fila que
+         diga nada, así que ahora son fijas de verdad: sin asa, no se les puede
+         soltar nada encima, con la cabecera más oscura para que se lean como un
+         bloque, y el candado explica por qué en vez de sólo decir que lo está.</p>
+      <p>Lo que cuesta, dicho claro: el nombre del material ya no se puede poner
+         delante del tipo y la fecha. Antes se podía y puede que alguien lo
+         tuviera así; su orden guardado se corrige solo en el siguiente dibujado.
+         Todas las columnas que no llevan candado conservan el orden que su dueño
+         les dio.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.12</span>
       <span class="tag fix">Arreglado</span>
       <h3>Enseñar una columna más ya no deja el nombre del material sin sitio</h3>
