@@ -52,11 +52,24 @@ function check(label, cond) {
   if (cond) { ok++; console.log('  ok  ', label); }
   else { fail++; console.log('  FAIL ', label); }
 }
-// Line comments only — see tools/test-fractional-qty.js for why stripping
-// /* */ across these files is a good way to lose ten thousand lines.
-function codeOnly(src) {
-  return src.split('\n').map(l => l.replace(/\/\/.*$/, '')).join('\n');
-}
+// LOS COMENTARIOS NO SON CÓDIGO, y esto se aprendió pagando.
+//
+// El 26 de septiembre de 2026 esta prueba dio dos falsos positivos seguidos:
+//
+//   getInitialData reads `s` at 1763 but declares it at 1957
+//   archiveOldMovements reads `antes` at 4149 but declares it at 4204
+//
+// Las dos "lecturas" eran PROSA EN ESPAÑOL. La regla busca `nombre` seguido de
+// un punto —que es una forma honesta de decir "aquí se usa el valor"— y una
+// frase que termina en "…una hora antes." encaja igual de bien que una línea de
+// código. La prueba estaba leyendo comentarios y acusando al producto.
+//
+// El aviso que había aquí decía que quitar los bloques era una buena forma de
+// perder diez mil líneas, y tenía razón EN LA FORMA EN QUE SE HACE NORMALMENTE.
+// Por eso el ayudante del andamio los BLANQUEA en vez de borrarlos: el archivo
+// mide lo mismo línea por línea y los números que esta prueba imprime siguen
+// señalando el sitio real.
+const codeOnly = require('./andamio.js').sinComentariosMismasLineas;
 
 const CODE  = codeOnly(GS);
 const LINES = CODE.split('\n');

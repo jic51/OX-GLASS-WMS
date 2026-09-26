@@ -4301,6 +4301,9 @@
 <script>
 // ── Global State ──────────────────────────────────────────────────────────────
 var movements   = [];
+/* Lo pone el servidor en cada carga: existencias en los estantes y CERO
+ * movimientos en el archivo, que es una mezcla imposible. Ver getInitialData. */
+var _archivoVacioConStock = false;
 var stockData   = {};  // pre-calculated by backend: { matId: {warehouseQty, siteQty, ...} }
 var config      = { projects:[], categories:[], suppliers:[], locations:[], trucks:[], minStock:{} };
 var currentMoveType = 'ENTRY';
@@ -4313,7 +4316,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.13';
+var APP_VERSION = '12.14';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -4325,7 +4328,7 @@ var APP_VERSION = '12.13';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '423e62dc';
+var APP_BUILD = '3bb713c7';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -7645,8 +7648,29 @@ function renderMovements(){
   // took the column editor off screen with it. The message is a row now, so the
   // headings stay put whatever the filters match.
   if (!total){
-    rows = '<tr><td colspan="'+span+'"><div class="empty-state"><div class="empty-icon">📋</div>'+
-           '<p>No movements match your filters.</p></div></td></tr>';
+    /* DOS VACÍOS QUE NO SON EL MISMO VACÍO.
+     *
+     * "No movements match your filters" es la respuesta correcta cuando un
+     * filtro no encuentra nada. El 26 de septiembre de 2026 fue también la
+     * respuesta a que el trabajo nocturno hubiera BORRADO el archivo entero, y
+     * eso es lo que hizo que el desastre pasara catorce horas inadvertido: la
+     * app se veía normal.
+     *
+     * Existencias sin un solo movimiento es imposible —cada unidad de un estante
+     * llegó por una entrada, y esa entrada es una fila del archivo—, así que
+     * cuando el servidor dice que se da esa mezcla, esta tabla deja de disimular. */
+    rows = _archivoVacioConStock
+      ? '<tr><td colspan="'+span+'"><div class="empty-state"><div class="empty-icon">🚨</div>' +
+        '<p><b>The movement history is empty, but the warehouse is not.</b></p>' +
+        '<p>That cannot happen on its own — every unit on a shelf got there ' +
+        'through an entry, and every entry is a row in the archive. Your ' +
+        'movements are almost certainly still in the backup made at 2am.</p>' +
+        '<p>Do not add movements and do not rebuild anything yet. Open your ' +
+        'spreadsheet and check the <b>MASTER_ARCHIVE_V3</b> tab, then the ' +
+        '<b>ERROR_LOG</b> tab for what the nightly job reported.</p>' +
+        '</div></td></tr>'
+      : '<tr><td colspan="'+span+'"><div class="empty-state"><div class="empty-icon">📋</div>'+
+        '<p>No movements match your filters.</p></div></td></tr>';
   }
 
   var foot = total
@@ -21354,6 +21378,11 @@ function _loadCache() {
 
 function _applyData(data) {
   movements          = data.movements          || [];
+  /* EL CANARIO DEL ARCHIVO. Ver el comentario del servidor, en getInitialData.
+   * Va en su propia variable y NO se deduce aquí a partir de `movements` y
+   * `stockData`: la caché de este navegador puede traer movimientos de antes y
+   * taparía justo el caso que hay que ver. Lo decide quien lee la hoja. */
+  _archivoVacioConStock = !!data.archiveVacioConStock;
   stockData          = data.stock              || {};
   config             = data.config             || config;
   userRole           = data.userRole           || 'WAREHOUSE';

@@ -97,6 +97,44 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.14</span>
+      <span class="tag fix">Fix</span>
+      <h3>The nightly archive job can no longer delete your movement history</h3>
+      <p>On the night of 26 September 2026 the 3am archive job emptied an entire
+         movement history — every row, in both the active archive and the older
+         history. It was found fourteen hours later, by accident. The daily
+         backup runs at 2am, an hour before this job, and had everything; nothing
+         was lost. That one hour of difference is the only reason.</p>
+      <p><b>What happened.</b> The job cleared the sheet and then wrote the rows
+         back. The write failed — the sheet was 20 columns wide and a movement
+         row is 23 — and by then the clear had already happened. Sheets created
+         before the cost columns existed are the normal case on an upgrade, not
+         the odd one, and a helper written months ago for exactly this was never
+         being called here.</p>
+      <p><b>Three things changed, because it was three failures and not one.</b>
+         The sheets are widened before anything is touched. The job now
+         <b>writes first and clears afterwards</b>, so a failure half way through
+         leaves the rows where they were — that part would have mattered even
+         with the width right, because a quota limit or a timeout between those
+         two lines had the same effect. And the sheet that gains rows is written
+         before the sheet that loses them, so the worst case is a duplicate you
+         can see rather than a hole you cannot.</p>
+      <p><b>Two counts now have to agree before a single cell is written.</b>
+         This job only moves rows between two sheets, so the total has to be
+         identical before and after. If it is not, nothing is written at all. A
+         second count runs afterwards against the sheets themselves, because
+         "the arithmetic is right" and "the write landed" are different
+         questions and the second one was nobody's job.</p>
+      <p><b>And it says so.</b> The failure went to a log tab nobody reads, and
+         the app carried on showing "No movements match your filters" — the same
+         sentence it shows when a filter matches nothing. The job now emails the
+         admin when it fails or when the counts disagree, and the app itself
+         refuses to be quiet: stock on the shelves with zero movements on record
+         is impossible, and it now says that in plain words instead of showing an
+         empty table.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.13</span>
       <span class="tag fix">Fix</span>
       <h3>The eye button in the column editor is reachable again</h3>

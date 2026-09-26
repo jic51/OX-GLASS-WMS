@@ -5,6 +5,45 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+# ══ URGENTE (2026-09-26) — EL MISMO PATRÓN QUE BORRÓ EL ARCHIVO, EN `writeConfigColumn_` ══
+
+El trabajo nocturno borró el archivo de movimientos entero la noche del 26 de
+septiembre. Historia completa, causa y arreglo en
+**`docs/INCIDENTE-2026-09-26-ARCHIVO.md`**. Arreglado en la v12.14.
+
+Al barrer el resto del archivo buscando el mismo patrón —borrar y luego
+escribir— apareció **un sitio más**, y hay que arreglarlo:
+
+**`writeConfigColumn_`, línea ~655.**
+
+```javascript
+if (lastRow > 1) cfg.getRange(2, colIdx + 1, lastRow - 1, 1).clearContent();  // BORRAR
+...
+cfg.getRange(2, colIdx + 1, values.length, 1).setValues(...)                  // ESCRIBIR
+```
+
+Es lo que guarda **categorías, proyectos, proveedores y locaciones**. Si la
+escritura falla entre las dos líneas, esa lista se queda vacía.
+
+**Por qué no entró en la v12.14:** ese cambio ya era un arreglo crítico sobre
+datos, y meterle un segundo cambio a otro camino multiplica lo que puede salir
+mal justo cuando menos conviene. El alcance tampoco se parece — perder el
+catálogo se vuelve a escribir a mano en diez minutos; perder el archivo de
+movimientos es perder el trabajo de un año.
+
+**El arreglo es el mismo:** escribir primero, limpiar la cola después. Con su
+prueba, como la de `test-archivo-nocturno.js`: romper la escritura a propósito y
+comprobar que el catálogo sigue ahí.
+
+**Y una decisión que hay que tomar, no técnica:** ¿debería existir una regla
+escrita —y una prueba que la vigile— de que en este archivo **ningún**
+`clearContent()` puede ir antes de su `setValues()`, salvo donde borrar es el
+objetivo (`menuEraseEverything`)? Mi opinión: **sí**. Es una prueba de texto
+barata y cierra la clase entera de fallo en vez de ir sitio por sitio.
+
+---
+
+
 # ══ ANOTADO EL 2026-09-22 (tras la v12.11) — TRES COSAS + LA PREGUNTA DEL LANZAMIENTO ══
 
 > Jose, con dos vídeos y una imagen: *"anota todo, no hagas nada hasta que me

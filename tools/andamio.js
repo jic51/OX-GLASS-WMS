@@ -366,5 +366,33 @@ function marcador(titulo) {
   };
 }
 
+/* LO MISMO, PERO SIN MOVER UNA SOLA LÍNEA.
+ *
+ * `sinComentarios` colapsa cada comentario a un espacio, y eso vale cuando sólo
+ * se busca un patrón. No vale cuando la prueba IMPRIME números de línea: desde
+ * el primer bloque, todos los números que diga son mentira.
+ *
+ * Aquí no se borra nada: se BLANQUEA. Cada carácter de dentro pasa a ser un
+ * espacio y los saltos de línea se quedan donde estaban, así que el archivo mide
+ * exactamente lo mismo, línea por línea.
+ *
+ * POR QUÉ ESTÁ AQUÍ Y NO EN UNA PRUEBA, y se aprendió pagando el 26 de
+ * septiembre de 2026: TRES pruebas distintas acusaron al producto el mismo día
+ * por leer comentarios como si fueran código. Dos de ellas buscaban el código
+ * VIEJO que el comentario de al lado estaba citando justamente para explicar por
+ * qué se había cambiado. Una prueba sobre texto tiene que mirar código, y eso no
+ * puede depender de que cada prueba se acuerde por su cuenta. */
+function sinComentariosMismasLineas(src) {
+  return String(src)
+    .replace(/\/\*[\s\S]*?\*\//g, function (bloque) {
+      return bloque.replace(/[^\n]/g, ' ');
+    })
+    .split('\n')
+    // Sólo líneas que EMPIEZAN por //, para no partir 'https://…' por la mitad.
+    .map(l => l.replace(/^(\s*)\/\/.*$/, '$1'))
+    .join('\n');
+}
+
 module.exports = { fuente, fnSrc, nombresDe, levantar, montar, constantes,
-                   sinComentarios, Hoja, comoSheets, marcador };
+                   sinComentarios, sinComentariosMismasLineas,
+                   Hoja, comoSheets, marcador };

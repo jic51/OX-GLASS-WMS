@@ -48,6 +48,7 @@
 
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.join(__dirname, '..');
+const A    = require('./andamio.js');
 const GS   = fs.readFileSync(path.join(ROOT, 'Code_v3_fixed.gs'), 'utf8');
 
 let ok = 0, fail = 0;
@@ -325,8 +326,18 @@ console.log('\n═══ los demás caminos que escriben una fila ═══\n');
 {
   const sitios = [
     ['guardar movimientos nuevos',    /setValues\(newRows\.map\(textSafeRow_\)\)/],
-    ['la rotación de las 3am (activo)',   /setValues\(newActive\.map\(textSafeRow_\)\)/],
-    ['la rotación de las 3am (historial)',/setValues\(newHistory\.map\(textSafeRow_\)\)/],
+    /* LAS DOS MITADES DE LA ROTACIÓN DE LAS 3AM PASAN AHORA POR UN SOLO SITIO.
+     *
+     * Aquí se buscaban los dos `setValues` a pelo —`newActive.map(textSafeRow_)`
+     * y `newHistory.map(...)`— y dejaron de existir el 26 de septiembre de 2026,
+     * cuando esas dos escrituras se unificaron en `escribirHojaCompleta_` para
+     * arreglar el desastre del trabajo nocturno (ver test-archivo-nocturno.js).
+     *
+     * La protección NO se perdió: vive dentro de esa función, y ahora en un solo
+     * sitio en vez de dos. Debajo se comprueba además que las dos mitades sigan
+     * entrando por ahí, que es lo que la unificación puso en juego. */
+    ['la rotación de las 3am (el escritor compartido)',
+                                      /setValues\(filas\.map\(textSafeRow_\)\)/],
     ['copiar a la papelera',          /setValues\(\[textSafeRow_\(saved\)\]\)/],
     ['restaurar',                     /setValues\(\[textSafeRow_\(restored\)\]\)/],
     ['editar un movimiento',          /setValues\(\[textSafeRow_\(rowVals\)\]\)/],
@@ -338,9 +349,17 @@ console.log('\n═══ los demás caminos que escriben una fila ═══\n');
   ];
   sitios.forEach(([nombre, re]) => check('protegido: ' + nombre, re.test(GS)));
 
+  check('las dos mitades de las 3am entran por el escritor protegido',
+        /escribirHojaCompleta_\(history, newHistory/.test(GS) &&
+        /escribirHojaCompleta_\(archive, newActive/.test(GS));
+
   // Y que no quede ninguno suelto. Esta es la comprobación que sobrevive a que
   // alguien añada un séptimo sitio dentro de un año.
-  const sueltos = GS.split('\n').filter(l =>
+  /* SOBRE CÓDIGO, NO SOBRE COMENTARIOS. El comentario que explica el desastre
+   * del trabajo nocturno CITA la línea vieja —`...setValues(); // ESCRIBIR`— y
+   * este barrido la encontraba y la denunciaba como una escritura sin proteger.
+   * Es el mismo error que cometieron otras dos pruebas el mismo día. */
+  const sueltos = A.sinComentarios(GS).split('\n').filter(l =>
     /\.setValues\(/.test(l) &&
     !/textSafeRow_|textCell_/.test(l) &&
     /newRows|newActive|newHistory|saved|restored|rowVals|liveRows|siteRows|wasteRows/.test(l));

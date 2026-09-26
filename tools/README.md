@@ -99,6 +99,7 @@ node tools/test-toast-and-buttons.js
 node tools/test-live-exit-unlock.js
 node tools/test-load-race.js
 node tools/test-movement-id.js
+node tools/test-archivo-nocturno.js
 node tools/test-trash.js
 node tools/test-role-permissions.js
 node tools/test-move-tabs.js

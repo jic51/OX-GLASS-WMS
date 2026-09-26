@@ -98,6 +98,45 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.14</span>
+      <span class="tag fix">Arreglado</span>
+      <h3>El trabajo nocturno ya no puede borrar tu historial de movimientos</h3>
+      <p>La noche del 26 de septiembre de 2026, el trabajo de archivado de las
+         3am vació un historial de movimientos entero — todas las filas, tanto
+         del archivo activo como del histórico antiguo. Se descubrió catorce
+         horas después, por casualidad. La copia de seguridad diaria se hace a
+         las 2am, una hora antes que este trabajo, y lo tenía todo: no se perdió
+         nada. Esa hora de diferencia es la única razón.</p>
+      <p><b>Qué pasó.</b> El trabajo borraba la hoja y después escribía las filas
+         de vuelta. La escritura falló —la hoja tenía 20 columnas de ancho y una
+         fila de movimiento tiene 23— y para entonces el borrado ya había
+         ocurrido. Una hoja creada antes de que existieran las columnas de costo
+         es el caso NORMAL en una actualización, no el raro, y había un ayudante
+         escrito hace meses para exactamente esto al que aquí no se llamaba.</p>
+      <p><b>Cambiaron tres cosas, porque eran tres fallos y no uno.</b> Las hojas
+         se ensanchan antes de tocar nada. El trabajo ahora <b>escribe primero y
+         limpia después</b>, así que un fallo a mitad deja las filas donde
+         estaban — y eso habría importado igual con el ancho bien, porque una
+         cuota agotada o un tiempo de espera entre esas dos líneas tenían el
+         mismo efecto. Y se escribe antes la hoja que GANA filas que la que las
+         pierde, de modo que lo peor que puede pasar es un duplicado que se ve,
+         en vez de un agujero que no.</p>
+      <p><b>Ahora dos cuentas tienen que coincidir antes de escribir una sola
+         celda.</b> Este trabajo sólo mueve filas entre dos hojas, así que el
+         total tiene que ser idéntico antes y después. Si no lo es, no se escribe
+         nada en absoluto. Una segunda cuenta se hace al terminar, contra las
+         hojas mismas, porque "la aritmética está bien" y "la escritura llegó"
+         son preguntas distintas y la segunda no era tarea de nadie.</p>
+      <p><b>Y ahora avisa.</b> El fallo se escribió en una pestaña de registro
+         que nadie mira, y la app siguió diciendo "No movements match your
+         filters" — la misma frase que dice cuando un filtro no encuentra nada.
+         El trabajo manda ahora un correo al admin cuando falla o cuando las
+         cuentas no cuadran, y la app se niega a callar: tener existencias en los
+         estantes y cero movimientos registrados es imposible, y ahora lo dice
+         con todas las letras en vez de enseñar una tabla vacía.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.13</span>
       <span class="tag fix">Arreglado</span>
       <h3>El botón del ojo del editor de columnas se puede volver a pulsar</h3>
