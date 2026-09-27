@@ -45,11 +45,19 @@ const ctx = vm.createContext({
 });
 vm.runInContext(SRC, ctx);
 
-const nuevoEstado = () => ({
-  dic: {},
-  usados: { obra: 0, prov: 0, pers: 0 },
-  vistos: { obra: {}, prov: {}, pers: {}, correo: {} }
-});
+/* LAS CLAVES SE SACAN DEL ARCHIVO, no se copian a mano. La primera versión de
+ * esta caja tenía { obra, prov, pers } escritos aquí; al añadir la clase `gc` a
+ * la herramienta, el contador que faltaba hizo que el nombre saliera
+ * `undefined` — y el fallo parecía de la herramienta cuando era del andamio. */
+const CLASES = (() => {
+  const m = /var usados = \{([^}]*)\}/.exec(SRC);
+  return m[1].split(',').map(x => x.split(':')[0].trim()).filter(Boolean);
+})();
+const nuevoEstado = () => {
+  const usados = {}, vistos = { correo: {} };
+  CLASES.forEach(c => { usados[c] = 0; vistos[c] = {}; });
+  return { dic: {}, usados, vistos };
+};
 function registrar(st, valor, clase) {
   return vm.runInContext('_registrar_', ctx)(valor, clase, st.dic, st.usados, st.vistos);
 }
@@ -123,7 +131,8 @@ console.log('\n═══ 5. Cada columna va a su clase ═══\n');
 {
   const esperado = {
     'Project': 'obra', 'Projects': 'obra',
-    'Supplier': 'prov', 'GC': 'prov', 'Company': 'prov',
+    'Supplier': 'prov', 'Company': 'prov',
+    'GC': 'gc', 'GCs': 'gc',
     'User': 'correo', 'Email': 'correo',
     'Responsible': 'pers', 'PM': 'pers', 'Name': 'pers', 'Created By': 'pers',
     'Comments': 'libre', 'Notes': 'libre', 'Context': 'libre'
@@ -172,6 +181,78 @@ console.log('\n═══ 6. Los dos cerrojos siguen puestos ═══\n');
    * no la lista. Se comprueba explícitamente porque la palabra es la misma. */
   check('el nombre del MATERIAL no se toca: el archivo no lista su columna Name',
     !/'MASTER_ARCHIVE_V3':\s*\[[^\]]*'Name'/.test(SRC));
+}
+
+console.log('\n═══ 7. El correo de USERS_V3 es la LLAVE y no se toca ═══\n');
+{
+  /* JOSE SE QUEDÓ FUERA DE SU PROPIA COPIA con la primera versión: USERS_V3
+   * llevaba 'Email' en la lista, y ese correo es lo que getUserRole() busca
+   * para dejar entrar. Cambiarlo le negó el acceso a él mismo.
+   *
+   * Se lee del ARCHIVO, que es lo que se copia y se pega en la hoja de alguien. */
+  check('USERS_V3 lleva el nombre y NO el correo',
+    /'USERS_V3':\s*\['Name'\]/.test(SRC),
+    (SRC.match(/'USERS_V3':[^\n]*/) || [''])[0]);
+  check('...y no queda ningún Email en la lista de USERS_V3',
+    !/'USERS_V3':\s*\[[^\]]*'Email'/.test(SRC));
+  /* PM_DIRECTORY sí lo lleva, y está bien: ese correo no da acceso a nada, es
+   * una agenda. La diferencia es la que importa y por eso se comprueba. */
+  check('PM_DIRECTORY sí cambia su correo — ahí no abre ninguna puerta',
+    /'PM_DIRECTORY':\s*\[[^\]]*'Email'/.test(SRC));
+}
+
+console.log('\n═══ 8. Un contratista no es un proveedor ═══\n');
+{
+  /* En la copia de Jose quedó "CASCADE GLASSWORKS" haciendo de contratista
+   * general, porque los GC salían de la lista de proveedores. A un jefe de
+   * bodega —que es el público de estas capturas— eso le chirría en dos
+   * segundos. */
+  check('GC tiene su propia clase', claseDe('GC') === 'gc' && claseDe('GCs') === 'gc',
+    [claseDe('GC'), claseDe('GCs')]);
+  check('...y Supplier sigue siendo proveedor', claseDe('Supplier') === 'prov');
+
+  const st = nuevoEstado();
+  registrar(st, 'ALPINE BUILDERS INC', 'gc');
+  registrar(st, 'AMSCO', 'prov');
+  const gc   = sustituir('ALPINE BUILDERS INC', st.dic);
+  const prov = sustituir('AMSCO', st.dic);
+  const listaProv = vm.runInContext('PROVEEDORES', ctx);
+  const listaGc   = vm.runInContext('CONTRATISTAS', ctx);
+  check('el GC sale de la lista de contratistas', listaGc.indexOf(gc) !== -1, gc);
+  check('...y el proveedor de la de proveedores', listaProv.indexOf(prov) !== -1, prov);
+  check('las dos listas no comparten ni un nombre — si lo hicieran, una empresa ' +
+        'aparecería de proveedora y de constructora en la misma captura',
+    listaGc.filter(x => listaProv.indexOf(x) !== -1).length === 0);
+}
+
+console.log('\n═══ 9. Los nombres de material — el agujero de la primera versión ═══\n');
+{
+  /* Después de correr todo lo demás, la copia de Jose SEGUÍA diciendo
+   * "KOTTER RESIDENCE" y "SUNBRIDGE PHASE 1" en la columna Name: él nombra
+   * muchos materiales por la obra a la que van. La columna más visible de la
+   * app llevaba nombres de clientes reales, que es lo que todo esto existe para
+   * evitar. */
+  check('existe un paso aparte para los nombres de material',
+    /function ponerNombresFicticiosDeMaterial\(\)/.test(SRC));
+  check('...con su propio cerrojo, y viene cerrado', /var CERROJO_3 = false;/.test(SRC));
+  check('...y una función que sólo MIRA y lista lo que hay',
+    /function verNombresDeMaterial\(\)/.test(SRC));
+  check('la lista de materiales a renombrar viene VACÍA — la llena quien sabe ' +
+        'cuáles son nombres de cliente, porque este archivo no puede adivinarlo',
+    /var MATERIALES_A_RENOMBRAR = \[\s*(\/\/[^\n]*\n\s*)*\];/.test(SRC),
+    (SRC.match(/var MATERIALES_A_RENOMBRAR = \[[\s\S]*?\];/) || [''])[0]);
+  check('renombra en las tres hojas que llevan el nombre del material',
+    /var HOJAS_CON_MATERIAL = \['MASTER_ARCHIVE_V3', 'ARCHIVE_HISTORY', 'MOVEMENT_TRASH'\];/.test(SRC));
+  /* Y NO en las de existencias: se rehacen solas al reconstruir, y escribirlas
+   * a mano sería pelearse con esa reconstrucción. */
+  check('...y NO en las hojas de existencias, que se rehacen solas',
+    !/HOJAS_CON_MATERIAL = \[[^\]]*LIVE_STOCK/.test(SRC));
+  check('avisa de que hay que reconstruir después, sin lo cual el stock queda ' +
+        'hablando de materiales que ya no se llaman así',
+    /Rebuild Stock Totals/.test(SRC) && /NO ES OPCIONAL/.test(SRC));
+  check('el paso de materiales también comprueba que la hoja sea DEMO',
+    /function _hojaEsDemo_/.test(SRC) &&
+    /function ponerNombresFicticiosDeMaterial\(\)\s*\{[\s\S]{0,200}_hojaEsDemo_/.test(SRC));
 }
 
 console.log('\n' + (fail ? '✗ ' + fail + ' fallo(s), ' : '✓ ') + ok + ' comprobaciones');

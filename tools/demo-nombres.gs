@@ -80,7 +80,19 @@ var CAMPOS = {
   'WASTED_STOCK':      ['Supplier', 'Project'],
   'INCOMING_V3':       ['Supplier', 'Project', 'PM', 'GC', 'Notes', 'Created By'],
   'PM_DIRECTORY':      ['Name', 'Email', 'Phone', 'Company'],
-  'USERS_V3':          ['Email', 'Name'],
+  /* USERS_V3 LLEVA **SÓLO EL NOMBRE**, NUNCA EL CORREO.
+   *
+   * Aquí decía ['Email', 'Name'] y Jose se quedó fuera de su propia copia: el
+   * correo de esa pestaña es LA LLAVE DE ENTRADA —getUserRole() busca ahí el
+   * correo de quien abre la app— así que cambiarlo le negó el acceso a él
+   * mismo. Tuvo que arreglarlo a mano.
+   *
+   * Y no se pierde nada al dejarlo: la columna User que se ve en las CAPTURAS
+   * es la del archivo de movimientos, y ésa sí se cambia. El correo de
+   * USERS_V3 sólo se ve en Manage Users, que no es una pantalla que vaya a la
+   * landing. Entre "sale un correo real en una pantalla que nadie publica" y
+   * "el dueño no puede entrar", no hay duda. */
+  'USERS_V3':          ['Name'],
   'AUDIT_LOG':         ['User', 'Detail', 'Before', 'After'],
   'ERROR_LOG':         ['User', 'Message', 'Context']
 };
@@ -103,6 +115,17 @@ var OBRAS = [
   'LAKESHORE TERRACE', 'MILLPOND COMMONS', 'NEWPORT HILL HOUSE',
   'ORCHARD GATE PHASE 3', 'PINECREST RESIDENCE'
 ];
+/* LOS GC NO SON PROVEEDORES, Y SE NOTA EN UNA CAPTURA.
+ *
+ * Al principio los GC salían de la lista de proveedores, y en la copia de Jose
+ * quedó "CASCADE GLASSWORKS" como contratista general — un nombre de
+ * cristalería haciendo de constructora. A un jefe de bodega, que es justo el
+ * público de estas capturas, eso le chirría en dos segundos. Lista propia. */
+var CONTRATISTAS = [
+  'ALDERWOOD BUILDERS', 'CRESTONE CONSTRUCTION', 'HIGH DESERT CONTRACTING',
+  'LONE PEAK BUILDERS', 'SAGEBRUSH CONSTRUCTION', 'WASATCH RIDGE BUILDERS',
+  'CANYON GATE CONTRACTING', 'FALCON CREST BUILDERS'
+];
 var PROVEEDORES = [
   'NORTHGATE SUPPLY', 'CASCADE GLASSWORKS', 'FOUR PEAKS MILLWORK',
   'IRONWOOD WINDOWS', 'BLUE MESA DISTRIBUTION', 'REDROCK BUILDING PRODUCTS',
@@ -115,9 +138,142 @@ var PERSONAS = [
 ];
 var DOMINIO_DEMO = 'demo-glass.example';
 
+// ── CERROJO 3, Y ES OTRA COSA: LOS NOMBRES DE MATERIAL ──────────────────────
+//
+// EL AGUJERO QUE DEJÓ LA PRIMERA VERSIÓN, y lo enseñó la captura de Jose.
+//
+// Yo escribí que los nombres de material "ya son códigos y no dicen quién es el
+// cliente". **Es falso para una buena parte de ellos.** En su copia, después de
+// correr todo lo de arriba, la columna Name seguía diciendo:
+//
+//     KOTTER RESIDENCE · SUNBRIDGE PHASE 1 · PROVO REMODEL · BULLOCK 11 (ELOISE)
+//     BRYLEE 7 (341-347) · DE 043 MILLARD · MH 159 (SGD ADD)
+//
+// Es decir: **la columna más visible de la app seguía llevando nombres de
+// clientes reales**, que es exactamente lo que todo esto existe para evitar.
+// Jose nombra muchos materiales por la obra a la que van, y eso es razonable
+// para trabajar y es un problema para publicar.
+//
+// POR QUÉ NO SE HACE AUTOMÁTICO. No hay forma honesta de que este archivo
+// adivine cuáles son nombres de cliente: "MH 159 (SGD ADD)" y "SR MM213 TT
+// 091026" se parecen mucho vistos desde aquí y sólo uno lo es. Adivinar
+// significaría renombrar códigos perfectamente inocentes y dejar pasar alguno
+// de verdad. **Así que lo eliges tú**, que eres quien sabe.
+//
+// ── CÓMO ─────────────────────────────────────────────────────────────────────
+//
+//   1. Corre  verNombresDeMaterial . Escribe en el registro la lista de todos
+//      los nombres distintos que hay, ordenada.
+//   2. Copia de ahí los que sean nombres de cliente o de obra y pégalos abajo,
+//      entre comillas y separados por comas.
+//   3. Pon CERROJO_3 en true y corre  ponerNombresFicticiosDeMaterial .
+//   4. **Después, en la app: Settings → System → Rebuild Stock Totals.**
+//      NO ES OPCIONAL. La identidad de un material es categoría + nombre, así
+//      que al renombrarlo cambia su identidad; la reconstrucción vuelve a
+//      calcularla y a rehacer las hojas de existencias desde el archivo. Sin
+//      ese paso, el stock queda hablando de materiales que ya no se llaman así.
+//
+// ES SEGURO EN ESTE ORDEN, y sólo en éste: el Mat ID no se conserva, se
+// RECALCULA de categoría + nombre (ver getMaterialId en el código de la app),
+// y las hojas LIVE_STOCK / SITE_STOCK / WASTED_STOCK se rehacen enteras desde
+// el archivo. Por eso renombrar y reconstruir deja todo cuadrado.
+var CERROJO_3 = false;
+var MATERIALES_A_RENOMBRAR = [
+  // 'KOTTER RESIDENCE',
+  // 'SUNBRIDGE PHASE 1',
+];
+
 // ════════════════════════════════════════════════════════════════════════════
 // A PARTIR DE AQUÍ NO HACE FALTA TOCAR NADA
 // ════════════════════════════════════════════════════════════════════════════
+
+/** Escribe en el registro todos los nombres de material distintos. No toca nada. */
+function verNombresDeMaterial() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!_hojaEsDemo_(ss)) return;
+  var vistos = {};
+  HOJAS_CON_MATERIAL.forEach(function (nombre) {
+    var h = ss.getSheetByName(nombre);
+    if (!h || h.getLastRow() < 2) return;
+    var i = _indiceDe_(h, 'Name');
+    if (i === -1) return;
+    h.getRange(2, i + 1, h.getLastRow() - 1, 1).getValues().forEach(function (r) {
+      var v = String(r[0] || '').trim();
+      if (v) vistos[v.toUpperCase()] = (vistos[v.toUpperCase()] || 0) + 1;
+    });
+  });
+  var lista = Object.keys(vistos).sort();
+  Logger.log('Nombres de material distintos: ' + lista.length);
+  Logger.log('');
+  Logger.log('Copia abajo los que sean nombres de CLIENTE o de OBRA:');
+  Logger.log('');
+  lista.forEach(function (n) { Logger.log("  '" + n + "',   // " + vistos[n] + ' fila(s)'); });
+}
+
+/** Renombra SÓLO los materiales de MATERIALES_A_RENOMBRAR. Necesita CERROJO_3. */
+function ponerNombresFicticiosDeMaterial() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!_hojaEsDemo_(ss)) return;
+  if (!CERROJO_3) {
+    Logger.log('CERROJO 3 CERRADO. Corre primero verNombresDeMaterial, pega abajo ' +
+               'los que sean nombres de cliente, y pon CERROJO_3 = true.');
+    return;
+  }
+  if (!MATERIALES_A_RENOMBRAR.length) {
+    Logger.log('La lista MATERIALES_A_RENOMBRAR está vacía: no hay nada que hacer.');
+    return;
+  }
+
+  // Un nombre nuevo por cada uno, de la lista de obras, y el MISMO en las tres
+  // hojas — si no, una salida y su entrada dejarían de ser del mismo material.
+  var dic = {}, n = 0;
+  MATERIALES_A_RENOMBRAR.forEach(function (m) {
+    var k = String(m || '').trim().toUpperCase();
+    if (!k || dic[k]) return;
+    dic[k] = OBRAS[n % OBRAS.length];
+    n++;
+  });
+
+  var celdas = 0;
+  HOJAS_CON_MATERIAL.forEach(function (nombre) {
+    var h = ss.getSheetByName(nombre);
+    if (!h || h.getLastRow() < 2) return;
+    var i = _indiceDe_(h, 'Name');
+    if (i === -1) return;
+    var filas = h.getLastRow() - 1;
+    var col = h.getRange(2, i + 1, filas, 1).getValues().map(function (r) {
+      var v = String(r[0] === null || r[0] === undefined ? '' : r[0]);
+      var rep = dic[v.trim().toUpperCase()];
+      return [rep ? rep : v];
+    });
+    h.getRange(2, i + 1, filas, 1).setValues(col);
+    celdas += filas;
+  });
+
+  Logger.log('Materiales renombrados: ' + Object.keys(dic).length);
+  Object.keys(dic).sort().forEach(function (k) { Logger.log('   ' + k + '   →   ' + dic[k]); });
+  Logger.log('');
+  Logger.log('⚠ AHORA, EN LA APP: Settings → System → Rebuild Stock Totals.');
+  Logger.log('  Sin eso el stock sigue hablando de materiales que ya no se llaman así.');
+}
+
+// Las hojas que llevan el nombre del material. Las de existencias NO están
+// aquí a propósito: se rehacen solas al reconstruir, y escribirlas a mano sería
+// pelearse con esa reconstrucción.
+var HOJAS_CON_MATERIAL = ['MASTER_ARCHIVE_V3', 'ARCHIVE_HISTORY', 'MOVEMENT_TRASH'];
+
+function _hojaEsDemo_(ss) {
+  if (ss.getName().toUpperCase().indexOf(MARCA_OBLIGATORIA) !== -1) return true;
+  Logger.log('CERROJO 1: esta hoja se llama "' + ss.getName() + '" y no contiene "' +
+             MARCA_OBLIGATORIA + '". Me niego a tocarla.');
+  return false;
+}
+
+function _indiceDe_(hoja, titulo) {
+  var t = hoja.getRange(1, 1, 1, hoja.getLastColumn()).getValues()[0]
+              .map(function (x) { return String(x || '').trim().toUpperCase(); });
+  return t.indexOf(String(titulo).toUpperCase());
+}
 
 /** Mira y cuenta. No escribe una sola celda. */
 function verQueCambiaria() {
@@ -152,8 +308,8 @@ function _correr_(escribir) {
    * LIVE_STOCK, y el stock dejaría de cuadrar con su historial — que es
    * exactamente lo que una captura no puede enseñar. */
   var dic = {};                 // ORIGINAL en mayúsculas → reemplazo
-  var usados = { obra: 0, prov: 0, pers: 0 };
-  var vistos = { obra: {}, prov: {}, pers: {}, correo: {} };
+  var usados = { obra: 0, prov: 0, gc: 0, pers: 0 };
+  var vistos = { obra: {}, prov: {}, gc: {}, pers: {}, correo: {} };
 
   var hojas = _hojasQueExisten_(ss);
   hojas.forEach(function (h) {
@@ -247,8 +403,8 @@ function _hojasQueExisten_(ss) {
 function _claseDe_(titulo) {
   var t = String(titulo).toUpperCase();
   if (t === 'PROJECT' || t === 'PROJECTS') return 'obra';
-  if (t === 'SUPPLIER' || t === 'SUPPLIERS' || t === 'GC' || t === 'GCS' ||
-      t === 'COMPANY') return 'prov';
+  if (t === 'SUPPLIER' || t === 'SUPPLIERS' || t === 'COMPANY') return 'prov';
+  if (t === 'GC' || t === 'GCS') return 'gc';
   if (t === 'USER' || t === 'EMAIL') return 'correo';
   if (t === 'RESPONSIBLE' || t === 'PM' || t === 'PMS' || t === 'NAME' ||
       t === 'CREATED BY') return 'pers';
@@ -280,9 +436,23 @@ function _registrar_(valor, clase, dic, usados, vistos) {
 
   var key = v.toUpperCase();
   if (dic[key]) return;
-  if (clase === 'obra') { dic[key] = OBRAS[usados.obra % OBRAS.length];        usados.obra++; }
-  else if (clase === 'prov') { dic[key] = PROVEEDORES[usados.prov % PROVEEDORES.length]; usados.prov++; }
-  else if (clase === 'pers') { dic[key] = PERSONAS[usados.pers % PERSONAS.length];  usados.pers++; }
+
+  /* `|| 0` EN EL CONTADOR, y no es adorno. Si a este ayudante le llega un
+   * contador que no existe —porque alguien añadió una clase nueva arriba y se
+   * olvidó de inicializarla—, `lista[undefined % n]` es `lista[NaN]`, que es
+   * `undefined`, y entonces esto ESCRIBE LA PALABRA "undefined" en las celdas
+   * de una copia de mil filas sin quejarse una sola vez. Lo encontró la prueba
+   * al añadir la clase `gc`. Un fallo que produce datos plausibles y falsos es
+   * peor que uno que revienta. */
+  var pool = clase === 'obra' ? OBRAS
+           : clase === 'prov' ? PROVEEDORES
+           : clase === 'gc'   ? CONTRATISTAS
+           : clase === 'pers' ? PERSONAS
+           : null;
+  if (!pool) return;
+  var i = (usados[clase] || 0);
+  dic[key] = pool[i % pool.length];
+  usados[clase] = i + 1;
 }
 
 /** Aplica el diccionario a un valor, entero o dentro de un texto libre. */
