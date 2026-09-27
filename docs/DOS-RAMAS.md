@@ -91,3 +91,53 @@ cosas encima del inventario de una empresa que trabaja.
 Cuanto más tiempo pasa, más grande es el volcado y más se parece a un
 lanzamiento a ciegas — que es exactamente lo que estas dos ramas existen para
 evitar. Volcar seguido, en tandas pequeñas.
+
+---
+
+## ✅ HECHAS — 2026-09-27
+
+Las dos ramas existen y están publicadas, las dos en el mismo punto: **v12.15 ·
+build c0a41403**, que es lo que Jose tiene desplegado.
+
+```
+estable      ← arreglos. Lo que está roto, miente o pierde datos
+siguiente    ← mejoras, features, pantallas, ajustes
+```
+
+`consolidado-v8.8` se queda **quieta**, como registro de todo lo anterior. No
+recibe más trabajo. No se borra: es la historia de doce versiones y el sitio
+desde donde salieron.
+
+### El día a día, en cuatro líneas
+
+| Qué pasó | Dónde se arregla | Cuándo sale |
+|---|---|---|
+| Algo está roto | `estable` | Ya |
+| Una mejora | `siguiente` | Cuando se decida la entrega |
+| Salió un arreglo | se mezcla `estable` → `siguiente` | En el momento |
+| Hay entrega nueva | se vuelca `siguiente` → `estable` | Por tandas |
+
+**Los arreglos suben, las mejoras bajan en bloque.** Así un arreglo se hace UNA
+vez, que es el único motivo de peso para no tener dos ramas.
+
+### La copia de pruebas — resuelto, y Jose tenía razón
+
+Jose: *"yo tengo una copia de prueba que se llama 'MY WAREHOUSE'… no empecé una
+nueva desde cero porque necesitamos los datos para trabajar; los datos reales
+son mejores que los inventados, dime si estoy mal."*
+
+**No está mal, está bien, y es mejor que lo que yo iba a proponer.** Un almacén
+inventado tiene nombres del mismo largo, cantidades redondas y ningún caso raro
+— y los casos raros son justo lo que rompe el producto. Toda la semana pasada lo
+demuestra: la columna que se estrujaba con el nombre de veinte letras, la
+insignia de categoría que no cabía, el correo más largo que se salía. Nada de eso
+aparece en datos inventados.
+
+**Lo que SÍ hay que separar es publicar.** Para eso está
+`tools/demo-nombres.gs`: se hace una copia de `MY WAREHOUSE`, se le corre encima
+y los nombres propios pasan a ser ficticios **sin tocar** cantidades, fechas,
+estantes ni categorías. El almacén sigue siendo el de verdad en todo lo que hace
+que una captura parezca real; lo único que cambia es a quién pertenece.
+
+O sea: **`MY WAREHOUSE` para probar, una copia suya con nombres ficticios para
+publicar.** Sin elegir entre las dos cosas.
