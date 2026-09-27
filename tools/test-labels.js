@@ -228,10 +228,16 @@ Object.assign(window.google,{script:{run:new Proxy({},{get(t,k){
   // cosa — que es exactamente lo que pasó al escribir esto.
   async function abrirTres(){
     return page.evaluate(() => {
+      /* `wantsLabel: true` en las tres, y no es un detalle del andamio: desde
+       * el 2026-09-27 el cuadro SÓLO se abre si se marcó alguna casilla en el
+       * formulario. Antes esta caja se apoyaba en la excepción de "si nadie la
+       * tocó, todas marcadas", que es justo la que Jose mandó quitar. Marcarlas
+       * es además lo que hace una persona que quiere etiquetas, así que la caja
+       * se parece más a la realidad que antes. */
       _openLabels(_labelsFromEntry([
-        { name: 'UNO',  category: 'A', unit: 'UNIT', locations: [{ loc: 'C2A', qty: 1 }] },
-        { name: 'DOS',  category: 'A', unit: 'UNIT', locations: [{ loc: 'B4A', qty: 2 }] },
-        { name: 'TRES', category: 'A', unit: 'UNIT', locations: [{ loc: 'A1A', qty: 3 }] }
+        { name: 'UNO',  category: 'A', unit: 'UNIT', wantsLabel: true, locations: [{ loc: 'C2A', qty: 1 }] },
+        { name: 'DOS',  category: 'A', unit: 'UNIT', wantsLabel: true, locations: [{ loc: 'B4A', qty: 2 }] },
+        { name: 'TRES', category: 'A', unit: 'UNIT', wantsLabel: true, locations: [{ loc: 'A1A', qty: 3 }] }
       ], {}), null);
     });
   }
@@ -466,10 +472,25 @@ Object.assign(window.google,{script:{run:new Proxy({},{get(t,k){
       !filas.some(f => f.name === 'VACIO'));
   }
 
-  console.log('\n═══ la casilla del formulario ESTRECHA, no crea ═══\n');
+  console.log('\n═══ la casilla del formulario MANDA ═══\n');
   //
   // Jose: *"mi idea es poner un checkbox al crear el entry para los que quiera
   // labels, así ya la app sabe cuáles quiero."*
+  //
+  // ── EL CONTRATO CAMBIÓ EL 2026-09-27, Y LO CAMBIÓ ÉL ───────────────────────
+  //
+  // Aquí se comprobaba que "si NADIE la tocó, todas vienen marcadas". Era
+  // deliberado: quien ignorase la casilla nueva no debía perder una función que
+  // ya tenía. Jose lo tumbó, y con razón:
+  //
+  //   "Sólo deben aparecer marcadas las que ya seleccioné al hacer el entry…
+  //    si no, ¿de qué sirve poner el checkbox dentro de cada material? Eso es
+  //    pedir información al usuario pero hacer lo que queremos después. Y si no
+  //    se marca ninguna, no se abre la ventana, así de simple."
+  //
+  // El argumento que sostenía la excepción ya no se sostiene, porque él señaló
+  // la salida: se marca un movimiento en Movements, se pulsa Labels y se
+  // reimprime cualquier cosa. Olvidarse de marcar cuesta dos clics después.
   {
     const mat = (name, quiere) => ({ name, category:'WINDOW', unit:'UNIT',
       locations:[{ loc:'A1A', qty:5 }], wantsLabel: quiere });
@@ -483,13 +504,58 @@ Object.assign(window.google,{script:{run:new Proxy({},{get(t,k){
     check('...pero las demás SIGUEN en la lista, por si se cambia de idea',
       elegidos.length === 3, elegidos.length);
 
-    // EL CASO DE QUIEN IGNORA LA CASILLA. No puede perder una función que ya
-    // tenía, y un cuadro que abre con todo desmarcado y el botón apagado parece
-    // roto.
     const nadie = await page.evaluate(ms => _labelsFromEntry(ms, {}),
       [mat('UNO', false), mat('DOS', false)]);
-    check('si NADIE la tocó, todas vienen marcadas — como siempre',
-      nadie.every(r => r.marcada), nadie.map(r => r.marcada));
+    check('si no se marcó ninguna, NINGUNA viene marcada — la respuesta del ' +
+          'usuario ya no se ignora cuando la respuesta es "ninguna"',
+      nadie.every(r => !r.marcada), nadie.map(r => r.marcada));
+
+    /* Y LO QUE SE VE, que es la otra mitad de lo que pidió: el cuadro NO SE
+     * ABRE. Se comprueba sobre el DOM y no sobre el valor devuelto, porque "la
+     * fila viene desmarcada" y "la ventana no apareció" son dos cosas distintas
+     * y la segunda es la que se pidió. */
+    /* SE MIRA LA CLASE `show`, que es como se abre de verdad. La primera
+     * versión de esta prueba miraba `ov.hidden`, que en este cuadro NO se usa
+     * nunca — así que daba "abierta" siempre y habría pasado en verde sobre el
+     * código sin arreglar. Y se cierra antes de medir, porque el bloque de
+     * arriba deja el cuadro abierto. */
+    const sinMarcar = await page.evaluate(ms => {
+      _labelsClose();
+      let siguio = 0;
+      _openLabels(_labelsFromEntry(ms, {}), function(){ siguio++; });
+      const ov = document.getElementById('labelsOverlay');
+      return new Promise(r => setTimeout(() => r({
+        abierta: !!(ov && ov.classList.contains('show')), siguio: siguio
+      }), 300));
+    }, [mat('UNO', false), mat('DOS', false)]);
+    check('sin ninguna marcada el cuadro NI SE ABRE', !sinMarcar.abierta, sinMarcar);
+    check('...y lo que venía detrás sigue corriendo — saltarse el cuadro no ' +
+          'puede tragarse la pregunta de las entregas', sinMarcar.siguio === 1,
+      sinMarcar);
+
+    const conUna = await page.evaluate(ms => {
+      _labelsClose();
+      _openLabels(_labelsFromEntry(ms, {}), function(){});
+      const ov = document.getElementById('labelsOverlay');
+      return new Promise(r => setTimeout(() => r(!!(ov && ov.classList.contains('show'))), 300));
+    }, [mat('UNO', false), mat('DOS', true)]);
+    check('con una sola marcada SÍ se abre', conUna, conUna);
+    await page.evaluate(() => _labelsClose());
+
+    /* LA REIMPRESIÓN NO PUEDE QUEDAR ATRAPADA EN ESTA REGLA. Sus filas vienen
+     * de movimientos ya guardados y NO traen `marcada`; sin ella cuentan como
+     * marcadas, porque allí se eligió fila por fila antes de abrir el cuadro.
+     * Si esto se rompiera, el botón Labels de Movements dejaría de hacer nada —
+     * y es justo la salida que hace aceptable lo de arriba. */
+    const reimpresion = await page.evaluate(() => {
+      _labelsClose();
+      _openLabels([{ name:'X', category:'A', qty:1, unit:'U', loc:'C2A',
+                     po:'', supplier:'', project:'', dateRec:'', copies:1 }], null);
+      const ov = document.getElementById('labelsOverlay');
+      return new Promise(r => setTimeout(() => r(!!(ov && ov.classList.contains('show'))), 300));
+    });
+    check('reimprimir desde Movements sigue abriendo el cuadro', reimpresion);
+    await page.evaluate(() => _labelsClose());
   }
 
   console.log('\n═══ lo que viene detrás ═══\n');

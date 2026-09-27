@@ -99,6 +99,11 @@ ${fnSrc('_renderTodoDeck')}
   var _TODO_KEY = 'acopio_pending_entries';
   var _todoItems = [];
   var _entryTodoId = null;
+  /* SE SACA DEL ARCHIVO, no se copia con un numero a mano: _renderTodoDeck
+   * paso a usarlo el 2026-09-27, cuando las tres clases de tarjeta dejaron de
+   * llevar cada una su 5 escrito aparte. Una copia aqui con el valor de hoy
+   * mentiria el dia que cambie, y esta caja mediria otro mazo que el real. */
+  ${(/var _DECK_VISIBLE = \d+;/.exec(SRC) || ['var _DECK_VISIBLE = 5;'])[0]}
 </script></body></html>`;
 
 // ── La tarjeta, medida contra la hoja de estilos ENTERA ──────────────────────

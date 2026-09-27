@@ -5,6 +5,81 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+# ══ ANOTADO 2026-09-27 — LOS MOVIMIENTOS DE josephl SIN ID ══
+
+Jose, con captura del sheet: once filas seguidas (1235-1245), todas de
+`josephl@ox-glass.com`, todas EXIT a JOBSITE, **con la columna Movement ID
+vacía**. Las de antes y las de después sí la tienen.
+
+## Lo que SÍ está comprobado en el código
+
+**No es una cuestión de rol.** Lo revisé entero:
+
+- Los **cuatro** caminos que guardan movimientos —`addMovement`, `addMultiEntry`,
+  `addMultiExit` y el de transferencias— desembocan todos en
+  **`addMovementsBatch_`**.
+- `addMovementsBatch_` asigna el ID **en la misma línea en que construye la
+  fila** (`row[AC.MOV_ID] = uniqueMovId_(...)`), sin mirar el rol, el permiso ni
+  quién guarda.
+- `addMultiExit` —el camino que usa josephl, según su propio ERROR_LOG— no tiene
+  ni una condición que dependa de la persona.
+
+**Con el código de hoy, josephl recibe ID igual que Jose.** Eso lo puedo afirmar.
+
+## Lo que NO puedo afirmar, y por qué
+
+**No sé por qué esas once filas no lo tienen, y no voy a inventar una causa.**
+Lo que descarté, para que no se vuelva a mirar:
+
+| Hipótesis | Descartada porque |
+|---|---|
+| Es por el rol | Ningún camino mira el rol al asignar el ID |
+| Son filas viejas, anteriores al ID | El AUDIT_LOG las sitúa el **24/09 a las 6:57**, muy posterior |
+| Las borró el arreglo del 26 | El desastre vació las hojas **enteras**; esto es un bloque con filas sanas a los lados |
+| La restauración desde la papelera las perdió | Ese camino conserva el ID (se ve en las filas `RESTORE_ROW` del AUDIT_LOG) |
+
+**La sospecha que queda, y es sólo una sospecha:** el ancho de la hoja. Sabemos
+por el incidente del 26 que había hojas con **20 columnas** cuando el modelo
+necesita 23 — y `Movement ID` es justo la 23. Una escritura de ese momento pudo
+quedarse corta. Encaja con que sea un bloque contiguo, pero **no lo he
+reproducido**, y sin reproducirlo no es una causa: es una corazonada.
+
+## Qué hacer AHORA (resuelve el síntoma, pase lo que pase)
+
+**Settings → System → Movement IDs.** Rellena los huecos y ya está. Tres cosas
+que lo hacen seguro, y están así a propósito:
+
+1. **Sólo rellena lo que está en blanco.** Una fila que ya tiene ID no se toca,
+   así que correrlo dos veces no hace nada la segunda.
+2. **Escribe UNA columna y nada más.** No puede estropear una cantidad, un
+   estante ni un precio: lo peor que puede hacer es poner un nombre.
+3. **Toma el mismo candado que toma un guardado.**
+
+## Lo que hace falta para saber la causa
+
+**Un dato que sólo Jose tiene:** si en el **backup del 25/09 a las 2:36** —el de
+la noche anterior al desastre— esas mismas once filas **ya estaban sin ID**.
+
+- **Sin ID también** → nacieron así el 24/09, y la causa está en el guardado de
+  ese día. Hay que mirar el ancho de la hoja en ese momento.
+- **Con ID** → algo se los quitó entre el 25 y hoy, y entonces el sospechoso es
+  el barrido del 26 o la restauración. Eso sería **más grave** y hay que mirarlo
+  ya.
+
+Son dos minutos: abrir ese backup, ir a `MASTER_ARCHIVE_V3`, buscar las filas de
+`josephl` del 24/09 y mirar la columna W.
+
+## Y una mejora que hace falta de todas formas
+
+Hoy, un movimiento sin ID sólo se nota si alguien abre el sheet y mira la
+columna. **Debería avisar la app**, como el canario del archivo vacío: al cargar,
+si hay movimientos sin ID, decirlo con el botón para arreglarlo al lado. El dato
+ya viaja —la tabla desactiva la casilla de selección con el texto *"This movement
+has no ID yet"*— pero eso sólo se ve si te pones a marcar filas.
+
+---
+
+
 # ══ URGENTE (2026-09-26) — EL MISMO PATRÓN QUE BORRÓ EL ARCHIVO, EN `writeConfigColumn_` ══
 
 El trabajo nocturno borró el archivo de movimientos entero la noche del 26 de

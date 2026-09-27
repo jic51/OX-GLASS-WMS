@@ -4316,7 +4316,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.14';
+var APP_VERSION = '12.15';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -4328,7 +4328,7 @@ var APP_VERSION = '12.14';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '3bb713c7';
+var APP_BUILD = 'c0a41403';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -16300,12 +16300,33 @@ function _paintDeck(){
   // test-mazo-contador.js las compara entre sí precisamente para que no vuelva
   // a pasar.
   var total = _cfgDeckTotal + _sysDeckTotal + _todoDeckTotal;
+
+  /* LA INSIGNIA PROMETÍA NUEVE Y EL MAZO ENSEÑABA CINCO (v12.15).
+   *
+   * Jose, con vídeo: *"revisa las tarjetas y averigua por qué muestra el número
+   * 9 y sólo aparecen 5."* El número era cierto —hay nueve esperando— y el mazo
+   * también: cada clase de tarjeta pone como mucho `_DECK_VISIBLE` en el DOM,
+   * porque pintarlas todas hacía una escalera que se salía por arriba de la
+   * pantalla.
+   *
+   * O sea que las dos mitades tenían razón y JUNTAS mentían: el número decía
+   * que había nueve cosas que atender y no había forma de ver ni de alcanzar
+   * las otras cuatro. Un contador que promete lo que la pantalla no entrega
+   * enseña a no creerle, que es justo lo que este mazo no puede permitirse.
+   *
+   * Ahora la insignia dice las dos cosas —`5/9`— y la ayuda al pasar el ratón
+   * explica lo que pasa cuando resuelves una. No se enseñan las nueve: la
+   * escalera era un problema de verdad y esto no lo reabre. */
+  var enPantalla = deck.querySelectorAll('.deck-card').length;
   var top = deck.lastElementChild;
   if (top && total > 1){
     var badge = document.createElement('span');
     badge.className = 'cfg-count';
-    badge.title = total + ' waiting';
-    badge.textContent = total;
+    var recortado = enPantalla > 0 && enPantalla < total;
+    badge.title = recortado
+      ? total + ' waiting · ' + enPantalla + ' shown — deal with one and the next takes its place'
+      : total + ' waiting';
+    badge.textContent = recortado ? (enPantalla + '/' + total) : String(total);
     top.appendChild(badge);
   }
 
@@ -19943,22 +19964,31 @@ var _labelAfter = null;   // lo que hay que hacer al cerrar (ver submitMultiEntr
 
 /** Las filas imprimibles de una entrada: una por (material × estante). */
 function _labelsFromEntry(materiales, compartido){
-  /* LA CASILLA DEL FORMULARIO ESTRECHA, NO CREA.
+  /* LA CASILLA DEL FORMULARIO MANDA, Y PUNTO (v12.15).
    *
-   * Si alguien marcó "🏷 Label" en alguna línea, el cuadro se abre con ESAS
-   * marcadas y las demás no — que es lo que ahorra trabajo cuando se entran
-   * diez materiales y sólo dos necesitan etiqueta.
+   * Aquí había una excepción: si NADIE marcaba la casilla en ninguna línea, el
+   * cuadro se abría con TODAS marcadas. El argumento era que quien ignorase la
+   * casilla nueva no perdiera una función que ya tenía.
    *
-   * Si NADIE la tocó, todas vienen marcadas, como siempre. Quien ignore la
-   * casilla nueva no puede perder una función que ya tenía; y un cuadro que se
-   * abre con todo desmarcado y el botón apagado parece roto. */
-  var alguienEligio = (materiales || []).some(function(m){ return m.wantsLabel; });
+   * Jose lo tumbó, y tiene razón: *"eso es pedir información al usuario pero
+   * hacer lo que queremos después. ¿De qué sirve poner el checkbox dentro de
+   * cada material?"* Una casilla cuya respuesta se ignora cuando la respuesta
+   * es "ninguna" enseña a no leer las casillas.
+   *
+   * Y el argumento de perder algo ya no se sostiene, porque la salida existe y
+   * él la señaló: se selecciona un movimiento en Movements, se pulsa Labels y
+   * se reimprime lo que sea, cuando sea. Olvidarse de marcar cuesta dos clics
+   * después, no un material sin etiqueta.
+   *
+   * Las filas siguen saliendo TODAS —se ven los diez materiales de la entrada—
+   * pero marcadas sólo las que se marcaron. Si no se marcó ninguna, el cuadro
+   * ni se abre; de eso se encarga _openLabels. */
   var out = [];
   (materiales || []).forEach(function(mat){
     (mat.locations || []).forEach(function(l){
       if (!l || !(l.qty > 0)) return;
       out.push({
-        marcada:  alguienEligio ? !!mat.wantsLabel : true,
+        marcada:  !!mat.wantsLabel,
         name:     mat.name || '',
         category: mat.category || compartido.category || '',
         qty:      l.qty,
@@ -20042,6 +20072,23 @@ function _openLabels(rows, alCerrar){
   _labelAfter = alCerrar || null;
   _labelRows  = rows || [];
   if (!_labelRows.length){ _labelsDone(); return; }
+
+  /* SI NO SE MARCÓ NINGUNA, NO SE ABRE (v12.15). Jose: *"si no se marca
+   * ninguna en el entry no se abre la ventana, así de simple."*
+   *
+   * Un cuadro que se abre con todo desmarcado no ofrece nada: obliga a cerrarlo
+   * después de cada entrada para llegar a lo siguiente. Y no se pierde nada,
+   * porque reimprimir existe — se marca un movimiento en Movements y se pulsa
+   * Labels.
+   *
+   * La regla vive AQUÍ y no en el formulario de entrada, para que valga también
+   * para cualquier camino que se añada mañana. Y no afecta a la reimpresión:
+   * esas filas no traen `marcada`, y sin ella se cuentan como marcadas —que es
+   * lo correcto, porque ahí se eligió fila por fila antes de abrir el cuadro. */
+  var hayMarcadas = _labelRows.some(function(r){
+    return r.marcada === undefined ? true : !!r.marcada;
+  });
+  if (!hayMarcadas){ _labelsDone(); return; }
 
   var lead = document.getElementById('labelsLead');
   var list = document.getElementById('labelsList');
@@ -21716,7 +21763,7 @@ function _renderTodoDeck(){
 
   // Como las otras dos: sólo un puñado en el DOM, y pintadas al revés para que
   // la más nueva quede la última y por tanto encima.
-  _todoDeckHtml = _todoItems.slice(0, 5).slice().reverse().map(function(t){
+  _todoDeckHtml = _todoItems.slice(0, _DECK_VISIBLE).slice().reverse().map(function(t){
     var qty = t.qty > 0 ? (_qtyText(t.qty) + ' ' + (t.unit || 'UNIT')) : 'qty not stated';
     return '<div class="deck-card todo-card" data-todo-id="' + _he(t.id) + '">' +
       '<button class="sys-card-x" data-todo-x="' + _he(t.id) + '" title="Dismiss">✕</button>' +
@@ -21744,7 +21791,7 @@ function _renderSysDeck(){
   if (!_sysCards.length){ _sysDeckHtml = ''; _paintDeck(); return; }
 
   // Newest painted last so it sits nearest the top of the pile.
-  _sysDeckHtml = _sysCards.slice(0, 5).reverse().map(function(c){
+  _sysDeckHtml = _sysCards.slice(0, _DECK_VISIBLE).reverse().map(function(c){
     return '<div class="deck-card sys-card" data-card-id="' + _he(c.id) + '" data-sys-open="' + _he(c.id) + '" title="Click for the full record">' +
       '<button class="sys-card-x" data-sys-x="' + _he(c.id) + '" title="Dismiss">✕</button>' +
       '<div class="sys-card-title">✓ ' + _he(c.label) + '</div>' +

@@ -240,15 +240,41 @@ check('las tres clases mezcladas: 9 → insignia 9', r.badge === 9 && r.tarjetas
 r = pintarCon(1, 0, 0);
 check('una sola tarjeta no lleva insignia', r.badge === null, r);
 
-// El mazo recorta cuánto mete en el DOM (slice(0,5) en las naranjas), así que
-// la insignia tiene que seguir contando el TOTAL, no lo que se ve. Se simula
-// con más total que HTML.
+/* EL MAZO RECORTA CUÁNTO METE EN EL DOM (_DECK_VISIBLE), Y LA INSIGNIA TIENE
+ * QUE DECIR LAS DOS COSAS.
+ *
+ * Aquí se exigía que la insignia dijera el TOTAL a secas: 12 con 5 en pantalla.
+ * El número era cierto, y el recorte también —pintarlas todas hacía una escalera
+ * que se salía por arriba—, pero JUNTOS mentían: prometían doce cosas que
+ * atender sin forma de ver ni alcanzar las otras siete.
+ *
+ * Jose lo cazó en vídeo el 2026-09-26: *"revisa las tarjetas y averigua por qué
+ * muestra el número 9 y sólo aparecen 5."* Que lo preguntara es la prueba de
+ * que el contador no se entendía.
+ *
+ * El contrato ahora: si TODO cabe, la insignia dice el total, como siempre. Si
+ * NO cabe, dice `visibles/total` y la ayuda explica que al resolver una entra la
+ * siguiente. Lo que NO cambia es cuántas se pintan: la escalera era un problema
+ * de verdad y esto no lo reabre. */
 ctx._sysDeckHtml = ''; ctx._cfgDeckHtml = ''; ctx._todoDeckHtml = carta('todo-card', 5);
 ctx._sysDeckTotal = 0; ctx._cfgDeckTotal = 0; ctx._todoDeckTotal = 12;
 mazo._reset(); mazo.classList.remove('open');
 vm.runInContext('_paintDeck()', ctx);
-check('con 12 pendientes y 5 en pantalla, la insignia dice 12',
-      Number(mazo.badges[0].textContent) === 12, mazo.badges[0].textContent);
+check('con 12 pendientes y 5 en pantalla, la insignia dice 5/12 — no doce a ' +
+      'secas, que es lo que hizo preguntar a Jose',
+      mazo.badges[0].textContent === '5/12', mazo.badges[0].textContent);
+check('...y la ayuda dice qué pasa al resolver una, no sólo cuántas hay',
+      /5 shown/.test(mazo.badges[0].title) && /next takes its place/.test(mazo.badges[0].title),
+      mazo.badges[0].title);
+
+/* Y EL CASO QUE NO DEBE CAMBIAR: cuando todo cabe, la insignia dice el total a
+ * secas. Sin esto, "arreglar" el recorte podría dejar un `9/9` en pantalla, que
+ * es ruido: una barra que siempre dice lo mismo a los dos lados no informa. */
+ctx._todoDeckHtml = carta('todo-card', 4); ctx._todoDeckTotal = 4;
+mazo._reset(); mazo.classList.remove('open');
+vm.runInContext('_paintDeck()', ctx);
+check('si todo cabe, la insignia sigue diciendo el total a secas',
+      mazo.badges[0].textContent === '4', mazo.badges[0].textContent);
 
 console.log('\n── 2. Los dos contadores cuentan LO MISMO ──');
 //
