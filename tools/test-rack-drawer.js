@@ -245,16 +245,35 @@ async function closeMoveModal(page) {
     document.getElementById('mExitDest').value) === '');
   await closeMoveModal(page);
 
+  /* Scenario: the single-material category select resets too (WASTE/TRANSFER/RETURN)
+   *
+   * EL RESIDUO SE PONE EN WINDOW Y SE ESPERA SCREW, no al revés, y hay una razón.
+   *
+   * Hasta la v12.20 los desplegables salían en el orden de la hoja CONFIG, que
+   * aquí es ['WINDOW','SCREW']; desde la v12.20 los catálogos se ordenan al
+   * llegar, así que la primera categoría pasó a ser SCREW. Escrito como estaba
+   * —dejar SCREW y esperar WINDOW— la prueba no sólo fallaba: se volvía
+   * AMBIGUA, porque el residuo y la primera categoría eran el mismo valor y
+   * "se reinició" y "se quedó lo de antes" dejaban de distinguirse.
+   *
+   * Un falso verde en el que la prueba no puede distinguir las dos respuestas
+   * es peor que un fallo. Con el residuo en WINDOW y la espera en SCREW vuelven
+   * a ser distintos, que es lo único que esta comprobación mide. */
   console.log('\nScenario: the single-material category select resets too (WASTE/TRANSFER/RETURN)');
-  await page.evaluate(() => { window.openMoveModal('WASTE'); document.getElementById('mType').value = 'SCREW'; });
+  await page.evaluate(() => { window.openMoveModal('WASTE'); document.getElementById('mType').value = 'WINDOW'; });
   await page.waitForTimeout(100);
-  check('category set to SCREW for this WASTE', await page.evaluate(() => document.getElementById('mType').value) === 'SCREW');
+  check('category set to WINDOW for this WASTE', await page.evaluate(() => document.getElementById('mType').value) === 'WINDOW');
   await closeMoveModal(page);
   await page.evaluate(() => window.openMoveModal('WASTE'));
   await page.waitForTimeout(100);
-  check('a fresh WASTE resets to the first category, not the leftover SCREW', await page.evaluate(() =>
-    document.getElementById('mType').value) === 'WINDOW');
+  check('a fresh WASTE resets to the first category, not the leftover WINDOW', await page.evaluate(() =>
+    document.getElementById('mType').value) === 'SCREW');
   await closeMoveModal(page);
+
+  // Y de paso, lo que la v12.20 promete: los catálogos llegan ordenados, y el
+  // desplegable del formulario enseña el mismo orden que Settings.
+  check('las categorías del formulario salen en orden alfabético', await page.evaluate(() =>
+    [...document.getElementById('mType').options].map(o => o.value).filter(Boolean).join(',')) === 'SCREW,WINDOW');
 
   console.log('\nScenario: switching type INSIDE the modal (Exit -> Transfer -> Waste) keeps the same material instead of losing it');
   // A1A was emptied out by the two staleness scenarios above — restore the

@@ -141,8 +141,21 @@ fs.writeFileSync(f, html);
         'reparte el hueco entre las demás',
         todas.desborda === true, { ancho: todas.ancho });
 
+  /* POR VALOR, NO POR POSICIÓN.
+   *
+   * Esto decía `{ index: 1 }` y luego afirmaba cosas de WINDOW: elegía por
+   * POSICIÓN y comprobaba por NOMBRE. Mientras el desplegable salió en el orden
+   * de la hoja CONFIG las dos coincidían por casualidad; en cuanto la v12.20
+   * ordenó los catálogos alfabéticamente, la posición 1 pasó a ser
+   * SEALANT/CAULK y tres comprobaciones se cayeron sin que nada estuviera mal
+   * en el producto.
+   *
+   * Una prueba que depende del ORDEN de una lista para hablar de UN elemento se
+   * rompe el día que alguien ordena la lista — y ese día no dice "cambió el
+   * orden", dice "el filtro está roto", que es mentira y cuesta media hora.
+   * Elegir por valor dice lo que quiere decir. */
   console.log('\n═══ elegida WINDOW: la columna se va ═══\n');
-  await page.selectOption('#stockFilter', { index: 1 });
+  await page.selectOption('#stockFilter', 'WINDOW');
   await page.waitForTimeout(200);
   const una = await foto();
 
@@ -165,7 +178,7 @@ fs.writeFileSync(f, html);
 
   // Una categoría con caracteres que nt() cambia: el título tiene que decir el
   // nombre de verdad, no "sealant/caulk".
-  await page.selectOption('#stockFilter', { index: 2 });
+  await page.selectOption('#stockFilter', 'SEALANT/CAULK');
   await page.waitForTimeout(200);
   const otra = await foto();
   check('y con una categoría con barra dentro, también',
@@ -186,7 +199,7 @@ fs.writeFileSync(f, html);
         vuelta.guardado === todas.guardado, { antes: todas.guardado, ahora: vuelta.guardado });
 
   console.log('\n═══ en modo edición se ve siempre ═══\n');
-  await page.selectOption('#stockFilter', { index: 1 });
+  await page.selectOption('#stockFilter', 'WINDOW');
   await page.waitForTimeout(200);
   await page.click('#btnEditCols_stock');
   await page.waitForTimeout(250);

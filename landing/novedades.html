@@ -98,6 +98,58 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.20</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Cuatro cosas pequeñas que estaban mal en silencio</h3>
+      <p><b>El aviso que gritaba sin motivo.</b> Pasar de Entry o Exit a Adjust
+         decía siempre <i>"1 material was not carried over"</i>, incluso con el
+         formulario completamente vacío. Contaba la tarjeta en blanco que Entry
+         y Exit siempre tienen abierta, así que creía que había un material
+         donde no se había escrito nada. Ahora cuenta materiales, o sea los que
+         tienen nombre. Y sigue avisando cuando de verdad se pierde algo, que es
+         la mitad que importa: ese aviso existe porque una vez se perdieron
+         cuatro materiales al cambiar de pestaña sin que nada lo dijera.</p>
+      <p><b>Las listas iban en dos órdenes distintos.</b> Categorías, proyectos
+         y proveedores salían por orden alfabético en Settings y por orden de
+         creación —lo que se escribió primero, hace meses— en el formulario de
+         movimientos. Dieciséis categorías en un orden que nadie puede predecir
+         obliga a leerlas todas para encontrar una. Ahora se ordenan una sola
+         vez, al llegar los datos, así que las dos listas coinciden por
+         construcción. Las ubicaciones se dejan como están a propósito: su orden
+         se coloca a mano y ese orden es justamente el valor.</p>
+      <p><b>Ya se puede añadir las unidades por caja sin fingir una entrada.</b>
+         Corregirla ya se podía; añadirla no — la única forma era empezar una
+         entrada, elegir el material, poner Box y contestar la pregunta. Un dato
+         de catálogo escondido detrás de un movimiento. Settings → Materials
+         tiene ahora <b>＋ Add a pack</b>. Sólo acepta un material que ya exista,
+         sólo los cuatro envases que contienen cosas, y nunca un envase de uno —
+         y si el material ya tiene su cifra te manda a Edit, que sigue
+         preguntando dos veces, porque cambiar una cifra que ya existe cambia lo
+         que van a costar las entradas futuras.</p>
+      <p><b>El título de Qty / Unit va centrado.</b> Es el único título centrado
+         de la tabla, y no es un capricho: en todas las demás columnas el valor
+         empieza donde empieza el título, así que alinearlos a la izquierda los
+         ata. Ésta no tiene un sitio donde empiece el valor — tiene dos mitades
+         que se encuentran en una costura — así que ahora el título se apoya en
+         la costura y deja de separarse de los números según se alargan.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v12.20</span>
+      <span class="tag new">Nuevo</span>
+      <h3>La papelera dice qué movimiento tiene guardado</h3>
+      <p>Borras un movimiento, lo devuelves, lo vuelves a borrar — y la papelera
+         mostraba dos renglones que decían exactamente lo mismo: mismo material,
+         misma cantidad, mismo tipo, mismo estante. Sin nada que dijera si era
+         UN movimiento listado dos veces o DOS movimientos que se parecen. Esas
+         dos respuestas piden acciones opuestas, así que dejar la pregunta
+         abierta era el fallo.</p>
+      <p>Cada renglón lleva ahora <b>la fecha del propio movimiento</b>, su
+         <b>PO</b> y su <b>ID</b> debajo. El ID no está para leerlo: está para
+         compararlo, con el otro renglón o con la hoja.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.19</span>
       <span class="tag fix">Arreglo</span>
       <h3>La cantidad vuelve a estar en su propia fila</h3>

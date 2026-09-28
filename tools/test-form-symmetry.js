@@ -547,6 +547,65 @@ const NORM = s => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
   check('a RETURN opened after a WASTE asks for Comments, not for a "Reason for Waste"',
     /^Comments$/i.test((lbl || '').trim()));
 
+  /* ── EL AVISO QUE SE DISPARABA SOLO ───────────────────────────────────────
+   *
+   * Jose, 2026-09-28: "1 material was not carried over — ADJUST holds one at a
+   * time. Este mensaje aparece SIEMPRE que doy clic en Entry o Exit y paso a
+   * Adjust. Es una advertencia, pero no tiene sentido si no había seleccionado
+   * algo antes de pasar a ajustar."
+   *
+   * La causa: _countMoveMaterialLines contaba TARJETAS, y ENTRY y EXIT siempre
+   * tienen al menos una dibujada esperando a que escribas. Así que `before`
+   * valía 1 con el formulario en blanco, `after` valía 0 al llegar a ADJUST, y
+   * el aviso salía cada vez.
+   *
+   * Se comprueban las dos mitades, y hacen falta las dos: que NO avise cuando
+   * no hay nada, y que SÍ avise cuando de verdad se pierde un material. Sólo la
+   * primera se pasaría borrando el aviso entero — y ese aviso existe porque
+   * Jose perdió cuatro materiales sin que nada se lo dijera. */
+  for (const desde of ['ENTRY', 'EXIT']) {
+    await page.evaluate(() => {
+      window.__avisos = [];
+      if (!window.__toastOrig) window.__toastOrig = window.showToast;
+      window.showToast = function(msg){ window.__avisos.push(String(msg)); };
+    });
+
+    // 1. En blanco: no debe avisar de nada.
+    await page.evaluate(t => openMoveModal(t), desde);
+    await page.waitForTimeout(280);
+    await page.evaluate(() => _moveTypeBarClick('ADJUST'));
+    await page.waitForTimeout(320);
+    let avisos = await page.evaluate(() => window.__avisos.slice());
+    check(desde + ' → ADJUST en blanco: NO avisa de materiales perdidos',
+      !avisos.some(a => /not carried over/i.test(a)), avisos);
+
+    /* 2. Con DOS materiales puestos: sí debe avisar, porque sí se pierde uno.
+     *
+     * Con UNO no avisa, y es correcto: ADJUST tiene un hueco, el material se
+     * carga en él y no se pierde nada. Lo escribí primero con uno y falló —
+     * fallaba la expectativa, no el código. Vale la pena dejarlo dicho, porque
+     * "avisa cuando cambio de pestaña con algo escrito" es la regla que parece
+     * obvia y es la equivocada: la regla es AVISA CUANDO SE PIERDE ALGO. */
+    await page.evaluate(() => { window.__avisos = []; });
+    await page.evaluate(t => openMoveModal(t), desde);
+    await page.waitForTimeout(280);
+    await setMaterial(desde, 'MM210', 12);
+    await page.evaluate(t => {
+      if (t === 'ENTRY') { addMatLine(); document.getElementById('mat-name-2').value = 'MM211'; }
+      else               { addExitMatLine(); document.getElementById('exit-name-2').value = 'MM211'; }
+    }, desde);
+    await page.waitForTimeout(220);
+    const cuantos = await page.evaluate(() => _countMoveMaterialLines());
+    check(desde + ': con dos nombres escritos, cuenta 2', cuantos === 2, cuantos);
+    await page.evaluate(() => _moveTypeBarClick('ADJUST'));
+    await page.waitForTimeout(320);
+    avisos = await page.evaluate(() => window.__avisos.slice());
+    check(desde + ' → ADJUST con DOS materiales: SÍ avisa de que se pierde uno',
+      avisos.some(a => /not carried over/i.test(a)), avisos);
+
+    await page.evaluate(() => { if (window.__toastOrig) window.showToast = window.__toastOrig; });
+  }
+
   check('no page errors', pageErrors.length === 0);
   if (pageErrors.length) pageErrors.forEach(e => console.log('  PAGE ERROR:', e));
 

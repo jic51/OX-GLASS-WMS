@@ -97,6 +97,57 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.20</span>
+      <span class="tag fix">Fix</span>
+      <h3>Four small things that were each quietly wrong</h3>
+      <p><b>The warning that cried wolf.</b> Switching from Entry or Exit to
+         Adjust always said <i>"1 material was not carried over"</i> — even with
+         the form completely empty. It was counting the blank card that Entry
+         and Exit always keep open, so it believed a material was there when
+         nothing had been typed. It now counts materials, meaning the ones with
+         a name. It still warns when something really is lost, which is the half
+         that matters: that warning exists because four materials once vanished
+         on a tab switch with nothing said.</p>
+      <p><b>The lists were in two different orders.</b> Categories, projects and
+         suppliers came out alphabetical in Settings and in creation order —
+         whatever was typed first, months ago — in the movement form. Sixteen
+         categories in an order nobody can predict means reading all of them to
+         find one. They are now sorted once, when the data arrives, so both
+         lists agree by construction. Locations are deliberately left alone:
+         their order is arranged by hand and that arrangement is the point.</p>
+      <p><b>You can add a units-per-box figure without pretending to receive
+         something.</b> Editing one was already possible; adding one was not —
+         the only way in was to start an entry, pick the material, choose Box
+         and answer the question. A catalog fact was hidden behind a movement.
+         Settings → Materials now has <b>＋ Add a pack</b>. It only accepts a
+         material that already exists, only the four units that hold other units,
+         and never a pack of one — and if the material already has a figure it
+         sends you to Edit, which still asks twice, because changing a figure
+         that already exists changes what future entries cost.</p>
+      <p><b>The Qty / Unit heading is centred.</b> It is the only heading in the
+         table that is, and it is not a whim: every other column starts its
+         values where the heading starts, so left-aligning ties them together.
+         This one has no starting point — it has two halves meeting at a seam —
+         so the heading now sits on the seam and stops drifting away from the
+         numbers as they get longer.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v12.20</span>
+      <span class="tag new">New</span>
+      <h3>The trash says which movement it is holding</h3>
+      <p>Delete a movement, put it back, delete it again, and the trash showed
+         two lines reading exactly the same thing — same material, same
+         quantity, same type, same rack — with nothing to say whether that was
+         one movement listed twice or two real movements that happen to look
+         alike. Those two answers call for opposite actions, so leaving the
+         question open was the defect.</p>
+      <p>Each line now carries <b>the movement's own date</b>, its <b>PO</b>,
+         and its <b>ID</b> underneath. The ID is not there to be read — it is
+         there to be compared, against the other line or against the sheet.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.19</span>
       <span class="tag fix">Fix</span>
       <h3>The quantity sits on its own row again</h3>

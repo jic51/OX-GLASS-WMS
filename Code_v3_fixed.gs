@@ -46,7 +46,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.19';
+var APP_VERSION = '12.20';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -58,7 +58,7 @@ var APP_VERSION = '12.19';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '49b4d850';
+var APP_BUILD = '5b81d2ba';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -10582,6 +10582,16 @@ function manageMaterialLocked_(data, auth) {
         project:   String(tr[AC.PROJECT] || ''),
         srcLoc:    String(tr[AC.SRC_LOC] || ''),
         destLoc:   String(tr[AC.DEST_LOC] || ''),
+        // THE MOVEMENT'S OWN DATE AND PO, not the deletion's. Without these the
+        // list cannot tell two movements apart: Jose deleted an exit, put it
+        // back, deleted it again, and saw two lines reading exactly
+        // "SR-MM213-TT-091026 · 37 UNIT · EXIT · SR MM213" with nothing to say
+        // whether that was one movement listed twice or two real movements.
+        // That is the wrong question to leave a person holding, because the two
+        // answers call for opposite actions.
+        when:      tr[AC.TIMESTAMP] instanceof Date ? tr[AC.TIMESTAMP].toISOString()
+                                                    : String(tr[AC.TIMESTAMP] || ''),
+        po:        String(tr[AC.PO] || ''),
         deletedBy: String(tr[TR.DELETED_BY] || ''),
         deletedAt: tr[TR.DELETED_AT] instanceof Date ? tr[TR.DELETED_AT].toISOString() : ''
       });
