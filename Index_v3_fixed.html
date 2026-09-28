@@ -1399,9 +1399,39 @@
      * necesita la cifra pegada a la derecha. Esto adelanta ese trabajo en vez de
      * ir en contra. */
     #tableContainer th.mc-qty,
-    #tableContainer td.mc-qty{padding-left:4px;padding-right:4px;text-align:right}
-    #tableContainer td.mc-qty{white-space:nowrap;font-variant-numeric:tabular-nums}
-    #tableContainer td.mc-qty.qty-lg{font-size:.82rem}
+    #tableContainer td.mc-qty{padding-left:4px;padding-right:4px}
+    #tableContainer th.mc-qty{text-align:left}
+
+    /* ═══ LA COSTURA DE `14 │ UNITS` ═════════════════════════════════════════
+     *
+     * Las dos mitades en un reparto FIJO, no automático. Con `auto` cada fila
+     * repartiría según lo que le toque —`+1 UNIT` y `−12500 PALLET` no miden
+     * igual— y la costura bailaría de fila en fila, que es exactamente lo que
+     * Jose pidió evitar: *"toda la columna debe verse igual… todas alineadas
+     * por la barra del medio."*
+     *
+     * 46 y 48 están MEDIDOS, no elegidos: `−9999` ocupa 45px con la letra en
+     * negrita, y `PALLET` —la unidad más larga del vocabulario de la app: UNIT,
+     * SET, ROLL, SHEET, LF, BOX, CASE, PALLET, BAG— ocupa 46.
+     *
+     * La cifra a la derecha y la unidad a la izquierda es lo que pone la costura
+     * en el medio. `tabular-nums` sigue haciendo que todas las cifras midan
+     * igual, así que las unidades, decenas y centenas también se alinean entre
+     * filas — no sólo la costura.
+     *
+     * Y SI UN CLIENTE INVENTA UNA UNIDAD MÁS LARGA que PALLET, la mitad derecha
+     * la recorta con puntos y guarda el texto entero en la ayuda al pasar el
+     * ratón. Es la misma excepción que ya tiene el comentario, y por el mismo
+     * motivo: aquí no se puede partir en dos líneas sin romper la costura, que
+     * es lo único que esta columna existe para dar. */
+    #tableContainer td.mc-qty{
+      display:grid;grid-template-columns:46px 48px;gap:5px;align-items:baseline}
+    #tableContainer td.mc-qty .qv{
+      text-align:right;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
+    #tableContainer td.mc-qty .qv.qty-lg{font-size:.82rem}
+    #tableContainer td.mc-qty .qu{
+      text-align:left;color:var(--muted);font-size:.78rem;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .col-bar-right{margin-left:auto;display:inline-flex;align-items:center;gap:.4rem}
     /* Mismo alto, mismo ancho, mismo sitio: sólo cambia el color. */
     .btn.col-open{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -4355,7 +4385,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.17';
+var APP_VERSION = '12.18';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -4367,7 +4397,7 @@ var APP_VERSION = '12.17';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'f8b85a06';
+var APP_BUILD = '3f37137b';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -5018,8 +5048,22 @@ var STOCK_COLS = [
 var MOV_COLS = [
   { key:'when',     def:'Type / Date',     lock:true,  w:112 },
   { key:'what',     def:'Category / Name', lock:true          },  // la elástica
-  { key:'qty',      def:'Qty',         lock:true,  w:58  },
-  { key:'unit',     def:'Unit',        lock:false, w:58  },
+  /* QTY Y UNIT SON UNA SOLA COLUMNA desde la v12.18. Idea de Jose:
+   *
+   *   "Podemos unir qty con unit, ya que van de la mano; tampoco se debería
+   *    poder cambiar o mover: la cantidad debe tener una unidad para ser
+   *    entendible… pero estas 2 columnas deben tener un lugar específico al ser
+   *    mostradas, una al lado de la otra, y toda la columna debe verse igual."
+   *
+   * Y tapa un agujero que nadie había visto: `qty` estaba bloqueada y `unit`
+   * NO, así que se podía esconder Unit y dejar la tabla diciendo "+25" sin
+   * decir veinticinco DE QUÉ. Unidas, la unidad ya no se puede perder.
+   *
+   * 107px = 4 de relleno + 46 para la cifra + 5 de hueco + 48 para la unidad +
+   * 4 de relleno. Los dos números están MEDIDOS: `−9999` ocupa 45px y `PALLET`
+   * —la unidad más larga del vocabulario de la app— ocupa 46. Antes las dos
+   * columnas sumaban 116, así que además se ahorran 9. */
+  { key:'qty',      def:'Qty / Unit',  lock:true,  w:107 },
   { key:'po',       def:'PO#',         lock:false, w:86  },
   { key:'locFlow',  def:'Src→Dest',    lock:false, w:150 },
   { key:'rawLoc',   def:'Raw Loc',     lock:false, w:120 },
@@ -5152,7 +5196,11 @@ function _defaultColOrder(t){ return _colCfg(t).cols.map(function(c){ return c.k
 // La vieja de arriba se queda con el sitio, la de abajo desaparece: es lo que
 // significa "type SOBRE date".
 var COL_MERGES = {
-  mov:   { type: 'when', date: null, category: 'what', name: null },
+  mov:   { type: 'when', date: null, category: 'what', name: null,
+           // `unit` desaparece y `qty` se queda con el sitio: es lo que
+           // significa "qty SOBRE unit". Sin esta línea, a quien tuviera Unit
+           // en su orden guardado se le caería la columna al final.
+           unit: null },
   // La barra se queda con el sitio que tenía "In Warehouse", que es la primera
   // de las cinco en el orden de fábrica. Las otras cuatro desaparecen del orden
   // guardado de cada persona sin que tenga que tocar nada.
@@ -7687,12 +7735,25 @@ function renderMovements(){
        * deja de caber en la caja de 50px y baja un punto la letra. Se mide el
        * TEXTO YA ARMADO, con el signo dentro, porque el signo ocupa como una
        * cifra y sin contarlo la cuenta se queda corta justo en el borde. */
+      /* LA COSTURA QUE PIDIÓ JOSE: `14 │ UNITS`, `150 │ BOX`, `243 │ BAGS`,
+       * todas alineadas por el mismo punto aunque la barra no se dibuje.
+       *
+       * Eso sale de un reparto FIJO dentro de la celda —46px y 48px— y no de
+       * dejar que cada mitad ocupe lo suyo: con `auto` la costura bailaría de
+       * fila en fila, que es justo lo que él no quiere.
+       *
+       * El color y el signo siguen siendo de la CIFRA. La unidad va en gris y
+       * pequeña, como estaba: así el `+`/`−` y la unidad dejan de competir por
+       * la misma mirada. */
       qty:      (function(){
         var txt = (isOut ? '−' : '+') + m.qty;
-        return '<td class="mc-qty' + (txt.length > 5 ? ' qty-lg' : '') + '" style="color:' +
-               (isOut ? 'var(--red)' : 'var(--accent2)') + ';font-weight:600">' + txt + '</td>';
+        var uni = String(m.unit || '—');
+        return '<td class="mc-qty">' +
+          '<span class="qv' + (txt.length > 5 ? ' qty-lg' : '') + '" style="color:' +
+            (isOut ? 'var(--red)' : 'var(--accent2)') + '">' + _he(txt) + '</span>' +
+          '<span class="qu" title="' + _escAttr(uni) + '">' + _he(uni) + '</span>' +
+        '</td>';
       })(),
-      unit:     '<td class="mc-unit" style="color:var(--muted);font-size:.78rem">'+_he(m.unit||'—')+'</td>',
       po:       '<td class="mc-po" style="font-size:.78rem">'+_he(m.po||'—')+'</td>',
       locFlow:  '<td class="mc-locFlow" style="font-size:.78rem;color:var(--muted)">'+_he(locDisplay)+'</td>',
       rawLoc:   '<td class="mc-rawLoc" style="font-size:.75rem;color:var(--muted)">'+_he(srcDest)+'</td>',

@@ -97,6 +97,30 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.18</span>
+      <span class="tag new">New</span>
+      <h3>Qty and Unit are one column now</h3>
+      <p>They always belonged together — a quantity without its unit does not
+         mean anything. Now they sit in one column, the figure on the right and
+         the unit on the left, meeting at the same point on every row:
+         <b>14 │ UNIT</b>, <b>150 │ BOX</b>, <b>243 │ BAG</b>. The line is not
+         drawn; it does not need to be.</p>
+      <p>That alignment comes from a fixed split inside the cell, not from
+         letting each half take what it needs. Left to itself the meeting point
+         would wander from row to row, which is exactly what makes a column of
+         numbers hard to read. The two halves are measured: the widest quantity
+         and the longest unit in the app's vocabulary.</p>
+      <p><b>And it closes a hole nobody had noticed.</b> Qty could not be
+         hidden, but Unit could — so it was possible to end up with a table
+         saying <b>+25</b> without saying twenty-five of what. Joined, the unit
+         can no longer be lost. The pair cannot be hidden or moved either: type,
+         material and quantity are what a movement <i>is</i>.</p>
+      <p>If you had Unit somewhere else in your own column order, nothing
+         breaks — the saved order is translated, and everything that is not
+         locked keeps the place you gave it.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.17</span>
       <span class="tag fix">Fix</span>
       <h3>The status filter knows all four states — and one of the two it had was wrong</h3>

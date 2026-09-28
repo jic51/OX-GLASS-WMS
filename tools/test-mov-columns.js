@@ -50,15 +50,29 @@ function fnSrc(name){
   }
   throw new Error('sin cerrar: ' + name);
 }
+/* EL PRIMER `;` NO ES EL FINAL DE LA DECLARACIÓN, y esto se aprendió pagando.
+ *
+ * Esta función elegía entre el cierre del literal y el primer punto y coma, y
+ * se quedaba con el que viniera antes. El 2026-09-28 se añadió a MOV_COLS un
+ * comentario que CITA a Jose —"...ya que van de la mano;..."— y ese punto y
+ * coma, dentro de un comentario dentro del literal, cortó la extracción por la
+ * mitad: la caja recibió un `/*` sin cerrar y reventó con "Invalid or
+ * unexpected token" sobre un archivo perfectamente sano.
+ *
+ * Ahora manda LA FORMA de lo que se declara: si abre con `[` termina en `\n];`
+ * y si abre con `{` termina en `\n};`. El punto y coma sólo decide cuando no
+ * hay literal, que es el único caso en que es de fiar. */
 function varSrc(name){
   const i = HTML.indexOf('var ' + name + ' =');
   if (i === -1) throw new Error('no encontrada: ' + name);
-  const llave = HTML.indexOf('\n];', i);
-  const cierre = HTML.indexOf('\n};', i);
-  const punto = HTML.indexOf(';', i);
-  const fin = [llave, cierre].filter(x => x !== -1 && x < punto);
-  if (fin.length) return HTML.slice(i, Math.min.apply(null, fin) + 3);
-  return HTML.slice(i, punto + 1);
+  const abre = /=\s*([\[{])/.exec(HTML.slice(i, i + 200));
+  if (abre){
+    const cierra = abre[1] === '[' ? '\n];' : '\n};';
+    const fin = HTML.indexOf(cierra, i);
+    if (fin === -1) throw new Error('no se encontró el cierre de ' + name);
+    return HTML.slice(i, fin + 3);
+  }
+  return HTML.slice(i, HTML.indexOf(';', i) + 1);
 }
 
 // ── El modelo de columnas ───────────────────────────────────────────────────
@@ -83,8 +97,16 @@ check('sus títulos dicen las dos cosas, para que renombrarlos siga teniendo ' +
       'sentido para quien lo lea',
   MOV_COLS.find(c => c.key === 'when').def === 'Type / Date' &&
   MOV_COLS.find(c => c.key === 'what').def === 'Category / Name');
-check('la tabla tiene dos columnas MENOS que antes (' + keys.length + ')',
-  keys.length === 16);
+/* TRES MENOS QUE AL PRINCIPIO. Dos se fueron cuando type+date y category+name
+ * se unieron; la tercera el 2026-09-28, cuando Qty y Unit pasaron a ser una
+ * sola — idea de Jose, y además tapa que `unit` se pudiera esconder dejando la
+ * cantidad sin decir de qué. */
+check('la tabla tiene tres columnas MENOS que al principio (' + keys.length + ')',
+  keys.length === 15);
+check('...y `unit` ya no existe por su cuenta', keys.indexOf('unit') === -1, keys);
+check('la columna unida está bloqueada y su título dice las dos cosas',
+  MOV_COLS.find(c => c.key === 'qty').lock === true &&
+  MOV_COLS.find(c => c.key === 'qty').def === 'Qty / Unit');
 
 // ── El orden que la gente ya tenía guardado ─────────────────────────────────
 console.log('\n═══ y nadie pierde el orden que ya tenía ═══\n');
@@ -118,9 +140,13 @@ function orden(guardado){
   check('...y "when" y "what" NO acaban al final, que es lo que pasaría si el ' +
         'filtro las tratara como columnas desconocidas',
     nuevo.indexOf('when') < nuevo.indexOf('qty') && nuevo.indexOf('what') < nuevo.indexOf('qty'));
+  /* `unit` ya no está en el orden: se fundió con `qty`. Lo que se comprueba es
+   * que lo de después siga después — y que la vieja `unit` haya DESAPARECIDO
+   * del orden guardado en vez de quedarse como una columna fantasma. */
   check('lo que iba después sigue después, en su orden',
-    nuevo.indexOf('qty') < nuevo.indexOf('unit') &&
-    nuevo.indexOf('unit') < nuevo.indexOf('po'));
+    nuevo.indexOf('qty') < nuevo.indexOf('po'));
+  check('...y la vieja "unit" desaparece del orden guardado, no se queda de ' +
+        'fantasma', nuevo.indexOf('unit') === -1, nuevo);
   check('no queda ninguna columna repetida', new Set(nuevo).size === nuevo.length);
   check('y siguen estando todas las que existen hoy',
     keys.every(k => nuevo.indexOf(k) !== -1));
@@ -147,13 +173,13 @@ function orden(guardado){
  * ─────────────────────────────────────────────────────────────────────────── */
 {
   // Alguien que SÍ movió las columnas: puso el nombre delante del todo.
-  const personal = ['name','category','type','date','qty','project','unit'];
+  const personal = ['name','category','type','date','qty','project','unit','po'];
   const nuevo = orden(personal);
   check('un orden con las bloqueadas movidas se normaliza: van las tres ' +
         'primeras y en su orden de fábrica (' + nuevo.slice(0,3).join(', ') + ')',
     nuevo.slice(0, 3).join(',') === 'when,what,qty', nuevo.slice(0, 5));
   check('...y lo que NO está bloqueado conserva el orden que su dueño le dio',
-    nuevo.indexOf('project') < nuevo.indexOf('unit'), nuevo);
+    nuevo.indexOf('project') < nuevo.indexOf('po'), nuevo);
   check('y nada se duplica al fusionar dos columnas que estaban separadas',
     new Set(nuevo).size === nuevo.length);
   check('...ni se pierde ninguna al normalizar',

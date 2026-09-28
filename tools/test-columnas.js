@@ -220,8 +220,9 @@ window.__DATA=${JSON.stringify(DATA)};
 
   check('la tabla reparte por reglas y no por contenido',
         /#tableContainer table\{[^}]*table-layout:fixed/.test(css));
-  check('se leyeron las dieciséis columnas de Movements',
-        todasLasCols.length === 16, todasLasCols.length);
+  /* QUINCE desde la v12.18: Qty y Unit se unieron en una. Ver COL_MERGES. */
+  check('se leyeron las quince columnas de Movements',
+        todasLasCols.length === 15, todasLasCols.length);
   check('hay exactamente UNA columna sin ancho declarado', sinAncho.length === 1, sinAncho);
   check('...y es la del material, que es la que más varía y más se lee',
         sinAncho[0] === 'what', sinAncho);
@@ -383,8 +384,8 @@ window.__DATA=${JSON.stringify(DATA)};
       return { w: th ? Math.round(th.getBoundingClientRect().width) : -1, alto: Math.round(alto),
                cols: document.querySelectorAll('#movHeadRow th').length };
     });
-    check('ventana ' + W + ', editor abierto: se ven las dieciséis columnas',
-          ed.cols >= 18, ed.cols);          // 16 + casilla + acciones
+    check('ventana ' + W + ', editor abierto: se ven las quince columnas',
+          ed.cols >= 17, ed.cols);          // 15 + casilla + acciones
     check('ventana ' + W + ', editor abierto: el material conserva su sitio',
           ed.w >= SUELO, ed);
     check('ventana ' + W + ', editor abierto: las filas no se disparan de alto',
@@ -476,8 +477,8 @@ window.__DATA=${JSON.stringify(DATA)};
                tieneAyuda: !!(cand && (cand.getAttribute('data-tip') || '').length > 20) };
     });
 
-    check('ventana ' + W + ': se abrieron las dieciséis con sus mandos',
-          e6.ojos + e6.candados === 16, e6);
+    check('ventana ' + W + ': se abrieron las quince con sus mandos',
+          e6.ojos + e6.candados === 15, e6);
     check('ventana ' + W + ': TODOS los ojos caben dentro de su celda' +
           (e6.fuera.length ? ' — SE SALEN: ' + e6.fuera.join('; ') : ''),
           e6.ojos > 0 && e6.dentro === e6.ojos, { ojos: e6.ojos, dentro: e6.dentro });
@@ -518,7 +519,7 @@ window.__DATA=${JSON.stringify(DATA)};
   check('un orden guardado con las bloqueadas desperdigadas se normaliza solo',
         reparado.slice(0, 3).join(',') === 'when,what,qty', reparado.slice(0, 6));
   check('...sin perder ninguna columna por el camino',
-        reparado.length === 16 && new Set(reparado).size === 16, reparado.length);
+        reparado.length === 15 && new Set(reparado).size === 15, reparado.length);
   await pOrden.close();
 
   /* ══════════════════════════════════════════════════════════════════════════
@@ -560,12 +561,18 @@ window.__DATA=${JSON.stringify(DATA)};
 
     const q = await p7.evaluate(() => {
       const malas = [], vistos = {};
-      document.querySelectorAll('#tableContainer td.mc-qty').forEach(td => {
-        const t = td.textContent.trim();
+      /* SOBRE `.qv`, QUE ES LA CIFRA. Desde que Qty y Unit son una sola celda,
+       * `selectNodeContents(td)` abarca las DOS mitades y devuelve cuatro
+       * rectángulos —es una rejilla— así que medir la celda entera decía "4
+       * líneas" sobre una columna perfectamente alineada. Lo que hay que mirar
+       * es si LA CIFRA se parte. */
+      document.querySelectorAll('#tableContainer td.mc-qty .qv').forEach(qv => {
+        const t = qv.textContent.trim();
         if (!t || vistos[t]) return;
         vistos[t] = 1;
+        const td = qv;
         const rg = document.createRange();
-        rg.selectNodeContents(td);
+        rg.selectNodeContents(qv);
         const rects = rg.getClientRects();
         const caja = td.getBoundingClientRect();
         let maxR = 0, minL = 1e9;
@@ -604,7 +611,7 @@ window.__DATA=${JSON.stringify(DATA)};
      * demuestra algo que en este banco de pruebas no puede demostrar. */
     const anchos = await p7.evaluate(() => {
       const por = {};
-      document.querySelectorAll('#tableContainer td.mc-qty').forEach(td => {
+      document.querySelectorAll('#tableContainer td.mc-qty .qv').forEach(td => {
         const t = td.textContent.trim();
         if (!t) return;
         const rg = document.createRange(); rg.selectNodeContents(td);
@@ -627,17 +634,104 @@ window.__DATA=${JSON.stringify(DATA)};
 
   {
     const cssQty = css;
-    check('la cantidad va a la derecha, que es como se leen los números y como ' +
-          'quedará al unir Qty con Unit',
-          /#tableContainer td\.mc-qty\{[^}]*text-align:right|text-align:right[^}]*\}/.test(
-            (cssQty.match(/#tableContainer th\.mc-qty,[\s\S]*?\}/) || [''])[0]));
+    check('la cifra va a la derecha, que es lo que pone la costura en el medio',
+          /td\.mc-qty \.qv\{[^}]*text-align:right/.test(cssQty));
     check('...y con cifras de ancho fijo, que es lo que deja una columna de ' +
           'números comparable de un vistazo',
-          /td\.mc-qty\{[^}]*tabular-nums/.test(cssQty));
+          /td\.mc-qty \.qv\{[^}]*tabular-nums/.test(cssQty));
     check('el relleno de la cantidad es pequeño — 24px para tres cifras era el fallo',
           /#tableContainer th\.mc-qty,\s*#tableContainer td\.mc-qty\{padding-left:4px;padding-right:4px/.test(cssQty));
     check('y hay un escalón de tamaño para las cantidades largas',
-          /td\.mc-qty\.qty-lg\{font-size:/.test(cssQty) && /qty-lg/.test(html));
+          /td\.mc-qty \.qv\.qty-lg\{font-size:/.test(cssQty) && /qty-lg/.test(html));
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+   * 8. QTY Y UNIT SON UNA COLUMNA, CON SU COSTURA
+   *
+   * Jose: *"podemos unir qty con unit, ya que van de la mano… pero estas 2
+   * columnas deben tener un lugar específico al ser mostradas, una al lado de
+   * la otra, y toda la columna debe verse igual: 14 | units, 150 | box,
+   * 243 | bags, todas alineadas por la barra del medio (aunque no tenemos que
+   * poner la barra, sólo es para entender la idea)."*
+   *
+   * LO QUE SE MIDE ES LA COSTURA, que es lo único que esta columna existe para
+   * dar. No que las dos mitades estén —eso es trivial— sino que el punto donde
+   * se encuentran caiga EN EL MISMO PÍXEL en todas las filas. Con un reparto
+   * automático las dos mitades estarían igual y la costura bailaría: la prueba
+   * pasaría y la columna se vería exactamente como Jose no la quiere.
+   *
+   * Y tapa además un agujero real: `qty` estaba bloqueada y `unit` NO, así que
+   * se podía esconder Unit y dejar la tabla diciendo "+25" sin decir de qué.
+   * ══════════════════════════════════════════════════════════════════════════ */
+  console.log('\n═══ 8. Qty y Unit, una columna con su costura ═══\n');
+
+  {
+    const p8 = await browser.newPage({ viewport: { width: 1500, height: 900 } });
+    p8.on('pageerror', e => errores.push(e.message));
+    await p8.goto('file://' + pagina());
+    await p8.waitForTimeout(800);
+    await p8.evaluate(() => showTab('movements', 'btn-movements'));
+    await p8.waitForTimeout(300);
+    /* Cantidades y unidades variadas a propósito: con todo "UNIT" y todo de dos
+     * cifras, cualquier reparto daría una costura recta y esto no mediría nada. */
+    await p8.evaluate(() => {
+      const U = ['UNIT','PALLET','LF','BOX','SHEET','CASE','SET','ROLL','BAG'];
+      const Q = [1, 20, 300, 9999, 12500, 7, 85, 1250];
+      movements.forEach(function (m, i) { m.qty = Q[i % Q.length]; m.unit = U[i % U.length]; });
+      renderMovements();
+    });
+    await p8.waitForTimeout(250);
+
+    const r8 = await p8.evaluate(() => {
+      const costuras = {}, malas = [];
+      let n = 0;
+      document.querySelectorAll('#tableContainer td.mc-qty').forEach(td => {
+        const v = td.querySelector('.qv'), u = td.querySelector('.qu');
+        if (!v || !u) { malas.push('celda sin sus dos mitades'); return; }
+        n++;
+        const rv = v.getBoundingClientRect(), ru = u.getBoundingClientRect(),
+              rt = td.getBoundingClientRect();
+        costuras[Math.round((rv.right + ru.left) / 2)] = 1;
+        if (u.scrollWidth > u.clientWidth + 1) malas.push(u.textContent.trim() + ' no cabe');
+        if (rv.left < rt.left - 0.5 || ru.right > rt.right + 0.5)
+          malas.push(v.textContent.trim() + ' se sale de la celda');
+      });
+      const unis = new Set(), qtys = new Set();
+      document.querySelectorAll('#tableContainer td.mc-qty .qu').forEach(x => unis.add(x.textContent.trim()));
+      document.querySelectorAll('#tableContainer td.mc-qty .qv').forEach(x => qtys.add(x.textContent.trim()));
+      return { n, costuras: Object.keys(costuras), malas: malas.slice(0, 5),
+               unis: [...unis], qtys: qtys.size,
+               hayUnitSuelta: !!document.querySelector('#tableContainer td.mc-unit') ||
+                              !!document.querySelector('#movHeadRow th.mc-unit') };
+    });
+
+    check('se midieron muchas filas', r8.n >= 20, r8.n);
+    check('...con unidades y cantidades variadas — con todo igual, cualquier ' +
+          'reparto daría una costura recta y esto no mediría nada',
+          r8.unis.length >= 5 && r8.qtys >= 5, { unis: r8.unis, qtys: r8.qtys });
+    check('LA COSTURA CAE EN EL MISMO PÍXEL EN TODAS LAS FILAS — es lo que pidió ' +
+          'Jose, medido' + (r8.costuras.length > 1 ? ' — HAY ' + r8.costuras.length +
+          ': ' + r8.costuras.join(', ') : ''),
+          r8.costuras.length === 1, r8.costuras);
+    check('ninguna mitad se sale ni se recorta' +
+          (r8.malas.length ? ' — MALAS: ' + r8.malas.join('; ') : ''),
+          r8.malas.length === 0);
+    check('ya no queda una columna Unit suelta', !r8.hayUnitSuelta);
+    await p8.close();
+  }
+
+  {
+    const fila = (MOV_COLS.match(/key:'qty'[^\n]*/) || [''])[0];
+    check('la columna unida está BLOQUEADA: una cantidad sin unidad no se ' +
+          'entiende, así que la unidad ya no se puede esconder',
+          /lock:\s*true/.test(fila), fila);
+    check('...y su nombre dice las dos cosas, como Type / Date y Category / Name',
+          /def:'Qty \/ Unit'/.test(fila), fila);
+    check('quien tuviera Unit en su orden guardado no pierde nada: se traduce',
+          /unit:\s*null/.test(html));
+    check('las dos mitades van en un reparto FIJO — con automático la costura ' +
+          'bailaría de fila en fila',
+          /td\.mc-qty\{[^}]*grid-template-columns:\d+px \d+px/.test(css));
   }
 
   /* LA MUTACIÓN QUE TIENE QUE MATAR ESTA PRUEBA: devolver el mínimo a un número
