@@ -98,6 +98,28 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.17</span>
+      <span class="tag fix">Arreglado</span>
+      <h3>El filtro de estado conoce los cuatro — y uno de los dos que tenía estaba mal</h3>
+      <p>Un material puede estar en cuatro estados, y la insignia de cada fila
+         siempre lo ha dicho: <b>In Stock</b>, <b>Reserved</b>,
+         <b>All at Site</b>, <b>Zero Stock</b>. El filtro ofrecía dos. Los dos
+         que faltaban ya están.</p>
+      <p><b>Y la mitad más seria, que desde fuera no se veía.</b> "In Stock
+         only" no significaba lo mismo que la insignia verde: filtraba por "hay
+         algo en el estante", que incluye el material que está en el estante
+         pero apartado — material que no te puedes llevar. Así que quien
+         filtraba para ver qué podía sacar, veía cosas que no podía sacar. Ése
+         es el error que hace caminar hasta el estante para nada.</p>
+      <p>Los tres tenían la misma causa: la insignia se decidía en un sitio y el
+         filtro hacía su propia cuenta en otro. Dos listas que tenían que decir
+         lo mismo, sin nada que lo obligara. Ahora hay una sola — la insignia
+         sale de ella, el desplegable se dibuja de ella, y el filtro compara
+         contra ella. Añadir un quinto estado es añadir una línea; no hay una
+         segunda copia que recordar.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.16</span>
       <span class="tag fix">Arreglado</span>
       <h3>Una cantidad de tres cifras ya no se parte en dos</h3>

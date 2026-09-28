@@ -62,6 +62,12 @@ vm.runInContext(
   extractFn('nt') + '\n' +
   extractFn('displayName') + '\n' +
   extractFn('normMT') + '\n' +
+  /* `stockBadge` ya no decide el estado: lo pide a `_stockState`, que lee
+   * `STOCK_STATES`. Las dos se SACAN del archivo —no se copian— porque son
+   * justo la lista que dejó de estar duplicada: una copia aquí volvería a ser
+   * una segunda versión de la verdad, que es el fallo que se acaba de cerrar. */
+  (/var STOCK_STATES = \[[\s\S]*?\n\];/.exec(src) || [''])[0] + '\n' +
+  extractFn('_stockState') + '\n' +
   extractFn('stockBadge') + '\n' +
   extractFn('_he') + '\n' +
   extractFn('_escAttr') + '\n' +
