@@ -5,6 +5,77 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+# ══ PRIORIDAD ALTA — ESTANDARIZAR LA PANTALLA. Anotado 2026-09-28 ══
+
+Jose, con tres capturas del Dashboard filtrando por estado: *"muestran cómo se
+mueven las columnas con diferentes anchos según filtramos por estado del
+material. Recuerda que ya habíamos hablado de estandarizar todo: eso incluye
+tamaños de filas y columnas, letras, números, ventanas, colores, gráficos, etc.
+Anótalo para hacerlo luego y ponle la prioridad que se merece."*
+
+## La prioridad que se merece: **la siguiente**
+
+Y hay una razón concreta, no una opinión: **el filtro de estado que acabamos de
+arreglar convirtió esto en algo que se ve todos los días**. Antes había dos
+opciones y casi nadie cambiaba de filtro; ahora hay cuatro y Jose ya las está
+usando — y cada cambio mueve la tabla entera. Arreglar el filtro destapó esto.
+
+En sus tres capturas, la MISMA tabla con tres filtros:
+
+| Filtro | Dónde empieza `NAME` | Dónde empieza `STOCK` |
+|---|---|---|
+| Zero Stock only | 383 | 729 |
+| Reserved only | 504 | 748 |
+| All at Site only | 508 | 846 |
+
+**Más de 120px de diferencia en la misma columna**, sólo por cambiar el filtro.
+Es exactamente la queja que tenía sobre Movements, en la pantalla que más mira.
+
+## Lo bueno: el arreglo ya está inventado
+
+La v12.11–v12.14 lo resolvió para Movements y dejó la maquinaria hecha:
+
+- El ancho de cada columna vive **en su definición** (`w:` en `MOV_COLS`), no en
+  un bloque de CSS aparte.
+- `_fijarMinTabla` recalcula el mínimo de la tabla **en cada dibujado**, sumando
+  los anchos que SE VEN más un suelo para la columna elástica.
+- `tools/test-columnas.js` mide que ninguna columna se mueva entre filtros.
+
+Aplicarlo al Dashboard es **reusar**, no inventar: poner `w:` en `STOCK_COLS`,
+declarar su `minWhat`, y extender la prueba a esa tabla. Después, Incoming y
+Project View.
+
+**Y hay que medir los anchos, no elegirlos**, como se hizo en Movements: dibujar
+la tabla con datos reales bajo varios filtros y tomar el máximo real de cada
+columna. Dos de las de Movements se quedaron cortas a la primera y sólo se supo
+midiendo.
+
+## Lo demás de "estandarizar", que es más grande y hay que trocearlo
+
+Jose nombró seis cosas. No son un solo trabajo y no tienen la misma urgencia:
+
+| Qué | Urgencia | Por qué |
+|---|---|---|
+| **Anchos de columna** (las 3 tablas que faltan) | **Ya** | Se ve cada vez que filtra |
+| **Alto de fila** | Alta | Va con lo anterior: una fila que crece porque un texto se parte es el mismo problema |
+| **Escala de texto** | Media | Hay **18 tamaños** distintos en el archivo. Deberían ser cinco o seis |
+| **Anchos de ventana** | Media | **20 anchos** distintos hoy; tres niveles bastan. Ya está analizado en la lista de la ventana |
+| **Colores** | Baja | Ya salen de variables; el desorden es menor |
+| **Gráficos** | Baja | Son de Google Charts y se configuran aparte |
+
+**El orden que propongo:** columnas y filas primero, porque son lo que él ve;
+después texto y ventanas, que es donde hay más desorden medido; colores y
+gráficos al final.
+
+**Aviso honesto sobre el tamaño:** lo de la escala de texto y los anchos de
+ventana toca CIENTOS de líneas de CSS y no se puede hacer a ojo sin romper algo.
+Hay que hacerlo tabla por tabla y ventana por ventana, con la prueba delante en
+cada paso. Es de las cosas que conviene hacer en la rama `siguiente` y entregar
+en una tanda, no gotear.
+
+---
+
+
 # ══ ANOTADO 2026-09-28 — DOS INDICADORES DE ESPERA PARA EL MISMO ESTADO ══
 
 Jose, con dos capturas de la papelera: *"al hacer el return de un movimiento
