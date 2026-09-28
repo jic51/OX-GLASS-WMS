@@ -143,31 +143,46 @@ var DOMINIO_DEMO = 'demo-glass.example';
 // EL AGUJERO QUE DEJÓ LA PRIMERA VERSIÓN, y lo enseñó la captura de Jose.
 //
 // Yo escribí que los nombres de material "ya son códigos y no dicen quién es el
-// cliente". **Es falso para una buena parte de ellos.** En su copia, después de
-// correr todo lo de arriba, la columna Name seguía diciendo:
+// cliente". Es falso. Su copia, después de correr todo lo de arriba, seguía
+// diciendo KOTTER RESIDENCE, SUNBRIDGE PHASE 1, BULLOCK 11 (ELOISE) en la
+// columna más visible de la app.
 //
-//     KOTTER RESIDENCE · SUNBRIDGE PHASE 1 · PROVO REMODEL · BULLOCK 11 (ELOISE)
-//     BRYLEE 7 (341-347) · DE 043 MILLARD · MH 159 (SGD ADD)
+// ── Y LUEGO LOS CONTAMOS, Y ERA AL REVÉS DE LO QUE YO SUPUSE ────────────────
 //
-// Es decir: **la columna más visible de la app seguía llevando nombres de
-// clientes reales**, que es exactamente lo que todo esto existe para evitar.
-// Jose nombra muchos materiales por la obra a la que van, y eso es razonable
-// para trabajar y es un problema para publicar.
+// La segunda versión de este bloque le pedía a Jose que PEGARA la lista de
+// nombres a renombrar. Corrió `verNombresDeMaterial` y salieron **455 nombres
+// distintos**, de los cuales la inmensa mayoría son personas, obras o edificios:
 //
-// POR QUÉ NO SE HACE AUTOMÁTICO. No hay forma honesta de que este archivo
-// adivine cuáles son nombres de cliente: "MH 159 (SGD ADD)" y "SR MM213 TT
-// 091026" se parecen mucho vistos desde aquí y sólo uno lo es. Adivinar
-// significaría renombrar códigos perfectamente inocentes y dejar pasar alguno
-// de verdad. **Así que lo eliges tú**, que eres quien sabe.
+//     ALVIN JENSON · JEFF WATSON · KENT KAY · TRENT B JAMES ANDERSON
+//     CLOUDVEIL A…H · LIBERTY WELLS B5 · HOLBROOK CLUBHOUSE · WESTERLY W15
+//
+// Y sólo un puñado son materiales de verdad: WINDOW SCREEN, FLASHING TAPE 6",
+// RAIN BUSTER 444, TYVEK, BACKER ROD, GE SILPRUF SC2000…
+//
+// O sea que le estaba pidiendo pegar cuatrocientas líneas para salvar veinte.
+// **La lista correcta es la corta, y es la de los que SE QUEDAN.** Se invierte:
+// se renombra todo menos lo que esté aquí abajo.
+//
+// La lista viene rellenada con los materiales genéricos que se ven en SUS
+// datos. Repásala: quitar uno de más sólo significa que ese material recibirá
+// nombre ficticio, y dejar uno de más significa que un nombre real se publica.
+// Ante la duda, quítalo.
+//
+// ── SE CONSERVAN LAS FAMILIAS ───────────────────────────────────────────────
+//
+// `CLOUDVEIL A`, `CLOUDVEIL B` … `CLOUDVEIL H` son ocho variantes de una obra.
+// Si cada una recibiera un nombre suelto y sin relación, la captura dejaría de
+// parecer un almacén y pasaría a parecer una lista generada — que es justo lo
+// que hay que evitar. Así que los nombres que empiezan igual reciben la MISMA
+// base ficticia y se distinguen entre ellos: STONEGATE A, STONEGATE B…
 //
 // ── CÓMO ─────────────────────────────────────────────────────────────────────
 //
-//   1. Corre  verNombresDeMaterial . Escribe en el registro la lista de todos
-//      los nombres distintos que hay, ordenada.
-//   2. Copia de ahí los que sean nombres de cliente o de obra y pégalos abajo,
-//      entre comillas y separados por comas.
-//   3. Pon CERROJO_3 en true y corre  ponerNombresFicticiosDeMaterial .
-//   4. **Después, en la app: Settings → System → Rebuild Stock Totals.**
+//   1. Corre  verNombresDeMaterial  y repasa la lista de abajo contra lo que
+//      salga. Es lo único que hay que revisar.
+//   2. Pon CERROJO_3 en true y corre  ponerNombresFicticiosDeMaterial .
+//      Antes de escribir te enseña en el registro el antes → después entero.
+//   3. **Después, en la app: Settings → System → Rebuild Stock Totals.**
 //      NO ES OPCIONAL. La identidad de un material es categoría + nombre, así
 //      que al renombrarlo cambia su identidad; la reconstrucción vuelve a
 //      calcularla y a rehacer las hojas de existencias desde el archivo. Sin
@@ -178,9 +193,46 @@ var DOMINIO_DEMO = 'demo-glass.example';
 // y las hojas LIVE_STOCK / SITE_STOCK / WASTED_STOCK se rehacen enteras desde
 // el archivo. Por eso renombrar y reconstruir deja todo cuadrado.
 var CERROJO_3 = false;
-var MATERIALES_A_RENOMBRAR = [
-  // 'KOTTER RESIDENCE',
-  // 'SUNBRIDGE PHASE 1',
+
+// Los que NO se tocan: materiales genéricos, que no dicen de quién es nada.
+// Sacados de la lista real de Jose (455 nombres, 2026-09-28).
+var MATERIALES_QUE_SE_QUEDAN = [
+  'WINDOW', 'WINDOW SCREEN', 'DOOR SCREEN',
+  'FLASHING TAPE', 'FLASHING TAPE 6"', "FLASHING PAPER 9'", "FLASHINGTAPE 9'",
+  "FLEX WRAP 9'", "STRAIGHT FLASH 4'", "STRAIGHT FLASH 9'",
+  'TYVEK 9" INTGRATION WRAP',
+  'RAIN BUSTER 440', 'RAIN BUSTER 444', 'RAIN BUSTER 450',
+  'BACKER ROD', 'OPEN CELL BACKER ROD 7/8 X 350',
+  'GE SILPRUF SC2000',
+  'LEVATA CHANNEL CAP', 'PIPE KNIFE DEGLAZING', 'REDD HANGER', 'POP DISPLAY',
+  'PREMIUM SHOWER DOOR HEADER 95 LONG', 'TUBULAR SINGLE SLIDER TOWL BAR'
+  // DUDOSOS, decídelos tú. Los dejo FUERA (o sea, se renombran) porque ante la
+  // duda es mejor cambiar un material genérico de más que publicar un nombre
+  // real de menos:
+  //   'GEM MIRROR 1'   ¿producto o cliente?
+  //   'MARVEL' / 'MARVL'   ¿marca o apellido?
+  //   'GRANITE' / 'CASCADE' / 'DELANO' / 'MILLARD'   suenan a desarrollo de LGI
+  //   'HELLO 555' / 'HOLA 2' / 'JOSE JOSE' / 'WIN WIN' / 'NO NAME'
+  //       son filas de prueba tuyas. En una captura quedan mal de todas formas:
+  //       plantéate borrar esas filas de la copia en vez de renombrarlas.
+];
+
+/* De aquí salen los nombres nuevos. Dos listas que se combinan, porque una
+ * lista plana no llega: hay cientos de grupos y escribir cientos de nombres a
+ * mano sería garantizar repetidos. 40 × 12 = 480 combinaciones, de sobra. */
+var BASES_DEMO = [
+  'MAPLE STREET', 'CEDAR RIDGE', 'STONEGATE', 'WILLOW CREEK', 'NORTH FORK',
+  'ASPEN HOLLOW', 'BIRCH POINT', 'SUMMIT VIEW', 'RIVER BEND', 'GRANITE PARK',
+  'ELM COURT', 'FOXGLOVE', 'HARBOR LANE', 'JUNIPER FLATS', 'KESTREL RIDGE',
+  'LAKESHORE', 'MILLPOND', 'NEWPORT HILL', 'ORCHARD GATE', 'PINECREST',
+  'QUAIL RUN', 'ROSEWOOD', 'SILVER FALLS', 'TANAGER', 'UPLAND',
+  'VERMILION', 'WHEATFIELD', 'YARROW', 'ZEPHYR', 'ALDER GROVE',
+  'BRIAR HILL', 'CLOVER FIELD', 'DOVE CANYON', 'EAGLE POINT', 'FERN HOLLOW',
+  'GOLDEN ACRE', 'HAWTHORN', 'INDIGO BAY', 'JASPER MILL', 'KINGFISHER'
+];
+var TIPOS_DEMO = [
+  'RESIDENCE', 'TOWNHOMES', 'APARTMENTS', 'REMODEL', 'PHASE 2', 'LOT 14',
+  'BUILDING 3', 'COMMONS', 'ADDITION', 'ESTATES', 'LOFTS', 'SUITES'
 ];
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -210,29 +262,18 @@ function verNombresDeMaterial() {
   lista.forEach(function (n) { Logger.log("  '" + n + "',   // " + vistos[n] + ' fila(s)'); });
 }
 
-/** Renombra SÓLO los materiales de MATERIALES_A_RENOMBRAR. Necesita CERROJO_3. */
+/** Renombra TODO menos lo que esté en MATERIALES_QUE_SE_QUEDAN. Necesita CERROJO_3. */
 function ponerNombresFicticiosDeMaterial() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!_hojaEsDemo_(ss)) return;
   if (!CERROJO_3) {
-    Logger.log('CERROJO 3 CERRADO. Corre primero verNombresDeMaterial, pega abajo ' +
-               'los que sean nombres de cliente, y pon CERROJO_3 = true.');
-    return;
-  }
-  if (!MATERIALES_A_RENOMBRAR.length) {
-    Logger.log('La lista MATERIALES_A_RENOMBRAR está vacía: no hay nada que hacer.');
+    Logger.log('CERROJO 3 CERRADO. Corre primero verNombresDeMaterial, repasa la ' +
+               'lista MATERIALES_QUE_SE_QUEDAN, y pon CERROJO_3 = true.');
     return;
   }
 
-  // Un nombre nuevo por cada uno, de la lista de obras, y el MISMO en las tres
-  // hojas — si no, una salida y su entrada dejarían de ser del mismo material.
-  var dic = {}, n = 0;
-  MATERIALES_A_RENOMBRAR.forEach(function (m) {
-    var k = String(m || '').trim().toUpperCase();
-    if (!k || dic[k]) return;
-    dic[k] = OBRAS[n % OBRAS.length];
-    n++;
-  });
+  var dic = _dicDeMateriales_(ss);
+  if (!dic) return;
 
   var celdas = 0;
   HOJAS_CON_MATERIAL.forEach(function (nombre) {
@@ -250,11 +291,92 @@ function ponerNombresFicticiosDeMaterial() {
     celdas += filas;
   });
 
-  Logger.log('Materiales renombrados: ' + Object.keys(dic).length);
-  Object.keys(dic).sort().forEach(function (k) { Logger.log('   ' + k + '   →   ' + dic[k]); });
+  var claves = Object.keys(dic).sort();
+  Logger.log('Materiales renombrados: ' + claves.length);
+  Logger.log('');
+  claves.forEach(function (k) { Logger.log('   ' + k + '   →   ' + dic[k]); });
   Logger.log('');
   Logger.log('⚠ AHORA, EN LA APP: Settings → System → Rebuild Stock Totals.');
   Logger.log('  Sin eso el stock sigue hablando de materiales que ya no se llaman así.');
+}
+
+/* EL DICCIONARIO DE MATERIALES, construido entero antes de tocar una celda.
+ *
+ * Dos reglas y las dos importan:
+ *
+ *   · SE RENOMBRA TODO menos lo que esté en MATERIALES_QUE_SE_QUEDAN. Es al
+ *     revés de como empezó, y es por los números: de los 455 nombres de Jose,
+ *     los genéricos son veintitantos. La lista corta es la de los que se quedan.
+ *
+ *   · LAS FAMILIAS SE CONSERVAN. `CLOUDVEIL A`…`CLOUDVEIL H` son ocho variantes
+ *     de una obra; con ocho nombres sueltos la captura deja de parecer un
+ *     almacén y pasa a parecer una lista generada. Los que empiezan por la misma
+ *     palabra reciben la misma base y se distinguen entre ellos.
+ */
+function _dicDeMateriales_(ss) {
+  var quedan = {};
+  MATERIALES_QUE_SE_QUEDAN.forEach(function (m) {
+    quedan[String(m || '').trim().toUpperCase()] = 1;
+  });
+
+  // Todos los nombres distintos, en orden estable: la misma copia da siempre el
+  // mismo resultado, así que correrlo dos veces no reparte nombres distintos.
+  var vistos = {};
+  HOJAS_CON_MATERIAL.forEach(function (nombre) {
+    var h = ss.getSheetByName(nombre);
+    if (!h || h.getLastRow() < 2) return;
+    var i = _indiceDe_(h, 'Name');
+    if (i === -1) return;
+    h.getRange(2, i + 1, h.getLastRow() - 1, 1).getValues().forEach(function (r) {
+      var v = String(r[0] || '').trim().toUpperCase();
+      if (v && !quedan[v]) vistos[v] = 1;
+    });
+  });
+
+  var nombres = Object.keys(vistos).sort();
+  if (!nombres.length) {
+    Logger.log('No hay ningún nombre de material que renombrar.');
+    return null;
+  }
+
+  // Agrupar por la PRIMERA palabra. Es la que casi siempre nombra la obra
+  // ("CLOUDVEIL A", "LIBERTY WELLS B5", "WHI PR220"), así que agrupa por ella
+  // sin tener que entender nada más.
+  var grupos = {}, orden = [];
+  nombres.forEach(function (n) {
+    var g = n.split(/[\s\-_]+/)[0] || n;
+    if (!grupos[g]) { grupos[g] = []; orden.push(g); }
+    grupos[g].push(n);
+  });
+
+  var combos = BASES_DEMO.length * TIPOS_DEMO.length;
+  if (orden.length > combos) {
+    Logger.log('AVISO: hay ' + orden.length + ' familias distintas y sólo ' + combos +
+               ' nombres posibles. Dos familias compartirían nombre, y eso fundiría ' +
+               'dos materiales en uno al reconstruir. Añade más palabras a ' +
+               'BASES_DEMO y vuelve a correrlo. NO SE ESCRIBIÓ NADA.');
+    return null;
+  }
+
+  var dic = {};
+  orden.forEach(function (g, gi) {
+    var base = BASES_DEMO[gi % BASES_DEMO.length] + ' ' +
+               TIPOS_DEMO[Math.floor(gi / BASES_DEMO.length) % TIPOS_DEMO.length];
+    var miembros = grupos[g];
+    miembros.forEach(function (n, mi) {
+      // Uno solo se queda con la base limpia; varios se distinguen entre ellos,
+      // que es lo que conserva la forma de "una obra con sus variantes".
+      dic[n] = miembros.length === 1 ? base : (base + ' ' + _sufijoDemo_(mi));
+    });
+  });
+  return dic;
+}
+
+/** A, B, C… y luego A2, B2… Suficiente para cualquier familia real. */
+function _sufijoDemo_(i) {
+  var letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  var vuelta = Math.floor(i / 26);
+  return letras.charAt(i % 26) + (vuelta ? String(vuelta + 1) : '');
 }
 
 // Las hojas que llevan el nombre del material. Las de existencias NO están

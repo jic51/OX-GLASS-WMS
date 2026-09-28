@@ -229,22 +229,24 @@ console.log('\n═══ 9. Los nombres de material — el agujero de la primera
 {
   /* Después de correr todo lo demás, la copia de Jose SEGUÍA diciendo
    * "KOTTER RESIDENCE" y "SUNBRIDGE PHASE 1" en la columna Name: él nombra
-   * muchos materiales por la obra a la que van. La columna más visible de la
-   * app llevaba nombres de clientes reales, que es lo que todo esto existe para
-   * evitar. */
+   * muchos materiales por la obra a la que van.
+   *
+   * Y la SEGUNDA versión de este paso también estaba mal, aunque de otra forma:
+   * le pedía pegar la lista de los que renombrar. Corrió el listado y salieron
+   * 455 nombres distintos, de los que los genéricos son veintitantos. O sea que
+   * le pedía pegar cuatrocientas líneas para salvar veinte. La lista corta es la
+   * de los que SE QUEDAN, y por eso ahora se renombra todo menos ésos. */
   check('existe un paso aparte para los nombres de material',
     /function ponerNombresFicticiosDeMaterial\(\)/.test(SRC));
   check('...con su propio cerrojo, y viene cerrado', /var CERROJO_3 = false;/.test(SRC));
   check('...y una función que sólo MIRA y lista lo que hay',
     /function verNombresDeMaterial\(\)/.test(SRC));
-  check('la lista de materiales a renombrar viene VACÍA — la llena quien sabe ' +
-        'cuáles son nombres de cliente, porque este archivo no puede adivinarlo',
-    /var MATERIALES_A_RENOMBRAR = \[\s*(\/\/[^\n]*\n\s*)*\];/.test(SRC),
-    (SRC.match(/var MATERIALES_A_RENOMBRAR = \[[\s\S]*?\];/) || [''])[0]);
+  check('la lista que hay que repasar es la de los que SE QUEDAN, no la de los ' +
+        'que se renombran — con 455 nombres, la otra era impracticable',
+    /var MATERIALES_QUE_SE_QUEDAN = \[/.test(SRC) &&
+    !/MATERIALES_A_RENOMBRAR/.test(SRC));
   check('renombra en las tres hojas que llevan el nombre del material',
     /var HOJAS_CON_MATERIAL = \['MASTER_ARCHIVE_V3', 'ARCHIVE_HISTORY', 'MOVEMENT_TRASH'\];/.test(SRC));
-  /* Y NO en las de existencias: se rehacen solas al reconstruir, y escribirlas
-   * a mano sería pelearse con esa reconstrucción. */
   check('...y NO en las hojas de existencias, que se rehacen solas',
     !/HOJAS_CON_MATERIAL = \[[^\]]*LIVE_STOCK/.test(SRC));
   check('avisa de que hay que reconstruir después, sin lo cual el stock queda ' +
@@ -253,6 +255,75 @@ console.log('\n═══ 9. Los nombres de material — el agujero de la primera
   check('el paso de materiales también comprueba que la hoja sea DEMO',
     /function _hojaEsDemo_/.test(SRC) &&
     /function ponerNombresFicticiosDeMaterial\(\)\s*\{[\s\S]{0,200}_hojaEsDemo_/.test(SRC));
+}
+
+console.log('\n═══ 10. El generador, contra los nombres REALES de Jose ═══\n');
+{
+  /* NO CONTRA UN EJEMPLO INVENTADO. Los 449 nombres de abajo salieron de correr
+   * verNombresDeMaterial sobre su copia el 2026-09-28. Un generador probado con
+   * ocho nombres bonitos no dice nada sobre lo que pasa con cuatrocientos, y lo
+   * que puede salir mal —dos familias con el mismo nombre— sólo aparece con
+   * volumen. */
+  const REALES = require('fs')
+    .readFileSync(require('path').join(__dirname, 'fixtures', 'nombres-material-reales.txt'), 'utf8')
+    .trim().split('|').map(x => x.trim()).filter(Boolean);
+
+  const hoja = (vals) => ({
+    getLastRow: () => vals.length + 1, getLastColumn: () => 1,
+    getRange: (r) => ({ getValues: () => r === 1 ? [['Name']] : vals.map(v => [v]) })
+  });
+  const ss = {
+    getName: () => 'MY WAREHOUSE DEMO',
+    getSheetByName: (n) => n === 'MASTER_ARCHIVE_V3' ? hoja(REALES) : null
+  };
+  const dic = vm.runInContext('_dicDeMateriales_', ctx)(ss);
+
+  check('se leyeron los nombres reales', REALES.length > 400, REALES.length);
+  check('el generador devuelve un diccionario', !!dic);
+
+  const claves  = Object.keys(dic || {});
+  const valores = claves.map(k => dic[k]);
+  const cuenta  = {}; valores.forEach(v => { cuenta[v] = (cuenta[v] || 0) + 1; });
+  const repes   = Object.keys(cuenta).filter(v => cuenta[v] > 1);
+
+  /* DOS MATERIALES CON EL MISMO NOMBRE NUEVO SE FUNDIRÍAN EN UNO al reconstruir
+   * —la identidad es categoría + nombre— y el stock de los dos se sumaría en
+   * una sola fila. Es el fallo más caro que puede tener este generador y es el
+   * que sólo se ve con volumen. */
+  check('ningún nombre nuevo se repite' + (repes.length ? ' — REPETIDOS: ' + repes.slice(0,3).join(', ') : ''),
+    repes.length === 0, repes.length);
+
+  const intactos = REALES.filter(n => !dic[n.toUpperCase()]);
+  check('los materiales genéricos se quedan como están',
+    intactos.indexOf('WINDOW SCREEN') !== -1 && intactos.indexOf('RAIN BUSTER 444') !== -1,
+    intactos.slice(0, 8));
+  check('...y todo lo demás se renombra', claves.length > 400, claves.length);
+
+  /* LAS FAMILIAS. Ocho variantes de una obra tienen que seguir pareciendo ocho
+   * variantes de una obra: con ocho nombres sueltos, la captura deja de parecer
+   * un almacén y pasa a parecer una lista generada. */
+  const familia = (g) => claves.filter(k => k.split(/[\s\-_]+/)[0] === g)
+                               .map(k => dic[k]);
+  const cloud = familia('CLOUDVEIL');
+  const bases = cloud.map(v => v.replace(/ [A-Z]\d?$/, ''));
+  check('las diez variantes de una misma obra comparten base',
+    cloud.length >= 8 && new Set(bases).size === 1, { n: cloud.length, bases: [...new Set(bases)] });
+  check('...y se distinguen entre ellas', new Set(cloud).size === cloud.length, cloud.length);
+  check('dos obras distintas NO comparten base',
+    familia('CLOUDVEIL')[0].replace(/ [A-Z]\d?$/, '') !==
+    familia('WESTERLY')[0].replace(/ [A-Z]\d?$/, ''),
+    [familia('CLOUDVEIL')[0], familia('WESTERLY')[0]]);
+
+  /* Y QUE NO SE ESCRIBA NADA SI NO HAY NOMBRES PARA TODOS. Antes que repartir
+   * un nombre repetido —que fundiría dos materiales— se para y lo dice. */
+  check('si hubiera más familias que nombres posibles, aborta sin escribir',
+    /NO SE ESCRIBIÓ NADA/.test(SRC) && /AVISO: hay/.test(SRC));
+
+  /* Y que correrlo dos veces sobre la misma copia reparta lo mismo: si no, una
+   * segunda pasada movería materiales de sitio sin que nadie lo pidiera. */
+  const otra = vm.runInContext('_dicDeMateriales_', ctx)(ss);
+  check('correrlo dos veces da exactamente el mismo reparto',
+    JSON.stringify(dic) === JSON.stringify(otra));
 }
 
 console.log('\n' + (fail ? '✗ ' + fail + ' fallo(s), ' : '✓ ') + ok + ' comprobaciones');
