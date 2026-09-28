@@ -1363,6 +1363,45 @@
        de una persona, puede ser larguísimo, y tiene su ayuda al pasar el ratón. */
     #tableContainer td{overflow-wrap:anywhere}
     #tableContainer td.mc-comment{max-width:none}
+
+    /* ═══ LA CANTIDAD NO SE PARTE EN DOS ═════════════════════════════════════
+     *
+     * Jose, con captura: un `−300` dibujado como `−30` y `0` debajo, al lado de
+     * un `−200` que cabía. *"No podemos mostrar un número de 3 cifras que no
+     * entra y otros que sí."*
+     *
+     * MEDIDO, y la causa no es el ancho de la columna: es el relleno. La columna
+     * mide 58px y el relleno se lleva 12 por lado, así que a la cifra le quedan
+     *
+     *     58 − 12 − 12 = 34px
+     *
+     * y `−300` necesita 37. `−20` necesita 28 y por eso ése sí cabía. **Toda
+     * cantidad de tres cifras se partía**, que en su almacén no es un caso raro:
+     * es cualquier entrada de bulto.
+     *
+     * Veinticuatro píxeles de relleno para un número de tres cifras es lo que
+     * estaba mal. A 4 por lado, la caja pasa de 34 a 50px y entran hasta cuatro
+     * cifras con signo. Para cinco —`+12500`, 54px— baja un punto la letra, que
+     * es la misma escalera de la tira de reservas: achicar sólo cuando hace
+     * falta y sólo lo que haga falta.
+     *
+     * `nowrap` es lo que convierte esto en algo que se puede comprobar: sin él
+     * un número que no cupiera se partiría en silencio; con él se saldría de su
+     * celda, y `tools/test-columnas.js` ya falla cuando algo se sale.
+     *
+     * `tabular-nums` hace que todas las cifras midan igual, así que una columna
+     * de cantidades queda alineada por unidades, decenas y centenas. En una
+     * columna de números eso no es adorno: es lo que permite compararlos de un
+     * vistazo sin leerlos.
+     *
+     * Y A LA DERECHA, que es como se leen los números y como van a quedar cuando
+     * se unan Qty y Unit — la costura que pidió Jose (`14 | UNITS`, `150 | BOX`)
+     * necesita la cifra pegada a la derecha. Esto adelanta ese trabajo en vez de
+     * ir en contra. */
+    #tableContainer th.mc-qty,
+    #tableContainer td.mc-qty{padding-left:4px;padding-right:4px;text-align:right}
+    #tableContainer td.mc-qty{white-space:nowrap;font-variant-numeric:tabular-nums}
+    #tableContainer td.mc-qty.qty-lg{font-size:.82rem}
     .col-bar-right{margin-left:auto;display:inline-flex;align-items:center;gap:.4rem}
     /* Mismo alto, mismo ancho, mismo sitio: sólo cambia el color. */
     .btn.col-open{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -4316,7 +4355,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.15';
+var APP_VERSION = '12.16';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -4328,7 +4367,7 @@ var APP_VERSION = '12.15';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'c0a41403';
+var APP_BUILD = '7e6dced5';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -7584,7 +7623,15 @@ function renderMovements(){
                 '<div class="mc-sub">'+_he(m.dateRec||m.timestamp||'—')+'</div></td>',
       what:     '<td class="mc-what">'+catBadge(m.category)+
                 '<div class="mc-main">'+_he(displayName(m))+'</div></td>',
-      qty:      '<td class="mc-qty" style="color:'+(isOut?'var(--red)':'var(--accent2)')+';font-weight:600">'+(isOut?'−':'+')+m.qty+'</td>',
+      /* `qty-lg` cuando el texto pasa de cinco caracteres con su signo: ahí
+       * deja de caber en la caja de 50px y baja un punto la letra. Se mide el
+       * TEXTO YA ARMADO, con el signo dentro, porque el signo ocupa como una
+       * cifra y sin contarlo la cuenta se queda corta justo en el borde. */
+      qty:      (function(){
+        var txt = (isOut ? '−' : '+') + m.qty;
+        return '<td class="mc-qty' + (txt.length > 5 ? ' qty-lg' : '') + '" style="color:' +
+               (isOut ? 'var(--red)' : 'var(--accent2)') + ';font-weight:600">' + txt + '</td>';
+      })(),
       unit:     '<td class="mc-unit" style="color:var(--muted);font-size:.78rem">'+_he(m.unit||'—')+'</td>',
       po:       '<td class="mc-po" style="font-size:.78rem">'+_he(m.po||'—')+'</td>',
       locFlow:  '<td class="mc-locFlow" style="font-size:.78rem;color:var(--muted)">'+_he(locDisplay)+'</td>',

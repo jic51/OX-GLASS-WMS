@@ -98,6 +98,29 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.16</span>
+      <span class="tag fix">Arreglado</span>
+      <h3>Una cantidad de tres cifras ya no se parte en dos</h3>
+      <p><b>−300</b> se dibujaba como <b>−30</b> con un <b>0</b> solo debajo,
+         justo al lado de un <b>−200</b> que cabía perfectamente. Las mismas
+         cifras, distinto resultado.</p>
+      <p>La columna no era estrecha: el relleno era ancho. 58 píxeles menos 12
+         por lado dejan 34 para la cifra, y una cantidad de cuatro caracteres
+         necesita 37. Con 4 por lado en vez de 12 quedan 50, y entra todo hasta
+         cuatro cifras con sitio de sobra. Las de cinco bajan un punto de
+         tamaño, que es la misma escalera que ya usa la tira de reservas:
+         achicar sólo cuando hace falta y sólo lo que haga falta.</p>
+      <p>Y el motivo de que una entrara y otra no: en una letra normal el
+         <b>0</b> y el <b>2</b> son más estrechos que el <b>3</b> y el <b>6</b>,
+         así que las mismas tres cifras pueden medir distinto. Las cantidades
+         usan ahora cifras de ancho fijo, lo que además deja la columna alineada
+         por unidades, decenas y centenas — en una columna de números eso no es
+         adorno: es lo que permite compararlos sin leerlos.</p>
+      <p>Y van alineadas a la derecha, que es como se leen los números y como
+         quedarán cuando Qty y Unit se junten en una sola columna.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.15</span>
       <span class="tag fix">Arreglado</span>
       <h3>El cuadro de etiquetas respeta las casillas que marcaste</h3>

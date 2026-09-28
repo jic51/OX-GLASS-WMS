@@ -521,6 +521,125 @@ window.__DATA=${JSON.stringify(DATA)};
         reparado.length === 16 && new Set(reparado).size === 16, reparado.length);
   await pOrden.close();
 
+  /* ══════════════════════════════════════════════════════════════════════════
+   * 7. LA CANTIDAD NO SE PARTE EN DOS
+   *
+   * Jose, con captura (2026-09-28): un `−300` dibujado como `−30` y `0` debajo,
+   * justo al lado de un `−200` que sí cabía. *"No podemos mostrar un número de
+   * 3 cifras que no entra y otros que sí."*
+   *
+   * La causa medida no era el ancho de la columna sino el RELLENO: 58px menos
+   * 12 por lado dejan 34px a la cifra, y `−300` necesita 37. `−20` necesita 28
+   * y por eso ése cabía. O sea que se partía TODA cantidad de tres cifras, que
+   * en un almacén no es un caso raro: es cualquier entrada de bulto.
+   *
+   * SE MIDE EL TEXTO, NO LA CELDA. `scrollWidth` no sirve aquí: con el texto
+   * partido en dos líneas la celda no desborda —cabe, en dos renglones— y la
+   * comprobación daría verde sobre el fallo exacto que Jose fotografió. Lo que
+   * dice la verdad es cuántas LÍNEAS ocupa el texto, y eso se lee con un rango
+   * sobre el contenido de la celda.
+   * ══════════════════════════════════════════════════════════════════════════ */
+  console.log('\n═══ 7. La cantidad no se parte en dos ═══\n');
+
+  for (const W of [1200, 1600]) {
+    const p7 = await browser.newPage({ viewport: { width: W, height: 900 } });
+    p7.on('pageerror', e => errores.push(e.message));
+    await p7.goto('file://' + pagina());
+    await p7.waitForTimeout(800);
+    await p7.evaluate(() => showTab('movements', 'btn-movements'));
+    await p7.waitForTimeout(300);
+    /* Cantidades de una a cinco cifras. El fixture normal llega a 40, así que
+     * sin esto la prueba no vería nunca el caso que falla. */
+    await p7.evaluate(() => {
+      movements.forEach(function (m, i) {
+        m.qty = [1, 20, 42, 200, 360, 1250, 9999, 12500][i % 8];
+      });
+      renderMovements();
+    });
+    await p7.waitForTimeout(250);
+
+    const q = await p7.evaluate(() => {
+      const malas = [], vistos = {};
+      document.querySelectorAll('#tableContainer td.mc-qty').forEach(td => {
+        const t = td.textContent.trim();
+        if (!t || vistos[t]) return;
+        vistos[t] = 1;
+        const rg = document.createRange();
+        rg.selectNodeContents(td);
+        const rects = rg.getClientRects();
+        const caja = td.getBoundingClientRect();
+        let maxR = 0, minL = 1e9;
+        for (const x of rects) { maxR = Math.max(maxR, x.right); minL = Math.min(minL, x.left); }
+        if (rects.length !== 1) malas.push(t + ' en ' + rects.length + ' líneas');
+        else if (minL < caja.left - 0.5 || maxR > caja.right + 0.5)
+          malas.push(t + ' se sale ' + Math.ceil(maxR - caja.right) + 'px');
+      });
+      return { n: Object.keys(vistos).length, malas: malas.slice(0, 6) };
+    });
+
+    check('ventana ' + W + ': se dibujaron cantidades de varios tamaños',
+          q.n >= 8, q.n);
+    check('ventana ' + W + ': NINGUNA cantidad se parte ni se sale de su celda' +
+          (q.malas.length ? ' — MALAS: ' + q.malas.join('; ') : ''),
+          q.malas.length === 0);
+
+    /* Y LA RAZÓN DE FONDO DE LO QUE VIO JOSE, medida.
+     *
+     * Su queja fue *"un número de 3 cifras que no entra y otros que sí"*, y eso
+     * no era casualidad ni cosa de su pantalla: en una letra proporcional el `0`
+     * y el `2` son más estrechos que el `3` y el `6`, así que `−200` cabía y
+     * `−300` no CON EL MISMO NÚMERO DE CIFRAS. Por eso el umbral cambiaba de
+     * máquina en máquina y por eso parecía caprichoso.
+     *
+     * `tabular-nums` hace que toda cifra mida igual. Esta comprobación es la que
+     * lo fija, y no depende de ningún número medido: dos cantidades con la misma
+     * cantidad de caracteres tienen que ocupar EXACTAMENTE lo mismo.
+     *
+     * AVISO HONESTO SOBRE ESTA MEDIDA: en el Chromium sin cabeza de la suite, la
+     * letra de respaldo YA trae las cifras de ancho fijo, así que quitar
+     * `tabular-nums` NO hace fallar esta comprobación aquí — lo comprobé. Sigue
+     * valiendo porque la app corre en la máquina de otro, con otra letra, y ahí
+     * sí muerde; pero quien vigila la regla en ESTA máquina es la comprobación
+     * de texto de más abajo. Decirlo es mejor que dejar creer que esta línea
+     * demuestra algo que en este banco de pruebas no puede demostrar. */
+    const anchos = await p7.evaluate(() => {
+      const por = {};
+      document.querySelectorAll('#tableContainer td.mc-qty').forEach(td => {
+        const t = td.textContent.trim();
+        if (!t) return;
+        const rg = document.createRange(); rg.selectNodeContents(td);
+        const w = Math.round(rg.getBoundingClientRect().width * 10) / 10;
+        (por[t.length] = por[t.length] || {})[w] = (por[t.length][w] || []).concat(t);
+      });
+      return por;
+    });
+    const dispares = Object.keys(anchos)
+      .filter(n => Object.keys(anchos[n]).length > 1)
+      .map(n => n + ' caracteres → ' + Object.keys(anchos[n]).map(w =>
+        w + 'px (' + anchos[n][w].slice(0, 2).join(',') + ')').join(' vs '));
+    check('ventana ' + W + ': dos cantidades con las mismas cifras miden lo ' +
+          'mismo — es la raíz de que "una entre y otra no"' +
+          (dispares.length ? ' — DISPARES: ' + dispares.join(' | ') : ''),
+          dispares.length === 0);
+
+    await p7.close();
+  }
+
+  {
+    const cssQty = css;
+    check('la cantidad va a la derecha, que es como se leen los números y como ' +
+          'quedará al unir Qty con Unit',
+          /#tableContainer td\.mc-qty\{[^}]*text-align:right|text-align:right[^}]*\}/.test(
+            (cssQty.match(/#tableContainer th\.mc-qty,[\s\S]*?\}/) || [''])[0]));
+    check('...y con cifras de ancho fijo, que es lo que deja una columna de ' +
+          'números comparable de un vistazo',
+          /td\.mc-qty\{[^}]*tabular-nums/.test(cssQty));
+    check('el relleno de la cantidad es pequeño — 24px para tres cifras era el fallo',
+          /#tableContainer th\.mc-qty,\s*#tableContainer td\.mc-qty\{padding-left:4px;padding-right:4px/.test(cssQty));
+    check('y hay un escalón de tamaño para las cantidades largas',
+          /td\.mc-qty\.qty-lg\{font-size:/.test(cssQty) && /qty-lg/.test(html));
+  }
+
   /* LA MUTACIÓN QUE TIENE QUE MATAR ESTA PRUEBA: devolver el mínimo a un número
    * fijo. Se comprueba que el código NO lo lleva escrito, porque un `min-width`
    * en el CSS de la tabla volvería a ser un número que no sabe cuántas columnas

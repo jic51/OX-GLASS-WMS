@@ -5,6 +5,46 @@ here once they ship (the commit message is the record of what changed and why).
 
 ## Next up
 
+# ══ ANOTADO 2026-09-28 — DOS INDICADORES DE ESPERA PARA EL MISMO ESTADO ══
+
+Jose, con dos capturas de la papelera: *"al hacer el return de un movimiento
+borrado, primero aparece el anillo rotando y luego el reloj de arena. Si los 2
+significan lo mismo, ¿por qué?"*
+
+**Tiene razón y son dos sitios distintos dibujando el mismo estado.** No es una
+transición pensada: es que el botón se dibuja de dos formas según quién lo pinte.
+
+| Quién pinta | Qué dibuja | Cuándo |
+|---|---|---|
+| `_btnBusy(btn, 'Restoring…')` (~22019) | `<span class="btn-spin">` — **el anillo** | al pulsar, sobre el botón pulsado |
+| El repintado de la lista (~12270) | `'⏳ Restoring…'` — **el reloj** | cada vez que el panel se redibuja |
+
+O sea: pulsas y sale el anillo; el panel se repinta —y se repinta solo, porque
+`_trashPending` existe justamente para que un repintado no olvide lo que está en
+camino— y el mismo botón pasa a reloj. **El icono cambia debajo de la mano sin
+que haya pasado nada nuevo.**
+
+Y en la captura de Jose se ven **los dos a la vez** en filas distintas de la
+misma lista: las que él acababa de pulsar con anillo, las repintadas con reloj.
+Eso es peor que cualquiera de los dos por separado, porque sugiere que son dos
+estados diferentes.
+
+**El arreglo es una línea:** que el repintado use el mismo `btn-spin` que
+`_btnBusy`, en vez de su propio `⏳`. Una sola forma de decir "este botón está
+trabajando".
+
+**Y una decisión pequeña que hay que tomar al hacerlo:** hoy hay `⏳` en otros
+cinco sitios (`progIcon` y los cuatro cuadros de Settings → System). Ésos son
+*esperas de pantalla*, no de botón, y ahí el reloj está bien. La regla que
+propongo: **anillo = un botón que pulsaste; reloj = algo que la pantalla está
+consultando sola.** Con esa regla los cinco se quedan y sólo cambia el de la
+papelera.
+
+Tamaño: minúsculo. Se hace con la primera cosa que toque esa zona.
+
+---
+
+
 # ══ ANOTADO 2026-09-27 — LOS MOVIMIENTOS DE josephl SIN ID ══
 
 Jose, con captura del sheet: once filas seguidas (1235-1245), todas de
