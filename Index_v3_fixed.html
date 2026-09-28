@@ -873,6 +873,10 @@
     .dq-kind.dq-spelling{background:#DBEAFE;color:var(--accent2)}
     .dq-kind.dq-gap{background:var(--green-bg);color:var(--green)}
     .dq-kind.dq-similar{background:var(--yellow-bg);color:var(--yellow)}
+    /* Rojo, y es el único de los cuatro que lo lleva. Los otros tres son
+     * "esto se puede mejorar"; éste es "esto no puede haber pasado", y una
+     * lista donde todo tiene el mismo color no deja verlo. */
+    .dq-kind.dq-negative{background:var(--red-bg);color:var(--red)}
     .dq-head{font-size:.86rem;margin-bottom:.2rem;word-break:break-word}
     .dq-body{font-size:.78rem;color:var(--muted);line-height:1.45}
     .dq-act{margin-top:.5rem}
@@ -4412,7 +4416,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.20';
+var APP_VERSION = '12.21';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -4424,7 +4428,7 @@ var APP_VERSION = '12.20';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '5b81d2ba';
+var APP_BUILD = '936950aa';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -12915,6 +12919,21 @@ function _dqCard(f, i){
            '<strong>' + _he(f.value) + '</strong>.';
     action = '<button class="btn btn-primary btn-sm" onclick="_dqApply(' + i + ')">Fill them in</button>';
 
+  } else if (f.kind === 'negative'){
+    /* LESS THAN NOTHING. No Apply button and there never will be one: the fix
+     * is either "one of these movements should not be there" or "an entry was
+     * never recorded", and only somebody who knows the warehouse can say which.
+     * What this owes them is the evidence and where to go look. */
+    head = '<strong>' + _he(f.name) + '</strong> <span style="color:var(--muted);font-size:.78rem">' + _he(f.category) + '</span>';
+    body = 'More of this has left than ever arrived: <strong>' + _he(String(f.inQty)) + ' in</strong>, ' +
+           '<strong>' + _he(String(f.outQty)) + ' out</strong>, which leaves it at ' +
+           '<strong style="color:var(--red)">' + _he(String(f.value)) + '</strong>. ' +
+           'That cannot have happened, so one of its movements is wrong — either something went out ' +
+           'twice, or something that came in was never recorded. ' +
+           '<em>Every stock figure for this material is wrong until it is sorted.</em><br><br>' +
+           'Search its name in Movement History and compare the entries against the exits. ' +
+           'Also worth a look: Settings → System → Deleted movements.';
+
   } else {
     // No Apply button, on purpose. The app is not confident enough to offer
     // one, and saying so is worth more than a button that is wrong one time in
@@ -12927,7 +12946,10 @@ function _dqCard(f, i){
 
   return '<div class="dq-card" id="dq-card-' + i + '">' +
       '<div class="dq-kind dq-' + f.kind + '">' +
-        (f.kind === 'spelling' ? 'Written two ways' : f.kind === 'gap' ? 'Missing a value' : 'Have a look') +
+        (f.kind === 'spelling' ? 'Written two ways'
+          : f.kind === 'gap'      ? 'Missing a value'
+          : f.kind === 'negative' ? 'Less than nothing'
+          : 'Have a look') +
       '</div>' +
       '<div class="dq-head">' + head + '</div>' +
       '<div class="dq-body">' + body + '</div>' +

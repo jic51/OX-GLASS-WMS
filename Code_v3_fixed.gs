@@ -46,7 +46,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.20';
+var APP_VERSION = '12.21';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -58,7 +58,7 @@ var APP_VERSION = '12.20';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '5b81d2ba';
+var APP_BUILD = '936950aa';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -10534,6 +10534,59 @@ function manageMaterialLocked_(data, auth) {
     ensureArchiveWidth_(target);
 
     var restored = padRow_(entry.row, AC_WIDTH);   // drops the three trash columns
+
+    /* THE WAREHOUSE MAY HAVE MOVED ON WHILE THIS SAT IN THE TRASH.
+     *
+     * Jose, 2026-09-28, with his sheet open: two EXIT rows, 37 UNIT each, same
+     * material, DIFFERENT ids (MMULCYV78-J2R-0 and MMJLCVYS1-Z6T-0), against a
+     * single ENTRY of 37. That material stood at MINUS 37 and nothing anywhere
+     * had said a word — no toast, no ERROR_LOG line, no console.
+     *
+     * The sequence that produces it needs no bug in delete and none in restore:
+     *
+     *   08:41  exit #1 saved              37 → 0
+     *   08:43  exit #1 deleted            0 → 37    the stock comes back
+     *   08:44  exit #2 saved              37 → 0    LEGAL: there were 37
+     *          exit #1 put back           0 → −37   nobody looked
+     *
+     * Saving an outgoing movement goes through buildStockSnapshot_ and is
+     * refused when the material will not cover it. RESTORING went through
+     * nothing at all: it appended the row and returned success. The same door,
+     * with a lock on one side and no lock on the other.
+     *
+     * The rule this settles: A RESTORE IS NEVER MORE PERMISSIVE THAN A SAVE.
+     * It is checked against the same snapshot, from the same sheet, by the same
+     * arithmetic — so a movement is refused on the way back in exactly when an
+     * identical one would be refused on the way in.
+     *
+     * The movement STAYS IN THE TRASH when refused. Nothing is lost: the person
+     * is told what changed and decides, which is the only honest answer when
+     * two true movements no longer fit in the same warehouse.
+     *
+     * Only the types that TAKE material out. TRANSFER moves between racks and
+     * leaves the warehouse total alone, and RETURN and ENTRY only ever add — a
+     * restore of those cannot make the total impossible. A transfer can still
+     * leave one rack short, which is a smaller and different problem; it is in
+     * BACKLOG.md rather than half-solved here. */
+    var mtBack = String(restored[AC.MOVETYPE] || '').toUpperCase().trim();
+    if (mtBack === 'EXIT' || mtBack === 'DISPATCH' || mtBack === 'WASTE') {
+      var qtyBack = Math.abs(Number(restored[AC.QTY] || 0));
+      var matBack = getMaterialId(normalizeString(restored[AC.CATEGORY] || ''),
+                                  normalizeString(restored[AC.NAME]     || ''));
+      // The same sheet the save path reads, for the same reason it reads only
+      // that one: the two checks have to agree, and one of them reading more
+      // than the other is how they stop agreeing.
+      var snapBack = buildStockSnapshot_(archive.getDataRange().getValues());
+      var haveBack = (snapBack[matBack] && snapBack[matBack].wh) || 0;
+      if (haveBack < qtyBack) {
+        throw new Error('CANNOT PUT THIS BACK — the warehouse changed while it was in the trash. ' +
+          String(restored[AC.NAME] || 'This material') + ' now has ' + haveBack +
+          ' in the warehouse, and this movement takes ' + qtyBack + ' out. ' +
+          'Putting it back would leave you holding less than nothing. ' +
+          'It is still in the trash: check whether the same material left again after this was deleted.');
+      }
+    }
+
     target.getRange(target.getLastRow() + 1, 1, 1, AC_WIDTH).setValues([textSafeRow_(restored)]);
     target.getRange(target.getLastRow(), AC.TIMESTAMP + 1, 1, 1).setNumberFormat('mm/dd/yyyy hh:mm');
 
@@ -11089,6 +11142,62 @@ function runDataQualityScan(data) {
         value: projs[0], rows: m.staleTransfer
       });
     }
+  });
+
+  /* ── Family 4: this material is holding less than nothing ──────────────────
+   *
+   * A material whose movements add up below zero is not a tidiness problem. It
+   * means the archive is asserting something that cannot have happened — more
+   * went out than ever came in — and every number built on top of it is wrong.
+   *
+   * WHY NOTHING HAS EVER SEEN ONE. applyMovementToSnapshot_ clamps:
+   *
+   *     s.wh = Math.max(0, s.wh - qty);
+   *
+   * That clamp is right for the stock screen — a shelf cannot show −37 windows
+   * — but it means the arithmetic REFUSES TO REPRESENT the broken state, so the
+   * broken state is invisible everywhere the arithmetic is used. Jose's
+   * WINDOW|||SR-MM213-TT-091026 stood at −37 across the whole app and every
+   * screen showed a calm 0.
+   *
+   * So this counts WITHOUT the clamp. It is the only place in the file that
+   * does, and that is the entire point of it.
+   *
+   * Nothing is offered to Apply. There is no safe automatic answer: the fix is
+   * either "one of these movements should not be there" or "an entry was never
+   * recorded", and only a person who knows the warehouse can say which. What
+   * this owes them is the evidence — the number, and the movements that made
+   * it — which is what a finding carries. */
+  var netos = {};
+  rows.forEach(function (row) {
+    var cat  = String(row[AC.CATEGORY] || '').trim();
+    var name = String(row[AC.NAME]     || '').trim();
+    if (!cat && !name) return;
+    var matId = getMaterialId(normalizeString(cat), normalizeString(name));
+    var n = netos[matId] || (netos[matId] = { category: cat, name: name, neto: 0, dentro: 0, fuera: 0 });
+    var qty = Math.abs(Number(row[AC.QTY] || 0));
+    var mt  = String(row[AC.MOVETYPE] || '').toUpperCase().trim();
+    // Same normalisation the stock engine uses for rows written before the
+    // MoveType column existed, so old history is not read as entries.
+    if (!mt || mt === 'IN STOCK') {
+      mt = (Number(row[AC.QTY] || 0) < 0 ||
+            String(row[AC.STATUS] || '').toUpperCase().trim().indexOf('DISPATCH') === 0) ? 'EXIT' : 'ENTRY';
+    }
+    // TRANSFER and ADJUST are left out on purpose. A transfer moves between
+    // racks and nets to zero; an adjustment is a CORRECTION, so counting it
+    // here would flag the very movement somebody made to put a count right.
+    if (mt === 'ENTRY' || mt === 'RETURN')                       { n.neto += qty; n.dentro += qty; }
+    else if (mt === 'EXIT' || mt === 'DISPATCH' || mt === 'WASTE'){ n.neto -= qty; n.fuera  += qty; }
+  });
+
+  Object.keys(netos).forEach(function (matId) {
+    var n = netos[matId];
+    if (n.neto >= 0) return;
+    findings.push({
+      id: dqId_(['negative', matId]), kind: 'negative',
+      matId: matId, category: n.category, name: n.name,
+      value: n.neto, rows: 0, inQty: n.dentro, outQty: n.fuera
+    });
   });
 
   // ── Family 3: one of these two is probably a typo ─────────────────────────

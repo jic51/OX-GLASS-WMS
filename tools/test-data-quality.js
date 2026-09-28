@@ -102,7 +102,17 @@ function row(o) {
   r[AC.PROJECT]  = o.project || '';
   r[AC.SRC_LOC]  = o.src || '';
   r[AC.DEST_LOC] = o.dest || '';
-  r[AC.MOVETYPE] = o.mt || 'ENTRY';
+  // `o.mt || 'ENTRY'` convertía una cadena vacía en ENTRY, así que NO HABÍA
+  // FORMA de montar una fila anterior a la columna MoveType — justo el caso que
+  // el motor de stock deduce por el signo o por el Status. Ahora un mt ausente
+  // sigue siendo ENTRY y un mt:'' se queda vacío, que es el caso real.
+  r[AC.MOVETYPE] = (o.mt === undefined ? 'ENTRY' : o.mt);
+  // La cantidad la ACEPTABA y no la escribía: varias llamadas de abajo ya
+  // pasaban `qty` y se perdía. Hasta la Family 4 nada la leía, así que nadie lo
+  // notó. Las familias 1 a 3 no miran cantidades, así que escribirla no cambia
+  // ninguna comprobación anterior.
+  r[AC.QTY]      = o.qty || 0;
+  r[AC.STATUS]   = o.status || '';
   r[AC.GC]       = o.gc || '';
   r[AC.PO]       = o.po || '';
   r[AC.PM]       = o.pm || '';
@@ -461,6 +471,85 @@ console.log('\n═══ the screen ═══\n');
     /Stock can move: merging two materials/.test(HTML));
   check('both endpoints are dispatched',
     /action === 'runDataQualityScan'/.test(GS) && /action === 'applyDataQualityFix'/.test(GS));
+}
+
+/* ═══ MENOS QUE NADA ═══════════════════════════════════════════════════════
+ *
+ * Jose, 2026-09-28, con su hoja: dos salidas de 37 del mismo material contra
+ * una sola entrada de 37. El material estaba en −37 y TODA la app enseñaba un
+ * 0 tranquilo, porque applyMovementToSnapshot_ recorta con Math.max(0, …).
+ * Ese recorte está bien para la pantalla —un estante no puede enseñar −37
+ * ventanas— pero hace que el estado roto sea INVISIBLE en todos los sitios
+ * donde se usa la aritmética.
+ *
+ * Esta familia cuenta SIN el recorte. Es el único sitio del archivo que lo
+ * hace, y ésa es toda su razón de existir. */
+console.log('\n═══ un material que tiene menos que nada ═══\n');
+
+{
+  const res = scan([
+    row({ name: 'SR-MM213-TT-091026', qty: 37, mt: 'ENTRY' }),
+    row({ name: 'SR-MM213-TT-091026', qty: 37, mt: 'EXIT' }),
+    row({ name: 'SR-MM213-TT-091026', qty: 37, mt: 'EXIT' })
+  ]);
+  const neg = of(res, 'negative');
+  check('la secuencia exacta de la hoja de Jose se detecta', neg.length === 1);
+  check('...y dice el número de verdad, −37, no un 0 recortado',
+    neg.length === 1 && neg[0].value === -37);
+  check('...con las dos mitades a la vista: 37 entraron, 74 salieron',
+    neg.length === 1 && neg[0].inQty === 37 && neg[0].outQty === 74);
+  check('NO se ofrece ningún Apply: sólo quien conoce el almacén sabe cuál sobra',
+    neg.length === 1 && !neg[0].field);
+}
+
+{
+  const res = scan([
+    row({ name: 'NORMAL', qty: 50, mt: 'ENTRY' }),
+    row({ name: 'NORMAL', qty: 50, mt: 'EXIT' }),
+    row({ name: 'JUSTO',  qty: 10, mt: 'ENTRY' }),
+    row({ name: 'JUSTO',  qty: 4,  mt: 'EXIT' })
+  ]);
+  check('un almacén que cuadra en cero NO se acusa', of(res, 'negative').length === 0);
+}
+
+{
+  // Un TRANSFER no saca nada del almacén, y un ADJUST es la corrección misma:
+  // contarlos aquí acusaría justo al movimiento que alguien hizo para arreglar
+  // una cuenta.
+  const res = scan([
+    row({ name: 'MOVIDO', qty: 5, mt: 'ENTRY', dest: 'A1A' }),
+    row({ name: 'MOVIDO', qty: 5, mt: 'TRANSFER', src: 'A1A', dest: 'B2B' }),
+    row({ name: 'MOVIDO', qty: 5, mt: 'TRANSFER', src: 'B2B', dest: 'C3C' })
+  ]);
+  check('los TRANSFER no cuentan: mueven entre estantes, no sacan nada',
+    of(res, 'negative').length === 0);
+
+  const res2 = scan([
+    row({ name: 'CONTADO', qty: 3, mt: 'ENTRY' }),
+    row({ name: 'CONTADO', qty: 9, mt: 'ADJUST', src: 'A1A' })
+  ]);
+  check('los ADJUST tampoco: son la corrección, no el error',
+    of(res2, 'negative').length === 0);
+}
+
+{
+  // Filas anteriores a la columna MoveType: el motor las lee por el signo de la
+  // cantidad o por el Status. Si esta familia no hiciera lo mismo, leería una
+  // salida vieja como entrada y no vería nunca un archivo importado.
+  const res = scan([
+    row({ name: 'VIEJO', qty: 10, mt: '' }),
+    row({ name: 'VIEJO', qty: 40, mt: '', status: 'DISPATCHED' })
+  ]);
+  check('el historial viejo sin MoveType se lee igual que en el motor de stock',
+    of(res, 'negative').length === 1 && of(res, 'negative')[0].value === -30);
+}
+
+{
+  check('la tarjeta se pinta en rojo y se llama "Less than nothing"',
+    /dq-negative/.test(HTML) && /Less than nothing/.test(HTML));
+  check('...y dice qué hacer, sin ofrecer un botón que decida por nadie',
+    /More of this has left than ever arrived/.test(HTML) &&
+    /Every stock figure for this material is wrong/.test(HTML));
 }
 
 console.log('\ndata quality: ' + (fail === 0 ? 'ok (' + ok + ' checks)' : fail + ' FAILED'));

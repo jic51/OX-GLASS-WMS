@@ -98,6 +98,39 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.21</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Devolver un movimiento ya no puede romperte el stock</h3>
+      <p><b>El almacén puede cambiar mientras un movimiento está en la papelera,
+         y nadie lo estaba mirando.</b> Guardar una salida siempre se ha
+         rechazado cuando el material no alcanza. Devolver una desde la papelera
+         no pasaba por ninguna comprobación: metía la fila y ya. La misma puerta,
+         con cerradura en un lado y sin cerradura en el otro.</p>
+      <p>La secuencia, y no hace falta ningún fallo en borrar ni en restaurar:
+         sacas 37 de algo. Borras esa salida, así que vuelven los 37. Alguien
+         saca 37 otra vez — perfectamente legal, hay 37. Y entonces devuelves la
+         primera. Ahora han salido 74 de un estante que sólo recibió 37, y todas
+         las cifras de ese material están mal.</p>
+      <p><b>Y no avisó nada, lo cual tiene su propia causa.</b> La aritmética del
+         stock recorta en cero —un estante no puede enseñar menos 37 ventanas—
+         así que el estado imposible ni siquiera se podía representar. Lo que
+         sobraba se iba a "dispatched", que no tiene techo. La app enseñaba un
+         cero tranquilo y un total inflado en silencio.</p>
+      <p><b>Dos arreglos, porque eran dos fallos.</b> Devolver un movimiento pasa
+         ahora por la misma comprobación que guardarlo, contra los mismos
+         números: <i>restaurar nunca es más permisivo que guardar</i>. Cuando ya
+         no cabe, dice qué cambió y <b>el movimiento se queda en la papelera</b>
+         — no se pierde nada, y decides tú.</p>
+      <p>Y <b>Check my data</b> tiene un tipo de hallazgo nuevo: <b>Less than
+         nothing</b>, para cualquier material cuyos movimientos sumen por debajo
+         de cero. Cuenta SIN el recorte — es lo único en la app que lo hace, y
+         ésa es toda su razón de ser. Enseña lo que entró, lo que salió y el
+         número de verdad, y no ofrece ningún botón: el arreglo es o un
+         movimiento que sobra o uno que nunca se registró, y eso sólo lo sabe
+         quien conoce el almacén.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.20</span>
       <span class="tag fix">Arreglo</span>
       <h3>Cuatro cosas pequeñas que estaban mal en silencio</h3>

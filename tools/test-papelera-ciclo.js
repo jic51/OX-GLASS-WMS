@@ -199,8 +199,13 @@ const AUTH = { email: 'jose@ox-glass.com', role: 'ADMIN' };
    ═══════════════════════════════════════════════════════════════════════════ */
 console.log('\n═══ 1. Borrar → restaurar → borrar, con la hoja del ancho correcto ═══\n');
 {
+  /* CON SU ENTRADA. La primera versión de este montaje tenía la salida SOLA, y
+   * desde la v12.21 eso ya no es un almacén posible: restaurar una salida de 37
+   * sobre un material del que nunca entró nada se niega, y con razón. El montaje
+   * describía un mundo que el producto no permite. */
   const archivo  = hojaFalsa('MASTER_ARCHIVE_V3',
-    [CABECERA, mov('SR-MM213-TT-091026', 37, 'ID-A'), mov('OTRA COSA', 5, 'ID-B', 'ENTRY')], AC_WIDTH);
+    [CABECERA, mov('SR-MM213-TT-091026', 37, 'ID-ENT', 'ENTRY'),
+     mov('SR-MM213-TT-091026', 37, 'ID-A'), mov('OTRA COSA', 5, 'ID-B', 'ENTRY')], AC_WIDTH);
   const papelera = hojaFalsa('MOVEMENT_TRASH', [CABECERA.concat(['Deleted At','Deleted By','Came From'])], TRASH_WIDTH);
   const ctx = montar(archivo, papelera);
 
@@ -211,8 +216,13 @@ console.log('\n═══ 1. Borrar → restaurar → borrar, con la hoja del anc
   ctx.manageMaterialLocked_({ op: 'restoreMovement', movId: 'ID-A' }, AUTH);
   check('tras restaurar: la papelera queda VACÍA', papelera.datos().length === 0, papelera.datos().length);
   check('tras restaurar: el archivo lo tiene UNA vez', archivo.cuantasCon('ID-A') === 1, archivo.cuantasCon('ID-A'));
-  check('tras restaurar: la cantidad NO se duplicó (37, no 74)',
-        archivo.sumaQty('SR-MM213-TT-091026') === 37, archivo.sumaQty('SR-MM213-TT-091026'));
+  /* EN NETO, no sumando filas. sumaQty suma cantidades sin mirar el sentido, y
+   * desde que el montaje lleva su ENTRADA eso da 37+37=74 con el almacén
+   * perfectamente sano. Lo que hay que medir es el NETO: entró 37, salió 37,
+   * queda 0. Medir la suma bruta habría dado por duplicado un archivo correcto. */
+  check('tras restaurar: no hay movimiento de más — el neto es 0 (37 dentro, 37 fuera)',
+        disponible(archivo, 'SR-MM213-TT-091026') === 0,
+        disponible(archivo, 'SR-MM213-TT-091026'));
 
   ctx.manageMaterialLocked_({ op: 'deleteRow', movId: 'ID-A' }, AUTH);
   check('tras el segundo borrado: la papelera tiene 1, no 2',
@@ -251,7 +261,9 @@ console.log('\n═══ 2. La misma secuencia sobre una hoja de 20 columnas ═
    ═══════════════════════════════════════════════════════════════════════════ */
 console.log('\n═══ 3. Restaurar dos veces el mismo movimiento ═══\n');
 {
-  const archivo  = hojaFalsa('MASTER_ARCHIVE_V3', [CABECERA], AC_WIDTH);
+  // La entrada que hace legítima la salida que se va a restaurar.
+  const archivo  = hojaFalsa('MASTER_ARCHIVE_V3',
+    [CABECERA, mov('SR-MM213-TT-091026', 37, 'ID-ENT', 'ENTRY')], AC_WIDTH);
   const papelera = hojaFalsa('MOVEMENT_TRASH',
     [CABECERA.concat(['Deleted At','Deleted By','Came From'])], TRASH_WIDTH);
   // Un movimiento ya en la papelera, como si lo hubiera borrado hace un rato.
@@ -267,8 +279,9 @@ console.log('\n═══ 3. Restaurar dos veces el mismo movimiento ═══\n'
 
   check('el segundo restaurar se NIEGA en vez de duplicar', !!err2, err2);
   check('el archivo lo tiene UNA sola vez', archivo.cuantasCon('ID-A') === 1, archivo.cuantasCon('ID-A'));
-  check('la cantidad sigue siendo 37', archivo.sumaQty('SR-MM213-TT-091026') === 37,
-        archivo.sumaQty('SR-MM213-TT-091026'));
+  check('el neto sigue en 0 — la salida se aplicó UNA vez, no dos',
+        disponible(archivo, 'SR-MM213-TT-091026') === 0,
+        disponible(archivo, 'SR-MM213-TT-091026'));
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -292,6 +305,91 @@ console.log('\n═══ 4. Dos movimientos iguales con ids distintos ═══\
   check('...pero son movimientos DISTINTOS (ids distintos)', ids[0] !== ids[1], ids);
   console.log('     → en pantalla las dos dicen: SR-MM213-TT-091026 · 37 UNIT · EXIT · SR MM213');
   console.log('     → y no hay nada que las distinga. Ids reales:', ids.join(' / '));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   5. LA SECUENCIA DE JOSE, LA DE VERDAD — y aquí está el fallo
+   ═══════════════════════════════════════════════════════════════════════════
+
+   Su hoja, 2026-09-28, dos filas en MASTER_ARCHIVE_V3:
+
+     fila 1270 · 08:44 · WINDOW · SR-MM213-TT-091026 · 37 UNIT · EXIT · MMULCYV78-J2R-0
+     fila 1271 · 08:41 · WINDOW · SR-MM213-TT-091026 · 37 UNIT · EXIT · MMJLCVYS1-Z6T-0
+
+   DOS IDS DISTINTOS: son dos movimientos de verdad, no uno listado dos veces.
+   Y la fila de ABAJO (1271, la que se escribió DESPUÉS, porque restaurar añade
+   al final) lleva la marca de tiempo MÁS ANTIGUA. Eso es la firma de un
+   restaurado: vuelve con su fecha original.
+
+   Con las entradas de su pantalla — +37 WINDOW, y +16/+1 que son SCREEN y por
+   tanto OTRO material — el WINDOW queda en 37 − 37 − 37 = −37.
+
+   LA SECUENCIA QUE LO PRODUCE, y no hace falta ningún fallo en borrar ni en
+   restaurar:
+
+     1. 08:41  se guarda la SALIDA #1.           37 → 0
+     2. 08:43  se borra. Va a la papelera.       0 → 37   (vuelve el stock)
+     3. 08:44  se guarda la SALIDA #2.           37 → 0   ES LEGAL: hay 37
+     4.        se restaura la #1 de la papelera. 0 → −37  NADIE MIRA
+
+   EL FALLO ESTÁ EN EL PASO 4. Guardar una salida pasa por buildStockSnapshot_ y
+   se rechaza si no alcanza. RESTAURAR no comprueba NADA: mete la fila y ya.
+   Pero el almacén CAMBIÓ mientras el movimiento estaba en la papelera, y eso es
+   justo lo que nadie mira.
+
+   Es la misma puerta, con cerradura en un lado y sin cerradura en el otro.
+   Y explica cada prueba que dio Jose: dos ids, las dos fechas, el stock
+   imposible, y que no hubiera ningún error en ningún sitio.
+   ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n═══ 5. Borrar, salir otra vez con lo que volvió, y restaurar ═══\n');
+{
+  const archivo  = hojaFalsa('MASTER_ARCHIVE_V3',
+    [CABECERA, mov('SR-MM213-TT-091026', 37, 'ID-ENTRADA', 'ENTRY')], AC_WIDTH);
+  const papelera = hojaFalsa('MOVEMENT_TRASH',
+    [CABECERA.concat(['Deleted At','Deleted By','Came From'])], TRASH_WIDTH);
+  const ctx = montar(archivo, papelera);
+
+  // Paso 1: la salida #1 ya está guardada (37 fuera).
+  archivo.getRange(archivo.getLastRow() + 1, 1, 1, AC_WIDTH)
+         .setValues([mov('SR-MM213-TT-091026', 37, 'ID-SALIDA-1', 'EXIT')]);
+
+  // Paso 2: se borra.
+  ctx.manageMaterialLocked_({ op: 'deleteRow', movId: 'ID-SALIDA-1' }, AUTH);
+  check('borrada la salida #1, el almacén vuelve a tener 37',
+        disponible(archivo, 'SR-MM213-TT-091026') === 37,
+        disponible(archivo, 'SR-MM213-TT-091026'));
+
+  // Paso 3: con esos 37 de vuelta, se guarda una salida NUEVA. Es legal.
+  archivo.getRange(archivo.getLastRow() + 1, 1, 1, AC_WIDTH)
+         .setValues([mov('SR-MM213-TT-091026', 37, 'ID-SALIDA-2', 'EXIT')]);
+  check('la salida #2 deja el almacén en 0',
+        disponible(archivo, 'SR-MM213-TT-091026') === 0,
+        disponible(archivo, 'SR-MM213-TT-091026'));
+
+  // Paso 4: se restaura la #1. El almacén ya no es el que era.
+  let negado = null;
+  try { ctx.manageMaterialLocked_({ op: 'restoreMovement', movId: 'ID-SALIDA-1' }, AUTH); }
+  catch (e) { negado = e.message; }
+
+  const queda = disponible(archivo, 'SR-MM213-TT-091026');
+  check('RESTAURAR SE NIEGA cuando ya no alcanza el material', !!negado, negado);
+  check('...y lo dice sin tecnicismos, nombrando el material',
+        !!negado && /SR-MM213-TT-091026/.test(negado), negado);
+  check('el almacén NO queda en negativo (era −37 en la hoja de Jose)',
+        queda >= 0, queda);
+  check('y el movimiento SIGUE en la papelera, no se pierde',
+        papelera.datos().length === 1, papelera.datos().length);
+}
+
+/** Lo que el almacén tiene de un material: entradas menos salidas. */
+function disponible(hoja, nombreMat) {
+  return hoja.datos()
+    .filter(r => String(r[AC.NAME]) === nombreMat)
+    .reduce((s, r) => {
+      const q = Math.abs(Number(r[AC.QTY] || 0));
+      const mt = String(r[AC.MOVETYPE] || '').toUpperCase();
+      return s + (mt === 'EXIT' || mt === 'WASTE' ? -q : q);
+    }, 0);
 }
 
 console.log('\n' + (fail ? '✗ ' + fail + ' fallos, ' : '✓ ') + ok + ' comprobaciones\n');

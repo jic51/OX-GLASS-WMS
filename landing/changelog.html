@@ -97,6 +97,39 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.21</span>
+      <span class="tag fix">Fix</span>
+      <h3>Putting a movement back can no longer break your stock</h3>
+      <p><b>The warehouse can move on while a movement sits in the trash, and
+         nothing was checking.</b> Saving an exit has always been refused when
+         the material will not cover it. Putting one back from the trash went
+         through no check at all — it just added the row. The same door, with a
+         lock on one side and none on the other.</p>
+      <p>Here is the sequence, and it needs no bug in deleting and none in
+         restoring. You ship 37 of something. You delete that exit, so the 37
+         come back. Somebody ships 37 again — perfectly legal, there are 37
+         there. Then you put the first one back. Now 74 have left a shelf that
+         only ever received 37, and every figure for that material is wrong.</p>
+      <p><b>Nothing said a word, and that part has its own cause.</b> The stock
+         arithmetic clamps at zero — a shelf cannot show minus 37 windows — so
+         the impossible state could not even be represented. The extra went into
+         "dispatched" instead, which has no ceiling. The app showed a calm zero
+         and a quietly inflated total.</p>
+      <p><b>Two fixes, because it was two failures.</b> Putting a movement back
+         now goes through the same check as saving one, against the same
+         numbers: <i>a restore is never more permissive than a save</i>. When it
+         no longer fits, it says what changed and <b>the movement stays in the
+         trash</b> — nothing is lost, and you decide.</p>
+      <p>And <b>Check my data</b> has a new kind of finding: <b>Less than
+         nothing</b>, for any material whose movements add up below zero. It
+         counts without the clamp — the only thing in the app that does, which
+         is the whole point of it. It shows what came in, what went out, and the
+         real number, and it offers no button: the fix is either a movement that
+         should not be there or one that was never recorded, and only somebody
+         who knows the warehouse can say which.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.20</span>
       <span class="tag fix">Fix</span>
       <h3>Four small things that were each quietly wrong</h3>
