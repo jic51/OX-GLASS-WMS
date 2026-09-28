@@ -683,9 +683,11 @@ window.__DATA=${JSON.stringify(DATA)};
     await p8.waitForTimeout(250);
 
     const r8 = await p8.evaluate(() => {
-      const costuras = {}, malas = [];
+      const costuras = {}, malas = [], desviadas = [];
       let n = 0;
-      document.querySelectorAll('#tableContainer td.mc-qty').forEach(td => {
+      document.querySelectorAll('#tableContainer tbody tr').forEach(tr => {
+        const td = tr.querySelector('td.mc-qty');
+        if (!td) return;
         const v = td.querySelector('.qv'), u = td.querySelector('.qu');
         if (!v || !u) { malas.push('celda sin sus dos mitades'); return; }
         n++;
@@ -695,11 +697,23 @@ window.__DATA=${JSON.stringify(DATA)};
         if (u.scrollWidth > u.clientWidth + 1) malas.push(u.textContent.trim() + ' no cabe');
         if (rv.left < rt.left - 0.5 || ru.right > rt.right + 0.5)
           malas.push(v.textContent.trim() + ' se sale de la celda');
+
+        /* ¿ESTÁ A LA ALTURA DE SU PROPIA FILA? Se compara contra una celda
+         * NORMAL de la misma fila, no contra un número fijo: el alto de fila
+         * cambia con el contenido, así que lo único que significa algo es que
+         * las dos estén a la misma altura. */
+        const ref = tr.querySelector('td.mc-po');
+        if (ref){
+          const rr = ref.getBoundingClientRect();
+          const d = Math.round((rv.top + rv.bottom) / 2 - (rr.top + rr.bottom) / 2);
+          if (Math.abs(d) > 3) desviadas.push(v.textContent.trim() + ' ' + d + 'px');
+        }
       });
       const unis = new Set(), qtys = new Set();
       document.querySelectorAll('#tableContainer td.mc-qty .qu').forEach(x => unis.add(x.textContent.trim()));
       document.querySelectorAll('#tableContainer td.mc-qty .qv').forEach(x => qtys.add(x.textContent.trim()));
       return { n, costuras: Object.keys(costuras), malas: malas.slice(0, 5),
+               desviadas: desviadas.slice(0, 5),
                unis: [...unis], qtys: qtys.size,
                hayUnitSuelta: !!document.querySelector('#tableContainer td.mc-unit') ||
                               !!document.querySelector('#movHeadRow th.mc-unit') };
@@ -717,6 +731,20 @@ window.__DATA=${JSON.stringify(DATA)};
           (r8.malas.length ? ' — MALAS: ' + r8.malas.join('; ') : ''),
           r8.malas.length === 0);
     check('ya no queda una columna Unit suelta', !r8.hayUnitSuelta);
+
+    /* LA COMPROBACIÓN QUE ME FALTABA, y Jose la encontró a la primera: la v12.18
+     * puso `display:grid` en el propio `<td>`, y una celda con display:grid deja
+     * de ser un `table-cell` — pierde el `vertical-align:middle` que alinea a
+     * todas las demás. La costura estaba perfecta y la cantidad flotaba por
+     * encima de su propia fila. Medir la costura no dice nada sobre la altura:
+     * son dos preguntas distintas y yo sólo había hecho una. */
+    check('la cantidad está a la altura de su propia fila' +
+          (r8.desviadas.length ? ' — DESVIADAS: ' + r8.desviadas.join('; ') : ''),
+          r8.desviadas.length === 0);
+    check('...y la rejilla vive en un envoltorio, no en la celda — un `td` con ' +
+          'display:grid deja de ser table-cell',
+          /td\.mc-qty \.qpair\{[^}]*display:grid/.test(css) &&
+          !/td\.mc-qty\{[^}]*display:grid/.test(css));
     await p8.close();
   }
 
@@ -731,7 +759,7 @@ window.__DATA=${JSON.stringify(DATA)};
           /unit:\s*null/.test(html));
     check('las dos mitades van en un reparto FIJO — con automático la costura ' +
           'bailaría de fila en fila',
-          /td\.mc-qty\{[^}]*grid-template-columns:\d+px \d+px/.test(css));
+          /td\.mc-qty \.qpair\{[^}]*grid-template-columns:\d+px \d+px/.test(css));
   }
 
   /* LA MUTACIÓN QUE TIENE QUE MATAR ESTA PRUEBA: devolver el mínimo a un número

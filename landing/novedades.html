@@ -98,6 +98,29 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.19</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>La cantidad vuelve a estar en su propia fila</h3>
+      <p>En la v12.18 la columna nueva de Qty / Unit estaba bien a lo ancho y mal
+         a lo alto: la cifra flotaba por encima del centro de su fila mientras
+         todas las demás celdas seguían centradas. En una tabla larga eso es peor
+         de lo que parece — el ojo sigue una línea horizontal, y si una columna va
+         unos pocos píxeles arriba acabas leyendo la cantidad de la fila de
+         encima.</p>
+      <p>La causa estaba en la forma de unir las dos mitades. Partir una celda en
+         dos mitades fijas se hace con una rejilla, y la rejilla estaba puesta en
+         la celda misma — y eso hace que una celda de tabla deje de comportarse
+         como celda, y con ello se pierde el centrado que todas las demás tienen
+         de regalo. Ahora la rejilla vive en un envoltorio dentro de la celda,
+         así que la celda vuelve a ser una celda normal y el reparto no cambia.</p>
+      <p>La tabla ya tiene una comprobación permanente para esto: compara el
+         centro vertical de cada cantidad con otra celda de la misma fila y falla
+         si alguna se desvía más de tres píxeles. También comprueba que la
+         rejilla esté en el envoltorio y no en la celda, para que este error
+         exacto no pueda volver en silencio.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.18</span>
       <span class="tag new">Nuevo</span>
       <h3>Qty y Unit son una sola columna</h3>

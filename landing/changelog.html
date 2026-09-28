@@ -97,6 +97,28 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.19</span>
+      <span class="tag fix">Fix</span>
+      <h3>The quantity sits on its own row again</h3>
+      <p>In v12.18 the new Qty / Unit column was correct sideways and wrong
+         downwards: the figure floated above the middle of its row while every
+         other cell stayed centred. On a long table that is worse than it
+         sounds — your eye follows a horizontal line, and if one column sits a
+         few pixels high you end up reading the quantity of the row above.</p>
+      <p>The cause was in the way the two halves were joined. Splitting a cell
+         into two fixed halves is done with a grid, and the grid had been put on
+         the cell itself — which stops a table cell behaving like one, and with
+         it goes the centring that every other cell gets for free. The grid now
+         lives in a wrapper inside the cell, so the cell is an ordinary cell
+         again and the split is unchanged.</p>
+      <p>The table now has a permanent check for this: it compares the vertical
+         centre of every quantity against another cell in the same row and fails
+         if any of them is off by more than three pixels. It also checks that the
+         grid is on the wrapper and not on the cell, so this exact mistake
+         cannot come back quietly.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.18</span>
       <span class="tag new">New</span>
       <h3>Qty and Unit are one column now</h3>
