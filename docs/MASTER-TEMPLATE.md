@@ -1,5 +1,11 @@
 # Building the master template
 
+> This page is about making the template **clean** — no OX Glass data, no
+> secrets. Making it **presentable** is a separate job with its own page:
+> `ESTANDAR-DE-LA-PLANTILLA.md`, which also closes a real hole: a fresh
+> installation ships without the plain-text column format that stops a PO like
+> `07-6329` turning into a date.
+
 The one file every customer copies. Get this wrong and each of them receives OX
 Glass's inventory, and OX Glass's email sitting in their user list as an admin
 of *their* system.

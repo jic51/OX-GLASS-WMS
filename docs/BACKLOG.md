@@ -76,6 +76,155 @@ en una tanda, no gotear.
 ---
 
 
+# ══ V1 · ERROR — EL NÚMERO CAMBIA SEGUNDOS DESPUÉS DE QUE LA APP DIGA "LISTO" ══
+#    Anotado 2026-09-28. Jose, con vídeo. VA A V1: es un error, no una mejora.
+
+Jose: *"cuánto se demora la app en el feedback visual al hacer Exit desde el
+Dashboard, restaurar las cantidades al eliminar un movimiento. Si te das cuenta,
+aun cuando la app dice 'done' o 'listo', igual luego de eso se toma unos
+segundos más para cambiar la cantidad, restaurar las cantidades y cambiar el
+estado de In Stock a At Site. Analiza y busca la mejor solución para esto (ya lo
+hemos arreglado en otros lados)."*
+
+**Tiene razón en las dos mitades, y sobre todo en "ya lo hemos arreglado en
+otros lados": es el MISMO fallo que `test-pintar-al-confirmar.js` describe para
+"Mark arrived", arreglado ahí en la v11.71 y nunca aplicado a guardar ni a
+borrar.** Encontrado en el código, no deducido del vídeo:
+
+## Lo que está mal, con los números de línea
+
+### 1. Guardar (EXIT, ENTRY, TRANSFER/RETURN/WASTE/ADJUST)
+
+Los tres caminos de guardado terminan igual:
+
+```
+Index_v3_fixed.html:10050   loadDataFromGoogle(false);
+Index_v3_fixed.html:11333   loadDataFromGoogle(false); // cached numbers show instantly…
+Index_v3_fixed.html:11519   loadDataFromGoogle(false); // cached numbers show instantly…
+```
+
+Ese comentario es la trampa, y lo escribí yo. **`false` significa USA EL CACHÉ, y
+el caché es la foto de ANTES del movimiento que se acaba de guardar.** Lo que
+"sale al instante" es la cantidad vieja. Y es peor que un esqueleto de carga,
+porque un esqueleto se ve como algo que está cargando y un número viejo se ve
+como un número: no hay nada en la pantalla que diga "esto todavía no es verdad".
+Luego termina el viaje entero al servidor y el número salta. Esos son los
+segundos que Jose cronometró.
+
+`test-pintar-al-confirmar.js` ya nombra a ese `false` como la mitad gruesa de los
+once segundos de "Mark arrived". La misma línea, en tres sitios más.
+
+### 2. Ninguno de los caminos toca la copia local del stock
+
+Al borrar, la FILA sí se va al pulsar — eso está arreglado desde la v11.66
+(`_rowLeave` en `_doDeleteMovementRow`, línea 8245). Pero **el stock no se
+retoca en el navegador en ningún sitio**: las cantidades y el badge sólo cambian
+cuando `_reloadWhenIdle()` termina un `getInitialData` completo, y ese viaje
+incluye que el servidor reconstruya los totales del almacén desde el archivo
+entero — cuatro segundos medidos en la hoja de Jose el 2026-09-11, y crece con
+el archivo.
+
+Así que la secuencia que él ve es exactamente ésta: la fila se va al instante ✓,
+el toast sale al instante ✓, y la cantidad y el estado `In Stock → At Site` se
+quedan mintiendo hasta que llega la foto nueva.
+
+## La solución, y es reusar lo que ya existe
+
+**Una función, `_aplicarMovimientoLocal(mov, signo)`**, que hace en el navegador
+la aritmética que el navegador ya tiene delante: el tipo de movimiento, la
+cantidad y el material están todos en el objeto que se acaba de guardar o
+borrar. Ajusta la entrada de `stock[]` que corresponde (`warehouseQty`,
+`siteQty`, `availableQty`) y llama a `renderAll()`.
+
+Es la misma forma que `_applyMergeLocally` (línea 14152) para el catálogo y que
+`movements.splice` para la fila: **parchear lo local, y pedir la foto buena
+después sin que nadie la espere mirando.**
+
+**Y el badge sale gratis.** Desde la v12.17 el estado lo decide `_stockState(item)`
+a partir de los números — una sola fuente. Si los números se parchean, el badge
+pasa de `In Stock` a `At Site` solo, sin una línea más. Ése era justamente el
+sentido de la v12.17, y éste es el primer sitio donde se cobra.
+
+**Y se quita el `loadDataFromGoogle(false)` de los tres sitios**, sustituido por
+el parche local + `_reloadWhenIdle()`. Un refresco cacheado tras un guardado no
+es un adelanto: es un número viejo vestido de número nuevo.
+
+## El riesgo, dicho antes de construirlo
+
+**Que la aritmética del navegador no dé lo mismo que el motor del servidor.**
+Entonces el número parpadearía a un valor equivocado y se corregiría después, y
+eso es peor que esperar: rompe la regla de siempre —*los datos como el usuario
+los ingresó*— aunque sea sólo en pantalla y sólo un segundo.
+
+Por eso la prueba no es opcional y no puede ser de las que buscan texto:
+**ejecutar `_aplicarMovimientoLocal` y `calculateStock` sobre el MISMO movimiento
+y exigir el mismo resultado**, para los seis tipos (ENTRY, EXIT, TRANSFER,
+RETURN, WASTE, ADJUST) y para el borrado de cada uno. Mismo molde que
+`test-pintar-al-confirmar.js`, y por la misma razón escrita ahí: *una
+comprobación que mira si una llamada ESTÁ en el código pasa en verde sobre código
+que nunca la corre.*
+
+Si algún tipo no se puede reproducir en el navegador con seguridad, ese tipo NO
+se parchea: se deja el esqueleto de carga honesto sobre las cantidades. Un hueco
+que dice "estoy calculando" es correcto; un número que miente no.
+
+## Tamaño y orden
+
+Mediano, y va después de estandarizar la pantalla porque toca los mismos
+repintados. Cuatro cosas: la función, los tres `loadDataFromGoogle(false)`
+fuera, el parche en el éxito del borrado, y la prueba que compara con el
+servidor. La prueba es la mitad del trabajo y es la mitad que importa.
+
+---
+
+
+# ══ ANOTADO 2026-09-28 — NO HAY FORMA DE PAUSAR EL MANTENIMIENTO NOCTURNO ══
+
+Salió al escribir el manual de restauración (`RESTAURAR-UN-BACKUP.md`). El Paso
+0 de las tres rutas dice "apaga los disparadores nocturnos antes de tocar los
+datos", y **no hay ningún botón en la app que haga eso**. Hay que ir al editor
+de Apps Script → ⏰ Disparadores y borrar a mano `dailyBackupTrigger` (2 AM) y
+`archiveOldMovementsTrigger` (3 AM).
+
+**Por qué importa, y no es teórico.** Restaurar lleva de minutos a dos horas. Si
+la medianoche te pilla a medias:
+
+- `archiveOldMovementsTrigger` corre sobre un archivo a medio restaurar y mueve
+  filas entre hojas basándose en un estado que no es el final.
+- `dailyBackupTrigger` te **guarda el estado roto encima del bueno** en la
+  carpeta de backups. Si el cliente tiene poca retención, el ejemplar bueno se
+  va y no hay segunda oportunidad. Este es el que de verdad quema.
+
+Y el remedio actual es peor que el problema: para pausarlos hay que abrir el
+editor de Apps Script, que es exactamente donde no queremos meter a un cliente
+en medio de una emergencia — es la pantalla desde la que se puede romper todo lo
+demás.
+
+**Lo que hay que construir:** un interruptor en **Settings → System**, al lado
+del estado del backup, que diga algo como *"Pause nightly maintenance"* — y con
+dos condiciones que no son opcionales:
+
+1. **Que se apague solo.** Guardar `MAINTENANCE_PAUSED_UNTIL` con una marca de
+   tiempo, no un booleano. Un booleano se queda encendido para siempre el día
+   que a alguien se le olvide, y el síntoma es que el sistema deja de
+   respaldarse en silencio — el mismo fallo que ya tuvimos con el trigger de
+   backup que no se instalaba y nadie se enteraba. 24 horas.
+2. **Que se vea que está pausado**, y no en letra pequeña: la tarjeta de backup
+   de Settings → System en naranja diciendo hasta cuándo, y `🩺 Check this
+   installation` contándolo como algo que hay que mirar, no como algo normal.
+
+Los dos triggers no se borran: cada handler comprueba la marca al empezar y
+sale sin hacer nada, dejando una línea en el audit log. Así no hay que
+reinstalarlos después, que es el otro sitio donde esto se puede quedar a medias.
+
+**Tamaño:** pequeño. Dos handlers con una comprobación al principio, una
+propiedad, un botón, y la línea en `checkInstallation`. La prueba es directa:
+pausar, llamar a los dos handlers, comprobar que no escribieron nada; adelantar
+la marca 25 horas, llamarlos otra vez, comprobar que sí.
+
+---
+
+
 # ══ ANOTADO 2026-09-28 — DOS INDICADORES DE ESPERA PARA EL MISMO ESTADO ══
 
 Jose, con dos capturas de la papelera: *"al hacer el return de un movimiento
