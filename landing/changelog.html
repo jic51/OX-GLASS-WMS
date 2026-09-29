@@ -97,6 +97,37 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.24</span>
+      <span class="tag fix">Fix</span>
+      <h3>The number changes when the app says it changed</h3>
+      <p>Save a movement and the app said <i>done</i> — and then took a few more
+         seconds to change the quantity, put the stock back, and move the badge
+         from <b>In Stock</b> to <b>All at Site</b>. Measured with a stopwatch on
+         a real save.</p>
+      <p><b>What it was doing was worse than waiting.</b> After a save the app
+         repainted from its own cache — and the cache is the picture from
+         <i>before</i> the movement you just saved. So the figure that appeared
+         "instantly" was the old one. That is worse than a loading skeleton: a
+         skeleton looks like something loading, an old number looks like a
+         number. There was nothing on screen to say it was not true yet.</p>
+      <p><b>The fix was not to redo the arithmetic in the browser.</b> That was
+         the obvious route and it was the wrong one: two sets of arithmetic can
+         disagree, and then the figure flickers to a <i>wrong</i> value before
+         correcting itself — worse than waiting, and it breaks the rule this app
+         is built on.</p>
+      <p>The server already had the after figures. It walks its own stock picture
+         movement by movement to check the save is allowed, so by the time it
+         answers it knows exactly what you have — and it was throwing that away.
+         Now it sends it. <b>There are not two sets of arithmetic: it is the
+         server's, quoted.</b> The full picture is still fetched behind, quietly;
+         this brings forward what you look at, it does not replace the truth.</p>
+      <p>And the badge comes free. Since v12.17 the status is decided from those
+         numbers rather than stored beside them, so correcting the numbers
+         corrects <b>In Stock → All at Site</b> on its own. That was the point of
+         unifying the statuses, and this is the first place it pays.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.23</span>
       <span class="tag new">New</span>
       <h3>The spreadsheet behind the app looks like part of the product</h3>

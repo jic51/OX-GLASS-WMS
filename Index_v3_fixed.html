@@ -4416,7 +4416,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.23';
+var APP_VERSION = '12.24';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -4428,7 +4428,7 @@ var APP_VERSION = '12.23';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'f156c448';
+var APP_BUILD = 'f07d3bcd';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -6627,6 +6627,63 @@ function locSummary(locs){
 
 // Move-type badge: ENTRY=green, EXIT=red, TRANSFER=purple, RETURN=gray,
 // WASTE=black, ADJUST=slate
+/* ═══ LAS CIFRAS DEL SERVIDOR, PUESTAS AL INSTANTE ═══════════════════════════
+ *
+ * Jose, 2026-09-28, con vídeo y cronómetro: *"aun cuando la app dice done o
+ * listo, igual luego de eso se toma unos segundos más para cambiar la cantidad,
+ * restaurar las cantidades y cambiar el estado de In Stock a At Site."*
+ *
+ * LO QUE HACÍA. Los tres caminos de guardado terminaban en
+ * `loadDataFromGoogle(false)`, y ese `false` significa USA EL CACHÉ. El caché es
+ * la foto de ANTES del movimiento que se acaba de guardar, así que lo que salía
+ * "al instante" era la cantidad VIEJA. Y es peor que un esqueleto de carga:
+ * un esqueleto se ve como algo cargando, un número viejo se ve como un número.
+ * Luego terminaba el viaje entero y el número saltaba. Ésos eran los segundos.
+ *
+ * El comentario que decía "cached numbers show instantly, fresh ones catch up
+ * quietly" lo escribí yo, y describía el fallo creyendo que describía el
+ * arreglo.
+ *
+ * POR QUÉ NO SE REHACE LA ARITMÉTICA AQUÍ. Era la otra salida —calcular en el
+ * navegador el efecto del movimiento— y la descarté: abre la puerta a que el
+ * navegador y el servidor no coincidan, y entonces el número parpadea a un
+ * valor EQUIVOCADO antes de corregirse. Eso es peor que esperar, y rompe la
+ * regla de siempre: los datos como el usuario los ingresó.
+ *
+ * LO QUE SE HACE. El servidor YA tenía las cifras de después —muta su snapshot
+ * fila a fila para validar el guardado— y las tiraba. Ahora las manda en
+ * `res.stockAfter`. No hay dos aritméticas: es la del servidor, contada.
+ *
+ * Y la foto completa se sigue pidiendo detrás, en silencio, con
+ * `_reloadWhenIdle()`: esto adelanta lo que se mira, no sustituye la verdad.
+ */
+function _aplicarStockDelServidor(res){
+  var mapa = res && res.stockAfter;
+  if (!mapa) return 0;
+  var puestos = 0;
+  for (var k in mapa) {
+    if (!mapa.hasOwnProperty(k)) continue;
+    var s = stockData[k], f = mapa[k];
+    // Un material que esta pantalla no tenía todavía —la primera entrada de
+    // algo nuevo— no se inventa aquí: le faltan categoría, nombre y unidad, y
+    // media fila es peor que ninguna. Llega entero con la recarga.
+    if (!s) continue;
+    s.warehouseQty  = f.warehouseQty;
+    s.siteQty       = f.siteQty;
+    s.reservedQty   = f.reservedQty;
+    s.availableQty  = f.availableQty;
+    s.totalQty      = f.totalQty;
+    if (f.warehouseLocs) s.warehouseLocs = f.warehouseLocs;
+    puestos++;
+  }
+  // El badge sale gratis: desde la v12.17 el estado lo decide _stockState() a
+  // partir de estos números, así que In Stock → All at Site se corrige solo sin
+  // una línea más. Ése era el sentido de unificar los estados y éste es el
+  // primer sitio donde se cobra.
+  if (puestos) renderAll();
+  return puestos;
+}
+
 function normMT(mt){
   var n = nt(mt);
   if (n === 'DISPATCH' || n === 'DISPATCHED' || n === 'DEL') return 'EXIT';
@@ -10180,10 +10237,10 @@ async function submitMovement(){
         // window that closed without saving, and the toast arrives afterwards,
         // somewhere else on the screen, when the eye is still on the button.
         _btnDone(btn, true, function(){ closeModal('moveOverlay'); });
-        // Show cached numbers instantly (no skeleton-card flash), fresh data quietly
-        // replaces them a moment later once the round-trip completes — the "reload"
-        // feeling was the skeleton cards, not the actual data refresh.
-        loadDataFromGoogle(false);
+        // Las cifras REALES de después, que el servidor acaba de mandar, y la
+        // foto completa detrás en silencio. Ver _aplicarStockDelServidor.
+        _aplicarStockDelServidor(res);
+        _reloadWhenIdle();
         setTimeout(function(){
           if (res && (res.emailError || res.fileError || res.refreshError)){
             var msgs = [];
@@ -11466,7 +11523,10 @@ function submitMultiExit(){
         } else {
           showToast('✓ '+res.rowCount+' movement record(s) saved.','ok',TOAST_QUICK);
         }
-        loadDataFromGoogle(false); // cached numbers show instantly, fresh ones catch up quietly
+        // Las cifras REALES de después, que el servidor acaba de mandar, y la
+        // foto completa detrás en silencio. Ver _aplicarStockDelServidor.
+        _aplicarStockDelServidor(res);
+        _reloadWhenIdle();
       })
       .withFailureHandler(function(err){
         // ANTES de soltar el botón: mientras se espera turno no debe poder
@@ -11652,7 +11712,10 @@ function submitMultiEntry(){
         // marcó — ver _entryFromIncId.
         var deLaEntrega = _entryFromIncId;
         closeModal('moveOverlay');
-        loadDataFromGoogle(false); // cached numbers show instantly, fresh ones catch up quietly
+        // Las cifras REALES de después, que el servidor acaba de mandar, y la
+        // foto completa detrás en silencio. Ver _aplicarStockDelServidor.
+        _aplicarStockDelServidor(res);
+        _reloadWhenIdle();
         setTimeout(function(){
           var count = (res && res.count) ? res.count : materials.length;
           var rows  = (res && res.rowCount) ? res.rowCount : count;

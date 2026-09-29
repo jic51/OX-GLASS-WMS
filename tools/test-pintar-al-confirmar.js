@@ -362,7 +362,11 @@ console.log('\n── 5. Ningún camino corregido vuelve al caché ──');
 // cuentan cuatro donde hay tres.
 const limpio = sinComentarios(HTML);
 const cacheadas = (limpio.match(/loadDataFromGoogle\(false\)/g) || []).length;
-check('quedan exactamente 3 recargas cacheadas en toda la app', cacheadas === 3, cacheadas);
+/* CERO, desde la v12.24. Esto decía 3, y las tres eran las de guardar un
+ * movimiento — las que este mismo archivo listaba abajo como "deliberado,
+ * pendiente". Ya no están pendientes: Jose las cronometró y eran justo los
+ * segundos que veía entre el "listo" y el número que cambiaba. */
+check('NO queda ni una recarga cacheada en toda la app', cacheadas === 0, cacheadas);
 
 // Y NINGUNA en los tres caminos arreglados. Esta es la comprobación que impide
 // que vuelvan: el recuento de arriba seguiría en 3 si alguien cambiara una por
@@ -375,14 +379,41 @@ check('quedan exactamente 3 recargas cacheadas en toda la app', cacheadas === 3,
         /renderAll\s*\(/.test(cuerpo) || /_incAplicarLocal\s*\(/.test(cuerpo));
 });
 
-// Las 3 que quedan son las de entrada/salida, y son deliberadas: quien guarda un
-// movimiento ya se fue del formulario. Se nombran aquí para que quede escrito
-// cuáles son y no se confundan con un olvido.
+/* ── LOS TRES QUE ESTABAN PENDIENTES, YA NO (v12.24) ────────────────────────
+ *
+ * Aquí ponía "sigue con la recarga cacheada (deliberado, pendiente)" y la
+ * excusa era que quien guarda un movimiento ya se fue del formulario. Jose lo
+ * midió y la excusa no se sostenía: el número de la pantalla que SÍ estaba
+ * mirando —el Dashboard— seguía siendo el viejo varios segundos después del
+ * "listo".
+ *
+ * Y la salida NO fue rehacer la aritmética en el navegador, que es lo que
+ * parecía tocar. El servidor ya tenía las cifras de después —muta su snapshot
+ * fila a fila para validar— y las tiraba. Ahora las manda. No hay dos
+ * aritméticas que puedan discrepar; ésa era toda la razón para no hacerlo
+ * antes. */
 ['_doSubmit', '_doMultiSubmit', 'submitMultiExit'].forEach(function(fn){
   const cuerpo = sinComentarios(A.fnSrc(HTML, fn));
-  check(fn + ' sigue con la recarga cacheada (deliberado, pendiente)',
-        cuerpo.indexOf('loadDataFromGoogle(false)') !== -1);
+  check(fn + ' ya no usa la recarga cacheada',
+        cuerpo.indexOf('loadDataFromGoogle(false)') === -1);
+  check(fn + ' pone las cifras que mandó el servidor',
+        /_aplicarStockDelServidor\s*\(\s*res\s*\)/.test(cuerpo));
+  check(fn + ' y pide la foto completa detrás, en silencio',
+        /_reloadWhenIdle\s*\(/.test(cuerpo));
 });
+
+/* Y lo que hace que esto sea correcto y no sólo rápido: las cifras vienen del
+ * servidor, no se calculan aquí. Si alguien un día mete aritmética de almacén
+ * en esta función, esto lo caza. */
+{
+  const cuerpo = sinComentarios(A.fnSrc(HTML, '_aplicarStockDelServidor'));
+  check('_aplicarStockDelServidor COPIA, no calcula — nada de sumas ni restas',
+        !/[+\-]=\s/.test(cuerpo) && !/Math\.max/.test(cuerpo), cuerpo.slice(0, 200));
+  check('...y se salta un material que esta pantalla no tenía, en vez de ' +
+        'inventarse media fila', /if\s*\(!s\)\s*continue/.test(cuerpo));
+  check('...y repinta, que es donde el badge In Stock → All at Site se corrige solo',
+        /renderAll\s*\(/.test(cuerpo));
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 console.log('\n── 6. El servidor devuelve lo que el navegador necesita ──');
@@ -393,10 +424,90 @@ console.log('\n── 6. El servidor devuelve lo que el navegador necesita ─�
 const updDoc = A.fnSrc(GS, 'updateDocument_');
 check('updateDocument_ devuelve docLinks', /return\s*\{[^}]*docLinks/.test(sinComentarios(updDoc)),
       (sinComentarios(updDoc).match(/return\s*\{[^}]*\}/g) || []).pop());
+
+/* La otra mitad de servidor, la de la v12.24: sin `stockAfter` el navegador no
+ * tiene de dónde sacar el número bueno y volvería al caché. */
+{
+  const lote = sinComentarios(A.fnSrc(GS, 'addMovementsBatch_'));
+  check('addMovementsBatch_ devuelve stockAfter', /stockAfter:\s*stockAfter/.test(lote));
+  check('...con las cuatro cifras que la pantalla enseña',
+        /warehouseQty:/.test(lote) && /siteQty:/.test(lote) &&
+        /availableQty:/.test(lote) && /totalQty:/.test(lote));
+  check('...y SÓLO de los materiales de este lote, no del archivo entero — ' +
+        'en OX serían 652 en cada guardado de una línea',
+        /tocados\[rowMeta\[/.test(lote) && /for \(var m2 in tocados\)/.test(lote));
+}
 check('addIncoming devuelve el id que generó',
       /return\s*\{[^}]*id:\s*id/.test(sinComentarios(A.fnSrc(GS, 'addIncoming'))));
 check('updateIncoming devuelve docLink',
       /return\s*\{[^}]*docLink/.test(sinComentarios(A.fnSrc(GS, 'updateIncoming'))));
+
+// ═══════════════════════════════════════════════════════════════════════════
+console.log('\n── 7. Y EJECUTANDO: el número y el badge cambian en el acto ──');
+//
+// Las de arriba miran el código. Ésta lo CORRE, que es la única forma de saber
+// que lo que llega del servidor acaba en la pantalla — y sobre todo que el
+// badge se corrige SOLO, que es la mitad que Jose nombró expresamente:
+// "cambiar el estado de In Stock a At Site".
+//
+// Es la deuda que cobra la v12.17: desde que el estado lo decide _stockState()
+// a partir de los números, parchear los números arregla el badge sin una línea
+// más. Si algún día alguien vuelve a poner el estado en un campo aparte, esto
+// se pone rojo.
+{
+  const ctx = {
+    console,
+    stockData: {
+      'A|||B': { matId:'A|||B', category:'A', name:'B',
+                 warehouseQty: 37, siteQty: 0, reservedQty: 0,
+                 availableQty: 37, totalQty: 37, warehouseLocs: { B4A: 37 } }
+    },
+    _repintados: 0
+  };
+  ctx.renderAll = function(){ ctx._repintados++; };
+  vm.createContext(ctx);
+  // STOCK_STATES sale del archivo, no se copia: una copia aquí dejaría esta
+  // prueba en verde el día que alguien cambie el orden de los estados en el
+  // producto — y el orden ES la regla (gana el primero que encaja).
+  vm.runInContext(A.constantes(HTML, ['STOCK_STATES']), ctx);
+  vm.runInContext(A.levantar(HTML, ['_aplicarStockDelServidor', '_stockState'],
+                             { dobles: ['renderAll'] }), ctx);
+
+  const antes = ctx._stockState(ctx.stockData['A|||B']);
+  check('de partida el material está In Stock', antes.key === 'in', antes.key);
+
+  // Lo que devolvería el servidor tras una salida de los 37: almacén a 0, todo
+  // en obra. Exactamente el caso del vídeo.
+  const puestos = ctx._aplicarStockDelServidor({ stockAfter: {
+    'A|||B': { warehouseQty: 0, siteQty: 37, reservedQty: 0,
+               availableQty: 0, totalQty: 37, warehouseLocs: {} }
+  }});
+
+  check('se aplicó al material', puestos === 1, puestos);
+  check('la cantidad es la del servidor, no una calculada aquí',
+        ctx.stockData['A|||B'].warehouseQty === 0 &&
+        ctx.stockData['A|||B'].siteQty === 37, ctx.stockData['A|||B']);
+  const despues = ctx._stockState(ctx.stockData['A|||B']);
+  check('EL BADGE YA DICE All at Site, sin tocarlo — la deuda que cobra la v12.17',
+        despues.key === 'site', despues.key);
+  check('y repintó una sola vez, no una por material', ctx._repintados === 1, ctx._repintados);
+
+  // Un material que esta pantalla no conocía: no se inventa media fila.
+  const antesN = Object.keys(ctx.stockData).length;
+  ctx._aplicarStockDelServidor({ stockAfter: {
+    'NUEVO|||X': { warehouseQty: 5, siteQty: 0, reservedQty: 0,
+                   availableQty: 5, totalQty: 5, warehouseLocs: {} }
+  }});
+  check('un material que la pantalla no tenía NO se inventa a medias',
+        Object.keys(ctx.stockData).length === antesN, Object.keys(ctx.stockData));
+
+  // Y una respuesta sin stockAfter —un servidor viejo, un camino que no lo
+  // manda— no puede reventar el manejador de éxito.
+  let lanzo = null;
+  try { ctx._aplicarStockDelServidor({}); ctx._aplicarStockDelServidor(null); }
+  catch (e) { lanzo = e.message; }
+  check('una respuesta sin stockAfter no lanza', !lanzo, lanzo);
+}
 
 console.log('\n' + (fail ? '✗ ' + fail + ' fallo(s), ' : '✓ ') + ok + ' comprobaciones');
 process.exit(fail ? 1 : 0);

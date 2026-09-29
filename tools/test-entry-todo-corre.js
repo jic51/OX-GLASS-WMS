@@ -127,6 +127,13 @@ function mundo(opciones){
     _busyRetry: () => false,
     _showConfirm: () => {},
     loadDataFromGoogle: () => { visto.orden.push('recargar'); },
+    /* Desde la v12.24 el guardado ya no repinta desde el caché: pone las cifras
+     * que el servidor manda en `res.stockAfter` y pide la foto completa detrás.
+     * Las dos se espían, y la recarga con el MISMO nombre en `orden`, porque lo
+     * que esta prueba mide es el ORDEN de los pasos —saldar, cerrar, refrescar—
+     * y no de qué manera se refresca. */
+    _aplicarStockDelServidor: () => { visto.orden.push('cifras'); return 0; },
+    _reloadWhenIdle: () => { visto.orden.push('recargar'); },
     showToast: () => {},
     closeModal: (id) => { visto.cerrado.push(id); visto.orden.push('cerrar'); },
 

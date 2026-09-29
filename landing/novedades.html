@@ -98,6 +98,38 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.24</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>El número cambia cuando la app dice que cambió</h3>
+      <p>Guardabas un movimiento y la app decía <i>listo</i> — y luego tardaba
+         unos segundos más en cambiar la cantidad, devolver el stock y pasar el
+         badge de <b>In Stock</b> a <b>All at Site</b>. Cronometrado sobre un
+         guardado de verdad.</p>
+      <p><b>Y lo que hacía era peor que esperar.</b> Después de guardar repintaba
+         desde su propio caché — y el caché es la foto de <i>antes</i> del
+         movimiento que acababas de guardar. Así que la cifra que salía "al
+         instante" era la vieja. Eso es peor que un esqueleto de carga: un
+         esqueleto se ve como algo cargando, un número viejo se ve como un
+         número. No había nada en pantalla que dijera que todavía no era
+         verdad.</p>
+      <p><b>El arreglo NO fue rehacer la aritmética en el navegador.</b> Era el
+         camino obvio y era el equivocado: dos aritméticas pueden discrepar, y
+         entonces la cifra parpadea a un valor <i>incorrecto</i> antes de
+         corregirse — peor que esperar, y rompe la regla sobre la que está hecha
+         esta app.</p>
+      <p>El servidor ya tenía las cifras de después. Recorre su propia foto del
+         almacén movimiento a movimiento para comprobar que el guardado se puede
+         hacer, así que cuando contesta sabe exactamente qué tienes — y lo
+         tiraba. Ahora lo manda. <b>No hay dos aritméticas: es la del servidor,
+         contada.</b> La foto completa se sigue pidiendo detrás, en silencio;
+         esto adelanta lo que miras, no sustituye la verdad.</p>
+      <p>Y el badge sale gratis. Desde la v12.17 el estado se decide a partir de
+         esos números en vez de guardarse al lado, así que corregir los números
+         corrige <b>In Stock → All at Site</b> solo. Ése era el sentido de
+         unificar los estados, y éste es el primer sitio donde se cobra.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.23</span>
       <span class="tag new">Nuevo</span>
       <h3>La hoja de cálculo detrás de la app parece parte del producto</h3>

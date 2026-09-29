@@ -109,8 +109,32 @@ en una tanda, no gotear.
 ---
 
 
-# ══ V1 · ERROR — EL NÚMERO CAMBIA SEGUNDOS DESPUÉS DE QUE LA APP DIGA "LISTO" ══
-#    Anotado 2026-09-28. Jose, con vídeo. VA A V1: es un error, no una mejora.
+# ══ ✅ HECHO EN LA v12.24 — EL NÚMERO CAMBIA SEGUNDOS DESPUÉS DEL "LISTO" ══
+#    Anotado 2026-09-28, arreglado 2026-09-29.
+#
+# LA SALIDA NO FUE LA QUE ESTA ENTRADA PROPONÍA, y conviene que quede escrito.
+# Aquí abajo se diseñaba `_aplicarMovimientoLocal`: rehacer en el navegador la
+# aritmética del almacén. Este mismo texto ya avisaba del riesgo —"si la
+# aritmética del navegador no da lo mismo que el motor del servidor, el número
+# parpadea a un valor equivocado"— y proponía una prueba que comparase las dos.
+#
+# Al construirlo apareció la tercera salida, que no estaba en la lista: EL
+# SERVIDOR YA TENÍA LAS CIFRAS DE DESPUÉS y las tiraba. Muta su `snapshot` fila
+# a fila para validar el guardado, así que cuando contesta sabe exactamente qué
+# hay. Ahora lo manda en `res.stockAfter`.
+#
+# Así que no hay dos aritméticas que puedan discrepar, y la prueba que comparaba
+# las dos deja de hacer falta: no hay una segunda que comparar. Es mejor que lo
+# que estaba diseñado aquí, y más barato.
+#
+# QUEDA PENDIENTE EL BORRADO. La fila se va al pulsar desde la v11.66, pero las
+# cifras del Dashboard siguen esperando la recarga. `deleteRow` no tiene un
+# snapshot a mano como el guardado —tendría que leerse el archivo entero— y
+# hacerlo en cada borrado devolvería la ráfaga lenta que la v11.96 arregló. La
+# forma que encaja: calcularlo SÓLO cuando el refresco no se aplaza, que es
+# justo el final de la tanda y justo cuando alguien mira. Sin construir.
+#
+# El texto original, por lo que enseña sobre cómo se eligió mal al principio:
 
 Jose: *"cuánto se demora la app en el feedback visual al hacer Exit desde el
 Dashboard, restaurar las cantidades al eliminar un movimiento. Si te das cuenta,

@@ -46,7 +46,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.23';
+var APP_VERSION = '12.24';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -58,7 +58,7 @@ var APP_VERSION = '12.23';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'f156c448';
+var APP_BUILD = 'f07d3bcd';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -3563,13 +3563,47 @@ function addMovementsBatch_(ss, archive, movements, auth) {
       }
     }
 
-    // ── available-after per material from the final snapshot ─────────────────
-    var availableByMat = {};
-    for (var m2 in snapshot) {
-      if (snapshot.hasOwnProperty(m2)) {
-        availableByMat[m2] = Math.max(0, snapshot[m2].wh -
-                                reservedQtyFromRacks_(locksMap, m2, snapshot[m2].locs));
-      }
+    /* ── LAS CIFRAS DE DESPUÉS, PARA LA PANTALLA ─────────────────────────────
+     *
+     * Jose, con cronómetro: *"aun cuando la app dice done o listo, igual luego
+     * de eso se toma unos segundos más para cambiar la cantidad, restaurar las
+     * cantidades y cambiar el estado de In Stock a At Site."*
+     *
+     * El navegador tenía dos formas de arreglarlo y las dos eran malas:
+     * repintar desde su caché —que es la foto de ANTES, o sea un número viejo
+     * vestido de número nuevo— o rehacer la aritmética del almacén por su
+     * cuenta, que abre la puerta a que el navegador y el servidor no coincidan
+     * y el número parpadee a un valor equivocado antes de corregirse.
+     *
+     * LA TERCERA FORMA es la que faltaba y no cuesta nada: `snapshot` YA ES el
+     * estado de después —lo hemos ido mutando fila a fila para validar— así que
+     * basta con mandarlo. No hay dos aritméticas: es la del servidor, contada.
+     *
+     * SÓLO LOS MATERIALES DE ESTE LOTE. `availableByMat` devolvía el snapshot
+     * ENTERO, que en OX son 652 materiales en cada guardado de una sola línea.
+     * Nadie lo leía salvo un caso que mira justo el material que acaba de
+     * guardar, así que estrecharlo no rompe nada y quita peso del viaje.
+     *
+     * `wasted` no va: applyMovementToSnapshot_ no lleva esa cuenta, y prefiero
+     * no mandar un campo que tendría que inventar. La recarga silenciosa lo
+     * corrige, y el desperdicio no es el número que alguien mira al guardar. */
+    var tocados = {};
+    for (var t2 = 0; t2 < rowMeta.length; t2++) tocados[rowMeta[t2].matId] = true;
+
+    var availableByMat = {}, stockAfter = {};
+    for (var m2 in tocados) {
+      if (!tocados.hasOwnProperty(m2) || !snapshot[m2]) continue;
+      var reservado = reservedQtyFromRacks_(locksMap, m2, snapshot[m2].locs);
+      var disp      = Math.max(0, snapshot[m2].wh - reservado);
+      availableByMat[m2] = disp;
+      stockAfter[m2] = {
+        warehouseQty:  snapshot[m2].wh,
+        siteQty:       snapshot[m2].site,
+        reservedQty:   reservado,
+        availableQty:  disp,
+        totalQty:      snapshot[m2].wh + snapshot[m2].site,
+        warehouseLocs: snapshot[m2].locs
+      };
     }
 
     return {
@@ -3579,7 +3613,8 @@ function addMovementsBatch_(ss, archive, movements, auth) {
       fileError:      fileError,
       emailError:     emailError,
       refreshError:   refreshError,
-      availableByMat: availableByMat
+      availableByMat: availableByMat,
+      stockAfter:     stockAfter
     };
 
   } finally {
