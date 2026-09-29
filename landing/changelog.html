@@ -97,6 +97,52 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.22</span>
+      <span class="tag fix">Fix</span>
+      <h3>Renaming a material takes everything of its own with it</h3>
+      <p>A material is known by its category and its name — and <b>five other
+         things were filed under that name</b>: how many units come in a box,
+         its average cost, anything reserved of it, its minimum, and whether it
+         is watched for low stock. Renaming a material, moving it to another
+         category or merging it rewrote every movement and left all five
+         behind.</p>
+      <p><b>That does two kinds of damage, and the second is the worse one.</b>
+         You are left with an orphan line pointing at a material that no longer
+         exists — visible, at least. But <i>the renamed material has quietly
+         lost its figures</i>. The next delivery by the box does not get
+         divided, so the cost per unit comes out twelve times too high and
+         blends into that material's average from then on. Nothing says a
+         word.</p>
+      <p>All five now move with the material, and what moved is written into the
+         audit log. <b>When you merge two materials that both have figures, the
+         survivor keeps its own</b> — the one people will go on using should not
+         quietly take on the numbers of the one that disappeared — and the
+         dropped ones are counted in the log rather than vanishing.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v12.22</span>
+      <span class="tag fix">Fix</span>
+      <h3>The Stock Dashboard columns stop moving when you filter</h3>
+      <p>Every filter shifted the whole table. Measured across the categories:
+         <b>Stock started 114px further along in Window than in Shower</b>, and
+         Location 97px, without changing anything but the filter.</p>
+      <p><b>It was not the filter — it was the contents.</b> The browser shares
+         out the width by what is inside, and what is inside changes completely
+         between categories: Window's names are long and Mirror's are short,
+         Shower's locations read <i>MIRRORS/SHOWERS WAREHOUSE (234)</i> and
+         Window's read <i>A3A (54)</i>. So any filter that changes the mixture
+         moved the table.</p>
+      <p>Each column now declares its own width, the way Movements has since
+         v12.11, and <b>the widths are measured rather than chosen</b> — drawn
+         with the real worst cases and taken from there. Name stays elastic: it
+         is the one that grows with the window, and it absorbs the 200px that
+         Category frees up when you filter by one, so nothing to its right moves
+         at all.</p>
+      <p>Incoming and Project View are next.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.21</span>
       <span class="tag fix">Fix</span>
       <h3>Putting a movement back can no longer break your stock</h3>

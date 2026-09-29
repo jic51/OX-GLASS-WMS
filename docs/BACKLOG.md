@@ -5680,3 +5680,38 @@ feature:
 
 `FAVICON_URL` sigue existiendo y gana sobre todo lo demás, así que un cliente
 que insista hoy se resuelve con una Script Property mientras tanto.
+
+---
+
+# ══ V1 · LAS UBICACIONES TIENEN EL MISMO PROBLEMA QUE LOS MATERIALES ══
+#    Anotado 2026-09-29, al arreglar el de materiales (v12.22)
+
+La v12.22 arregló que renombrar un MATERIAL se lleve consigo sus cinco
+dependencias. La auditoría que hizo falta para escribirlo destapó **dos más, del
+mismo tipo, en las UBICACIONES**, y no se tocaron para no dejar dos arreglos a
+medias:
+
+`mergeLocationsLocked_` reescribe las columnas de origen y destino del archivo y
+la lista de CONFIG. **No toca:**
+
+| Qué queda huérfano | Qué se rompe |
+|---|---|
+| `RACK_PHOTOS` (clave: Location) | la foto del estante fusionado deja de salir en el Warehouse Map |
+| `MATERIAL_LOCKS` col. E (Rack) | **una reserva deja de proteger el estante**, porque apunta a un nombre que ya no existe |
+
+El segundo es el que importa: una reserva que no protege nada es peor que no
+tener reserva, porque alguien cuenta con ella.
+
+**El arreglo es el mismo molde**, y ya está escrito: `moverDependencias_` hace
+exactamente esto para materiales. Hace falta su gemela para ubicaciones, llamada
+desde `mergeLocationsLocked_` y desde cualquier renombrado de ubicación, con su
+prueba del mismo tipo que `test-dependencias-material.js` — la que EJECUTA y
+mira qué quedó en cada hoja, no la que comprueba que la llamada está escrita.
+
+**Y la comprobación que evita la próxima:** una prueba que liste todos los
+almacenes con clave derivada (material o ubicación) y falle si alguno no está
+cubierto por su función de mudanza. Es la lección de `check-suite.js` aplicada a
+los datos en vez de a las pruebas: el fallo no va a ser la función, va a ser el
+sexto almacén que alguien añada y no meta en ella.
+
+---

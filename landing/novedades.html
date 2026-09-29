@@ -98,6 +98,51 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.22</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Renombrar un material se lleva consigo todo lo suyo</h3>
+      <p>Un material se identifica por su categoría y su nombre — y había
+         <b>otras cinco cosas guardadas bajo ese nombre</b>: cuántas unidades
+         trae una caja, su coste promedio, lo que esté apartado de él, su mínimo
+         y si se vigila por stock bajo. Renombrarlo, moverlo de categoría o
+         fusionarlo reescribía todos los movimientos y dejaba las cinco
+         atrás.</p>
+      <p><b>Eso hace dos daños, y el segundo es el peor.</b> Queda una línea
+         huérfana apuntando a un material que ya no existe — que al menos se
+         ve. Pero <i>el material renombrado ha perdido sus cifras en silencio</i>.
+         La siguiente entrada por caja no se divide, así que el coste por unidad
+         sale doce veces más alto y se mezcla en el promedio de ese material de
+         ahí en adelante. Sin decir nada.</p>
+      <p>Las cinco se mueven ahora con el material, y lo que se movió queda
+         escrito en el audit log. <b>Al fusionar dos materiales que tienen cifras
+         los dos, el que sobrevive conserva las suyas</b> — el que la gente va a
+         seguir usando no debería quedarse en silencio con los números del que
+         desaparece — y lo descartado se cuenta en el registro en vez de
+         esfumarse.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v12.22</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Las columnas del Dashboard dejan de moverse al filtrar</h3>
+      <p>Cada filtro desplazaba la tabla entera. Medido entre categorías:
+         <b>Stock empezaba 114px más allá en Window que en Shower</b>, y Location
+         97px, sin cambiar más que el filtro.</p>
+      <p><b>No era el filtro: era el contenido.</b> El navegador reparte el ancho
+         por lo que hay dentro, y lo que hay dentro cambia por completo entre
+         categorías: los nombres de Window son largos y los de Mirror cortos, las
+         ubicaciones de Shower dicen <i>MIRRORS/SHOWERS WAREHOUSE (234)</i> y las
+         de Window <i>A3A (54)</i>. Así que cualquier filtro que cambiara la
+         mezcla movía la tabla.</p>
+      <p>Ahora cada columna declara su propio ancho, como hace Movements desde la
+         v12.11, y <b>los anchos están medidos, no elegidos</b> — dibujando la
+         tabla con los peores casos reales y tomándolos de ahí. Name se queda
+         elástica: es la que crece con la ventana, y absorbe los 200px que suelta
+         Category al filtrar por una, así que nada a su derecha se mueve.</p>
+      <p>Incoming y Project View son lo siguiente.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.21</span>
       <span class="tag fix">Arreglo</span>
       <h3>Devolver un movimiento ya no puede romperte el stock</h3>

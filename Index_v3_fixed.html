@@ -4416,7 +4416,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.21';
+var APP_VERSION = '12.22';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -4428,7 +4428,7 @@ var APP_VERSION = '12.21';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '936950aa';
+var APP_BUILD = 'e98f2b21';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -5055,9 +5055,41 @@ function _mountRowMode(scope){ _applyRowMode(scope); }
 // shelf a rack, the next calls it a bay; "At Site" reads as delivered to one
 // and as used-on-a-job to another. Both the label and whether a column appears
 // at all are the customer's to decide.
+/* ANCHOS DECLARADOS, COMO EN MOVEMENTS (v12.22).
+ *
+ * Jose, 2026-09-29, con cinco capturas —una por categoría, misma ventana—:
+ * *"debemos estandarizar las columnas del Dashboard así como lo hicimos con
+ * Movements. Todos los filtros hacen que las filas se muevan y cambien de
+ * ancho, no debe pasar eso."*
+ *
+ * Medido sobre sus capturas: `STOCK` empieza en 541 con SHOWER y en 655 con
+ * WINDOW. **114px de diferencia sin tocar más que el filtro.**
+ *
+ * Y la causa no es el filtro: ES EL CONTENIDO. El navegador reparte el ancho
+ * por lo que hay dentro, y lo que hay dentro cambia por completo entre
+ * categorías — los nombres de WINDOW son largos (`GHH-SCENICMTN-P2,5P-TT`) y
+ * los de MIRROR cortos (`KUNA`); las ubicaciones de SHOWER son
+ * `MIRRORS/SHOWERS WAREHOUSE (234)` y las de WINDOW `A3A (54)`. Por eso
+ * cualquier filtro mueve la tabla, no sólo el de estado.
+ *
+ * LOS NÚMEROS ESTÁN MEDIDOS, NO ELEGIDOS. Dibujando la tabla con los peores
+ * casos reales de sus capturas y midiendo el ancho natural de cada celda sin
+ * envolver:
+ *
+ *     category 199   ·   levels 128   ·   status 93
+ *     dateReceived 110 (lo pide el TÍTULO, no el dato)
+ *     location 476   ·   name 658   ← éstas dos no pueden ir fijas
+ *
+ * `name` se queda ELÁSTICA —es la que tiene que crecer con la ventana, igual
+ * que `what` en Movements— y `location` va fija y recorta con puntos
+ * suspensivos, que es lo que ya hacía y nadie ha echado de menos.
+ *
+ * `category` se lleva 200 porque el peor caso es el distintivo
+ * `IGU (ISOLATED GLASS UNIT)`, y recortar un distintivo lo vuelve ilegible.
+ */
 var STOCK_COLS = [
-  { key:'category',     def:'Category',         lock:true  },   // the row is unreadable without it
-  { key:'name',         def:'Name / Description', lock:true },   // the row would be meaningless without it
+  { key:'category',     def:'Category',         lock:true,  w:200 },   // the row is unreadable without it
+  { key:'name',         def:'Name / Description', lock:true },   // la elástica: sin `w:` a propósito
   // CINCO COLUMNAS EN UNA BARRA. Idea de Jose, 2026-09-09:
   //
   //   "una barra de 2 colores que muestra la cantidad que hay con la cantidad
@@ -5067,13 +5099,26 @@ var STOCK_COLS = [
   // Cinco números sueltos obligan al ojo a sumarlos para entender la situación
   // de un material. La barra dice de un vistazo cuánto había en total y qué
   // proporción queda — y la proporción es la pregunta de verdad.
-  { key:'levels',       def:'Stock',            lock:false },
-  { key:'location',     def:'Location',         lock:false },
-  { key:'status',       def:'Status',           lock:false },
-  { key:'dateReceived', def:'Date Received',    lock:false },
-  { key:'lastNote',     def:'Last Note',        lock:false },
-  { key:'docs',         def:'Docs',             lock:false }
+  { key:'levels',       def:'Stock',            lock:false, w:130 },
+  { key:'location',     def:'Location',         lock:false, w:230 },
+  { key:'status',       def:'Status',           lock:false, w:100 },
+  { key:'dateReceived', def:'Date Received',    lock:false, w:115 },
+  { key:'lastNote',     def:'Last Note',        lock:false, w:190 },
+  { key:'docs',         def:'Docs',             lock:false, w:60  }
 ];
+
+/* EL SUELO DE LA COLUMNA ELÁSTICA DEL DASHBOARD.
+ *
+ * Mismo papel que `_MOV_MIN_WHAT` en Movements: por debajo de esto, el nombre
+ * del material deja de poder leerse de un vistazo y la tabla prefiere sacar
+ * barra horizontal antes que estrujarlo.
+ *
+ * Medido, no elegido: el título `Name / Description` necesita 145px, y un
+ * nombre de material corriente con su proyecto debajo (`LIBERTY WELLS
+ * TOWNHOMES`) pide más. 210 deja el nombre completo en la gran mayoría de las
+ * filas de OX y recorta sólo los monstruos como el GUNTHER de 658px, que no
+ * cabe en ninguna pantalla y ya se leía recortado. */
+var _STOCK_MIN_NAME = 210;
 
 // Movements is the record of what happened, Stock is what is on hand — different
 // columns, but the same gesture edits both. What is locked here is what makes a
@@ -5199,6 +5244,10 @@ var COL_TABLES = {
     cols: STOCK_COLS, tips: STOCK_COL_TIPS, prefix: 'sc-',
     orderKey: 'acopio_stock_col_order', hiddenKey: 'acopio_stock_col_hidden',
     defaultHidden: [],
+    // Desde la v12.22. Antes no estaba, y por eso `_fijarMinTabla` se salía por
+    // la primera línea para esta tabla — que es literalmente lo que hacía que
+    // el Dashboard repartiera por contenido y se moviera con cada filtro.
+    minWhat: _STOCK_MIN_NAME,
     head: 'stockHeadRow',
     lead: function(){ return '<th style="width:30px"></th>'; },        // row-select checkbox
     tail: function(){ return ''; },
@@ -5550,7 +5599,12 @@ function _anchoDeclarado(html){
  * `tools/test-columnas.js` mide los dos caminos por separado. */
 function _fijarMinTabla(t, headHtml){
   var cfg = _colCfg(t);
-  if (!cfg.minWhat) return;                 // Stock reparte por contenido
+  // Hasta la v12.22 esta línea decía "Stock reparte por contenido" y era la
+  // puerta por la que el Dashboard se escapaba del mecanismo: sin `minWhat` no
+  // se fijaba mínimo, y sin mínimo el navegador repartía por lo que hubiera
+  // dentro — que es exactamente lo que movía la tabla con cada filtro. Ahora
+  // las dos tablas lo tienen; queda para Incoming y Project View.
+  if (!cfg.minWhat) return;
   var row = document.getElementById(cfg.head);
   var tabla = row && row.closest('table');
   if (tabla) tabla.style.minWidth = (_anchoDeclarado(headHtml) + cfg.minWhat) + 'px';

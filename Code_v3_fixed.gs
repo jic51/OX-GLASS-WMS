@@ -46,7 +46,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.21';
+var APP_VERSION = '12.22';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -58,7 +58,7 @@ var APP_VERSION = '12.21';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '936950aa';
+var APP_BUILD = 'e98f2b21';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -10396,6 +10396,184 @@ function listMaterials(auth) {
 // never work? It never worked.
 var MOVEMENT_OPS = { deleteRow: true, restoreMovement: true, listTrash: true };
 
+/* ═══ CUANDO UN MATERIAL CAMBIA DE NOMBRE, LO SUYO SE VA CON ÉL ═══════════════
+ *
+ * Jose, 2026-09-29, con tres capturas: renombró SEALANT #450 (FLASHING/CAULK) a
+ * RAIN BUSTER 450 y lo movió a SEALANT/CAULK. Los 1.271 movimientos se
+ * actualizaron. Pero en Settings → Materials, el panel de envases seguía
+ * diciendo `FLASHING/CAULK · SEALANT #450 · 12 per box`.
+ *
+ * Dos daños al mismo tiempo, y el segundo es peor que el primero:
+ *
+ *   1. Queda una línea huérfana apuntando a un material que ya no existe.
+ *   2. EL MATERIAL RENOMBRADO PERDIÓ SU FACTOR. Y no avisa: la próxima entrada
+ *      por caja no divide, así que el coste por unidad sale multiplicado por 12
+ *      y se mezcla en el promedio de ese material para siempre.
+ *
+ * LA CAUSA, dicha en general porque es general: la identidad de un material es
+ * `categoría + nombre`, y CINCO SITIOS guardan cosas bajo esa identidad. Las
+ * tres operaciones que la cambian —renombrar, cambiar de categoría, fusionar—
+ * reescribían el archivo y nada más. Cada una de esas cinco cosas era un cabo
+ * suelto esperando.
+ *
+ * Es el patrón que este archivo ya conoce por su nombre: COMPORTAMIENTO CABLEADO
+ * EN UN CAMINO Y NO EN LOS OTROS. Aquí era peor: no estaba cableado en ninguno.
+ *
+ * LO QUE SE MUEVE, y por qué importa cada uno:
+ *
+ *   · MATERIAL_PACKS      cuántas unidades trae una caja  → dinero
+ *   · CONFIG avgCost      el coste promedio               → dinero
+ *   · MATERIAL_LOCKS      lo apartado                     → material que deja
+ *                                                           de estar protegido
+ *   · CONFIG minStock     el mínimo                       → la alerta se apaga
+ *   · MONITORED_MATERIALS qué se vigila                   → la alerta se apaga
+ *
+ * Los dos últimos van por NOMBRE solo, no por categoría, así que un cambio de
+ * categoría no los rompe. Se tratan igual de todas formas: una regla con una
+ * excepción se olvida antes que una regla.
+ *
+ * LA DECISIÓN EN UNA FUSIÓN — `fusionando`. Si A se fusiona en B y los dos
+ * tienen factor de caja, ¿cuál queda? EL DE B. El que sobrevive es el que la
+ * gente va a seguir usando, y pisarlo con el del que desaparece cambiaría en
+ * silencio el coste de un material que nadie tocó. Lo del origen se descarta,
+ * y el resumen lo dice para que quede en el audit log en vez de en la cabeza
+ * de nadie.
+ *
+ * LO QUE NO HACE, y va en BACKLOG.md en vez de quedar a medias: las ubicaciones
+ * tienen el mismo problema con RACK_PHOTOS y con la columna Rack de
+ * MATERIAL_LOCKS. Es otra operación (mergeLocations) y merece su propio
+ * arreglo, no una mitad de éste.
+ *
+ * Nunca lanza. Un cabo suelto no debe impedir un renombrado que ya ocurrió en
+ * el archivo — eso dejaría las dos mitades en desacuerdo, que es justo el
+ * estado del que sale este arreglo. Lo que no se pudo mover se cuenta.
+ */
+function moverDependencias_(ss, catViejo, nomViejo, catNuevo, nomNuevo, fusionando) {
+  var res = { packs: 0, avgCost: 0, locks: 0, minStock: 0, monitored: 0,
+              descartados: 0, fallos: 0, resumen: '' };
+  var vc = String(catViejo || '').trim().toUpperCase();
+  var vn = String(nomViejo || '').trim().toUpperCase();
+  var nc = String(catNuevo || '').trim().toUpperCase();
+  var nn = String(nomNuevo || '').trim().toUpperCase();
+  if (vc === nc && vn === nn) return res;   // nada cambió
+
+  // ── 1. MATERIAL_PACKS ──────────────────────────────────────────────────────
+  try {
+    var pk = ss.getSheetByName(SHEETS.PACKS);
+    if (pk && pk.getLastRow() > 1) {
+      var pr = pk.getRange(2, 1, pk.getLastRow() - 1, 7).getValues();
+      // Qué envases tiene YA el destino: en una fusión son los que mandan.
+      var enDestino = {};
+      for (var d = 0; d < pr.length; d++) {
+        if (String(pr[d][PACK_COLS.CATEGORY] || '').trim().toUpperCase() === nc &&
+            String(pr[d][PACK_COLS.NAME]     || '').trim().toUpperCase() === nn) {
+          enDestino[String(pr[d][PACK_COLS.PACK] || '').trim().toUpperCase()] = true;
+        }
+      }
+      // Hacia atrás: borrar una fila mueve las de abajo.
+      for (var p = pr.length - 1; p >= 0; p--) {
+        if (String(pr[p][PACK_COLS.CATEGORY] || '').trim().toUpperCase() !== vc ||
+            String(pr[p][PACK_COLS.NAME]     || '').trim().toUpperCase() !== vn) continue;
+        var envase = String(pr[p][PACK_COLS.PACK] || '').trim().toUpperCase();
+        if (fusionando && enDestino[envase]) {
+          pk.deleteRow(p + 2);          // el del destino gana; éste sobra
+          res.descartados++;
+        } else {
+          pk.getRange(p + 2, 1, 1, 2).setValues([textSafeRow_([nc, nn])]);
+          res.packs++;
+        }
+      }
+    }
+  } catch (e) { res.fallos++; }
+
+  // ── 2. MATERIAL_LOCKS — matId, categoría y nombre ──────────────────────────
+  try {
+    var lk = ss.getSheetByName('MATERIAL_LOCKS');
+    if (lk && lk.getLastRow() > 1) {
+      var lr = lk.getRange(2, 1, lk.getLastRow() - 1, 4).getValues();
+      var idNuevo = getMaterialId(normalizeString(nc), normalizeString(nn));
+      for (var l = 0; l < lr.length; l++) {
+        if (String(lr[l][2] || '').trim().toUpperCase() !== vc ||
+            String(lr[l][3] || '').trim().toUpperCase() !== vn) continue;
+        lk.getRange(l + 2, 2, 1, 3).setValues([textSafeRow_([idNuevo, nc, nn])]);
+        res.locks++;
+      }
+    }
+  } catch (e) { res.fallos++; }
+
+  // ── 3 y 4. CONFIG: avgCost (col O/P/Q) y minStock (col L/M) ────────────────
+  try {
+    var cfg = ss.getSheetByName(SHEETS.CONFIG);
+    if (cfg && cfg.getLastRow() > 1) {
+      var cr = cfg.getRange(2, 1, cfg.getLastRow() - 1, 17).getValues();
+      // avgCost: columnas 14 (cat) y 15 (nombre).
+      var costeEnDestino = false;
+      for (var q = 0; q < cr.length; q++) {
+        if (String(cr[q][14] || '').trim().toUpperCase() === nc &&
+            String(cr[q][15] || '').trim().toUpperCase() === nn) { costeEnDestino = true; break; }
+      }
+      for (var c2 = 0; c2 < cr.length; c2++) {
+        if (String(cr[c2][14] || '').trim().toUpperCase() !== vc ||
+            String(cr[c2][15] || '').trim().toUpperCase() !== vn) continue;
+        if (fusionando && costeEnDestino) {
+          // El promedio del destino manda. El del origen se vacía en vez de
+          // dejarse: una fila de coste sobre un material que ya no existe es
+          // exactamente la huérfana que este arreglo viene a quitar.
+          cfg.getRange(c2 + 2, 15, 1, 3).setValues([['', '', '']]);
+          res.descartados++;
+        } else {
+          cfg.getRange(c2 + 2, 15, 1, 2).setValues([textSafeRow_([nc, nn])]);
+          res.avgCost++;
+        }
+      }
+      // minStock: columna 11 (nombre) — por NOMBRE, sin categoría.
+      if (vn !== nn) {
+        for (var m = 0; m < cr.length; m++) {
+          if (String(cr[m][11] || '').trim().toUpperCase() !== vn) continue;
+          cfg.getRange(m + 2, 12, 1, 1).setValues([textSafeRow_([nn])]);
+          res.minStock++;
+        }
+      }
+    }
+  } catch (e) { res.fallos++; }
+
+  // ── 5. WMS_MONITORED_MATERIALS — una lista de nombres ──────────────────────
+  if (vn !== nn) {
+    try {
+      var props = PropertiesService.getScriptProperties();
+      var crudo = props.getProperty('WMS_MONITORED_MATERIALS');
+      if (crudo) {
+        var lista = JSON.parse(crudo);
+        if (Object.prototype.toString.call(lista) === '[object Array]') {
+          var cambio = false, vistos = {}, salida = [];
+          for (var mo = 0; mo < lista.length; mo++) {
+            var v = String(lista[mo] || '').trim();
+            if (v.toUpperCase() === vn) { v = nomNuevo; cambio = true; }
+            // Una fusión puede dejar el mismo nombre dos veces en la lista.
+            var clave = v.toUpperCase();
+            if (clave && !vistos[clave]) { vistos[clave] = true; salida.push(v); }
+          }
+          if (cambio) {
+            props.setProperty('WMS_MONITORED_MATERIALS', JSON.stringify(salida));
+            res.monitored++;
+          }
+        }
+      }
+    } catch (e) { res.fallos++; }
+  }
+
+  var partes = [];
+  if (res.packs)       partes.push(res.packs + ' pack');
+  if (res.avgCost)     partes.push(res.avgCost + ' avg cost');
+  if (res.locks)       partes.push(res.locks + ' reservation');
+  if (res.minStock)    partes.push(res.minStock + ' min stock');
+  if (res.monitored)   partes.push('stock alerts');
+  if (res.descartados) partes.push(res.descartados + ' dropped (target kept its own)');
+  if (res.fallos)      partes.push(res.fallos + ' NOT moved');
+  res.resumen = partes.length ? ', ' + partes.join(', ') : '';
+  return res;
+}
+
 function manageMaterial(data, auth) {
   // ignores any caller-supplied `auth` — see requireAuth_
   if (MOVEMENT_OPS[data && data.op]) {
@@ -10438,18 +10616,22 @@ function manageMaterialLocked_(data, auth) {
     if (!newNm) throw new Error('New name required.');
     var hit = matches(cat, oldNm), storedNm = newNm;   // crudo: cita rewriteArchiveColumn_
     var count = rewriteBoth(AC.NAME, function (row) { return hit(row) ? storedNm : null; });
+    var depR  = moverDependencias_(ss, cat, oldNm, cat, newNm);
     if (count) refreshOrDefer_(ss, data);
-    auditLog_(ss, 'RENAME_MATERIAL', auth.email, cat, oldNm, newNm + ' (' + count + ' rows)');
-    return { status: 'success', updated: count };
+    auditLog_(ss, 'RENAME_MATERIAL', auth.email, cat, oldNm,
+              newNm + ' (' + count + ' rows' + depR.resumen + ')');
+    return { status: 'success', updated: count, dependencias: depR };
 
   } else if (op === 'changeCategory') {
     var newCat = String(data.newCategory || '').trim().toUpperCase();
     if (!newCat) throw new Error('New category required.');
     var hitC = matches(cat, nm), storedCat = newCat;   // crudo: cita rewriteArchiveColumn_
     var countC = rewriteBoth(AC.CATEGORY, function (row) { return hitC(row) ? storedCat : null; });
+    var depC   = moverDependencias_(ss, cat, nm, newCat, nm);
     if (countC) refreshOrDefer_(ss, data);
-    auditLog_(ss, 'CHANGE_CAT', auth.email, nm, cat, newCat + ' (' + countC + ' rows)');
-    return { status: 'success', updated: countC };
+    auditLog_(ss, 'CHANGE_CAT', auth.email, nm, cat,
+              newCat + ' (' + countC + ' rows' + depC.resumen + ')');
+    return { status: 'success', updated: countC, dependencias: depC };
 
   } else if (op === 'merge') {
     // Rename all rows of sourceName → targetName (same category)
@@ -10458,9 +10640,13 @@ function manageMaterialLocked_(data, auth) {
     if (!tgtNm) throw new Error('Target name required.');
     var hitM = matches(cat, srcNm), storedTgt = tgtNm; // crudo: cita rewriteArchiveColumn_
     var countM = rewriteBoth(AC.NAME, function (row) { return hitM(row) ? storedTgt : null; });
+    // fusionando: true — el destino YA EXISTE y lo suyo manda. Ver el comentario
+    // de moverDependencias_: en una fusión, el que sobrevive gana.
+    var depM   = moverDependencias_(ss, cat, srcNm, cat, tgtNm, true);
     if (countM) refreshOrDefer_(ss, data);
-    auditLog_(ss, 'MERGE_MATERIAL', auth.email, cat, srcNm, tgtNm + ' (' + countM + ' rows)');
-    return { status: 'success', merged: countM };
+    auditLog_(ss, 'MERGE_MATERIAL', auth.email, cat, srcNm,
+              tgtNm + ' (' + countM + ' rows' + depM.resumen + ')');
+    return { status: 'success', merged: countM, dependencias: depM };
 
   } else if (op === 'deleteRow') {
     // BY NAME, NOT BY POSITION. A row number is what made this dangerous:

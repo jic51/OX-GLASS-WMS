@@ -216,6 +216,114 @@ fs.writeFileSync(f, html);
   const cerrado = await foto();
   check('al cerrar el editor vuelve a esconderse', cerrado.tieneCategoryTh === false);
 
+  /* ── LAS COLUMNAS NO SE MUEVEN AL CAMBIAR DE FILTRO (v12.22) ──────────────
+   *
+   * Jose, 2026-09-29, con cinco capturas —una por categoría, misma ventana—:
+   * "todos los filtros hacen que las filas se muevan y cambien de ancho, no
+   * debe pasar eso". Medido sobre ellas, `STOCK` empezaba en 541 con SHOWER y
+   * en 655 con WINDOW: 114px sin tocar más que el filtro.
+   *
+   * LO QUE SE EXIGE, y es más fuerte que "se mueve poco": las columnas que van
+   * DESPUÉS de la elástica no se mueven NI UN PÍXEL. La elástica (`name`) es la
+   * que absorbe todo, incluidos los 200px que suelta `category` al esconderse.
+   * Por eso se comprueban las dos cosas: que `name` SÍ cambia y las demás NO.
+   *
+   * Y se comprueba que la categoría está realmente escondida en cada vuelta.
+   * Sin eso, la prueba mediría el caso cómodo —la tabla con todas sus columnas
+   * puestas— que es el error que ya cometí en `test-columnas` y que dejó pasar
+   * quince celdas desbordadas. */
+  console.log('\n═══ las columnas no bailan al cambiar de filtro ═══\n');
+  {
+    const filtros = ['', 'WINDOW', 'SEALANT/CAULK'];
+    const tomas = [];
+    for (const f of filtros) {
+      await page.selectOption('#stockFilter', f);
+      await page.waitForTimeout(220);
+      tomas.push(await page.evaluate(() => {
+        const out = { cols: {}, cat: !!document.querySelector('#stockHeadRow th.sc-category') };
+        document.querySelectorAll('#stockHeadRow th').forEach(t => {
+          const c = [...t.classList].find(x => x.startsWith('sc-'));
+          if (c) out.cols[c] = Math.round(t.getBoundingClientRect().left);
+        });
+        const n = document.querySelector('#stockHeadRow th.sc-name');
+        out.nameW = n ? Math.round(n.getBoundingClientRect().width) : 0;
+        return out;
+      }));
+    }
+
+    check('con "All Categories" la columna Category está', tomas[0].cat === true);
+    check('con una categoría elegida NO está — si estuviera, esto mediría el caso fácil',
+          tomas[1].cat === false && tomas[2].cat === false);
+
+    const detras = ['sc-levels', 'sc-location', 'sc-status', 'sc-dateReceived', 'sc-lastNote', 'sc-docs'];
+    const desvio = (a, b) => {
+      const out = [];
+      detras.forEach(c => {
+        if (a.cols[c] === undefined || b.cols[c] === undefined) return;
+        const d = Math.abs(a.cols[c] - b.cols[c]);
+        if (d > 1) out.push(c + ' ' + d + 'px');
+      });
+      return out;
+    };
+
+    /* LA COMPROBACIÓN QUE DE VERDAD PIDE JOSE: entre DOS CATEGORÍAS.
+     *
+     * WINDOW y SEALANT/CAULK tienen contenidos que no se parecen en nada —
+     * nombres de 22 y de 63 caracteres, ubicaciones de `A3A (54)` y de
+     * `MIRRORS/SHOWERS WAREHOUSE (234)`—, y las dos esconden Category. Si las
+     * columnas no se mueven entre ellas, EL CONTENIDO YA NO MANDA, que es la
+     * queja entera.
+     *
+     * Lo escribí primero comparando "todas" contra una categoría y falló con
+     * 200px en las seis. No fallaba el arreglo: fallaba la expectativa. En una
+     * ventana estrecha la tabla está en su mínimo y la elástica ya está en su
+     * suelo, así que no puede absorber nada — y esconder Category hace la tabla
+     * 200px más estrecha, así que todo se corre 200px. Eso es honesto: se fue
+     * una columna de 200px. Lo que NO puede pasar es que se mueva una cantidad
+     * que dependa de los datos, y eso es lo que se mide aquí. */
+    check('entre DOS CATEGORÍAS distintas no se mueve ni un píxel — el contenido ' +
+          'ya no manda', desvio(tomas[1], tomas[2]).length === 0, desvio(tomas[1], tomas[2]));
+
+    /* Y de "todas" a una categoría sí se mueve, pero EXACTAMENTE lo que mide la
+     * columna que desapareció. Un desplazamiento predecible no es el fallo; el
+     * fallo era que dependiera de lo que hubiera dentro de las filas. */
+    const anchoCat = tomas[0].cols['sc-name'] - tomas[0].cols['sc-category'];
+    const corrimiento = tomas[0].cols['sc-levels'] - tomas[1].cols['sc-levels'];
+    check('de "todas" a una categoría se corre EXACTAMENTE el ancho de Category, ' +
+          'ni más ni menos', Math.abs(corrimiento - anchoCat) <= 1,
+          { corrimiento: corrimiento, anchoCategory: anchoCat });
+
+    /* EN UNA VENTANA ANCHA la elástica sí tiene sitio, y entonces absorbe los
+     * 200px ella sola: nada de lo que va detrás se mueve, ni siquiera entre
+     * "todas" y una categoría. Las dos mitades del mismo diseño. */
+    await page.setViewportSize({ width: 1700, height: 900 });
+    const anchas = [];
+    for (const f of filtros) {
+      await page.selectOption('#stockFilter', f);
+      await page.waitForTimeout(220);
+      anchas.push(await page.evaluate(() => {
+        const out = { cols: {} };
+        document.querySelectorAll('#stockHeadRow th').forEach(t => {
+          const c = [...t.classList].find(x => x.startsWith('sc-'));
+          if (c) out.cols[c] = Math.round(t.getBoundingClientRect().left);
+        });
+        const n = document.querySelector('#stockHeadRow th.sc-name');
+        out.nameW = n ? Math.round(n.getBoundingClientRect().width) : 0;
+        return out;
+      }));
+    }
+    check('en ventana ancha NADA se mueve, ni entre "todas" y una categoría',
+          desvio(anchas[0], anchas[1]).length === 0 && desvio(anchas[1], anchas[2]).length === 0,
+          desvio(anchas[0], anchas[1]).concat(desvio(anchas[1], anchas[2])));
+    check('...porque es la elástica la que absorbe los 200px',
+          anchas[1].nameW - anchas[0].nameW >= 190,
+          { todas: anchas[0].nameW, filtrada: anchas[1].nameW });
+
+    await page.setViewportSize({ width: 760, height: 900 });
+    await page.selectOption('#stockFilter', '');
+    await page.waitForTimeout(200);
+  }
+
   check('sin errores de página', errores.length === 0, errores);
 
   await browser.close();
