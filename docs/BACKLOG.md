@@ -31,6 +31,39 @@ En sus tres capturas, la MISMA tabla con tres filtros:
 **Más de 120px de diferencia en la misma columna**, sólo por cambiar el filtro.
 Es exactamente la queja que tenía sobre Movements, en la pantalla que más mira.
 
+### 2026-09-29 — Jose lo vuelve a pedir, ahora con el filtro de CATEGORÍA
+
+*"Debemos estandarizar las columnas del Dashboard así como lo hicimos con
+Movements. Todos los filtros hacen que las filas se muevan y cambien de ancho,
+no debe pasar eso."*
+
+Cinco capturas más, una por categoría, misma ventana y misma tabla. Medido
+sobre ellas (aproximado, son capturas de pantalla, no el DOM):
+
+| Filtro | `STOCK` | `LOCATION` | `STATUS` | `DOCS` |
+|---|---|---|---|---|
+| SHOWER | 541 | 763 | 1076 | 1787 |
+| MIRROR | 541 | 763 | 1076 | 1787 |
+| IGU | 611 | 823 | 1118 | 1790 |
+| SCREEN | 625 | 838 | 1131 | 1801 |
+| WINDOW | 655 | 860 | 1147 | 1806 |
+
+**`STOCK` se mueve 114px y `LOCATION` 97px** según la categoría elegida.
+
+**Y esto confirma que no es el filtro de estado: es el contenido.** El navegador
+reparte el ancho por lo que hay dentro, y lo que hay dentro cambia por completo
+entre categorías — los nombres de WINDOW son largos
+(`GHH-SCENICMTN-P2,5P-TT`) y los de MIRROR cortos (`KUNA`); las ubicaciones de
+SHOWER son `MIRRORS/SHOWERS WAREHOU…` y las de WINDOW son `A3A (54)`. Cualquier
+filtro que cambie la mezcla mueve la tabla entera, así que la lista de filtros
+que hay que probar es *todos*, no sólo el de estado.
+
+**Se suma una causa propia del Dashboard que Movements no tiene:** al filtrar
+por una categoría, la columna `CATEGORY` se esconde (es correcto — ya lo dice el
+título), así que la tabla pasa a tener una columna MENOS. El reparto no sólo
+cambia de proporciones: cambia de número de partes. `_fijarMinTabla` ya sabe
+sumar sólo las columnas visibles, que es exactamente lo que hace falta aquí.
+
 ## Lo bueno: el arreglo ya está inventado
 
 La v12.11–v12.14 lo resolvió para Movements y dejó la maquinaria hecha:

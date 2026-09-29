@@ -60,7 +60,18 @@ Sin landing no hay a dónde mandar a nadie, y bloquea también el hipervínculo
 del nombre "Acopio" dentro de la app y la tarjeta de reenganche. Ver
 `docs/LANDING.md`.
 
-### 5. Verificar que el consent screen esté "In production"
+### 5. ~~Verificar que el consent screen esté "In production"~~ ✅ HECHO por Jose (2026-09-29)
+
+> Jose: *"ya hice lo de Google Cloud."* Publicado, con Branding completa y sin
+> logo — que es lo que lo mantiene fuera de la cola de verificación de Google.
+>
+> **Queda una comprobación de un minuto, y no es papeleo:** que alguien con un
+> Gmail personal, fuera del dominio y fuera de la lista de usuarios de prueba,
+> entre de verdad. Es la única que prueba lo que importa, porque la gente de
+> `@ox-glass.com` entra por la puerta automática y ésa no toca el cliente
+> OAuth. Está en `QUE-PROBAR.md`.
+
+El porqué, que sigue valiendo para quien lea esto después:
 
 > **Corregido el 2026-09-22.** Esta entrada decía que en Testing *"las
 > autorizaciones caducan a los 7 días"*. **Falso para Acopio**: esa regla es
