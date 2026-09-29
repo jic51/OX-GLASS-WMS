@@ -46,7 +46,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.22';
+var APP_VERSION = '12.23';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -58,7 +58,7 @@ var APP_VERSION = '12.22';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'e98f2b21';
+var APP_BUILD = 'f156c448';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -467,10 +467,224 @@ function ensureCoreSheets_(ss) {
   try { ensureWasteSheet_(ss);          } catch (e) {}
   try { ensureArchiveHistorySheet_(ss); } catch (e) {}
 
+  /* EL CONJUNTO COMPLETO SÓLO SI LA HOJA ACABA DE NACER.
+   *
+   * `created.length && !ss.getSheetByName(SHEETS.ARCHIVE).getLastRow() > 1` sería
+   * frágil. La regla que sí se sostiene: `aplicarFormatoEstandar_` decide por sí
+   * misma, hoja por hoja, si puede tocar el formato de las celdas —sólo las
+   * vacías— así que pedirle el conjunto completo aquí es seguro en los dos
+   * casos. En una instalación nueva formatea todo; en una de meses formatea el
+   * color, la cabecera y la nota, y deja los datos en paz.
+   *
+   * Envuelto porque un fallo de formato NO puede impedir que existan las hojas.
+   * Ése es el orden de importancia y conviene que esté escrito. */
+  try { aplicarFormatoEstandar_(ss, { completo: true }); } catch (e) {
+    try { Logger.log('aplicarFormatoEstandar_: ' + e.message); } catch (e2) {}
+  }
+
   if (repaired.length) {
     try { auditLog_(ss, 'REPAIR_HEADERS', 'system', repaired.join(', '), '', ''); } catch (e) {}
   }
   return created;
+}
+
+/* ═══ EL FORMATO ESTÁNDAR DE LA HOJA ═════════════════════════════════════════
+ *
+ * Jose, 2026-09-28: *"sobre la plantilla debemos estandarizarla y ponerle
+ * formato a todo, el formato profesional que queremos que los usuarios vean ya
+ * sea cuando yo les instale el programa o cuando ellos lo hagan."*
+ *
+ * LO QUE HABÍA. Una casa de estilo de verdad —SH_NAVY / SH_ACCENT / SH_MUTED,
+ * tipografía, jerarquía, anchos medidos— usada por TRES pestañas de veinte:
+ * START HERE, Terms y Privacy. Las otras diecisiete recibían esto y nada más:
+ *
+ *     sheet.setFrozenRows(1);
+ *     sheet.getRange(1,1,1,n).setFontWeight('bold');
+ *
+ * Así que lo que vive un cliente nuevo es una bienvenida cuidada y, detrás,
+ * diecisiete volcados de hoja de cálculo. El contraste hace MÁS daño que si
+ * ninguna estuviera formateada, porque enseña que sí sabíamos cómo.
+ *
+ * ── POR QUÉ ESTO ES CÓDIGO Y NO UNA LISTA DE PASOS ──────────────────────────
+ *
+ * Un formato puesto a mano sobre la plantilla se pierde en el primer
+ * `insertSheet` que añada una pestaña, y nadie lo nota, porque lo que falta no
+ * falla. Es el patrón que este archivo ya conoce por su nombre: dos listas que
+ * tienen que coincidir sin nada que lo obligue. Idempotente: correrla dos veces
+ * no cambia nada la segunda.
+ *
+ * ── LOS DOS CONJUNTOS, Y POR QUÉ NO SON UNO ─────────────────────────────────
+ *
+ * SEGURO SIEMPRE, incluso sobre una instalación de meses: color de pestaña,
+ * fila fija, estilo de la cabecera, la nota en A1 y la protección en modo
+ * aviso. Nada de eso pisa una decisión de nadie.
+ *
+ * SÓLO EN PLANTILLA Y EN HOJAS VACÍAS (`completo`): anchos de columna y formato
+ * de texto. El cliente pudo haber cambiado un ancho a propósito, y eso es suyo.
+ *
+ * ── LA CORRECCIÓN SOBRE EL FORMATO DE TEXTO, que yo mismo había exagerado ───
+ *
+ * `ESTANDAR-DE-LA-PLANTILLA.md` decía que una instalación nueva sale SIN la
+ * protección que impide que un PO `07-6329` se vuelva fecha, y que era un
+ * agujero abierto. **No es verdad, y conviene decirlo aquí para que nadie lo
+ * vuelva a creer:** `textCell_` pone una comilla delante de CADA cadena en cada
+ * camino de escritura, y eso ya protege las escrituras de la app —es el arreglo
+ * de la v11.x que guarda `test-text-stays-text.js`—.
+ *
+ * El formato `@` de la columna es la SEGUNDA capa, y sirve para lo que la
+ * comilla no alcanza: cuando una persona escribe A MANO en la hoja, y si algún
+ * día alguien añade un camino de escritura que se olvide de `textCell_`.
+ *
+ * Y por eso sólo va en hojas VACÍAS. Poner `@` sobre una columna que ya tiene
+ * números cambia cómo se ven —un importe pasaría a enseñarse como texto y
+ * cualquier fórmula del cliente sobre esa columna dejaría de sumar—. Sobre una
+ * plantilla vacía no cuesta nada y protege desde el primer día; sobre datos de
+ * verdad sería exactamente la clase de sorpresa que este archivo evita.
+ */
+var FORMATO_CABECERA_ALTO = 28;
+
+/* El color de pestaña DICE SI SE PUEDE EDITAR A MANO, que es la pregunta de
+ * soporte más frecuente que va a haber y hoy no está escrita en ningún sitio.
+ * No es decoración: es el único dato que el color puede llevar. */
+function gruposDeFormato_() {
+  return [
+    { grupo: 'documento', color: SH_NAVY, proteger: true, nota: '',
+      hojas: [START_HERE_SHEET, TERMS_SHEET, PRIVACY_SHEET] },
+    { grupo: 'datos', color: SH_ACCENT, proteger: false, nota: '',
+      hojas: [SHEETS.ARCHIVE, 'INCOMING_V3', 'USERS_V3', SHEETS.CONFIG,
+              SHEETS.PACKS, 'PM_DIRECTORY', 'RACK_PHOTOS'] },
+    { grupo: 'calculada', color: SH_MUTED, proteger: true,
+      nota: 'Rebuilt by ' + PRODUCT_NAME + ' from ' + SHEETS.ARCHIVE + '.\n' +
+            'Edits here are overwritten — change the movement instead.',
+      hojas: [SHEETS.LIVE, SHEETS.SITE, SHEETS.WASTE, SHEETS.RESERVATIONS, 'MATERIAL_LOCKS'] },
+    { grupo: 'registro', color: '#9CA3AF', proteger: true,
+      nota: 'A record of what happened. Rows are only ever added.\n' +
+            'Correcting one here does not correct anything else.',
+      hojas: [SHEETS.AUDIT, SHEETS.ERRORS, SHEETS.ARCHIVE_HISTORY, SHEETS.TRASH] }
+  ];
+}
+
+/* Anchos del archivo POR CLASE DE CONTENIDO, no columna por columna: añadir una
+ * columna deja de ser inventarse un número. Los que no están aquí se quedan
+ * como estén — ensanchar una columna que nadie pidió tampoco es gratis. */
+function anchosDelArchivo_() {
+  var a = {};
+  a[AC.TIMESTAMP] = 140;  a[AC.DATE_REC]  = 100;
+  a[AC.CATEGORY]  = 170;  a[AC.NAME]      = 260;
+  a[AC.QTY]       = 80;   a[AC.UNIT]      = 90;
+  a[AC.SRC_LOC]   = 120;  a[AC.DEST_LOC]  = 120;
+  a[AC.SUPPLIER]  = 170;  a[AC.PROJECT]   = 170;
+  a[AC.PO]        = 110;  a[AC.STATUS]    = 110;
+  a[AC.COMMENTS]  = 260;  a[AC.MAT_ID]    = 220;
+  a[AC.MOV_ID]    = 180;  a[AC.USER_EMAIL]= 200;
+  a[AC.UNIT_COST] = 90;   a[AC.TOTAL_COST]= 90;
+  return a;
+}
+
+/** ¿Tiene datos de verdad, o sólo la cabecera? Decide si se le puede tocar el
+ *  formato de las celdas sin cambiarle nada a nadie. */
+function hojaVacia_(sheet) {
+  try { return sheet.getLastRow() <= 1; } catch (e) { return false; }
+}
+
+/** Protección en modo AVISO, y sólo si no la tiene ya.
+ *
+ *  Aviso y no bloqueo, a propósito: la app escribe en estas hojas con la misma
+ *  cuenta, así que un bloqueo de verdad sería una forma NUEVA de que la app
+ *  falle de noche. El aviso frena a la persona y no frena al código. */
+function protegerConAviso_(sheet) {
+  try {
+    var ya = sheet.getProtections(SpreadsheetApp.ProtectionType.SHEET);
+    if (ya && ya.length) return false;
+    sheet.protect().setWarningOnly(true);
+    return true;
+  } catch (e) { return false; }
+}
+
+function aplicarFormatoEstandar_(ss, opciones) {
+  opciones = opciones || {};
+  var completo = !!opciones.completo;
+  var rep = { pestanas: 0, cabeceras: 0, notas: 0, protegidas: 0,
+              texto: [], anchos: 0, saltadas: [], fallos: [] };
+  var orden = [];
+
+  gruposDeFormato_().forEach(function (g) {
+    g.hojas.forEach(function (nombre) {
+      var sh = ss.getSheetByName(nombre);
+      if (!sh) return;                       // una instalación no las tiene todas
+      orden.push(sh);
+      try {
+        if (sh.getTabColor() !== g.color) { sh.setTabColor(g.color); rep.pestanas++; }
+
+        // Los documentos traen su propio diseño desde createLegalSheets_ y
+        // showStartHere_: pintarles encima una cabecera de tabla los estropea.
+        if (g.grupo !== 'documento') {
+          var ancho = Math.max(1, sh.getLastColumn());
+          var cab = sh.getRange(1, 1, 1, ancho);
+          if (cab.getBackground() !== SH_NAVY) {
+            cab.setBackground(SH_NAVY).setFontColor('#FFFFFF').setFontWeight('bold')
+               .setFontSize(9.5).setVerticalAlignment('bottom');
+            sh.setRowHeight(1, FORMATO_CABECERA_ALTO);
+            rep.cabeceras++;
+          }
+          try { sh.setFrozenRows(1); } catch (e) {}
+        }
+
+        // La nota vive en A1, que el código no lee y la persona ve al pasar el
+        // ratón. Es la línea que evita que alguien "arregle" el stock a mano y
+        // no entienda por qué vuelve.
+        if (g.nota) {
+          var a1 = sh.getRange(1, 1);
+          if (String(a1.getNote() || '') !== g.nota) { a1.setNote(g.nota); rep.notas++; }
+        }
+
+        if (g.proteger && protegerConAviso_(sh)) rep.protegidas++;
+
+        if (completo) {
+          if (g.grupo === 'documento') return;
+          if (!hojaVacia_(sh)) { rep.saltadas.push(nombre); return; }
+
+          // Texto en todo lo que no sea la cabecera. Ver el comentario largo de
+          // arriba: sólo sobre hojas vacías, nunca sobre datos de verdad.
+          var filas = Math.max(1, sh.getMaxRows() - 1);
+          var cols  = Math.max(1, sh.getMaxColumns());
+          sh.getRange(2, 1, filas, cols).setNumberFormat('@');
+          rep.texto.push(nombre);
+
+          if (nombre === SHEETS.ARCHIVE || nombre === SHEETS.ARCHIVE_HISTORY ||
+              nombre === SHEETS.TRASH) {
+            var anchos = anchosDelArchivo_();
+            Object.keys(anchos).forEach(function (idx) {
+              var col = Number(idx) + 1;
+              if (col > sh.getMaxColumns()) return;
+              sh.setColumnWidth(col, anchos[idx]);
+              rep.anchos++;
+            });
+            // Cantidades y dinero a la derecha. Es presentación y no toca el
+            // valor: el formato sigue siendo texto, que es lo que protege el
+            // dato. Alinear con un formato de número sí lo tocaría.
+            [AC.QTY, AC.UNIT_COST, AC.TOTAL_COST].forEach(function (c) {
+              if (c + 1 <= sh.getMaxColumns()) {
+                sh.getRange(2, c + 1, filas, 1).setHorizontalAlignment('right');
+              }
+            });
+          }
+        }
+      } catch (e) { rep.fallos.push(nombre + ': ' + e.message); }
+    });
+  });
+
+  // El orden de las pestañas, sólo en el conjunto completo: mover las pestañas
+  // de alguien que lleva meses usando la hoja es reordenarle el escritorio.
+  if (completo) {
+    try {
+      for (var i = 0; i < orden.length; i++) {
+        ss.setActiveSheet(orden[i]);
+        ss.moveActiveSheet(i + 1);
+      }
+    } catch (e) { rep.fallos.push('orden: ' + e.message); }
+  }
+  return rep;
 }
 
 /* PONE NOMBRE A LAS COLUMNAS QUE NO LO TIENEN, y sólo a ésas.
@@ -9010,6 +9224,30 @@ function menuCheckInstallation() {
     triggerNotes.push('  • The nightly backup failed to schedule during setup:\n      ' + backupErr);
   }
 
+  /* EL FORMATO DE LA HOJA, en su conjunto SEGURO.
+   *
+   * Sin `completo`, así que no toca anchos, ni el orden de las pestañas, ni el
+   * formato de las celdas — nada que un cliente de meses haya podido decidir a
+   * propósito. Sólo pone el color de pestaña, la cabecera, la nota de "esto lo
+   * reescribe la app" y la protección en modo aviso, y sólo donde falten.
+   *
+   * Aquí porque esta es la función que la gente ejecuta cuando algo va raro, y
+   * una hoja restaurada de un backup llega sin nada de esto: la copia trae los
+   * datos y pierde el formato. */
+  var fmtChk = null;
+  try {
+    fmtChk = aplicarFormatoEstandar_(SpreadsheetApp.getActiveSpreadsheet(), { completo: false });
+  } catch (e) {}
+  if (fmtChk && (fmtChk.pestanas || fmtChk.cabeceras || fmtChk.notas || fmtChk.protegidas)) {
+    var puestas = [];
+    if (fmtChk.pestanas)   puestas.push(fmtChk.pestanas + ' tab colour(s)');
+    if (fmtChk.cabeceras)  puestas.push(fmtChk.cabeceras + ' header row(s)');
+    if (fmtChk.notas)      puestas.push(fmtChk.notas + ' "rebuilt by the app" note(s)');
+    if (fmtChk.protegidas) puestas.push(fmtChk.protegidas + ' warning-only protection(s)');
+    repaired.push('Sheet formatting — ' + puestas.join(', ') +
+                  ' restored. Column widths and tab order left as you have them.');
+  }
+
   var lines = [];
   if (repaired.length) lines.push('REPAIRED AUTOMATICALLY\n  • ' + repaired.join('\n  • ') + '\n');
   if (triggerNotes.length) {
@@ -9130,13 +9368,28 @@ function menuPrepareMasterTemplate() {
   try { ss.rename(PRODUCT_NAME + ' — Warehouse Template'); } catch (e) {}
   try { createStartHereSheet_(ss); } catch (e) {}
 
+  /* EL FORMATO VA AQUÍ Y NO ANTES, y el orden importa: las hojas acaban de
+   * quedarse vacías, que es la única condición bajo la cual el conjunto
+   * completo —formato de texto y anchos— se puede aplicar sin cambiarle a
+   * nadie cómo se ven sus datos. Una plantilla es exactamente el momento. */
+  var fmt = { pestanas:0, cabeceras:0, texto:[], anchos:0, saltadas:[], fallos:[] };
+  try { fmt = aplicarFormatoEstandar_(ss, { completo: true }); } catch (e) {
+    fmt.fallos.push(e.message);
+  }
+
   ui.alert('✓ Template prepared',
     'Cleared: ' + cleared.join(', ') + '\n' +
     (missing.length ? 'Not present (fine): ' + missing.join(', ') + '\n' : '') +
     'CONFIG catalogs cleared.\n' +
     wiped + ' script propert(ies) removed.\n' +
     triggersRemoved + ' trigger(s) removed.\n\n' +
-    'Now run "Check if this copy is a clean template" to confirm, then share the\n' +
+    'FORMATTING\n' +
+    '· ' + fmt.pestanas + ' tab colour(s) set — navy reads, blue data, grey rebuilt, pale grey logs\n' +
+    '· ' + fmt.cabeceras + ' header row(s) styled\n' +
+    '· ' + fmt.texto.length + ' sheet(s) set to plain text, ' + fmt.anchos + ' column width(s)\n' +
+    (fmt.saltadas.length ? '· Left alone (still had rows): ' + fmt.saltadas.join(', ') + '\n' : '') +
+    (fmt.fallos.length ? '· NOT done: ' + fmt.fallos.join(' | ') + '\n' : '') +
+    '\nNow run "Check if this copy is a clean template" to confirm, then share the\n' +
     'file with a /copy link.',
     ui.ButtonSet.OK);
 }

@@ -97,6 +97,39 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.23</span>
+      <span class="tag new">New</span>
+      <h3>The spreadsheet behind the app looks like part of the product</h3>
+      <p>Open the file itself and three tabs were properly designed — the
+         welcome page and the two legal documents — while the other seventeen
+         were raw spreadsheet dumps with a bold header row. <b>The contrast did
+         more harm than no styling at all</b>, because it showed we knew how.</p>
+      <p><b>The tab colour now tells you whether it is safe to edit by hand</b>,
+         which is the most common support question there is and was written down
+         nowhere. Navy for the pages you read, blue for the data the system
+         lives in, grey for the sheets the app rebuilds, pale grey for the logs
+         that are only ever added to. And each rebuilt sheet carries a note on
+         its first cell: <i>"Rebuilt by Acopio from MASTER_ARCHIVE_V3. Edits here
+         are overwritten — change the movement instead."</i> That one line saves
+         somebody an afternoon of correcting a total that keeps coming back.</p>
+      <p>Headers are navy with white type and a frozen first row. The rebuilt
+         sheets and the logs are protected — <b>as a warning, not a lock</b>,
+         deliberately: the app writes to them with the same account, so a real
+         lock would be a new way for it to fail at night. The warning stops a
+         person and does not stop the code.</p>
+      <p><b>Nothing you have set is overwritten.</b> Column widths, tab order and
+         cell formats are only applied to sheets that are still empty — a
+         template, or a fresh install. On a system with months of data the app
+         sets the colours, the headers and the notes and leaves everything else
+         exactly as you arranged it, and says which sheets it left alone rather
+         than staying quiet about it.</p>
+      <p>It runs when the sheets are created, when a master template is
+         prepared, and as part of <b>Check this installation</b> — so a system
+         restored from a backup gets its look back, since a copy brings the data
+         and loses the formatting.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.22</span>
       <span class="tag fix">Fix</span>
       <h3>Renaming a material takes everything of its own with it</h3>

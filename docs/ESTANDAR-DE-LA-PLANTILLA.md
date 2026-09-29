@@ -94,11 +94,35 @@ Y hay una frase en ese archivo que decide este apartado entero:
 > UNA INSTALACIÓN NUEVA no lo lleva: ahí el archivo lo crea `insertSheet`, con
 > formato automático, y el PO se habría roto en el primer guardado."*
 
-**O sea: la plantilla de hoy sale sin la protección que la hoja de OX tiene por
-casualidad.** Poner `setNumberFormat('@')` en las columnas de datos de la
-plantilla no es ponerle formato bonito: **es cerrar un agujero que hoy está
-abierto en toda instalación nueva.** Va primero, antes que cualquier otra cosa de
-esta lista.
+> ## ⚠️ CORRECCIÓN (2026-09-29, al construirlo) — yo exageré esto
+>
+> Este apartado decía: *"la plantilla de hoy sale sin la protección que la hoja
+> de OX tiene por casualidad… es cerrar un agujero que hoy está abierto en toda
+> instalación nueva"*, y se lo dije a Jose con esas palabras. **No es verdad, y
+> la frase citada arriba es lo que me confundió: está en pasado condicional —
+> "se HABRÍA roto"— porque describe el mundo ANTES de que existiera `textCell_`.**
+>
+> Lo que de verdad protege las escrituras de la app es `textCell_`, que pone una
+> comilla delante de cada cadena en **todos** los caminos de escritura, y lo
+> guarda `test-text-stays-text.js`. Eso ya cubre una instalación nueva.
+>
+> **El formato `@` sigue valiendo la pena, pero como SEGUNDA capa**, y sirve para
+> lo que la comilla no alcanza: cuando una persona escribe **a mano** en la hoja,
+> y el día que alguien añada un camino de escritura que se olvide de `textCell_`.
+>
+> Y eso cambia dónde se puede aplicar: **sólo en hojas vacías**. Poner `@` sobre
+> una columna que ya tiene números cambia cómo se ven —un importe pasaría a
+> enseñarse como texto y cualquier fórmula del cliente sobre esa columna dejaría
+> de sumar—. Sobre una plantilla vacía no cuesta nada; sobre datos de verdad
+> sería la clase de sorpresa que este proyecto evita.
+>
+> Implementado así en la v12.23: `aplicarFormatoEstandar_` mira hoja por hoja si
+> tiene datos y se salta el formato de celdas en las que los tengan, **diciendo
+> cuáles se saltó** en vez de callarlo.
+
+Así que poner `setNumberFormat('@')` en las columnas de datos de una plantilla
+vacía es gratis y protege desde el primer día. No va primero por urgencia —
+`textCell_` ya cubre lo urgente— sino porque es el sitio donde no cuesta nada.
 
 Consecuencia de estilo: el texto se alinea a la izquierda, así que las columnas
 de cantidad y de dinero se alinean a la derecha **con

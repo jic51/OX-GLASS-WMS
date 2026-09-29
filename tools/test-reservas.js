@@ -308,10 +308,22 @@ check('el navegador ya no recibe la lista muerta',
 check('pero la hoja RESERVATIONS se sigue creando, no se destruye nada',
       gsLimpio.indexOf('RESERVATIONS') !== -1);
 
-// Nadie vuelve a leer esa hoja para calcular nada. Es lo que impide que dentro
-// de un año haya otra vez dos fuentes para el mismo número.
-const lectores = (gsLimpio.match(/SHEETS\.RESERVATIONS/g) || []).length;
-check('y ya sólo se la nombra UNA vez — la creación', lectores === 1, lectores);
+/* Nadie vuelve a LEER esa hoja para calcular nada. Es lo que impide que dentro
+ * de un año haya otra vez dos fuentes para el mismo número.
+ *
+ * SE DESCUENTA `gruposDeFormato_`, y merece explicación porque es justo la clase
+ * de excepción que vacía una prueba si se mete a la ligera. Esa función sólo
+ * dice de qué COLOR va cada pestaña y qué nota lleva en A1: no abre la hoja, no
+ * lee una fila, no calcula nada con ella. Nombrarla ahí no crea una segunda
+ * fuente del número, que es lo único que esta comprobación protege.
+ *
+ * Se descuenta por su CUERPO y no subiendo el número a 2: un `=== 2` se
+ * rompería otra vez a la próxima mención —o peor, pasaría en verde sobre un
+ * lector de verdad que ocupara el hueco del que se fue—. */
+const sinFormato = gsLimpio.replace(A.sinComentarios(A.fnSrc(GS, 'gruposDeFormato_') || ''), '');
+const lectores = (sinFormato.match(/SHEETS\.RESERVATIONS/g) || []).length;
+check('y ya sólo se la nombra UNA vez fuera del formato — la creación',
+      lectores === 1, lectores);
 
 // ═══════════════════════════════════════════════════════════════════════════
 console.log('\n── 5. El usuario no lee "lock" en ninguna pantalla ──');

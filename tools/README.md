@@ -103,6 +103,7 @@ node tools/test-movement-id.js
 node tools/test-archivo-nocturno.js
 node tools/test-papelera-ciclo.js
 node tools/test-dependencias-material.js
+node tools/test-formato-plantilla.js
 node tools/test-demo-nombres.js
 node tools/test-trash.js
 node tools/test-role-permissions.js
