@@ -98,6 +98,35 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.25</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Una lista de movimientos vacía ya dice de qué vacío se trata</h3>
+      <p><b>El aviso que se añadió en la v12.14 no podía saltar nunca.</b> Estaba
+         escrito para detectar lo único que no puede pasar solo —un almacén con
+         existencias y un archivo sin un movimiento— y recorría la lista de stock
+         como si fuera un array. No lo es: es un mapa por material. El bucle daba
+         cero vueltas y la respuesta era siempre <i>no</i>. Diez días con la red
+         puesta y rota.</p>
+      <p>Es la misma forma que la copia de configuración que nunca funcionó: una
+         protección escrita, dada por buena y jamás ejecutada ni una vez. Lo que
+         las dos tienen en común no es el descuido — <b>ninguna tenía prueba</b>.
+         Una protección sin prueba no es una protección: es una intención. Ésta
+         ya tiene una que la ejecuta, y la versión vieja no la pasa.</p>
+      <p><b>Y hay tres vacíos, no dos.</b> El tercero es el que provocó el susto:
+         la lista reciente vacía porque el trabajo nocturno se llevó
+         <i>todo</i> lo que pasó el corte al histórico. No se pierde nada — pero
+         la pantalla se veía igual que el desastre. Decirle a alguien que su
+         almacén se rompió cuando sólo tiene que pulsar un botón es casi tan malo
+         como no decirle nada cuando sí se rompió.</p>
+      <p>Así que la lista dice ahora cuál es: <b>un filtro no encontró nada</b>,
+         <b>está todo en el histórico</b> (con cuántos son y el botón que los
+         trae), o <b>el imposible</b>, que sigue diciendo que pares y no toques
+         nada. Y el propio trabajo nocturno escribe una línea y manda un correo
+         cuando deja la lista reciente vacía — aunque las cuentas cuadren, porque
+         en ese caso cuadran y por eso nadie se enteraba.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.24</span>
       <span class="tag fix">Arreglo</span>
       <h3>El número cambia cuando la app dice que cambió</h3>

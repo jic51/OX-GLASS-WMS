@@ -97,6 +97,36 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.25</span>
+      <span class="tag fix">Fix</span>
+      <h3>An empty movement list now tells you which kind of empty it is</h3>
+      <p><b>The alarm added in v12.14 could never have gone off.</b> It was
+         written to notice the one thing that cannot happen on its own — a
+         warehouse with stock and an archive with no movements — and it looped
+         over the stock list as if it were an array. It is not; it is a map
+         keyed by material. The loop ran zero times and the answer was always
+         <i>no</i>. Ten days with the net up and a hole in it.</p>
+      <p>That is the same shape as the backup snapshot that never worked: a
+         protection written, assumed good, and never once executed. What the two
+         have in common is not carelessness — <b>neither had a test</b>. A
+         protection without a test is not a protection, it is an intention. This
+         one now has a test that runs it, and the old version fails it.</p>
+      <p><b>And there are three kinds of empty, not two.</b> The third is the
+         one that caused the scare: the recent list is empty because the nightly
+         job moved <i>everything</i> past your cutoff into the archived history.
+         Nothing is lost — but the screen looked exactly like the disaster.
+         Telling somebody their warehouse broke when they only need to press a
+         button is nearly as bad as saying nothing when it really did break.</p>
+      <p>So the list now says which one it is: <b>a filter found nothing</b>,
+         <b>everything is in the archived history</b> (with how many, and the
+         button that brings them back), or <b>the impossible one</b>, which still
+         says to stop and touch nothing. And the nightly job itself now writes a
+         line and emails when it leaves the recent list empty — even though the
+         counts add up, because they do add up in that case and that is exactly
+         why nobody was told.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.24</span>
       <span class="tag fix">Fix</span>
       <h3>The number changes when the app says it changed</h3>

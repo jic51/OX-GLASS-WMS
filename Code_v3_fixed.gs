@@ -46,7 +46,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.24';
+var APP_VERSION = '12.25';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -58,7 +58,7 @@ var APP_VERSION = '12.24';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'f07d3bcd';
+var APP_BUILD = 'd65e83ee';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -2166,13 +2166,59 @@ function getInitialData(sessionToken) {
        *
        * Se manda como dato, no como texto: la frase vive en el navegador con
        * las demás, en inglés y en un solo sitio. */
+      /* ═══ ESTE CANARIO NUNCA PUDO CANTAR, Y LO DESCUBRIÓ JOSE ═══════════════
+       *
+       * Escrito así en la v12.14, para exactamente el desastre del 26/09:
+       *
+       *     for (var av = 0; av < stock.length; av++) { var s = stock[av]; ... }
+       *
+       * `stock` NO ES UN ARRAY. Es un mapa `{ matId: {...} }` — lo devuelven así
+       * tanto calculateStock como buildStockFromDerivedSheets_, y así lo consume
+       * el navegador con Object.values. `stock.length` es `undefined`,
+       * `0 < undefined` es `false`, el bucle no da ni una vuelta y la expresión
+       * devuelve `false` SIEMPRE.
+       *
+       * O sea: la red de seguridad que puse para que esto no volviera a pasar
+       * desapercibido llevaba diez días sin poder dispararse nunca. El 29/09
+       * Jose abrió Movements, vio la tabla vacía, y la app le enseñó el educado
+       * "No movements match your filters" — la misma frase del 26/09, por el
+       * mismo motivo, con el aviso puesto y roto.
+       *
+       * ES EL MISMO FALLO QUE writeConfigSnapshot_: una protección que se
+       * escribió, se dio por buena y nunca se ejecutó ni una vez. Lo que las dos
+       * tienen en común no es el descuido — es que NINGUNA TENÍA PRUEBA. Ahora
+       * la tiene, y ejecuta (tools/test-canario-archivo.js).
+       *
+       * Y SE DISTINGUEN LOS DOS VACÍOS, que no son el mismo susto:
+       *   · el archivo vacío y el HISTÓRICO con filas → no se perdió nada, el
+       *     trabajo nocturno se lo llevó todo al histórico. Un botón lo trae.
+       *   · los dos vacíos y el almacén con existencias → eso sí es imposible. */
       archiveVacioConStock: (movements.length === 0 && (function(){
-        for (var av = 0; av < stock.length; av++) {
+        for (var av in stock) {
+          if (!stock.hasOwnProperty(av)) continue;
           var s = stock[av];
           if ((s.warehouseQty || 0) > 0 || (s.siteQty || 0) > 0) return true;
         }
         return false;
       })()),
+      /* Cuántas filas tiene el histórico. Un `getLastRow()` y nada más — no se
+       * lee la hoja— y es lo que separa "se lo llevó todo el archivado" de "no
+       * está en ninguna parte". Cero si la hoja no existe todavía. */
+      historicoFilas: (function(){
+        try {
+          var h = ss.getSheetByName(SHEETS.ARCHIVE_HISTORY);
+          return h ? Math.max(0, h.getLastRow() - 1) : 0;
+        } catch (e) {
+          /* Se registra, no se traga. test-use-before-var exige que cada catch
+           * de esta carga esté argumentado, y aquí el argumento es el CONTRARIO
+           * al de los otros dos: si esto falla, la pantalla de "no hay
+           * movimientos" elige el mensaje EQUIVOCADO — le dice a alguien que
+           * perdió su almacén cuando sólo estaba todo en el histórico. Un cero
+           * en silencio es justo el fallo que este campo viene a evitar. */
+          Logger.log('historicoFilas: ' + e.message);
+          return 0;
+        }
+      })(),
       stock:              stock,
       config:             config,
       userRole:           auth.role,
@@ -4477,6 +4523,30 @@ function archiveOldMovements(ss) {
         '). The backup made at 2am has all of them.';
       logError_(ss, 'ERROR', 'backend', 'archiveOldMovements', 'system', perdidaMsg, null, newRequestId_());
       avisarFalloDeArchivo_(ss, perdidaMsg);
+    }
+
+    /* ── GUARDA 3: DEJAR EL ARCHIVO VACÍO NO ES UN ERROR, PERO HAY QUE DECIRLO ─
+     *
+     * Jose, 2026-09-29: abrió Movements, lo vio vacío, y dio por hecho que era
+     * el desastre del 26 otra vez.
+     *
+     * Y puede no serlo en absoluto: si TODO cruza el corte, todas las filas se
+     * van legítimamente al histórico y el archivo activo queda vacío. Las
+     * cuentas cuadran —la Guarda 1 pasa, y con razón: no falta ni una fila— y la
+     * pantalla queda idéntica a la de haberlo perdido todo.
+     *
+     * Dos pantallas iguales para un susto y una nada es peor que cualquiera de
+     * las dos por separado. Así que se avisa, y el aviso dice cuál de las dos es
+     * y qué hacer. No se aborta: mover filas viejas al histórico es el trabajo
+     * de esta función, y negarse a hacerlo bien sería inventarse un fallo. */
+    if (quedanA === 0 && antes > 0) {
+      var vacioMsg = 'The recent movement list is now EMPTY — all ' + antes +
+        ' movement(s) crossed the ' + cutoffMonths + '-month cutoff and moved to ' +
+        'ARCHIVE_HISTORY. Nothing was lost: press "Load Older History" in the app ' +
+        'to see them. If that is not what you expected, your archive cutoff in ' +
+        'Settings is shorter than you think.';
+      logError_(ss, 'WARN', 'backend', 'archiveOldMovements', 'system', vacioMsg, null, newRequestId_());
+      avisarFalloDeArchivo_(ss, vacioMsg);
     }
 
     auditLog_(ss, 'ARCHIVE_RECONCILE', 'system', 'cutoff=' + cutoffMonths + 'mo',

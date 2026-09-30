@@ -4404,6 +4404,10 @@ var movements   = [];
 /* Lo pone el servidor en cada carga: existencias en los estantes y CERO
  * movimientos en el archivo, que es una mezcla imposible. Ver getInitialData. */
 var _archivoVacioConStock = false;
+/* Cuántas filas tiene ARCHIVE_HISTORY. Lo manda el servidor con un getLastRow,
+ * y es lo único que separa "se lo llevó todo el archivado" de "no está en
+ * ninguna parte" — dos pantallas idénticas y dos sustos muy distintos. */
+var _historicoFilas = 0;
 var stockData   = {};  // pre-calculated by backend: { matId: {warehouseQty, siteQty, ...} }
 var config      = { projects:[], categories:[], suppliers:[], locations:[], trucks:[], minStock:{} };
 var currentMoveType = 'ENTRY';
@@ -4416,7 +4420,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.24';
+var APP_VERSION = '12.25';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -4428,7 +4432,7 @@ var APP_VERSION = '12.24';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'f07d3bcd';
+var APP_BUILD = 'd65e83ee';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -8029,18 +8033,34 @@ function renderMovements(){
      * Existencias sin un solo movimiento es imposible —cada unidad de un estante
      * llegó por una entrada, y esa entrada es una fila del archivo—, así que
      * cuando el servidor dice que se da esa mezcla, esta tabla deja de disimular. */
-    rows = _archivoVacioConStock
-      ? '<tr><td colspan="'+span+'"><div class="empty-state"><div class="empty-icon">🚨</div>' +
-        '<p><b>The movement history is empty, but the warehouse is not.</b></p>' +
-        '<p>That cannot happen on its own — every unit on a shelf got there ' +
-        'through an entry, and every entry is a row in the archive. Your ' +
-        'movements are almost certainly still in the backup made at 2am.</p>' +
-        '<p>Do not add movements and do not rebuild anything yet. Open your ' +
-        'spreadsheet and check the <b>MASTER_ARCHIVE_V3</b> tab, then the ' +
-        '<b>ERROR_LOG</b> tab for what the nightly job reported.</p>' +
-        '</div></td></tr>'
-      : '<tr><td colspan="'+span+'"><div class="empty-state"><div class="empty-icon">📋</div>'+
-        '<p>No movements match your filters.</p></div></td></tr>';
+    /* TRES VACÍOS, NO DOS. El tercero lo destapó Jose el 29/09 y es el que más
+     * asusta sin motivo: el archivo vacío porque el trabajo nocturno se llevó
+     * TODO al histórico. No se perdió nada, y sin embargo la pantalla se ve
+     * exactamente igual que el desastre del 26/09. Decirle a alguien que su
+     * almacén se rompió cuando sólo hay que pulsar un botón es casi tan malo
+     * como no decirle nada cuando sí se rompió. */
+    rows = !_archivoVacioConStock
+      ? '<tr><td colspan="'+span+'"><div class="empty-state"><div class="empty-icon">📋</div>'+
+        '<p>No movements match your filters.</p></div></td></tr>'
+      : _historicoFilas > 0
+        ? '<tr><td colspan="'+span+'"><div class="empty-state"><div class="empty-icon">📦</div>' +
+          '<p><b>Nothing recent — all ' + _he(String(_historicoFilas)) +
+          ' of your movements are in the archived history.</b></p>' +
+          '<p>Nothing is lost. The nightly job moves anything older than your ' +
+          'cutoff out of the recent list, and this time that was everything. ' +
+          'Press <b>Load Older History</b> to see them.</p>' +
+          '<p>If you expected recent movements here, your archive cutoff in ' +
+          'Settings is probably shorter than you think.</p>' +
+          '</div></td></tr>'
+        : '<tr><td colspan="'+span+'"><div class="empty-state"><div class="empty-icon">🚨</div>' +
+          '<p><b>The movement history is empty, but the warehouse is not.</b></p>' +
+          '<p>That cannot happen on its own — every unit on a shelf got there ' +
+          'through an entry, and every entry is a row in the archive. Your ' +
+          'movements are almost certainly still in the backup made at 2am.</p>' +
+          '<p>Do not add movements and do not rebuild anything yet. Open your ' +
+          'spreadsheet and check the <b>MASTER_ARCHIVE_V3</b> tab, then the ' +
+          '<b>ERROR_LOG</b> tab for what the nightly job reported.</p>' +
+          '</div></td></tr>';
   }
 
   var foot = total
@@ -21981,6 +22001,7 @@ function _applyData(data) {
    * `stockData`: la caché de este navegador puede traer movimientos de antes y
    * taparía justo el caso que hay que ver. Lo decide quien lee la hoja. */
   _archivoVacioConStock = !!data.archiveVacioConStock;
+  _historicoFilas       = Number(data.historicoFilas) || 0;
   stockData          = data.stock              || {};
   config             = data.config             || config;
   _ordenarCatalogos(config);
