@@ -337,8 +337,13 @@ console.log('\nScenario: what a refused execution should look like to the person
   check('a save that cannot get the lock fails LOUDLY and tells the user to retry, rather than saving something wrong',
     /System busy/.test(b) && /throw new Error/.test(b));
   const arch = bodyOf('archiveOldMovements') || '';
+  /* Matched on the status, not on the exact braces. It used to require the
+   * literal `return { status: 'busy' }` and broke in v12.26 when the return
+   * grew a second field — the behaviour was unchanged and the test still said
+   * FAIL. What this guards is that the archive pass RETURNS rather than throws;
+   * how many fields ride along is not this test's business. */
   check('the archiving pass instead gives up quietly and runs later, which is right for a background job',
-    /return \{ status: 'busy' \}/.test(arch));
+    /return \{\s*status:\s*'busy'/.test(arch) && !/throw[\s\S]{0,80}busy/i.test(arch));
 }
 
 console.log('\n' + '─'.repeat(72));

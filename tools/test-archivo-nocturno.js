@@ -73,6 +73,14 @@ function hojaFalsa(nombre, filas, maxCols) {
     _maxCols: maxCols,
     getName: () => nombre,
     getMaxColumns: () => h._maxCols,
+    // La ÚLTIMA columna con algo dentro, que no es lo mismo que el ancho de la
+    // hoja. El informe del ensayo (v12.26) enseña las dos porque el error
+    // "23 vs 20" no se puede diagnosticar sin saber cuál de las dos iba corta.
+    getLastColumn() {
+      let max = 0;
+      h._filas.forEach(r => { for (let i = 0; i < (r||[]).length; i++) if (r[i] !== '' && r[i] !== undefined) max = Math.max(max, i + 1); });
+      return max;
+    },
     getMaxRows: () => Math.max(h._filas.length, 2),
     insertColumnsAfter(despues, cuantas) {
       h._maxCols = despues + cuantas;
@@ -141,7 +149,9 @@ function montarTrabajo(archivo, historico, mesesCorte, correos) {
     SHEETS: { ARCHIVE: 'MASTER_ARCHIVE_V3' },
     PRODUCT_NAME: 'Acopio',
     LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock(){} }) },
-    Session: { getEffectiveUser: () => ({ getEmail: () => 'jose@ox-glass.com' }) },
+    Session: { getEffectiveUser: () => ({ getEmail: () => 'jose@ox-glass.com' }),
+               getScriptTimeZone: () => 'America/Denver' },
+    Utilities: { formatDate: (d) => d.toISOString().slice(0, 10) },
     MailApp: { sendEmail(a, b, c){ correos.push({ para:a, asunto:b, cuerpo:c }); } },
     Logger: { log(){} },
     // Dobles: lo que esta prueba no mide.
@@ -322,6 +332,91 @@ console.log('\n═══ 5. Lo que el código NO puede volver a decir ═══\
   check('las dos cuentas usan la MISMA definición de fila',
         (trabajo.match(/contarConDatos_/g) || []).length >= 4,
         (trabajo.match(/contarConDatos_/g) || []).length);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   EL ENSAYO EN SECO — idea de Jose, 2026-09-30
+   ═══════════════════════════════════════════════════════════════════════════
+
+   *"¿podemos crear un botón y una prueba que nos diga qué falla al momento de
+   probarlo? ¿cómo podemos hacer la prueba y saber qué falla?"*
+
+   Este trabajo corre a las 3 de la mañana sin nadie delante y escribe en
+   ERROR_LOG, una pestaña que nadie mira. Vació el archivo el 26/09 y otra vez
+   el 29/09, y las dos veces se supo horas después y por casualidad. Un fallo
+   que sólo se puede observar a las 3 AM no se puede investigar.
+
+   EL ENSAYO VA DENTRO DE LA FUNCIÓN DE VERDAD, no en una copia. Una copia sería
+   una segunda versión que se da la razón a sí misma — el mismo error que dejó
+   el canario roto diez días. Por eso lo único que estas comprobaciones tienen
+   que demostrar es: que recorre el MISMO camino, y que NO ESCRIBE. */
+console.log('\n═══ 5. El ensayo en seco: lo dice todo y no toca nada ═══\n');
+{
+  const { archivo, historico, total } = laNocheDeJose(20);
+  const antesA = JSON.stringify(archivo._filas);
+  const antesH = JSON.stringify(historico._filas);
+
+  const correos = [];
+  const ctx = montarTrabajo(archivo, historico, 12, correos);
+  const r = ctx.archiveOldMovements(ctx.ss, { ensayo: true });
+
+  check('el ensayo termina y dice que es un ensayo', r.status === 'dry-run', r.status);
+
+  // LA COMPROBACIÓN QUE HACE QUE SE PUEDA PULSAR SIN MIEDO.
+  check('NO TOCÓ EL ARCHIVO — ni una celda',
+        JSON.stringify(archivo._filas) === antesA);
+  check('NI EL HISTÓRICO', JSON.stringify(historico._filas) === antesH);
+  check('y no mandó ningún correo: es una prueba que alguien hizo a propósito',
+        correos.length === 0, correos.length);
+  check('ni escribió en el registro de errores',
+        ctx.registros.length === 0, ctx.registros);
+
+  // Y LO QUE TIENE QUE CONTAR, que es para lo que existe.
+  const inf = r.informe;
+  check('cuenta el ancho que necesita el modelo', inf.modeloAncho === AC_WIDTH, inf.modeloAncho);
+  check('cuenta el ancho REAL de la hoja antes de tocarla — el dato que ' +
+        'faltaba para diagnosticar el "23 vs 20"', inf.archivoAncho === 20, inf.archivoAncho);
+  check('...y que la ensanchó a 23', inf.archivoAnchoTras === AC_WIDTH, inf.archivoAnchoTras);
+  check('cuenta cuántos movimientos hay', inf.archivoFilas === total, inf.archivoFilas);
+  check('cuenta el corte que se está aplicando', inf.corteMeses === 12, inf.corteMeses);
+  check('cuenta cuántos se moverían', inf.seArchivan === 4, inf.seArchivan);
+  check('y con qué se quedaría cada hoja',
+        inf.quedariaEnArchivo === 12 && inf.quedariaEnHistoria === 4,
+        [inf.quedariaEnArchivo, inf.quedariaEnHistoria]);
+  check('y deja el paso a paso, que es lo que se lee cuando algo no cuadra',
+        inf.pasos.length >= 3, inf.pasos);
+}
+
+console.log('\n═══ 6. Si el ensayo encuentra un fallo, lo DEVUELVE en vez de gritarlo ═══\n');
+{
+  /* Un reparto que no cuadra. En el trabajo de verdad esto aborta, registra y
+   * manda correo; en un ensayo tiene que CONTARLO y callarse, porque quien lo
+   * pulsó está mirando la pantalla y no quiere un correo por una prueba suya. */
+  const { archivo, historico } = laNocheDeJose(AC_WIDTH);
+  const correos = [];
+  const ctx = montarTrabajo(archivo, historico, 12, correos);
+  /* SE ROMPE EL RECUENTO A PROPÓSITO, y costó dos intentos acertar — lo cual
+   * dice algo bueno de la prueba y malo de mis primeras dos versiones:
+   *
+   *   1ª: devolvía SIEMPRE 0. La guarda pasaba tan contenta, porque 0 antes y 0
+   *       después es un cuadre perfecto. Medía un fallo que no había provocado.
+   *   2ª: un contador de llamadas, 10 las dos primeras y 1 el resto. Pero el
+   *       informe del ensayo llama DOS VECES antes que la guarda, así que se
+   *       comía los dos dieces y volvía a cuadrar.
+   *
+   * Ahora se envuelve la de verdad y sólo se falsean las llamadas del "después".
+   * Las del informe y las del "antes" siguen contando bien. */
+  const contarDeVerdad = ctx.contarConDatos_;
+  let llamada = 0;
+  ctx.contarConDatos_ = (filas) => (++llamada <= 4 ? contarDeVerdad(filas) : 0);
+  const r = ctx.archiveOldMovements(ctx.ss, { ensayo: true });
+
+  check('el ensayo aborta igual que el trabajo de verdad',
+        r.status === 'aborted', r.status);
+  check('...y dice POR QUÉ, con el mensaje completo',
+        !!(r.informe && r.informe.error), r.informe && r.informe.error);
+  check('...sin mandar correo por una prueba', correos.length === 0, correos.length);
+  check('...ni ensuciar el registro de errores', ctx.registros.length === 0, ctx.registros);
 }
 
 console.log('\n' + (fail ? '✗ ' + fail + ' fallo(s), ' : '✓ ') + ok + ' comprobaciones');

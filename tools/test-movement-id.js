@@ -411,7 +411,11 @@ console.log('\n═══ el trabajo de las 3 de la mañana ═══\n');
   check('y escribe la corrección ANTES del "no hay nada que archivar" — si ' +
         'esperara al reescribido de abajo, la reparación no correría ninguna de ' +
         'las noches en que nada cruza la fecha de corte, que son casi todas',
-    cuerpo.indexOf('writeMovIdColumn_') < cuerpo.indexOf("return { status: 'noop' }"));
+    /* Por la posición del status, no por las llaves exactas. Pedía el literal
+     * `return { status: 'noop' }` y se rompió en la v12.26 cuando ese return
+     * pasó a llevar el informe del ensayo: la conducta era la misma y la prueba
+     * decía FAIL igual. Lo que importa aquí es el ORDEN, no la puntuación. */
+    cuerpo.indexOf('writeMovIdColumn_') < cuerpo.indexOf("status: 'noop'"));
 }
 
 console.log('\n═══ y en cada guardado, sin costar una lectura ═══\n');

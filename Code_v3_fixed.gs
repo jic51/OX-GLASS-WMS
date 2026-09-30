@@ -46,7 +46,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.25';
+var APP_VERSION = '12.26';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -58,7 +58,7 @@ var APP_VERSION = '12.25';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'd65e83ee';
+var APP_BUILD = '8093f39d';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -4347,9 +4347,34 @@ function ensureArchiveHistorySheet_(ss) {
 // Rewrites MASTER_ARCHIVE_V3 and ARCHIVE_HISTORY so every row lands in the
 // sheet matching the CURRENT cutoff. Locked against concurrent movement saves
 // (same script lock addMovementsBatch_ uses) since row positions shift.
-function archiveOldMovements(ss) {
+/* `opciones.ensayo` — HACERLO TODO MENOS ESCRIBIR.
+ *
+ * Jose, 2026-09-30, después de que el archivo se vaciara por segunda vez:
+ * *"¿podemos crear un botón y una prueba que nos diga qué falla al momento de
+ * probarlo? ¿cómo podemos hacer la prueba y saber qué falla?"*
+ *
+ * Es la pregunta correcta y no se me había ocurrido. Este trabajo corre a las
+ * 3 de la mañana sin nadie delante, escribe en ERROR_LOG —una pestaña que nadie
+ * mira— y para cuando alguien se entera ya pasó. Lo único que puede convertir
+ * eso en algo investigable es poder EJECUTARLO A VOLUNTAD y ver qué dice.
+ *
+ * EL ENSAYO VA DENTRO DE LA FUNCIÓN DE VERDAD, no en una copia. Una copia sería
+ * una segunda versión que se da la razón a sí misma — el mismo error que dejó
+ * pasar el canario roto diez días. Aquí se recorre EXACTAMENTE el mismo camino,
+ * con las mismas guardas y las mismas cuentas, y lo único que cambia es que las
+ * dos escrituras no se hacen.
+ *
+ * Devuelve `informe`: qué ancho tiene cada hoja, cuántas filas hay, qué corte
+ * se está aplicando, cuántas filas se moverían en cada sentido, y qué diría
+ * cada guarda. Si algo revienta, devuelve el error en vez de tragárselo.
+ */
+function archiveOldMovements(ss, opciones) {
+  var ensayo = !!(opciones && opciones.ensayo);
+  var informe = { ensayo: ensayo, pasos: [] };
+  function anotar(t) { informe.pasos.push(t); }
+
   var lock = LockService.getScriptLock();
-  if (!lock.tryLock(10000)) return { status: 'busy' };
+  if (!lock.tryLock(10000)) return { status: 'busy', informe: informe };
   try {
     var archive = ss.getSheetByName(SHEETS.ARCHIVE);
     if (!archive) return { status: 'no-archive' };
@@ -4372,6 +4397,23 @@ function archiveOldMovements(ss) {
     var aData    = archive.getDataRange().getValues();
     var hData    = history.getDataRange().getValues();
 
+    /* LO PRIMERO QUE HAY QUE SABER CUANDO ESTO FALLA, y hasta ahora no se
+     * apuntaba en ninguna parte: cómo de anchas son las hojas DE VERDAD. El
+     * error del 26/09 y el del 29/09 dicen los dos "los datos tienen 23 y el
+     * rango 20", y sin estos cuatro números no hay forma de saber cuál de las
+     * dos hojas iba estrecha ni si la ensanchamos bien. */
+    informe.modeloAncho   = colCount;
+    informe.archivoAncho  = archive.getMaxColumns();
+    informe.archivoUltima = archive.getLastColumn();
+    informe.histAncho     = history.getMaxColumns();
+    informe.histUltima    = history.getLastColumn();
+    informe.archivoFilas  = contarConDatos_(aData.slice(1));
+    informe.histFilas     = contarConDatos_(hData.slice(1));
+    anotar('Model needs ' + colCount + ' columns. Archive is ' + informe.archivoAncho +
+           ' wide (last used ' + informe.archivoUltima + ') with ' + informe.archivoFilas +
+           ' movement(s). History is ' + informe.histAncho + ' wide (last used ' +
+           informe.histUltima + ') with ' + informe.histFilas + '.');
+
     // ── The one place both sheets are in memory together ─────────────────────
     // Which makes it the only place a name duplicated ACROSS them can be seen
     // at all. A save only ever holds the active archive, so it cannot catch
@@ -4382,7 +4424,13 @@ function archiveOldMovements(ss) {
     var aIdFix   = dedupeMovementIds_(aData, takenIds);
     var hIdFix   = dedupeMovementIds_(hData, takenIds);
     if (aIdFix.length || hIdFix.length) {
+      informe.idsDuplicados = aIdFix.length + hIdFix.length;
+      // UN ENSAYO NO ESCRIBE. Ésta es una de las dos escrituras que se colaban
+      // en el ensayo de la primera versión — la prueba las cazó, que es
+      // exactamente para lo que está.
+      if (ensayo) anotar(informe.idsDuplicados + ' duplicated movement ID(s) would be renamed.');
       try {
+        if (ensayo) throw { _saltar: true };
         // Written now rather than left to the rewrite below, because the rewrite
         // does not happen on a night when nothing crosses the cutoff — which is
         // most nights, and would be exactly when the repair quietly never ran.
@@ -4392,7 +4440,7 @@ function archiveOldMovements(ss) {
           (aIdFix.length + hIdFix.length) + ' duplicated movement ID(s) renamed',
           'archive rows ' + (aIdFix.join(',') || '—'),
           'history rows ' + (hIdFix.join(',') || '—'));
-      } catch (de) { Logger.log('nightly dedupe movement ids: ' + de.message); }
+      } catch (de) { if (!de || !de._saltar) Logger.log('nightly dedupe movement ids: ' + de.message); }
     }
 
     var keep = [], toArchive = [];
@@ -4414,7 +4462,19 @@ function archiveOldMovements(ss) {
       (hts && hts >= cutoffDate ? toRestore : stillOld).push(padRow_(hrow, colCount));
     }
 
-    if (!toArchive.length && !toRestore.length) return { status: 'noop' };
+    informe.corteMeses = cutoffMonths;
+    informe.corteFecha = Utilities.formatDate(cutoffDate, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+    informe.seArchivan = toArchive.length;
+    informe.seDevuelven = toRestore.length;
+    informe.seQuedan   = keep.length;
+    anotar('Cutoff is ' + cutoffMonths + ' month(s) — anything before ' + informe.corteFecha +
+           ' is old. ' + toArchive.length + ' would move OUT of the recent list, ' +
+           toRestore.length + ' would come back IN, ' + keep.length + ' would stay.');
+
+    if (!toArchive.length && !toRestore.length) {
+      anotar('Nothing crosses the cutoff tonight — the job would do nothing at all.');
+      return { status: 'noop', informe: informe };
+    }
 
     var byTs = function(a, b) {
       var ta = a[AC.TIMESTAMP] instanceof Date ? a[AC.TIMESTAMP].getTime() : 0;
@@ -4472,15 +4532,32 @@ function archiveOldMovements(ss) {
      * ═══════════════════════════════════════════════════════════════════════ */
 
     // ── GUARDA 0: que las dos hojas quepan, ANTES de tocar ninguna ───────────
-    ensureArchiveWidth_(archive);
-    ensureArchiveWidth_(history);
-    if (archive.getMaxColumns() < colCount || history.getMaxColumns() < colCount) {
+    /* ENSANCHAR ES ESCRIBIR, y un ensayo no escribe. La primera versión de esto
+     * llamaba a ensureArchiveWidth_ también en el ensayo y por tanto INSERTABA
+     * COLUMNAS en la hoja de alguien que sólo quería mirar. Lo cazó la prueba
+     * —"NO TOCÓ EL ARCHIVO"— y es justo el tipo de fallo por el que un ensayo
+     * tiene que probarse igual que lo que ensaya. */
+    if (!ensayo) {
+      ensureArchiveWidth_(archive);
+      ensureArchiveWidth_(history);
+    }
+    informe.archivoAnchoTras = ensayo ? Math.max(informe.archivoAncho, colCount) : archive.getMaxColumns();
+    informe.histAnchoTras    = ensayo ? Math.max(informe.histAncho,    colCount) : history.getMaxColumns();
+    if (informe.archivoAnchoTras !== informe.archivoAncho || informe.histAnchoTras !== informe.histAncho) {
+      anotar((ensayo ? 'Would widen' : 'Widened') + ' the sheets to fit: archive ' +
+             informe.archivoAncho + ' → ' + informe.archivoAnchoTras + ', history ' +
+             informe.histAncho + ' → ' + informe.histAnchoTras + '.');
+    }
+    if (informe.archivoAnchoTras < colCount || informe.histAnchoTras < colCount) {
       var anchoMsg = 'ABORTED WITHOUT TOUCHING ANYTHING: the sheets cannot hold ' +
-        colCount + ' columns (archive ' + archive.getMaxColumns() +
-        ', history ' + history.getMaxColumns() + ').';
+        colCount + ' columns (archive ' + informe.archivoAnchoTras +
+        ', history ' + informe.histAnchoTras + ').';
+      anotar('GUARD 1 (width) FAILS: ' + anchoMsg);
+      informe.error = anchoMsg;
+      if (ensayo) return { status: 'aborted', reason: 'width', informe: informe };
       logError_(ss, 'ERROR', 'backend', 'archiveOldMovements', 'system', anchoMsg, null, newRequestId_());
       avisarFalloDeArchivo_(ss, anchoMsg);
-      return { status: 'aborted', reason: 'width' };
+      return { status: 'aborted', reason: 'width', informe: informe };
     }
 
     /* ── GUARDA 1: NINGUNA FILA PUEDE DESAPARECER ────────────────────────────
@@ -4501,12 +4578,26 @@ function archiveOldMovements(ss) {
     if (antes !== despues) {
       var cuadreMsg = 'ABORTED WITHOUT TOUCHING ANYTHING: the split does not add up. ' +
         antes + ' movements before, ' + despues + ' would come out.';
+      anotar('GUARD 2 (count) FAILS: ' + cuadreMsg);
+      informe.error = cuadreMsg;
+      if (ensayo) return { status: 'aborted', reason: 'count', informe: informe };
       logError_(ss, 'ERROR', 'backend', 'archiveOldMovements', 'system', cuadreMsg, null, newRequestId_());
       avisarFalloDeArchivo_(ss, cuadreMsg);
-      return { status: 'aborted', reason: 'count' };
+      return { status: 'aborted', reason: 'count', informe: informe };
     }
 
+    anotar('GUARD 1 (width) passes. GUARD 2 (count) passes: ' + antes +
+           ' movement(s) in, ' + despues + ' out.');
+
     // ── ESCRIBIR, la que GANA filas primero ─────────────────────────────────
+    if (ensayo) {
+      anotar('DRY RUN — stopping here. Nothing was written. The real job would ' +
+             'now leave ' + contarConDatos_(newActive) + ' movement(s) in the recent ' +
+             'list and ' + contarConDatos_(newHistory) + ' in the archived history.');
+      informe.quedariaEnArchivo  = contarConDatos_(newActive);
+      informe.quedariaEnHistoria = contarConDatos_(newHistory);
+      return { status: 'dry-run', informe: informe };
+    }
     escribirHojaCompleta_(history, newHistory, colCount);
     escribirHojaCompleta_(archive, newActive,  colCount);
 
@@ -4552,8 +4643,15 @@ function archiveOldMovements(ss) {
     auditLog_(ss, 'ARCHIVE_RECONCILE', 'system', 'cutoff=' + cutoffMonths + 'mo',
       toArchive.length + ' archived', toRestore.length + ' restored');
     return { status: 'success', archived: toArchive.length, restored: toRestore.length,
-             total: antes };
+             total: antes, informe: informe };
   } catch (e) {
+    /* EN ENSAYO NO SE RELANZA NI SE MANDA CORREO: se devuelve. El sentido del
+     * ensayo es que alguien pulse un botón y LEA el fallo, no que le llegue un
+     * correo diez minutos después de una prueba que hizo a propósito. */
+    informe.error = e.message;
+    informe.stack = String(e.stack || '').split('\n').slice(0, 6).join(' | ');
+    anotar('THREW: ' + e.message);
+    if (ensayo) return { status: 'error', informe: informe };
     logError_(ss, 'ERROR', 'backend', 'archiveOldMovements', 'system', e.message, null, newRequestId_());
     // ANTES SÓLO SE REGISTRABA. ERROR_LOG es una pestaña que nadie mira, y por
     // eso el desastre del 26 de septiembre estuvo catorce horas sin que nadie
@@ -8111,6 +8209,7 @@ function onOpen() {
     .addSeparator()
     .addItem('📁 Tidy up my Drive (one folder for everything)', 'menuOrganizeDrive')
     .addItem('🩺 Check this installation', 'menuCheckInstallation')
+    .addItem('🌙 Test the nightly archive (changes nothing)', 'menuProbarArchivado')
     .addItem('🔎 Check if this copy is a clean template', 'menuVerifyMasterTemplate')
     .addItem('💣 Erase everything — make this a blank template', 'menuPrepareMasterTemplate');
 
@@ -9228,6 +9327,96 @@ function detectFolderPrefixes_() {
     }
   } catch (e) {}
   return Object.keys(found);
+}
+
+/* EL BOTÓN QUE PIDIÓ JOSE.
+ *
+ * *"¿podemos crear un botón y una prueba que nos diga qué falla al momento de
+ * probarlo? ¿cómo podemos hacer la prueba y saber qué falla?"*
+ *
+ * Corre el trabajo nocturno ENTERO —las mismas guardas, las mismas cuentas, el
+ * mismo reparto— y se para justo antes de las dos escrituras. Se puede pulsar
+ * en cualquier momento, con datos de verdad, sin riesgo, y lo que enseña es lo
+ * que el trabajo diría esta noche a las 3.
+ *
+ * Por qué hacía falta: este trabajo corre sin nadie delante y escribe en
+ * ERROR_LOG, que es una pestaña que nadie mira. El 26/09 y el 29/09 vació el
+ * archivo y en las dos ocasiones se supo horas después y por casualidad. Un
+ * fallo que sólo se puede observar a las 3 de la mañana no se puede investigar.
+ */
+function menuProbarArchivado() {
+  var ui = SpreadsheetApp.getUi();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var r;
+  try {
+    r = archiveOldMovements(ss, { ensayo: true });
+  } catch (e) {
+    ui.alert('The test itself could not run', String(e && e.message || e), ui.ButtonSet.OK);
+    return;
+  }
+
+  var inf = (r && r.informe) || { pasos: [] };
+  var lineas = [];
+
+  lineas.push('RESULT: ' + String(r && r.status || '?').toUpperCase());
+  lineas.push('');
+  lineas.push('NOTHING WAS WRITTEN. This is a rehearsal of tonight\'s job.');
+  lineas.push('');
+
+  if (inf.modeloAncho) {
+    lineas.push('SHEET WIDTHS — this is what the "23 vs 20" error is about');
+    lineas.push('  The row model needs   : ' + inf.modeloAncho + ' columns');
+    lineas.push('  MASTER_ARCHIVE_V3 has : ' + inf.archivoAncho +
+                (inf.archivoAnchoTras && inf.archivoAnchoTras !== inf.archivoAncho
+                  ? ' → widened to ' + inf.archivoAnchoTras : '') +
+                '   (last column in use: ' + inf.archivoUltima + ')');
+    lineas.push('  ARCHIVE_HISTORY has   : ' + inf.histAncho +
+                (inf.histAnchoTras && inf.histAnchoTras !== inf.histAncho
+                  ? ' → widened to ' + inf.histAnchoTras : '') +
+                '   (last column in use: ' + inf.histUltima + ')');
+    lineas.push('');
+    lineas.push('MOVEMENTS RIGHT NOW');
+    lineas.push('  Recent list      : ' + inf.archivoFilas);
+    lineas.push('  Archived history : ' + inf.histFilas);
+    lineas.push('');
+  }
+
+  if (inf.corteMeses !== undefined) {
+    lineas.push('CUTOFF');
+    lineas.push('  ' + inf.corteMeses + ' month(s) — anything before ' + inf.corteFecha + ' counts as old.');
+    lineas.push('  Would move OUT of the recent list : ' + inf.seArchivan);
+    lineas.push('  Would come back IN                : ' + inf.seDevuelven);
+    lineas.push('  Would stay                        : ' + inf.seQuedan);
+    lineas.push('');
+  }
+
+  if (inf.quedariaEnArchivo !== undefined) {
+    lineas.push('AFTER TONIGHT IT WOULD LEAVE');
+    lineas.push('  Recent list      : ' + inf.quedariaEnArchivo);
+    lineas.push('  Archived history : ' + inf.quedariaEnHistoria);
+    if (inf.quedariaEnArchivo === 0 && inf.quedariaEnHistoria > 0) {
+      lineas.push('');
+      lineas.push('  ⚠ The recent list would end up EMPTY. Nothing would be lost —');
+      lineas.push('    it all moves to the archived history — but the app will look');
+      lineas.push('    blank until you press "Load Older History". If that is not');
+      lineas.push('    what you want, raise the cutoff in Settings.');
+    }
+    lineas.push('');
+  }
+
+  if (inf.error) {
+    lineas.push('✗ WHAT FAILED');
+    lineas.push('  ' + inf.error);
+    if (inf.stack) { lineas.push(''); lineas.push('  ' + inf.stack); }
+    lineas.push('');
+  }
+
+  if (inf.pasos && inf.pasos.length) {
+    lineas.push('STEP BY STEP');
+    inf.pasos.forEach(function (t) { lineas.push('  · ' + t); });
+  }
+
+  ui.alert('🌙 Nightly archive — rehearsal', lineas.join('\n'), ui.ButtonSet.OK);
 }
 
 function menuCheckInstallation() {

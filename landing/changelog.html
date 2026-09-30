@@ -97,6 +97,30 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.26</span>
+      <span class="tag new">New</span>
+      <h3>You can rehearse the nightly archive whenever you like</h3>
+      <p>The job that tidies old movements runs at 3 in the morning with nobody
+         watching, and writes what it did to a tab nobody opens. When it went
+         wrong it was found hours later and by accident. <b>A failure you can
+         only observe at 3am is a failure you cannot investigate.</b></p>
+      <p>There is now <b>🌙 Test the nightly archive</b> in the Advanced menu. It
+         runs tonight's job in full — the same checks, the same counts, the same
+         split — and stops just before the two writes. It is safe to press at any
+         time on real data, and it tells you what tonight would do: how wide each
+         sheet actually is against the width the rows need, how many movements
+         are in each, what your cutoff is and what it counts as old, how many
+         would move each way, what each check says, and <b>the exact error if
+         one happens</b>.</p>
+      <p>The rehearsal lives <i>inside</i> the real job rather than being a copy
+         of it. A copy would be a second version that always agrees with itself,
+         which is how a broken safety net went unnoticed for ten days. And it is
+         tested like anything else — including that it truly writes nothing,
+         which caught a first version that quietly widened the sheets while
+         claiming to be a rehearsal.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.25</span>
       <span class="tag fix">Fix</span>
       <h3>An empty movement list now tells you which kind of empty it is</h3>
