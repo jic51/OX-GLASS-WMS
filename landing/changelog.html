@@ -97,6 +97,31 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.28</span>
+      <span class="tag fix">Fix</span>
+      <h3>When the nightly job fails, the log now says where it got to</h3>
+      <p>Three failures in a row left <b>exactly the same line</b>: <i>"the number
+         of columns in the data does not match the number of columns in the range.
+         The data has 23, and the range, 20."</i> That line does not say which
+         sheet, or at which step, or how wide either sheet was. It is the shape of
+         the failure without the failure.</p>
+      <p>The job now leaves a trail as it goes — how wide each sheet is against
+         the width the rows need, what the cutoff is, how many rows go each way,
+         <b>which of the two writes it was attempting</b>, and whether the first
+         one had finished. When it throws, all of that goes into the error log
+         along with the stack and its line numbers.</p>
+      <p>Putting the rows back, added in v12.27, is a seatbelt — <b>it is not the
+         fix</b>. Losing rows must not become a thing the app routinely recovers
+         from. This is what turns the next failure into something that can
+         actually be diagnosed instead of guessed at.</p>
+      <p>One detail worth recording: the trail very nearly never arrived. The
+         error log discards anything that is not an object, so the first version
+         — which passed a plain string — would have been dropped silently, and we
+         would have had the same useless line while believing it now said
+         something.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.27</span>
       <span class="tag fix">Fix</span>
       <h3>If the nightly job loses rows, it puts them back</h3>

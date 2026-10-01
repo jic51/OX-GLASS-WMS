@@ -98,6 +98,31 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.28</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Cuando el trabajo nocturno falla, el registro dice por dónde iba</h3>
+      <p>Tres fallos seguidos dejaron <b>exactamente la misma línea</b>: <i>"el
+         número de columnas de los datos no coincide con el número de columnas del
+         rango. Los datos tienen 23, y el rango, 20."</i> Esa línea no dice qué
+         hoja, ni en qué paso, ni de cuántas columnas era cada una. Es la forma
+         del fallo sin el fallo.</p>
+      <p>Ahora el trabajo va dejando un rastro: de cuántas columnas es cada hoja
+         frente a las que necesitan las filas, cuál es el corte, cuántas filas van
+         a cada lado, <b>cuál de las dos escrituras estaba intentando</b>, y si la
+         primera había terminado. Cuando revienta, todo eso va al registro de
+         errores junto con la pila y sus números de línea.</p>
+      <p>Reponer las filas, que se añadió en la v12.27, es un cinturón de
+         seguridad — <b>no es el arreglo</b>. Perder filas no puede convertirse en
+         algo de lo que la app se recupera por rutina. Esto es lo que convierte el
+         próximo fallo en algo que se puede diagnosticar en vez de adivinar.</p>
+      <p>Un detalle que vale la pena dejar escrito: el rastro estuvo a punto de no
+         llegar nunca. El registro de errores descarta lo que no sea un objeto, así
+         que la primera versión —que pasaba un texto suelto— se habría tirado en
+         silencio, y habríamos tenido la misma línea inútil creyendo que esta vez
+         sí decía algo.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.27</span>
       <span class="tag fix">Arreglo</span>
       <h3>Si el trabajo nocturno pierde filas, las devuelve</h3>

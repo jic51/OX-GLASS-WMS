@@ -164,7 +164,12 @@ function montarTrabajo(archivo, historico, mesesCorte, correos) {
     registros: [],
     ss: { getSheetByName: (n) => (n === 'MASTER_ARCHIVE_V3' ? archivo : null) }
   };
-  ctx.logError_ = function(_ss, sev, _src, fn, _u, msg){ ctx.registros.push({ sev, fn, msg }); };
+  // Se guarda también el CONTEXTO, que desde la v12.28 es donde viaja el
+  // rastro del fallo. El doble anterior lo tiraba, así que una prueba sobre el
+  // rastro habría mirado un sitio vacío y no habría medido nada.
+  ctx.logError_ = function(_ss, sev, _src, fn, _u, msg, ctxObj){
+    ctx.registros.push({ sev, fn, msg, ctx: ctxObj });
+  };
   vm.createContext(ctx);
   vm.runInContext(A.levantar(GS, ['archiveOldMovements'], {
     dobles: ['ensureArchiveHistorySheet_', 'loadConfig', 'dedupeMovementIds_',
@@ -487,6 +492,57 @@ console.log('\n═══ 7. Si la escritura pierde filas, se deshacen solas ═�
   check('...y deja el fallo en el registro para que la causa se pueda buscar',
         ctx.registros.some(r => /lost rows/.test(r.msg || '')),
         ctx.registros.map(r => r.msg));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   8. ANTES, DURANTE Y DESPUÉS — el rastro que pidió Jose
+   ═══════════════════════════════════════════════════════════════════════════
+
+   Jose, 2026-10-01: *"¿qué activa ese error? ¿qué pasa antes y después de ese
+   error? Ahí está la clave, hay que ver antes, durante y después."*
+
+   Tres incidentes seguidos dejaron EXACTAMENTE LA MISMA LÍNEA en el registro:
+   "los datos tienen 23 y el rango 20". Esa línea no dice qué hoja, ni en qué
+   paso, ni con qué anchos. No es un dato: es la forma del fallo sin el fallo.
+
+   Ahora el catch guarda el camino entero y la pila. Lo que esto comprueba es
+   que el rastro LLEGA — porque por poco no llega: sanitizeErrorContext_ empieza
+   con `if (typeof obj !== 'object') return ''`, así que la primera versión, que
+   pasaba un texto, se habría descartado en silencio y habríamos vuelto a tener
+   la línea inútil creyendo que esta vez decía algo. */
+console.log('\n═══ 8. Cuando revienta, el registro dice por dónde iba ═══\n');
+{
+  const { archivo, historico } = laNocheDeJose(AC_WIDTH);
+  const correos = [];
+  const ctx = montarTrabajo(archivo, historico, 12, correos);
+
+  // Que reviente en la SEGUNDA escritura, que es la del archivo.
+  const rangeReal = archivo.getRange;
+  archivo.getRange = function(f, c, nf, nc){
+    const r = rangeReal.call(archivo, f, c, nf, nc);
+    if (f === 2) r.setValues = function(){ throw new Error('boom al escribir el archivo'); };
+    return r;
+  };
+
+  let lanzo = null;
+  try { ctx.archiveOldMovements(ctx.ss); } catch (e) { lanzo = e.message; }
+  check('relanza, para que el disparador lo marque como fallido', !!lanzo, lanzo);
+
+  const reg = ctx.registros.filter(r => r.sev === 'ERROR').pop();
+  check('queda una línea de error', !!reg, ctx.registros);
+  check('EL RASTRO LLEGA — no se descarta por no ser un objeto',
+        !!(reg && reg.ctx && reg.ctx.steps), reg && reg.ctx);
+  check('dice los anchos de las DOS hojas, que es lo que el mensaje de Sheets ' +
+        'nunca dijo', !!(reg && reg.ctx && reg.ctx.archiveWidth && reg.ctx.historyWidth),
+        reg && reg.ctx);
+  check('dice CUÁL de las dos escrituras se intentó',
+        !!(reg && /WRITE 2\/2 →/.test(reg.ctx.steps)), reg && reg.ctx && reg.ctx.steps);
+  check('...y que la primera había terminado bien — el "antes"',
+        !!(reg && /WRITE 1\/2 done/.test(reg.ctx.steps)), reg && reg.ctx && reg.ctx.steps);
+  check('y el corte que se estaba aplicando',
+        !!(reg && /Cutoff is 12 month/.test(reg.ctx.steps)), reg && reg.ctx && reg.ctx.steps);
+  check('el archivo NO se quedó vacío: la escritura falló antes de limpiar',
+        archivo.conDatos() > 0, archivo.conDatos());
 }
 
 console.log('\n' + (fail ? '✗ ' + fail + ' fallo(s), ' : '✓ ') + ok + ' comprobaciones');
