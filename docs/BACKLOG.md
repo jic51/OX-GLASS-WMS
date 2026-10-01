@@ -5856,3 +5856,139 @@ ninguna parte de la app:
 2. **Bajar el corte MUEVE DATOS.** De 12 a 6 saca movimientos de la pantalla.
    Hoy se guarda como cualquier otra preferencia, sin avisar de que esa noche se
    van a mover filas. Debería decir cuántas antes de guardar.
+
+# ══ EL PRINCIPIO: EL USUARIO NO ADMINISTRA LA APP. Anotado 2026-10-01 ══
+
+Jose, pensándolo después de dos semanas de incidentes con el archivado:
+
+> *"El archivado no debe manejarlo el usuario, o por lo menos no lo necesita
+> manejar, sino que nosotros debemos usarlo cuando le demos soporte. Le vamos a
+> enseñar al usuario que la app es todo lo que necesita y no debe ni necesita
+> mover nada en el sheet. Entonces debemos mover a una nueva pestaña, tal vez con
+> el nombre 'Avanzados', todo lo que el usuario no necesita manejar por sí mismo,
+> lo dividimos por categoría y le ponemos la 'i' con la información necesaria.*
+>
+> *Lo que el usuario sí necesita es que la app maneje todo de forma ordenada,
+> correcta, sin perder nada y de forma rápida, y le dé la información que él
+> necesita cuando la necesite. Nosotros debemos trabajar y mejorar y añadir cosas
+> a la app para darle soporte y saber cómo arreglar todo lo que se dañe, pero el
+> usuario debe ver sólo lo esencial y necesario para hacer su vida simple."*
+
+**Esto no es una tarea, es un criterio**, y ordena muchas de las que ya hay
+apuntadas. Lo que dice, dicho de otra forma: *cada ajuste que le enseñamos al
+usuario es una decisión que le estamos pasando a él, y una decisión que puede
+tomar mal.* El corte de archivado en meses es el ejemplo perfecto: nadie que
+gestione un almacén quiere decidir cuántos meses de histórico caben en una
+pestaña de Google. Eso es nuestro.
+
+## La prueba de fuego para cualquier ajuste
+
+**¿Qué pasa si lo pone mal?** Si la respuesta es "la app va lenta", "se pierden
+datos", "no ve sus movimientos" o "hay que restaurar un backup" → no es suyo.
+
+El corte de archivado falla esa prueba por los cuatro lados: ponerlo corto saca
+movimientos de la pantalla, ponerlo mal (una celda con un número raro) puede
+dejar la lista vacía. Es exactamente lo que pasó.
+
+## Qué hay que hacer, cuando toque
+
+1. **Una pestaña `Advanced` en App Settings**, por categorías, cada bloque con su
+   ⓘ. Ahí se van: el corte de archivado, el archivado manual, la comprobación de
+   instalación, la calidad de datos, el reconstruir totales, y lo que vaya
+   saliendo del repaso.
+2. **Lo que queda fuera de Advanced es lo que el usuario toca a diario**:
+   categorías, proyectos, proveedores, ubicaciones, usuarios, packs, mínimos.
+3. **Repasar ajuste por ajuste con la prueba de fuego** y anotar en cada uno a
+   qué lado cae y por qué. Ese repaso es el trabajo de verdad; mover cajas de
+   sitio es media hora.
+4. **Y lo que no está y hace falta: herramientas NUESTRAS de soporte.** Hoy, para
+   arreglar la instalación de alguien, hay que abrir su hoja y mirar pestañas a
+   mano. Si la app es lo único que el usuario abre, nosotros necesitamos ver
+   desde dentro qué le pasa a su instalación — y eso hay que construirlo.
+
+# ══ ARCHIVAR POR TAMAÑO, NO POR CALENDARIO. Anotado 2026-10-01 ══
+
+> *"De fábrica o por defecto la app debe archivar lo que no necesita y la hace
+> lenta, pero debemos dejar el acceso a esa información sólo si el usuario la
+> necesita. ¿Cómo y con qué frecuencia podemos hacer el archivado para mantener
+> la app siempre rápida pero manteniendo la información necesaria siempre a la
+> mano?"*
+
+## El error de diseño de hoy: el calendario no sabe nada de la velocidad
+
+El corte está en meses, y los meses no tienen nada que ver con lo que hace lenta
+la app. **Seis meses pueden ser 300 movimientos en una instalación y 60.000 en
+otra.** El ajuste que supuestamente controla la velocidad no la controla: lo que
+la hace lenta son FILAS, y las filas no se cuentan en meses.
+
+De ahí sale todo lo demás. Un trabajo que reescribe dos hojas enteras cada
+madrugada "por si acaso" es, además, el que nos borró el archivo tres veces.
+
+## La propuesta
+
+**Que el trabajo nocturno sea un vigilante y no un motor:**
+
+1. Mira una sola cosa: cuántos movimientos tiene la lista reciente.
+2. **Si está por debajo del umbral, NO HACE NADA y no escribe nada.** Ni una
+   celda. La inmensa mayoría de las noches, en la inmensa mayoría de las
+   instalaciones, el trabajo nocturno no tocaría el archivo jamás.
+3. Si lo pasa, saca la tanda más vieja hasta bajar al objetivo, de una vez, y lo
+   deja escrito donde se vea.
+4. **Suelo de 30 días, siempre** (ya está, v12.30): lo de este mes no se archiva
+   aunque haya cien mil filas.
+
+Con los números de Jose —1.279 movimientos en algo más de un año— un umbral de
+5.000 significa que su app no archivaría nada **en años**. Y eso es exactamente
+lo que queremos: un trabajo que casi nunca escribe es un trabajo que casi nunca
+puede romper nada, y cuando escribe es porque de verdad hacía falta.
+
+## El número hay que MEDIRLO, no inventarlo
+
+5.000 es mi punto de partida, no un dato. Lo honesto es medir el tiempo de
+carga de la app con 1.000, 3.000, 5.000, 10.000 y 20.000 movimientos en la copia
+DEMO, y poner el umbral donde la carga empiece a notarse — con la medición
+apuntada al lado, para que el día que alguien lo quiera cambiar sepa qué está
+cambiando.
+
+Eso es, además, el primer trabajo de verdad para el robot de pruebas que Jose
+pidió: generar movimientos falsos a miles y cronometrar.
+
+## Y entonces el corte en meses deja de ser un ajuste del usuario
+
+Pasa a `Advanced`, para soporte. El usuario no elige cuántos meses: la app
+mantiene la lista por debajo del umbral, nunca archiva lo del último mes, y todo
+lo demás se alcanza buscando (que es la tarea nº 1 de la sección anterior).
+
+# ══ LA VERSIÓN, EN TODOS LOS TRABAJOS AUTOMÁTICOS. Anotado 2026-10-01 ══
+
+**Confirmado en la propia instalación de Jose, en la pantalla de ⏰ Activadores:**
+
+| Función | Implementación |
+|---|---|
+| `dailyBackupTrigger` | Encabezado |
+| `dailyCheckinTrigger` | Encabezado |
+| **`dailyReportTrigger`** | **Versión 273** |
+| `archiveOldMovementsTrigger` | Encabezado |
+
+**Un disparador de este proyecto está clavado a una versión congelada.** No es
+una teoría: está en su pantalla. `dailyReportTrigger` va a ejecutar para siempre
+el código de la versión 273, pase lo que pase con lo que pegamos en el editor —
+y eso es, exactamente, el mecanismo que explica las dos semanas de archivados
+fallando con las guardas puestas.
+
+La v12.29 puso el sello de versión en el archivado y por eso mañana sabremos qué
+versión corrió. **Los otros tres trabajos automáticos no lo llevan**, así que si
+uno de ellos se queda congelado no hay forma de saberlo salvo mirando esta
+pantalla y acordándose de mirarla.
+
+Hace falta la misma línea en `dailyBackupTrigger`, `dailyCheckinTrigger` y
+`dailyReportTrigger`: la versión dentro de su entrada de AUDIT_LOG. Entonces
+Settings → System enseña la versión de cada trabajo automático, y un trabajo
+congelado se delata solo — dice una versión distinta de la que dice el pie de la
+app.
+
+**Y la comprobación que lo caza antes:** 🩺 Check this installation no puede leer
+a qué implementación está atado un disparador (la API de Apps Script no lo
+expone), pero sí puede decir, con todas las letras, que hay que mirarlo: *"Open
+⏰ Triggers and check every row says Head."* Un paso manual escrito es
+infinitamente mejor que una comprobación que no existe.
