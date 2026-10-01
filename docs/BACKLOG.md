@@ -5992,3 +5992,29 @@ a qué implementación está atado un disparador (la API de Apps Script no lo
 expone), pero sí puede decir, con todas las letras, que hay que mirarlo: *"Open
 ⏰ Triggers and check every row says Head."* Un paso manual escrito es
 infinitamente mejor que una comprobación que no existe.
+
+# ══ DECIDIR: ¿DE QUÉ PROYECTO DE CLOUD CUELGA LA COPIA DEL CLIENTE? Anotado 2026-10-01 ══
+
+Sale de enlazar la copia DEMO al proyecto ACOPIO. Para la DEMO da igual; para la
+plantilla maestra es una decisión que hay que tomar antes de publicarla, y que no
+parece deshacerse después. Lo escrito está en `docs/PROYECTO-DE-CLOUD.md`.
+
+**Las dos opciones:**
+
+| | Proyecto automático de cada cliente | El proyecto ACOPIO |
+|---|---|---|
+| Pantalla de permisos | genérica, con el aviso gris de "Google no ha verificado" | la nuestra, verificable, sin avisos |
+| Registros | suyos | todos los clientes mezclados en el nuestro |
+| Límites de uso | suyos | compartidos entre todos |
+| Push Update Live | no funciona (hay que usar el camino manual) | funciona |
+
+**Y el paso previo, que es una comprobación y no una opinión:** hacer una copia
+de la hoja y leer, en Apps Script → ⚙️ Configuración del proyecto, qué dice
+*Google Cloud Platform (GCP) Project*. Si una copia hereda el enlace, la decisión
+ya está medio tomada por Google y hay que saberlo antes y no después.
+
+**Mi recomendación, para discutirla:** proyecto propio del cliente para la
+plantilla que se copia, y el aviso gris se resuelve explicándolo en la guía de
+instalación con una captura. Atar a cientos de clientes a un proyecto nuestro
+mete sus registros y sus límites de uso en nuestra casa, y el día que haya que
+mover a uno no hay forma de separarlo.
