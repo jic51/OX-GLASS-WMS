@@ -301,3 +301,17 @@ el corte — pero conviene saberlo.
 Si quieres verlos todos siempre en la lista principal, sube el corte en
 **Settings → System**. El precio es que la app carga más despacio cuantos más
 movimientos tenga que traer de golpe.
+
+---
+
+## Y cuando ya hayas restaurado: ¿cómo sabes que cuadra?
+
+Restaurar no es el final. Copiar y pegar una pestaña entre dos archivos puede
+dejar filas fuera por abajo o duplicarlas, y las dos cosas se ven igual a simple
+vista. Hay que contar.
+
+Las comprobaciones, con los clics y con lo que tiene que decir cada pantalla,
+están en **`docs/VERIFICAR-QUE-TODO-CUADRA.md`**: comparar la copia con el
+archivo vivo, que la app diga lo mismo que la hoja, que el código que corre sea
+el que pegaste (que NO es automático: publicar es un paso aparte), y que el
+disparador nocturno esté atado al código guardado y no a una foto congelada.

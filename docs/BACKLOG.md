@@ -5739,3 +5739,25 @@ los datos en vez de a las pruebas: el fallo no va a ser la función, va a ser el
 sexto almacén que alguien añada y no meta en ella.
 
 ---
+
+# ══ PULIDO PEQUEÑO — PONERLE NOMBRE A `ARCHIVE_START`. Anotado 2026-10-01 ══
+
+La v12.29 hace que el trabajo nocturno firme con su versión ANTES de tocar nada
+(`ARCHIVE_START` → `nightly archive starting · v12.29`), y esa línea es ahora la
+única forma que tiene Jose de saber, desde la app, qué código corrió esa noche —
+el `docs/VERIFICAR-QUE-TODO-CUADRA.md` entero depende de ella.
+
+Sale ya en **App Settings → System**, porque el actor es `system` y las acciones
+desconocidas caen en un rótulo automático. Pero ese rótulo automático es
+`archive start` en minúsculas, al lado de hermanos que dicen *"Backup created"* y
+*"Old movements archived"*. Falta una línea en `SYSTEM_EVENT_LABELS`:
+
+```javascript
+ARCHIVE_START: 'Nightly archive started',
+```
+
+**NO se shipeó al descubrirlo, a propósito.** Jose acababa de pegar la v12.29 y
+de restaurar MASTER a mano; hacerle pegar el archivo otra vez esa misma noche
+por un rótulo cosmético habría sido cambiar algo que funciona por algo más
+bonito, justo cuando lo que hacía falta era no mover nada. Va con el próximo
+cambio de verdad que toque ese archivo.
