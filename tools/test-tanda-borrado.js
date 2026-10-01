@@ -666,8 +666,13 @@ m.seccion('los que se quedan, pero cortos');
     ['entrada de varios materiales',        "archive row' + (rows===1?'':'s') + ')', 'ok', TOAST_QUICK)"],
     ['editar un movimiento',                "field(s) changed. Email sent.', 'ok', TOAST_QUICK)"],
     ['borrar una entrega esperada',         "showToast('Expected delivery deleted.', 'ok', TOAST_QUICK)"],
-    ['cargar el historial viejo',           "archived movement(s).', 'ok', TOAST_QUICK)"],
-    ['...y pedirlo dos veces',              "movements).', 'ok', TOAST_QUICK)"],
+    /* Los dos del histórico cambiaron de texto en la v12.27, cuando el botón
+     * pasó a traer tandas: antes decían "loaded N" y "already loaded", y ahora
+     * dicen cuántas MÁS llegaron y si queda alguna. Lo que esta lista guarda no
+     * es el texto — es que esos dos avisos sigan durando lo poco que duran,
+     * porque no hay nada que leer en ellos. */
+    ['traer una tanda más del histórico',   "'ok', TOAST_QUICK);"],
+    ['...y decir que ya están todas',       "nothing older left.', 'ok', TOAST_QUICK)"],
     ['autorrellenar estantes',              "auto-filled — enter quantities.','ok',TOAST_QUICK)"],
     ['guardar documentos',                  "showToast('Documents updated ✓', 'ok', TOAST_QUICK)"],
     ['la semana sin entregas',              "rest of this week.', 'ok', TOAST_QUICK)"]

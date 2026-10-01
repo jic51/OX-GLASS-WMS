@@ -419,5 +419,75 @@ console.log('\n═══ 6. Si el ensayo encuentra un fallo, lo DEVUELVE en vez 
   check('...ni ensuciar el registro de errores', ctx.registros.length === 0, ctx.registros);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   7. SI SE PIERDEN FILAS, SE DEVUELVEN — v12.27
+   ═══════════════════════════════════════════════════════════════════════════
+
+   La Guarda 2 DETECTABA la pérdida y no hacía nada con ella: una línea en
+   ERROR_LOG, un correo, y la hoja rota. Pasó el 26/09, el 29/09 y el 01/10, y
+   las tres veces Jose se enteró horas después y restauró a mano.
+
+   Darse cuenta de que acabas de perder mil filas y no devolverlas es casi peor
+   que no darte cuenta: lo necesario para repararlo está EN MEMORIA, a dos
+   líneas. `aData` y `hData` son las dos hojas tal como estaban.
+
+   Y esto NO DEPENDE DE SABER POR QUÉ FALLÓ, que es la razón de que exista:
+   llevamos tres incidentes sin poder explicar el mecanismo, y la red tiene que
+   sostener igual. Una reparación que sólo funciona cuando entiendes la causa no
+   es una red, es una esperanza.
+
+   Para probarlo hace falta una hoja que ACEPTE la escritura y luego devuelva
+   menos de lo que se le dio — que es exactamente la forma del fallo que no
+   sabemos explicar. */
+console.log('\n═══ 7. Si la escritura pierde filas, se deshacen solas ═══\n');
+{
+  const { archivo, historico, total } = laNocheDeJose(AC_WIDTH);
+  const correos = [];
+  const ctx = montarTrabajo(archivo, historico, 12, correos);
+
+  /* La crueldad del día: setValues ACEPTA y aun así la hoja acaba con menos
+   * filas. No lanza —si lanzara, el orden escribir-antes-de-borrar ya
+   * protegería— así que es justo el caso que se cuela por debajo de todas las
+   * guardas anteriores. Y es la forma del fallo que llevamos tres incidentes
+   * sin poder explicar.
+   *
+   * El primer intento escribía sólo 2 de las 12 filas y NO funcionaba como
+   * mutación: `escribirHojaCompleta_` limpia a partir de `filas.length + 2`, o
+   * sea de la fila 14, así que las filas 4 a 13 conservaban el contenido viejo
+   * y la cuenta volvía a cuadrar. La hoja quedaba MAL pero no FALTA, que no es
+   * lo que esta guarda mide. Hay que truncarla de verdad. */
+  let tragar = true;
+  const rangeReal = archivo.getRange;
+  archivo.getRange = function(f, c, nf, nc){
+    const r = rangeReal.call(archivo, f, c, nf, nc);
+    const setReal = r.setValues;
+    r.setValues = function(datos){
+      if (tragar && f === 2 && datos.length > 2) {
+        tragar = false;                               // sólo la primera escritura
+        setReal.call(r, datos.slice(0, 2));           // llegan 2 de las 12
+        archivo._filas.length = 3;                    // y las demás NO están
+        return r;
+      }
+      return setReal.call(r, datos);
+    };
+    return r;
+  };
+
+  const res = ctx.archiveOldMovements(ctx.ss);
+
+  check('dice que deshizo, no que fue un éxito', res.status === 'rolled-back', res.status);
+  check('EL ARCHIVO VUELVE A TENER SUS FILAS — no se queda a medias',
+        archivo.conDatos() + historico.conDatos() === total,
+        { archivo: archivo.conDatos(), historico: historico.conDatos(), esperado: total });
+  check('y avisa igual: una reparación silenciosa esconde la causa',
+        correos.length >= 1, correos.length);
+  check('el aviso dice que se repuso y que no hay nada que hacer',
+        correos.some(c => /PUT BACK AUTOMATICALLY/.test(c.cuerpo || '')),
+        correos.map(c => (c.cuerpo || '').slice(0, 120)));
+  check('...y deja el fallo en el registro para que la causa se pueda buscar',
+        ctx.registros.some(r => /lost rows/.test(r.msg || '')),
+        ctx.registros.map(r => r.msg));
+}
+
 console.log('\n' + (fail ? '✗ ' + fail + ' fallo(s), ' : '✓ ') + ok + ' comprobaciones');
 process.exit(fail ? 1 : 0);

@@ -4420,7 +4420,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.26';
+var APP_VERSION = '12.27';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -4432,7 +4432,7 @@ var APP_VERSION = '12.26';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '8093f39d';
+var APP_BUILD = 'e7f6a8cd';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -8120,24 +8120,59 @@ function renderMovements(){
   });
 }
 
+/* EL BOTÓN TRAE UNA TANDA MÁS CADA VEZ, Y DICE CUÁNTAS QUEDAN.
+ *
+ * Jose, 2026-10-01: *"la app sólo carga 56 movimientos y luego no puede cargar
+ * más; debería ir cargando más y más cada vez que se apriete el botón."*
+ *
+ * Lo que hacía: se traía ARCHIVE_HISTORY ENTERO de un golpe y después decía
+ * "ya está cargado". Con 56 filas eso parece que sólo sabe cargar 56; con
+ * 20.000 sería un viaje que no termina.
+ *
+ * Lo que faltaba de verdad no era el paginado: era que el botón DIJERA SI HA
+ * TERMINADO. "Older History (56)" no distingue "van 56 de 56" de "van 56 de
+ * 1.271", y sin esa diferencia la persona tiene que adivinar — que es
+ * exactamente lo que pasó. Ahora el rótulo cuenta las dos cosas. */
+var _oldHistoryQuedan = 0;
+
+function _rotuloHistorico(btn){
+  if (!btn) return;
+  if (!_oldHistoryLoaded) { _btnLabel(btn, '📜 Load Older History'); return; }
+  _btnLabel(btn, _oldHistoryQuedan > 0
+    ? '📜 Load ' + Math.min(300, _oldHistoryQuedan) + ' more (' + oldMovements.length + ' loaded, ' +
+      _oldHistoryQuedan + ' older still there)'
+    : '📜 All older history loaded (' + oldMovements.length + ')');
+}
+
 function _loadOlderHistoryClicked() {
   var btn = document.getElementById('btnLoadOlderHistory');
-  if (_oldHistoryLoaded) { showToast('Older history already loaded (' + oldMovements.length + ' movements).', 'ok', TOAST_QUICK); return; }
+  if (_oldHistoryLoaded && _oldHistoryQuedan === 0) {
+    showToast('That is all of it — ' + oldMovements.length +
+              ' archived movement(s), nothing older left.', 'ok', TOAST_QUICK);
+    return;
+  }
   _btnBusy(btn, 'Loading…');
   google.script.run
-    .withSuccessHandler(function(rows) {
-      oldMovements = rows || [];
+    .withSuccessHandler(function(res) {
+      var tanda = (res && res.items) || [];
+      // Al final: la hoja se lee de atrás hacia delante, así que cada tanda es
+      // MÁS VIEJA que la anterior y va debajo. renderMovements invierte el
+      // conjunto, así que lo de arriba sigue siendo lo más reciente.
+      oldMovements = tanda.concat(oldMovements);
+      _oldHistoryQuedan = (res && res.quedan) || 0;
       _oldHistoryLoaded = true;
-      _btnLabel(btn, '📜 Older History (' + oldMovements.length + ')');
+      _rotuloHistorico(btn);
       _movPage = 1;
       renderMovements();
-      showToast('✓ Loaded ' + oldMovements.length + ' archived movement(s).', 'ok', TOAST_QUICK);
+      showToast('✓ ' + tanda.length + ' more loaded' +
+                (_oldHistoryQuedan ? ' — ' + _oldHistoryQuedan + ' older still there.' : '. That is all of it.'),
+                'ok', TOAST_QUICK);
     })
     .withFailureHandler(function(e) {
-      _btnLabel(btn, '📜 Load Older History');
+      _rotuloHistorico(btn);
       showToast('⚠ Error: ' + _stripTags(e), 'err');
     })
-    .processMovement('loadOlderHistory', _h({}));
+    .processMovement('loadOlderHistory', _h({ desde: oldMovements.length }));
 }
 
 function _loadMoreMovements(){
@@ -12380,19 +12415,20 @@ function _spotMovementRows(want, mayFetch){
     var btn = document.getElementById('btnLoadOlderHistory');
     if (btn) _btnBusy(btn, 'Loading…');
     google.script.run
-      .withSuccessHandler(function(rows){
-        oldMovements     = rows || [];
+      .withSuccessHandler(function(res){
+        oldMovements      = ((res && res.items) || []).concat(oldMovements);
+        _oldHistoryQuedan = (res && res.quedan) || 0;
         _oldHistoryLoaded = true;
-        _btnLabel(btn, '📜 Older History (' + oldMovements.length + ')');
+        _rotuloHistorico(btn);
         _movPage = 1;
         renderMovements();
         setTimeout(function(){ _spotMovementRows(want, false); }, 60);
       })
       .withFailureHandler(function(e){
-        _btnLabel(btn, '📜 Load Older History');
+        _rotuloHistorico(btn);
         showToast('Could not load the archived history: ' + (e.message || e), 'err', 6000);
       })
-      .processMovement('loadOlderHistory', _h({}));
+      .processMovement('loadOlderHistory', _h({ desde: oldMovements.length }));
     return;
   }
 

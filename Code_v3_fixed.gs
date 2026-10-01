@@ -46,7 +46,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.26';
+var APP_VERSION = '12.27';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -58,7 +58,7 @@ var APP_VERSION = '12.26';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '8093f39d';
+var APP_BUILD = 'e7f6a8cd';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -2852,7 +2852,7 @@ function processMovementInner_(ss, action, data, auth) {
   if (action === 'setBackupEnabled') return setBackupEnabled(data, auth);
   if (action === 'runBackupOnDemand') return runBackupOnDemand(data, auth);
   if (action === 'logClientError')  return logClientError(data, auth);
-  if (action === 'loadOlderHistory') return loadOlderHistory(auth);
+  if (action === 'loadOlderHistory') return loadOlderHistory(auth, data);
   if (action === 'getSpaceUsage')   return getSpaceUsage(auth);
   if (action === 'getAiStatus')     return getAiStatus(auth);
   if (action === 'setAiKey')        return setAiKey(data, auth);
@@ -4608,12 +4608,59 @@ function archiveOldMovements(ss, opciones) {
     var quedanA = contarConDatos_(archive.getDataRange().getValues().slice(1));
     var quedanH = contarConDatos_(history.getDataRange().getValues().slice(1));
     if (quedanA + quedanH !== antes) {
-      var perdidaMsg = 'CHECK THIS NOW: the archive was written and the counts do ' +
-        'not add up. There were ' + antes + ' movements, now ' + (quedanA + quedanH) +
-        ' can be read (archive ' + quedanA + ', history ' + quedanH +
-        '). The backup made at 2am has all of them.';
+      /* ── Y SI FALTAN, SE DEVUELVEN. ───────────────────────────────────────
+       *
+       * Esta guarda DETECTABA la pérdida y no hacía nada con ella: escribía una
+       * línea en ERROR_LOG, mandaba un correo, y dejaba la hoja rota. Es lo que
+       * pasó las tres veces —26/09, 29/09 y 01/10—, y las tres veces Jose se
+       * enteró horas después y tuvo que restaurar a mano desde un backup.
+       *
+       * Darse cuenta de que acabas de perder mil filas y no devolverlas es casi
+       * peor que no darse cuenta: la información para repararlo ESTÁ AHÍ, en
+       * memoria, a dos líneas de distancia. `aData` y `hData` son las dos hojas
+       * tal como estaban antes de tocar nada, y siguen en el ámbito.
+       *
+       * Así que se devuelven. Sin preguntar y sin esperar a nadie.
+       *
+       * ESTO NO DEPENDE DE SABER POR QUÉ FALLÓ, y ésa es la razón de escribirlo
+       * así: llevo tres incidentes sin poder explicar el mecanismo, y mientras
+       * tanto la red tiene que sostener igual. Una reparación que sólo funciona
+       * cuando entiendes la causa no es una red, es una esperanza.
+       *
+       * EL ORDEN AL DESHACER ES EL CONTRARIO AL DE ESCRIBIR, y por el mismo
+       * motivo: primero se repone el archivo —la que perdió filas— porque es la
+       * que deja a alguien sin nada que ver si falla otra vez. Si la reposición
+       * falla, el correo lo dice y el backup de las 2 sigue estando.
+       *
+       * Y se vuelve a contar DESPUÉS de deshacer, para no prometer una
+       * reparación que tampoco llegó. */
+      var perdidaMsg = 'The archive write lost rows. There were ' + antes +
+        ' movements, only ' + (quedanA + quedanH) + ' could be read afterwards ' +
+        '(recent ' + quedanA + ', archived ' + quedanH + ').';
+      var reparado = false;
+      try {
+        escribirHojaCompleta_(archive, aData.slice(1), colCount);
+        escribirHojaCompleta_(history, hData.slice(1), colCount);
+        var trasA = contarConDatos_(archive.getDataRange().getValues().slice(1));
+        var trasH = contarConDatos_(history.getDataRange().getValues().slice(1));
+        reparado = (trasA + trasH === antes);
+        perdidaMsg += reparado
+          ? ' PUT BACK AUTOMATICALLY from memory — all ' + antes + ' are there again ' +
+            '(recent ' + trasA + ', archived ' + trasH + '). Nothing was archived ' +
+            'tonight; the job will try again. Nothing for you to do, but tell ' +
+            'support so the cause gets found.'
+          : ' COULD NOT BE PUT BACK — only ' + (trasA + trasH) + ' are readable now. ' +
+            'STOP: do not add movements and do not rebuild anything. Restore ' +
+            'MASTER_ARCHIVE_V3 and ARCHIVE_HISTORY from the 2am backup.';
+      } catch (re) {
+        perdidaMsg += ' PUTTING THEM BACK ALSO FAILED (' + re.message + '). STOP: ' +
+          'do not add movements and do not rebuild anything. Restore ' +
+          'MASTER_ARCHIVE_V3 and ARCHIVE_HISTORY from the 2am backup.';
+      }
       logError_(ss, 'ERROR', 'backend', 'archiveOldMovements', 'system', perdidaMsg, null, newRequestId_());
       avisarFalloDeArchivo_(ss, perdidaMsg);
+      // Se devuelve el estado real, no 'success': esta noche no se archivó nada.
+      return { status: reparado ? 'rolled-back' : 'lost', total: antes, informe: informe };
     }
 
     /* ── GUARDA 3: DEJAR EL ARCHIVO VACÍO NO ES UN ERROR, PERO HAY QUE DECIRLO ─
@@ -5791,17 +5838,52 @@ function sendDailyReportNow(auth) {
 // export ("Load older history"). Read-only in the UI — rowIdx here refers to
 // ARCHIVE_HISTORY's row, not MASTER_ARCHIVE_V3's, so it's tagged `archived: true`
 // and must never be sent to modifyMovement/updateDocument_.
-function loadOlderHistory(auth) {
+/* DE LO MÁS NUEVO HACIA ATRÁS, Y A TANDAS.
+ *
+ * Jose, 2026-10-01: *"lo que hace es cargar literalmente los movimientos más
+ * viejos... la app sólo carga 56 y luego no puede cargar más; debería ir
+ * cargando más y más cada vez que se apriete el botón, pero desde los más
+ * recientes a los más viejos."*
+ *
+ * Tenía razón en el fondo aunque el síntoma le engañó: la lista SÍ se pintaba
+ * de nuevo a viejo, pero el botón se traía ARCHIVE_HISTORY ENTERO de un golpe y
+ * después decía "ya está cargado". Con 56 filas eso parece que sólo sabe
+ * cargar 56; con 20.000 sería un viaje que no termina.
+ *
+ * Ahora se lee desde el FINAL de la hoja —que es donde están las más nuevas,
+ * porque el archivado escribe ordenado por fecha— y de 300 en 300. `desde` es
+ * cuántas se han traído ya, así que cada pulsación continúa donde se quedó.
+ *
+ * Y se devuelve `quedan`, que es lo que faltaba para que el botón pueda decir
+ * la verdad: "quedan 1.215 más" o "ya están todas". Un botón que no sabe si ha
+ * terminado obliga a la persona a adivinar, que es lo que pasó aquí.
+ *
+ * Se leen SÓLO las filas de la tanda, no la hoja entera: es lo que hace que
+ * esto siga funcionando el día que el histórico tenga años dentro. */
+var OLDER_HISTORY_PAGE = 300;
+
+function loadOlderHistory(auth, data) {
   auth = requireAuth_();   // any registered user; unauthenticated callers are refused
   var seeCosts = canSeeCosts_(auth);
   var ss      = SpreadsheetApp.getActiveSpreadsheet();
   var history = ensureArchiveHistorySheet_(ss);
-  var data    = history.getDataRange().getValues();
+
+  var ultima = history.getLastRow();
+  var hay    = Math.max(0, ultima - 1);              // sin la cabecera
+  var desde  = Math.max(0, Number(data && data.desde) || 0);
+  if (desde >= hay) return { items: [], total: hay, quedan: 0 };
+
+  var cuantas  = Math.min(OLDER_HISTORY_PAGE, hay - desde);
+  // La tanda, contada desde el final: las `desde` últimas ya se mandaron.
+  var primera  = ultima - desde - cuantas + 1;
+  var ancho    = Math.min(Math.max(history.getLastColumn(), AC_WIDTH), history.getMaxColumns());
+  var filas    = history.getRange(primera, 1, cuantas, ancho).getValues();
+
   var out = [];
-  for (var i = 1; i < data.length; i++) {
-    var row = data[i];
+  for (var i = 0; i < filas.length; i++) {
+    var row = filas[i];
     if (!row[AC.CATEGORY] && !row[AC.NAME]) continue;
-    var m = parseArchiveRow(row, i + 1);
+    var m = parseArchiveRow(row, primera + i);
     m.archived = true;
     // The second door for costs, and it would have been easy to miss: this
     // returns exactly the same movement objects getInitialData does, from the
@@ -5813,7 +5895,11 @@ function loadOlderHistory(auth) {
     if (!seeCosts) { m.unitCost = null; m.totalCost = null; }
     out.push(m);
   }
-  return out;
+  /* `quedan` cuenta FILAS DE HOJA, no movimientos devueltos: una fila en blanco
+   * se salta arriba pero sigue consumiendo sitio en la tanda, y si `quedan` se
+   * calculara sobre `out` el botón creería que falta una tanda que no existe y
+   * se quedaría pidiéndola para siempre. */
+  return { items: out, total: hay, quedan: Math.max(0, hay - desde - cuantas) };
 }
 
 // ─── REFRESH DERIVED SHEETS ──────────────────────────────────────────────────

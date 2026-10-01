@@ -147,14 +147,23 @@ console.log('═══ telling you to go and do it yourself             ══�
   // _btnBusy hides the neighbouring buttons, and only _btnLabel/_btnReset give
   // them back. Setting .textContent directly left "+ Entry (IN)" and
   // "− Exit (OUT)" hidden until the page was reloaded — Jose filmed it.
+  /* Both of these used to pin the exact label text. In v12.27 the button stopped
+   * having ONE label — it now says how many more there are to fetch, or that
+   * there are none left — so the label is built in `_rotuloHistorico` and both
+   * paths call that instead of writing the words themselves. Pinning the words
+   * here would mean this test fails every time that wording improves, which is
+   * how a test stops being read. What it has to guard is unchanged: the button
+   * comes back usable, and it comes back saying the same thing it would say if
+   * you had pressed it by hand — which is exactly what sharing the helper
+   * guarantees, and more strongly than matching a string ever did. */
   check('the Load Older History button is left usable again on failure, not ' +
-        'stuck saying "Loading…" — and through the helper, so its neighbours ' +
-        'come back too',
-    /_btnLabel\(btn, '📜 Load Older History'\)/.test(spot) &&
-    !/btn\.disabled = false/.test(spot));
-  check('...and shows the loaded count on success, matching what the button ' +
-        'does when pressed by hand',
-    /Older History \(' \+ oldMovements\.length/.test(spot));
+        'stuck saying "Loading…" — and through the shared helper, so it says ' +
+        'the same as when pressed by hand',
+    /_rotuloHistorico\(btn\)/.test(spot) && !/btn\.disabled = false/.test(spot));
+  check('...and the success path uses that same helper rather than writing its ' +
+        'own label, so the two can never drift apart',
+    (spot.match(/_rotuloHistorico\(btn\)/g) || []).length >= 2,
+    (spot.match(/_rotuloHistorico\(btn\)/g) || []).length);
 }
 
 // ── 3. The highlight lasts long enough to read ──────────────────────────────

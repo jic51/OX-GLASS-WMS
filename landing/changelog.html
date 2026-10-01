@@ -97,6 +97,47 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.27</span>
+      <span class="tag fix">Fix</span>
+      <h3>If the nightly job loses rows, it puts them back</h3>
+      <p>Since v12.14 the job has counted the movements before and after writing,
+         so it could tell when rows went missing. <b>And all it did was say so</b>
+         — a line in the error log, an email, and the sheet left broken. That
+         happened three times, and all three times it was found hours later and
+         fixed by hand from a backup.</p>
+      <p>Noticing you have just lost a thousand rows and not putting them back is
+         nearly worse than not noticing: <b>everything needed to repair it is in
+         memory, two lines away.</b> Both sheets are still held exactly as they
+         were before anything was touched. So now they go back — straight away,
+         without asking.</p>
+      <p><b>This does not depend on knowing why it failed</b>, and that is the
+         point of writing it this way. The cause of the three incidents is still
+         not established. A repair that only works once you understand the cause
+         is not a safety net, it is a hope.</p>
+      <p>The email still goes out either way: a silent repair would hide the
+         cause, and the cause still needs finding.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v12.27</span>
+      <span class="tag fix">Fix</span>
+      <h3>Older history loads newest first, a batch at a time</h3>
+      <p><b>Load Older History</b> fetched the entire archived history in one go
+         and then said "already loaded". With 56 rows that looks like the app can
+         only ever load 56; with twenty thousand it would be a trip that never
+         finishes.</p>
+      <p>It now brings 300 at a time, <b>starting with the most recent</b> and
+         working back, and each press continues where the last one stopped. Only
+         the rows in that batch are read, so it stays quick however much history
+         there is.</p>
+      <p>And the real gap was not the batching — <b>it was that the button never
+         said whether it had finished</b>. "Older History (56)" cannot tell "56
+         of 56" from "56 of 1,271", so you have to guess. Now it says
+         <i>"Load 300 more — 56 loaded, 1,215 older still there"</i>, or
+         <i>"All older history loaded"</i> when there is nothing left.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.26</span>
       <span class="tag new">New</span>
       <h3>You can rehearse the nightly archive whenever you like</h3>

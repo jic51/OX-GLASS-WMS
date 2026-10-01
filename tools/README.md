@@ -102,6 +102,7 @@ node tools/test-load-race.js
 node tools/test-movement-id.js
 node tools/test-archivo-nocturno.js
 node tools/test-canario-archivo.js
+node tools/test-historico-tandas.js
 node tools/test-papelera-ciclo.js
 node tools/test-dependencias-material.js
 node tools/test-formato-plantilla.js

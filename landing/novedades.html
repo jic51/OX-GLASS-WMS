@@ -98,6 +98,46 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.27</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Si el trabajo nocturno pierde filas, las devuelve</h3>
+      <p>Desde la v12.14 el trabajo cuenta los movimientos antes y después de
+         escribir, así que sabía cuándo faltaban filas. <b>Y lo único que hacía
+         era decirlo</b> — una línea en el registro de errores, un correo, y la
+         hoja rota. Pasó tres veces, y las tres se supo horas después y se
+         arregló a mano desde un backup.</p>
+      <p>Darse cuenta de que acabas de perder mil filas y no devolverlas es casi
+         peor que no darte cuenta: <b>todo lo necesario para repararlo está en
+         memoria, a dos líneas.</b> Las dos hojas siguen guardadas tal como
+         estaban antes de tocar nada. Así que ahora se devuelven — en el acto y
+         sin preguntar.</p>
+      <p><b>Esto no depende de saber por qué falló</b>, y ésa es la razón de
+         escribirlo así. La causa de los tres incidentes sigue sin establecerse.
+         Una reparación que sólo funciona cuando entiendes la causa no es una
+         red: es una esperanza.</p>
+      <p>El correo sale igual: una reparación silenciosa escondería la causa, y
+         la causa sigue habiendo que encontrarla.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v12.27</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>El histórico carga de lo más nuevo hacia atrás, por tandas</h3>
+      <p><b>Load Older History</b> se traía el histórico entero de un golpe y
+         después decía "ya está cargado". Con 56 filas eso parece que la app sólo
+         sabe cargar 56; con veinte mil sería un viaje que no termina.</p>
+      <p>Ahora trae 300 cada vez, <b>empezando por las más recientes</b> y yendo
+         hacia atrás, y cada pulsación continúa donde se quedó la anterior. Sólo
+         se leen las filas de esa tanda, así que sigue siendo rápido por mucho
+         histórico que haya.</p>
+      <p>Y lo que de verdad faltaba no era el paginado — <b>era que el botón
+         dijera si había terminado</b>. "Older History (56)" no distingue "56 de
+         56" de "56 de 1.271", así que hay que adivinar. Ahora dice <i>"Load 300
+         more — 56 loaded, 1.215 older still there"</i>, o <i>"All older history
+         loaded"</i> cuando no queda nada.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.26</span>
       <span class="tag new">Nuevo</span>
       <h3>Ya puedes ensayar el archivado nocturno cuando quieras</h3>
