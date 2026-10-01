@@ -5761,3 +5761,98 @@ de restaurar MASTER a mano; hacerle pegar el archivo otra vez esa misma noche
 por un rótulo cosmético habría sido cambiar algo que funciona por algo más
 bonito, justo cuando lo que hacía falta era no mover nada. Va con el próximo
 cambio de verdad que toque ese archivo.
+
+# ══ PRIORIDAD ALTA — QUE EL ARCHIVADO NO SE NOTE. Anotado 2026-10-01 ══
+
+Jose, después de dos semanas de incidentes con el trabajo nocturno:
+
+> *"Pensándolo bien, el archivado no debe ser un problema para el usuario, es un
+> problema para nosotros y para que la app sea más rápida, así que la app debe
+> seguir mostrando los movimientos aunque estén archivados, o por lo menos
+> mostrar los del último mes sin que el usuario deba pedirlo."*
+>
+> *"Eso de archivar movimientos cada día será un problema para todos los
+> usuarios… debería hacerlo por tandas: tiene una fecha para mover todos los
+> movimientos que el usuario no quiere y dejar sólo los que sí."*
+
+**Tiene razón en el principio y hay que escribirlo antes de tocar nada: el
+archivado existe por el techo de 10 millones de celdas de Google y por el tiempo
+de carga. Son dos problemas NUESTROS. Que el usuario tenga que saber qué es un
+"archivado", pulsar "Load Older History" o enterarse de que hay un corte en
+meses es el síntoma de que le hemos pasado un problema nuestro.**
+
+## Lo que ya se hizo (v12.30)
+
+**El suelo de 30 días.** Pase lo que pase con el ajuste, lo del último mes se
+queda en la lista reciente. Era lo que él pedía como mínimo, y ahora es una
+regla y no una consecuencia aritmética de que el corte sea grande.
+
+## Lo que falta, por orden
+
+### 1. BUSCAR TIENE QUE ALCANZAR EL ARCHIVO — esto es lo que de verdad convierte el archivado en un problema del usuario
+
+Hoy la caja de búsqueda filtra **lo que ya está cargado en pantalla**. Un PO de
+hace ocho meses no aparece buscándolo: hay que adivinar que existe un botón
+llamado "Load Older History", pulsarlo las veces que haga falta, y entonces
+buscar.
+
+Eso es exactamente la queja de Jose en su forma más concreta. **Y no se arregla
+cargándolo todo** —que es lo que mataría la velocidad que el archivado compra—
+sino buscando en el servidor: cuando la búsqueda no encuentra nada (o encuentra
+poco) en lo cargado, preguntar a las dos hojas y traer sólo lo que coincide, con
+un rótulo honesto del tipo *"3 more from the archived history"*.
+
+Es el mismo patrón que `loadOlderHistory` de la v12.26: una ventana, no la hoja
+entera.
+
+### 2. ARCHIVAR POR TANDAS, NO POR GOTEO
+
+Lo que Jose describe —*"una fecha para mover todos los movimientos que el
+usuario no quiere"*— es archivar **a propósito y de una vez**, no un poco cada
+noche. Y tiene una ventaja real sobre el goteo: una tanda se puede mirar antes
+de hacerla, se puede hacer cuando a uno le conviene, y deja un antes y un
+después claros. El goteo nocturno, en cambio, cambia la pantalla mientras nadie
+mira — que es precisamente cómo se perdieron los datos tres veces sin que nadie
+se enterara hasta el día siguiente.
+
+El botón **▶️ Archive old movements NOW** de la v12.30 ya es media tanda: corre
+el trabajo cuando se le pide y enseña los números antes. **Lo que falta para que
+sea la idea entera es que la tanda acepte SU PROPIA FECHA**, en vez de usar
+siempre el corte de los ajustes: *"archiva todo lo anterior al 1 de enero"*,
+una vez, y se acabó.
+
+Y entonces la pregunta de verdad: **¿sigue haciendo falta el trabajo nocturno?**
+Mi opinión, para discutirla con él: sí, pero como RED, no como motor —
+que corra sólo cuando la hoja se acerca al techo de celdas o cuando la lista
+pasa de un tamaño que haga lenta la carga, y que no toque nada el resto de las
+noches. Un trabajo que casi nunca hace nada es mucho más fácil de vigilar que
+uno que reescribe dos hojas cada madrugada.
+
+### 3. EL AVISO CUANDO EL ARCHIVADO SE LLEVA ALGO
+
+Si una tanda saca 400 movimientos de la lista, la app debería decirlo donde se
+ve —no en ERROR_LOG— y ofrecer deshacerlo. Hoy el único rastro es la línea de
+*Old movements archived* en Settings → System, que hay que ir a buscar.
+
+## La pregunta que hizo y que conviene no perder
+
+> *"¿Qué pasa si el usuario que tiene 6 en el tiempo del archivado lo cambia a
+> 12? ¿Los movimientos salen del archivado y regresan al master, o se quedan ahí
+> pero los muestra otra vez?"*
+
+**Regresan físicamente al master.** `archiveOldMovements` no sólo mira el
+archivo activo: también recorre `ARCHIVE_HISTORY` y devuelve a la lista reciente
+todo lo que vuelva a caer dentro del corte (`toRestore`). Es simétrico en los
+dos sentidos, y por eso el informe del ensayo tiene una línea *"Would come back
+IN"* desde la v12.26.
+
+Dos consecuencias que hay que tener presentes y que hoy no están dichas en
+ninguna parte de la app:
+
+1. **El cambio no es inmediato.** Se aplica la próxima vez que corra el trabajo
+   — esta noche, o al pulsar ▶️. Subir el corte de 6 a 12 y no ver nada nuevo
+   es lo que va a pasar, y nadie lo ha avisado. **Debería archivarse/devolverse
+   al guardar el ajuste**, o al menos decir "se aplicará esta noche".
+2. **Bajar el corte MUEVE DATOS.** De 12 a 6 saca movimientos de la pantalla.
+   Hoy se guarda como cualquier otra preferencia, sin avisar de que esa noche se
+   van a mover filas. Debería decir cuántas antes de guardar.

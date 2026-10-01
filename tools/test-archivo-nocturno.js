@@ -591,5 +591,177 @@ console.log('\n═══ 9. Cada corrida deja dicho qué versión era ═══\
         /requireOwnerContext_\(\)/.test(menu));
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   10. EL SUELO — LO DE ESTE MES NO SE ARCHIVA NUNCA
+   ═══════════════════════════════════════════════════════════════════════════
+
+   Jose, 2026-10-01: *"el archivado no debe ser un problema para el usuario, es
+   un problema para nosotros y para que la app sea más rápida, así que la app
+   debe seguir mostrando los movimientos aunque estén archivados, o por lo menos
+   mostrar los del último mes sin que el usuario deba pedirlo."*
+
+   Con el corte en 6 o 12 meses eso ya se cumplía POR ARITMÉTICA. El problema de
+   cumplirlo por aritmética es que depende de un ajuste, y un ajuste se puede
+   poner mal: `cfg.archiveCutoffMonths` sale de una celda de CONFIG, y una celda
+   con un número negativo —una migración torcida, alguien que escribe "-6"—
+   pone la FECHA DE CORTE EN EL FUTURO. Entonces todo es viejo, todo se archiva,
+   y la lista reciente amanece vacía. Que es exactamente la pantalla que Jose se
+   encontró el 26 de septiembre por otro motivo, y la que no quiere volver a ver.
+
+   Por eso el suelo es una regla y no un número grande: diga lo que diga el
+   ajuste, lo de los últimos 30 días se queda en pantalla. */
+console.log('\n═══ 10. Los últimos 30 días nunca se archivan ═══\n');
+
+/** Un movimiento de hace `dias` días. */
+function haceDias(dias, nombre) {
+  const d = new Date();
+  d.setDate(d.getDate() - dias);
+  return mov(d, nombre, AC_WIDTH);
+}
+
+{
+  const filas = [CABECERA,
+    haceDias(0,   'HOY'),
+    haceDias(10,  'HACE 10 DIAS'),
+    haceDias(45,  'HACE 45 DIAS'),
+    haceDias(900, 'HACE DOS AÑOS')];
+  const archivo   = hojaFalsa('MASTER_ARCHIVE_V3', filas, AC_WIDTH);
+  const historico = hojaFalsa('ARCHIVE_HISTORY',   [CABECERA], AC_WIDTH);
+
+  // Corte NEGATIVO: la fecha de corte se va al futuro y, sin el suelo, todo
+  // cruza — incluido lo de hoy.
+  const ctx = montarTrabajo(archivo, historico, -1, []);
+  const r = ctx.archiveOldMovements(ctx.ss);
+
+  /* SIN EL APÓSTROFO. `textCell_` le pone uno delante a todo texto que escribe;
+   * en Sheets de verdad esa comilla es la marca de "esto es texto", se la come
+   * al guardar y no sale al leer. Esta hoja de mentira sí la guarda, así que hay
+   * que quitarla aquí — si no, la prueba acusaría al producto de un apóstrofo
+   * que el producto no deja. Ya nos pasó una vez. */
+  const sinComilla = f => String(f[2] || '').replace(/^'/, '');
+  const enArchivo  = archivo._filas.slice(1).map(sinComilla).filter(Boolean);
+  const enHistoria = historico._filas.slice(1).map(sinComilla).filter(Boolean);
+
+  check('LO DE HOY SIGUE EN PANTALLA aunque el corte diga que es viejo — es la ' +
+        'promesa que pidió Jose', enArchivo.indexOf('HOY') !== -1, enArchivo);
+  check('...y lo de hace 10 días también', enArchivo.indexOf('HACE 10 DIAS') !== -1, enArchivo);
+  check('lo de hace 45 días sí se archiva: el suelo son 30 días, no "nada se ' +
+        'archiva nunca"', enHistoria.indexOf('HACE 45 DIAS') !== -1, enHistoria);
+  check('y lo de hace dos años también', enHistoria.indexOf('HACE DOS AÑOS') !== -1, enHistoria);
+  check('no se pierde ni uno de los cuatro',
+        enArchivo.length + enHistoria.length === 4, { enArchivo, enHistoria });
+  check('el informe DICE que el suelo actuó — un ajuste que la app ignora en ' +
+        'silencio es peor que un ajuste que no se puede poner',
+        r.informe.sueloAplicado === true && r.informe.sueloDias === 30, r.informe.sueloDias);
+}
+
+{
+  /* Y CON UN CORTE NORMAL EL SUELO NO SE NOTA. Una guarda que cambia el
+   * comportamiento del caso corriente no es una guarda, es otro comportamiento:
+   * con 12 meses lo de hace 45 días tiene que seguir en la lista reciente. */
+  const filas = [CABECERA, haceDias(45, 'HACE 45 DIAS'), haceDias(900, 'HACE DOS AÑOS')];
+  const archivo   = hojaFalsa('MASTER_ARCHIVE_V3', filas, AC_WIDTH);
+  const historico = hojaFalsa('ARCHIVE_HISTORY',   [CABECERA], AC_WIDTH);
+  const ctx = montarTrabajo(archivo, historico, 12, []);
+  const r = ctx.archiveOldMovements(ctx.ss);
+
+  check('con 12 meses el suelo no toca el corte', r.informe.sueloAplicado === false);
+  check('...y lo de hace 45 días se queda, como siempre',
+        archivo._filas.slice(1)
+          .map(f => String(f[2] || '').replace(/^'/, ''))
+          .indexOf('HACE 45 DIAS') !== -1);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   11. EL BOTÓN DE "HAZLO AHORA"
+   ═══════════════════════════════════════════════════════════════════════════
+
+   Jose, 2026-10-01: *"¿podemos crear un botón que lo haga en este momento? …
+   quiero saber si funciona en este mismo momento."*
+
+   Lo que hay detrás de la pregunta: hasta hoy cada intento de arreglar el
+   archivado costaba VEINTICUATRO HORAS, porque la única forma de ver el
+   resultado era esperar a las 3 de la mañana. Tres incidentes a ese ritmo son
+   dos semanas. Y encima resultó que lo que corría de noche era otro código, así
+   que ni siquiera se estaba midiendo lo que creíamos medir.
+
+   Esta parte se lee en vez de ejecutarse, y es a propósito: lo que hay que
+   comprobar es CON QUÉ llama el botón al trabajo —ensayo primero, de verdad
+   sólo después del YES— y eso es la forma de la función, no su resultado. */
+console.log('\n═══ 11. El botón de hacerlo ahora ═══\n');
+{
+  const ahora = A.sinComentarios(A.fnSrc(GS, 'menuArchivarAhora'));
+
+  check('declara quién es antes de tocar nada — es el fallo que dejó el ensayo ' +
+        'inútil un día entero', /setVerifiedAuth_\(/.test(ahora));
+  check('ENSAYA PRIMERO: enseña los números antes de tocar las hojas',
+        /archiveOldMovements\(ss,\s*\{\s*ensayo:\s*true\s*\}\)/.test(ahora), ahora.slice(0, 200));
+  check('pregunta antes de escribir, y con los números delante',
+        /YES_NO/.test(ahora) && /seArchivan/.test(ahora));
+  check('y sólo escribe si la respuesta es YES',
+        /Button\.YES/.test(ahora) && /return;/.test(ahora));
+
+  /* LA LLAMADA DE VERDAD NO LLEVA `ensayo`. Si la llevara, el botón diría que
+   * archivó y no habría archivado nada — un botón que miente es peor que no
+   * tenerlo, y esto se escribe copiando la línea de arriba, así que es
+   * exactamente el error que se cometería. */
+  const real = /archiveOldMovements\(ss\)\s*;/.test(ahora);
+  check('LA CORRIDA DE VERDAD VA SIN ensayo', real, ahora);
+
+  const menu = A.sinComentarios(GS.match(/createMenu\('🔧 Advanced'\)[\s\S]{0,900}/)[0]);
+  check('y está colgado del menú, al lado del ensayo',
+        /menuArchivarAhora/.test(menu) && /menuProbarArchivado/.test(menu));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   12. EL INFORME NO PUEDE DECIR "WOULD" DESPUÉS DE HABER ESCRITO
+   ═══════════════════════════════════════════════════════════════════════════
+
+   Los dos botones enseñan el mismo informe, y tiene que ser el MISMO texto —
+   dos copias del mismo informe divergen en cuanto alguien toca una, que es lo
+   que ya nos pasó con las dos listas de pruebas que debían coincidir sin nada
+   que lo obligara.
+
+   Lo único que cambia son los tiempos verbales, y cambian porque importan: un
+   informe que dice "would move OUT" después de haber reescrito las dos hojas le
+   hace creer a quien lo lee que todavía está a tiempo de arrepentirse. */
+console.log('\n═══ 12. El informe dice si ya pasó o todavía no ═══\n');
+{
+  const ctx = {};
+  vm.createContext(ctx);
+  vm.runInContext(A.levantar(GS, ['informeDeArchivado_']), ctx);
+
+  const r = { status: 'success', informe: {
+    pasos: ['uno', 'dos'], modeloAncho: 23, archivoAncho: 25, archivoUltima: 23,
+    histAncho: 26, histUltima: 23, archivoFilas: 1223, histFilas: 56,
+    corteMeses: 6, corteFecha: '2026-04-01', seArchivan: 29, seDevuelven: 0,
+    seQuedan: 1194, quedariaEnArchivo: 1194, quedariaEnHistoria: 85 } };
+
+  const ensayo = ctx.informeDeArchivado_(r, true).join('\n');
+  const deVerdad = ctx.informeDeArchivado_(r, false).join('\n');
+
+  check('el ensayo dice que no escribió nada', /NOTHING WAS WRITTEN/.test(ensayo));
+  check('la corrida de verdad dice que SÍ', /THIS WAS THE REAL RUN/.test(deVerdad));
+  check('el ensayo habla en condicional', /Would move OUT/.test(ensayo));
+  check('LA CORRIDA DE VERDAD NO — "would" después de escribir hace creer que ' +
+        'todavía se puede uno arrepentir',
+        !/Would move OUT/.test(deVerdad) && /Moved OUT/.test(deVerdad), deVerdad);
+  check('los dos llevan los mismos números, que es el sentido de compartirlo',
+        /1194/.test(ensayo) && /1194/.test(deVerdad));
+  check('y los dos llevan el paso a paso', /STEP BY STEP/.test(ensayo) &&
+        /STEP BY STEP/.test(deVerdad));
+
+  /* El aviso de "se queda vacío" también cambia de tiempo verbal: en la corrida
+   * de verdad ya está vacío, y decirlo en condicional sería mentir sobre el
+   * estado de la pantalla que la persona tiene delante. */
+  const vacio = { status: 'success', informe: { pasos: [], corteMeses: 6,
+    corteFecha: '2026-04-01', seArchivan: 1, seDevuelven: 0, seQuedan: 0,
+    quedariaEnArchivo: 0, quedariaEnHistoria: 1279 } };
+  check('vacío en ensayo: "would end up EMPTY"',
+        /would end up EMPTY/.test(ctx.informeDeArchivado_(vacio, true).join('\n')));
+  check('vacío de verdad: "is now EMPTY"',
+        /is now EMPTY/.test(ctx.informeDeArchivado_(vacio, false).join('\n')));
+}
+
 console.log('\n' + (fail ? '✗ ' + fail + ' fallo(s), ' : '✓ ') + ok + ' comprobaciones');
 process.exit(fail ? 1 : 0);
