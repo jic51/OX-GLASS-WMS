@@ -146,6 +146,10 @@ function montarTrabajo(archivo, historico, mesesCorte, correos) {
           MAT_ID:14, DOC_LINKS:15, USER_EMAIL:16, DEST_LOC:17, MOVETYPE:18, PM:19,
           UNIT_COST:20, TOTAL_COST:21, MOV_ID:22 },
     AC_WIDTH,
+    // Desde la v12.29 la corrida estampa la versión, así que el contexto la
+    // necesita. Se lee del archivo, no se inventa: una constante copiada aquí
+    // diría una versión y el producto otra.
+    APP_VERSION: (/^var APP_VERSION = '([^']+)'/m.exec(GS) || [])[1],
     SHEETS: { ARCHIVE: 'MASTER_ARCHIVE_V3' },
     PRODUCT_NAME: 'Acopio',
     LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock(){} }) },
@@ -543,6 +547,48 @@ console.log('\n═══ 8. Cuando revienta, el registro dice por dónde iba ═
         !!(reg && /Cutoff is 12 month/.test(reg.ctx.steps)), reg && reg.ctx && reg.ctx.steps);
   check('el archivo NO se quedó vacío: la escritura falló antes de limpiar',
         archivo.conDatos() > 0, archivo.conDatos());
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   9. QUÉ VERSIÓN CORRIÓ — la línea que habría ahorrado tres incidentes
+   ═══════════════════════════════════════════════════════════════════════════
+
+   01/10, 3:19:11. La pila de la ejecución decía:
+
+       at archiveOldMovements(Code:2148:78)
+       at archiveOldMovementsTrigger(Code:2170:3)
+
+   Veintidós líneas entre una y otra. En la v12.14 —la que puso las guardas—
+   archiveOldMovements ocupa unas 300 líneas. O sea que LAS GUARDAS NO ESTABAN
+   EN EL CÓDIGO QUE CORRIÓ: el trabajo nocturno llevaba semanas ejecutando una
+   versión vieja mientras nosotros mirábamos la nueva y nos preguntábamos por qué
+   no servía de nada.
+
+   Nada en la app decía qué versión había corrido de noche. Dos semanas de
+   incidentes y la pregunta "¿pero esto es el código nuevo?" no se podía
+   contestar desde dentro. Ahora cada corrida lo deja escrito, dos veces: al
+   empezar (por si revienta antes de llegar al final) y al terminar. */
+console.log('\n═══ 9. Cada corrida deja dicho qué versión era ═══\n');
+{
+  const trabajo = A.sinComentarios(A.fnSrc(GS, 'archiveOldMovements'));
+  const disp    = A.sinComentarios(A.fnSrc(GS, 'archiveOldMovementsTrigger'));
+
+  check('el disparador anota la versión ANTES de empezar — por si revienta en la ' +
+        'primera línea', /ARCHIVE_START/.test(disp) && /APP_VERSION/.test(disp), disp);
+  check('y la corrida que termina bien también la deja',
+        /ARCHIVE_RECONCILE[\s\S]{0,120}APP_VERSION/.test(trabajo));
+  check('y el error la lleva en su contexto, que es donde más falta hace',
+        /version:\s*APP_VERSION/.test(trabajo));
+
+  /* Y el ensayo tiene que poder arrancar. Lo mandé sin identidad y lo único que
+   * Jose sacó al pulsarlo fue "Not authenticated" desde loadConfig — un botón de
+   * diagnóstico que no arranca es peor que no tenerlo, porque hace perder el
+   * día a quien confiaba en él. */
+  const menu = A.sinComentarios(A.fnSrc(GS, 'menuProbarArchivado'));
+  check('el ensayo declara quién es antes de tocar nada, como las demás ' +
+        'entradas de menú', /setVerifiedAuth_\(/.test(menu), menu.slice(0, 160));
+  check('...y por el camino del dueño, no inventándose un permiso',
+        /requireOwnerContext_\(\)/.test(menu));
 }
 
 console.log('\n' + (fail ? '✗ ' + fail + ' fallo(s), ' : '✓ ') + ok + ' comprobaciones');

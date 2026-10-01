@@ -46,7 +46,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.28';
+var APP_VERSION = '12.29';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -58,7 +58,7 @@ var APP_VERSION = '12.28';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '3abce4c9';
+var APP_BUILD = '8b55aed4';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -4707,7 +4707,20 @@ function archiveOldMovements(ss, opciones) {
       avisarFalloDeArchivo_(ss, vacioMsg);
     }
 
-    auditLog_(ss, 'ARCHIVE_RECONCILE', 'system', 'cutoff=' + cutoffMonths + 'mo',
+    /* LA VERSIÓN QUEDA ESCRITA EN CADA CORRIDA, y es la línea que habría
+     * ahorrado tres incidentes y dos semanas.
+     *
+     * El 01/10 a las 3:19 este trabajo falló con el mismo error del 26 y del 29.
+     * La pila decía `archiveOldMovements(Code:2148)` — y en la v12.14, que es la
+     * que puso las guardas, esa función está en la 4371 y ocupa unas 300 líneas,
+     * no las ~90 que caben antes de la 2170 donde estaba su disparador. O sea
+     * que LAS GUARDAS NO ESTABAN EN EL CÓDIGO QUE CORRIÓ: el trabajo nocturno
+     * llevaba semanas ejecutando una versión vieja mientras nosotros mirábamos
+     * la nueva.
+     *
+     * Nada en la app decía qué versión había corrido de noche. Ahora sí. */
+    auditLog_(ss, 'ARCHIVE_RECONCILE', 'system',
+      'v' + APP_VERSION + ' · cutoff=' + cutoffMonths + 'mo',
       toArchive.length + ' archived', toRestore.length + ' restored');
     return { status: 'success', archived: toArchive.length, restored: toRestore.length,
              total: antes, informe: informe };
@@ -4741,6 +4754,7 @@ function archiveOldMovements(ss, opciones) {
      * llegado nunca al registro. Habríamos vuelto a tener la misma línea inútil
      * creyendo que esta vez sí decía algo. */
     logError_(ss, 'ERROR', 'backend', 'archiveOldMovements', 'system', e.message, {
+      version: APP_VERSION,     // qué versión corrió DE VERDAD — ver ARCHIVE_RECONCILE
       steps: informe.pasos.join('  →  ') || '(none)',
       stack: informe.stack,
       archiveWidth: informe.archivoAncho, historyWidth: informe.histAncho,
@@ -4826,6 +4840,13 @@ function archiveOldMovementsTrigger() {
   // archive rewrite on demand and burn the project's execution quota.
   requireOwnerContext_();
   setVerifiedAuth_({ role: 'ADMIN', email: 'system@scheduled-trigger', name: 'Scheduled trigger' });
+  /* ANTES DE NADA, para que conste aunque lo de abajo reviente en la primera
+   * línea. Es la diferencia entre "falló el archivado" y "falló el archivado de
+   * la v12.9 cuando creíamos tener la v12.14". */
+  try {
+    auditLog_(SpreadsheetApp.getActiveSpreadsheet(), 'ARCHIVE_START', 'system',
+              'nightly archive starting · v' + APP_VERSION, '', '');
+  } catch (e) {}
   archiveOldMovements(SpreadsheetApp.getActiveSpreadsheet());
 }
 
@@ -9478,6 +9499,17 @@ function detectFolderPrefixes_() {
  */
 function menuProbarArchivado() {
   var ui = SpreadsheetApp.getUi();
+  /* LA IDENTIDAD, QUE SE ME OLVIDÓ Y DEJÓ EL ENSAYO INÚTIL.
+   *
+   * Jose lo corrió y lo único que sacó fue "Not authenticated", desde
+   * loadConfig. Toda entrada por menú tiene que declarar quién es antes de
+   * tocar nada —menuActivateWebApp y menuCheckInstallation ya lo hacían— porque
+   * `requireAuth_` mira la sesión de la app, no la de Google, y desde un menú no
+   * hay ninguna.
+   *
+   * Un botón de diagnóstico que no arranca es peor que no tenerlo: le hice
+   * perder un día a Jose creyendo que el ensayo le iba a decir algo. */
+  setVerifiedAuth_({ role: 'ADMIN', email: requireOwnerContext_(), name: 'Spreadsheet menu' });
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var r;
   try {

@@ -98,6 +98,30 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.29</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Cada corrida nocturna deja escrito de qué versión era</h3>
+      <p><b>Ésta es la que explica las dos últimas semanas.</b> El fallo del 1 de
+         octubre dejó una pila, y la pila decía que la función que reventó estaba
+         en la línea 2.148, veintidós por encima de su propio disparador. En la
+         versión que puso las comprobaciones de seguridad, esa misma función está
+         en la 4.371 y ocupa unas trescientas líneas.</p>
+      <p><b>O sea que las comprobaciones no estaban en el código que corrió.</b>
+         El trabajo nocturno llevaba semanas ejecutando una copia vieja del script
+         mientras la nueva estaba en el editor — por eso tres arreglos seguidos
+         parecían no cambiar nada. Y nada en la app podía contestar "¿pero esto es
+         el código nuevo?", así que la pregunta no se hizo en dos semanas.</p>
+      <p>Ahora cada corrida lo deja escrito dos veces: al empezar, por si revienta
+         en la primera línea, y al terminar. La versión viaja además dentro del
+         registro del error. Una línea corta, y la pregunta ya no puede quedarse
+         sin respuesta.</p>
+      <p><b>Y el botón de ensayo ahora sí arranca.</b> Salió sin declarar quién
+         es, así que lo único que llegó a decir fue "not authenticated". Un
+         diagnóstico que no arranca es peor que no tener ninguno: le cuesta un día
+         a quien contaba con él.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.28</span>
       <span class="tag fix">Arreglo</span>
       <h3>Cuando el trabajo nocturno falla, el registro dice por dónde iba</h3>

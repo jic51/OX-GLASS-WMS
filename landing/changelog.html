@@ -97,6 +97,30 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.29</span>
+      <span class="tag fix">Fix</span>
+      <h3>Every nightly run now records which version of the app it was</h3>
+      <p><b>This is the one that explains the last two weeks.</b> The failure on
+         1 October left a stack trace, and the stack trace said the function that
+         broke was at line 2,148, twenty-two lines above its own trigger. In the
+         version that added the safety checks, that same function sits at line
+         4,371 and is about three hundred lines long.</p>
+      <p><b>So the safety checks were not in the code that ran.</b> The nightly
+         job had been executing an older copy of the script while the new one sat
+         in the editor — which is why three fixes in a row appeared to change
+         nothing. Nothing anywhere in the app could answer "but is this the new
+         code?", so the question went unasked for two weeks.</p>
+      <p>Now every run writes it down twice: once when it starts, in case it
+         breaks on the first line, and once when it finishes. The version also
+         rides along in the error record. One short line, and the question can
+         never go unanswered again.</p>
+      <p><b>And the rehearsal button now actually starts.</b> It was shipped
+         without declaring who it is, so the only thing it ever said was "not
+         authenticated". A diagnostic that does not start is worse than no
+         diagnostic: it costs a day to somebody who was counting on it.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.28</span>
       <span class="tag fix">Fix</span>
       <h3>When the nightly job fails, the log now says where it got to</h3>
