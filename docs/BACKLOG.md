@@ -6018,3 +6018,83 @@ plantilla que se copia, y el aviso gris se resuelve explicándolo en la guía de
 instalación con una captura. Atar a cientos de clientes a un proyecto nuestro
 mete sus registros y sus límites de uso en nuestra casa, y el día que haya que
 mover a uno no hay forma de separarlo.
+
+# ══ COSAS ANOTADAS EL 2026-10-02 ══
+
+## 1. ¿Le sirve al cliente todo lo que hay en el menú 🏭 Acopio?
+
+Jose, sobre la captura del menú entero desplegado: *"anota que debemos hablar de
+si todo eso en el menú Acopio sirve o le sirve al cliente."*
+
+Es el mismo criterio de *"el usuario no administra la app"*, aplicado al menú de
+la hoja de cálculo en vez de a Settings. Y aquí es más urgente, porque **el menú
+de la hoja es lo único que el cliente ve si abre el Sheet** — y lo va a abrir,
+aunque le digamos que no hace falta.
+
+Hoy ese menú ofrece, entre otras cosas: *Revoke Public Sharing*, *Normalize
+Status Column*, *Push Update Live*, *Erase everything — make this a blank
+template* y *Check if this copy is a clean template*. **Las dos últimas son
+nuestras, no suyas**, y una de ellas borra toda su información. Que un cliente
+tenga a dos clics un botón llamado "borra todo" es un accidente esperando.
+
+Repaso pendiente, entrada por entrada, con la misma prueba de fuego: *¿qué pasa
+si la pulsa sin entender qué hace?* Lo que no sobreviva a esa pregunta se va
+detrás de una contraseña de soporte, o directamente no se le enseña.
+
+## 2. Las sugerencias de PM no salen en Edit Movement ni en Edit Receiving
+
+Jose: *"en Edit Movement y en Edit Receiving no se muestran las sugerencias de
+PM's."*
+
+Es el patrón que ya nos mordió tres veces y que está escrito en el archivo:
+**comportamiento cableado en un camino y no en los otros**. El campo de PM
+sugiere al crear y no sugiere al editar, así que editar un movimiento es
+exactamente donde es más fácil escribir el nombre de otra forma — y entonces el
+mismo PM queda escrito de dos maneras, que es justo lo que *Check my data* se
+pasa el día proponiendo arreglar.
+
+## 3. La categoría tiene que empezar VACÍA
+
+Jose: *"cuando se abre una ventana para crear algún movimiento quiero que la
+categoría aparezca vacía y sin nada. Me ha pasado que no recuerdo seleccionar
+qué tipo de material es y, como BONEYARD aparece primero en la lista, se queda
+así y al guardar me doy cuenta. Entonces no debemos dejar que el cliente se
+equivoque."*
+
+**Un desplegable que ya trae una respuesta puesta no está preguntando, está
+respondiendo por ti.** Y la respuesta que da es la primera por orden alfabético,
+que no tiene ninguna relación con lo que el usuario quería — BONEYARD empieza por
+B y por eso gana. Guardar un movimiento en la categoría equivocada ensucia el
+stock de dos materiales a la vez: el que no era suma, y el que era no.
+
+El arreglo es una opción vacía al principio y que el guardar se niegue sin
+elección — lo segundo ya existe, así que es poco trabajo. **Y hay que buscar el
+mismo patrón en los demás desplegables** (unidad, proyecto, proveedor,
+ubicación): el que pueda quedarse con un valor que nadie eligió tiene el mismo
+problema.
+
+## 4. Incoming: los dos botones de arriba, fijos al bajar
+
+Jose, con la captura: *"quiero que los 2 botones de Incoming se queden pegados en
+la parte de arriba cuando baje, porque no puedo hacerlo sin subir otra vez."*
+
+*From an email* y *+ Add Expected*. Con una semana de llegadas en pantalla hay que
+subir hasta arriba para añadir una — y lo normal es darse cuenta de que falta una
+llegada mientras se mira el jueves.
+
+## 5. El pie de las ventanas, siempre visible
+
+Jose, con la captura de *Receive Material (ENTRY)*: *"quiero que en el Incoming,
+Entry, Exit, Transfer y otras ventanas, la parte de abajo con el botón de guardar
+o el que sea se vea siempre. Si la pantalla es muy pequeña entonces hay que hacer
+scroll, pero si la pantalla es grande no se necesita hacer scroll."*
+
+Y hay una razón de más peso que la comodidad, visible en su propia captura: **el
+aviso de error vive en ese pie**. En la imagen dice *"Material 1 needs a name"*
+justo al lado de *Save to System*. Si el pie está fuera de la pantalla, el
+usuario pulsa guardar, no pasa nada, y el motivo está en un sitio que no ve. Un
+mensaje de error que hay que ir a buscar es un mensaje de error que no existe.
+
+Pie pegado abajo en la ventana, con el cuerpo haciendo scroll por dentro. Vale
+para todas las ventanas de movimiento, no sólo para ENTRY — y conviene hacerlo
+de una vez y en un solo sitio, no ventana por ventana.
