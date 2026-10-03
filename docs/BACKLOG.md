@@ -6098,3 +6098,31 @@ mensaje de error que hay que ir a buscar es un mensaje de error que no existe.
 Pie pegado abajo en la ventana, con el cuerpo haciendo scroll por dentro. Vale
 para todas las ventanas de movimiento, no sólo para ENTRY — y conviene hacerlo
 de una vez y en un solo sitio, no ventana por ventana.
+
+# ══ PANEL DE CLIENTES — quién paga y qué instalaciones están vivas. Anotado 2026-10-03 ══
+
+Jose: *"quiero tener una forma de ver automáticamente y me diga cuándo empezó un
+cliente a pagar, el nombre y el correo, y todo lo demás de la app."*
+
+El diseño entero está en **`docs/PANEL-DE-CLIENTES.md`**. Lo que hay que retener
+desde aquí:
+
+- **El dinero ya lo contesta Stripe** (cuándo empezó a pagar, nombre, correo,
+  plan, tarjeta fallida). No se duplica: se traen sus *webhooks* a una hoja en el
+  Drive de Jose y ya está.
+- **Lo que de verdad falta es saber si una instalación está viva.** Hoy, de la
+  copia de un cliente sólo llega un correo a los 3 y a los 7 días, y **sólo si no
+  ha registrado ni un movimiento**. Un cliente sano no manda nada nunca. Un
+  cliente roto tampoco. Se ven igual: silencio.
+- **Y tenemos la prueba en casa:** tres veces el archivado destrozó datos en OX
+  Glass y nos enteramos entre catorce horas y dos días después, por casualidad.
+  En la copia de un cliente no nos enteraríamos jamás — nos enteraríamos el día
+  de la devolución.
+- **El obstáculo es una promesa escrita**, no una dificultad técnica: la política
+  de privacidad dice *"exactly four things… nothing else"*. Hay que elegir entre
+  no tocarla (y seguir ciegos) o reescribirla ANTES de recoger nada, con la lista
+  cerrada, el interruptor y la frontera que lo sostiene todo: **cuánto, nunca
+  qué.** Ni un nombre de material, ni una cantidad, ni un documento.
+
+**Primer paso, y no depende de ninguna decisión:** los webhooks de Stripe el día
+que se active. Eso solo ya contesta la pregunta literal que hizo.
