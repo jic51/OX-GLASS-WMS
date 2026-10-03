@@ -6126,3 +6126,28 @@ desde aquí:
 
 **Primer paso, y no depende de ninguna decisión:** los webhooks de Stripe el día
 que se active. Eso solo ya contesta la pregunta literal que hizo.
+
+# ══ PARTIR LA APP EN VARIOS ARCHIVOS — cuando toque, no ahora. Anotado 2026-10-03 ══
+
+Jose: *"una app profesional no es un solo bloque… ¿no es mejor dividir la app en
+bloques y que cada uno tenga su propio archivo?"*
+
+Razonado entero en **`docs/UN-ARCHIVO-O-MUCHOS.md`**. Lo que hay que retener:
+
+- **Apps Script no tiene módulos**: todos los `.gs` comparten un ámbito global.
+  Partir da orden, no aislamiento — y añade un problema que hoy no existe, el
+  orden de carga de las variables de nivel superior (ya nos mordió:
+  `test-use-before-var.js`).
+- **El coste se paga en cada actualización de cada cliente.** Hoy son 3 archivos
+  pegados a mano; con veinte son veinte. Acabamos de perder un día por olvidar
+  UNO de tres.
+- **La salida buena es separar cómo se escribe de cómo se entrega:** muchos
+  archivos en `src/`, un paso de construcción que los junta en el
+  `Code_v3_fixed.gs` de siempre. Se gana el orden, no se paga la entrega, y las
+  125 pruebas siguen leyendo el archivo generado sin enterarse.
+- **Cuándo**: cuando toque el código alguien más, cuando haya un paso de
+  construcción por otro motivo, o cuando el editor empiece a sufrir. **Y por el
+  HTML primero** (24.132 líneas contra 13.279, `include()` de serie, y sin el
+  problema del orden de carga).
+- **Mientras tanto, una hora de trabajo**: un índice al principio de cada
+  archivo. Las 68 secciones ya están; falta la lista que diga qué hay y dónde.
