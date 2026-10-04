@@ -6151,3 +6151,53 @@ Razonado entero en **`docs/UN-ARCHIVO-O-MUCHOS.md`**. Lo que hay que retener:
   problema del orden de carga).
 - **Mientras tanto, una hora de trabajo**: un índice al principio de cada
   archivo. Las 68 secciones ya están; falta la lista que diga qué hay y dónde.
+
+# ══ "LOAD MORE" TE MANDA AL FINAL DE LA LISTA. Anotado 2026-10-04 ══
+
+Jose, probando el archivado en la copia DEMO:
+
+> *"Cada vez que se pulsa el botón Load more se cargan los movimientos, pero la
+> vista siempre se va al final, al último movimiento de esos 75 recién añadidos.
+> La vista del usuario debe quedarse viendo los movimientos que ya se veían y
+> añadir los demás debajo, no debemos irnos hasta el último."*
+
+**La causa está escrita y es deliberada** — `_loadMoreMovements`, tres líneas:
+
+```javascript
+_movPage++;
+renderMovements();
+// Scroll to keep position near the new rows
+var tc = document.getElementById('tableContainer');
+if (tc) tc.scrollTop = tc.scrollHeight;
+```
+
+El comentario dice *"para quedarse cerca de las filas nuevas"* y la línea hace lo
+contrario: `scrollHeight` es **el fondo del todo**, así que aterriza más allá de
+las 75 recién traídas, en la última de todas. La intención era buena y la línea
+hace otra cosa.
+
+## El arreglo
+
+Guardar `scrollTop` **antes** de repintar y devolverlo después. Las filas nuevas
+se añaden por abajo, así que todo lo que estaba encima conserva su posición y la
+vista se queda clavada donde estaba:
+
+```javascript
+var tc  = document.getElementById('tableContainer');
+var pos = tc ? tc.scrollTop : 0;
+_movPage++;
+renderMovements();
+if (tc) tc.scrollTop = pos;
+```
+
+**Y la comprobación que hay que escribir con él**, porque es lo único que impide
+que vuelva: pintar, bajar a una fila concreta, pulsar el botón y comprobar que
+esa fila sigue a la misma altura. Medir la posición, no que la línea esté
+escrita — la línea ESTÁ escrita ahora mismo, y hace lo contrario de lo que su
+comentario promete.
+
+## Y de paso, mirar los otros dos
+
+El mismo patrón puede estar en **"Load Older History"** y en cualquier lista que
+crezca por abajo. Si se arregla uno solo, el siguiente que alguien pruebe vuelve
+a sorprender.
