@@ -98,6 +98,26 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.31</span>
+      <span class="tag safe">Interno</span>
+      <h3>Un índice para el código, y una prueba que lo obliga a no mentir</h3>
+      <p><b>En la app no cambia nada.</b> Ésta es para quien tenga que trabajar
+         en ella — hoy una persona, y algún día no.</p>
+      <p>El archivo del servidor son 13.279 líneas repartidas en 68 secciones.
+         Ahora empieza con un índice numerado de esas secciones, así que
+         encontrar algo es leer una lista en vez de bajar y bajar. <b>El índice
+         se genera de las propias cabeceras del archivo, no se escribe</b>, y una
+         prueba lo vuelve a generar y lo compara línea a línea: si se renombra,
+         se mueve, se añade o se quita una sección y el índice no lo refleja, la
+         prueba falla.</p>
+      <p>Y eso es lo importante. Un índice escrito a mano es otra lista que tiene
+         que coincidir con algo sin que nada lo obligue — exactamente la forma de
+         fallo que este código ya se ha cazado dos veces a sí mismo. Un índice
+         que miente es peor que no tenerlo: no tenerlo obliga a buscar, y tenerlo
+         equivocado hace creer que ya se ha buscado.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.30</span>
       <span class="tag new">Nuevo</span>
       <h3>Archivar los movimientos viejos ahora, sin esperar a las 3 de la mañana</h3>

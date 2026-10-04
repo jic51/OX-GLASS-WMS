@@ -62,6 +62,7 @@ node tools/test-cost-privacy.js
 node tools/test-html-escaping.js
 node tools/test-window-stack.js
 node tools/test-use-before-var.js
+node tools/test-indice.js
 node tools/test-sysact-followthrough.js
 node tools/test-daily-report.js
 node tools/test-morning-closes.js

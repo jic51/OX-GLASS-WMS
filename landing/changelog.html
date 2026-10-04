@@ -97,6 +97,25 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.31</span>
+      <span class="tag safe">Internal</span>
+      <h3>A table of contents for the code, and a test that keeps it honest</h3>
+      <p><b>Nothing in the app changed.</b> This one is for whoever has to work
+         on it — today that is one person, and one day it will not be.</p>
+      <p>The server file is 13,279 lines across 68 sections. It now opens with a
+         numbered index of those sections, so finding something is reading a list
+         instead of scrolling. <b>The index is generated from the file's own
+         section headings, not typed</b>, and a test regenerates it and compares
+         it line by line: rename, move, add or remove a section without updating
+         the index and the test fails.</p>
+      <p>That part is the point. A hand-written index is one more list that has
+         to agree with something else with nothing forcing it — the exact shape
+         of bug this codebase has caught itself making twice. And an index that
+         lies is worse than no index at all: no index makes you search, a wrong
+         one makes you believe you already have.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.30</span>
       <span class="tag new">New</span>
       <h3>Archive the old movements now, instead of waiting for 3am</h3>

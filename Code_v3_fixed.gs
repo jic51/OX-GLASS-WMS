@@ -4,6 +4,87 @@
 //         RETURN logic, custom on-demand notifications, WASTE-only auto-email
 // ════════════════════════════════════════════════════════════════════════════════
 
+// ╔══ ÍNDICE ══ generado por tools/test-indice.js — no editar a mano ══════════╗
+//
+//  Las 68 secciones de este archivo, en el orden en que están.
+//  Para saltar a una: Ctrl+F con su texto, tal cual aparece aquí.
+//
+//  NO SE EDITA A MANO. Lo genera (y lo comprueba) tools/test-indice.js a
+//  partir de las propias cabeceras del archivo — un índice escrito a mano es
+//  otra lista que tiene que coincidir con algo sin que nada lo obligue, y de
+//  esas este código ya se ha cazado dos.
+//
+//   1  THE `#.png` ON THE END IS LOAD-BEARING. DO NOT TIDY IT AWAY.
+//   2  UNA SOLA CARPETA MAESTRA
+//   3  ROUTING
+//   4  PRIVATE DOCUMENT ACCESS
+//   5  GOOGLE SIGN-IN (hybrid, for users outside the company's Workspace)
+//   6  PAID ADD-ON: GMAIL DELIVERY SCANNER
+//   7  THE AI KEY, SET FROM INSIDE THE APP
+//   8  RATE LIMITING
+//   9  AUTH
+//  10  AUTHORIZATION GATE
+//  11  PER-INSTALLATION PERMISSIONS
+//  12  CONFIG LOADER
+//  13  TEXT THAT STAYS TEXT
+//  14  INITIAL DATA
+//  15  STOCK CALCULATION
+//  16  PROCESS MOVEMENT
+//  17  BATCH MOVEMENT ENGINE
+//  18  THE STOCK LOCK
+//  19  ADD MULTI-ENTRY
+//  20  MULTI-MATERIAL EXIT
+//  21  FRESH STOCK QUERY (reads Archive directly, no cache)
+//  22  PACKS: HOW MANY UNITS COME IN A BOX
+//  23  ARCHIVING OLD MOVEMENTS
+//  24  THE TRASH
+//  25  AUTOMATIC BACKUP
+//  26  HOW FULL IS THE SPREADSHEET
+//  27  CHECK-IN — CATCH A STUCK CUSTOMER BEFORE THEY QUIETLY LEAVE
+//  28  REFRESH DERIVED SHEETS
+//  29  RESERVAS
+//  30  MATERIAL LOCKS
+//  31  PM DIRECTORY
+//  32  DOCUMENT UPLOAD
+//  33  RACK PHOTOS
+//  34  DUPLICATE MOVEMENT DETECTION
+//  35  ATTACH AN EXISTING DRIVE FILE
+//  36  MULTI-PHOTO NAMED DOCUMENT GROUPS
+//  37  ADMIN ACTIONS
+//  38  BULK IMPORT (CSV)
+//  39  NO TWO MOVEMENTS MAY SHARE A NAME
+//  40  GIVING EVERY EXISTING MOVEMENT A NAME
+//  41  AUDIT LOG
+//  42  WHAT THE SYSTEM DID ON ITS OWN
+//  43  ERROR LOG
+//  44  NOTIFICATIONS
+//  45  EXPORT
+//  46  CUSTOM MENU
+//  47  THE ACCEPT BUTTON
+//  48  BEGIN GENERATED LEGAL TEXT — node tools/sync-legal.js
+//  49  END GENERATED LEGAL TEXT
+//  50  PROGRAMMATIC DEPLOYMENT — ADVANCED / OWNER-ONLY
+//  51  INSTALLATION CHECK
+//  52  WHICH WAY AN ADJUSTMENT WENT
+//  53  PRESENCE / HEARTBEAT
+//  54  LOCKING
+//  55  USER MANAGEMENT
+//  56  SETTINGS / CONFIG MANAGEMENT
+//  57  COLUMN LABELS AND VISIBILITY
+//  58  COMPANY NAME, DOMAIN AND LOGO
+//  59  WHAT MAKES A LOCATION SAFE TO DELETE
+//  60  WHY ONLY CATEGORIES ARE REWRITTEN INTO THE ARCHIVE
+//  61  MATERIAL MANAGEMENT
+//  62  INCOMING MATERIALS
+//  63  APPLYING ONE FINDING
+//  64  READ AN EMAIL INTO EXPECTED DELIVERIES
+//  65  GMAIL SCANNER
+//  66  MODIFY MOVEMENT
+//  67  MONITORED MATERIALS
+//  68  AI DOCUMENT EXTRACTION
+//
+// ╚════════════════════════════════════════════════════════════════════════════╝
+
 // ⚠️ NAMING RULE — THIS IS A SECURITY BOUNDARY, NOT A STYLE CHOICE ⚠️
 //
 // A helper that must NOT be callable from a browser has to END with an
@@ -46,7 +127,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.30';
+var APP_VERSION = '12.31';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -58,7 +139,7 @@ var APP_VERSION = '12.30';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'f1b731c6';
+var APP_BUILD = 'b9b6526f';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
