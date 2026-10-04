@@ -97,6 +97,30 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.32</span>
+      <span class="tag fix">Fix</span>
+      <h3>"Open WMS App" could hand you someone else's address</h3>
+      <p>On a spreadsheet <b>copied</b> from one that had already been published,
+         Google answers the question "what is this app's address?" with the
+         <i>original</i> file's address. The copy has its own, somewhere else.
+         Following the one Google gives you lands on <i>"Sorry, unable to open
+         the file at this time"</i>, and nothing about that page suggests the
+         link was the problem.</p>
+      <p>The app already knew this — it keeps the real address in a setting that
+         wins over Google's guess, and the setup wizard has been reading it that
+         way for months. <b>The menu entry was the one place that never asked.</b></p>
+      <p>Now it asks. And <b>Push Update Live writes the address down the moment
+         it publishes</b>, which is the only moment it is known for certain, so
+         the menu is right from then on without anybody typing anything.</p>
+      <p><b>A second one came out of the same check.</b> Signing in with Google
+         sends you back to the app afterwards, and on a copy with nothing saved
+         that return address was Google's guess too — so the sign-in could send
+         people back to somebody else's installation, failing with an error that
+         looks nothing like its cause. It now prefers the recorded address as
+         well.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.31</span>
       <span class="tag safe">Internal</span>
       <h3>A table of contents for the code, and a test that keeps it honest</h3>

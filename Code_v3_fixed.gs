@@ -127,7 +127,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.31';
+var APP_VERSION = '12.32';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -139,7 +139,7 @@ var APP_VERSION = '12.31';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'b9b6526f';
+var APP_BUILD = '2814a571';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -1455,9 +1455,25 @@ function serverSecret_() {
 
 // Must EXACTLY match the "Authorized redirect URI" registered in Google Cloud.
 // We read it from a Script Property so it can't drift from what getUrl() guesses
-// (the domain /a/macros/ form vs the /macros/s/ form). Falls back to getUrl().
+// (the domain /a/macros/ form vs the /macros/s/ form).
+//
+/* Y SI NO ESTÁ, LA GUARDADA ANTES QUE LA ADIVINADA — lo encontró el contador de
+ * puertas de test-url-de-la-app el 2026-10-04, buscando el fallo de otra
+ * función. Esta decía "falls back to getUrl()", y en una hoja COPIADA de otra ya
+ * publicada getUrl() devuelve la dirección del script ORIGINAL. O sea: en una
+ * copia sin OAUTH_REDIRECT_URI puesta, el inicio de sesión con Google mandaba a
+ * la gente de vuelta a la app de OTRO, y el fallo que sale es un
+ * redirect_uri_mismatch, que no se parece en nada a su causa.
+ *
+ * `savedWebAppUrl_()` existe veinte líneas más arriba y esta función no la
+ * llamaba: el ayudante escrito y el camino sin conectar, otra vez.
+ *
+ * El orden importa y es deliberado. OAUTH_REDIRECT_URI sigue ganando porque
+ * puede diferir a propósito —un proxy, un intermediario—; después la dirección
+ * que el dueño confirmó; y sólo al final la suposición de Google. */
 function redirectUri_() {
   return PropertiesService.getScriptProperties().getProperty('OAUTH_REDIRECT_URI')
+      || savedWebAppUrl_()
       || ScriptApp.getService().getUrl();
 }
 
@@ -9338,6 +9354,27 @@ function selfActivateWebApp_() {
   for (var i = 0; i < entryPoints.length; i++) {
     if (entryPoints[i].webApp) {
       var url = entryPoints[i].webApp.url;
+      /* ANOTARLA, QUE ES EL ÚNICO MOMENTO EN QUE SE SABE CON CERTEZA.
+       *
+       * Jose, 2026-10-04, en la copia DEMO: publicó con este botón, el aviso le
+       * dio una dirección, y "Open WMS App" le dio OTRA — muerta, con la página
+       * de "Sorry, unable to open the file at this time".
+       *
+       * No era un misterio: es el peligro que `checkDeploymentReady` tiene
+       * escrito encima desde hace meses — en una hoja COPIADA de otra ya
+       * publicada, `ScriptApp.getService().getUrl()` devuelve una dirección con
+       * el identificador del script ORIGINAL. Una copia hereda ese enlace y lo
+       * enseña como si fuera suyo.
+       *
+       * La defensa ya existía (la propiedad WEB_APP_URL, que gana sobre
+       * getUrl()), y esta función —la ÚNICA del archivo que conoce la dirección
+       * buena de primera mano, porque acaba de crearla— no la rellenaba. Saber
+       * la respuesta correcta y no apuntarla en el sitio donde todos la buscan
+       * es la misma forma de fallo que el ensayo del archivado sin identidad.
+       *
+       * En try: publicar es lo importante, y que no se pueda anotar no puede
+       * tumbar una publicación que ya ha salido bien. */
+      try { saveWebAppUrl(url); } catch (e3) { Logger.log('saveWebAppUrl: ' + e3.message); }
       try {
         MailApp.sendEmail(Session.getActiveUser().getEmail(), '✅ Your ' + PRODUCT_NAME + ' system is ready',
           'Your warehouse system is live at:\n\n' + url +
@@ -10250,9 +10287,48 @@ function menuReconcile() {
   ui.alert('Reconciliation complete.');
 }
 
+/* LA DIRECCIÓN GUARDADA GANA, COMO EN TODAS PARTES MENOS AQUÍ.
+ *
+ * Esta entrada de menú preguntaba a `ScriptApp.getService().getUrl()` y punto,
+ * y era el único sitio del archivo que lo hacía: `checkDeploymentReady` prefiere
+ * la propiedad desde hace meses, y la línea que construye el enlace de los
+ * correos también. Una defensa escrita, probada, y un camino sin conectar.
+ *
+ * Lo que eso produce, medido en la copia DEMO de Jose el 2026-10-04: publicó
+ * con Push Update Live, el aviso le dio una dirección, pulsó "Open WMS App" y
+ * le dio otra distinta que abría "Sorry, unable to open the file at this time".
+ * En una hoja COPIADA de otra ya publicada, getUrl() devuelve una dirección con
+ * el identificador del script ORIGINAL — está escrito encima de
+ * checkDeploymentReady, con la palabra "observed", porque ya nos pasó.
+ *
+ * Y cuando hay que adivinar, se dice que se está adivinando. Una dirección
+ * muerta presentada sin reservas hace perder la tarde buscando el fallo en la
+ * app; la misma dirección con "esto no está confirmado, y así se confirma"
+ * cuesta dos minutos. */
 function menuOpenApp() {
-  var url = ScriptApp.getService().getUrl();
-  SpreadsheetApp.getUi().alert('Open this URL in your browser:\n\n' + url);
+  var ui = SpreadsheetApp.getUi();
+  var p  = PropertiesService.getScriptProperties();
+  var guardada = String(p.getProperty('WEB_APP_URL') || '').trim();
+  var url = guardada, aviso = '';
+
+  if (!url) {
+    try { url = String(ScriptApp.getService().getUrl() || ''); } catch (e) { url = ''; }
+    aviso = '\n\n⚠ THIS ADDRESS IS A GUESS, not a recorded one. On a spreadsheet ' +
+            'copied from another one that was already published, Google hands back ' +
+            'the ORIGINAL file\'s address here — which opens "Sorry, unable to open ' +
+            'the file at this time".\n\n' +
+            'To record the right one: 🔧 Advanced → Push Update Live, which writes ' +
+            'it down for you. Or copy it from Extensions → Apps Script → Deploy → ' +
+            'Manage deployments and paste it into the setup wizard.';
+  }
+
+  if (!url) {
+    ui.alert('No web app address yet',
+      'This copy has not been published. Extensions → Apps Script → Deploy → ' +
+      'New deployment → Web app.', ui.ButtonSet.OK);
+    return;
+  }
+  ui.alert('Open this URL in your browser:\n\n' + url + aviso);
 }
 
 // ─── PRESENCE / HEARTBEAT ────────────────────────────────────────────────────
