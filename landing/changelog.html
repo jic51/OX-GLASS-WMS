@@ -97,6 +97,24 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.34</span>
+      <span class="tag fix">Fix</span>
+      <h3>"Load more" no longer throws you to the bottom of the list</h3>
+      <p>Pressing it brought the next 75 movements and then jumped the view past
+         all of them, to the very last row. You lost the place you were reading
+         and had to scroll back up to find it.</p>
+      <p>Measured: the row you were looking at moved about <b>5,000 pixels</b>
+         off the top of the screen. Now it stays exactly where it was and the new
+         rows arrive underneath, which is the whole point of a "more" button.</p>
+      <p><b>And the other button that grows the same list got the same
+         treatment.</b> "Load Older History" was quietly resetting the table back
+         to its first 75 rows — so anyone who had pressed "Load more" ten times
+         lost all ten, and then had to press it ten times again to reach the
+         older movements they had just asked for. A button that brings things
+         cannot hide the things that were already there.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.33</span>
       <span class="tag fix">Fix</span>
       <h3>After a real archive run, the report says how each sheet ended up</h3>

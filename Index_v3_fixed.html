@@ -4420,7 +4420,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.33';
+var APP_VERSION = '12.34';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -4432,7 +4432,7 @@ var APP_VERSION = '12.33';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '303fb30a';
+var APP_BUILD = '329e8bfd';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -8162,8 +8162,13 @@ function _loadOlderHistoryClicked() {
       _oldHistoryQuedan = (res && res.quedan) || 0;
       _oldHistoryLoaded = true;
       _rotuloHistorico(btn);
-      _movPage = 1;
-      renderMovements();
+      /* NO SE VUELVE A LA PRIMERA PÁGINA, y esto salió de revisar el salto del
+       * otro botón. Aquí decía `_movPage = 1`, así que pedir histórico viejo
+       * ENCOGÍA la lista a las 75 primeras: quien había pulsado "Load more"
+       * diez veces perdía las diez, y para llegar a lo que acababa de pedir
+       * tenía que volver a pulsar otras tantas. Un botón que trae cosas no
+       * puede esconder las que ya estaban. */
+      _repintarSinSaltar(renderMovements);
       showToast('✓ ' + tanda.length + ' more loaded' +
                 (_oldHistoryQuedan ? ' — ' + _oldHistoryQuedan + ' older still there.' : '. That is all of it.'),
                 'ok', TOAST_QUICK);
@@ -8175,12 +8180,39 @@ function _loadOlderHistoryClicked() {
     .processMovement('loadOlderHistory', _h({ desde: oldMovements.length }));
 }
 
+/* REPINTAR SIN MOVER LA VISTA.
+ *
+ * Jose, 2026-10-04: *"cada vez que se pulsa Load more se cargan los movimientos
+ * pero la vista siempre se va al final, al último movimiento de esos 75 recién
+ * añadidos. La vista debe quedarse viendo los movimientos que ya se veían y
+ * añadir los demás debajo, no debemos irnos hasta el último."*
+ *
+ * Tiene razón, y la causa era una línea escrita A PROPÓSITO bajo un comentario
+ * que decía "Scroll to keep position near the new rows":
+ *
+ *     if (tc) tc.scrollTop = tc.scrollHeight;
+ *
+ * `scrollHeight` es el fondo del todo. O sea que la línea escrita para quedarse
+ * CERCA de las filas nuevas te manda MÁS ALLÁ de todas ellas, a la última de la
+ * lista. La intención era buena y el efecto el contrario — y por eso llevaba
+ * tanto tiempo sin verse: quien lee el código lee la intención.
+ *
+ * Como las filas crecen POR ABAJO, nada de lo que está encima cambia de sitio,
+ * así que devolver el `scrollTop` de antes deja la vista exactamente donde
+ * estaba. Va en una función compartida porque hay DOS botones que hacen crecer
+ * esta misma lista, y arreglar uno solo deja al otro sorprendiendo igual. */
+function _repintarSinSaltar(repintar) {
+  var tc  = document.getElementById('tableContainer');
+  var pos = tc ? tc.scrollTop : 0;
+  repintar();
+  if (tc) tc.scrollTop = pos;
+}
+
 function _loadMoreMovements(){
-  _movPage++;
-  renderMovements();
-  // Scroll to keep position near the new rows
-  var tc = document.getElementById('tableContainer');
-  if (tc) tc.scrollTop = tc.scrollHeight;
+  _repintarSinSaltar(function () {
+    _movPage++;
+    renderMovements();
+  });
 }
 
 function deleteMovementRow(rowIdx){
