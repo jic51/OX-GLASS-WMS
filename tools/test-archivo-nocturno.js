@@ -763,5 +763,58 @@ console.log('\n═══ 12. El informe dice si ya pasó o todavía no ═══
         /is now EMPTY/.test(ctx.informeDeArchivado_(vacio, false).join('\n')));
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   13. EL INFORME DE LA CORRIDA DE VERDAD DICE CÓMO QUEDÓ
+   ═══════════════════════════════════════════════════════════════════════════
+
+   Jose archivó de verdad en la copia DEMO el 2026-10-04 y el informe no le dijo
+   con cuántos movimientos quedaba cada hoja. Los números estaban —en el paso a
+   paso, repartidos— pero el apartado que lo dice de una vez no salió.
+
+   No salió porque no podía: `quedariaEnArchivo` y `quedariaEnHistoria` se
+   rellenaban DENTRO del `if (ensayo)`, así que en la corrida de verdad nunca
+   existían y el informe se saltaba el bloque entero. Yo escribí ese bloque en la
+   v12.30, con su texto en pasado ("IT NOW LEAVES"), sin que pudiera salir nunca.
+
+   Y MI PRUEBA NO LO CAZÓ, porque le pasaba a `informeDeArchivado_` un informe
+   con los campos ya puestos a mano. Midió el informe cómodo en vez del que
+   produce el producto — que es, palabra por palabra, el fallo que este archivo
+   lleva meses nombrando.
+
+   Así que esta sección no fabrica un informe: CORRE EL TRABAJO y mira el que
+   salga. */
+console.log('\n═══ 13. Después de archivar de verdad, el informe dice cómo quedó ═══\n');
+{
+  const { archivo, historico, total } = laNocheDeJose(AC_WIDTH);
+  const ctx = montarTrabajo(archivo, historico, 12, []);
+  const r = ctx.archiveOldMovements(ctx.ss);          // SIN ensayo
+
+  check('el trabajo terminó bien', r.status === 'success', r.status);
+  check('EL INFORME TRAE CÓMO QUEDÓ LA LISTA RECIENTE — antes no venía y el ' +
+        'apartado no se pintaba',
+        r.informe.quedariaEnArchivo !== undefined, r.informe.quedariaEnArchivo);
+  check('...y cómo quedó el histórico',
+        r.informe.quedariaEnHistoria !== undefined, r.informe.quedariaEnHistoria);
+
+  /* Y QUE SEAN LAS DE LA HOJA, no las que pensábamos escribir. Cuando ya se ha
+   * escrito, "cuántas quería escribir" y "cuántas hay" son dos preguntas
+   * distintas, y la que importa es la segunda. */
+  check('LOS NÚMEROS SON LOS DE LA HOJA, leídos después de escribir',
+        r.informe.quedariaEnArchivo === archivo.conDatos() &&
+        r.informe.quedariaEnHistoria === historico.conDatos(),
+        { informe: [r.informe.quedariaEnArchivo, r.informe.quedariaEnHistoria],
+          hojas:   [archivo.conDatos(), historico.conDatos()] });
+  check('y entre las dos están todos los movimientos',
+        r.informe.quedariaEnArchivo + r.informe.quedariaEnHistoria === total,
+        { total, suma: r.informe.quedariaEnArchivo + r.informe.quedariaEnHistoria });
+
+  /* El ensayo tiene que seguir trayéndolos, que es de donde venían. */
+  const ctx2 = montarTrabajo(...Object.values(laNocheDeJose(AC_WIDTH)).slice(0, 2), 12, []);
+  const e = ctx2.archiveOldMovements(ctx2.ss, { ensayo: true });
+  check('y el ensayo los sigue trayendo, como siempre',
+        e.informe.quedariaEnArchivo !== undefined &&
+        e.informe.quedariaEnHistoria !== undefined, e.informe.quedariaEnArchivo);
+}
+
 console.log('\n' + (fail ? '✗ ' + fail + ' fallo(s), ' : '✓ ') + ok + ' comprobaciones');
 process.exit(fail ? 1 : 0);

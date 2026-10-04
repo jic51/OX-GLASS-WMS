@@ -127,7 +127,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.32';
+var APP_VERSION = '12.33';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -139,7 +139,7 @@ var APP_VERSION = '12.32';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '2814a571';
+var APP_BUILD = '303fb30a';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -4719,13 +4719,27 @@ function archiveOldMovements(ss, opciones) {
     anotar('GUARD 1 (width) passes. GUARD 2 (count) passes: ' + antes +
            ' movement(s) in, ' + despues + ' out.');
 
+    /* CÓMO QUEDA LA COSA — EN LAS DOS CORRIDAS, NO SÓLO EN EL ENSAYO.
+     *
+     * Estas dos líneas vivían dentro del `if (ensayo)`, así que el informe de la
+     * corrida de VERDAD nunca las traía y su apartado —el que dice cómo queda
+     * cada hoja— no se pintaba jamás. Jose archivó de verdad en la copia DEMO el
+     * 2026-10-04 y el informe no se lo dijo: los números estaban, pero
+     * desperdigados por el paso a paso.
+     *
+     * Lo escribí yo en la v12.30, con su texto en pasado ("IT NOW LEAVES") y
+     * todo, sin que pudiera salir nunca. Y mi prueba no lo cazó porque le pasaba
+     * los campos ya puestos a mano: midió el informe cómodo en vez del que
+     * produce el producto. Es, literalmente, el fallo que este archivo lleva
+     * meses nombrando. */
+    informe.quedariaEnArchivo  = contarConDatos_(newActive);
+    informe.quedariaEnHistoria = contarConDatos_(newHistory);
+
     // ── ESCRIBIR, la que GANA filas primero ─────────────────────────────────
     if (ensayo) {
       anotar('DRY RUN — stopping here. Nothing was written. The real job would ' +
-             'now leave ' + contarConDatos_(newActive) + ' movement(s) in the recent ' +
-             'list and ' + contarConDatos_(newHistory) + ' in the archived history.');
-      informe.quedariaEnArchivo  = contarConDatos_(newActive);
-      informe.quedariaEnHistoria = contarConDatos_(newHistory);
+             'now leave ' + informe.quedariaEnArchivo + ' movement(s) in the recent ' +
+             'list and ' + informe.quedariaEnHistoria + ' in the archived history.');
       return { status: 'dry-run', informe: informe };
     }
     /* MIGAS DE PAN, Y NO SON DECORACIÓN.
@@ -4757,6 +4771,14 @@ function archiveOldMovements(ss, opciones) {
      * `setValues` puede fallar, puede escribir de menos, y nadie estaba mirando. */
     var quedanA = contarConDatos_(archive.getDataRange().getValues().slice(1));
     var quedanH = contarConDatos_(history.getDataRange().getValues().slice(1));
+
+    /* Y AHORA LO QUE HAY DE VERDAD EN LAS HOJAS, no lo que íbamos a escribir.
+     * Son dos preguntas distintas —la segunda es la que importa cuando ya se ha
+     * escrito— y la diferencia entre las dos es exactamente lo que la Guarda 2
+     * está a punto de comprobar. El informe cuenta lo medido. */
+    informe.quedariaEnArchivo  = quedanA;
+    informe.quedariaEnHistoria = quedanH;
+
     if (quedanA + quedanH !== antes) {
       /* ── Y SI FALTAN, SE DEVUELVEN. ───────────────────────────────────────
        *

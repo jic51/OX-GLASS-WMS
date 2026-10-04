@@ -97,6 +97,23 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.33</span>
+      <span class="tag fix">Fix</span>
+      <h3>After a real archive run, the report says how each sheet ended up</h3>
+      <p>Running the archive for real finished correctly and reported every step
+         — but the one line that says what the two sheets hold <i>now</i> was
+         missing. The numbers were in the step-by-step, spread across it; the
+         summary that puts them side by side only ever appeared in the rehearsal.</p>
+      <p>It could not appear: the two figures were worked out inside the
+         rehearsal's own branch, so a real run never had them. They are now
+         worked out for both — and on a real run they are <b>read back from the
+         sheets after writing</b>, not carried over from what was about to be
+         written. Once something has been written, "how many did I mean to
+         write" and "how many are there" are two different questions, and the
+         second is the one worth printing.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.32</span>
       <span class="tag fix">Fix</span>
       <h3>"Open WMS App" could hand you someone else's address</h3>
