@@ -156,7 +156,93 @@ medias, y dos lo empeorarían.
 
 ---
 
+## Tercera tanda, 2026-10-05 noche (5 vídeos) — el mismo autor, y un patrón
+
+Otra vez **@davidm_ai**. Pero esta tanda dice algo que las anteriores no decían,
+y es lo primero que hay que escribir:
+
+> **Tres de los cinco son el mismo tema: UNA SOLA COLOCACIÓN QUE SE RECOLOCA
+> SOLA.** Bento Grid, List & Detail Panes y Container Queries son tres formas de
+> lo mismo. Y con el *Bento Skyline* de la tanda anterior, **Jose me ha mandado
+> esa idea cuatro veces**. Eso ya no es casualidad: es lo que de verdad le
+> molesta de la app, aunque no lo haya dicho con esas palabras.
+
+Lo que hay detrás, y encaja con todo lo demás que sabemos: **trabaja al 157 % de
+zoom**. A ese zoom una pantalla de portátil se comporta como una tablet, y Acopio
+hoy se recoloca con reglas sueltas repartidas por la hoja de estilos en vez de
+con una colocación declarada. Por eso se le desborda, se le parten los nombres y
+se le pegan los botones.
+
+| Vídeo | Qué es | ¿Sirve para Acopio? |
+|---|---|---|
+| **Container Queries** | *"Un componente, un contenedor: arrastra su borde, la ventana no se mueve."* Una tarjeta se adapta **al ancho que le ha tocado**, no al de la pantalla | **SÍ, y es el más valioso de los quince.** Ver abajo |
+| **List & Detail Panes** | *"Cuatro paneles se pliegan en uno, y el detalle pasa a ser una pantalla."* Riel de iconos + lista + detalle, con `grid-template-areas` por tamaño y un `.detail-open` que cambia las áreas | **SÍ.** Es literalmente la forma de Settings (barra lateral + panel), que hoy no se pliega bien en un teléfono |
+| **Mobile Bottom Menu** | Seis barras inferiores: Minimal, Bottom Line, Glass, Expanding Tab, **Centre FAB**, Gradient Bold | **SÍ, para el día del móvil.** Nuestras cinco pestañas viven arriba; en un teléfono están donde el pulgar no llega. El *Centre FAB* es la pareja del Floating Button de la tanda anterior |
+| **Notification Stack** | Avisos apilados que dicen *"2 notifications"* y se abren en lista; conmutador Stacked / List | **A medias, y con cuidado.** Es la pantalla del punto del backlog *"agrupar los avisos como hace Google"*, pero ver abajo |
+| **Bento Grid** | Lo mismo que el *Bento Skyline* de la tanda anterior, otra demostración | **Repetido.** No añade técnica; **añade insistencia**, que es el dato |
+
+### Container Queries — por qué éste es el más valioso de los quince
+
+Es el único que arregla un fallo **que ya tenemos documentado y que resolvimos a
+mano**. En el código, el ancho de los nombres de estante está ajustado **contando
+caracteres**: a los 12 una cosa, a los 17 otra, con el estante real de Jose
+—*WINDOW WAREHOUSE*— escrito en los comentarios como el caso que no cabía. Eso es
+lo que hay que hacer cuando no se puede preguntar *"¿cuánto espacio me ha
+tocado?"*.
+
+Container queries es exactamente esa pregunta. Una tarjeta de estante no sabe hoy
+si está estrecha porque la pantalla es pequeña o porque la rejilla le dio menos
+sitio — y **son dos cosas distintas que la app trata igual**. Con esto, la tarjeta
+decide por su propio ancho y los ajustes a ojo sobran.
+
+**Dos avisos para cuando se haga:**
+
+1. **Funciona en los navegadores actuales** (Chrome, Safari y Firefox desde
+   2023), pero **no degrada solo**: en uno viejo, la regla simplemente no se
+   aplica y la tarjeta se queda con el estilo base. Hay que escribirlo de forma
+   que el estilo base ya sea usable, no que dependa de la consulta.
+2. **No sirve para las etiquetas impresas.** Ahí el ancho es de papel, en
+   milímetros, y el escalado por número de caracteres se queda como está.
+
+### List & Detail Panes — lo tenemos a medias ya
+
+Settings ya es un riel con una barra lateral y un panel. Lo que el vídeo añade es
+**qué hacer cuando no caben los dos**: la lateral se reduce a iconos, y luego el
+detalle se come la pantalla entera con un camino de vuelta. Es la pieza que falta
+para que Settings se use de verdad en un teléfono, y es la misma forma que
+necesitaría un día el detalle de un movimiento.
+
+### Notification Stack — a medias, y hay que decir por qué
+
+Es la pantalla del punto que está abierto en el backlog. **Pero apilar esconde**,
+y hay dos cosas ya decididas que esto no puede romper:
+
+- **El aviso de sin conexión NO va ahí** — lo decidiste tú el 05/10, y tienes
+  razón: la lista es para *lo que la app está haciendo*, y quedarse sin internet
+  no es una tarea.
+- **Un error no se apila nunca.** Un *"no se pudo guardar"* reducido a *"3
+  notifications"* es un error que nadie lee, que es la forma de perder trabajo.
+  Lo que se agrupa son los ✓ de lo que salió bien.
+
+Así que de aquí me llevo **la forma** (el recuento, el abrir y cerrar), no la
+regla de qué entra.
+
+### Lo que esta tanda añade a las dos conclusiones anteriores
+
+Las anteriores eran *"el contenido no cambia, cambia cuánto trabajo hace la
+presentación"* y *"una técnica bonita en la pantalla equivocada quita
+información"*. Ésta añade la tercera, y es la más útil de las tres:
+
+**Lo que se repite en lo que manda Jose vale más que lo que dice cada vídeo
+suelto.** Cuatro de quince son la misma idea de colocación. Ninguno de los cuatro
+la pide con palabras; los cuatro juntos sí. **El rediseño, cuando se haga, empieza
+por ahí** — una colocación declarada que se recoloca sola, probada al 157 %— y no
+por las sombras y los degradados, que es por donde empezaría cualquiera mirando
+los vídeos de uno en uno.
+
+---
+
 ## Estado
 
-**15 vídeos recogidos. Esperando el resto.** Cuando lleguen, estas tablas crecen
+**20 vídeos recogidos. Esperando el resto.** Cuando lleguen, estas tablas crecen
 y entonces —y no antes— se decide el rediseño y se trocea en el backlog.
