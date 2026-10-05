@@ -98,6 +98,30 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.35</span>
+      <span class="tag safe">Seguridad</span>
+      <h3>Tus categorías y ubicaciones ya no se pueden borrar por un tropiezo</h3>
+      <p>El código que guarda tus listas —categorías, proveedores, proyectos,
+         ubicaciones— <b>vaciaba la columna primero y escribía la lista
+         después</b>. Entre esos dos pasos cabe cualquier interrupción normal de
+         Google: una cuota, un tiempo de espera, un error pasajero. Lo que
+         cayera ahí dejaba esa lista <b>vacía</b>, sin nada que avisara. Te
+         enterabas al abrir un desplegable y no encontrar nada.</p>
+      <p>Ahora escribe primero y limpia lo que sobra después. Si la escritura
+         falla, tu lista de antes sigue ahí. Una lista desactualizada es un
+         problema pequeño y visible; una lista vacía es uno grande e
+         invisible.</p>
+      <p><b>Y un segundo fallo, encontrado al arreglar el primero.</b> El nombre
+         de una ubicación y su tipo viven en dos columnas pegadas y sólo
+         significan algo juntas — y se escribían en dos operaciones separadas. Si
+         la primera salía y la segunda no, los nombres y los tipos quedaban
+         corridos: un estante tomaba el tipo de otro, uno aparecía archivado y
+         otro dejaba de estarlo. Nada fallaba y nada lo decía. Ahora se escriben
+         como un solo bloque, que para Google es una sola operación: el estado a
+         medias ya no existe.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.34</span>
       <span class="tag fix">Arreglo</span>
       <h3>"Load more" ya no te manda al final de la lista</h3>

@@ -97,6 +97,29 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.35</span>
+      <span class="tag safe">Safety</span>
+      <h3>Your categories and locations can no longer be wiped by a hiccup</h3>
+      <p>The code that saves your lists — categories, suppliers, projects,
+         locations — <b>emptied the column first and wrote the new list
+         second</b>. Between those two steps sits every ordinary interruption
+         Google can throw: a quota, a timeout, a passing error. Anything landing
+         there left that list <b>empty</b>, with nothing to warn you. You would
+         find out on opening a dropdown with nothing in it.</p>
+      <p>It now writes first and clears what is left over afterwards. If the
+         write fails, your old list is still there. An out-of-date list is a
+         small, visible problem; an empty one is a large, invisible one.</p>
+      <p><b>And a second fault, found while fixing the first.</b> A location's
+         name and its type live in two columns side by side and only mean
+         anything together — and they were written in two separate operations.
+         If the first one landed and the second did not, the names and the types
+         slid out of line: one rack took another's type, a rack appeared
+         archived, one stopped being archived. Nothing failed and nothing said
+         so. They are now written as a single block, which for Google is one
+         operation: the half-done state no longer exists.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.34</span>
       <span class="tag fix">Fix</span>
       <h3>"Load more" no longer throws you to the bottom of the list</h3>

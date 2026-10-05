@@ -181,7 +181,13 @@ function mundo(opts){
     ss: { getSheetByName: (n) => hojas[n] || null }
   });
 
-  ['textCell_', 'writeConfigColumn_', 'saveLocationLayout', 'removedLocations_',
+  /* `writeConfigColumns_` desde la v12.35: writeConfigColumn_ ya no escribe, le
+   * pasa el trabajo a la que sabe escribir varias columnas de una vez. Sin ella
+   * en la caja, guardar locaciones lanza "no está definida" y DOCE
+   * comprobaciones de este archivo fallan por un motivo que no tiene nada que
+   * ver con lo que miden. */
+  ['textCell_', 'writeConfigColumn_', 'writeConfigColumns_',
+   'saveLocationLayout', 'removedLocations_',
    'locationUsage_', 'locationBlockReason_', 'forgetRackPhotos_'].forEach(n => {
     vm.runInContext(fnSrc(GS, n), c);
   });

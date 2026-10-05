@@ -344,10 +344,23 @@ console.log('\n═══ los demás caminos que escriben una fila ═══\n');
     ['LIVE_STOCK',                    /setValues\(liveRows\.map\(textSafeRow_\)\)/],
     ['SITE_STOCK',                    /setValues\(siteRows\.map\(textSafeRow_\)\)/],
     ['WASTED_STOCK',                  /setValues\(wasteRows\.map\(textSafeRow_\)\)/],
+    /* MIDE LA INTENCIÓN, NO LA LETRA. Esto era /\[textCell_\(v\)\]/ — la forma
+     * exacta que tenía writeConfigColumn_ cuando escribía una columna de una en
+     * una. En la v12.35 pasó a escribir por FILAS para que el nombre de una
+     * locación y su tipo no puedan descolocarse, la línea cambió de forma, y
+     * esta comprobación se puso roja sobre un código que protege exactamente
+     * igual. Es el mismo error que ya cometí en cinco pruebas de este
+     * repositorio: medir cómo está escrito en vez de qué hace. Ahora se busca
+     * dentro de la función que escribe el catálogo, y lo que se exige es que
+     * TODO valor pase por textCell_ antes de entrar en la fila. */
     ['el catálogo (categorías, proyectos, proveedores, locaciones)',
-                                      /\[textCell_\(v\)\]/]
+      () => {
+        const fn = A.sinComentarios(A.fnSrc(GS, 'writeConfigColumns_') || '');
+        return /textCell_\(/.test(fn) && /setValues\(filas\)/.test(fn);
+      }]
   ];
-  sitios.forEach(([nombre, re]) => check('protegido: ' + nombre, re.test(GS)));
+  sitios.forEach(([nombre, prueba]) => check('protegido: ' + nombre,
+    typeof prueba === 'function' ? prueba() : prueba.test(GS)));
 
   check('las dos mitades de las 3am entran por el escritor protegido',
         /escribirHojaCompleta_\(history, newHistory/.test(GS) &&

@@ -127,7 +127,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.34';
+var APP_VERSION = '12.35';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -139,7 +139,7 @@ var APP_VERSION = '12.34';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '329e8bfd';
+var APP_BUILD = '1f68611e';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -865,8 +865,11 @@ function saveSetupWizard(data) {
     if (data.suppliers  && data.suppliers.length)  writeConfigColumn_(cfg, 2, data.suppliers);
     if (data.projects   && data.projects.length)   writeConfigColumn_(cfg, 0, data.projects);
     if (data.locations && data.locations.length) {
-      writeConfigColumn_(cfg, 3, data.locations.map(function(l){ return l.name; }));
-      writeConfigColumn_(cfg, 4, data.locations.map(function(l){ return l.type || 'RACK'; }));
+      // Las dos de una vez: nombre y tipo sólo significan algo emparejados.
+      writeConfigColumns_(cfg, 3, [
+        data.locations.map(function(l){ return l.name; }),
+        data.locations.map(function(l){ return l.type || 'RACK'; })
+      ]);
     }
     cfg.getRange(2, 8).setValue(textCell_(String(data.adminEmail || actor).trim()));
   }
@@ -944,19 +947,112 @@ function saveSetupWizard(data) {
 // (CONFIG packs unrelated lists side by side, so a whole-sheet write would
 // destroy trucks, min-stock levels and the archive cutoff).
 function writeConfigColumn_(cfg, colIdx, values) {
-  values = (values || []).map(function(v){ return String(v || '').trim(); })
-                         .filter(function(v){ return v; });
-  var lastRow = cfg.getLastRow();
-  if (lastRow > 1) cfg.getRange(2, colIdx + 1, lastRow - 1, 1).clearContent();
-  if (!values.length) return;
-  var needed = values.length + 1;
+  return writeConfigColumns_(cfg, colIdx, [values]);
+}
+
+/* ═══ EL MISMO PATRÓN QUE BORRÓ EL ARCHIVO, Y SEGUÍA AQUÍ ══════════════════════
+ *
+ * Anotado como urgente el 26/09/2026, el día después del primer desastre.
+ * Nueve días y tres pérdidas de datos después, esta función seguía diciendo:
+ *
+ *     cfg.getRange(...).clearContent();     // BORRAR la columna entera
+ *     if (!values.length) return;
+ *     cfg.getRange(...).setValues(...);     // y DESPUÉS escribir
+ *
+ * Entre esas dos líneas cabe una cuota agotada, un tiempo de espera o un error
+ * pasajero de Sheets. Lo que caiga ahí deja **la columna vacía** — y aquí no hay
+ * Guarda 2, ni correo, ni reparación: te enteras el día que abres un desplegable
+ * y no hay nada dentro.
+ *
+ * Y no es una columna cualquiera: son las categorías, los proveedores, los
+ * proyectos y las ubicaciones. Los movimientos no se pierden —cada fila guarda
+ * su propia categoría— pero sin la lista no se puede registrar nada, el mapa del
+ * almacén se queda sin estantes, y MATERIAL_LOCKS acaba apuntando a ubicaciones
+ * que ya no existen: reservas que no protegen nada, que es peor que no tener
+ * reserva porque alguien cuenta con ella.
+ *
+ * ── Y UN SEGUNDO FALLO, QUE SALIÓ AL MIRAR QUIÉN LA LLAMA ───────────────────
+ *
+ * Las ubicaciones se escribían en DOS llamadas seguidas:
+ *
+ *     writeConfigColumn_(cfg, 3, names);   // el nombre del estante
+ *     writeConfigColumn_(cfg, 4, types);   // y su tipo, en la columna de al lado
+ *
+ * Dos columnas que SÓLO significan algo si van en el mismo orden, escritas por
+ * separado. Si la primera sale y la segunda no, los nombres y los tipos quedan
+ * corridos: A1A se queda con el tipo de A1B, un estante aparece ARCHIVED y otro
+ * deja de estarlo. Nada falla, nada avisa, y las cuentas dejan de cuadrar.
+ *
+ * ── LO QUE HACE AHORA ───────────────────────────────────────────────────────
+ *
+ *   1. ESCRIBE PRIMERO Y LIMPIA DESPUÉS, como `escribirHojaCompleta_` desde la
+ *      v12.14. Si la escritura revienta, lo viejo sigue ahí: se queda una lista
+ *      desactualizada, que es un problema pequeño y visible, en vez de una lista
+ *      vacía, que es grande e invisible.
+ *   2. LAS COLUMNAS QUE VAN JUNTAS SE ESCRIBEN JUNTAS, en un solo rango de dos
+ *      de ancho. Para Sheets es una sola operación: no existe el estado en que
+ *      una salió y la otra no.
+ *   3. AL EMPAREJAR, MANDA LA PRIMERA COLUMNA. Una fila sin nombre se cae entera
+ *      —con su tipo— en vez de filtrarse cada columna por su cuenta, que es
+ *      precisamente cómo se descolocarían.
+ */
+function writeConfigColumns_(cfg, colIdx, columnas) {
+  columnas = columnas || [];
+  var ancho = columnas.length;
+  if (!ancho) return;
+
+  // Se arma por FILAS, no por columnas: es lo que hace imposible descolocarlas.
+  var filas = [];
+  var alto  = 0;
+  for (var c = 0; c < ancho; c++) alto = Math.max(alto, (columnas[c] || []).length);
+  for (var r = 0; r < alto; r++) {
+    var primera = String(((columnas[0] || [])[r]) || '').trim();
+    if (!primera) continue;            // sin nombre no hay fila, y se cae entera
+    var fila = [];
+    for (var c2 = 0; c2 < ancho; c2++) {
+      // textCell_, not sheetSafe_: every value in these columns is a LABEL — a
+      // category, a project, a supplier, a location. A category typed "3-4"
+      // becoming a date would split one material into two and make the stock
+      // numbers wrong, which is the worst version of this bug in the app.
+      fila.push(textCell_(String(((columnas[c2] || [])[r]) || '').trim()));
+    }
+    filas.push(fila);
+  }
+
+  /* VACIAR UNA LISTA QUE TENÍA COSAS ES LEGÍTIMO —alguien borró la última
+   * ubicación— pero también es lo que se vería si quien llama calculó mal.
+   * No se impide: impedirlo rompería el caso de verdad. Se deja dicho, que es
+   * lo que no había: tres veces nos hemos quedado mirando una lista vacía sin
+   * saber si fue una persona o un fallo. */
+  if (!filas.length) {
+    try {
+      var habia = 0, ultimaPrevia = cfg.getLastRow();
+      if (ultimaPrevia > 1) {
+        cfg.getRange(2, colIdx + 1, ultimaPrevia - 1, 1).getValues().forEach(function (f) {
+          if (String(f[0] || '').trim()) habia++;
+        });
+      }
+      if (habia) {
+        logError_(cfg.getParent(), 'WARN', 'backend', 'writeConfigColumns_', 'system',
+          'A CONFIG list was emptied: column ' + (colIdx + 1) + ' had ' + habia +
+          ' value(s) and now has none. If nobody deleted them on purpose, restore ' +
+          'them from the 2am backup.', { column: colIdx + 1, had: habia }, newRequestId_());
+      }
+    } catch (e) { Logger.log('writeConfigColumns_ warn: ' + e.message); }
+  }
+
+  var needed = filas.length + 1;
   if (cfg.getMaxRows() < needed) cfg.insertRowsAfter(cfg.getMaxRows(), needed - cfg.getMaxRows());
-  cfg.getRange(2, colIdx + 1, values.length, 1)
-     // textCell_, not sheetSafe_: every value in these four columns is a LABEL
-     // — a category, a project, a supplier, a location. A category typed "3-4"
-     // becoming a date would split one material into two and make the stock
-     // numbers wrong, which is the worst version of this bug in the app.
-     .setValues(values.map(function(v){ return [textCell_(v)]; }));
+
+  // 1) ESCRIBIR
+  if (filas.length) cfg.getRange(2, colIdx + 1, filas.length, ancho).setValues(filas);
+
+  // 2) Y SÓLO ENTONCES limpiar lo que sobra por debajo.
+  var primeraSobrante = filas.length + 2;
+  var sobrantes = cfg.getMaxRows() - primeraSobrante + 1;
+  if (sobrantes > 0) {
+    cfg.getRange(primeraSobrante, colIdx + 1, sobrantes, ancho).clearContent();
+  }
 }
 
 // ─── ROUTING ─────────────────────────────────────────────────────────────────
@@ -10732,8 +10828,7 @@ function mergeLocationsLocked_(data, auth, into, from) {
       types.push(String(rows[r][4] || 'RACK').trim().toUpperCase() || 'RACK');
     }
     if (!sawInto) { names.push(into); types.push(intoType || 'RACK'); }
-    writeConfigColumn_(cfg, 3, names);
-    writeConfigColumn_(cfg, 4, types);
+    writeConfigColumns_(cfg, 3, [names, types]);   // emparejadas, en una escritura
   }
 
   refreshOrDefer_(ss, data);
@@ -10894,8 +10989,7 @@ function saveLocationLayout(data, auth) {
     }
   }
 
-  writeConfigColumn_(cfg, 3, names);
-  writeConfigColumn_(cfg, 4, types);
+  writeConfigColumns_(cfg, 3, [names, types]);   // emparejadas, en una escritura
 
   // Only after the write: a photo trashed for a save that then failed would be
   // gone for a location that is still there.

@@ -24,16 +24,9 @@ que un ✅ optimista.
 
 ## LO VIVO, POR ORDEN
 
-### 🔴 Primero, y no es opinión
-
-1. **`writeConfigColumn_` borra antes de escribir.** El mismo patrón que destruyó
-   el archivo tres veces, en la función que escribe categorías, proyectos,
-   proveedores y ubicaciones. Sin guarda, sin conteo, sin aviso. Media hora con
-   su prueba.
-
 ### 🔶 Lo empezado y sin terminar
 
-2. **Estandarizar las columnas** — faltan **Incoming** y **Project View**.
+1. **Estandarizar las columnas** — faltan **Incoming** y **Project View**.
 3. **Que el archivado no se note** — falta **que buscar alcance el archivo**
    (hoy un PO de hace ocho meses no aparece) y **archivar por tandas**.
 4. **Movimientos sin ID** — falta el aviso en la app, y la causa sigue sin
@@ -491,12 +484,21 @@ has no ID yet"*— pero eso sólo se ve si te pones a marcar filas.
 ---
 
 
-# ══ 🔴 ABIERTO · LO MÁS URGENTE DE LA LISTA — `writeConfigColumn_` ══
+# ══ ✅ HECHO (v12.35) — EL MISMO PATRÓN QUE BORRÓ EL ARCHIVO, EN `writeConfigColumn_` ══
 
-> **Repaso 2026-10-05, leído línea a línea: SIGUE IGUAL.** `clearContent()` en
-> la línea 950 y `setValues()` en la 954. Nueve días después de anotarlo y
-> después de que el mismo patrón destruyera el archivo tres veces. Es el
-> primero de la lista.
+> **Hecho entero el 2026-10-05**, y con un segundo fallo que salió al mirar
+> quién la llamaba: las ubicaciones se escribían en DOS llamadas —nombre y
+> tipo—, dos columnas que sólo significan algo emparejadas. Si la primera salía
+> y la segunda no, A1A se quedaba con el tipo de A1B y nada avisaba.
+>
+> Ahora escribe primero y limpia después; las columnas que van juntas se
+> escriben en un solo rango; al emparejar manda la primera columna, así que una
+> fila sin nombre se cae entera en vez de dejar subir un puesto a la de abajo; y
+> vaciar una lista que tenía cosas deja un WARN con cuántas había.
+>
+> `tools/test-config-escritura.js` (17 comprobaciones) rompe la escritura a
+> mitad y mira qué queda en la hoja. Mutación comprobada: devuelto el
+> borrar-antes-de-escribir, las cuatro categorías desaparecen.
 
 El trabajo nocturno borró el archivo de movimientos entero la noche del 26 de
 septiembre. Historia completa, causa y arreglo en
