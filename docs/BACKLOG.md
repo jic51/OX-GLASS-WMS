@@ -6654,3 +6654,53 @@ comprobarlo en su pantalla, no darlo por hecho.
 - **La cabecera pegajosa de la tabla aguanta el desplazamiento lateral**: en el
   vídeo la tabla está corrida a la derecha y la cabecera acompaña a sus columnas.
 - **Los avisos duran lo que dicen durar**: 6,1 s medidos, cuatro de cuatro.
+
+
+# ══ ✅ HECHO (v12.38) — "YOU ARE OFFLINE", A LA VISTA ══
+
+Jose, 2026-10-05: *"poner un label (este sí que se vea como los demás arriba en
+la pantalla) que diga 'you are off-line' y 'back on-line' o algo así."*
+
+**Lo que había: un punto de color y un `title`.** Nadie pasa el ratón por encima
+de un punto. Se sigue trabajando, se sigue escribiendo, y lo que se escriba no se
+guarda. Un estado que te puede costar el trabajo no se cuenta en un texto
+escondido — y en el backlog hay un incidente de agosto, *"una vez off-line, NUNCA
+vuelve solo"*, que se diagnosticó tarde precisamente por eso.
+
+Ahora: barra roja arriba del todo mientras esté caída, que **no se puede cerrar**
+—mientras siga siendo verdad, el aviso sigue siendo verdad— diciendo además lo
+único que de verdad importa: *que lo que escribas no se guarda* y *que la app lo
+sigue intentando sola*. Al volver, verde, "Back online", y **se va sola a los
+cinco segundos**: lo contrario que la roja, porque dejó de ser noticia.
+
+Y una pila (`#topBanners`) para las barras de arriba, porque ya había otra —la
+del desajuste de versiones— con su propio `position:fixed; top:0`: **con las dos
+a la vez una tapaba a la otra, y la que tapaba era justo la de la conexión.**
+
+`tools/test-barra-conexion.js` (19 comprobaciones). Mide las TRANSICIONES, no el
+texto: que no salude al arrancar, que salga al caer, que no se tape con la otra,
+que se vaya sola al volver, y que `stale`/`loading` no pongan nada. Mutación
+comprobada: apagada la rama, fallan siete.
+
+# ══ 🔴 ABIERTO — AGRUPAR LOS AVISOS EN UNA LISTA, COMO GOOGLE ══
+
+Jose, 2026-10-05: *"agrupar todos los loading que aparecen en la esquina inferior
+izquierda (si es que hay más de uno) como lo hace Google: pone todos en una
+lista, los que se están haciendo tienen un aro girando y los que ya se hicieron
+les pone un check verde, y los deja ahí hasta que tú hagas clic en la 'x'."*
+
+**Y resuelve de paso el problema que medí en su vídeo:** los avisos se piden hoy
+con **ocho duraciones distintas** —2000, 3000, 3500, 4000, 5000, 6000 (28
+llamadas), 8000 y 12000 ms—, así que dos seguidos se van en desorden y nadie
+sabe cuánto dura nada. Con una lista que se queda hasta que la cierras, **la
+duración deja de ser una decisión**: ésa es la mitad buena de la idea.
+
+Lo que hay que resolver al construirlo:
+- **Qué entra y qué no.** Un error que exige decidir algo no puede irse a una
+  lista que quizá nadie abra. Propuesta: la lista para el progreso y los hechos;
+  los errores siguen pidiendo atención.
+- **Hay ya media pieza hecha**: `_prog`, la línea de progreso de las tandas
+  ("voy por 4 de 13"), que ya sabe contar y terminar en un check. La lista es su
+  hermana mayor, y hay que reusarla, no escribir otra.
+- **Y el tope.** Una lista que nunca se vacía sola acaba con cuarenta líneas de
+  ayer. Quedarse hasta la 'x' sí, pero con un máximo y con las de hoy primero.

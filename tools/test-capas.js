@@ -316,7 +316,12 @@ const QUIEN_MANDA = `window.__quienManda = function (a, b) {
    * style.cssText y z-index 99999, por encima incluso de los avisos de arriba.
    * Es correcto que gane a todo —dice que lo que estás viendo no se puede
    * creer— pero no sale de la tabla, así que se fija aquí su número. */
-  const banner = /versionMismatchBanner[\s\S]{0,400}?z-index:(\d+)/.exec(html);
+  /* AHORA LA PILA, NO LA BARRA SUELTA. En la v12.38 las barras de arriba pasaron
+   * a vivir todas dentro de `#topBanners` —antes cada una se dibujaba con su
+   * propio `position:fixed; top:0` y con las dos a la vez una tapaba a la otra—,
+   * así que el z-index que hay que fijar es el de la pila. La protección es la
+   * misma y ahora cubre también el aviso de "estás sin conexión". */
+  const banner = /#topBanners\{[^}]*z-index:(\d+)/.exec(html);
   check('el aviso de versiones desparejas sigue por encima de todo',
         !!banner && Number(banner[1]) > valor['--z-toast'],
         banner && banner[1]);

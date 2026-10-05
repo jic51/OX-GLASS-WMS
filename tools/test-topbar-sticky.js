@@ -89,7 +89,15 @@ function check(label, cond) {
 
     const antes = await page.evaluate(() => {
       const r = document.querySelector('.topbar').getBoundingClientRect();
-      return { top: r.top, bottom: r.bottom, merged: document.querySelector('.topbar').classList.contains('merged'),
+      /* `tope` = lo que ocupan las barras de aviso de arriba. Desde la v12.38 la
+       * barra de navegación se pega DEBAJO de ellas (`top:var(--tb-alto)`), así
+       * que "pegado arriba" ya no quiere decir y=0: quiere decir y = lo que
+       * midan las barras. Esta prueba exigía el cero literal y se puso roja con
+       * un aviso puesto, sobre una barra que estaba perfectamente anclada. */
+      var pila = document.getElementById('topBanners');
+      var tope = pila ? pila.getBoundingClientRect().height : 0;
+      return { top: r.top, bottom: r.bottom, tope: tope,
+               merged: document.querySelector('.topbar').classList.contains('merged'),
                pos: getComputedStyle(document.querySelector('.topbar')).position,
                scrollable: document.documentElement.scrollHeight > window.innerHeight };
     });
@@ -97,7 +105,9 @@ function check(label, cond) {
 
     check('la página tiene alto para hacer scroll — si no, esta prueba no ' +
           'estaría midiendo nada', antes.scrollable);
-    check('en reposo el header está pegado arriba', Math.abs(antes.top) < 1);
+    check('en reposo el header está pegado arriba (bajo las barras de aviso, ' +
+          'si las hay: ' + antes.tope.toFixed(0) + 'px)',
+          Math.abs(antes.top - antes.tope) < 1, antes);
 
     // El scroll de verdad.
     await page.evaluate(() => window.scrollTo(0, 900));
@@ -114,7 +124,8 @@ function check(label, cond) {
           'PANTALLA (top = ' + despues.top.toFixed(1) + 'px) — con el ' +
           '`position:relative` de .topbar.merged estaría en ' +
           (-despues.y) + 'px, o sea fuera de la vista',
-      Math.abs(despues.top) < 1);
+      // Igual que arriba: "en lo alto" es debajo de las barras de aviso, no y=0.
+      Math.abs(despues.top - antes.tope) < 1);
     check('y sigue calculando `sticky`, no `relative` (' + despues.pos + ')',
       despues.pos === 'sticky');
 

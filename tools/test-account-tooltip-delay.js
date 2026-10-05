@@ -93,9 +93,14 @@ function check(label, cond) {
     var els = document.querySelectorAll('.tip:not(#acctBtn)');
     for (var i = 0; i < els.length; i++) {
       var r = els[i].getBoundingClientRect();
-      if (r.width > 0 && r.height > 0 && r.top >= 0 && r.bottom <= window.innerHeight &&
-          els[i].getAttribute('data-tip')) {
+      /* NO SE EXIGE QUE QUEPA ENTERO EN LA PANTALLA: se lleva a la vista. Desde
+       * la v12.38 las barras de aviso de arriba ocupan su sitio y empujan la
+       * página, así que el candidato de siempre dejó de caber por abajo y esta
+       * prueba se quedó sin con qué comparar — por 31 píxeles, y sobre un
+       * tooltip que funcionaba perfectamente. */
+      if (r.width > 0 && r.height > 0 && els[i].getAttribute('data-tip')) {
         if (!els[i].id) els[i].id = 'otroTipProbe';
+        els[i].scrollIntoView({ block: 'center' });
         return els[i].id;
       }
     }
