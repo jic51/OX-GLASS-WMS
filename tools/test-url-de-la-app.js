@@ -134,7 +134,14 @@ console.log('\n═══ 3. Push Update Live la deja apuntada ═══\n');
   };
   ctx._findWebAppDeploymentId_ = () => 'dep-1';
   ctx.MailApp = { sendEmail(){} };
-  ctx.Session = { getActiveUser: () => ({ getEmail: () => 'jose@ox-glass.com' }) };
+  ctx.Session = { getActiveUser: () => ({ getEmail: () => 'jose@ox-glass.com' }),
+                  getScriptTimeZone: () => 'America/Denver' };
+  ctx.Utilities = { formatDate: () => '2026-10-05 12:00' };
+  /* Leídas DEL ARCHIVO, no inventadas: una constante copiada aquí diría una
+   * versión y el producto otra, que es justo lo que esta parte comprueba. */
+  ctx.APP_VERSION = (/^var APP_VERSION = '([^']+)'/m.exec(GS) || [])[1];
+  ctx.APP_BUILD   = (/^var APP_BUILD\s*=\s*'([^']*)'/m.exec(GS) || [])[1] || '';
+  ctx.PRODUCT_NAME = 'Acopio';
 
   const devuelta = ctx.selfActivateWebApp_();
 
@@ -200,6 +207,44 @@ console.log('\n═══ 4. Ningún sitio pregunta sólo a Google ═══\n');
 
   check('y la excepción sigue existiendo y sigue argumentada',
         usos.some(u => PERMITIDOS[u.fn]), Object.keys(PERMITIDOS));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   6. EL NOMBRE DE LA VERSIÓN SÍ; EL DE LA IMPLEMENTACIÓN, NUNCA
+   ═══════════════════════════════════════════════════════════════════════════
+
+   Jose, 2026-10-04, con la captura de "Manage deployments": una lista de
+   "Acopio Web App" repetidos que no dice cuál es cuál. Tiene razón en lo que ve,
+   pero el nombre que hay que cambiar no es el que señala.
+
+   `_findWebAppDeploymentId_` encuentra NUESTRA implementación comparando su
+   descripción, letra por letra, con la constante. Si esa descripción llevara la
+   versión, a la siguiente publicación no coincidiría, no la encontraría, y
+   crearía una implementación nueva — o sea UNA DIRECCIÓN NUEVA, con todos los
+   marcadores del almacén apuntando a la vieja.
+
+   Esta comprobación existe para que nadie "mejore" eso dentro de un año leyendo
+   sólo la petición de Jose y no el motivo. */
+console.log('\n═══ 6. El nombre va en la versión, no en la implementación ═══\n');
+{
+  const act = A.sinComentarios(A.fnSrc(GS, 'selfActivateWebApp_'));
+
+  check('la VERSIÓN se describe con la versión de la app',
+        /versions'[\s\S]{0,260}APP_VERSION/.test(act), act.slice(0, 300));
+  check('...y con el build, que es lo que distingue dos publicaciones del mismo ' +
+        'número', /APP_BUILD/.test(act));
+  check('...y con la fecha y la hora', /formatDate/.test(act));
+
+  const cfgLine = (act.match(/var configBody = \{[^}]*\}/) || [''])[0];
+  check('LA IMPLEMENTACIÓN SIGUE DESCRIBIÉNDOSE CON LA CONSTANTE — es la llave ' +
+        'para volver a encontrarla, y cambiarla crea una dirección nueva',
+        /description:\s*_WEBAPP_DEPLOYMENT_MARKER/.test(cfgLine), cfgLine);
+  check('...y no lleva ni la versión ni el build',
+        !/APP_VERSION|APP_BUILD/.test(cfgLine), cfgLine);
+
+  const find = A.sinComentarios(A.fnSrc(GS, '_findWebAppDeploymentId_'));
+  check('y quien la busca sigue comparando contra la misma constante — si no, ' +
+        'esta prueba no protege nada', /_WEBAPP_DEPLOYMENT_MARKER/.test(find), find);
 }
 
 console.log('\n' + (fail ? '✗ ' + fail + ' fallo(s), ' : '✓ ') + ok + ' comprobaciones\n');

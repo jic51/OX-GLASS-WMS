@@ -127,7 +127,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.35';
+var APP_VERSION = '12.36';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -139,7 +139,7 @@ var APP_VERSION = '12.35';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '1f68611e';
+var APP_BUILD = '04f6f500';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -9455,10 +9455,37 @@ function menuActivateWebApp() {
 function selfActivateWebApp_() {
   var projectId = ScriptApp.getScriptId();
 
+  /* LA VERSIÓN LLEVA SU NOMBRE; LA IMPLEMENTACIÓN, NO. Y la diferencia importa.
+   *
+   * Jose, 2026-10-04, con la captura de "Manage deployments": *"la app funciona
+   * al hacer el deploy, pero le pone el mismo nombre a cada deploy, debemos
+   * hacer que se diferencie: el número de la versión o el código."*
+   *
+   * Tiene razón en lo que ve —una lista de "Acopio Web App" repetidos no dice
+   * nada— pero el nombre que hay que cambiar NO es el que él señala.
+   *
+   * `_findWebAppDeploymentId_` encuentra NUESTRA implementación comparando su
+   * descripción con esta constante, letra por letra. Es la única forma que tiene
+   * de saber cuál de todas hay que actualizar. Si la descripción de la
+   * implementación llevara la versión, a la siguiente publicación ya no
+   * coincidiría, no la encontraría, **crearía una implementación nueva — y una
+   * implementación nueva es una DIRECCIÓN NUEVA**. Todos los marcadores de todo
+   * el almacén dejarían de funcionar, y el aviso seguiría diciendo "esta
+   * dirección no cambia nunca".
+   *
+   * La VERSIÓN sí es libre: es la foto congelada, se archiva una por
+   * publicación, y su descripción es justo lo que se lee en el desplegable
+   * "Versión 117 del 4 oct 2026". Ahí es donde falta saber cuál es cuál, y ahí
+   * es donde se pone. */
   var versionNumber = _scriptApiRequest_(projectId, 'versions', 'post',
-    { description: _WEBAPP_DEPLOYMENT_MARKER }).versionNumber;
+    { description: PRODUCT_NAME + ' v' + APP_VERSION +
+                   (typeof APP_BUILD === 'string' && APP_BUILD ? ' · build ' + APP_BUILD : '') +
+                   ' · ' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm')
+    }).versionNumber;
 
   var deploymentId = _findWebAppDeploymentId_(projectId);
+  // La descripción de la implementación NO LLEVA VERSIÓN, a propósito: es la
+  // llave con la que se la vuelve a encontrar. Ver el comentario de arriba.
   var configBody = { versionNumber: versionNumber, description: _WEBAPP_DEPLOYMENT_MARKER };
 
   // create takes the config fields directly; update wraps them in

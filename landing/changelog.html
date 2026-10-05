@@ -97,6 +97,21 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.36</span>
+      <span class="tag fix">Fix</span>
+      <h3>Every published version now says which one it is</h3>
+      <p>Publishing from the menu labelled every version the same way, so the
+         list in Google's deployment dialog read as a column of identical names
+         with no way to tell one from the next. Each version is now stamped with
+         the app version, its build and the date it went out.</p>
+      <p><b>The deployment's own name deliberately stays the same</b>, and that
+         is not an oversight: it is the key the app uses to find its existing
+         deployment and update it in place. Change it and the next publish would
+         create a <i>new</i> deployment — which means a <b>new address</b>, with
+         every bookmark in the warehouse pointing at the old one.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.35</span>
       <span class="tag safe">Safety</span>
       <h3>Your categories and locations can no longer be wiped by a hiccup</h3>

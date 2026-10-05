@@ -6358,7 +6358,59 @@ El mismo patrón puede estar en **"Load Older History"** y en cualquier lista qu
 crezca por abajo. Si se arregla uno solo, el siguiente que alguien pruebe vuelve
 a sorprender.
 
-# ══ TODAVÍA SALTA UN POCO AL CARGAR MÁS. Anotado 2026-10-05 ══
+# ══ 🔴 ABIERTO — TODAVÍA SALTA AL CARGAR MÁS. Medido en el vídeo 2026-10-05 ══
+
+> **El vídeo está analizado. Esto es lo que mide, no lo que parece.**
+>
+> Fotograma a fotograma, siguiendo el contenido de la tabla por correlación
+> vertical:
+>
+> | Momento | Qué pasa |
+> |---|---|
+> | **47.03 → 47.05 s** | el contenido se desplaza **−108 px** de golpe, en un solo fotograma. Es el clic en *Load 75 more* |
+> | **49.13 → 49.43 s** | **+1 px**. Es el "movimiento muy leve entre las filas" que Jose notó, y es real |
+>
+> O sea: lo gordo está arreglado —ya no son cinco mil píxeles— pero quedan
+> **108 px**, que son como vez y media una fila.
+>
+> **Y LO QUE NO CONSIGO ES REPRODUCIRLO.** Con la prueba de navegador, poniendo
+> la lista AL FONDO DEL TODO —que es la única posición desde la que se puede
+> pulsar ese botón, y por tanto la que había que medir— el desplazamiento es
+> **0,0 px**. Con filas de altura variable, textos largos y varias líneas,
+> también 0,0 px.
+>
+> **Así que falta algo de su pantalla que mi página falsa no tiene**, y no voy a
+> inventarme cuál. Lo que lo resuelve en dos minutos, desde su app, con F12 →
+> Console, pegando esto ANTES de pulsar el botón:
+>
+> ```javascript
+> (function(){ var tc=document.getElementById('tableContainer');
+>   window._v = function(){ return [tc.scrollTop, tc.scrollHeight, tc.clientHeight,
+>     window.scrollY, document.documentElement.scrollHeight, window.devicePixelRatio,
+>     Math.round(window.outerWidth/window.innerWidth*100)+'% zoom'].join(' | '); };
+>   console.log('ANTES  ', _v());
+>   var o=_loadMoreMovements; _loadMoreMovements=function(){ var a=_v(); o();
+>     console.log('ANTES  ', a); console.log('JUSTO DESPUÉS', _v());
+>     setTimeout(function(){ console.log('MEDIO SEGUNDO DESPUÉS', _v()); }, 500); };
+> })();
+> ```
+>
+> Las tres líneas que saldrán dicen cuál de las tres hipótesis es:
+>
+> 1. **`scrollTop` distinto justo después y luego igual** → el navegador recorta
+>    al restaurar porque la altura todavía no está recalculada. Arreglo: repetir
+>    la restauración en el siguiente fotograma (`requestAnimationFrame`).
+> 2. **`scrollTop` igual pero `scrollHeight` cambia medio segundo después** →
+>    algo se carga tarde (miniaturas, tipografía) y empuja el contenido. Arreglo:
+>    anclar en una FILA y no en un número de píxeles.
+> 3. **El zoom no es 100 %** → alturas fraccionarias, y ahí el +1 px se explica
+>    solo. Arreglo: anclar en la fila, igual que el 2.
+>
+> **Y lo del +1 px se arregla con el mismo ancla**: guardar en qué fila estaba y
+> dejarla donde estaba, en vez de guardar un número de píxeles que depende de que
+> todo lo de arriba mida exactamente lo mismo que antes.
+
+## Lo anotado el 2026-10-05, antes de ver el vídeo
 
 Jose, después de la v12.34: *"hice la prueba y grabé un vídeo. Aún hay un salto
 en la lista al aplastar el botón: al dar clic, la lista se mueve hacia arriba o
@@ -6408,3 +6460,29 @@ salto. Es, otra vez, medir el caso cómodo.
 **No tocar nada hasta ver el vídeo y el resultado de las dos líneas de arriba.**
 Arreglar a ciegas un salto de pocos píxeles es la forma más rápida de añadir un
 segundo salto.
+
+
+# ══ ✅ HECHO (v12.36) — CADA PUBLICACIÓN SE LLAMABA IGUAL ══
+
+Jose, con la captura de *Manage deployments*: *"la app funciona al hacer el
+deploy, pero le pone el mismo nombre a cada deploy, debemos hacer que se
+diferencie: el número de la versión o el código."*
+
+**Tenía razón en lo que veía y el nombre que había que cambiar no era el que
+señalaba** — y la diferencia no es un detalle:
+
+`_findWebAppDeploymentId_` encuentra nuestra implementación **comparando su
+descripción letra por letra** con la constante `Acopio Web App`. Es la única
+forma que tiene de saber cuál actualizar. Si esa descripción llevara la versión,
+a la siguiente publicación no coincidiría, no la encontraría, **crearía una
+implementación nueva — y una implementación nueva es una DIRECCIÓN NUEVA**. Todos
+los marcadores del almacén apuntando a la vieja, y el aviso diciendo todavía
+"esta dirección no cambia nunca".
+
+Así que el nombre va donde se puede: **en la VERSIÓN**, que es la foto congelada
+y la que se lee en el desplegable *"Versión 117 del 4 oct 2026"*. Ahora dice
+`Acopio v12.36 · build xxxxxxxx · 2026-10-05 14:20`.
+
+Con su comprobación en `test-url-de-la-app.js`, que exige las dos mitades: que la
+versión lleve nombre **y que la implementación no lo lleve**. Está escrita para
+que nadie "mejore" esto dentro de un año leyendo la petición y no el motivo.
