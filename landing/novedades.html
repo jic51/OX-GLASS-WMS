@@ -98,6 +98,29 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.40</span>
+      <span class="tag safe">Seguridad</span>
+      <h3>Los accesos rechazados quedan escritos — y te avisan</h3>
+      <p>La puerta funcionaba: a alguien que no está en tu lista de usuarios se
+         le rechazaba. Pero el rechazo <b>no dejaba rastro en ninguna parte</b>,
+         así que desde dentro un intento de entrar y un día tranquilo se veían
+         exactamente igual. Eso es una cerradura sin mirilla.</p>
+      <p>Ahora cada rechazo queda en la pestaña <b>AUDIT_LOG</b> de tu hoja, bajo
+         <b>ACCESS_DENIED</b>, con quién lo intentó y por qué. <b>Una línea por
+         persona y minuto</b> — una pestaña olvidada reintenta sola cada veinte
+         segundos, y sin ese tope una sola pantalla abandonada enterraría la
+         única línea que importaba.</p>
+      <p>Y a los <b>diez rechazos en diez minutos recibes un correo</b>, como
+         mucho uno por hora: quién lo intentó, qué hacer si es alguien de los
+         tuyos, y dónde está el registro completo. Un registro que nadie abre no
+         avisa a nadie.</p>
+      <p>Que a alguien se le niegue una acción concreta —un usuario de sólo
+         lectura pulsando guardar— <b>no</b> se apunta aquí. Esa persona está
+         dentro y sólo le falta un permiso; mezclar las dos cosas escondería a
+         los de fuera entre gente legítima.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.39</span>
       <span class="tag safe">Seguridad</span>
       <h3>Desactivar a un usuario ahora sí le quita el acceso</h3>

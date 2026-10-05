@@ -97,6 +97,28 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.40</span>
+      <span class="tag safe">Security</span>
+      <h3>Refused sign-ins are now written down — and you get told</h3>
+      <p>The door worked: somebody who is not on your user list was turned away.
+         But the refusal <b>left no trace anywhere</b>, so from the inside an
+         attempt to get in and a quiet day looked exactly the same. That is a
+         lock without a peephole.</p>
+      <p>Every refusal now lands in the <b>AUDIT_LOG</b> tab of your spreadsheet
+         under <b>ACCESS_DENIED</b>, with who tried and why. <b>One line per
+         person per minute</b> — a forgotten browser tab retries on its own every
+         twenty seconds, and without that cap a single abandoned screen would
+         bury the one line that mattered.</p>
+      <p>And at <b>ten refusals in ten minutes you get an email</b>, at most one
+         an hour: who tried, what to do if it is one of your own people, and
+         where the full record is. A log nobody opens warns nobody.</p>
+      <p>Being refused permission for one action — a read-only user pressing
+         save — is <b>not</b> recorded here. That person is inside and simply
+         lacks a permission; mixing the two would hide outsiders among
+         legitimate people.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.39</span>
       <span class="tag safe">Security</span>
       <h3>Deactivating a user now actually locks them out</h3>

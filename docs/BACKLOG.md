@@ -6886,3 +6886,116 @@ al guardar. Comments NO** (es una frase, no una clave, y al guardarla en
 mayúsculas el original se pierde). **Lo ya guardado se queda como está** y no se
 reescribe nada — que además evita tocar el archivo entero, que es la operación
 que más respeto da en este producto.
+
+# ══ 🔴 URGENTE — DOS LISTAS DE USUARIOS, Y LA VIEJA DEJA ENTRAR ══
+
+Jose, 2026-10-05, con dos capturas de su hoja: *"actualmente tenemos CONFIG con
+correos, roles y USERS. ¿Por qué tenemos 2 listas de lo mismo? ¿No sería mejor
+hacer una sola? ¿Por qué si desactivo un usuario en USERS no se borra o desactiva
+en CONFIG también? Mejor hagámoslo profesional, arreglémoslo para que no haya
+errores ni goteos de seguridad."*
+
+**Tiene toda la razón, y es más grave de lo que arreglé en la v12.39.**
+
+## La lista vieja es CONFIG, columnas F y G
+
+En su captura se ve: **columna F = correo, columna G = rol**, diecinueve
+personas. Es de donde se migró cuando se creó `USERS_V3`, y **sigue concediendo
+acceso**.
+
+La v12.39 arregló *"desactivado en USERS_V3 ya no se cae a CONFIG"*. **Lo que NO
+arregla, y sigue abierto: alguien que está SÓLO en CONFIG entra igual** — aunque
+no aparezca en Manage Users, aunque nadie recuerde haberle dado acceso, aunque
+no se le pueda quitar desde la app porque la app no le enseña.
+
+En la copia DEMO de Jose eso son **diecinueve correos** que entran y que la
+pantalla de usuarios no lista.
+
+## Qué hacer, y en este orden
+
+1. **Mirar qué hay.** Un informe —no un borrado— que cruce las dos listas y diga:
+   quién está sólo en CONFIG, quién en las dos y con qué roles distintos, y qué
+   filas no son correos siquiera (ver abajo).
+2. **Migrar de verdad**: cada correo de CONFIG que no esté en USERS_V3 entra como
+   fila nueva, con su rol, `Added By = migration` y la fecha. **Sin perder a
+   nadie**, que es lo que convierte esto en un cambio seguro.
+3. **Dejar de leer CONFIG para decidir acceso.** Ése es el momento en que hay una
+   sola lista y el interruptor de Manage Users significa lo que dice.
+4. **Y vaciar las dos columnas de CONFIG después**, no antes, para que la
+   migración se pueda repetir si algo sale mal.
+
+Con un aviso que hay que decirle a Jose antes de tocarlo: **si alguien entra hoy
+sólo gracias a CONFIG y la migración se hace mal, mañana no puede trabajar.** Por
+eso el paso 1 es mirar, y por eso el 4 va al final.
+
+## Y de paso, filas corruptas en USERS_V3
+
+En su captura hay filas donde **la columna Email lleva un nombre de persona**
+(*"AVERY NDIAYE"*, *"CASEY LINDQVIST"*) y la columna Name lleva un proyecto
+(*"GRANITE PARK OFFICES"*). No dan acceso —un nombre nunca va a coincidir con un
+correo— pero **salen en la pantalla de usuarios** y ensucian la lista. Hay que
+averiguar qué las escribió (sospecha: el generador de datos de demostración) y
+limpiarlas.
+
+# ══ 🔴 URGENTE — SE PUEDE ESCRIBIR UNA UBICACIÓN QUE NO EXISTE ══
+
+Jose, con dos capturas: escribió `A1p` en el rack de un ENTRY —una ubicación que
+no existe— y **la app la guardó tal cual**. En el Warehouse Map aparece ahora
+`A1P` como una ubicación más, con 3 unidades dentro.
+
+**Es el agujero por donde entra la mitad de la suciedad que luego persigue "Check
+my data".** Un campo libre donde debería haber una lista cerrada produce
+`A1P`/`A1 P`/`A-1-P`, y a partir de ahí el stock de un estante está repartido en
+tres sitios que nadie suma.
+
+Y es peor que un nombre mal escrito: **una ubicación inventada no está en ninguna
+estantería**. El material consta en un sitio que no existe.
+
+**Lo que hay que decidir al arreglarlo**, y enlaza con la idea de Jose de abajo:
+
+- **Lo mínimo y seguro:** si lo tecleado no está en la lista, **no se guarda** y
+  se dice; con un botón de *"crear esta ubicación"* para quien tenga permiso.
+- **Lo que no vale:** crear en silencio, que es lo de hoy.
+- Y hay que mirar **los otros campos libres que deberían ser listas**: proyecto,
+  proveedor, categoría. El mismo agujero, las mismas consecuencias.
+
+# ══ 🔵 IDEA DE JOSE (V2) — PERMISOS PARA CREAR CADA COSA ══
+
+Jose: *"quiero que la posibilidad de crear nuevos suppliers, locations, projects,
+categories se pueda delegar, o sea decidir si alguien puede o no hacer cada uno
+de esos, así podemos poner un toggle para cada uno, y luego podemos trabajar para
+empezar a crear diferentes tipos de usuarios. Eso sería versión 2."*
+
+**Me parece bien, y encaja con lo que ya existe:** los interruptores por rol
+(`rolePerms`) ya funcionan así —`canManageCatalog` es exactamente este permiso,
+sólo que en bloque— y la regla ya vive en el servidor, que es lo que lo hace
+real. Partir `canManageCatalog` en cuatro es un cambio pequeño sobre algo
+probado.
+
+**Dos cosas que yo añadiría cuando se discuta:**
+
+1. **El permiso de crear y el de escribir mal son el mismo problema.** Mientras
+   el campo sea libre, quitar el permiso de "crear ubicaciones" no impide
+   escribir `A1p`: lo impide **cerrar la lista**. Así que el arreglo de arriba va
+   primero, y los permisos encima.
+2. **Cuidado con partirlo demasiado.** Cuatro interruptores por rol son cuatro
+   decisiones que alguien tiene que entender. Yo empezaría por dos —*catálogo*
+   (proyectos, proveedores, categorías) y *almacén* (ubicaciones)— y sólo partiría
+   más si alguien lo pide.
+
+# ══ 🔵 DECIDIDO POR JOSE — EL AVISO DE OFFLINE NO VA EN LA LISTA ══
+
+Jose: *"¿qué es la lista de avisos con el offline dentro? Si hablas de la lista
+que dije que tiene Google, no quiero el offline ahí; tal vez podemos poner el
+offline en Error Log o en System."*
+
+Entendido y corregido: **la lista de Google es para lo que la app está haciendo**
+(aros girando, checks verdes), y el estado de la conexión no es una tarea. Van
+por separado:
+
+- **El aviso en pantalla**: debajo de las pestañas, donde salen los ✓ (decidido
+  el 2026-10-05).
+- **El registro**: una línea cuando se cae y otra cuando vuelve, con la hora.
+  **En Settings → System**, no en ERROR_LOG — quedarse sin internet no es un
+  error de la app, y meterlo en el registro de errores haría que el registro de
+  errores dejara de significar "algo va mal".

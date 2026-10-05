@@ -127,7 +127,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.39';
+var APP_VERSION = '12.40';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -139,7 +139,7 @@ var APP_VERSION = '12.39';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '580d26cb';
+var APP_BUILD = 'f4f1e0b9';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -1733,12 +1733,84 @@ function setVerifiedAuth_(auth) { _verifiedAuth = auth; return auth; }
 //   'ADMIN' → ADMIN only
 //   'WRITE' → ADMIN or WAREHOUSE (blocks VIEWER)
 //   omitted → any registered, signed-in user
+/* ── CUÁNTOS RECHAZOS SEGUIDOS SON UN AVISO Y NO UN DEDO TORPE ───────────────
+ * Diez en diez minutos. Por debajo es alguien que se equivocó de cuenta o que
+ * dejó una pestaña vieja abierta; por encima ya no es un accidente. */
+var ACCESO_RECHAZOS_AVISO = 10;
+
+/* ── QUEDA ESCRITO QUIÉN LLAMÓ A LA PUERTA Y NO PUDO ENTRAR ──────────────────
+ *
+ * Jose, 2026-10-05, sobre la lista de seguridad: le tocaba el turno a esto.
+ *
+ * Hasta hoy un rechazo no dejaba rastro EN NINGUNA PARTE. La puerta funcionaba
+ * —se cerraba— pero nadie sabía nunca que alguien la había empujado, así que un
+ * intento de entrar a la fuerza y un día tranquilo se veían exactamente igual
+ * desde dentro. Eso no es una cerradura, es una cerradura sin mirilla.
+ *
+ * TRES DECISIONES, Y LAS TRES IMPORTAN:
+ *
+ *  1. SE APUNTA UNA VEZ POR PERSONA Y MINUTO. Una pestaña vieja reintenta sola
+ *     cada veinte segundos; sin tope, un solo navegador olvidado llenaría el
+ *     registro de miles de líneas iguales y taparía lo que hay que ver. Lo que
+ *     importa es que alguien lo intentó, no cuántas veces rebotó su latido.
+ *  2. A LOS DIEZ EN DIEZ MINUTOS SE AVISA AL DUEÑO, y como mucho una vez por
+ *     hora. Un registro que nadie abre no avisa de nada — es la misma lección
+ *     del ERROR_LOG, que estuvo catorce horas con el desastre dentro sin que
+ *     nadie lo mirara.
+ *  3. NUNCA LANZA. Esto corre dentro del camino que ya está rechazando a
+ *     alguien: si fallara, convertiría un "no puedes pasar" limpio en un error
+ *     raro, y el rechazo es lo único que de verdad tiene que ocurrir.
+ *
+ * Y el correo del dueño se saca de `Session.getEffectiveUser()`, no de
+ * `loadConfig()`: loadConfig llama a requireAuth_, que es justo quien nos acaba
+ * de llamar a nosotros con una sesión rechazada. Habría lanzado dentro del
+ * registro del rechazo.
+ */
+function registrarAccesoDenegado_(auth, motivo) {
+  try {
+    var quien = (auth && auth.email) ? String(auth.email) : '(no session)';
+
+    /* PRIMERO SE CUENTA, DESPUÉS SE DECIDE QUÉ ESCRIBIR. El orden no es un
+     * detalle: la primera versión empezaba con el tope de escritura y se salía
+     * por ahí, así que el contador del aviso NUNCA pasaba de uno y el correo no
+     * se mandaba jamás. Lo cazó la prueba antes de salir de aquí. */
+    var cruzoElUmbral = !throttle_('denegadocuenta', quien, ACCESO_RECHAZOS_AVISO, 600);
+
+    // Una línea por persona y minuto: el latido de una pestaña olvidada
+    // reintenta solo cada veinte segundos y llenaría el registro.
+    if (throttle_('denegado', quien, 1, 60)) {
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      try { auditLog_(ss, 'ACCESS_DENIED', quien, motivo, '', ''); } catch (e1) {}
+    }
+
+    if (!cruzoElUmbral) return;
+    if (!throttle_('denegadocorreo', quien, 1, 3600)) return;   // un correo por hora
+
+    var dueno = '';
+    try { dueno = Session.getEffectiveUser().getEmail(); } catch (e2) {}
+    if (!dueno) return;
+    MailApp.sendEmail(dueno,
+      '⚠ ' + PRODUCT_NAME + ' — repeated sign-in attempts were refused',
+      'Someone has been refused access to your warehouse app ' +
+      ACCESO_RECHAZOS_AVISO + ' or more times in the last ten minutes.\n\n' +
+      'Account: ' + quien + '\n' +
+      'Reason:  ' + motivo + '\n\n' +
+      'If that is one of your people, add them in the app: ⚙️ App Settings → ' +
+      'Manage Users. If it is not, there is nothing to do — they were refused ' +
+      'every time, and this message is only so you know it happened.\n\n' +
+      'Every refusal is written down in the AUDIT_LOG tab of your spreadsheet, ' +
+      'under ACCESS_DENIED.');
+  } catch (e) { /* nunca lanza: ver arriba */ }
+}
+
 function requireAuth_(minRole) {
   var a = _verifiedAuth;
   if (!a || !a.email || a.role === 'NO_SESSION') {
+    registrarAccesoDenegado_(a, 'No signed-in session');
     throw new Error('Not authenticated. Please sign in and use the app from its own page.');
   }
   if (a.role === 'DENIED') {
+    registrarAccesoDenegado_(a, 'Not registered in this installation');
     throw new Error('Access denied. Your account (' + a.email + ') is not registered in this system.');
   }
   if (minRole === 'ADMIN' && a.role !== 'ADMIN') throw new Error('Admin only.');
