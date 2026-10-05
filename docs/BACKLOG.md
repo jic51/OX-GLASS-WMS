@@ -6526,3 +6526,131 @@ alargar un rótulo corre al vecino hacia la izquierda. Es inevitable sin anchos
 fijos y no es lo que Jose ve — lo que él veía es la fila moviéndose al ponerse a
 girar un botón, y eso ya lo resolvía `_btnBusy`, que fija el ancho ANTES de
 cambiar el texto. La prueba lo mide y lo imprime como dato, no como fallo.
+
+# ══ ANÁLISIS DE LOS DOS VÍDEOS Y DEL REGISTRO DE CONSOLA. 2026-10-05 ══
+
+> **Jose pidió expresamente NO TOCAR NADA, sólo analizar.** Aquí no hay ningún
+> cambio de producto: son hallazgos, con sus medidas y, donde la causa está en
+> el código, con la línea.
+
+## 1. EL SALTO AL CARGAR MÁS — y una corrección de lo que yo dije
+
+El registro que mandó Jose es concluyente, y **desmiente mi propia medición del
+vídeo anterior**. En las trece pulsaciones, sin una sola excepción:
+
+```
+ANTES   4427 | 4980 | 552        DESPUÉS 4427 | 9940 | 552
+ANTES   9320 | 9930 | 610        DESPUÉS 9320 | 14850 | 610
+ANTES  14230 | 14840 | 610       DESPUÉS 14230 | 19696 | 610
+```
+
+**`scrollTop` no cambia. Nunca.** La restauración de la v12.34 funciona.
+
+**Lo que sí se mueve está medio segundo después**, en tres de las trece:
+
+| Justo después | Medio segundo después | Diferencia |
+|---|---|---|
+| 19017 \| 24440 | 19007 \| 24430 | **−10 px** |
+| 33589 \| 39192 | 33579 \| 39182 | **−10 px** |
+| 43431 \| 49096 | 43398 \| 49060 | **−33 px** |
+
+**El contenido ENCOGE después de pintarse**, y `scrollTop` baja con él. No es que
+la app lo mueva: es que Jose está clavado al fondo —`scrollTop` 4427 de un máximo
+de 4428, a un píxel del final— y **cuando la altura total se encoge, el navegador
+lo arrastra**. Ésa es la sacudida pequeña, y es la misma causa del "+1 px entre
+las filas" que él notó.
+
+**Y corrijo lo mío:** los −108 px que medí en el vídeo anterior **eran un
+artefacto de mi medición**. Al fondo del todo, lo que se ve es el contador y el
+botón; al cargar, eso se sustituye por filas, y mi correlación emparejó cosas
+distintas. El registro manda sobre mi vídeo.
+
+**Y el dato que lo explica todo: `157% zoom`.** A ese zoom las alturas de fila
+son fraccionarias; el navegador redondea al pintar y vuelve a redondear cuando
+algo se recalcula. Por eso no lo reproduzco al 100 %, y por eso los números son
+10 y 33 px y no 0.
+
+**Lo que haría, cuando toque:** anclar en una FILA y no en un número de píxeles
+—así da igual que el total encoja—, y además averiguar **qué** encoge medio
+segundo después, porque eso mueve la pantalla en cualquier sitio donde alguien
+esté mirando el final de una lista.
+
+**Y una consecuencia que va más allá de esto:** todas nuestras pruebas de
+navegador corren al **100 % de zoom y dpr 1**. Jose trabaja al **157 %**. Hay una
+familia entera de defectos —redondeos, medio píxel, alturas fraccionarias— que
+nuestras pruebas no pueden ver. Al menos una prueba debería correr a un zoom
+distinto de 100.
+
+## 2. LO QUE JOSE VE, UNO POR UNO
+
+### «los tiempos de aparecer y desaparecer son diferentes» — CIERTO Y MEDIDO
+
+Los avisos de la esquina se piden con **ocho duraciones distintas**: 2000
+(`TOAST_QUICK`), 3000, 3500 (el valor por defecto), 4000, 5000, **6000 (28
+llamadas)**, 8000 y 12000 ms. Medido en su vídeo: cuatro avisos, **6,1 s cada
+uno**, que es el 6000 más el desvanecido.
+
+No es un fallo de ninguno en particular: es que **nadie decidió nunca una regla**.
+Debería haber tres: *leído de pasada*, *hay que leerlo*, *hay que decidir algo*.
+
+### «el label del check aparece segundos antes que el movimiento» — CIERTO, Y ES EL DISEÑO
+
+La marca se pinta en el navegador al instante; la fila espera al servidor y al
+repintado. Está hecho a propósito —es lo que hace que la app no parezca
+congelada— pero **la distancia entre las dos cosas no está acotada**: si el
+servidor tarda cuatro segundos, la marca lleva cuatro segundos diciendo "hecho"
+sobre una lista que todavía no lo refleja.
+
+### «la selección desaparece cuando aparece un movimiento nuevo» — CIERTO, Y LA LÍNEA ESTÁ LOCALIZADA
+
+`renderMovements` poda `_movSelection`: borra de la selección **todo lo que no se
+haya pintado**. Con la página llena, un movimiento nuevo entra por arriba y el
+último se cae de la página — y si el marcado era ése, su marca desaparece sin
+avisar. La poda es correcta en intención (no dejar seleccionado lo que ya no
+existe) pero no distingue *"ya no existe"* de *"se fue a la página siguiente"*.
+
+### «las tarjetas se hacen sólidas sólo en ciertas ocasiones» — CIERTO, Y ES A PROPÓSITO
+
+`_CFG_SOLID_MS = 3500`: una tarjeta **nueva de verdad** sale sólida y a los 3,5
+segundos se atenúa. Jose ha leído el diseño exactamente: sólido = acaba de pasar
+algo. **Lo que falta no es el comportamiento, es que nada lo diga.**
+
+### «el botón de guardar en el entry salta de tamaño» — HIPÓTESIS CON LA CAUSA A LA VISTA
+
+En su captura del formulario ENTRY, bajo PROJECT / CLIENT aparece *"New project —
+not on your list yet · + Add it"*. Ese aviso **aparece y desaparece mientras se
+escribe**, cambia el alto del formulario, y en la v12.36 el pie **iba al final
+del contenido**: cada vez que el aviso entraba o salía, la fila de botones se
+movía. Encaja con "un cambio o salto por un segundo o menos".
+
+**La v12.37 debería haberlo quitado** —el pie ya va pegado abajo— pero eso hay que
+comprobarlo en su pantalla, no darlo por hecho.
+
+## 3. LO QUE VEO YO Y NO ESTÁ EN SU LISTA
+
+1. **La tarjeta atenuada se lee ENCIMA de la tabla.** En su vídeo, la tarjeta de
+   *NEW PROJECT / STOCK* está translúcida sobre las filas, y se leen las dos a la
+   vez: ni se lee la tarjeta ni se lee la fila. Atenuar funciona sobre un fondo
+   liso; sobre texto, no. **O va sólida, o se aparta.**
+2. **Una extensión del navegador (Grammarly) está metiendo iconos dentro del
+   campo de comentarios.** No es nuestro y no se puede evitar, pero conviene
+   saberlo: cambia el alto del campo y puede explicar movimientos raros que
+   buscaríamos en nuestro código.
+3. **El aviso de "New project" empuja el formulario hacia abajo mientras se
+   escribe** — el campo que estabas mirando se mueve mientras tecleas. Debería
+   reservar su sitio, como se hizo con la barra de herramientas de Movements.
+4. **Los avisos se apilan**, y con ocho duraciones distintas dos avisos seguidos
+   se van en desorden: el segundo puede irse antes que el primero.
+
+## 4. LO QUE SÍ ESTÁ BIEN, Y CONVIENE DEJARLO ESCRITO
+
+- **El archivado nocturno corrió la v12.33** — la tarjeta lo dice con fecha y
+  hora: *"archive start · today at 3:47 AM · nightly archive starting · v12.33"*.
+  El sello de la v12.29 hace exactamente su trabajo.
+- **El almacenamiento se explica solo y bien**: *"433.620 de 10.000.000 celdas ·
+  1.065 movimientos · 15 pestañas. A unos 3 movimientos al día, sitio para más de
+  50 años — o menos de un año si tu ritmo sigue creciendo como el año pasado."*
+  Dice el número Y lo que significa.
+- **La cabecera pegajosa de la tabla aguanta el desplazamiento lateral**: en el
+  vídeo la tabla está corrida a la derecha y la cabecera acompaña a sus columnas.
+- **Los avisos duran lo que dicen durar**: 6,1 s medidos, cuatro de cuatro.
