@@ -57,6 +57,13 @@ que un ✅ optimista.
     enlace.
 11. El aviso de offline debajo de las pestañas (donde salen los ✓) + su línea
     en Settings → System.
+11-bis. **El changelog no se enseña en la app.** Escribimos dos en cada versión
+    —inglés y español—, los publicamos, y dentro de la app hay **cero** enlaces
+    que lleven ahí: un cliente nunca se entera de lo que mejora. *What's new* en
+    el menú de la cuenta, con punto de novedad cuando `APP_VERSION` cambia.
+    **Antes hay que decidir** si abre la web o si el texto viaja en el archivo
+    (lo segundo funciona sin internet y no manda a nadie fuera, pero hay que
+    llevarlo dentro). Encontrado el 05/10 comprobando un vídeo contra el código.
 12. La categoría empieza vacía.
 13. Los dos botones de Incoming, pegados arriba.
 14. Sugerencias de PM en Edit Movement y Edit Receiving.
@@ -88,7 +95,7 @@ que un ✅ optimista.
 31. Stripe.
 32. La plantilla maestra y el ensayo de restauración.
 33. **Otro tipo de usuario** — ya no hace falta: lo cierra el nº 35.
-34. Los vídeos de UX/UI — **van llegando** (20 el 05/10, faltan más). El
+34. Los vídeos de UX/UI — **van llegando** (25 el 05/10, faltan más). El
     registro de lo que enseña cada uno está en `VIDEOS-DE-UX.md`.
 35. **Permisos por persona** — ✅ decidido por Jose el 05/10; va después de la
     guardia de escritura (nº 5).

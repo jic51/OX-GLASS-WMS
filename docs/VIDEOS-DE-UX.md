@@ -242,7 +242,95 @@ los vídeos de uno en uno.
 
 ---
 
+## Cuarta tanda, 2026-10-05 noche (5 vídeos) — y la idea va por la quinta vez
+
+Otra vez **@davidm_ai**. Y **Responsive Breakpoints vuelve a ser la rejilla que
+se recoloca sola**: van **cinco de veinticinco**. Ya no hace falta interpretarlo
+más; está anotado arriba y es por donde empieza el rediseño.
+
+Lo nuevo de esta tanda son dos cosas que **no son de estilo**, y una de ellas se
+puede hacer mañana.
+
+| Vídeo | Qué es | ¿Sirve para Acopio? |
+|---|---|---|
+| **Account Menu** | Menú de la cuenta: foto, nombre y correo, Mi perfil, Ajustes, Facturación, Ayuda, **"What's new" con un punto de novedad**, cambiar de cuenta, modo oscuro, cerrar sesión | **SÍ — y una parte se hace mañana.** Ver abajo |
+| **HTML Semantic Elements** | `<header> <nav> <main> <section> <article> <aside> <footer>` en vez de `<div>` para todo, por accesibilidad y por que una máquina entienda la página | **SÍ, y es medible: lo tenemos a cero.** Ver abajo |
+| **Workspace Sidebar** | Barra lateral con **cambiador de espacio de trabajo** (Mercedes, Porsche, Tesla, BMW…), que se encoge a un riel de iconos | **El riel sí; el cambiador, no todavía.** Ver abajo |
+| **Responsive Breakpoints** | Seis regiones (header, sidebar, main, widget, stats, footer) recolocándose con `grid-template-areas` | **Repetido — quinta vez.** Confirma el patrón, no añade técnica |
+| **CSS Border Radius** | Taller de redondeos: blob, círculo, pastilla, y un radio distinto por tipo de pieza (tarjeta, avatar, botón, burbuja) | **Poco.** Lo único que me llevo es el principio: **el redondeo es un valor por TIPO de pieza**, no uno para todo |
+
+### El menú de la cuenta — hay un agujero que no había visto
+
+Lo encontré comprobando este vídeo contra el código, y es de los que dan
+vergüenza: **la app publica un changelog y nunca se lo enseña a nadie.**
+
+Buscado en `Index_v3_fixed.html`: **cero menciones** a `changelog`, a
+*"What's new"* o a la página de novedades. Escribimos dos changelogs en cada
+versión —inglés y español— los publicamos en acopio-site, y **dentro de la app no
+hay un solo enlace que lleve ahí**. El número de versión sale en el pie y no se
+puede pulsar.
+
+O sea: **un cliente nunca se entera de lo que mejora.** Pega el código, la app
+cambia, y nadie le cuenta por qué. Todo el trabajo de escribir esos changelogs se
+queda en una página que sólo visita quien ya sabe que existe.
+
+**Lo que haría, y es pequeño:** *What's new* en el menú de la cuenta, con un punto
+de novedad cuando `APP_VERSION` no es la que vio la última vez. **Pendiente de
+decidir una cosa:** si abre la página web o si el texto viaja dentro de la app.
+Lo segundo funciona sin internet y no manda a nadie fuera, pero obliga a llevar
+el changelog en el archivo. Lo hablamos antes de hacerlo.
+
+Del resto del vídeo: **el modo oscuro ya lo tenemos** (`[data-theme="dark"]`, 48
+reglas), y *Facturación* y *cambiar de cuenta* no son de esta app.
+
+### Los elementos semánticos — lo tenemos literalmente a cero
+
+Contado en el archivo:
+
+| | Cuántos hay |
+|---|---|
+| `<div>` | **707** |
+| `<nav>` | 1 |
+| `<main>`, `<header>`, `<section>`, `<article>`, `<aside>`, `<footer>` | **0 de cada uno** |
+
+Lo bueno: `<button>` sí se usa de verdad (263), que es la parte que más importa
+para poder manejar la app con el teclado.
+
+**Lo digo sin exagerar su urgencia:** esto no rompe nada hoy ni es nada de lo que
+Jose se haya quejado. Pero es gratis mientras se reescribe la colocación —que es
+lo que va a pasar en el rediseño— y es lo que hace que la app se pueda manejar
+con teclado, que la lea un lector de pantalla y, como dice el propio vídeo, que
+una máquina entienda la página. **Cambiar 707 `<div>` por gusto, no; ponerlos bien
+en lo que se toque, sí.**
+
+### La barra lateral con cambiador — la mitad sí, la mitad no
+
+**El riel que se encoge a iconos es la misma idea del *List & Detail Panes*** de
+la tanda anterior, y es útil por lo mismo: Settings ya es barra lateral + panel.
+
+**El cambiador de espacio de trabajo es otra cosa, y hay que decir por qué no se
+puede hoy:** cada instalación de Acopio es **su propia hoja, su propio script y su
+propia dirección**. Dos copias —la DEMO y la de verdad— no se ven entre sí, así
+que un cambiador dentro de una no podría llegar a los datos de la otra. No es una
+pantalla que falte: es una decisión de arquitectura que todavía está abierta, y
+está en `PANEL-DE-CLIENTES.md` esperando que Jose elija camino A o B.
+
+Donde sí encajaría **dentro de una sola instalación** es para **varios almacenes**
+—el competidor del otro vídeo tiene ALMACÉN A / B / C—, pero eso es una
+funcionalidad, no un estilo, y hoy no está ni pedida.
+
+### Lo que esta tanda añade
+
+Poco de estilo y dos cosas de fondo, que es mejor reparto del que parecía:
+
+1. **Un agujero real encontrado**: el changelog que no se enseña. No lo habría
+   visto sin este vídeo.
+2. **Una medida, no una opinión**: 707 `<div>` y cero `<main>`. El rediseño tiene
+   ahí una tarea concreta en vez de un buen propósito.
+
+---
+
 ## Estado
 
-**20 vídeos recogidos. Esperando el resto.** Cuando lleguen, estas tablas crecen
+**25 vídeos recogidos. Esperando el resto.** Cuando lleguen, estas tablas crecen
 y entonces —y no antes— se decide el rediseño y se trocea en el backlog.
