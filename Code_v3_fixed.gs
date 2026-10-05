@@ -127,7 +127,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.41';
+var APP_VERSION = '12.42';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -139,7 +139,7 @@ var APP_VERSION = '12.41';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '6f186d7b';
+var APP_BUILD = '7fa7ba83';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -9659,13 +9659,114 @@ function saveWebAppUrl(url) {
 // docs/INSTALL-GUIDE.md instead.
 var _WEBAPP_DEPLOYMENT_MARKER = PRODUCT_NAME + ' Web App';
 
+/* ── UN ENLACE QUE SE PULSA, NO QUE SE COPIA ─────────────────────────────────
+ *
+ * Jose, 2026-10-05, con una captura del aviso de "Update published!": *"¿hay
+ * alguna forma de que el usuario sólo pueda dar clic en el link para ir a la
+ * app en lugar de tener que copiar el link, ir al navegador y pegarlo?"*
+ *
+ * Sí, y la razón de que no lo fuera es tonta: `ui.alert` **sólo sabe enseñar
+ * texto plano**. Una dirección dentro de un alert de Sheets no es un enlace, es
+ * una ristra de letras. Y encima la caja es estrecha, así que la dirección sale
+ * cortada con una barra de scroll horizontal — que es exactamente lo que se ve
+ * en su captura. Para seleccionarla entera hay que arrastrar a ciegas.
+ *
+ * Lo que sí sabe enseñar un enlace es `showModalDialog` con HTML. Dentro del
+ * recuadro de Sheets el HTML corre en un iframe cerrado, así que el enlace
+ * necesita `target="_blank"` para poder abrir algo; sin eso no hace nada y
+ * parece roto.
+ *
+ * ── POR QUÉ SIGUE EXISTIENDO EL ALERT DE ANTES ─────────────────────────────
+ *
+ * `showModalDialog` necesita el permiso `script.container.ui`, y hay copias que
+ * NO lo tienen: el editor de Apps Script esconde `appsscript.json`, así que
+ * quien actualiza pegando sólo Code e Index se queda con el manifiesto viejo.
+ * Eso ya nos mordió una vez —está contado entero en `showSetupWizardDialog`.
+ *
+ * Si esa ventana no se puede abrir, lo que NO puede pasar es que la persona se
+ * quede sin la dirección. Así que el alert de texto sigue ahí, de red: peor,
+ * pero nunca ausente. Un adorno que puede dejarte sin el dato no es una mejora.
+ *
+ * ── Y EL BOTÓN DE COPIAR ───────────────────────────────────────────────────
+ *
+ * `navigator.clipboard` está bloqueado en bastantes iframes cerrados, y cuando
+ * falla lo hace en silencio: el botón dice "Copied" y el portapapeles está
+ * vacío. Por eso se intenta primero el camino viejo (`execCommand`, que dentro
+ * de un diálogo de Sheets funciona) y **el botón sólo dice que copió cuando
+ * algo contestó que sí**. Mentirle a alguien sobre si tiene la dirección le
+ * manda a pegar la nada en la barra del navegador. */
+function pintarEnlaceEnVentana_(titulo, url, intro, aviso) {
+  var ui = SpreadsheetApp.getUi();
+  var u  = escHtml_(url);
+  var html =
+    '<!DOCTYPE html><html><head><meta charset="utf-8"><base target="_blank">' +
+    '<style>' +
+      'body{font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;' +
+        'color:#1F2937;margin:0;padding:18px 20px 16px}' +
+      'p{margin:0 0 12px}' +
+      '.go{display:block;text-align:center;background:#2563EB;color:#fff;text-decoration:none;' +
+        'font-weight:600;font-size:15px;padding:12px 16px;border-radius:8px;margin:0 0 14px}' +
+      '.go:hover{background:#1D4ED8}' +
+      '.row{display:flex;gap:8px;align-items:center}' +
+      'input{flex:1;min-width:0;font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;' +
+        'padding:8px 10px;border:1px solid #D1D5DB;border-radius:6px;background:#F9FAFB;color:#374151}' +
+      'button{border:1px solid #D1D5DB;background:#fff;color:#374151;font-size:13px;font-weight:600;' +
+        'padding:8px 14px;border-radius:6px;cursor:pointer;white-space:nowrap}' +
+      'button:hover{background:#F3F4F6}' +
+      '.note{font-size:12px;color:#6B7280;margin:12px 0 0}' +
+      '.warn{font-size:12px;color:#92400E;background:#FEF3C7;border:1px solid #FDE68A;' +
+        'border-radius:6px;padding:9px 11px;margin:12px 0 0}' +
+    '</style></head><body>' +
+    (intro ? '<p>' + escHtml_(intro) + '</p>' : '') +
+    '<a class="go" href="' + u + '" target="_blank" rel="noopener">Open ' + escHtml_(PRODUCT_NAME) + ' →</a>' +
+    '<div class="row"><input id="u" type="text" readonly value="' + u + '">' +
+    '<button id="c" onclick="copiar()">Copy link</button></div>' +
+    '<p class="note">Opens in a new tab. Bookmark it once and you will not need ' +
+      'this spreadsheet again.</p>' +
+    (aviso ? '<p class="warn">' + escHtml_(aviso) + '</p>' : '') +
+    '<script>' +
+      'function copiar(){' +
+        'var i=document.getElementById("u"),b=document.getElementById("c"),ok=false;' +
+        'i.focus();i.select();i.setSelectionRange(0,i.value.length);' +
+        'try{ok=document.execCommand("copy");}catch(e){ok=false;}' +
+        'if(ok){hecho(b);return;}' +
+        'try{navigator.clipboard.writeText(i.value).then(function(){hecho(b);},' +
+          'function(){fallo(b);});}catch(e){fallo(b);}' +
+      '}' +
+      'function hecho(b){b.textContent="Copied";setTimeout(function(){b.textContent="Copy link";},2000);}' +
+      /* Cuando no se puede copiar se dice, y se deja el texto seleccionado para
+       * que Ctrl+C funcione. Es lo contrario de decir "Copied" y no copiar. */
+      'function fallo(b){b.textContent="Press Ctrl+C";' +
+        'setTimeout(function(){b.textContent="Copy link";},3000);}' +
+    '<\/script></body></html>';
+  ui.showModalDialog(
+    HtmlService.createHtmlOutput(html).setWidth(480).setHeight(aviso ? 330 : 250),
+    titulo);
+}
+
+/* El mismo aviso, en la caja de texto de siempre. Se usa cuando la ventana no
+ * se puede abrir — nunca para ahorrarse la ventana. */
+function avisoDeEnlaceEnTexto_(titulo, url, intro, aviso) {
+  SpreadsheetApp.getUi().alert(titulo,
+    (intro ? intro + '\n\n' : '') + url + (aviso ? '\n\n' + aviso : ''),
+    SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+function mostrarEnlaceDeLaApp_(titulo, url, intro, aviso) {
+  try { pintarEnlaceEnVentana_(titulo, url, intro, aviso); }
+  catch (e) {
+    Logger.log('pintarEnlaceEnVentana_: ' + (e && e.message));
+    avisoDeEnlaceEnTexto_(titulo, url, intro, aviso);
+  }
+}
+
 function menuActivateWebApp() {
   var ui = SpreadsheetApp.getUi();   // throws outside the Sheets UI — the real gate
   setVerifiedAuth_({ role: 'ADMIN', email: requireOwnerContext_(), name: 'Spreadsheet menu' });
   try {
     var url = selfActivateWebApp_();
-    ui.alert('✅ Update published!\n\n' + url +
-      '\n\nThis URL never changes — running this again republishes to the same address.');
+    mostrarEnlaceDeLaApp_('✅ Update published!', url,
+      'This address never changes — publishing again updates the same one.', '');
   } catch (e) {
     ui.alert('Could not publish automatically: ' + e.message +
       '\n\nThis is expected unless this copy is linked to a standard Google Cloud project.' +
@@ -10725,7 +10826,11 @@ function menuOpenApp() {
       'New deployment → Web app.', ui.ButtonSet.OK);
     return;
   }
-  ui.alert('Open this URL in your browser:\n\n' + url + aviso);
+  /* El aviso se pasa aparte y no pegado a la dirección: dentro de la caja de
+   * texto iban los dos en la misma ristra, y la advertencia de que la dirección
+   * puede estar MAL quedaba detrás de cien caracteres de dirección, que es
+   * donde nadie la lee. */
+  mostrarEnlaceDeLaApp_('🚀 Open ' + PRODUCT_NAME, url, '', aviso.replace(/^\n+/, ''));
 }
 
 // ─── PRESENCE / HEARTBEAT ────────────────────────────────────────────────────
@@ -10939,7 +11044,84 @@ function addUser(data, auth) {
   var id  = 'USR-' + now.getTime();
   sheet.appendRow([id, textCell_(email), textCell_(name), textCell_(role), auth.email, now, true]);
   auditLog_(ss, 'ADD_USER', auth.email, email + ' as ' + role, '', '');
-  return { status: 'success', id: id };
+
+  var inv = (data.invite === false) ? { enviado: false, motivo: '' }
+                                    : invitarUsuario_(ss, email, name, role, auth);
+  return { status: 'success', id: id, invited: inv.enviado, inviteNote: inv.motivo };
+}
+
+/* ── CÓMO LLEGA LA DIRECCIÓN A QUIEN ACABA DE ENTRAR ─────────────────────────
+ *
+ * Jose: *"debemos reducir al máximo (100%) la necesidad del usuario de ir al
+ * sheet."* Pues el primer día de un usuario era justo lo contrario: se le daba
+ * de alta y **la app no le decía nada a nadie**. Alguien tenía que acordarse de
+ * mandarle la dirección por su cuenta — y para tenerla, abrir la hoja.
+ *
+ * Así que el alta manda la invitación. Tres cosas que importan:
+ *
+ *   · SI FALLA EL CORREO, EL USUARIO QUEDA DADO DE ALTA IGUAL. El alta ya está
+ *     escrita cuando se llega aquí, y avisar es un extra. Un extra que deshace
+ *     lo principal es un fallo, no un extra.
+ *   · SI NO HAY DIRECCIÓN GUARDADA, NO SE INVENTA NINGUNA. `ScriptApp.getService()
+ *     .getUrl()` devuelve la del script ORIGINAL en una hoja copiada —ya nos costó
+ *     una tarde— y mandarle a alguien una dirección muerta en su primer correo es
+ *     peor que no mandarle nada. Se dice que no se mandó y por qué.
+ *   · SE DICE LA VERDAD AL QUE INVITA. La respuesta lleva si salió o no, para que
+ *     la pantalla no ponga "Invitation sent" cuando no se mandó nada. */
+function invitarUsuario_(ss, email, name, role, auth) {
+  var url = savedWebAppUrl_();
+  if (!url) {
+    return { enviado: false, motivo: 'No invitation was sent: this installation has ' +
+      'no saved app address yet. Open 🏭 ' + PRODUCT_NAME + ' → 🔧 Advanced → Push ' +
+      'Update Live in the spreadsheet, which records it.' };
+  }
+  var empresa = '';
+  try { empresa = String((companySettings_() || {}).name || '').trim(); } catch (e) {}
+  var deQuien = String((auth && auth.name) || '').trim() || String((auth && auth.email) || '');
+  var queHace = (role === 'VIEWER')    ? 'You can see everything in the warehouse, and you cannot change it.'
+              : (role === 'ADMIN')     ? 'You have full access, including settings and users.'
+              :                          'You can record movements in and out of the warehouse.';
+  try {
+    MailApp.sendEmail({
+      to: email,
+      subject: 'You have been added to ' + (empresa ? empresa + ' — ' : '') + PRODUCT_NAME,
+      name: (empresa || PRODUCT_NAME) + ' — ' + PRODUCT_NAME,
+      replyTo: String((auth && auth.email) || ''),
+      body:
+        (name ? 'Hi ' + name + ',\n\n' : 'Hi,\n\n') +
+        deQuien + ' has given you access to ' + (empresa ? empresa + "'s " : 'the ') +
+        'warehouse system.\n\n' +
+        'Open it here:\n' + url + '\n\n' +
+        'Sign in with this Google account: ' + email + '\n' +
+        queHace + '\n\n' +
+        'Bookmark that address — it is the only thing you need. You do not need ' +
+        'the spreadsheet.\n',
+      htmlBody:
+        '<div style="font:14px/1.6 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;color:#1F2937">' +
+        '<p>' + (name ? 'Hi ' + escHtml_(name) + ',' : 'Hi,') + '</p>' +
+        '<p>' + escHtml_(deQuien) + ' has given you access to ' +
+          (empresa ? escHtml_(empresa) + "'s" : 'the') + ' warehouse system.</p>' +
+        '<p><a href="' + escHtml_(url) + '" style="display:inline-block;background:#2563EB;' +
+          'color:#fff;text-decoration:none;font-weight:600;padding:11px 22px;border-radius:8px">' +
+          'Open ' + escHtml_(PRODUCT_NAME) + '</a></p>' +
+        '<p style="font-size:13px;color:#374151">Sign in with this Google account: <b>' +
+          escHtml_(email) + '</b><br>' + escHtml_(queHace) + '</p>' +
+        '<p style="font-size:13px;color:#6B7280">Bookmark that address — it is the only ' +
+          'thing you need. You do not need the spreadsheet.</p>' +
+        '<p style="font-size:12px;color:#9CA3AF;word-break:break-all">' + escHtml_(url) + '</p>' +
+        '</div>'
+    });
+    try { auditLog_(ss, 'USER_INVITED', String((auth && auth.email) || ''), email, role, ''); } catch (e) {}
+    return { enviado: true, motivo: '' };
+  } catch (e) {
+    try {
+      logError_(ss, 'WARN', 'backend', 'invitarUsuario_', String((auth && auth.email) || ''),
+        'Could not email the invitation to ' + email + ': ' + (e && e.message), null, '');
+    } catch (e2) {}
+    return { enviado: false, motivo: 'The user was added, but the invitation email could ' +
+      'not be sent (' + (e && e.message ? e.message : 'unknown reason') + '). Send them ' +
+      'the app address yourself.' };
+  }
 }
 
 function updateUser(data, auth) {

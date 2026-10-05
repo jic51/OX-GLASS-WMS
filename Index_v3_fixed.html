@@ -1999,6 +1999,9 @@
     .usr-select-cb:disabled{opacity:.3;cursor:not-allowed}
     .user-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:.65rem;margin-bottom:.75rem}
     @media(max-width:520px){.user-form-grid{grid-template-columns:1fr}}
+    .user-invite{display:flex;align-items:center;gap:.5rem;font-size:.82rem;color:var(--text);
+      cursor:pointer;user-select:none;padding:.15rem 0}
+    .user-invite input{width:1rem;height:1rem;accent-color:var(--accent2);cursor:pointer;margin:0}
     /* ── SIMILAR-MATERIAL HINT ── */
     .similar-hint{display:none;margin-top:.3rem;padding:.3rem .6rem;background:#FEF9C3;border:1px solid #FDE68A;border-radius:6px;font-size:.76rem;color:#92400E;align-items:center;gap:.4rem;flex-wrap:wrap}
     .similar-hint.show{display:flex}
@@ -3309,6 +3312,15 @@
           </select>
         </div>
       </div>
+      <!-- Hasta ahora, dar de alta a alguien NO LE DECÍA NADA A NADIE: había que
+           acordarse de mandarle la dirección por otro lado, y para tenerla,
+           abrir la hoja de cálculo. Marcado por defecto porque no avisar es casi
+           siempre un olvido, no una decisión — y se puede desmarcar para el caso
+           real de preparar las cuentas antes de que la gente deba entrar. -->
+      <label class="user-invite" id="uInviteWrap">
+        <input type="checkbox" id="uInvite" checked>
+        <span>Email them the link to the app</span>
+      </label>
       <div id="userFormMsg" style="display:none;margin-top:.5rem;font-size:.78rem;padding:.35rem .6rem;border-radius:6px"></div>
       <div class="modal-actions" style="margin-top:1.1rem">
         <button class="btn btn-ghost" onclick="closeModal('userFormOverlay')">Cancel</button>
@@ -4498,7 +4510,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.41';
+var APP_VERSION = '12.42';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -4510,7 +4522,7 @@ var APP_VERSION = '12.41';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '6f186d7b';
+var APP_BUILD = '7fa7ba83';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -21675,6 +21687,9 @@ function editUser(email) {
   document.getElementById('uName').value  = u.name  || '';
   document.getElementById('uRole').value  = u.role  || 'WAREHOUSE';
   document.getElementById('userFormTitle').textContent = '✏️ Editing: ' + u.email;
+  // Invitar es cosa del alta. A quien ya está dentro no se le manda un "te han
+  // dado acceso" cada vez que se le corrige el nombre.
+  _mostrarInvitar(false);
   // El formulario vive en su propia ventana desde la v11.98, así que hay que
   // abrirla — antes estaba siempre puesta y bastaba con rellenarla.
   document.getElementById('userFormOverlay').classList.add('show');
@@ -21688,7 +21703,15 @@ function resetUserForm() {
   document.getElementById('uName').value     = '';
   document.getElementById('uRole').value     = 'WAREHOUSE';
   document.getElementById('userFormTitle').textContent  = '➕ Add New User';
+  var inv = document.getElementById('uInvite');
+  if (inv) inv.checked = true;
+  _mostrarInvitar(true);
   _userFormMsg('', '');
+}
+
+function _mostrarInvitar(ver) {
+  var w = document.getElementById('uInviteWrap');
+  if (w) w.style.display = ver ? 'flex' : 'none';
 }
 
 function _userFormMsg(msg, type) {
@@ -21710,12 +21733,19 @@ function saveUser() {
   _btnBusy(btn, 'Saving…');
 
   var action  = _editingUser ? 'updateUser' : 'addUser';
-  var payload = { email: email, name: name, role: role, active: true };
+  var invitar = !_editingUser && !!(document.getElementById('uInvite') || {}).checked;
+  var payload = { email: email, name: name, role: role, active: true, invite: invitar };
 
   google.script.run
-    .withSuccessHandler(function() {
+    .withSuccessHandler(function(res) {
       _btnDone(btn, true);
       _userFormMsg(_editingUser ? 'User updated.' : 'User added successfully.', 'ok');
+      /* Lo que diga el servidor, no lo que pedimos. El correo puede no salir
+       * —sin dirección guardada, sin cuota— y decir "invitación enviada" cuando
+       * no se envió nada deja a alguien esperando un correo que no existe.
+       * El aviso tiene que verse, así que la ventana no se cierra con él. */
+      res = res || {};
+
       // The row is patched in place rather than the whole list being fetched
       // again: the browser already knows exactly what changed, and re-reading
       // the sheet to learn it puts a "Loading…" flash over a list of four names.
@@ -21724,10 +21754,27 @@ function saveUser() {
       if (found){ found.name = name; found.role = role; found.active = true; }
       else _usersData.push({ email: email, name: name, role: role, active: true,
                              addedBy: userEmail, addedAt: _isoDate(new Date()) });
-      resetUserForm();
-      closeModal('userFormOverlay');
       _sysCachePut('users', _usersData, true);   // ya está al día, no hay que ir a buscarla
       _renderUsersTable();
+
+      /* El usuario YA ESTÁ DADO DE ALTA cuando se llega aquí, pase lo que pase
+       * con el correo. Por eso la lista se actualiza arriba y sólo después se
+       * mira la invitación: un fallo al avisar no puede hacer que la pantalla
+       * finja que el alta tampoco ocurrió.
+       *
+       * Y se cuenta lo que dijo el servidor, no lo que pedimos. Si no salió
+       * —sin dirección guardada, sin cuota de correo—, la ventana se queda
+       * abierta con el motivo: decir "invitación enviada" cuando no se envió
+       * nada deja a alguien esperando un correo que no existe. */
+      if (invitar && res.invited) {
+        showToast('Invitation emailed to ' + email, 'ok');
+      } else if (invitar && res.inviteNote) {
+        _userFormMsg(res.inviteNote, 'error');
+        _btnReset(btn);
+        return;
+      }
+      resetUserForm();
+      closeModal('userFormOverlay');
     })
     .withFailureHandler(function(err) {
       _btnReset(btn);

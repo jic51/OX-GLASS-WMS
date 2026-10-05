@@ -14,7 +14,20 @@ empieza mientras quede algo roto en el backlog.
 
 ---
 
-## 1. 🔵 OTRO TIPO DE USUARIO — hay que hablarlo, y aquí están los números
+## 1. ✅ DECIDIDO (2026-10-05) — PERMISOS POR PERSONA, Y NO UN CUARTO ROL
+
+Jose, al leer esta nota: *"«los interruptores por persona en vez de por rol» OK
+entonces creo que esto está mejor, permisos por usuario."*
+
+**Eso cierra la pregunta de este apartado**, y cierra también el punto 2 de abajo
+(los permisos por cosa pasan a ser interruptores de la ficha de cada persona).
+Lo que hay que construir, con sus tres cuidados, está en `BACKLOG.md` bajo
+*"PERMISOS POR PERSONA, NO POR ROL"*.
+
+El análisis que llevó a esa decisión se conserva entero debajo, porque tiene los
+números de lo que costaba cada camino.
+
+### El análisis original — OTRO TIPO DE USUARIO: los números
 
 Jose: *"anota para la v2: crear otro tipo de usuario (primero hablamos de esto y
 si es mucho trabajo lo dejamos para la v3)."*

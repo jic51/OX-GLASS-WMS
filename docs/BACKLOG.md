@@ -41,8 +41,11 @@ que un ✅ optimista.
 5. **La guardia de escritura es una lista de quién NO** (`role === 'VIEWER'`).
    Hoy da el mismo resultado; el día que haya un rol más, entra escribiendo sin
    que nadie lo decida. Una línea y una prueba con un rol inventado.
-6. **El botón de Release no da señal** de que haya hecho algo — y hay que
-   repasar **todos** los botones que llaman al servidor con el mismo criterio.
+6. **El cartel de reservas se queda viejo y la app culpa a un tercero** — se
+   suelta una reserva, el cartel no se entera, se vuelve a pulsar y contesta
+   *"someone else got there first"* cuando no había nadie más. Medido en el
+   vídeo del 05/10. Y de paso, repasar **todos** los botones que llaman al
+   servidor: feedback y mensajes que no supongan la causa.
 
 ### 🔴 Abierto, pequeño
 
@@ -84,9 +87,14 @@ que un ✅ optimista.
     previa**: copiar una hoja y leer qué dice en ⚙️ Configuración del proyecto).
 31. Stripe.
 32. La plantilla maestra y el ensayo de restauración.
-33. **Otro tipo de usuario** — pidió hablarlo antes de hacerlo. Los números
-    están en `LISTA-DE-LA-V2.md`.
-34. Los vídeos de UX/UI que anunció.
+33. **Otro tipo de usuario** — ya no hace falta: lo cierra el nº 35.
+34. Los vídeos de UX/UI — **van llegando** (10 el 05/10, faltan más). El
+    registro de lo que enseña cada uno está en `VIDEOS-DE-UX.md`.
+35. **Permisos por persona** — ✅ decidido por Jose el 05/10; va después de la
+    guardia de escritura (nº 5).
+36. **Informes** — qué falta y en qué orden, en `LO-QUE-FALTA-EN-LA-APP.md`. Lo
+    primero: la actividad de las personas dentro de la app (hoy AUDIT_LOG es el
+    único dato que obliga a abrir la hoja).
 
 ### 🔵 La v2
 
@@ -95,8 +103,8 @@ lo mismo, que es justo lo que acabamos de arreglar en los usuarios.
 
 ### 🔍 Sin revisar
 
-35. El estándar de las ventanas (lista de revisión del 2026-09-17).
-36. La sección histórica del 2026-09-09 — casi toda ✅ v11.x, con dos ⛔ dentro
+37. El estándar de las ventanas (lista de revisión del 2026-09-17).
+38. La sección histórica del 2026-09-09 — casi toda ✅ v11.x, con dos ⛔ dentro
     que no se han vuelto a mirar.
 
 ---
@@ -7128,3 +7136,94 @@ no haya dos listas de lo mismo, que es justo el fallo que acabamos de arreglar.
 **Pendiente de Jose:** los vídeos de UX/UI que anunció (*"te voy a pasar unos
 vídeos para que veas cómo quiero cambiar la app, en especial la UX/UI, pero eso
 más tarde o en los próximos días"*). No se apunta nada de eso hasta verlos.
+
+# ══ 🔴 ABIERTO — EL CARTEL DE RESERVAS SE QUEDA VIEJO, Y LA APP CULPA A UN TERCERO ══
+
+Medido en el vídeo de Jose del 2026-10-05 (`2053-37`), fotograma a fotograma.
+
+## Lo que se ve
+
+1. **8s** — suelta una reserva. Sale el aviso *"Released — KOTTER RESIDENCE at
+   B."* y el cartel pasa de 5 reservas a 4. Bien.
+2. **18s** — vuelve a pulsar Release. La app contesta: **"Already released —
+   someone else got there first. Nothing left to do."**
+3. **26s** — pulsa el botón de arriba, *"Release the 2 holding nothing"*.
+4. **42s** — sale **"Released 0 reservations — 2 had already been released by
+   someone else"**… y el cartel pasa de 3 reservas a 1.
+
+## Lo que pasa de verdad
+
+**No había nadie más.** Jose estaba solo. Las reservas que la app dice que
+"alguien se adelantó a soltar" **las soltó él mismo, segundos antes, en esa misma
+pantalla**. El cartel de arriba no se refresca con lo que ya ha ocurrido, así que
+sigue ofreciendo soltar cosas que ya están sueltas; se pulsa sobre ellas, y el
+servidor —que sí está al día— contesta con la única explicación que conoce.
+
+Son dos fallos, no uno, y el segundo es el feo:
+
+- **El cartel se queda viejo.** Ofrece acciones sobre algo que ya no existe. Eso
+  es lo que hay que arreglar.
+- **El mensaje acusa a alguien que no existe.** *"Someone else got there first"*
+  es una conclusión, no un hecho: lo que el servidor sabe es que **ya estaba
+  suelta**, no quién la soltó. Y en el caso normal —una sola persona trabajando—
+  la conclusión es **falsa**, y manda a buscar un compañero que no ha tocado
+  nada.
+
+Y **"Released 0 reservations"** mientras la lista baja de 3 a 1 es lo mismo visto
+desde el otro lado: lo que la app cuenta y lo que la app hace no coinciden en la
+misma frase. Aunque las dos cosas sean técnicamente ciertas por separado, juntas
+sólo se pueden leer como un fallo.
+
+## El arreglo
+
+1. **Refrescar el cartel con lo que acaba de pasar**, igual que la tabla de
+   movimientos ya hace al guardar: el servidor sabe cómo queda la cosa y puede
+   decirlo en la misma respuesta.
+2. **Decir lo que se sabe y no lo que se deduce.** *"That reservation was already
+   released"* y, si de verdad consta quién la soltó, decir quién. Nunca *"someone
+   else"* por descarte. El registro de reservas guarda quién suelta: si el que
+   suelta es el mismo que pregunta, la frase correcta es **"you already released
+   this one"**.
+3. **Y revisar el resto de mensajes del archivo buscando el mismo patrón**:
+   afirmar la causa cuando sólo se conoce el efecto. Es hermano de *"una guardia
+   que dice que sí"* — aquí es *"un mensaje que supone"*.
+
+**Tamaño:** pequeño. **Es el ejemplo más limpio que tenemos de por qué los
+vídeos de Jose valen más que nuestras pruebas**: un fallo de refresco más un
+mensaje engañoso, en una pantalla que todas nuestras pruebas dan por buena
+porque, por separado, cada pieza funciona.
+
+# ══ 🔵 DECIDIDO POR JOSE (2026-10-05) — PERMISOS POR PERSONA, NO POR ROL ══
+
+Jose, sobre la nota de la `LISTA-DE-LA-V2.md`: *"«los interruptores por persona
+en vez de por rol» OK entonces creo que esto está mejor, permisos por usuario."*
+
+**Decidido, y cierra tres cosas de golpe:**
+
+- Lo que pedía como *"otro tipo de usuario"* — ya no hace falta un cuarto rol
+  para que dos personas de bodega puedan cosas distintas.
+- Su idea de *"delegar crear suppliers, locations, projects, categories"* — pasa
+  a ser una fila de interruptores en la ficha de cada persona.
+- Y la pantalla ya la enseñó él mismo en uno de los vídeos de referencia
+  (*Collaboration access*): la lista de gente con su permiso al lado.
+
+**Lo que hay hoy, para no partir de cero:** `DEFAULT_ROLE_PERMS` ya tiene cuatro
+interruptores (`canSeeCosts`, `canEditMovements`, `canManageCatalog`,
+`canExportData`) y la regla **ya vive en el servidor**, que es lo que la hace
+real. Lo único que cambia es **dónde se guardan**: hoy en una propiedad del
+script (`ROLE_PERMS_WAREHOUSE`), y pasarían a columnas de USERS_V3.
+
+**Tres cuidados cuando se construya, cada uno por algo que ya nos ha pasado:**
+
+1. **Los roles NO desaparecen.** Siguen siendo el valor por defecto de una
+   persona nueva; los interruptores sólo se apartan de ese valor. Quitar los
+   roles obligaría a decidir diez cosas para dar de alta a alguien.
+2. **Migrar sin cambiarle nada a nadie.** El día del cambio, cada persona tiene
+   que quedarse exactamente con lo que podía hacer el día antes. Es la misma
+   regla que en la adopción de usuarios de la v12.41, y por el mismo motivo.
+3. **Una prueba que invente un permiso que no existe** y compruebe que **no**
+   concede nada. Sin eso volvemos a *una guardia que dice que sí*, que es el
+   fallo que llevamos todo el mes encontrando.
+
+**Y va DESPUÉS de dar la vuelta a la guardia de escritura**, que es de una línea
+y está más arriba en esta lista.
