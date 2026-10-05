@@ -84,7 +84,79 @@ referencias no pueden saberlas:
 
 ---
 
+## Segunda tanda, 2026-10-05 noche (5 vídeos) — *AI Builder Components*
+
+Los cinco son del mismo autor, **@davidm_ai (David Mráz)**, y son de otra clase
+que los de arriba: no son "básico contra premium", son **un componente suelto
+con su CSS a la vista**. Eso los hace más útiles para decidir y más peligrosos
+para copiar: enseñan una técnica, no una pantalla, y la técnica siempre parece
+que encaja.
+
+| Vídeo | Qué es, técnicamente | ¿Sirve para Acopio? |
+|---|---|---|
+| **Bento Skyline** | **Una sola rejilla y cinco tamaños de pantalla**, con `grid-template-areas` reescritas por `@media`: las mismas piezas (hero, chart, stat, list, quote, cta) se recolocan sin tocar el HTML | **SÍ, y es el más aprovechable de los cinco.** Ver abajo |
+| **Pagination Styles** | Ocho formas de pasar páginas: Classic, Pills, Dots, Bordered, Track, **Compact (2 / 5)**, **Progress** (barra + 3 / 5), Steps | **A medias, y choca con lo que ya pediste.** Ver abajo |
+| **Floating Button** | Un botón redondo que se **abre** en un menú de acciones rápidas, animando `clip-path: inset(...)` de círculo a tarjeta | **El patrón sí, la animación no.** Ver abajo |
+| **Island Carousel** | Carrusel con `scroll-snap-type: x mandatory` + `scroll-snap-align: center`, flechas y puntitos | **Casi no.** Una fila que se arrastra enseña una cosa cada vez; el mapa de la bodega existe para ver muchas de golpe. Lo único que valdría es en móvil, para las fotos de un estante |
+| **Card Stack** | Cartas apiladas que se abren en abanico al pasar por encima, con variables CSS por carta | **No, y ya lo decidiste tú.** En el backlog está tu propia petición para la columna DOC: *"dos al lado y una flecha, en vez de apilarse"*. Esto es exactamente lo contrario: esconde información detrás de más información y obliga a apuntar bien con el ratón para leer |
+
+### El de la rejilla (Bento Skyline) — por qué éste sí
+
+Es la respuesta técnica a un problema que ya tenemos escrito en dos sitios del
+backlog: **estandarizar las columnas** y **que la app se comporte en pantallas
+pequeñas**. Hoy el Stock Dashboard se recoloca con reglas sueltas repartidas por
+la hoja de estilos; una rejilla con **áreas con nombre** dice la colocación de
+cada tamaño en un solo bloque que se lee de un vistazo:
+
+- Deja de haber reglas que se pisan entre sí, que es de lo que ya avisa el propio
+  archivo (*"cuidado con las especificidades: es fácil generar clases que se
+  cancelan"*).
+- Y degrada mejor **al 157 % de zoom**, que es como trabajas: una rejilla de
+  áreas recoloca; un apaño de flex se desborda.
+
+**No es urgente** y no toca nada roto, pero es la forma correcta de hacer el
+rediseño cuando llegue, en vez de añadir otra capa de parches encima.
+
+### El de la paginación — honesto: choca con lo que ya pediste
+
+Es el que más me tienta, porque **resuelve de raíz el problema del salto**: si la
+lista no crece, no hay nada a lo que anclar el scroll, y toda esa familia de
+fallos desaparece.
+
+**Pero tú ya decidiste lo contrario**, y con razones: *"la vista del usuario debe
+quedarse viendo los movimientos que ya se veían y añadir los demás debajo, no
+debemos irnos hasta el último"*. Eso es acumular, no paginar. Paginar
+significaría que los movimientos que estabas mirando **desaparecen** al pasar de
+página.
+
+Así que lo guardo como **lo que sí se puede llevar sin cambiar la decisión**: el
+indicador de **Compact** o **Progress** — *"164 of 320"* con su barra, junto al
+botón de cargar más. Hoy no hay forma de saber cuánto queda, y eso es la mitad de
+lo que la paginación da gratis, sin quitarte lo que pediste.
+
+### El botón flotante — el patrón sí, la animación no
+
+Un botón de acciones rápidas (ENTRY, EXIT, TRANSFER) flotando en móvil es un
+patrón de verdad y resuelve algo real: en el teléfono, los botones de acción
+quedan arriba y hay que subir cada vez.
+
+Lo que no me llevaría es **animar `clip-path`**. Es bonito y es caro: fuerza
+repintados en cada fotograma, en un navegador que al mismo tiempo está pintando
+una tabla de cientos de filas. La misma apertura con opacidad y `transform`
+cuesta mucho menos y se ve igual.
+
+### Lo que esta tanda añade a la conclusión de arriba
+
+La de los siete primeros era *"el contenido no cambia, cambia cuánto trabajo hace
+la presentación"*. Ésta añade la contraria, y conviene que estén las dos escritas:
+**una técnica bonita aplicada a la pantalla equivocada quita información**. El
+carrusel enseña de uno en uno lo que hoy se ve de golpe; el abanico de cartas
+esconde detrás lo que hoy está al lado. De los cinco, dos mejoran Acopio, uno a
+medias, y dos lo empeorarían.
+
+---
+
 ## Estado
 
-**Esperando el resto de los vídeos.** Cuando lleguen, esta tabla crece y
-entonces —y no antes— se decide el rediseño y se trocea en el backlog.
+**15 vídeos recogidos. Esperando el resto.** Cuando lleguen, estas tablas crecen
+y entonces —y no antes— se decide el rediseño y se trocea en el backlog.

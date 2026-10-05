@@ -88,7 +88,7 @@ que un ✅ optimista.
 31. Stripe.
 32. La plantilla maestra y el ensayo de restauración.
 33. **Otro tipo de usuario** — ya no hace falta: lo cierra el nº 35.
-34. Los vídeos de UX/UI — **van llegando** (10 el 05/10, faltan más). El
+34. Los vídeos de UX/UI — **van llegando** (15 el 05/10, faltan más). El
     registro de lo que enseña cada uno está en `VIDEOS-DE-UX.md`.
 35. **Permisos por persona** — ✅ decidido por Jose el 05/10; va después de la
     guardia de escritura (nº 5).
