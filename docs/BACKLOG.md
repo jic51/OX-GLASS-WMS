@@ -6704,3 +6704,98 @@ Lo que hay que resolver al construirlo:
   hermana mayor, y hay que reusarla, no escribir otra.
 - **Y el tope.** Una lista que nunca se vacía sola acaba con cuarenta líneas de
   ayer. Quedarse hasta la 'x' sí, pero con un máximo y con las de hoy primero.
+
+# ══ ANOTADO EL 2026-10-05 (tarde) — MAYÚSCULAS, COLUMNAS Y EL AVISO DE OFFLINE ══
+
+## 1. 🔴 MAYÚSCULAS — y hay que separar dos cosas antes de tocarlo
+
+Jose: *"hay que hacer que PO, Received By, Comments se hagan en mayúsculas
+siempre, así como el proyecto, nombre y demás."*
+
+**Hoy, comprobado en `addMovementsBatch_`:**
+
+| Campo | Cómo se guarda |
+|---|---|
+| Unit | **mayúsculas** (`.toUpperCase()`) |
+| Category, Name | como se teclean (`cleanDisplay_`) — pero el **MatId** se calcula con la forma normalizada, que SÍ es mayúsculas |
+| GC, PO, Supplier, Received By, Comments | **sólo `.trim()`** — tal cual se teclearon |
+
+**Dos cosas distintas que conviene no mezclar:**
+
+1. **Normalizar para COMPARAR** — ya está hecho donde importa: el identificador
+   del material es mayúsculas, así que `Window` y `WINDOW` son el mismo material.
+2. **Uniformar para MIRAR** — es lo que Jose está pidiendo, y es lo que no está.
+
+**Mi recomendación, campo por campo:**
+
+- **PO, GC, Received By, Project, Supplier, Category, Name → mayúsculas al
+  guardar.** Son etiquetas y claves: nadie quiere dos proveedores por una
+  mayúscula, y verlos desparejos en la tabla se ve mal.
+- **Comments → NO.** Un comentario es una frase, no una clave. *"2 broken windows
+  on arrival"* en mayúsculas se lee peor, y **al guardar en mayúsculas el
+  original se pierde para siempre**. Si lo que molesta es que la columna se vea
+  despareja, eso se arregla en la pantalla (`text-transform`) sin tocar el dato.
+
+Y lo que hay que hacer sí o sí al implementarlo: **decidir qué pasa con lo ya
+guardado.** Mayúsculas sólo en lo nuevo deja la tabla mitad y mitad durante
+meses; convertir lo viejo es reescribir el archivo entero, que es justo la
+operación que más respeto da en este producto.
+
+## 2. 🟡 ¿QUÉ ES "RAW LOC"? — contestado, y sobra
+
+`{ key:'rawLoc', def:'Raw Loc', w:120 }`, con la ayuda *"The source and
+destination fields exactly as recorded"*. Es **origen y destino en crudo**, tal
+como están en la hoja, frente a `Src→Dest` que los pinta ya formateados. Viene
+**oculta de fábrica**.
+
+**Opinión:** es una columna de diagnóstico con nombre de programador. O se
+renombra a algo que signifique algo para un almacén (*"Locations as recorded"*),
+o se quita de la lista del usuario y se deja para soporte — que encaja con el
+criterio de *"el usuario no administra la app"*.
+
+## 3. 🟡 ¿POR QUÉ LAS OCULTAS SE VEN TRANSPARENTES?
+
+Porque es el **editor de columnas**: con `⚙ Columns` abierto se enseñan TODAS,
+y las apagadas van al 45 % (`th.col-edit.col-off{opacity:.45}`) con su 🚫, para
+poder volver a encenderlas. Fuera del editor no se ven en absoluto.
+
+**Es correcto, y aun así confunde** — en la captura de Jose parecen columnas a
+medio cargar. Un rótulo encima (*"the faded ones are hidden — click to turn them
+back on"*) lo resolvería.
+
+## 4. 🟠 LA COLUMNA VACÍA DEL FINAL — Jose tenía razón a medias
+
+`COL_TABLES.mov.tail` añade `<th style="width:44px"></th>`, y las filas ponen
+ahí el ✏️ y el 🗑 de cada movimiento. **No es un resto: es la columna de las
+acciones de fila.** Pero:
+
+- **La cabecera se dibuja si `_movCanAct()` y la celda sólo si `isAdmin`.** No es
+  la misma condición: un usuario que puede editar pero no es ADMIN ve **una
+  columna con cabecera y sin nada debajo**. Eso sí es un fallo.
+- **La cabecera no tiene rótulo**, así que en el editor de columnas queda un
+  bloque oscuro mudo — que es exactamente lo que Jose fotografió.
+
+Arreglo: una sola condición para las dos, y un rótulo (aunque sea una ⚙ o un
+`aria-label`) para que no parezca una columna rota.
+
+## 5. 🔴 EL AVISO DE OFFLINE — Jose quiere tarjeta, no barra
+
+Jose, sobre la v12.38: *"quisiera que sea menos invasiva, que sea un toast rojo
+que se queda flotando justo donde aparecen los otros; es mejor que una barra que
+mueve toda la app para abajo. De esa forma cuando cambia a online se pone verde y
+se nota también el cambio."*
+
+**Lleva razón en lo que molesta** —empujar la app entera hacia abajo es mucho
+precio— y la idea encaja además con su propuesta de la lista de avisos: **el
+estado de la conexión sería la primera línea de esa lista, fija, y las demás
+pasan por debajo.** Eso es mejor que las dos cosas por separado.
+
+**Mi única reserva, y es la que hay que resolver al hacerlo:** una tarjeta en la
+esquina es más fácil de ignorar que una barra, y lo que no puede pasar es que
+alguien escriba diez minutos sin enterarse. Así que la tarjeta, sí, **pero con la
+protección de verdad en el sitio donde importa: que al pulsar Guardar estando
+sin conexión, el botón lo diga.** Un aviso que se puede no mirar necesita un
+segundo aviso donde la persona sí está mirando.
+
+Va junto con la lista de avisos, no antes: hacer la tarjeta ahora y la lista
+después sería escribir dos veces lo mismo.
