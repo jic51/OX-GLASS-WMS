@@ -3,9 +3,89 @@
 Running list of agreed-upon work, roughly in priority order. Items move out of
 here once they ship (the commit message is the record of what changed and why).
 
+## Cómo leer esta lista
+
+Barrido del **2026-10-05**, pedido por Jose: *"asegúrate de marcar sólo lo que
+está hecho; si falta algo o una parte de algo no lo marques y ponlo en la
+lista."* Cada sección lleva su estado **comprobado en el código**, no de memoria.
+Donde no he podido comprobarlo, pone que no lo he comprobado — eso es más útil
+que un ✅ optimista.
+
+| | Significa |
+|---|---|
+| ✅ | hecho entero, con su versión |
+| 🔶 | **a medias** — parte hecha, parte no. El texto dice cuál es cuál |
+| 🔴 | abierto, sin empezar |
+| 🔵 | decisión de Jose, no código |
+| ⏸ | aplazado a propósito |
+| 🔍 | **no revisado entera** — no se marca nada sin leerla |
+
+---
+
+## LO VIVO, POR ORDEN
+
+### 🔴 Primero, y no es opinión
+
+1. **`writeConfigColumn_` borra antes de escribir.** El mismo patrón que destruyó
+   el archivo tres veces, en la función que escribe categorías, proyectos,
+   proveedores y ubicaciones. Sin guarda, sin conteo, sin aviso. Media hora con
+   su prueba.
+
+### 🔶 Lo empezado y sin terminar
+
+2. **Estandarizar las columnas** — faltan **Incoming** y **Project View**.
+3. **Que el archivado no se note** — falta **que buscar alcance el archivo**
+   (hoy un PO de hace ocho meses no aparece) y **archivar por tandas**.
+4. **Movimientos sin ID** — falta el aviso en la app, y la causa sigue sin
+   saberse (depende de que Jose mire un backup del 25/09).
+
+### 🔴 Abierto, pequeño
+
+5. El pie de las ventanas, siempre visible (ahí vive el aviso de error).
+6. La categoría empieza vacía.
+7. Los dos botones de Incoming, pegados arriba.
+8. Sugerencias de PM en Edit Movement y Edit Receiving.
+9. Los dos indicadores de espera de la papelera (una línea).
+10. Rótulo de `ARCHIVE_START` (una línea).
+11. El salto pequeño que queda al cargar más — **esperando el vídeo de Jose**.
+12. La columna DOC: dos al lado y una flecha, en vez de apilarse.
+13. Las etiquetas no se pueden apagar.
+
+### 🔴 Abierto, mediano
+
+14. Pausar el mantenimiento nocturno.
+15. La versión en los otros tres trabajos automáticos.
+16. Dependencias de las UBICACIONES al fusionar (`RACK_PHOTOS`, `MATERIAL_LOCKS`).
+17. Archivar por tamaño y no por calendario.
+18. Repasar el menú 🏭 Acopio: qué de eso le sirve al cliente.
+19. Abrir un movimiento nuevo con los datos de otro.
+20. Incoming agrupado por fecha.
+
+### 🔵 Esperando a Jose
+
+21. Panel de clientes: ¿camino A o B?
+22. ¿De qué proyecto de Cloud cuelga la copia del cliente? (**con la comprobación
+    previa**: copiar una hoja y leer qué dice en ⚙️ Configuración del proyecto).
+23. Stripe.
+24. La plantilla maestra y el ensayo de restauración.
+
+### 🔍 Sin revisar
+
+25. El estándar de las ventanas (lista de revisión del 2026-09-17).
+26. La sección histórica del 2026-09-09 — casi toda ✅ v11.x, con dos ⛔ dentro
+    que no se han vuelto a mirar.
+
+---
+
 ## Next up
 
-# ══ PRIORIDAD ALTA — ESTANDARIZAR LA PANTALLA. Anotado 2026-09-28 ══
+# ══ 🔶 A MEDIAS — ESTANDARIZAR LA PANTALLA. Anotado 2026-09-28 ══
+
+> **Repaso 2026-10-05, comprobado en el código.** `COL_TABLES` sólo tiene dos
+> miembros, `stock` y `mov`: **Movements y Dashboard están hechos** —con
+> `test-columnas.js` midiendo la x de cada columna con siete filtros— y
+> **Incoming y Project View no están**. No se marca hecho: falta la mitad de
+> las tablas. Lo que sigue vivo de esta entrada es exactamente eso.
 
 Jose, con tres capturas del Dashboard filtrando por estado: *"muestran cómo se
 mueven las columnas con diferentes anchos según filtramos por estado del
@@ -235,7 +315,10 @@ servidor. La prueba es la mitad del trabajo y es la mitad que importa.
 ---
 
 
-# ══ ANOTADO 2026-09-28 — NO HAY FORMA DE PAUSAR EL MANTENIMIENTO NOCTURNO ══
+# ══ 🔴 ABIERTO — NO HAY FORMA DE PAUSAR EL MANTENIMIENTO NOCTURNO ══
+
+> **Repaso 2026-10-05:** cero apariciones de `MAINTENANCE_PAUSED` o
+> equivalente en el código. Sin empezar.
 
 Salió al escribir el manual de restauración (`RESTAURAR-UN-BACKUP.md`). El Paso
 0 de las tres rutas dice "apaga los disparadores nocturnos antes de tocar los
@@ -282,7 +365,10 @@ la marca 25 horas, llamarlos otra vez, comprobar que sí.
 ---
 
 
-# ══ ANOTADO 2026-09-28 — DOS INDICADORES DE ESPERA PARA EL MISMO ESTADO ══
+# ══ 🔴 ABIERTO (una línea) — DOS INDICADORES DE ESPERA PARA EL MISMO ESTADO ══
+
+> **Repaso 2026-10-05:** el `'⏳ Restoring…'` del repintado sigue ahí. Sin
+> tocar.
 
 Jose, con dos capturas de la papelera: *"al hacer el return de un movimiento
 borrado, primero aparece el anillo rotando y luego el reloj de arena. Si los 2
@@ -322,7 +408,15 @@ Tamaño: minúsculo. Se hace con la primera cosa que toque esa zona.
 ---
 
 
-# ══ ANOTADO 2026-09-27 — LOS MOVIMIENTOS DE josephl SIN ID ══
+# ══ 🔶 A MEDIAS — LOS MOVIMIENTOS DE josephl SIN ID ══
+
+> **Repaso 2026-10-05.** Hecho: la herramienta que rellena los huecos
+> (Settings → System → Movement IDs) y el `dedupeMovementIds_` del archivado.
+> **Sin hacer, y son dos cosas distintas:** (1) la app no avisa de que hay
+> movimientos sin ID —no existe ningún canario, comprobado—, así que sólo se
+> ve abriendo el sheet; (2) **la causa sigue sin saberse**, y eso depende de un
+> dato que sólo Jose puede mirar: si en el backup del 25/09 a las 2:36 esas
+> once filas ya estaban sin ID.
 
 Jose, con captura del sheet: once filas seguidas (1235-1245), todas de
 `josephl@ox-glass.com`, todas EXIT a JOBSITE, **con la columna Movement ID
@@ -397,7 +491,12 @@ has no ID yet"*— pero eso sólo se ve si te pones a marcar filas.
 ---
 
 
-# ══ URGENTE (2026-09-26) — EL MISMO PATRÓN QUE BORRÓ EL ARCHIVO, EN `writeConfigColumn_` ══
+# ══ 🔴 ABIERTO · LO MÁS URGENTE DE LA LISTA — `writeConfigColumn_` ══
+
+> **Repaso 2026-10-05, leído línea a línea: SIGUE IGUAL.** `clearContent()` en
+> la línea 950 y `setValues()` en la 954. Nueve días después de anotarlo y
+> después de que el mismo patrón destruyera el archivo tres veces. Es el
+> primero de la lista.
 
 El trabajo nocturno borró el archivo de movimientos entero la noche del 26 de
 septiembre. Historia completa, causa y arreglo en
@@ -436,7 +535,13 @@ barata y cierra la clase entera de fallo en vez de ir sitio por sitio.
 ---
 
 
-# ══ ANOTADO EL 2026-09-22 (tras la v12.11) — TRES COSAS + LA PREGUNTA DEL LANZAMIENTO ══
+# ══ 🔶 A MEDIAS — TRES COSAS + LA PREGUNTA DEL LANZAMIENTO (2026-09-22) ══
+
+> **Repaso 2026-10-05.** Hechos y comprobados: **A** (✅ v12.12), **A-bis**
+> unir Qty con Unit (✅ v12.19–12.20, `.qpair`), **B** el filtro de estado
+> (✅ — los cuatro estados están en el código). **Abiertos:** **A-ter**, las
+> etiquetas no tienen interruptor (ni `LABELS_ENABLED` ni equivalente);
+> **D-ter**, Stripe, que es decisión de Jose.
 
 > Jose, con dos vídeos y una imagen: *"anota todo, no hagas nada hasta que me
 > respondas las preguntas."* Esto es eso. Lo de aquí está **medido**, no
@@ -905,7 +1010,13 @@ desincroniza sola.
 
 ---
 
-# ══ ANOTADO EL 2026-09-22 (noche) — CINCO COSAS, NINGUNA TOCADA AÚN ══
+# ══ 🔶 A MEDIAS — CINCO COSAS (2026-09-22 noche) ══
+
+> **Repaso 2026-10-05.** **1** a medias (Movements y Dashboard sí, Incoming y
+> Project View no). **2** sigue aparcado por Jose, a propósito. **3** sin
+> hacer: no existe abrir un movimiento nuevo con los datos de otro. **4** sin
+> hacer: el Incoming no agrupa por fecha (el panel de "This week's arrivals"
+> es otra cosa). **5** sin revisar en detalle.
 
 > Jose: *"NO QUIERO QUE CAMBIES NADA POR AHORA, SOLO ANALIZA, ANOTA, COMENTA Y
 > SUGIERE."* Esto es eso. Todo lo de aquí está comprobado en el código o medido
@@ -1140,7 +1251,14 @@ descartadas: el análisis sirve si algún día cambia de opinión, y borrarlo
 significaría volver a hacerlo. Lo que NO puede pasar es que alguien lea el
 "arreglo propuesto" y lo aplique.
 
-# ══ ANOTADO EL 2026-09-22 (tarde) — LA COLUMNA LAST NOTE Y EL NOMBRE ══
+# ══ 🔶 A MEDIAS — LA COLUMNA LAST NOTE Y EL NOMBRE (2026-09-22 tarde) ══
+
+> **Repaso 2026-10-05.** **1 y 2** descartados por Jose en su día. **3**
+> (el mismo nombre en dos categorías) sigue abierto: hay que comprobar si el
+> barrido de calidad compara **entre** categorías o sólo dentro de una. **4**
+> (las tarjetas naranjas tapan la tabla) sin verificar: existe `test-capas.js`
+> y el menú del avatar se arregló (v12.08), pero **no he comprobado esta
+> tarjeta en concreto**, así que no se marca.
 
 Jose, con tres capturas del Stock Dashboard: *"muestran la diferencia y la
 repetición de comentarios en el mismo material, comentarios con formatos
@@ -1477,7 +1595,12 @@ El nombre del material se recorta a tres líneas (`max-height:29mm`). Con
 porque si la locación gana altura, el nombre la pierde.
 
 
-# ══ ANOTADO EL 2026-09-19 — DE LA PRUEBA DE LA v12.00 ══
+# ══ 🔶 A MEDIAS — DE LA PRUEBA DE LA v12.00 (2026-09-19) ══
+
+> **Repaso 2026-10-05.** El buscador y el aviso de duplicado del Incoming
+> están hechos (v12.06). **La columna DOC sigue abierta y comprobada:**
+> `renderDocLinks` todavía termina en `flex-wrap:wrap`, que es exactamente lo
+> que apila los documentos en columna y estira la fila.
 
 Jose probó los cuatro cambios de la v12.00 y **los cuatro pasan**: "mark arrived
 completado y trabajando bien", "adjuntar un documento esto funciona muy bien…
@@ -1572,7 +1695,12 @@ app, que son muchos.
 **c) Y las dos que ya estaban anotadas** — el tamaño de Add/Edit User y el
 `ADDED BY` con el nombre — se resuelven con (a) y con el punto 7 de la sección A.
 
-# ══ ANOTADO EL 2026-09-17 — PARA REVISAR AL FINAL ══
+# ══ 🔍 SIN REVISAR ENTERA — PARA REVISAR AL FINAL (2026-09-17) ══
+
+> **Repaso 2026-10-05:** el estándar de las ventanas tiene parte hecha —el
+> alto de las ventanas, con `test-ventanas.js`— pero **no he repasado la lista
+> de revisión entera**, así que no se marca nada. Queda como trabajo de
+> revisión, no como pendiente nuevo.
 
 Jose: *"HAY QUE MEJORAR LAS VENTANAS (TODAS) QUE SE ABREN DENTRO DE LA APP. HAY
 QUE DARLES UN ESTÁNDAR A CADA UNA Y REVISAR QUÉ DEBE Y NO DEBE SER DIFERENTE EN
@@ -1739,7 +1867,14 @@ vez de avisarlo. Se cruza con el punto 1 de la lista del 2026-09-09 (por qué la
 sugerencias del Incoming no siempre salen).
 
 
-# ══ LA LISTA, ORDENADA — 2026-09-09 ══
+# ══ 🔍 HISTÓRICA (casi toda ✅ v11.x) — LA LISTA ORDENADA, 2026-09-09 ══
+
+> **Repaso 2026-10-05:** esta sección es sobre todo historia de la v11, con
+> sus ✅ ya puestos uno por uno. **Dos cosas quedan marcadas ⛔ dentro y no se
+> han vuelto a mirar**: las cabeceras viejas que faltan en una instalación
+> existente (que el 🩺 parece resolver hoy — dice "15 header row(s)
+> restored"— pero **no lo he comprobado contra esa entrada**) y las preguntas
+> abiertas de permisos. No se marca nada de aquí sin leerlo entero.
 
 De más urgente a menos. Lo de arriba estorba para publicar; lo de abajo puede
 esperar meses sin que pase nada.
@@ -5707,7 +5842,10 @@ que insista hoy se resuelve con una Script Property mientras tanto.
 
 ---
 
-# ══ V1 · LAS UBICACIONES TIENEN EL MISMO PROBLEMA QUE LOS MATERIALES ══
+# ══ 🔴 ABIERTO · V1 — LAS UBICACIONES TIENEN EL MISMO PROBLEMA QUE LOS MATERIALES ══
+
+> **Repaso 2026-10-05:** `moverDependencias_` existe y cubre MATERIALES.
+> La gemela para ubicaciones no existe. Sin empezar.
 #    Anotado 2026-09-29, al arreglar el de materiales (v12.22)
 
 La v12.22 arregló que renombrar un MATERIAL se lleve consigo sus cinco
@@ -5740,7 +5878,7 @@ sexto almacén que alguien añada y no meta en ella.
 
 ---
 
-# ══ PULIDO PEQUEÑO — PONERLE NOMBRE A `ARCHIVE_START`. Anotado 2026-10-01 ══
+# ══ 🔴 ABIERTO (una línea) — PONERLE NOMBRE A `ARCHIVE_START` ══
 
 La v12.29 hace que el trabajo nocturno firme con su versión ANTES de tocar nada
 (`ARCHIVE_START` → `nightly archive starting · v12.29`), y esa línea es ahora la
@@ -5762,7 +5900,11 @@ por un rótulo cosmético habría sido cambiar algo que funciona por algo más
 bonito, justo cuando lo que hacía falta era no mover nada. Va con el próximo
 cambio de verdad que toque ese archivo.
 
-# ══ PRIORIDAD ALTA — QUE EL ARCHIVADO NO SE NOTE. Anotado 2026-10-01 ══
+# ══ 🔶 A MEDIAS · PRIORIDAD ALTA — QUE EL ARCHIVADO NO SE NOTE ══
+
+> **Repaso 2026-10-05.** Hecho: **el suelo de 30 días** (✅ v12.30, con su
+> prueba). Abierto y es lo importante: **que buscar alcance el archivo**, y
+> **archivar por tandas con su propia fecha**.
 
 Jose, después de dos semanas de incidentes con el trabajo nocturno:
 
@@ -5857,7 +5999,7 @@ ninguna parte de la app:
    Hoy se guarda como cualquier otra preferencia, sin avisar de que esa noche se
    van a mover filas. Debería decir cuántas antes de guardar.
 
-# ══ EL PRINCIPIO: EL USUARIO NO ADMINISTRA LA APP. Anotado 2026-10-01 ══
+# ══ 🔵 CRITERIO (no es una tarea) — EL USUARIO NO ADMINISTRA LA APP ══
 
 Jose, pensándolo después de dos semanas de incidentes con el archivado:
 
@@ -5906,7 +6048,7 @@ dejar la lista vacía. Es exactamente lo que pasó.
    mano. Si la app es lo único que el usuario abre, nosotros necesitamos ver
    desde dentro qué le pasa a su instalación — y eso hay que construirlo.
 
-# ══ ARCHIVAR POR TAMAÑO, NO POR CALENDARIO. Anotado 2026-10-01 ══
+# ══ 🔴 ABIERTO — ARCHIVAR POR TAMAÑO, NO POR CALENDARIO ══
 
 > *"De fábrica o por defecto la app debe archivar lo que no necesita y la hace
 > lenta, pero debemos dejar el acceso a esa información sólo si el usuario la
@@ -5959,7 +6101,10 @@ Pasa a `Advanced`, para soporte. El usuario no elige cuántos meses: la app
 mantiene la lista por debajo del umbral, nunca archiva lo del último mes, y todo
 lo demás se alcanza buscando (que es la tarea nº 1 de la sección anterior).
 
-# ══ LA VERSIÓN, EN TODOS LOS TRABAJOS AUTOMÁTICOS. Anotado 2026-10-01 ══
+# ══ 🔴 ABIERTO — LA VERSIÓN, EN TODOS LOS TRABAJOS AUTOMÁTICOS ══
+
+> **Repaso 2026-10-05:** sólo el archivado sella su versión (v12.29). Backup,
+> check-in e informe diario siguen sin sellar.
 
 **Confirmado en la propia instalación de Jose, en la pantalla de ⏰ Activadores:**
 
@@ -5993,7 +6138,7 @@ expone), pero sí puede decir, con todas las letras, que hay que mirarlo: *"Open
 ⏰ Triggers and check every row says Head."* Un paso manual escrito es
 infinitamente mejor que una comprobación que no existe.
 
-# ══ DECIDIR: ¿DE QUÉ PROYECTO DE CLOUD CUELGA LA COPIA DEL CLIENTE? Anotado 2026-10-01 ══
+# ══ 🔵 DECISIÓN DE JOSE — ¿DE QUÉ PROYECTO DE CLOUD CUELGA LA COPIA DEL CLIENTE? ══
 
 Sale de enlazar la copia DEMO al proyecto ACOPIO. Para la DEMO da igual; para la
 plantilla maestra es una decisión que hay que tomar antes de publicarla, y que no
@@ -6019,7 +6164,9 @@ instalación con una captura. Atar a cientos de clientes a un proyecto nuestro
 mete sus registros y sus límites de uso en nuestra casa, y el día que haya que
 mover a uno no hay forma de separarlo.
 
-# ══ COSAS ANOTADAS EL 2026-10-02 ══
+# ══ 🔴 ABIERTAS (5) — COSAS ANOTADAS EL 2026-10-02 ══
+
+> **Repaso 2026-10-05:** ninguna de las cinco tocada.
 
 ## 1. ¿Le sirve al cliente todo lo que hay en el menú 🏭 Acopio?
 
@@ -6099,7 +6246,7 @@ Pie pegado abajo en la ventana, con el cuerpo haciendo scroll por dentro. Vale
 para todas las ventanas de movimiento, no sólo para ENTRY — y conviene hacerlo
 de una vez y en un solo sitio, no ventana por ventana.
 
-# ══ PANEL DE CLIENTES — quién paga y qué instalaciones están vivas. Anotado 2026-10-03 ══
+# ══ 🔵 DECISIÓN + 🔴 ABIERTO — PANEL DE CLIENTES ══
 
 Jose: *"quiero tener una forma de ver automáticamente y me diga cuándo empezó un
 cliente a pagar, el nombre y el correo, y todo lo demás de la app."*
@@ -6127,7 +6274,9 @@ desde aquí:
 **Primer paso, y no depende de ninguna decisión:** los webhooks de Stripe el día
 que se active. Eso solo ya contesta la pregunta literal que hizo.
 
-# ══ PARTIR LA APP EN VARIOS ARCHIVOS — cuando toque, no ahora. Anotado 2026-10-03 ══
+# ══ ⏸ APLAZADO A PROPÓSITO — PARTIR LA APP EN VARIOS ARCHIVOS ══
+
+> **Hecho de aquí:** el índice del archivo, generado y con prueba (✅ v12.31).
 
 Jose: *"una app profesional no es un solo bloque… ¿no es mejor dividir la app en
 bloques y que cada uno tenga su propio archivo?"*
@@ -6152,7 +6301,12 @@ Razonado entero en **`docs/UN-ARCHIVO-O-MUCHOS.md`**. Lo que hay que retener:
 - **Mientras tanto, una hora de trabajo**: un índice al principio de cada
   archivo. Las 68 secciones ya están; falta la lista que diga qué hay y dónde.
 
-# ══ "LOAD MORE" TE MANDA AL FINAL DE LA LISTA. Anotado 2026-10-04 ══
+# ══ ✅ HECHO (v12.34) — "LOAD MORE" TE MANDABA AL FINAL DE LA LISTA ══
+
+> Hecho entero, y con la segunda mitad que salió al revisarlo: *Load Older
+> History* devolvía la tabla a la página 1. Prueba de navegador que mide
+> píxeles (`test-no-saltar-al-cargar.js`), comprobada con las dos mutaciones.
+> **Queda vivo el resto pequeño**, en la entrada del 2026-10-05.
 
 Jose, probando el archivado en la copia DEMO:
 
