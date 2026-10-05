@@ -27,44 +27,76 @@ que un ✅ optimista.
 ### 🔶 Lo empezado y sin terminar
 
 1. **Estandarizar las columnas** — faltan **Incoming** y **Project View**.
-3. **Que el archivado no se note** — falta **que buscar alcance el archivo**
+2. **Que el archivado no se note** — falta **que buscar alcance el archivo**
    (hoy un PO de hace ocho meses no aparece) y **archivar por tandas**.
-4. **Movimientos sin ID** — falta el aviso en la app, y la causa sigue sin
+3. **Movimientos sin ID** — falta el aviso en la app, y la causa sigue sin
    saberse (depende de que Jose mire un backup del 25/09).
+
+### 🔴 Lo siguiente, y es de datos
+
+4. **Se puede escribir una ubicación que no existe** y la app la crea en
+   silencio (`A1p`). El material consta en un sitio que no está en ninguna
+   estantería. Y los mismos campos libres que deberían ser listas: proyecto,
+   proveedor, categoría.
+5. **La guardia de escritura es una lista de quién NO** (`role === 'VIEWER'`).
+   Hoy da el mismo resultado; el día que haya un rol más, entra escribiendo sin
+   que nadie lo decida. Una línea y una prueba con un rol inventado.
+6. **El botón de Release no da señal** de que haya hecho algo — y hay que
+   repasar **todos** los botones que llaman al servidor con el mismo criterio.
 
 ### 🔴 Abierto, pequeño
 
-5. La categoría empieza vacía.
-7. Los dos botones de Incoming, pegados arriba.
-8. Sugerencias de PM en Edit Movement y Edit Receiving.
-9. Los dos indicadores de espera de la papelera (una línea).
-10. Rótulo de `ARCHIVE_START` (una línea).
-11. El salto pequeño que queda al cargar más — **esperando el vídeo de Jose**.
-12. La columna DOC: dos al lado y una flecha, en vez de apilarse.
-13. Las etiquetas no se pueden apagar.
+7. Mayúsculas al guardar en PO/GC, Received By, Project, Supplier, Category y
+   Name — **no** en Comments, y **sólo** en lo nuevo.
+8. Las columnas escondidas, en gris opaco y no transparentes.
+9. Raw Loc y las columnas de diagnóstico, al soporte y fuera de la vista.
+10. El logo de Acopio en los dos sitios de marca, con el bloque entero como
+    enlace.
+11. El aviso de offline debajo de las pestañas (donde salen los ✓) + su línea
+    en Settings → System.
+12. La categoría empieza vacía.
+13. Los dos botones de Incoming, pegados arriba.
+14. Sugerencias de PM en Edit Movement y Edit Receiving.
+15. Los dos indicadores de espera de la papelera (una línea).
+16. Rótulo de `ARCHIVE_START` (una línea).
+17. El salto pequeño que queda al cargar más — **esperando el vídeo de Jose**.
+18. La columna DOC: dos al lado y una flecha, en vez de apilarse.
+19. Las etiquetas no se pueden apagar.
 
 ### 🔴 Abierto, mediano
 
-14. Pausar el mantenimiento nocturno.
-15. La versión en los otros tres trabajos automáticos.
-16. Dependencias de las UBICACIONES al fusionar (`RACK_PHOTOS`, `MATERIAL_LOCKS`).
-17. Archivar por tamaño y no por calendario.
-18. Repasar el menú 🏭 Acopio: qué de eso le sirve al cliente.
-19. Abrir un movimiento nuevo con los datos de otro.
-20. Incoming agrupado por fecha.
+20. La lista de avisos agrupada, como la de Google — **sin el offline dentro**
+    (decidido por Jose).
+21. Pausar el mantenimiento nocturno.
+22. La versión en los otros tres trabajos automáticos.
+23. Dependencias de las UBICACIONES al fusionar (`RACK_PHOTOS`, `MATERIAL_LOCKS`).
+24. Archivar por tamaño y no por calendario.
+25. Repasar el menú 🏭 Acopio: qué de eso le sirve al cliente.
+26. Abrir un movimiento nuevo con los datos de otro.
+27. Incoming agrupado por fecha.
+28. Una prueba de navegador a un zoom que no sea el 100 % — Jose trabaja al
+    157 % y ahí hay una clase de fallos que desde aquí no vemos.
 
 ### 🔵 Esperando a Jose
 
-21. Panel de clientes: ¿camino A o B?
-22. ¿De qué proyecto de Cloud cuelga la copia del cliente? (**con la comprobación
+29. Panel de clientes: ¿camino A o B?
+30. ¿De qué proyecto de Cloud cuelga la copia del cliente? (**con la comprobación
     previa**: copiar una hoja y leer qué dice en ⚙️ Configuración del proyecto).
-23. Stripe.
-24. La plantilla maestra y el ensayo de restauración.
+31. Stripe.
+32. La plantilla maestra y el ensayo de restauración.
+33. **Otro tipo de usuario** — pidió hablarlo antes de hacerlo. Los números
+    están en `LISTA-DE-LA-V2.md`.
+34. Los vídeos de UX/UI que anunció.
+
+### 🔵 La v2
+
+Vive en **`docs/LISTA-DE-LA-V2.md`**, no aquí — para que no haya dos listas de
+lo mismo, que es justo lo que acabamos de arreglar en los usuarios.
 
 ### 🔍 Sin revisar
 
-25. El estándar de las ventanas (lista de revisión del 2026-09-17).
-26. La sección histórica del 2026-09-09 — casi toda ✅ v11.x, con dos ⛔ dentro
+35. El estándar de las ventanas (lista de revisión del 2026-09-17).
+36. La sección histórica del 2026-09-09 — casi toda ✅ v11.x, con dos ⛔ dentro
     que no se han vuelto a mirar.
 
 ---
@@ -6887,7 +6919,9 @@ mayúsculas el original se pierde). **Lo ya guardado se queda como está** y no 
 reescribe nada — que además evita tocar el archivo entero, que es la operación
 que más respeto da en este producto.
 
-# ══ 🔴 URGENTE — DOS LISTAS DE USUARIOS, Y LA VIEJA DEJA ENTRAR ══
+# ══ ✅ HECHO (v12.41) — DOS LISTAS DE USUARIOS, Y LA VIEJA DEJA ENTRAR ══
+#    El diagnóstico se conserva aquí; lo que se construyó y por qué no se borró
+#    la lista vieja está al final del documento, en la entrada de la v12.41.
 
 Jose, 2026-10-05, con dos capturas de su hoja: *"actualmente tenemos CONFIG con
 correos, roles y USERS. ¿Por qué tenemos 2 listas de lo mismo? ¿No sería mejor
@@ -6999,3 +7033,98 @@ por separado:
   **En Settings → System**, no en ERROR_LOG — quedarse sin internet no es un
   error de la app, y meterlo en el registro de errores haría que el registro de
   errores dejara de significar "algo va mal".
+
+# ══ ✅ HECHO EN LA v12.41 — UNA SOLA LISTA DE USUARIOS ══
+
+Jose, 2026-10-05, con dos capturas de su hoja: *"actualmente tenemos config con
+correos, roles y users… ¿por qué tenemos 2 listas de lo mismo? ¿No sería mejor
+hacer una sola? Mejor hagámoslo profesional, arreglémoslo para que no haya
+errores ni goteos de seguridad."*
+
+**Tenía razón y el goteo era real.** CONFIG guarda correos y roles en las
+columnas F y G —de ahí se migró cuando nació USERS_V3— y `getUserRole` **seguía
+dando acceso por esa lista**. En la copia de Jose son **diecinueve correos** que
+entran, que Manage Users **no lista**, y a los que por tanto **no se les podía
+quitar el acceso desde la app**. Un permiso que no se puede retirar no es un
+permiso: es una llave perdida.
+
+Es la hermana del fallo de la v12.39. Ese era "la fila dice desactivado y se
+entra igual"; éste es "no hay fila y se entra igual". El mismo trozo de código y
+la misma causa: **dos listas que tienen que coincidir sin que nada lo obligue.**
+
+## Lo que se hizo, y por qué no se borró la lista vieja
+
+**No se borra porque esa gente trabaja.** Quitar CONFIG de un día para otro deja
+mañana sin app a quien sólo estaba ahí, y en una instalación a medio migrar ésos
+son usuarios legítimos. Romperle el martes a alguien es un daño más real que un
+correo de más en una hoja que sólo ve el dueño.
+
+En su lugar, **la puerta se cierra sola**: quien llega por la lista vieja entra
+—como siempre— y **queda escrito en USERS_V3 en ese mismo momento**
+(`adoptarUsuarioDeConfig_`). A partir de ahí es un usuario de verdad: sale en
+Manage Users, tiene su interruptor, y el dueño puede apagarlo. La lista vieja
+deja de ser una puerta trasera permanente y pasa a ser **un camino de ida que se
+recorre una vez por persona**.
+
+Tres cuidados, cada uno por un fallo que ya hemos cometido antes:
+
+- **Se escribe dentro de un `try`.** Corre en el camino por el que entra todo el
+  mundo: si apuntar fallara, no puede impedir el acceso de quien tiene derecho.
+- **Entra con el rol que tenía y como activo.** No se aprovecha una migración
+  para cambiarle nada a nadie.
+- **No borra nada.** Ni la lista vieja, ni las filas corruptas.
+
+Y además `revisarUsuarios_`, que mira las dos listas enteras de golpe sin
+esperar a que nadie entre, y que **`menuCheckInstallation` ejecuta**: dice cuánta
+gente se migró, qué correos tienen un rol distinto en cada lista (manda
+USERS_V3) y qué filas de USERS_V3 llevan algo que no es un correo en la columna
+del correo —en la copia de Jose hay varias con nombres de persona dentro, que no
+dan acceso pero salen en la pantalla.
+
+**El día en que una instalación no tenga correos sueltos en CONFIG, esa rama no
+se ejecuta nunca.** Ése es el día en que se puede borrar — con datos, no con fe.
+
+`tools/test-revocar-acceso.js` lo ejecuta (23 comprobaciones).
+
+# ══ 🔴 ABIERTO, UNA LÍNEA — LA GUARDIA DE ESCRITURA ES UNA LISTA DE QUIÉN NO ══
+
+Encontrado el 2026-10-05 al mirar qué costaría el *"otro tipo de usuario"* que
+pidió Jose para la v2. **No es un fallo hoy. Es un fallo el día que haya un rol
+más**, y por eso se arregla antes y no después.
+
+`requireAuth_` decide si puedes escribir así:
+
+```javascript
+if (minRole === 'WRITE' && a.role === 'VIEWER') throw ...
+```
+
+Eso no pregunta *"¿puede éste escribir?"*. Pregunta *"¿es VIEWER?"*. Con tres
+roles da el mismo resultado, así que nunca se ha notado. Pero **cualquier rol
+nuevo pasaría la guardia de escritura sin que nadie lo hubiera decidido**, sólo
+por no llamarse VIEWER — y en una app de almacén eso es permiso para mover
+material.
+
+Es el tercer caso este mes del mismo patrón: **una guardia que dice que sí.**
+
+**El arreglo:** darle la vuelta. `['ADMIN','WAREHOUSE'].indexOf(a.role) === -1`
+→ negado. Una línea, y una prueba que invente un rol que no existe y compruebe
+que **no** puede escribir — que es la parte que de verdad cierra esto, porque sin
+ella volvemos a tener una regla escrita y no ejecutada.
+
+Y de paso: las dos listas `['ADMIN','WAREHOUSE','VIEWER']` escritas a mano
+(`addUser` y el asistente) deberían ser **una constante**, por el mismo motivo
+por el que las dos listas de usuarios eran un problema.
+
+# ══ 🔵 LA LISTA DE LA V2 — ahora vive en su propio documento ══
+
+Jose, 2026-10-05: *"estaba pensando que también podemos empezar a trabajar en la
+v2, o por lo menos empezar con una lista para la v2."*
+
+Hecha: **`docs/LISTA-DE-LA-V2.md`**. Lleva dentro los números mirados en el
+código de lo que costaría *"otro tipo de usuario"* —que Jose pidió hablar antes
+de hacer— y recoge las ideas de v2 que estaban sueltas por este backlog para que
+no haya dos listas de lo mismo, que es justo el fallo que acabamos de arreglar.
+
+**Pendiente de Jose:** los vídeos de UX/UI que anunció (*"te voy a pasar unos
+vídeos para que veas cómo quiero cambiar la app, en especial la UX/UI, pero eso
+más tarde o en los próximos días"*). No se apunta nada de eso hasta verlos.

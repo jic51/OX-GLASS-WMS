@@ -127,7 +127,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.40';
+var APP_VERSION = '12.41';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -139,7 +139,7 @@ var APP_VERSION = '12.40';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'f4f1e0b9';
+var APP_BUILD = '6f186d7b';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -2024,19 +2024,150 @@ function getUserRole(sessionToken) {
     }
   }
 
-  // ── 2. Fallback: CONFIG sheet (legacy rows) ──────────────────────────────
+  /* ── 2. LA LISTA VIEJA DE CONFIG — QUE AHORA SE CONVIERTE EN LA NUEVA ──────
+   *
+   * Jose, 2026-10-05, con dos capturas de su hoja: *"¿por qué tenemos 2 listas
+   * de lo mismo? ¿No sería mejor hacer una sola? Mejor hagámoslo profesional,
+   * arreglémoslo para que no haya errores ni goteos de seguridad."*
+   *
+   * Tiene razón, y el goteo era éste: CONFIG tiene correos y roles en las
+   * columnas F y G —de donde se migró cuando nació USERS_V3— y **seguía dando
+   * acceso**. En su copia, diecinueve personas que entran, que la pantalla de
+   * usuarios NO LISTA, y a las que por tanto **no se les puede quitar el acceso
+   * desde la app**. Un permiso que no se puede retirar no es un permiso: es una
+   * llave perdida.
+   *
+   * ── POR QUÉ NO SE BORRA Y YA ────────────────────────────────────────────
+   *
+   * Porque esa gente trabaja. Quitar la lista vieja de un día para otro deja
+   * mañana sin app a quien sólo estaba ahí, y en una instalación a medio migrar
+   * ésos son usuarios legítimos. El riesgo de romperle el día a alguien es más
+   * real que el de un correo de más en una hoja que sólo ve el dueño.
+   *
+   * ── LO QUE HACE EN SU LUGAR: LA PUERTA SE CIERRA SOLA ───────────────────
+   *
+   * Quien llega por la lista vieja entra —como siempre— **y queda escrito en
+   * USERS_V3 en el mismo momento**. A partir de ahí es un usuario de verdad:
+   * sale en Manage Users, tiene su interruptor, y el dueño puede apagarlo. La
+   * lista vieja deja de ser una puerta trasera permanente y pasa a ser lo que
+   * debió ser siempre: un camino de ida, que se recorre una vez por persona.
+   *
+   * Y cuando una instalación ya no tenga correos sueltos en CONFIG, esta rama
+   * no se ejecuta nunca. Ese es el día en que se puede borrar — con datos, no
+   * con fe.
+   *
+   * ── TRES CUIDADOS ──────────────────────────────────────────────────────
+   *
+   *   · Se escribe DENTRO DE UN try. Esto corre en el camino por el que entra
+   *     todo el mundo: si apuntar fallara, no puede impedir el acceso de quien
+   *     tiene derecho a entrar.
+   *   · Se escribe UNA VEZ. En cuanto la fila existe, la rama de arriba
+   *     contesta y aquí no se vuelve a pasar.
+   *   · Entra como ACTIVO y con el rol que tenía. No se aprovecha la migración
+   *     para cambiarle nada a nadie: lo que había es lo que hay, sólo que ahora
+   *     se ve. */
   var cfg = ss.getSheetByName(SHEETS.CONFIG);
   if (cfg) {
     var cRows = cfg.getDataRange().getValues();
     for (var c = 1; c < cRows.length; c++) {
       var cEmail = String(cRows[c][5] || '').toLowerCase().trim();
       if (cEmail && cEmail === userEmail) {
-        return { role: String(cRows[c][6] || 'WAREHOUSE').toUpperCase().trim(), email: email, name: '' };
+        var rolViejo = String(cRows[c][6] || 'WAREHOUSE').toUpperCase().trim();
+        try { adoptarUsuarioDeConfig_(ss, email, rolViejo); } catch (eMig) {
+          Logger.log('adoptarUsuarioDeConfig_: ' + eMig.message);
+        }
+        return { role: rolViejo, email: email, name: '' };
       }
     }
   }
 
   return { role: 'DENIED', email: email };
+}
+
+/* ── LAS DOS LISTAS, MIRADAS DE UNA VEZ ──────────────────────────────────────
+ *
+ * `adoptarUsuarioDeConfig_` convierte a la gente según va entrando, que está
+ * bien pero es lento: a quien no entre hoy no se le ve hoy. Esto mira las dos
+ * listas enteras de golpe y, si se le pide, las junta.
+ *
+ * Devuelve lo que hay que SABER, no sólo lo que hizo:
+ *   · migrados        — los que estaban sólo en la lista vieja (ya en USERS_V3)
+ *   · rolesDistintos  — el mismo correo con dos roles. Manda USERS_V3; que la
+ *                       otra diga otra cosa no cambia nada, pero confunde a
+ *                       quien abra la hoja, así que se dice.
+ *   · corruptas       — filas de USERS_V3 cuya columna de correo no es un
+ *                       correo. En la copia de Jose hay varias con nombres de
+ *                       persona dentro ("AVERY NDIAYE"). No dan acceso —nunca
+ *                       van a coincidir— pero salen en la pantalla de usuarios.
+ *
+ * NO BORRA NADA. Ni filas corruptas, ni la lista vieja. Borrar una fila de
+ * usuarios automáticamente es la clase de ayuda que deja a alguien sin trabajar
+ * un martes por la mañana.
+ */
+function revisarUsuarios_(ss, migrar) {
+  var out = { migrados: [], rolesDistintos: [], corruptas: [], soloEnConfig: [] };
+  var sheet = ensureUsersSheet_(ss);
+
+  var enUsers = {};
+  if (sheet.getLastRow() > 1) {
+    var uRows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 7).getValues();
+    for (var i = 0; i < uRows.length; i++) {
+      var val = String(uRows[i][1] || '').trim();
+      if (!val) continue;
+      if (val.indexOf('@') === -1) {
+        out.corruptas.push({ fila: i + 2, valor: val.substring(0, 40) });
+        continue;
+      }
+      enUsers[val.toLowerCase()] = String(uRows[i][3] || '').toUpperCase().trim();
+    }
+  }
+
+  var cfg = ss.getSheetByName(SHEETS.CONFIG);
+  if (!cfg) return out;
+  var cRows = cfg.getDataRange().getValues();
+  for (var c = 1; c < cRows.length; c++) {
+    var correo = String(cRows[c][5] || '').trim();
+    if (!correo || correo.indexOf('@') === -1) continue;
+    var rol = String(cRows[c][6] || 'WAREHOUSE').toUpperCase().trim();
+    var clave = correo.toLowerCase();
+    if (enUsers[clave] === undefined) {
+      out.soloEnConfig.push(correo);
+      if (migrar && adoptarUsuarioDeConfig_(ss, correo, rol)) {
+        out.migrados.push(correo);
+        enUsers[clave] = rol;            // para no duplicar si aparece dos veces
+      }
+    } else if (enUsers[clave] !== rol) {
+      out.rolesDistintos.push({ email: correo, users: enUsers[clave], config: rol });
+    }
+  }
+  return out;
+}
+
+/* Mete en USERS_V3 a quien llegó por la lista vieja, para que el dueño lo vea y
+ * pueda quitarle el acceso. Vuelve a comprobar que no esté antes de escribir:
+ * dos pestañas de la misma persona pueden entrar a la vez, y dos filas con el
+ * mismo correo harían que apagar una no sirviera de nada. */
+function adoptarUsuarioDeConfig_(ss, email, rol) {
+  var sheet = ensureUsersSheet_(ss);
+  var buscado = String(email || '').toLowerCase().trim();
+  if (!buscado) return false;
+  if (sheet.getLastRow() > 1) {
+    var filas = sheet.getRange(2, 2, sheet.getLastRow() - 1, 1).getValues();
+    for (var i = 0; i < filas.length; i++) {
+      if (String(filas[i][0] || '').toLowerCase().trim() === buscado) return false;
+    }
+  }
+  sheet.appendRow([
+    'USR-' + Date.now(), email, '', rol || 'WAREHOUSE',
+    'migrated from CONFIG', new Date(), true
+  ]);
+  try {
+    auditLog_(ss, 'USER_MIGRATED', 'system',
+      email + ' was signing in through the old CONFIG list and is now a real ' +
+      'user row — switch them off in Manage Users if they should not have access',
+      rol || 'WAREHOUSE', '');
+  } catch (e) {}
+  return true;
 }
 
 // ─── CONFIG LOADER ───────────────────────────────────────────────────────────
@@ -10216,8 +10347,36 @@ function menuCheckInstallation() {
                   ' restored. Column widths and tab order left as you have them.');
   }
 
+  /* ── LAS DOS LISTAS DE USUARIOS ──────────────────────────────────────────
+   * Aquí y no en otro sitio porque ésta es la función que la gente ejecuta
+   * cuando quiere saber si su instalación está sana, y "hay gente entrando que
+   * tu pantalla de usuarios no enseña" es exactamente eso. */
+  var usrChk = null;
+  try { usrChk = revisarUsuarios_(SpreadsheetApp.getActiveSpreadsheet(), true); } catch (e) {}
+  if (usrChk && usrChk.migrados.length) {
+    repaired.push('User list — ' + usrChk.migrados.length + ' person(s) were signing in ' +
+      'through the OLD list in CONFIG, where you could not see or stop them. They are ' +
+      'now real users: ' + usrChk.migrados.slice(0, 6).join(', ') +
+      (usrChk.migrados.length > 6 ? ' …and ' + (usrChk.migrados.length - 6) + ' more' : '') +
+      '. Open ⚙️ App Settings → Manage Users and switch off anyone who should not be there.');
+  }
+
   var lines = [];
   if (repaired.length) lines.push('REPAIRED AUTOMATICALLY\n  • ' + repaired.join('\n  • ') + '\n');
+  if (usrChk && (usrChk.rolesDistintos.length || usrChk.corruptas.length)) {
+    lines.push('THE USER LIST NEEDS A LOOK');
+    usrChk.rolesDistintos.forEach(function (d) {
+      lines.push('  • ' + d.email + ' is ' + d.users + ' in Manage Users but ' + d.config +
+                 ' in the old CONFIG list.\n      Manage Users is the one that counts. ' +
+                 'The old row is ignored now, but tidy it up so it cannot confuse anyone.');
+    });
+    usrChk.corruptas.forEach(function (c) {
+      lines.push('  • Row ' + c.fila + ' of USERS_V3 has "' + c.valor + '" where an email ' +
+                 'should be.\n      It can never match anybody, so it grants nothing — but it ' +
+                 'shows up in Manage Users. Fix or delete that row.');
+    });
+    lines.push('');
+  }
   if (triggerNotes.length) {
     lines.push('SCHEDULED JOBS THAT NEED ATTENTION');
     triggerNotes.forEach(function (n) { lines.push(n); });

@@ -3,7 +3,7 @@
 Jose, 2026-10-05: *"corre un chequeo de la seguridad una vez más y enumera todas
 las que tenemos y las que nos hacen falta corregir."*
 
-Revisado contra el código, no de memoria. Fecha del repaso: **2026-10-05, v12.38**.
+Revisado contra el código, no de memoria. Fecha del repaso: **2026-10-05, v12.38**; al día siguiente se cerraron 2.1 y 2.2-bis (v12.40 y v12.41).
 
 ---
 
@@ -88,15 +88,35 @@ clave no baja al navegador.
 
 ## 2. LO QUE FALTA, POR ORDEN
 
-### 2.1 🔴 Nadie vigila los intentos fallidos
+### 2.1 ✅ CORREGIDO (v12.40) — nadie vigilaba los intentos fallidos
 
-No hay registro de *"a este correo se le rechazó la sesión quince veces en un
-minuto"*. `pollLogin` tiene tope, pero un rechazo de `requireAuth_` no deja
-rastro en ninguna parte. **Sin eso, un intento de entrar a la fuerza es
-indistinguible de un día tranquilo.**
+Lo que decía aquí: *"un rechazo de `requireAuth_` no deja rastro en ninguna
+parte. Sin eso, un intento de entrar a la fuerza es indistinguible de un día
+tranquilo."* Era cierto y ya no lo es.
 
-Lo que haría: una línea en AUDIT_LOG por rechazo, con el correo y la hora, y un
-aviso al dueño a partir de N en una ventana corta.
+`registrarAccesoDenegado_` escribe una línea `ACCESS_DENIED` en AUDIT_LOG por
+cada rechazo de puerta —sin sesión o no registrado— y manda **un** correo al
+dueño al pasar de **10 rechazos en 10 minutos**. Tres topes, cada uno por un
+motivo:
+
+- **Una línea por persona y minuto.** Una pestaña olvidada reintenta sola cada
+  veinte segundos; sin tope, un navegador en una mesa vacía entierra la línea
+  que importaba bajo miles iguales.
+- **El contador del aviso cuenta TODOS los intentos**, no sólo los escritos. La
+  primera versión tenía el tope de escritura delante y el contador nunca pasaba
+  de uno: **el correo no se habría mandado nunca**. Lo cazó la prueba antes de
+  salir.
+- **Un correo por hora y persona.** Un aviso por rechazo a partir del décimo
+  convierte el buzón del dueño en el ruido del que huíamos — la lección del
+  ERROR_LOG.
+
+Y no se mezcla con los permisos: a un VIEWER al que se le niega **escribir** no
+se le apunta aquí. Está dentro y le falta un permiso; meterlo en el registro de
+rechazos esconde a los de fuera entre gente legítima.
+
+Nunca lanza: corre dentro del camino que ya está rechazando a alguien, y el
+rechazo es lo único que de verdad tiene que ocurrir.
+`tools/test-acceso-denegado.js` lo ejecuta (21 comprobaciones).
 
 ### 2.2 ✅ CORREGIDO (v12.39) — y lo que yo dije aquí estaba MAL
 
@@ -133,6 +153,25 @@ ya expulsado. Mutación comprobada: quitada la línea, fallan tres.
 **Lo que sigue faltando, y es más estrecho:** no hay forma de matar un token
 **robado** de un usuario que sigue siendo legítimo. Para eso hace falta un botón
 de *"cerrar todas las sesiones"* que rote `SESSION_SECRET`.
+
+### 2.2-bis ✅ CORREGIDO (v12.41) — y era el MISMO agujero por el otro lado
+
+Al arreglar lo de arriba quedó dicho que la lista vieja de CONFIG *"sigue dando
+acceso"*, y se quedó ahí una semana. **Era el segundo goteo, y el peor de los
+dos:** en la v12.39 la fila existía y decía "desactivado"; aquí **no hay fila
+ninguna** y se entra igual. En la copia de Jose eran **diecinueve correos** que
+Manage Users no lista y a los que, por tanto, **no se les podía quitar el
+acceso desde la app**.
+
+Arreglado sin borrar la lista vieja —esa gente trabaja— convirtiéndola en **un
+camino de ida**: quien entra por ahí queda escrito en USERS_V3 en ese momento
+(`adoptarUsuarioDeConfig_`), con su rol y activo, y desde entonces sale en
+Manage Users con su interruptor. `revisarUsuarios_` hace lo mismo con las dos
+listas enteras sin esperar a que nadie entre, y `menuCheckInstallation` lo
+ejecuta y lo cuenta.
+
+**La causa, dicha para la próxima vez:** dos listas que tienen que coincidir sin
+que nada lo obligue. Es el cuarto caso de este patrón en el proyecto.
 
 ### 2.3 🟠 Varias puertas sin tope
 

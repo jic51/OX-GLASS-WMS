@@ -98,6 +98,31 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.41</span>
+      <span class="tag safe">Seguridad</span>
+      <h3>Una sola lista de usuarios, no dos</h3>
+      <p>Las instalaciones que vienen de una versión antigua llevaban <b>dos
+         listas de usuarios</b>: la que manejas en <b>Manage Users</b> y otra más
+         vieja que seguía en la pestaña CONFIG. Las dos dejaban entrar — pero
+         sólo una está en tu pantalla. Así que cualquiera que estuviera en la
+         lista vieja <b>podía entrar sin aparecer nunca en Manage Users</b>, y eso
+         significa que <b>no había forma de quitarle el acceso desde la app</b>.</p>
+      <p>La lista vieja <b>no se borra</b>: en una instalación a medio migrar esa
+         gente es personal de verdad, y quitarla de un día para otro dejaría a
+         alguien sin trabajar un martes por la mañana. En su lugar se ha
+         convertido en un <b>camino de ida</b>. La próxima vez que una de esas
+         personas entre, queda escrita en tu lista de usuarios de verdad en ese
+         mismo momento —con su rol, activa, sin cambiarle nada— y desde entonces
+         aparece en Manage Users con su interruptor, para que puedas apagarla.</p>
+      <p><b>🏭 Acopio → Check installation</b> hace ahora el cruce entero de
+         golpe, sin esperar a que nadie entre. Te dice cuánta gente se pasó, qué
+         correos llevan un rol distinto en cada lista (manda Manage Users) y qué
+         filas de tu lista de usuarios tienen algo que no es un correo donde va
+         el correo — ésas no dan acceso, pero salen en pantalla. <b>Nunca borra
+         una fila.</b></p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.40</span>
       <span class="tag safe">Seguridad</span>
       <h3>Los accesos rechazados quedan escritos — y te avisan</h3>

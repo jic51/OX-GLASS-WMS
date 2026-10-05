@@ -97,6 +97,31 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.41</span>
+      <span class="tag safe">Security</span>
+      <h3>One user list, not two</h3>
+      <p>Installations upgraded from an older version carried <b>two lists of
+         users</b>: the one you manage in <b>Manage Users</b>, and an older one
+         still sitting in the CONFIG tab. Both let people in — but only one of
+         them is on your screen. So anybody who was in the old list <b>could
+         sign in without ever appearing in Manage Users</b>, which means
+         <b>you had no way to stop them from inside the app</b>.</p>
+      <p>The old list is <b>not deleted</b>: in a half-migrated installation the
+         people in it are real staff, and removing it overnight would lock
+         somebody out of their job on a Tuesday morning. Instead it has become a
+         <b>one-way door</b>. The next time one of those people signs in, they
+         are written into your real user list on the spot — same role, still
+         active, nothing changed about their access — and from that moment they
+         appear in Manage Users with their own switch, so you can turn them off.</p>
+      <p><b>🏭 Acopio → Check installation</b> now does the whole crossing at
+         once instead of waiting for people to sign in. It tells you how many
+         were brought across, which emails carry a different role in each list
+         (Manage Users is the one that counts), and which rows of your user list
+         have something other than an email where the email goes — those grant
+         nothing, but they show up on screen. <b>It never deletes a row.</b></p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.40</span>
       <span class="tag safe">Security</span>
       <h3>Refused sign-ins are now written down — and you get told</h3>
