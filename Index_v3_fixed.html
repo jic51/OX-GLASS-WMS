@@ -596,7 +596,7 @@
        baja—, y `scrollbar-gutter:stable` también: reserva el carril para que un
        formulario que crece, al añadir otro material, no dé un salto lateral
        cuando aparezca la barra. */
-    .modal{--mpad:1.75rem;background:var(--card);border-radius:14px;padding:0 var(--mpad) var(--mpad);width:100%;max-width:min(640px,92vw);max-height:82vh;overflow-y:auto;scrollbar-gutter:stable;box-shadow:0 12px 30px rgba(0,0,0,.25)}
+    .modal{--mpad:1.75rem;background:var(--card);border-radius:14px;padding:0 var(--mpad) var(--mpad);width:100%;max-width:min(640px,92vw);max-height:90vh;overflow-y:auto;scrollbar-gutter:stable;box-shadow:0 12px 30px rgba(0,0,0,.25)}
     /* Standardized size tiers (scale with viewport via min(), never grow past
        that from content) — every popup uses one of these three instead of an
        ad-hoc per-modal pixel value. Content still picks the tier that fits it
@@ -658,7 +658,50 @@
        encogerse, y sin `wrap` el texto se desborda por encima del botón de al
        lado. Con `wrap` se baja a la línea siguiente, que es feo pero legible;
        sin él, se pisan. */
-    .modal-actions{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:flex-end;margin-top:1.5rem}
+    /* EL PIE VA FIJO ABAJO, igual que .mhdr va fija arriba desde hace meses.
+       Jose, 2026-10-04, con un vídeo de "Add Expected Material": *"si la
+       pantalla tiene espacio para poner toda la ventana, se lo hace; si no
+       tiene espacio, entonces vamos a poner los botones en el marco, fijos,
+       para que el usuario no tenga que hacer scroll para poder dar clic."*
+
+       Y pesa más que la comodidad: EL AVISO DE ERROR VIVE EN ESTE PIE. En su
+       captura de ENTRY, "Material 1 needs a name" sale justo al lado de "Save
+       to System". Con el pie fuera de la pantalla, la persona pulsa guardar, no
+       pasa nada, y el motivo está donde no está mirando. Un mensaje de error
+       que hay que ir a buscar es un mensaje de error que no existe.
+
+       Los márgenes negativos lo llevan hasta los bordes de la ventana —la misma
+       técnica que la cabecera— para que el contenido pase por DEBAJO y no por
+       un lado. */
+    .modal-actions{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:flex-end;
+      /* `bottom` NEGATIVO, no 0: un elemento pegajoso se ancla al borde del área
+       de desplazamiento, que INCLUYE el relleno de abajo de la ventana. Con
+       bottom:0 el pie quedaba flotando 28px por encima del borde y se veía una
+       franja de tarjeta por debajo. Medido: 561 contra 589. */
+      position:sticky;bottom:calc(-1 * var(--mpad));z-index:30;background:var(--card);
+      margin:1.5rem calc(-1 * var(--mpad)) calc(-1 * var(--mpad));
+      padding:.85rem var(--mpad);border-top:1px solid var(--border);
+      border-radius:0 0 14px 14px}
+    /* BOTONES QUE NO CAMBIAN DE TAMAÑO. Jose, en el mismo mensaje: *"debemos
+       estandarizar los botones para que no se hagan más grandes o más
+       pequeños, en especial si hay más botones al lado, porque se mueven o
+       empujan y se ve poco profesional."*
+
+       Dos causas distintas y las dos se tapan aquí: un rótulo largo hacía el
+       botón más ancho que su vecino (de ahí el min-width común), y un rótulo
+       que no cabía se partía en dos líneas y empujaba toda la fila hacia abajo
+       (de ahí el nowrap). Lo de cambiar de ancho al ponerse a girar ya estaba
+       resuelto: _btnBusy fija el ancho ANTES de cambiar el texto. */
+    /* EN EL PIE MANDA EL PIE, no la clase que traiga cada botón. Había pies con
+       un "Cancel" btn-sm de 88px al lado de un "Save" de 120: dos tamaños
+       distintos en la misma fila, que es exactamente lo que Jose llama "se ve
+       poco profesional". Dentro de .modal-actions todos miden igual — el mismo
+       ancho mínimo, el mismo relleno y la misma letra — sea cual sea la clase
+       con la que llegaron. */
+    .modal-actions .btn,
+    .modal-actions .btn.btn-sm{min-width:7.5rem;flex:0 0 auto;
+      padding:.5rem 1rem;font-size:.85rem}
+    .btn{white-space:nowrap}
     /* ── NOTIFY SECTION ── */
     .notify-section{margin-top:1rem;padding:1rem;background:#F8FAFC;border:1px dashed var(--border);border-radius:8px}
     .notify-section label.check-label{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.88rem;font-weight:600;color:var(--navy)}
@@ -3610,7 +3653,7 @@
         style="font-size:.82rem">
       <div id="incDocPreview" style="margin-top:.55rem"></div>
     </div>
-    <div style="display:flex;gap:.75rem;margin-top:1rem;justify-content:flex-end">
+    <div class="modal-actions" style="margin-top:1rem">
       <button id="btnDeleteIncoming" class="btn btn-danger btn-sm" style="margin-right:auto;display:none" onclick="deleteIncomingItem()">🗑 Delete</button>
       <button class="btn btn-ghost btn-sm" onclick="closeModal('incomingOverlay')">Cancel</button>
       <button class="btn btn-primary" onclick="saveIncomingItem()">💾 Save</button>
@@ -3676,7 +3719,7 @@
       <button class="btn btn-ghost btn-sm" onclick="monitorSelectAll(false)">✕ Clear all</button>
     </div>
     <div class="monitor-grid" id="monitorGrid"></div>
-    <div style="display:flex;gap:.75rem;justify-content:flex-end;margin-top:1rem">
+    <div class="modal-actions" style="margin-top:1rem">
       <button class="btn btn-ghost btn-sm" onclick="closeModal('monitorOverlay')">Cancel</button>
       <button class="btn btn-primary" onclick="saveMonitorSettings()">💾 Save</button>
     </div>
@@ -3875,7 +3918,7 @@
     </div>
 
     <input type="hidden" id="em_rowIdx">
-    <div style="display:flex;gap:.75rem;margin-top:1rem;justify-content:flex-end">
+    <div class="modal-actions" style="margin-top:1rem">
       <button class="btn btn-ghost btn-sm" onclick="closeModal('editMovOverlay')">Cancel</button>
       <button class="btn btn-primary" id="btnSaveEditMov" onclick="saveEditMov()">💾 Save Changes</button>
     </div>
@@ -4341,7 +4384,7 @@
       <label>Allowed transfer destinations <span style="font-weight:400;color:var(--muted)">(optional — leave blank to allow transfer anywhere)</span></label>
       <input type="text" id="lockAllowedDest" list="rackListDest" placeholder="e.g. B2B, C1A — comma-separated">
     </div>
-    <div style="display:flex;gap:.75rem;margin-top:1.25rem;justify-content:flex-end">
+    <div class="modal-actions" style="margin-top:1.25rem">
       <button class="btn btn-ghost btn-sm" onclick="closeModal('lockMatOverlay')">Cancel</button>
       <button class="btn btn-danger btn-sm" id="lockMatSubmit" onclick="submitLockMaterial()">🔒 Reserve</button>
     </div>
@@ -4390,7 +4433,7 @@
       <input type="file" id="riPhotoFiles" accept="image/*" multiple style="display:none" onchange="_onReportIssuePhotos(this.files);this.value=''">
       <div id="riPhotoPreview" style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem"></div>
     </div>
-    <div style="display:flex;gap:.75rem;margin-top:1.25rem;justify-content:flex-end">
+    <div class="modal-actions" style="margin-top:1.25rem">
       <button class="btn btn-ghost btn-sm" onclick="closeModal('reportIssueOverlay')">Cancel</button>
       <button class="btn btn-primary btn-sm" id="riSubmitBtn" onclick="submitReportIssue()">Send Report</button>
     </div>
@@ -4420,7 +4463,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.36';
+var APP_VERSION = '12.37';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -4432,7 +4475,7 @@ var APP_VERSION = '12.36';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '04f6f500';
+var APP_BUILD = '92335214';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for

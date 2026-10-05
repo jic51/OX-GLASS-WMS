@@ -187,8 +187,15 @@ const FUERA = {
         'ventanas midieran el 82% de la pantalla',
         !!reglaModal && !/(^|;)\s*height:/.test(reglaModal[1]),
         reglaModal && reglaModal[1].slice(0, 160));
+  /* EL TOPE SE MIDE EN PANTALLA, NO EN UN NÚMERO CONCRETO. Era /82vh/ clavado,
+   * y el 2026-10-05 subió a 90vh porque con 82 quedaba hueco de sobra debajo de
+   * la ventana de Incoming y aun así salía barra de desplazamiento — Jose lo
+   * grabó. Fijar el número aquí convertía un ajuste legítimo en una prueba
+   * roja; lo que esta comprobación defiende no es el 82, es que el tope exista,
+   * vaya en vh y no se coma la pantalla entera. */
+  const tope = reglaModal && /max-height:\s*([0-9]+)vh/.exec(reglaModal[1]);
   check('...sino un tope, y el tope es la pantalla',
-        !!reglaModal && /max-height:\s*82vh/.test(reglaModal[1]),
+        !!tope && Number(tope[1]) >= 70 && Number(tope[1]) <= 95,
         reglaModal && /max-height:[^;]*/.exec(reglaModal[1])[0]);
 
   /* 2. NINGUNA SE PASA DEL TOPE. Una ventana más alta que la pantalla no se

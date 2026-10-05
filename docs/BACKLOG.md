@@ -34,8 +34,7 @@ que un ✅ optimista.
 
 ### 🔴 Abierto, pequeño
 
-5. El pie de las ventanas, siempre visible (ahí vive el aviso de error).
-6. La categoría empieza vacía.
+5. La categoría empieza vacía.
 7. Los dos botones de Incoming, pegados arriba.
 8. Sugerencias de PM en Edit Movement y Edit Receiving.
 9. Los dos indicadores de espera de la papelera (una línea).
@@ -6486,3 +6485,44 @@ y la que se lee en el desplegable *"Versión 117 del 4 oct 2026"*. Ahora dice
 Con su comprobación en `test-url-de-la-app.js`, que exige las dos mitades: que la
 versión lleve nombre **y que la implementación no lo lleve**. Está escrita para
 que nadie "mejore" esto dentro de un año leyendo la petición y no el motivo.
+
+
+# ══ ✅ HECHO (v12.37) — EL PIE DE LAS VENTANAS, SIEMPRE VISIBLE ══
+
+Jose, 2026-10-04, con un vídeo de *Add Expected Material*: *"si la pantalla tiene
+espacio para poner toda la ventana, se lo hace; si no tiene espacio, entonces
+vamos a poner los botones en el marco, fijos, para que el usuario no tenga que
+hacer scroll para poder dar clic."* Y: *"debemos estandarizar los botones para
+que no se hagan más grandes o más pequeños, en especial si hay más botones al
+lado, porque se mueven o empujan y se ve poco profesional."*
+
+**Lo que encontró la revisión, y es el patrón de siempre:** la clase
+`.modal-actions` existía desde hacía meses y **la ventana que él grabó no la
+usaba**. Tenía su propia fila de botones escrita a mano, así que ningún arreglo
+que se hiciera sobre la clase le iba a llegar. **Cinco ventanas estaban igual**:
+Incoming, Monitor, Edit Movement, Reservar material y Reportar un problema.
+
+Hecho:
+1. `.modal-actions` va pegada abajo (`position:sticky`), como `.mhdr` lleva
+   pegada arriba desde hace meses. Con `bottom` **negativo**, no 0: lo pegajoso
+   se ancla al borde del área de desplazamiento, que incluye el relleno de abajo
+   — con `bottom:0` el pie quedaba flotando 28px por encima del borde. Medido.
+2. Las cinco filas hechas a mano pasan a usar la clase.
+3. El tope de alto sube de 82vh a 90vh: con 82 quedaba hueco de sobra debajo y
+   aun así salía barra.
+4. **En el pie manda el pie**: todos los botones miden igual —mismo ancho mínimo,
+   mismo relleno, misma letra— venga cada uno con la clase que venga. Había un
+   `Cancel` de 88px al lado de un `Save` de 120.
+
+`tools/test-pie-de-ventana.js` (17 comprobaciones, de navegador) mide la posición
+del pie con el cuerpo arriba del todo y abajo del todo, en una pantalla corta;
+comprueba que en la pantalla de Jose la ventana entra entera sin barra; mide que
+los botones tengan el mismo alto y ninguno se quede enano; y **cuenta las
+puertas**: falla si vuelve a aparecer un pie escrito a mano. Mutación comprobada:
+quitado el `sticky`, fallan tres.
+
+**Lo que NO se tocó, y se deja dicho:** con los botones alineados a la derecha,
+alargar un rótulo corre al vecino hacia la izquierda. Es inevitable sin anchos
+fijos y no es lo que Jose ve — lo que él veía es la fila moviéndose al ponerse a
+girar un botón, y eso ya lo resolvía `_btnBusy`, que fija el ancho ANTES de
+cambiar el texto. La prueba lo mide y lo imprime como dato, no como fallo.

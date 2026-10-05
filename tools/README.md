@@ -66,6 +66,7 @@ node tools/test-indice.js
 node tools/test-url-de-la-app.js
 node tools/test-no-saltar-al-cargar.js
 node tools/test-config-escritura.js
+node tools/test-pie-de-ventana.js
 node tools/test-sysact-followthrough.js
 node tools/test-daily-report.js
 node tools/test-morning-closes.js
