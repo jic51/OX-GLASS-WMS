@@ -6201,3 +6201,54 @@ comentario promete.
 El mismo patrón puede estar en **"Load Older History"** y en cualquier lista que
 crezca por abajo. Si se arregla uno solo, el siguiente que alguien pruebe vuelve
 a sorprender.
+
+# ══ TODAVÍA SALTA UN POCO AL CARGAR MÁS. Anotado 2026-10-05 ══
+
+Jose, después de la v12.34: *"hice la prueba y grabé un vídeo. Aún hay un salto
+en la lista al aplastar el botón: al dar clic, la lista se mueve hacia arriba o
+hacia abajo un poco, y los demás datos aparecen abajo (eso ya se arregló, ya no
+nos vamos al final de la fila)."*
+
+Lo gordo está resuelto —ya no te manda cinco mil píxeles abajo— pero queda un
+desplazamiento pequeño, y no vale darlo por bueno: un salto pequeño en cada clic
+es la diferencia entre una lista que se lee y una que hay que volver a buscar.
+
+## La hipótesis que hay que descartar PRIMERO, y explica el síntoma entero
+
+**Que quien está haciendo scroll no sea `#tableContainer` sino la ventana.**
+
+`_repintarSinSaltar` guarda y devuelve el `scrollTop` del contenedor de la
+tabla. Si en la pantalla de Jose —ancha— la tabla no desborda por dentro y lo
+que se mueve es **la página**, entonces el arreglo está devolviendo una posición
+que no era la que se movía, y el salto que queda es el de la ventana: repintar
+cambia el alto del documento y el navegador reajusta.
+
+Encaja con lo que describe: "se mueve un poco hacia arriba **o hacia abajo**".
+Un salto al fondo es un error de lógica; un empujón pequeño en cualquiera de los
+dos sentidos es un reajuste de altura.
+
+**Comprobación, dos líneas en la consola del navegador de Jose:**
+
+```javascript
+var tc = document.getElementById('tableContainer');
+console.log('contenedor desborda:', tc.scrollHeight > tc.clientHeight,
+            '· ventana desborda:', document.body.scrollHeight > window.innerHeight);
+```
+
+Si el que desborda es la ventana, el arreglo es guardar y devolver **los dos**
+(`window.scrollY` además del `scrollTop`), y la prueba tiene que medir también
+en una pantalla donde el que se mueva sea el documento. **La prueba actual sólo
+mueve el contenedor interior** — por eso está en verde y Jose sigue viendo el
+salto. Es, otra vez, medir el caso cómodo.
+
+## Las otras dos, si la primera no era
+
+1. **El alto del contenido cambia por encima de donde estás.** El contador
+   ("75 of 1065 records") o el botón del pie cambian de texto, y si alguno pasa
+   de una línea a dos, todo lo de abajo baja.
+2. **La barra de scroll horizontal.** Si al repintar aparece o desaparece, el
+   alto útil cambia unos píxeles y el contenido se recoloca.
+
+**No tocar nada hasta ver el vídeo y el resultado de las dos líneas de arriba.**
+Arreglar a ciegas un salto de pocos píxeles es la forma más rápida de añadir un
+segundo salto.
