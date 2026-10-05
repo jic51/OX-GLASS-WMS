@@ -6799,3 +6799,90 @@ segundo aviso donde la persona sí está mirando.
 
 Va junto con la lista de avisos, no antes: hacer la tarjeta ahora y la lista
 después sería escribir dos veces lo mismo.
+
+
+# ══ ANOTADO EL 2026-10-05 (noche) — CUATRO COSAS Y TRES DECISIONES DE JOSE ══
+
+## 1. 🔴 EL BOTÓN "RELEASE" DE LOS MATERIALES RESERVADOS NO DICE NADA
+
+Jose, con vídeo: *"el botón de release de los lock materials no tiene feedback.
+No sabemos si está funcionando o no. No se desactiva, nada. El usuario puede dar
+doble clic si quiere y no sabemos qué va a pasar."*
+
+**Y lo del doble clic no es una molestia, es la parte seria:** sin apagar el
+botón, dos pulsaciones mandan dos liberaciones de la misma reserva. Lo que pase
+entonces depende de si el servidor aguanta la segunda, y eso **no lo sabemos
+porque nadie lo ha probado**.
+
+El molde ya existe y se usa en media app: `_btnBusy` (que además fija el ancho
+antes de cambiar el texto) y `_btnDone` con su ✓. Esto es conectarlo — y de paso
+**revisar todos los botones que llaman al servidor**, porque si éste se quedó
+fuera, habrá más.
+
+## 2. 🟡 EL LOGO DE ACOPIO EN LOS DOS SITIOS, Y QUE TODO SEA ENLACE
+
+Jose, con dos capturas: la marca de la esquina superior izquierda y la del menú
+de la cuenta. Quiere **el logo** junto al nombre, y que **el enlace sea todo el
+bloque** —logo y nombre— no sólo las palabras.
+
+Nota al hacerlo: hoy el texto de las dos lo escribe `_syncProductLinks` de una
+sola vez, a propósito, *"para que los dos no puedan decir cosas distintas"*. El
+logo tiene que entrar por ahí, no pegado a mano en cada sitio.
+
+## 3. ✅ DECIDIDO — "RAW LOC" Y LAS COLUMNAS DE DIAGNÓSTICO SE VAN A SOPORTE
+
+Jose: *"me parece buena idea dejarlas sólo para el soporte, porque el cliente no
+las necesita. Además, si tienen la misma información que la otra columna, ¿por
+qué está ahí?"*
+
+**Contestando sus preguntas, que son las correctas:**
+
+- **¿Da más información que `Src→Dest`?** Casi nunca. `Src→Dest` pinta
+  `origen → destino`; `Raw Loc` enseña los dos campos tal como están guardados.
+  Coinciden **salvo** cuando el dato está raro — un espacio de más, una
+  ubicación que ya no existe, un movimiento viejo con el formato antiguo.
+- **¿Es necesaria para el cliente?** No.
+- **¿Es necesaria para nosotros?** **Sí, y justo para eso**: es la única columna
+  que enseña el dato sin maquillar, que es lo que hace falta cuando alguien dice
+  "este movimiento sale raro".
+- **¿Hace algo importante?** No hace nada: sólo muestra.
+
+**Decisión: fuera de la lista del cliente, disponible para soporte.** Va con la
+pestaña `Advanced` del criterio *"el usuario no administra la app"*.
+
+## 4. 🟡 LAS COLUMNAS APAGADAS: OPACAS Y EN GRIS, NO TRANSPARENTES
+
+Jose: *"no quiero decirle al cliente por qué están así; quiero cambiarlas. Quiero
+que las columnas se pongan opacas, pero no transparentes; tal vez si las pasamos
+a tonos de gris queden mejor."*
+
+Tiene razón y es mejor que mi idea de explicarlo con un rótulo: **si hay que
+explicar lo que se ve, lo que se ve está mal.** Hoy es `opacity:.45`, que deja
+transparentarse lo de detrás y por eso parece a medio cargar. Gris sólido —
+fondo apagado, letra gris, el 🚫 en su sitio— se lee como "apagado" sin
+explicación.
+
+Y revisar los otros `opacity` del mismo tipo: `.user-inactive`, `.dq-card.dq-done`,
+`.ei-card.skipped`, `.rack-card.rack-empty-card`. Son el mismo gesto en cuatro
+sitios, y conviene que signifique lo mismo en todos.
+
+## 5. ✅ DECIDIDO — DÓNDE VA EL AVISO DE CONEXIÓN
+
+Jose: *"el toast debe ir como los toast de check verde que aparecen justo debajo
+de las pestañas, debe ir ahí, no importa si ocupa más espacio que los toasts
+normales y tapa las pestañas, ahí es el lugar correcto."*
+
+Decidido: **debajo de las pestañas**, donde ya salen los avisos de ✓, y se
+permite que ocupe más y tape. Va con la lista de avisos, no antes.
+
+## 6. ✅ DECIDIDO — MAYÚSCULAS SÓLO DE AHORA EN ADELANTE
+
+Jose: *"hagámoslo como tú dices, y deja lo que ya está hecho así, no nos
+preocupemos por eso; desde ahora debemos mejorar los datos, los de antes ya
+pasaron."*
+
+Entonces: **PO, GC, Received By, Project, Supplier, Category, Name → mayúsculas
+al guardar. Comments NO** (es una frase, no una clave, y al guardarla en
+mayúsculas el original se pierde). **Lo ya guardado se queda como está** y no se
+reescribe nada — que además evita tocar el archivo entero, que es la operación
+que más respeto da en este producto.

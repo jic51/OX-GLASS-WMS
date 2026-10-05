@@ -98,15 +98,41 @@ indistinguible de un día tranquilo.**
 Lo que haría: una línea en AUDIT_LOG por rechazo, con el correo y la hora, y un
 aviso al dueño a partir de N en una ventana corta.
 
-### 2.2 🔴 La sesión no se puede revocar
+### 2.2 ✅ CORREGIDO (v12.39) — y lo que yo dije aquí estaba MAL
 
-Un token firmado vale **30 días** y no hay forma de invalidarlo. Si alguien se va
-de la empresa y se le quita de USERS_V3, su token sigue siendo criptográficamente
-válido hasta que caduque.
+**Lo que escribí en este documento el 2026-10-05 por la mañana:** *"un token
+firmado vale 30 días y no hay forma de invalidarlo"*. **Es falso**, y lo
+comprobé al ir a arreglarlo: cada llamada del navegador pasa por
+`getUserRole`, que **lee USERS_V3 en el momento**. El token dice QUIÉN eres; la
+hoja decide SI puedes pasar. Quitar a alguien le deja fuera en su siguiente
+llamada, no en treinta días.
 
-Lo que haría: que `requireAuth_` compruebe que el correo **sigue** en USERS_V3 en
-cada llamada — es una lectura que ya se hace casi siempre— y un botón de
-*"cerrar todas las sesiones"* que rote `SESSION_SECRET`.
+**Pero al comprobarlo apareció algo peor, y real.** `getUserRole` decía:
+
+```javascript
+if (uEmail === userEmail && isActive) return { ...rol... };
+```
+
+Si el correo estaba **pero desactivado**, el bucle seguía, salía por abajo y caía
+en el apartado siguiente: **la lista vieja de CONFIG**. Y en CONFIG está todo el
+mundo — es la lista de la que se migró. O sea que **en cualquier instalación
+migrada, desmarcar a alguien en Manage Users no le quitaba el acceso**: la
+pantalla decía "desactivado" y el servidor le dejaba entrar igual.
+
+No era una puerta sin guardia. Era **una guardia que decía que sí**.
+
+Y no se vio antes porque `test-endpoint-auth` comprueba que cada puerta TENGA
+guardia — lo dice él mismo en su cierre: *"prueba que no falta ninguna guarda, no
+que ninguna sea correcta"*. Ésta estaba y era equivocada.
+
+Arreglado: si el correo aparece en USERS_V3, **esa fila decide** — activo → su
+rol, desactivado → DENIED, sin mirar la lista vieja. `tools/test-revocar-acceso.js`
+(10 comprobaciones) lo EJECUTA, incluido el caso de un token válido de alguien
+ya expulsado. Mutación comprobada: quitada la línea, fallan tres.
+
+**Lo que sigue faltando, y es más estrecho:** no hay forma de matar un token
+**robado** de un usuario que sigue siendo legítimo. Para eso hace falta un botón
+de *"cerrar todas las sesiones"* que rote `SESSION_SECRET`.
 
 ### 2.3 🟠 Varias puertas sin tope
 

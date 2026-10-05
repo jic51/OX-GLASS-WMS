@@ -97,6 +97,25 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.39</span>
+      <span class="tag safe">Security</span>
+      <h3>Deactivating a user now actually locks them out</h3>
+      <p><b>If your installation was upgraded from an older version, switching
+         someone off in Manage Users may not have been stopping them.</b> The
+         screen said "deactivated"; the server let them in anyway.</p>
+      <p>The check looked them up in the current user list and, finding them
+         switched off, carried on to the old list the app was migrated from — and
+         that old list still has everybody in it. So the "off" switch was read,
+         and then quietly overruled by a leftover.</p>
+      <p>Now the current user list decides, both ways: switched on, they get
+         their role; switched off, they are out, and the old list is not
+         consulted. Somebody who was never added to the current list still gets
+         in exactly as before, which is the one case the old list is there for.</p>
+      <p>This is worth checking on your own installation today: open Manage Users
+         and confirm everyone switched off is someone you meant to switch off.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.38</span>
       <span class="tag safe">Safety</span>
       <h3>The app now tells you when it has lost the connection</h3>

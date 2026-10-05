@@ -127,7 +127,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.38';
+var APP_VERSION = '12.39';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -139,7 +139,7 @@ var APP_VERSION = '12.38';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '3fb05219';
+var APP_BUILD = '580d26cb';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -1913,7 +1913,24 @@ function getUserRole(sessionToken) {
   var ss        = SpreadsheetApp.getActiveSpreadsheet();
   var userEmail = email.toLowerCase().trim();
 
-  // ── 1. Check USERS_V3 (new in-app user management) ─────────────────────
+  /* ── 1. USERS_V3 MANDA, Y MANDA TAMBIÉN CUANDO DICE QUE NO ────────────────
+   *
+   * Encontrado el 2026-10-05 comprobando si de verdad se puede quitar el acceso
+   * a alguien. Esta parte decía:
+   *
+   *     if (uEmail === userEmail && isActive) return { ...rol... };
+   *
+   * y si estaba PERO DESACTIVADO, el bucle seguía, salía por abajo y caía en la
+   * lista vieja de CONFIG. **Y en CONFIG está todo el mundo**: es la lista de la
+   * que se migró. O sea que en cualquier instalación migrada —la de OX Glass
+   * entre ellas— desmarcar a alguien en Manage Users NO LE QUITABA EL ACCESO.
+   * La pantalla decía "desactivado" y el servidor le dejaba entrar igual.
+   *
+   * No es una puerta sin guardia: es una guardia que decía que sí.
+   *
+   * Ahora, si el correo aparece en USERS_V3, ESA FILA DECIDE: activo → su rol;
+   * desactivado → DENIED, y no se mira la lista vieja. La lista vieja queda para
+   * lo único que debe cubrir: correos que nunca llegaron a USERS_V3. */
   var usersSheet = ss.getSheetByName('USERS_V3');
   if (usersSheet && usersSheet.getLastRow() > 1) {
     var uRows = usersSheet.getDataRange().getValues();
@@ -1921,12 +1938,16 @@ function getUserRole(sessionToken) {
       var uEmail  = String(uRows[u][1] || '').toLowerCase().trim(); // col B
       var uActive = uRows[u][6];                                    // col G
       var isActive = (uActive === true || String(uActive).toUpperCase() === 'TRUE' || uActive === '');
-      if (uEmail && uEmail === userEmail && isActive) {
-        return {
-          role:     String(uRows[u][3] || 'WAREHOUSE').toUpperCase().trim(), // col D
-          email:    email,
-          name:     String(uRows[u][2] || '').trim()                         // col C
-        };
+      if (uEmail && uEmail === userEmail) {
+        if (isActive) {
+          return {
+            role:     String(uRows[u][3] || 'WAREHOUSE').toUpperCase().trim(), // col D
+            email:    email,
+            name:     String(uRows[u][2] || '').trim()                         // col C
+          };
+        }
+        // Está en la lista y está apagado. Se acabó: no se cae a la de abajo.
+        return { role: 'DENIED', email: email };
       }
     }
   }

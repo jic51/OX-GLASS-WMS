@@ -98,6 +98,25 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.39</span>
+      <span class="tag safe">Seguridad</span>
+      <h3>Desactivar a un usuario ahora sí le quita el acceso</h3>
+      <p><b>Si tu instalación viene de una versión anterior, desmarcar a alguien
+         en Manage Users podía no estar deteniéndole.</b> La pantalla decía
+         "desactivado"; el servidor le dejaba entrar igual.</p>
+      <p>La comprobación le buscaba en la lista de usuarios actual y, al
+         encontrarle apagado, seguía hasta la lista antigua de la que se migró la
+         app — y esa lista antigua sigue teniendo a todo el mundo. Así que el
+         interruptor se leía, y acto seguido lo anulaba un resto del pasado.</p>
+      <p>Ahora la lista actual decide en los dos sentidos: encendido, entra con
+         su rol; apagado, se queda fuera, y la lista antigua ni se mira. Quien
+         nunca llegó a la lista actual sigue entrando igual que antes, que es el
+         único caso para el que esa lista antigua está ahí.</p>
+      <p>Conviene comprobarlo hoy mismo en tu instalación: abre Manage Users y
+         confirma que todo el que esté apagado es alguien que querías apagar.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.38</span>
       <span class="tag safe">Seguridad</span>
       <h3>La app ya avisa cuando se queda sin conexión</h3>
