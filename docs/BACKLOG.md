@@ -86,10 +86,9 @@ que un ✅ optimista.
 27. Incoming agrupado por fecha.
 28. Una prueba de navegador a un zoom que no sea el 100 % — Jose trabaja al
     157 % y ahí hay una clase de fallos que desde aquí no vemos.
-28-bis. **Las 20 comprobaciones de SEO del sitio** — auditadas el 06/10 contra el
-    sitio publicado. El hallazgo gordo: **la portada no tiene `viewport`** y sale
-    en escritorio encogido en los teléfonos. Plan de cinco tandas en
-    `SEO-DEL-SITIO.md`; la primera cubre 6 de las 20 en una tarde.
+28-bis. ✅ **HECHO (06/10) — las 20 comprobaciones de SEO del sitio.** 18 de 20
+    cumplidas y vigiladas por `tools/test-site-seo.js`. Las dos que faltan son
+    de Jose (nº 37 y 38). Lo construido, en `SEO-DEL-SITIO.md`.
 
 ### 🔵 Esperando a Jose
 

@@ -72,7 +72,21 @@ const ALLOWED = [
   // has to be argued for here before it can ship. They replace a hotlink to a
   // file in Jose's Drive, so the site's own logo stops depending on that file
   // staying shared.
-  'logo.png', 'favicon.svg'
+  'logo.png', 'favicon.svg',
+  // La tarjeta que se ve al pegar el enlace en un WhatsApp o un correo. Se
+  // dibuja con tools/build-og-image.js a partir del logo y de una frase que ya
+  // está en la portada — no lleva nada que no estuviera ya publicado.
+  'og.jpg',
+  // Los tres que no son páginas, y los tres salen de la MISMA lista de
+  // build-site.js que decide qué se publica. Por eso no pueden filtrar nada: si
+  // un documento no está en esa lista, no está en el sitio y tampoco en éstos.
+  //
+  //   sitemap.xml  las direcciones de las páginas de arriba, con su fecha
+  //   robots.txt   dice que todo está abierto y apunta al sitemap
+  //   llms.txt     los mismos títulos y descripciones, para un asistente.
+  //                SIN PRECIOS Y SIN COMPARACIONES: es un índice, no un sitio
+  //                donde contar más de lo que cuentan las páginas.
+  'sitemap.xml', 'robots.txt', 'llms.txt'
   // restaurar-backup.html is deliberately absent — see build-site.js. This
   // guard is what removed it, on its first run, by reading what it said.
 ];
@@ -347,11 +361,25 @@ console.log('\n═══ lock 2 — what the published files actually say ══
 
   // Any OTHER address is either a leak or a mistake. The support one is a
   // business address by definition; a second personal one is neither.
+  //
+  // SÓLO EN LOS FICHEROS DE TEXTO, y conviene explicar por qué no es aflojar el
+  // candado. El patrón de un correo es flojo a propósito —tiene que serlo para
+  // cazar uno cualquiera— y dentro de una imagen hay bytes al azar: al publicar
+  // og.jpg, esta comprobación "encontró" la dirección `2@6.fh`, que no es de
+  // nadie. Una prueba que acusa de una fuga que no existe deja de leerse, y
+  // entonces no caza la que sí.
+  //
+  // Las comprobaciones de CADENAS CONCRETAS de arriba siguen mirando el sitio
+  // ENTERO, imágenes incluidas: unos bytes al azar pueden parecer un correo,
+  // pero no van a deletrear OAUTH_CLIENT_SECRET. Se quita el falso positivo sin
+  // quitar ni una sola cobertura real.
+  const BINARIO = /\.(png|jpe?g|gif|webp|ico|woff2?|ttf|otf|pdf)$/i;
   const addrs = {};
-  corpus.forEach(c => (c.t.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g) || [])
+  corpus.filter(c => !BINARIO.test(c.f))
+    .forEach(c => (c.t.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g) || [])
     .forEach(a => { if (a !== CONTACT_EMAIL) addrs[a.toLowerCase()] = 1; }));
   const others = Object.keys(addrs).filter(a => !/@(example|acopio)\./.test(a));
-  check('no second personal address appears anywhere on the site' +
+  check('no second personal address appears in any text file on the site' +
         (others.length ? ' — found: ' + others.join(', ') : ''), others.length === 0);
 
   const support = corpus.filter(c => /soporte|terms|privacy/.test(c.f));

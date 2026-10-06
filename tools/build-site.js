@@ -36,23 +36,56 @@ const OUT  = path.join(ROOT, '_site');
 // ── WHAT IS PUBLIC. Nothing else is. ────────────────────────────────────────
 // Each entry says WHY, because "is this public?" is a decision that has to be
 // re-made deliberately, and a list without reasons gets appended to.
+// `title` and `desc` live HERE and not inside the source files, on purpose.
+//
+// The four files in landing/ are HTML FRAGMENTS — they open straight at
+// <title>, with no doctype, no <html lang>, no charset and no viewport. That is
+// why they rendered in quirks mode, and why a phone drew the landing page at
+// desktop width and shrank it until it fit: the one page a buyer opens from a
+// WhatsApp link was the one page that never said it was made for a phone.
+//
+// The five pages under DOCS never had that problem, because docShell() below
+// builds their head for them. So the fix is the same shape: ONE head, built
+// here, for every page. A fifth landing page added tomorrow cannot be the one
+// without a viewport, because nobody has to remember anything.
+//
+// The cost is that the title and the description sit next to the file name
+// rather than inside the file. That is the right trade: they are the two lines
+// a search engine shows, they only work when they are written together, and a
+// <title> buried at the top of a two-thousand-line page is one nobody re-reads.
 const PAGES = [
-  { src: 'landing/acopio.html',          out: 'index.html',
+  { src: 'landing/acopio.html',          out: 'index.html', lang: 'en',
+    title: 'Acopio — know what is on the shelf without walking there',
+    desc:  'Acopio turns a Google Sheet into a warehouse system: record what ' +
+           'comes in and what goes out, see every rack, and know what is in ' +
+           'stock from any phone.',
     why: 'The landing page itself, both languages in one file.' },
-  { src: 'landing/acopio-overview.html', out: 'detalle.html',
+  { src: 'landing/acopio-overview.html', out: 'detalle.html', lang: 'es',
+    title: 'Acopio en detalle — qué hace, pantalla por pantalla',
+    desc:  'El recorrido largo de Acopio: qué resuelve, qué hace hoy en ' +
+           'producción, qué huecos tiene y qué cuesta. Escrito para leerse ' +
+           'entero antes de decidir.',
     why: 'The long-form product description — what it does, screen by screen.' },
-  { src: 'landing/changelog.html',       out: 'changelog.html',
+  { src: 'landing/changelog.html',       out: 'changelog.html', lang: 'en',
+    title: 'What is new in Acopio — every change, in plain words',
+    desc:  'Every change that reaches a customer installation, newest first, ' +
+           'with what it fixes and why it mattered.',
     why: 'Every change that reaches a customer installation, in English.' },
-  { src: 'landing/novedades.html',       out: 'novedades.html',
+  { src: 'landing/novedades.html',       out: 'novedades.html', lang: 'es',
+    title: 'Novedades de Acopio — todos los cambios, explicados',
+    desc:  'Cada cambio que llega a la instalación de un cliente, del más ' +
+           'nuevo al más viejo, con qué arregla y por qué importaba.',
     why: 'The same changelog in Spanish. The two are kept level by check-changelog.js.' }
 ];
 
 const DOCS = [
   { src: 'docs/INSTALL-GUIDE.md',           out: 'docs/instalacion.html',
     title: 'Guía de instalación', lang: 'es',
+    desc:  'Cómo instalar Acopio en tu propia hoja de Google, paso a paso y sin saber de programación. Copiar el archivo, autorizarlo y publicarlo.',
     why: 'A customer cannot install without it. Written for them, not for Jose.' },
   { src: 'docs/CUSTOMER-SETUP.md',          out: 'docs/setup.html',
     title: 'Setting up your warehouse system', lang: 'en',
+    desc:  'How to set up your Acopio warehouse system the first time: your categories, your racks, your people, and the first movement.',
     why: 'The English half of the same job.' },
   // RESTAURAR-UN-BACKUP.md IS NOT HERE, AND THAT IS THE GUARD DOING ITS JOB.
   //
@@ -74,11 +107,13 @@ const DOCS = [
   // that reads like it has holes in it. Noted in docs/BACKLOG.md.
   { src: 'docs/RESTAURAR-UNA-COPIA.md',     out: 'docs/restaurar.html',
     title: 'Si algo se dañó, así vuelves a ayer', lang: 'es',
+    desc:  'Si algo se borró o se dañó, así vuelves al estado de ayer. Qué copias hay, dónde están y cómo se usa cada una.',
     why: 'The customer half, written from scratch. This is the document the ' +
          'comment above says was missing — the private RESTAURAR-UN-BACKUP.md ' +
          'stays private and is NOT its source.' },
   { src: 'docs/VISTA-POR-PASILLO.md',       out: 'docs/vista-por-pasillo.html',
     title: 'La vista por pasillo', lang: 'es',
+    desc:  'Qué es la vista por pasillo de Acopio, en qué se diferencia de una lista de materiales, y cuándo conviene cada una.',
     why: 'Explains a feature to the person using it. No internals.' },
   // SOPORTE-Y-DEVOLUCIONES.md YA NO SE PUBLICA, Y ESO ERA UNA FUGA.
   //
@@ -99,14 +134,17 @@ const DOCS = [
   // es donde sirve.
   { src: 'docs/SOPORTE-Y-PAGOS.md',         out: 'docs/soporte.html',
     title: 'Soporte y pagos', lang: 'es',
+    desc:  'Qué cubre el soporte de Acopio, cuánto cuesta, cómo se paga y qué pasa si algo sale mal o quieres darte de baja.',
     why: 'The customer half: what it costs, when, and what happens if something ' +
          'goes wrong. A promise nobody can read is not one — but it has to be ' +
          'written TO them.' },
   { src: 'legal/TERMS-OF-SERVICE.md',       out: 'terms.html',
     title: 'Terms of Service', lang: 'en',
+    desc:  'The terms you agree to when you use Acopio: what the licence covers, what it does not, and how either side ends it.',
     why: 'Has to be public — the app links to it from its own footer.' },
   { src: 'legal/PRIVACY-POLICY.md',         out: 'privacy.html',
     title: 'Privacy Policy', lang: 'en',
+    desc:  'What Acopio does and does not collect, where your warehouse data lives, who can reach it, and how to delete it.',
     why: 'Same: linked from the app, and required by Google for the consent screen.' }
 ];
 
@@ -114,11 +152,111 @@ const DOCS = [
 // site that answers on two names without redirecting is two sites as far as
 // search engines and cookies are concerned.
 const DOMAIN = 'www.acopio.net';
+const ORIGIN = 'https://' + DOMAIN;
+
+// The picture that shows when somebody pastes the link into WhatsApp, a mail or
+// a chat. 1200×630 is the size every one of them crops to.
+//
+// It matters more here than the search-engine work does, and it is worth saying
+// why: today the main way anybody reaches this site is JOSE SENDING THE LINK.
+// Without this file, that link arrives as a bare grey rectangle.
+const OG_IMAGE = '/og.jpg';
 
 // ── Everything below is machinery ───────────────────────────────────────────
 
 function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// A published file's address. The home page is the one that is not called by
+// its file name, which is also the rename that RENAMES handles for links.
+function urlOf(out) {
+  return ORIGIN + (out === 'index.html' ? '/' : '/' + out);
+}
+
+/* ── LA FICHA QUE LEE UNA MÁQUINA ───────────────────────────────────────────
+ *
+ * Sólo en la portada, y sólo con lo que ya dice la página. Es lo que convierte
+ * un resultado en una ficha con nombre y descripción, y es de lo que se alimenta
+ * un asistente cuando le preguntan qué programa usar para una bodega.
+ *
+ * NO LLEVA PRECIO, aunque el formato lo admita y aunque la página sí lo diga.
+ * Un precio aquí es un precio que un comparador puede recoger y repetir meses
+ * después de cambiarlo, y que queda cacheado fuera de nuestro alcance. El sitio
+ * es el sitio donde se dice el precio; esto es un índice.
+ *
+ * Y NO LLEVA EL CORREO. El del sitio es el personal de Jose; metido en un bloque
+ * que una máquina lee directamente, se convierte en una dirección que recogen
+ * los robots de spam sin tener siquiera que mirar la página. El contacto está
+ * en la página, donde una persona lo encuentra. */
+function fichaJsonLd(meta) {
+  const ficha = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'Acopio',
+    applicationCategory: 'BusinessApplication',
+    applicationSubCategory: 'Warehouse management',
+    operatingSystem: 'Web browser',
+    url: ORIGIN + '/',
+    description: meta.desc,
+    inLanguage: ['en', 'es'],
+    image: ORIGIN + OG_IMAGE,
+    featureList: [
+      'Record material in and out of the warehouse',
+      'Stock by rack and by project',
+      'Warehouse map with photos of each rack',
+      'Several people at once, with roles and an audit trail',
+      'Runs inside a Google Sheet the customer owns'
+    ],
+    publisher: { '@type': 'Organization', name: 'Acopio', url: ORIGIN + '/' }
+  };
+  return '<script type="application/ld+json">' +
+         JSON.stringify(ficha).replace(/</g, '\\u003c') +
+         '</script>';
+}
+
+// EVERY page's head, built from one place.
+//
+// What each line is for, because "SEO tags" is not a reason and a list without
+// reasons gets things added to it that nobody can remove later:
+//
+//   doctype      without it the browser uses a compatibility mode from 2001
+//   lang         what language the text is in — for screen readers and search
+//   charset      without it the accents depend on what the server happens to say
+//   viewport     THE IMPORTANT ONE. Without it a phone draws the page at
+//                desktop width and shrinks it until it fits
+//   description  the grey paragraph under the blue line in Google. It does not
+//                change the ranking; it decides whether anybody clicks
+//   canonical    this site answers on two names. Without this, a search engine
+//                can treat them as two sites with the same text and split the
+//                credit between them
+//   og / twitter the card when the link is pasted somewhere
+function headOf(meta) {
+  const url = urlOf(meta.out);
+  const t = esc(meta.title);
+  const d = esc(meta.desc);
+  return `<!doctype html>
+<html lang="${meta.lang}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${t}</title>
+<meta name="description" content="${d}">
+<link rel="canonical" href="${url}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Acopio">
+<meta property="og:locale" content="${meta.lang === 'es' ? 'es_US' : 'en_US'}">
+<meta property="og:url" content="${url}">
+<meta property="og:title" content="${t}">
+<meta property="og:description" content="${d}">
+<meta property="og:image" content="${ORIGIN}${OG_IMAGE}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Acopio — warehouse stock, from the shelf to the screen">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${t}">
+<meta name="twitter:description" content="${d}">
+<meta name="twitter:image" content="${ORIGIN}${OG_IMAGE}">`;
 }
 
 // A small Markdown reader. Deliberately small: these seven documents use
@@ -205,13 +343,9 @@ function mdToHtml(md) {
 
 // One shell for every converted document, using the landing's own tokens so a
 // doc page and the shopfront are visibly the same product.
-function docShell(title, lang, bodyHtml) {
-  return `<!doctype html>
-<html lang="${lang}">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(title)} · Acopio</title>
+function docShell(meta, bodyHtml) {
+  return `${headOf({ out: meta.out, lang: meta.lang, desc: meta.desc,
+                     title: meta.title + ' · Acopio' })}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap">
@@ -281,6 +415,86 @@ ${bodyHtml}
 </html>`;
 }
 
+/* ── LOS TRES FICHEROS QUE NO SON PÁGINAS ───────────────────────────────────
+ *
+ * sitemap.xml, robots.txt y llms.txt. Los tres salen de la MISMA lista de
+ * arriba, y eso no es comodidad: es la regla de la casa.
+ *
+ * Un sitemap escrito a mano es una segunda lista de las páginas del sitio que
+ * tiene que coincidir con la primera sin que nada lo obligue — y ése es
+ * exactamente el fallo que llevamos todo el mes arreglando en otro sitio (dos
+ * listas de usuarios, y la vieja dejaba entrar). Aquí el daño sería menor y la
+ * forma es idéntica: alguien añade una página, se olvida del sitemap, y el
+ * sitemap pasa a mentir sin que nadie se entere.
+ *
+ * Generándolos, una página nueva entra sola en los tres.
+ */
+function fechaDeArchivo(rel) {
+  // La fecha del ORIGEN, no la del build. Un `lastmod` que cambia cada vez que
+  // se compila le dice al buscador que las once páginas cambiaron hoy, lo cual
+  // es falso y, repetido, es la forma de que deje de hacer caso al fichero.
+  try { return fs.statSync(path.join(ROOT, rel)).mtime.toISOString().slice(0, 10); }
+  catch (e) { return new Date().toISOString().slice(0, 10); }
+}
+
+function escribirSitemap() {
+  const entradas = PAGES.concat(DOCS).map(x =>
+    '  <url>\n' +
+    '    <loc>' + urlOf(x.out) + '</loc>\n' +
+    '    <lastmod>' + fechaDeArchivo(x.src) + '</lastmod>\n' +
+    '  </url>');
+  fs.writeFileSync(path.join(OUT, 'sitemap.xml'),
+    '<?xml version="1.0" encoding="UTF-8"?>\n' +
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+    entradas.join('\n') + '\n</urlset>\n');
+}
+
+function escribirRobots() {
+  /* Todo abierto. Se dice a propósito, porque "no bloquear nada" es una
+   * decisión y no un olvido: las once páginas son material de venta o
+   * documentación de cliente, y ninguna tiene nada que esconder — de eso ya se
+   * encarga la lista de arriba, que es de denegación por defecto.
+   *
+   * Lo que este fichero SÍ hace es apuntar al sitemap, que es su trabajo real
+   * en un sitio como éste. */
+  fs.writeFileSync(path.join(OUT, 'robots.txt'),
+    '# ' + DOMAIN + '\n' +
+    '# Nothing here is private. What is private was never published:\n' +
+    '# tools/build-site.js publishes only what it names, and nothing else.\n' +
+    'User-agent: *\n' +
+    'Allow: /\n\n' +
+    'Sitemap: ' + ORIGIN + '/sitemap.xml\n');
+}
+
+function escribirLlms() {
+  /* llms.txt — y conviene decir lo que es, porque se vende como obligatorio:
+   * ES UNA CONVENCIÓN PROPUESTA, NO UN ESTÁNDAR. Ningún buscador la exige y no
+   * está demostrado que ningún modelo la lea.
+   *
+   * Se pone igual por dos motivos concretos: cuesta un fichero de texto que se
+   * genera solo, y el comprador de esto es un encargado de bodega que no sabe
+   * de programas — va a preguntarle a un asistente antes que a Google. Si
+   * mañana sirve, está; si no sirve, no ha costado nada.
+   *
+   * Lo que NO lleva: ni precios, ni comparaciones con nadie, ni nada que no
+   * esté ya en una de las once páginas. Un fichero pensado para que lo lea una
+   * máquina no es un sitio donde contar más. */
+  const linea = x => '- [' + x.title.replace(/ · Acopio$/, '') + '](' + urlOf(x.out) + '): ' + x.desc;
+  fs.writeFileSync(path.join(OUT, 'llms.txt'),
+    '# Acopio\n\n' +
+    '> A warehouse system that lives in a Google Sheet the customer already\n' +
+    '> owns. It records what comes into the warehouse and what leaves, keeps\n' +
+    '> stock per rack and per project, and is used from a browser or a phone\n' +
+    '> by several people at once. Built by a warehouse manager for his own\n' +
+    '> warehouse, and sold to others.\n\n' +
+    'Installation is copying a spreadsheet: there is no server to run and no\n' +
+    'account to create. The data stays in the customer\'s own Google Drive.\n\n' +
+    '## Pages\n\n' +
+    PAGES.map(linea).join('\n') + '\n\n' +
+    '## Customer documentation\n\n' +
+    DOCS.map(linea).join('\n') + '\n');
+}
+
 function collect() {
   const files = [];
   PAGES.forEach(p => files.push({ out: p.out, kind: 'page', src: p.src }));
@@ -300,11 +514,15 @@ function collect() {
   // arreglo que no se puede volver a romper moviendo código.
   const activos = [
     { out: 'logo.png',    src: 'landing/assets/logo.png' },
-    { out: 'favicon.svg', src: 'landing/assets/favicon.svg' }
+    { out: 'favicon.svg', src: 'landing/assets/favicon.svg' },
+    { out: 'og.jpg',      src: 'landing/assets/og.jpg' }
   ];
   activos.forEach(a => {
     if (fs.existsSync(path.join(ROOT, a.src))) files.push({ out: a.out, kind: 'asset', src: a.src });
   });
+  files.push({ out: 'sitemap.xml', kind: 'generated', src: '(every page above, with its date)' });
+  files.push({ out: 'robots.txt',  kind: 'generated', src: '(open, and points at the sitemap)' });
+  files.push({ out: 'llms.txt',    kind: 'generated', src: '(the same list, for an assistant)' });
   files.push({ out: 'CNAME', kind: 'generated', src: '(the custom domain)' });
   files.push({ out: '.nojekyll', kind: 'generated', src: '(stops GitHub Pages processing the files)' });
   files.push({ out: 'README.md', kind: 'generated', src: '(what this repo is, and what it must never contain)' });
@@ -355,6 +573,12 @@ function localiseLogo(html) {
 // The tab icon. Every page gets it, including the ones generated from markdown,
 // which is why it is injected here rather than typed into each source — a
 // document added to DOCS tomorrow should not be the one page with a blank tab.
+//
+// THIS IS THE ONLY PLACE THAT WRITES THIS TAG. headOf() wrote one too for about
+// ten minutes, and every page came out with two <link rel="icon"> — harmless in
+// a browser and exactly the kind of thing that stops being harmless when the
+// two disagree. One owner, and it is this one, because this is the one that
+// knows whether the file exists.
 function addFavicon(html) {
   if (!haveFavi || /rel="icon"/.test(html)) return html;
   const tag = '<link rel="icon" href="/favicon.svg" type="image/svg+xml">\n';
@@ -385,15 +609,48 @@ function rewriteLinks(html) {
       : whole);
 }
 
+/* The four landing files are fragments: they start at <title> and end at the
+ * last </div>. wrapPage gives them the head they never had and closes the
+ * document properly.
+ *
+ * The fragment's own <title> comes OUT, because headOf has already written one
+ * from the list above. Two <title> tags is not an error a browser reports — it
+ * silently keeps the first and ignores the second — so leaving both there would
+ * mean editing the list and seeing nothing change, which is worse than a crash.
+ *
+ * Everything else in the fragment stays exactly where it is. The preconnects,
+ * the stylesheet link and the <style> block are head content, and the parser
+ * keeps them in the head; the first <div> closes the head and opens the body by
+ * itself, which is the same implicit split that was already happening — only
+ * now it happens in standards mode instead of quirks mode. */
+function wrapPage(html, meta) {
+  const sinTitulo = html.replace(/[ \t]*<title>[\s\S]*?<\/title>\s*\n?/i, '');
+  // La ficha, sólo en la portada: es la ficha DEL PRODUCTO, y repetirla en cada
+  // página no la hace más cierta — hace que haya cinco copias que mantener.
+  const ficha = meta.out === 'index.html' ? '\n' + fichaJsonLd(meta) : '';
+  return headOf(meta) + ficha + '\n' + sinTitulo.replace(/\s*$/, '') + '\n</body>\n</html>\n';
+}
+
 PAGES.forEach(p => {
   const src = path.join(ROOT, p.src);
   if (!fs.existsSync(src)) throw new Error('missing: ' + p.src);
   fs.writeFileSync(path.join(OUT, p.out),
-    addFavicon(localiseLogo(rewriteLinks(stripComments(fs.readFileSync(src, 'utf8'))))));
+    addFavicon(wrapPage(localiseLogo(rewriteLinks(stripComments(fs.readFileSync(src, 'utf8')))), p)));
 });
 
 if (haveLogo) fs.copyFileSync(LOGO_SRC, path.join(OUT, 'logo.png'));
 if (haveFavi) fs.copyFileSync(FAVI_SRC, path.join(OUT, 'favicon.svg'));
+
+/* La tarjeta de compartir. La dibuja tools/build-og-image.js con el navegador y
+ * las fuentes de la marca; aquí sólo se copia.
+ *
+ * Si no está, se dice EN VOZ ALTA y no se calla: las once páginas llevan la
+ * etiqueta og:image apuntando a ella, así que sin el fichero cada enlace pegado
+ * en un WhatsApp pide una imagen que da 404 — que se ve exactamente igual que
+ * no tener ninguna, pero habiendo creído que sí. */
+const OG_SRC = path.join(ROOT, 'landing/assets/og.jpg');
+const haveOg = fs.existsSync(OG_SRC);
+if (haveOg) fs.copyFileSync(OG_SRC, path.join(OUT, 'og.jpg'));
 
 DOCS.forEach(d => {
   const src = path.join(ROOT, d.src);
@@ -412,9 +669,12 @@ DOCS.forEach(d => {
   // The post-conversion pass stays as well: a document may contain a real HTML
   // comment that survives conversion, and that one still has to go.
   fs.writeFileSync(path.join(OUT, d.out),
-    addFavicon(docShell(d.title, d.lang, stripComments(mdToHtml(stripComments(md))))));
+    addFavicon(docShell(d, stripComments(mdToHtml(stripComments(md))))));
 });
 
+escribirSitemap();
+escribirRobots();
+escribirLlms();
 fs.writeFileSync(path.join(OUT, 'CNAME'), DOMAIN + '\n');
 fs.writeFileSync(path.join(OUT, '.nojekyll'), '');
 fs.writeFileSync(path.join(OUT, 'README.md'),
@@ -442,6 +702,14 @@ before it can be pushed.
 const n = collect().length;
 console.log('\n  built _site/ — ' + n + ' files');
 console.log('  domain: ' + DOMAIN);
+if (!haveOg) {
+  console.log('\n  WARNING — landing/assets/og.jpg is missing.');
+  console.log('  Every page points at /og.jpg, so pasting a link anywhere asks');
+  console.log('  for an image that 404s. Build it:');
+  console.log('    NODE_PATH="$(npm root -g)" \\');
+  console.log('    CHROME_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome \\');
+  console.log('    node tools/build-og-image.js');
+}
 if (!haveLogo) {
   console.log('\n  WARNING — the logo is still hotlinked from Google Drive.');
   console.log('  Put the image at landing/assets/logo.png and build again;');

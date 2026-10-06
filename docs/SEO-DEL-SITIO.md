@@ -1,5 +1,12 @@
 # Las 20 comprobaciones de SEO, pasadas por el sitio de verdad
 
+> **ESTADO, 2026-10-06 (tarde): HECHAS LAS CINCO TANDAS.** De las veinte, **18
+> están cumplidas y comprobadas por `tools/test-site-seo.js`** (30
+> comprobaciones, cuatro mutaciones verificadas). Las dos que faltan son las dos
+> que no puedo hacer yo: **Enforce HTTPS** y **Search Console**. Lo construido
+> está al final, en el apartado 7; la auditoría se conserva entera porque es lo
+> que explica por qué se hizo cada cosa.
+
 Jose, 2026-10-06, con una lista de 20 comprobaciones: *"mira la lista de cosas
 que hay en esa imagen y verifica si las necesitamos y también si ya las tenemos.
 Anota las que sí y verifícalas para saber cómo están. También haz una lista con
@@ -345,3 +352,101 @@ el inventario de una bodega de vidrio"*, *"plantilla de inventario en Google
 Sheets"*— y que haya a quién preguntárselo. **Eso es trabajo de meses y es de
 Jose decidir si lo quiere.** Está anotado en `VENTAS.md` y no es parte de este
 plan.
+
+
+---
+
+## 7. LO QUE SE CONSTRUYÓ, 2026-10-06
+
+### El fallo de fondo, arreglado donde no se puede repetir
+
+Las cuatro páginas de `landing/` ya no se publican tal cual: `build-site.js` les
+pone la cabecera entera (`headOf`), la misma que ya construía para las de
+`docs/`. **Una sola función escribe la cabecera de las once páginas**, así que
+una página doce no puede volver a ser la que no tiene `viewport`.
+
+Comprobado en un teléfono de 390 px: la portada ocupa 390 px, **no desborda**, el
+titular sale a 41,7 px y el texto a 16,1 px. Antes salía a ancho de escritorio y
+encogida.
+
+### Lo que lleva ahora cada página
+
+Doctype · `lang` · `charset` · **viewport** · título propio · descripción ·
+canonical a sí misma · `og:` y `twitter:` completos con su imagen.
+
+El `<title>` de la portada pasó de **"Acopio"** a *"Acopio — know what is on the
+shelf without walking there"*.
+
+### La tarjeta de compartir — `tools/build-og-image.js`
+
+1200×630 a doble resolución, **dibujada con el navegador** y con **las fuentes de
+la marca** (Archivo e Inter), no con una librería de imágenes: una tarjeta de
+marca con la letra equivocada es peor que no tener tarjeta. 147 KB en JPEG — el
+mismo dibujo en PNG pesaba 485 KB.
+
+Dos cosas que el programa hace y conviene saber:
+
+- **Incrusta las fuentes** en vez de enlazarlas. El navegador de esta máquina no
+  alcanza Google Fonts, y una imagen que a veces sale con otra letra es peor que
+  una que no sale.
+- **Comprueba que se usaron**, y si no, **no escribe el fichero**.
+
+> **Una corrección, porque enseña algo.** La primera versión de esa comprobación
+> comparaba el ancho del titular con la fuente buena y con la de reserva, y daba
+> *siempre* "no cargó" — con las fuentes perfectamente cargadas. Un `<h1>` es un
+> bloque: su ancho es el del contenedor y no cambia nunca con la tipografía.
+> **Estaba midiendo el recipiente en lugar del contenido.** Ahora se le pregunta
+> al navegador directamente (`document.fonts.check`), que no hay nada que
+> deducir.
+
+### Los tres ficheros que no son páginas
+
+`sitemap.xml`, `robots.txt` y `llms.txt`, **generados de la misma lista** que
+decide qué se publica. Nada que mantener a mano, y una página nueva entra sola en
+los tres. El `lastmod` del sitemap es la fecha del **fichero de origen**, no la
+del build: un sitemap que dice que las once páginas cambiaron hoy, cada vez que
+se compila, enseña al buscador a no hacerle caso.
+
+### La ficha de datos estructurados
+
+`SoftwareApplication` en la portada. **Sin precio y sin correo**, las dos por el
+mismo motivo: lo que entra ahí lo recoge una máquina y lo repite meses después,
+fuera de nuestro alcance. Un precio caducado en un comparador y el correo
+personal de Jose en un recolector de spam son el mismo fallo.
+
+### Los pequeños
+
+- El segundo H1 de la guía de instalación → H2.
+- Los dos enlaces relativos de los changelogs → absolutos.
+- El favicon: **24 KB → 11 KB** (llevaba el logo entero dentro; un icono de
+  pestaña se dibuja a 32 px).
+
+### La prueba, que es lo que impide que esto se pudra
+
+`tools/test-site-seo.js`, en la suite. **Lee las páginas del directorio, no de
+una lista escrita dentro** — una lista allí sería una tercera copia de "qué
+páginas hay", y diría que todo está bien sobre una página que ya no existe.
+
+Mutaciones comprobadas: quitado el viewport → falla; canonical copiado de otra
+página → falla; una página fuera del sitemap → falla; borrada la imagen de
+compartir → falla.
+
+### Y el candado de privacidad, que hizo su trabajo
+
+`test-site-privacy.js` **rechazó los cuatro ficheros nuevos** hasta que se
+argumentaron uno a uno en su lista. Eso es el diseño funcionando: un fichero que
+aparece en el sitio tiene que defenderse antes de salir.
+
+También dio **un falso positivo**: el patrón de correos encontró `2@6.fh` dentro
+de los bytes del JPEG. Se acotó al texto — **las comprobaciones de cadenas
+concretas siguen leyendo el sitio entero, imágenes incluidas**. Unos bytes al
+azar pueden parecer un correo, pero no van a deletrear `OAUTH_CLIENT_SECRET`. Y
+comprobado con una mutación que el candado sigue cazando: colar
+`PRECIOS-Y-COMPETENCIA.md` en la lista de publicación produce cuatro fallos.
+
+### Lo que sigue sin hacerse, y por qué
+
+- **#16 Enforce HTTPS** y **#19 Search Console** — apartado 4. Son tuyas.
+- **#14 Core Web Vitals** — ahora ya se puede medir, porque el viewport está
+  arreglado. Con PageSpeed Insights, cuando el sitio esté publicado.
+- **#17 los slugs** — se quedan como están, a falta de que digas otra cosa.

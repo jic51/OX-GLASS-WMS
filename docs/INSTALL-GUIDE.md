@@ -147,7 +147,7 @@ problema**). Escribe qué pasó y adjunta una foto — nos llega directo.
 
 ---
 
-# Actualizar un cliente ya instalado — SON TRES ARCHIVOS, NO DOS
+## Actualizar un cliente ya instalado — SON TRES ARCHIVOS, NO DOS
 
 Cuando le mandes una versión nueva a un cliente (o cuando actualices tu propia
 copia), lo que se reemplaza en **Extensions → Apps Script** es:

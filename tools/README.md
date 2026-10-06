@@ -83,6 +83,7 @@ node tools/test-also-arrived.js
 node tools/test-labels.js
 node tools/test-selection-survives.js
 node tools/test-site-links.js
+node tools/test-site-seo.js
 node tools/test-arrived-to-entry.js
 node tools/test-settings-reopen.js
 node tools/test-settings-system-tab.js
