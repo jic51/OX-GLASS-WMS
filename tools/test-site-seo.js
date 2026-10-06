@@ -146,7 +146,33 @@ console.log('\n═══ 2. La imagen de compartir existe de verdad ═══\n'
   }
 }
 
-console.log('\n═══ 3. El sitemap dice la verdad ═══\n');
+console.log('\n═══ 3. La verificación de Search Console sigue ahí ═══\n');
+{
+  /* ESTO NO ES UNA FORMALIDAD CUMPLIDA UNA VEZ.
+   *
+   * Google vuelve a mirar esta etiqueta cada cierto tiempo. El día que no la
+   * encuentre, QUITA EL ACCESO a los datos del sitio — en silencio, con un
+   * aviso por correo a una cuenta que nadie mira. Y se pierde justamente lo
+   * único que dice si todo el trabajo de SEO sirvió para algo.
+   *
+   * Es el tipo de cosa que desaparece sin que nadie lo note: alguien reordena
+   * la cabecera, o se añade una página nueva y se copia la cabecera de otra sin
+   * ella. Por eso se comprueba, y no se confía. */
+  const idx = fs.readFileSync(path.join(SITE, 'index.html'), 'utf8');
+  const m = /<meta[^>]+name=["']google-site-verification["'][^>]+content=["']([^"']+)["']/i.exec(idx);
+  check('la portada lleva la etiqueta de Search Console — si desaparece, Google ' +
+        'quita el acceso a los datos y sólo avisa por correo', !!m);
+  check('...y no está vacía', !!m && m[1].length > 20, m && m[1]);
+
+  /* Y en ninguna otra, a propósito: Google la busca en la raíz, que es la
+   * propiedad. En once páginas no verifica nada más y multiplica por once lo
+   * que hay que cambiar el día que cambie. */
+  const otras = PAGINAS.filter(r => r !== 'index.html' &&
+    /google-site-verification/i.test(fs.readFileSync(path.join(SITE, r), 'utf8')));
+  check('...y sólo en la portada, que es donde Google la busca', !otras.length, otras);
+}
+
+console.log('\n═══ 4. El sitemap dice la verdad ═══\n');
 {
   const sm = path.join(SITE, 'sitemap.xml');
   check('existe sitemap.xml', fs.existsSync(sm));
@@ -166,7 +192,7 @@ console.log('\n═══ 3. El sitemap dice la verdad ═══\n');
   }
 }
 
-console.log('\n═══ 4. robots.txt y llms.txt ═══\n');
+console.log('\n═══ 5. robots.txt y llms.txt ═══\n');
 {
   const rb = path.join(SITE, 'robots.txt');
   check('existe robots.txt', fs.existsSync(rb));
@@ -184,7 +210,7 @@ console.log('\n═══ 4. robots.txt y llms.txt ═══\n');
   check('existe llms.txt', fs.existsSync(path.join(SITE, 'llms.txt')));
 }
 
-console.log('\n═══ 5. La ficha de datos estructurados ═══\n');
+console.log('\n═══ 6. La ficha de datos estructurados ═══\n');
 {
   const s = fs.readFileSync(path.join(SITE, 'index.html'), 'utf8');
   const m = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(s);

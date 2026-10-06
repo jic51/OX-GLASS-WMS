@@ -154,6 +154,27 @@ const DOCS = [
 const DOMAIN = 'www.acopio.net';
 const ORIGIN = 'https://' + DOMAIN;
 
+/* LA ETIQUETA DE SEARCH CONSOLE.
+ *
+ * Jose la trajo el 2026-10-06 desde search.google.com/search-console, al dar de
+ * alta la propiedad `https://www.acopio.net`. Google la busca para creerse que
+ * el sitio es suyo.
+ *
+ * ── TRES COSAS QUE HAY QUE SABER ANTES DE TOCARLA ─────────────────────────
+ *
+ *  1. NO ES UN SECRETO. Es una etiqueta pública en una página pública: cualquiera
+ *     que mire el código fuente la ve. No da acceso a nada — sólo demuestra que
+ *     quien controla el sitio controla la propiedad. Por eso puede vivir aquí.
+ *  2. NO SE QUITA NUNCA, aunque la verificación ya esté hecha. Google la vuelve
+ *     a mirar cada cierto tiempo, y el día que no la encuentre QUITA EL ACCESO a
+ *     los datos — en silencio, y el aviso llega por correo a una cuenta que
+ *     nadie mira. Por eso hay una prueba que comprueba que sigue ahí.
+ *  3. SÓLO VA EN LA PORTADA. Google la busca en la página de la propiedad, que
+ *     es la raíz. Repetirla en las once no verifica nada más y multiplica por
+ *     once lo que hay que cambiar el día que cambie.
+ */
+const GOOGLE_VERIFY = 'SZdwN9dMYFY3lf5XT9Ema084EgLO_sDIOTVFH9Hrxj8';
+
 // The picture that shows when somebody pastes the link into WhatsApp, a mail or
 // a chat. 1200×630 is the size every one of them crops to.
 //
@@ -256,7 +277,10 @@ function headOf(meta) {
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${t}">
 <meta name="twitter:description" content="${d}">
-<meta name="twitter:image" content="${ORIGIN}${OG_IMAGE}">`;
+<meta name="twitter:image" content="${ORIGIN}${OG_IMAGE}">` +
+    (meta.out === 'index.html' && GOOGLE_VERIFY
+      ? '\n<meta name="google-site-verification" content="' + GOOGLE_VERIFY + '">'
+      : '');
 }
 
 // A small Markdown reader. Deliberately small: these seven documents use

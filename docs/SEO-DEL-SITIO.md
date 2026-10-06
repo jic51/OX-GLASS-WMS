@@ -3,7 +3,8 @@
 > **ESTADO, 2026-10-06 (tarde): HECHAS LAS CINCO TANDAS.** De las veinte, **18
 > están cumplidas y comprobadas por `tools/test-site-seo.js`** (30
 > comprobaciones, cuatro mutaciones verificadas). Las dos que faltan son las dos
-> que no puedo hacer yo: **Enforce HTTPS** y **Search Console**. Lo construido
+> que no puedo hacer yo: **Enforce HTTPS** y **Search Console** — **las dos
+> hechas por Jose el mismo día**; ver el apartado 8. Lo construido
 > está al final, en el apartado 7; la auditoría se conserva entera porque es lo
 > que explica por qué se hizo cada cosa.
 
@@ -450,3 +451,46 @@ comprobado con una mutación que el candado sigue cazando: colar
 - **#14 Core Web Vitals** — ahora ya se puede medir, porque el viewport está
   arreglado. Con PageSpeed Insights, cuando el sitio esté publicado.
 - **#17 los slugs** — se quedan como están, a falta de que digas otra cosa.
+
+
+---
+
+## 8. SEARCH CONSOLE Y HTTPS — 2026-10-06, por Jose
+
+### La etiqueta de verificación, puesta y vigilada
+
+Jose dio de alta la propiedad `https://www.acopio.net` y trajo la etiqueta. Está
+en `build-site.js`, **sólo en la portada**, que es donde Google la busca.
+
+Tres cosas quedaron escritas junto a ella, porque las tres se olvidan:
+
+1. **No es un secreto.** Es una etiqueta pública en una página pública. No da
+   acceso a nada; sólo demuestra que quien controla el sitio controla la
+   propiedad. Por eso puede vivir en el repositorio.
+2. **No se quita nunca, aunque la verificación ya esté hecha.** Google la vuelve
+   a mirar cada cierto tiempo y, el día que no la encuentre, **quita el acceso a
+   los datos** — en silencio, con un aviso por correo a una cuenta que nadie
+   mira. Y se pierde justo lo único que dice si el resto del trabajo sirvió.
+3. **Sólo en la portada.** En las once no verifica nada más y multiplica por once
+   lo que hay que cambiar el día que cambie.
+
+`test-site-seo.js` comprueba las tres cosas. Mutación verificada: vaciada la
+etiqueta, fallan dos comprobaciones.
+
+### HTTPS
+
+Jose confirma que la casilla está marcada. **No lo he podido comprobar yo**: el
+acceso a `acopio.net` desde esta máquina sigue filtrado por el proxy — da 403
+antes de salir. Lo que sí he comprobado es que **lo publicado es lo que creemos
+que es**, leyendo el repositorio del sitio directamente.
+
+Queda, pues, apoyado en la palabra de Jose, y lo digo así en vez de ponerle un ✅
+como si lo hubiera visto.
+
+### Lo que falta, y ahora sí se puede
+
+**#14 Core Web Vitals.** Antes no tenía sentido medir: el `viewport` roto habría
+dado un número malo del que no se sabría qué parte era el viewport. Ahora el
+sitio está sano y se puede medir de verdad, con **PageSpeed Insights**
+(`pagespeed.web.dev`, gratis, se pega la dirección y ya). Es trabajo de Jose
+porque hay que abrirlo desde fuera; si sale algo, se anota y se arregla.

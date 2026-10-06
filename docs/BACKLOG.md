@@ -107,12 +107,15 @@ que un ✅ optimista.
     `LO-QUE-FALTA-EN-LA-APP.md`; confirmado desde fuera en `COMPETIDOR-EXCEL.md`.
     Lo primero: la actividad de las personas dentro de la app (hoy AUDIT_LOG es
     el único dato que obliga a abrir la hoja).
-37. **Search Console** — hay que darlo de alta y mandarme la etiqueta de
-    verificación. Sin esto, todo lo demás del SEO es a ciegas. Pasos click a
-    click en `SEO-DEL-SITIO.md`.
-38. **Enforce HTTPS** en los ajustes de `jic51/acopio-site` — una casilla. No lo
-    puedo comprobar desde aquí: el sitio no responde a esta máquina y la ruta de
-    la API de GitHub está bloqueada.
+37. ✅ **HECHO (06/10) — Search Console.** Jose dio de alta la propiedad y trajo
+    la etiqueta; está en la portada y `test-site-seo.js` la vigila (Google
+    reverifica y, si no la encuentra, quita el acceso en silencio). **Falta que
+    Jose pulse Verificar** ahora que está publicada.
+38. ✅ **HECHO (06/10) — Enforce HTTPS**, según Jose. No lo he podido comprobar
+    yo: el proxy de esta máquina da 403 contra acopio.net.
+39. **Medir Core Web Vitals** en `pagespeed.web.dev` — ahora sí tiene sentido,
+    con el viewport arreglado. Antes habría dado un número malo del que no se
+    sabría qué parte era el viewport.
 
 ### 🔵 La v2
 
@@ -121,8 +124,8 @@ lo mismo, que es justo lo que acabamos de arreglar en los usuarios.
 
 ### 🔍 Sin revisar
 
-39. El estándar de las ventanas (lista de revisión del 2026-09-17).
-40. La sección histórica del 2026-09-09 — casi toda ✅ v11.x, con dos ⛔ dentro
+40. El estándar de las ventanas (lista de revisión del 2026-09-17).
+41. La sección histórica del 2026-09-09 — casi toda ✅ v11.x, con dos ⛔ dentro
     que no se han vuelto a mirar.
 
 ---
