@@ -116,10 +116,22 @@ function buildSandbox() {
    * había que arreglar era el decorado, no el producto. */
   var cfg     = new FakeSheet();
   cfg.rows = [['Projects','Categories','Suppliers','Locations','LocType']];
-  [['A1A','RACK'], ['A1B','RACK'], ['B1A','RACK'], ['B1B','RACK'], ['B2A','RACK']].forEach(function (u) {
-    var fila = []; fila[3] = u[0]; fila[4] = u[1];
+  /* Ubicaciones (columna D) desde la v12.43 y CATEGORÍAS (columna B) desde la
+   * v12.45. Las dos por el mismo motivo y las dos avisando de algo real: el
+   * motor rechaza meter material en un estante que no existe y bajo una
+   * categoría que no está en el catálogo. Este CONFIG estaba vacío, así que
+   * las dos veces la prueba se quejó de algo que de verdad pasaría —un almacén
+   * sin ubicaciones ni categorías dadas de alta no puede recibir nada— y lo que
+   * había que arreglar era el decorado, no el producto. */
+  var UBIS = [['A1A','RACK'], ['A1B','RACK'], ['B1A','RACK'], ['B1B','RACK'], ['B2A','RACK']];
+  var CATS = ['HARDWARE', 'IGU', 'SCREEN', 'MISC'];
+  var filas = Math.max(UBIS.length, CATS.length);
+  for (var fi = 0; fi < filas; fi++) {
+    var fila = [];
+    if (CATS[fi]) fila[1] = CATS[fi];
+    if (UBIS[fi]) { fila[3] = UBIS[fi][0]; fila[4] = UBIS[fi][1]; }
     cfg.rows.push(fila);
-  });
+  }
   var ss = {
     getSheetByName: function (name) {
       if (name === 'MASTER_ARCHIVE_V3') return archive;

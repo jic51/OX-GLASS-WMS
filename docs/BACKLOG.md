@@ -43,12 +43,14 @@ que un ✅ optimista.
    instalación que ya existía no los recibe nunca. Cuarto caso del mismo patrón:
    una protección escrita y nunca ejecutada. Una línea en Check installation.
 
-4. 🔶 **Los campos libres que deberían ser listas** — ✅ **ubicaciones hechas en
-   la v12.43**; faltan **proyecto, proveedor y categoría**. Mismo agujero,
-   mismas consecuencias, y el patrón ya está resuelto para copiarlo.
-5. **La guardia de escritura es una lista de quién NO** (`role === 'VIEWER'`).
-   Hoy da el mismo resultado; el día que haya un rol más, entra escribiendo sin
-   que nadie lo decida. Una línea y una prueba con un rol inventado.
+4. ✅ **HECHO — los campos libres que deberían ser listas.** Ubicaciones en la
+   v12.43, **categoría en la v12.45**. Y al mirarlo resultó más pequeño de lo
+   que decía esta nota: **proyecto y proveedor NO son el mismo caso** y no se
+   cierran. Son libres a propósito —una obra nueva aparece cada semana— y ya
+   tienen su mecanismo, la baraja de valores sin registrar. Lo que faltaba de
+   verdad era la categoría, que es la mitad del nombre interno del material.
+5. ✅ **HECHO (v12.45) — la guardia de escritura ya es una lista de quién SÍ.**
+   Con una prueba que inventa un rol que no existe y comprueba que no escribe.
 6. **El cartel de reservas se queda viejo y la app culpa a un tercero** — se
    suelta una reserva, el cartel no se entera, se vuelve a pulsar y contesta
    *"someone else got there first"* cuando no había nadie más. Medido en el
@@ -7164,7 +7166,7 @@ se ejecuta nunca.** Ése es el día en que se puede borrar — con datos, no con
 
 `tools/test-revocar-acceso.js` lo ejecuta (23 comprobaciones).
 
-# ══ 🔴 ABIERTO, UNA LÍNEA — LA GUARDIA DE ESCRITURA ES UNA LISTA DE QUIÉN NO ══
+# ══ ✅ HECHO (v12.45) — LA GUARDIA DE ESCRITURA ERA UNA LISTA DE QUIÉN NO ══
 
 Encontrado el 2026-10-05 al mirar qué costaría el *"otro tipo de usuario"* que
 pidió Jose para la v2. **No es un fallo hoy. Es un fallo el día que haya un rol

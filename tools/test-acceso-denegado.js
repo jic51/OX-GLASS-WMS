@@ -63,7 +63,11 @@ function montar(opciones) {
     Logger: { log(){} }
   };
   vm.createContext(ctx);
-  vm.runInContext(A.constantes(GS, ['ACCESO_RECHAZOS_AVISO']), ctx);
+  // ROLES_QUE_ESCRIBEN entra aquí desde la v12.45: `levantar` resuelve funciones,
+  // no constantes — ésas se piden por su nombre, que es justo lo que documenta
+  // el andamio. Sin ella, requireAuth_ revienta con "is not defined" y la prueba
+  // acusa al producto de algo que es de la caja.
+  vm.runInContext(A.constantes(GS, ['ACCESO_RECHAZOS_AVISO', 'ROLES_QUE_ESCRIBEN']), ctx);
   vm.runInContext(A.levantar(GS, ['throttle_', 'registrarAccesoDenegado_', 'requireAuth_'], {
     dobles: ['auditLog_']
   }), ctx);
@@ -213,6 +217,74 @@ console.log('\n═══ 5. Apuntar nunca puede estropear la puerta ═══\n'
   ctx._verifiedAuth = FUERA;
   for (let i = 0; i < 20; i++) { try { ctx.requireAuth_(); } catch (e) {} }
   check('y sin dueño a quien escribir, tampoco revienta', ctx.correos.length === 0);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   6. QUIÉN PUEDE ESCRIBIR — una lista de quién SÍ, no de quién no
+   ═══════════════════════════════════════════════════════════════════════════
+
+   Hasta la v12.45, `requireAuth_` decidía si podías escribir así:
+
+       if (minRole === 'WRITE' && a.role === 'VIEWER') throw ...
+
+   Eso no pregunta *"¿puede éste escribir?"*. Pregunta *"¿es VIEWER?"*. Con tres
+   roles da el mismo resultado, así que nunca se notó — y por eso no era un fallo
+   el día que se encontró, sino el día siguiente a que existiera un rol más:
+   **cualquier rol nuevo habría pasado la guardia de escritura sin que nadie lo
+   decidiera**, sólo por no llamarse VIEWER. En una app de almacén eso es
+   permiso para mover material.
+
+   Tercera vez este mes del mismo patrón: **una guardia que dice que sí.**
+
+   La comprobación que lo cierra es la del rol inventado. Las otras dos pueden
+   pasar con el código viejo; ésa no. */
+console.log('\n═══ 6. Quién puede escribir ═══\n');
+{
+  const ctx = montar();
+  ctx._verifiedAuth = { email: 'jose@ox-glass.com', role: 'ADMIN' };
+  check('un ADMIN escribe', ctx.requireAuth_('WRITE').role === 'ADMIN');
+
+  ctx._verifiedAuth = { email: 'sam@ox-glass.com', role: 'WAREHOUSE' };
+  check('un WAREHOUSE escribe', ctx.requireAuth_('WRITE').role === 'WAREHOUSE');
+
+  ctx._verifiedAuth = { email: 'ana@ox-glass.com', role: 'VIEWER' };
+  let l1 = null;
+  try { ctx.requireAuth_('WRITE'); } catch (e) { l1 = e.message; }
+  check('un VIEWER no', /Read-only/.test(l1 || ''), l1);
+}
+
+{
+  /* LA QUE DE VERDAD CIERRA ESTO. Un rol que no existe hoy: con el código viejo
+   * pasaba —no se llama VIEWER— y con el nuevo no pasa, porque no está en la
+   * lista de los que escriben. Es la prueba que no se podía escribir mientras
+   * la regla fuera "quién no". */
+  const ctx = montar();
+  ctx._verifiedAuth = { email: 'nuevo@ox-glass.com', role: 'PURCHASING' };
+  let lanzo = null;
+  try { ctx.requireAuth_('WRITE'); } catch (e) { lanzo = e.message; }
+  check('UN ROL QUE NO EXISTE NO ESCRIBE — un rol nuevo no mueve material hasta ' +
+        'que alguien lo ponga en la lista a propósito',
+        /Read-only/.test(lanzo || ''), lanzo);
+
+  /* Y sigue entrando a leer: no se le expulsa, no se le apunta como intruso.
+   * Está registrado; lo que no tiene es permiso para una cosa. Mezclar las dos
+   * cosas llenaría el registro de rechazos de gente legítima. */
+  check('...pero sí entra a leer, y no se le apunta como intruso — está dentro, ' +
+        'le falta un permiso', ctx.requireAuth_().role === 'PURCHASING' &&
+        ctx.auditado.length === 0, ctx.auditado);
+}
+
+{
+  /* La lista de roles válidos estaba escrita a mano en DOS sitios y ahora
+   * harían falta tres. Tres copias de la misma lista es el fallo que llevamos
+   * todo el mes arreglando en otros sitios, y aquí la coincidencia decide quién
+   * entra. */
+  const src = A.fuente('gs');
+  check('los roles válidos viven en UNA constante, no copiados por el archivo',
+        /var ROLES = \['ADMIN', 'WAREHOUSE', 'VIEWER'\]/.test(src) &&
+        !/\['ADMIN','WAREHOUSE','VIEWER'\]/.test(src), 'quedan copias a mano');
+  check('...y los que escriben, en otra — VIEWER no está, y ésa es la frase entera',
+        /var ROLES_QUE_ESCRIBEN = \['ADMIN', 'WAREHOUSE'\]/.test(src));
 }
 
 console.log('\n' + (fail ? '✗ ' + fail + ' fallo(s), ' : '✓ ') + ok + ' comprobaciones\n');

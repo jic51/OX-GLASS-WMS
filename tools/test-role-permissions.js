@@ -85,6 +85,10 @@ function puerta(role, perms){
   });
   vm.runInContext([
     varSrc(GS, 'DEFAULT_ROLE_PERMS'), varSrc(GS, 'MOVEMENT_OPS'), varSrc(GS, 'PERM_LABELS'),
+    // v12.45: requireAuth_ pasó de preguntar "¿es VIEWER?" a mirar una lista de
+    // quién SÍ escribe. Sin la constante aquí, revienta con "is not defined" y
+    // nueve comprobaciones acusan al producto de algo que es de la caja.
+    varSrc(GS, 'ROLES_QUE_ESCRIBEN'),
     fnSrc(GS, 'rolePerms_'), fnSrc(GS, 'requireAuth_'), fnSrc(GS, 'requirePerm_'),
     fnSrc(GS, 'manageMaterial')
   ].join('\n'), c);

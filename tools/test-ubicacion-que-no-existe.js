@@ -251,5 +251,82 @@ console.log('\n═══ 6. Lo que ve quien está en la bodega ═══\n');
         !/destinoSet[^\n]*deMovimientos/.test(lista));
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   7. LA CATEGORÍA — el mismo agujero, en el campo que MÁS duele
+   ═══════════════════════════════════════════════════════════════════════════
+
+   La categoría no es una etiqueta: es **la mitad del nombre interno del
+   material** (getMaterialId = categoría + nombre). Un `WINDOWS` donde debía
+   decir `WINDOW` no es el mismo material mal clasificado: es OTRO material, con
+   sus propias existencias, y nadie los suma nunca.
+
+   Y al mirarlo resultó MÁS PEQUEÑO de lo que decía la nota del backlog, que
+   metía en el mismo saco a proyecto, proveedor y categoría. No son el mismo
+   caso, y conviene que esté escrito para que nadie "arregle" lo que ya está
+   decidido:
+
+     · Proyecto y proveedor son campos libres A PROPÓSITO —una obra nueva
+       aparece cada semana— y ya tienen su mecanismo: la baraja de valores sin
+       registrar con su "+ Add it". Cerrarlos sería pelearse con el trabajo.
+     · La categoría NO es un campo libre: en la pantalla es un desplegable
+       cerrado. Lo que quedaba abierto es lo que NO pasa por la pantalla.
+   ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n═══ 7. La categoría ═══\n');
+{
+  const src = A.fnSrc(GS, 'addMovementsBatch_') || '';
+  check('la prueba mira la función de verdad', src.length > 2000);
+
+  check('se comprueba la categoría al ENTRAR material',
+        /if \(mt === 'ENTRY' && cat\)/.test(src));
+  /* Y SÓLO al entrar, por lo mismo que las ubicaciones: un EXIT o un ajuste
+   * trabajan sobre material que YA está dentro, a veces con una categoría sin
+   * registrar precisamente porque esto no existía. Comprobarlos también dejaría
+   * ese material encerrado — el error que no cometimos con `A1P`. */
+  check('...y SÓLO al entrar — comprobarlo al salir dejaría encerrado el ' +
+        'material que ya está dentro con una categoría sin registrar',
+        !/if \(mt === 'EXIT' && cat\)/.test(src) &&
+        !/\['ENTRY', ?'EXIT'\].indexOf\(mt\)/.test(src));
+  check('...con un error que la pantalla puede entender',
+        /UNKNOWN_CATEGORY\|/.test(src));
+  check('...y la categoría parecida dentro, para poder decir cuál era',
+        /sugerirUbicacion_\(cat, categorias\)/.test(src));
+  check('la lista de categorías sale de la misma lectura de CONFIG',
+        /\(cfgAhora\.categories \|\| \[\]\)/.test(src));
+}
+
+{
+  const imp = A.fnSrc(GS, 'commitImport') || '';
+  check('la importación puede traer categorías nuevas', /categoriasCreadas/.test(imp));
+  /* Y aquí importa MÁS que en las ubicaciones, por algo que no es obvio: la
+   * categoría es un desplegable cerrado, así que un material cuya categoría no
+   * esté en la lista NO SE PUEDE NI SELECCIONAR PARA SACARLO. Importado y, acto
+   * seguido, intocable. */
+  check('...y SE ESCRIBEN en el catálogo — si no, el material importado no se ' +
+        'puede ni seleccionar para sacarlo, porque la categoría es un ' +
+        'desplegable cerrado', /writeConfigColumn_\(cfgSheet2, 1/.test(imp));
+  check('...y queda apuntado', /CATEGORIES_CREATED/.test(imp));
+}
+
+{
+  const H = A.fuente('html');
+  /* La baraja de valores sin registrar sólo miraba proyectos y proveedores. Una
+   * categoría metida por una importación era invisible para el admin Y hacía
+   * el material intocable. */
+  check('la baraja de valores sin registrar también mira las categorías',
+        /\['categories', m\.category\]/.test(H));
+  check('...y sabe qué categorías están registradas',
+        /type === 'categories'\) \? config\.categories/.test(H));
+
+  const fn = (H.match(/function _categoriaDesconocida[\s\S]*?\n}/) || [''])[0];
+  check('la pantalla reconoce el rechazo de categoría', /UNKNOWN_CATEGORY\|/.test(fn));
+  /* Y NO ofrece crearla. A la categoría no se llega tecleando —es un
+   * desplegable— así que un rechazo significa que la pantalla y el catálogo no
+   * dicen lo mismo. Lo que hace falta es recargar, no empujar más datos:
+   * ofrecer "créala y sigue" es cómo se acaba con dos categorías iguales. */
+  check('...y NO ofrece crearla — a una categoría no se llega tecleando, así que ' +
+        'un rechazo significa que la pantalla está desactualizada, no que falte ' +
+        'un dato', !/_cfgAddValue\('categories'/.test(fn) && /Reload the page/.test(fn));
+}
+
 console.log('\n' + (fail ? '✗ ' + fail + ' fallo(s), ' : '✓ ') + ok + ' comprobaciones\n');
 process.exit(fail ? 1 : 0);
