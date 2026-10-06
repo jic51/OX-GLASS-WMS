@@ -93,17 +93,25 @@ tres veces hasta que salga bien.
 
 ---
 
-## 2. LA IMAGEN PARA COMPARTIR (Open Graph) ⭐ urgente si va a publicar en Reddit
+## 2. ✅ HECHA (2026-10-06) — LA IMAGEN PARA COMPARTIR (Open Graph)
 
-**Formato:** PNG o JPG, **1200×630 exactos**.
-**Para qué:** es la imagen que sale cuando alguien pega el enlace de acopio.net
-en Reddit, LinkedIn, WhatsApp o un correo. **Hoy no existe**, así que el enlace
-aparece como un rectángulo gris con texto. Un enlace sin imagen recibe bastantes
-menos clics que uno con imagen, y él está a punto de publicar.
+**Ya no hace falta que la hagas tú.** La dibuja `tools/build-og-image.js` con el
+navegador y las fuentes de la marca, en los 1200×630 exactos, y hay **dos**: una
+en inglés (`/og.jpg`, para `acopio.net`) y otra en español (`/og-es.jpg`, para
+`acopio.net/es/`). La tarjeta la lee WhatsApp del HTML sin ejecutar nada, así que
+una dirección sólo puede tener una tarjeta — de ahí las dos direcciones.
 
-**Qué debe verse:** el **Warehouse Map** con varios estantes, un poco reducido, y
-el nombre *Acopio* con la frase de la landing encima o al lado. Nada de texto
-pequeño: en el móvil esa imagen se ve del tamaño de un sello.
+**Salió distinta de lo que decía esta entrada, y conviene decir por qué.** Aquí
+se pedía *"el Warehouse Map con varios estantes, un poco reducido"*. No se hizo:
+en el móvil esa tarjeta se ve del tamaño de un sello, y un mapa de estantes
+reducido a ese tamaño es una mancha. Lo que se lee a ese tamaño es **una frase
+grande**, así que la tarjeta lleva la frase de la portada, el logo y la
+dirección. La captura del mapa sigue haciendo falta — pero para la landing (3.1),
+donde se ve grande.
+
+**Lo único que haría falta rehacer** es si cambia el titular de la portada: las
+palabras de la tarjeta son las de la página, letra por letra, y hay una prueba
+que lo vigila.
 
 ---
 
@@ -189,7 +197,7 @@ como mucho**, a **800px de ancho**, y aun así va a pesar más que el vídeo.
 |---|---|---|---|---|
 | 0 | **Copia de demo con datos inventados** | — | una tarde | **Sí — todo lo demás depende de esto** |
 | 1 | Vídeo principal | MP4 mudo + poster JPG | 60–90 s | Sí, es el hueco que ya existe |
-| 2 | Imagen para compartir | PNG/JPG | 1200×630 | **Sí, si va a publicar en Reddit** |
+| 2 | ✅ Imagen para compartir | JPG ×2 (en/es) | 1200×630 | **Hecha el 06/10 — la genera un comando** |
 | 3.1 | Warehouse Map con estante abierto | PNG | 1600px | No |
 | 3.2 | Stock Dashboard | PNG | 1600px | No — y **rehacer tras los puntos B y C** |
 | 3.3 | Historial de un material | PNG | 1600px | No |
