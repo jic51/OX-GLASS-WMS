@@ -59,6 +59,16 @@ function paginas(dir, base) {
 const TODAS   = paginas('').sort();
 const ORIGIN  = 'https://www.acopio.net';
 
+/* La dirección de una página, con la MISMA regla que build-site.js: una carpeta
+ * se sirve por su nombre y no por el index.html de dentro. `/es/index.html` y
+ * `/es/` son la misma página, y poner la larga en un canonical o en un sitemap
+ * es inventarse una segunda dirección para una sola cosa. */
+function urlDe(rel) {
+  if (rel === 'index.html') return ORIGIN + '/';
+  if (/\/index\.html$/.test(rel)) return ORIGIN + '/' + rel.replace(/index\.html$/, '');
+  return ORIGIN + '/' + rel;
+}
+
 /* Una redirección NO es una página, y medirla con la vara de una página sería
  * mentirse: no necesita descripción, ni tarjeta de compartir, ni H1 — no la lee
  * nadie, dura un parpadeo. Pero tampoco se la deja sin mirar: abajo tiene su
@@ -110,7 +120,7 @@ PAGINAS.forEach(rel => {
   const c = (/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']*)["']/i.exec(head) || [])[1];
   if (!c) sinCanon.push(rel);
   else {
-    const esperado = ORIGIN + (rel === 'index.html' ? '/' : '/' + rel);
+    const esperado = urlDe(rel);
     if (c !== esperado) canonMal.push(rel + ' → ' + c);
   }
 
@@ -192,8 +202,56 @@ console.log('\n═══ 2-bis. Las direcciones viejas llevan a la buena ══�
    * dar un rodeo para llegar a donde ya le podíamos haber mandado. */
   const sm = fs.existsSync(path.join(SITE, 'sitemap.xml'))
     ? fs.readFileSync(path.join(SITE, 'sitemap.xml'), 'utf8') : '';
-  const enSitemap = REDIR.filter(r => sm.indexOf('<loc>' + ORIGIN + '/' + r + '</loc>') !== -1);
+  const enSitemap = REDIR.filter(r => sm.indexOf('<loc>' + urlDe(r) + '</loc>') !== -1);
   check('y ninguna está en el sitemap', !enSitemap.length, enSitemap);
+}
+
+console.log('\n═══ 2-ter. Las dos portadas, inglés y español ═══\n');
+{
+  /* Jose, 2026-10-06: *"¿cómo se ve el link cuando se lo comparte en español?"*
+   *
+   * La página se adapta sola al idioma del navegador, pero LA TARJETA NO PUEDE:
+   * la dibuja WhatsApp leyendo el HTML tal cual sale del servidor, sin ejecutar
+   * nada. Una dirección sólo puede tener una tarjeta. Por eso hay dos
+   * direcciones, y esto comprueba que de verdad son dos y no una repetida. */
+  const en = fs.readFileSync(path.join(SITE, 'index.html'), 'utf8');
+  const esHay = fs.existsSync(path.join(SITE, 'es/index.html'));
+  check('existe la portada española en /es/', esHay);
+  if (!esHay) { console.log(''); }
+  else {
+    const es = fs.readFileSync(path.join(SITE, 'es/index.html'), 'utf8');
+    const meta = (t, re) => (re.exec(t) || [])[1] || '';
+    const tit = t => meta(t, /<title>([\s\S]*?)<\/title>/i);
+    const img = t => meta(t, /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']*)["']/i);
+    const des = t => meta(t, /<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)["']/i);
+
+    check('...con un título distinto del inglés — si fuera el mismo, la tarjeta ' +
+          'española no serviría de nada', tit(en) !== tit(es), [tit(en), tit(es)]);
+    check('...y una descripción distinta', des(en) !== des(es));
+    check('...y SU PROPIA imagen. Dos portadas apuntando a la misma tarjeta es ' +
+          'todo el trabajo hecho a medias', img(en) !== img(es), [img(en), img(es)]);
+    const f = img(es).replace(ORIGIN, '').replace(/^\//, '');
+    check('...y esa imagen existe', !!f && fs.existsSync(path.join(SITE, f)), f);
+    check('la española declara lang="es"', /<html[^>]+lang=["']es["']/.test(es));
+
+    /* hreflang tiene que estar en LAS DOS y apuntarse mutuamente. Declarado por
+     * un solo lado, un buscador no se lo cree — y entonces las dos portadas
+     * vuelven a ser contenido duplicado, que es justo lo que esto evita. */
+    [['en', en], ['es', es]].forEach(par => {
+      const t = par[1];
+      check('la portada ' + par[0] + ' declara las dos versiones (hreflang)',
+            /hreflang=["']en["']/.test(t) && /hreflang=["']es["']/.test(t) &&
+            /hreflang=["']x-default["']/.test(t));
+    });
+
+    /* Y el conmutador tiene que ser un ENLACE, no un botón: es lo que hace que
+     * la versión española exista para un buscador en vez de ser un estado de un
+     * script, y lo que la deja alcanzable sin JavaScript. */
+    check('el conmutador de idioma es un enlace que se puede seguir',
+          /<a[^>]+id=["']langToggle["'][^>]+href=["']\/es\/["']/.test(en), 'en');
+    check('...y en la española lleva de vuelta al inglés',
+          /<a[^>]+id=["']langToggle["'][^>]+href=["']\/["']/.test(es), 'es');
+  }
 }
 
 console.log('\n═══ 3. La verificación de Search Console sigue ahí ═══\n');
@@ -230,7 +288,7 @@ console.log('\n═══ 4. El sitemap dice la verdad ═══\n');
     const x = fs.readFileSync(sm, 'utf8');
     const locs = (x.match(/<loc>([^<]+)<\/loc>/g) || [])
       .map(l => l.replace(/<\/?loc>/g, ''));
-    const esperadas = PAGINAS.map(r => ORIGIN + (r === 'index.html' ? '/' : '/' + r));
+    const esperadas = PAGINAS.map(urlDe);
     const faltan = esperadas.filter(u => locs.indexOf(u) === -1);
     const sobran = locs.filter(u => esperadas.indexOf(u) === -1);
     /* Las dos direcciones, y no sólo una: un sitemap al que le FALTA una página

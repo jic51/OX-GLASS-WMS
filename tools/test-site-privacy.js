@@ -92,7 +92,11 @@ const ALLOWED = [
   // canonical y un salto. Estaban publicadas desde antes y tenían DENTRO la
   // versión vieja del documento; esto es lo que las deja de tener.
   'setup.html', 'instalacion.html', 'restaurar.html', 'soporte.html',
-  'vista-por-pasillo.html'
+  'vista-por-pasillo.html',
+  // La misma portada en su propia dirección española, con su propia tarjeta de
+  // compartir. Mismo fichero fuente, mismo contenido, distinto idioma: lo que
+  // se pega en un grupo en español.
+  'es/index.html', 'og-es.jpg'
   // restaurar-backup.html is deliberately absent — see build-site.js. This
   // guard is what removed it, on its first run, by reading what it said.
 ];
@@ -302,7 +306,10 @@ console.log('\n═══ lock 2 — what the published files actually say ══
   // it is inconvenient; this one survives because the exception is written down.
   {
     const FORM_ENDPOINT = 'AKfycbxZGYzzytX6zAQe-IDddM4LQwzQia17Dtl9Ape4YWmmAcQgcRXPV9QfezwpWtk28Wo3';
-    const MAY_CARRY_ENDPOINT = ['index.html'];
+    // Las DOS portadas, porque son el mismo fichero fuente publicado en dos
+    // direcciones (inglés y español) para que la tarjeta de compartir salga en
+    // el idioma correcto. Es el mismo formulario, no un segundo.
+    const MAY_CARRY_ENDPOINT = ['index.html', 'es/index.html'];
 
     const strays = [];
     corpus.forEach(c => {
@@ -354,8 +361,8 @@ console.log('\n═══ lock 2 — what the published files actually say ══
   // rechazara — que es el arreglo funcionando. Es la página que PROMETE
   // respuesta en un día hábil; una promesa de contestar sin decir a dónde
   // escribir es media promesa.
-  const MAY_CARRY_CONTACT = ['index.html', 'terms.html', 'privacy.html',
-                             'docs/soporte.html'];
+  const MAY_CARRY_CONTACT = ['index.html', 'es/index.html', 'terms.html',
+                             'privacy.html', 'docs/soporte.html'];
 
   const carriers = corpus.filter(c => c.t.indexOf(CONTACT_EMAIL) !== -1).map(c => c.f);
   check('the contact address is on the pages where a reader looks for it (' +

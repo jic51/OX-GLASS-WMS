@@ -302,7 +302,15 @@
     <a href="#price" data-i18n="t2">Price</a>
     <a href="#contact" data-i18n="t3">Talk to us</a>
   </nav>
-  <button type="button" id="langToggle" class="lang-toggle" onclick="acopioToggleLang()">Español</button>
+  <!-- UN ENLACE, NO UN BOTÓN, y las tres razones importan:
+       · sin JavaScript sigue funcionando — navega a /es/ de verdad;
+       · un buscador lo SIGUE, que es lo que hace que la versión española
+         exista para Google en vez de ser un estado de un script;
+       · y se puede copiar con el botón derecho, que es como alguien manda
+         "la página en español" a un compañero.
+       Con JavaScript, el salto se cancela y el cambio es instantáneo. -->
+<a id="langToggle" class="lang-toggle" href="/es/" hreflang="es"
+   onclick="return acopioToggleLang(event)">Español</a>
 </div>
 
 <hr class="rule">
@@ -821,11 +829,49 @@ function acopioApplyLang(lang){
   if (btn) {
     btn.textContent = (acopioLang === 'es') ? 'English' : 'Español';
     btn.setAttribute('aria-label', (acopioLang === 'es') ? 'Switch to English' : 'Cambiar a español');
+    // El destino también cambia: si ya estás en español, el enlace lleva al inglés.
+    if (btn.tagName === 'A') {
+      btn.setAttribute('href', (acopioLang === 'es') ? '/' : '/es/');
+      btn.setAttribute('hreflang', (acopioLang === 'es') ? 'en' : 'es');
+    }
   }
   try { localStorage.setItem('acopio-lang', acopioLang); } catch (e) {}
+
+  /* LA DIRECCIÓN TIENE QUE DECIR LO MISMO QUE LA PÁGINA.
+   *
+   * Jose, 2026-10-06: *"¿cómo se ve el link cuando se lo comparte en español?
+   * ¿Sale una imagen en español o siempre está en inglés?"*
+   *
+   * La página sí se adapta —mira el idioma del navegador—, pero LA TARJETA DE
+   * COMPARTIR NO PUEDE: la dibuja WhatsApp leyendo el HTML tal cual sale del
+   * servidor, sin ejecutar nada. Una sola dirección sólo puede tener una
+   * tarjeta, y la de `/` está en inglés.
+   *
+   * Por eso hay dos direcciones: `/` en inglés y `/es/` en español, cada una
+   * con su tarjeta. Y por eso el cambio de idioma reescribe la dirección: si
+   * alguien cambia a español y copia lo que ve en la barra, tiene que llevarse
+   * la dirección española, no la inglesa con el contenido traducido.
+   *
+   * `replaceState` y no `pushState`: cambiar de idioma no es navegar a otro
+   * sitio, y llenar el botón "atrás" de idas y venidas entre los dos es una
+   * trampa para quien sólo quería volver. */
+  try {
+    var ruta = (acopioLang === 'es') ? '/es/' : '/';
+    if (location.protocol.indexOf('http') === 0 && location.pathname !== ruta) {
+      history.replaceState(null, '', ruta + location.search + location.hash);
+    }
+  } catch (e) { /* en un file:// o un navegador viejo, da igual: el contenido ya cambió */ }
 }
 
-function acopioToggleLang(){ acopioApplyLang(acopioLang === 'es' ? 'en' : 'es'); }
+function acopioToggleLang(ev){
+  /* Se cancela la navegación y se cambia en el sitio: el contenido ya está en la
+   * página, así que recargar para traducir sería pedirle al visitante que espere
+   * por algo que ya tiene. La dirección se corrige igualmente en
+   * acopioApplyLang, así que lo que queda en la barra es correcto. */
+  if (ev && ev.preventDefault) ev.preventDefault();
+  acopioApplyLang(acopioLang === 'es' ? 'en' : 'es');
+  return false;
+}
 
 (function(){
   /* An explicit choice wins for ever. Otherwise the browser's own language
@@ -834,7 +880,14 @@ function acopioToggleLang(){ acopioApplyLang(acopioLang === 'es' ? 'en' : 'es');
      than nothing. */
   var saved = null;
   try { saved = localStorage.getItem('acopio-lang'); } catch (e) {}
-  var wanted = saved || ((navigator.language || 'en').toLowerCase().indexOf('es') === 0 ? 'es' : 'en');
+  /* LA DIRECCIÓN MANDA SOBRE TODO LO DEMÁS, y es lo que hace que compartir
+   * funcione. Si a alguien le pasan `/es/`, ve español — aunque su navegador
+   * esté en inglés y aunque la última vez eligiera inglés. Lo contrario sería
+   * mandarle a un amigo una dirección española que a él le sale en inglés. */
+  var deLaRuta = (window.ACOPIO_RUTA_LANG === 'es' || window.ACOPIO_RUTA_LANG === 'en')
+                 ? window.ACOPIO_RUTA_LANG : null;
+  var wanted = deLaRuta || saved ||
+               ((navigator.language || 'en').toLowerCase().indexOf('es') === 0 ? 'es' : 'en');
   acopioApplyLang(wanted);
 })();
 </script>

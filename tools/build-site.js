@@ -82,6 +82,28 @@ const PAGES = [
            'out, locations, costs and low-stock alerts. We install and set it ' +
            'up for you.',
     why: 'The landing page itself, both languages in one file.' },
+  /* LA MISMA PORTADA, EN SU PROPIA DIRECCIÓN ESPAÑOLA.
+   *
+   * Jose, 2026-10-06: *"¿cómo se ve el link cuando se lo comparte en español?"*
+   *
+   * La página ya se adapta sola —mira el idioma del navegador—, así que un
+   * hispanohablante que abre `/` LEE ESPAÑOL. Lo que no se adapta es la TARJETA
+   * que dibuja WhatsApp: la hace leyendo el HTML tal cual sale del servidor, sin
+   * ejecutar nada. Una dirección sólo puede tener una tarjeta.
+   *
+   * Por eso `/es/`: el mismo fichero, la misma página, con su título, su
+   * descripción y su imagen en español. Es la dirección que hay que pegar en un
+   * grupo en español.
+   *
+   * No es contenido duplicado a ojos de un buscador, porque las dos se declaran
+   * como la misma página en dos idiomas (`hreflang`, abajo). */
+  { src: 'landing/acopio.html',          out: 'es/index.html', lang: 'es',
+    forceLang: 'es', ogImage: '/og-es.jpg',
+    title: 'Acopio — saber qué hay en la estantería sin ir a mirar',
+    desc:  'Acopio convierte tu hoja de Google en un sistema de almacén de ' +
+           'verdad: entradas, salidas, ubicaciones, costes y avisos de stock ' +
+           'bajo. Lo instalamos y lo dejamos funcionando.',
+    why: 'La misma portada, en su propia dirección española, para que la tarjeta de compartir salga en español.' },
   { src: 'landing/acopio-overview.html', out: 'detalle.html', lang: 'es',
     title: 'Acopio en detalle — qué hace, pantalla por pantalla',
     desc:  'El recorrido largo de Acopio: qué resuelve, qué hace hoy en ' +
@@ -214,7 +236,12 @@ function esc(s) {
 // A published file's address. The home page is the one that is not called by
 // its file name, which is also the rename that RENAMES handles for links.
 function urlOf(out) {
-  return ORIGIN + (out === 'index.html' ? '/' : '/' + out);
+  if (out === 'index.html') return ORIGIN + '/';
+  // Una carpeta se sirve por su nombre, no por el index.html de dentro. Poner
+  // `/es/index.html` en un canonical o en un sitemap es dar la dirección larga
+  // de algo que la gente escribe corto, y son dos direcciones para una página.
+  if (/\/index\.html$/.test(out)) return ORIGIN + '/' + out.replace(/index\.html$/, '');
+  return ORIGIN + '/' + out;
 }
 
 /* ── LA FICHA QUE LEE UNA MÁQUINA ───────────────────────────────────────────
@@ -278,6 +305,17 @@ function headOf(meta) {
   const url = urlOf(meta.out);
   const t = esc(meta.title);
   const d = esc(meta.desc);
+  const img = ORIGIN + (meta.ogImage || OG_IMAGE);
+  /* hreflang: le dice al buscador que `/` y `/es/` NO son dos páginas copiadas,
+   * sino la misma en dos idiomas, y cuál enseñar a quién. Tiene que estar en
+   * LAS DOS y apuntarse mutuamente — si sólo una lo declara, no cuenta. Y
+   * `x-default` dice a qué mandar a quien no es ni lo uno ni lo otro. */
+  const esPortada = meta.out === 'index.html' || meta.out === 'es/index.html';
+  const alternas = esPortada ? [
+    '<link rel="alternate" hreflang="en" href="' + ORIGIN + '/">',
+    '<link rel="alternate" hreflang="es" href="' + ORIGIN + '/es/">',
+    '<link rel="alternate" hreflang="x-default" href="' + ORIGIN + '/">'
+  ].join('\n') + '\n' : '';
   return `<!doctype html>
 <html lang="${meta.lang}">
 <head>
@@ -286,20 +324,20 @@ function headOf(meta) {
 <title>${t}</title>
 <meta name="description" content="${d}">
 <link rel="canonical" href="${url}">
-<meta property="og:type" content="website">
+${alternas}<meta property="og:type" content="website">
 <meta property="og:site_name" content="Acopio">
 <meta property="og:locale" content="${meta.lang === 'es' ? 'es_US' : 'en_US'}">
 <meta property="og:url" content="${url}">
 <meta property="og:title" content="${t}">
 <meta property="og:description" content="${d}">
-<meta property="og:image" content="${ORIGIN}${OG_IMAGE}">
+<meta property="og:image" content="${img}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Acopio — know what's on the shelf without going to look">
+<meta property="og:image:alt" content="${meta.lang === 'es' ? 'Acopio — saber qué hay en la estantería sin ir a mirar' : "Acopio — know what's on the shelf without going to look"}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${t}">
 <meta name="twitter:description" content="${d}">
-<meta name="twitter:image" content="${ORIGIN}${OG_IMAGE}">` +
+<meta name="twitter:image" content="${img}">` +
     (meta.out === 'index.html' && GOOGLE_VERIFY
       ? '\n<meta name="google-site-verification" content="' + GOOGLE_VERIFY + '">'
       : '');
@@ -634,7 +672,8 @@ function collect() {
   const activos = [
     { out: 'logo.png',    src: 'landing/assets/logo.png' },
     { out: 'favicon.svg', src: 'landing/assets/favicon.svg' },
-    { out: 'og.jpg',      src: 'landing/assets/og.jpg' }
+    { out: 'og.jpg',      src: 'landing/assets/og.jpg' },
+    { out: 'og-es.jpg',   src: 'landing/assets/og-es.jpg' }
   ];
   activos.forEach(a => {
     if (fs.existsSync(path.join(ROOT, a.src))) files.push({ out: a.out, kind: 'asset', src: a.src });
@@ -659,6 +698,7 @@ if (process.argv.indexOf('--list') !== -1) {
 
 fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(path.join(OUT, 'docs'), { recursive: true });
+fs.mkdirSync(path.join(OUT, 'es'), { recursive: true });
 
 // One file is called acopio.html in landing/ and index.html on the site, so
 // every link written between those files is correct in the folder and broken on
@@ -749,7 +789,20 @@ function wrapPage(html, meta) {
   // La ficha, sólo en la portada: es la ficha DEL PRODUCTO, y repetirla en cada
   // página no la hace más cierta — hace que haya cinco copias que mantener.
   const ficha = meta.out === 'index.html' ? '\n' + fichaJsonLd(meta) : '';
-  return headOf(meta) + ficha + '\n' + sinTitulo.replace(/\s*$/, '') + '\n</body>\n</html>\n';
+  /* Antes del fragmento, para que ya esté puesto cuando corra el script de
+   * idioma de la página. Es lo que hace que `/es/` salga en español aunque el
+   * navegador de quien abre esté en inglés: la dirección manda. */
+  const fija = meta.forceLang
+    ? '\n<script>window.ACOPIO_RUTA_LANG=' + JSON.stringify(meta.forceLang) + ';<\/script>'
+    : (meta.out === 'index.html' ? '\n<script>window.ACOPIO_RUTA_LANG="en";<\/script>' : '');
+  /* En la copia española, el enlace del conmutador apunta al revés. Importa
+   * sólo para quien tenga el JavaScript apagado —con JS, acopioApplyLang ya lo
+   * corrige al cargar— pero sin esto ése se quedaría dando a "English" sobre un
+   * enlace que lleva a la misma página española en la que ya está. */
+  const cuerpo = meta.forceLang === 'es'
+    ? sinTitulo.replace('href="/es/" hreflang="es"', 'href="/" hreflang="en"')
+    : sinTitulo;
+  return headOf(meta) + ficha + fija + '\n' + cuerpo.replace(/\s*$/, '') + '\n</body>\n</html>\n';
 }
 
 PAGES.forEach(p => {
@@ -772,6 +825,9 @@ if (haveFavi) fs.copyFileSync(FAVI_SRC, path.join(OUT, 'favicon.svg'));
 const OG_SRC = path.join(ROOT, 'landing/assets/og.jpg');
 const haveOg = fs.existsSync(OG_SRC);
 if (haveOg) fs.copyFileSync(OG_SRC, path.join(OUT, 'og.jpg'));
+const OG_ES_SRC = path.join(ROOT, 'landing/assets/og-es.jpg');
+const haveOgEs = fs.existsSync(OG_ES_SRC);
+if (haveOgEs) fs.copyFileSync(OG_ES_SRC, path.join(OUT, 'og-es.jpg'));
 
 DOCS.forEach(d => {
   const src = path.join(ROOT, d.src);
@@ -827,7 +883,7 @@ before it can be pushed.
 const n = collect().length;
 console.log('\n  built _site/ — ' + n + ' files');
 console.log('  domain: ' + DOMAIN);
-if (!haveOg) {
+if (!haveOg || !haveOgEs) {
   console.log('\n  WARNING — landing/assets/og.jpg is missing.');
   console.log('  Every page points at /og.jpg, so pasting a link anywhere asks');
   console.log('  for an image that 404s. Build it:');

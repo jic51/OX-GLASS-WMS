@@ -37,7 +37,24 @@ const ROOT = path.join(__dirname, '..');
  * bien— y lo que hay al otro lado es un teléfono en una bodega esperando a que
  * cargue una vista previa. No hace falta transparencia: la tarjeta se ve
  * siempre sobre sí misma. */
-const SALIDA = path.join(ROOT, 'landing/assets/og.jpg');
+/* DOS TARJETAS, UNA POR IDIOMA.
+ *
+ * Jose, 2026-10-06: *"¿sale una imagen en español o siempre está en inglés?"*
+ * Siempre estaba en inglés, y no por descuido: la tarjeta la dibuja WhatsApp
+ * leyendo el HTML tal cual sale del servidor, SIN EJECUTAR NADA, así que el
+ * conmutador de idioma de la página no puede alcanzarla. Una dirección, una
+ * tarjeta.
+ *
+ * La solución no es técnica, es de direcciones: `/` en inglés y `/es/` en
+ * español, cada una con la suya. Esto dibuja las dos. */
+const IDIOMAS = [
+  { f: 'landing/assets/og.jpg',    lang: 'en',
+    h1: "Know what's on the shelf without going to look.",
+    p:  'Your Google Sheet, turned into a real warehouse system.' },
+  { f: 'landing/assets/og-es.jpg', lang: 'es',
+    h1: 'Saber qué hay en la estantería sin ir a mirar.',
+    p:  'Tu hoja de Google, convertida en un sistema de almacén de verdad.' }
+];
 
 /* ── LAS FUENTES VAN DENTRO DE LA PÁGINA, NO ENLAZADAS ──────────────────────
  *
@@ -105,7 +122,7 @@ const NAVY = '#1B2A4A', AZUL = '#3B7DD8', TINTA = '#1A1A2E';
  * Si algún día cambia el titular de la portada, cambia aquí también — y hay una
  * prueba que lo comprueba, para que no dependa de que alguien se acuerde. */
 
-function plantilla(logoDataUri, fuentesCss) {
+function plantilla(logoDataUri, fuentesCss, texto) {
   return `<!doctype html><html><head><meta charset="utf-8">
 <style>
 ${fuentesCss}</style>
@@ -134,8 +151,8 @@ ${fuentesCss}</style>
 </style></head><body>
   <div class="luz"></div>
   <div class="marca"><img src="${logoDataUri}" alt=""><span>Acopio</span></div>
-  <h1>Know what's on the shelf without going to look.</h1>
-  <p>Your Google Sheet, turned into a real warehouse system.</p>
+  <h1>${texto.h1}</h1>
+  <p>${texto.p}</p>
   <div class="pie"><span class="punto"></span><span>www.acopio.net</span></div>
 </body></html>`;
 }
@@ -168,8 +185,10 @@ ${fuentesCss}</style>
     viewport: { width: ANCHO, height: ALTO }, deviceScaleFactor: 2
   });
   const pagina = await ctx.newPage();
-  await pagina.setContent(plantilla(logoDataUri, fuentesIncrustadas()),
-                          { waitUntil: 'load' });
+  const fuentes = fuentesIncrustadas();
+
+  for (const idioma of IDIOMAS) {
+  await pagina.setContent(plantilla(logoDataUri, fuentes, idioma), { waitUntil: 'load' });
 
   /* Esperar a las fuentes ANTES de la foto. Sin esto la imagen sale con la
    * tipografía de reserva del sistema una vez de cada tres —y encima de forma
@@ -211,10 +230,13 @@ ${fuentesCss}</style>
     process.exit(1);
   }
 
-  await pagina.screenshot({ path: SALIDA, type: 'jpeg', quality: 90 });
-  await navegador.close();
+  const salida = path.join(ROOT, idioma.f);
+  await pagina.screenshot({ path: salida, type: 'jpeg', quality: 90 });
+  const kb = Math.round(fs.statSync(salida).size / 1024);
+  console.log('  ✓ ' + idioma.f + ' (' + idioma.lang + ') — ' + ANCHO + '×' + ALTO +
+              ' a 2×, ' + kb + ' KB');
+  }
 
-  const kb = Math.round(fs.statSync(SALIDA).size / 1024);
-  console.log('\n  ✓ landing/assets/og.jpg — ' + ANCHO + '×' + ALTO + ' (a 2×), ' + kb + ' KB');
-  console.log('    build-site.js lo publica como /og.jpg\n');
+  await navegador.close();
+  console.log('\n  build-site.js las publica como /og.jpg y /og-es.jpg\n');
 })();
