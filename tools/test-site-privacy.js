@@ -86,7 +86,13 @@ const ALLOWED = [
   //   llms.txt     los mismos títulos y descripciones, para un asistente.
   //                SIN PRECIOS Y SIN COMPARACIONES: es un índice, no un sitio
   //                donde contar más de lo que cuentan las páginas.
-  'sitemap.xml', 'robots.txt', 'llms.txt'
+  'sitemap.xml', 'robots.txt', 'llms.txt',
+  // Las cinco direcciones viejas de los documentos de cliente, ahora
+  // redirecciones a su copia de docs/. No llevan contenido: una línea, un
+  // canonical y un salto. Estaban publicadas desde antes y tenían DENTRO la
+  // versión vieja del documento; esto es lo que las deja de tener.
+  'setup.html', 'instalacion.html', 'restaurar.html', 'soporte.html',
+  'vista-por-pasillo.html'
   // restaurar-backup.html is deliberately absent — see build-site.js. This
   // guard is what removed it, on its first run, by reading what it said.
 ];

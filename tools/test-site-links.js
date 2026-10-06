@@ -56,7 +56,34 @@ function walk(dir, base) {
 }
 
 const all   = walk(OUT);
-const pages = all.filter(f => /\.html$/.test(f)).sort();
+const todas = all.filter(f => /\.html$/.test(f)).sort();
+
+/* UNA REDIRECCIÓN NO ES UNA PÁGINA, y las tres comprobaciones de abajo la
+ * acusarían de las dos cosas contrarias a la vez.
+ *
+ * Desde el 2026-10-06 el sitio publica cinco direcciones viejas de los
+ * documentos de cliente convertidas en redirecciones a su copia de docs/ (ver
+ * REDIRECTS en build-site.js). No se borraron porque llevan meses publicadas y
+ * alguien puede tenerlas guardadas.
+ *
+ * Y es que, por diseño:
+ *   · NO son alcanzables desde la portada — nada del sitio les enlaza, y no
+ *     debe: su único trabajo es atender un enlace viejo que ya existe fuera.
+ *   · NO enlazan a la portada — enlazan a su destino, que es el punto.
+ *
+ * Así que medirlas con la vara de una página sería exigirles justo lo que no
+ * tienen que hacer. Se reconocen por lo que SON —un refresh y poco más— y no
+ * por una lista de nombres aquí, que sería otra copia de algo que ya decide el
+ * build. Que apunten a un documento que existe lo comprueba test-site-seo.js. */
+/* Se lee del disco y no de `read`, que se construye cien líneas más abajo: un
+ * `const` usado antes de su línea revienta con "Cannot access before
+ * initialization". Es exactamente el fallo que ya tuvo build-site.js con
+ * `haveLogo`, y está contado allí — no hace falta cometerlo dos veces. */
+const esRedireccion = f => {
+  const t = fs.readFileSync(path.join(OUT, f), 'utf8');
+  return /http-equiv=["']refresh["']/i.test(t) && t.length < 2000;
+};
+const pages = todas.filter(f => !esRedireccion(f));
 
 // Resolve an href the way a browser on this site would: absolute paths from the
 // root, relative ones from the folder the page is in, "/" and "" as index.html.

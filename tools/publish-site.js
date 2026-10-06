@@ -33,11 +33,16 @@
 //   · y escribe landing/.publicado, que es lo que le permite a
 //     check-publicado.js poner la suite roja cuando el sitio se queda atrás.
 //
-// LO QUE NO HACE: no borra nada del repositorio público. Ahí hay cinco copias
-// viejas de las guías en la raíz y un archivo vacío llamado "download", de una
-// subida manual anterior. Nada del sitio les enlaza, pero son URLs públicas y
-// borrarlas es una decisión de Jose, no del build. Se avisa de ellas y se
-// dejan.
+// LO QUE BORRA: nada, salvo lo que esté NOMBRADO en BORRAR, uno por uno y con
+// su motivo. Un borrado automático de "lo que sobra" es el mismo patrón de
+// limpiar-y-escribir que ya nos destrozó datos tres veces dentro de la app: una
+// dirección pública que desaparece sola es un enlace roto que nadie decidió.
+//
+// Las cinco copias viejas de las guías que había en la raíz YA NO SOBRAN: desde
+// el 2026-10-06 el build las genera como redirecciones a su copia de docs/
+// (ver REDIRECTS en build-site.js), así que se sobreescriben como cualquier
+// otro fichero. Tenían dentro el texto VIEJO del documento, que para una guía
+// de instalación es peor que un 404.
 //
 // Uso:
 //   node tools/publish-site.js                    → dice qué cambiaría
@@ -47,6 +52,20 @@
 const fs   = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
+
+/* LO ÚNICO QUE SE BORRA DEL SITIO PUBLICADO, nombrado y con su motivo.
+ *
+ * Nombrado, y no "todo lo que el build no genere", a propósito: la segunda
+ * forma borraría mañana un fichero que alguien subió a mano por una razón, sin
+ * que nadie lo decidiera. Es la misma diferencia que dentro de la app entre
+ * borrar-y-escribir y escribir-y-después-borrar, y allí costó datos.
+ *
+ * Jose lo autorizó el 2026-10-06. Cuando la lista esté hecha efecto en el
+ * sitio, estas entradas se pueden quitar de aquí. */
+const BORRAR = [
+  { f: 'download', por: 'un fichero de 0 bytes, sin contenido y sin extensión, ' +
+                        'de una subida manual antigua. No dice nada y no es nada.' }
+];
 
 const RAIZ   = path.join(__dirname, '..');
 const SALIDA = path.join(RAIZ, '_site');
@@ -126,13 +145,19 @@ console.log('\n── qué cambiaría en ' + DESTINO + ' ──');
 nuevos.forEach(f    => console.log('  nuevo    ' + f));
 cambiados.forEach(f => console.log('  cambia   ' + f));
 console.log('  (' + iguales.length + ' sin cambios)');
-if (huérfanos.length){
+const aBorrar = BORRAR.filter(b => publicados.indexOf(b.f) !== -1);
+const restantes = huérfanos.filter(f => !BORRAR.some(b => b.f === f));
+if (aBorrar.length){
+  console.log('\n  se BORRAN del sitio (nombrados, con motivo):');
+  aBorrar.forEach(b => console.log('    ✕ ' + b.f + ' — ' + b.por));
+}
+if (restantes.length){
   console.log('\n  publicados que este build NO genera — se dejan como están:');
-  huérfanos.forEach(f => console.log('    · ' + f));
+  restantes.forEach(f => console.log('    · ' + f));
   console.log('  Son URLs públicas. Borrarlas es decisión de Jose, no del build.');
 }
 
-const alDia = !nuevos.length && !cambiados.length;
+const alDia = !nuevos.length && !cambiados.length && !aBorrar.length;
 
 if (alDia && !PUSH){
   console.log('\n  ✓ el sitio publicado ya está al día.');
@@ -145,11 +170,17 @@ if (!PUSH){
   process.exit(0);
 }
 
-// ── 5. Copiar ───────────────────────────────────────────────────────────────
+// ── 5. Copiar, y borrar sólo lo nombrado ────────────────────────────────────
 nuevos.concat(cambiados).forEach(rel => {
   const dst = path.join(DESTINO, rel);
   fs.mkdirSync(path.dirname(dst), { recursive: true });
   fs.copyFileSync(path.join(SALIDA, rel), dst);
+});
+// Se copia primero y se borra después, en ese orden y no al revés. Es la misma
+// regla que dentro de la app: lo que puede fallar no debe dejar un hueco.
+aBorrar.forEach(b => {
+  try { fs.unlinkSync(path.join(DESTINO, b.f)); console.log('  borrado   ' + b.f); }
+  catch (e) { console.log('  no se pudo borrar ' + b.f + ': ' + e.message); }
 });
 
 // ── 6. EL SELLO ─────────────────────────────────────────────────────────────

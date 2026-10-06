@@ -54,11 +54,33 @@ const OUT  = path.join(ROOT, '_site');
 // a search engine shows, they only work when they are written together, and a
 // <title> buried at the top of a two-thousand-line page is one nobody re-reads.
 const PAGES = [
+  /* ── LAS PALABRAS SON LAS DE LA PÁGINA, LETRA POR LETRA ────────────────
+   *
+   * Jose, 2026-10-06, con una captura de la vista previa de WhatsApp al lado de
+   * la portada: *"¿por qué la imagen al enviar el link y la landing dicen cosas
+   * distintas? ¿No deben decir lo mismo?"*
+   *
+   * Sí. Y las mías decían *"without walking there"* mientras la página decía
+   * *"without going to look."* — yo las escribí de memoria en vez de copiarlas.
+   *
+   * La vista previa es **una promesa de lo que hay al otro lado del clic**. Si
+   * la promesa y la página no usan las mismas palabras, el que pulsa nota algo
+   * raro aunque no sepa decir qué: llegó a un sitio parecido al que le
+   * enseñaron, no al mismo.
+   *
+   * El título es la única excepción, y es a propósito: lleva *"Acopio — "*
+   * delante porque en una lista de resultados de Google hay que poder saber de
+   * quién es el enlace. La FRASE, a partir de ahí, es la de la página.
+   *
+   * La descripción también cambió: en la captura de Jose, WhatsApp la cortaba a
+   * media frase (*"...know what is in stock from any"*). Ahora dice lo
+   * importante primero, para que lo que se vea cortado sea el final y no el
+   * sentido. */
   { src: 'landing/acopio.html',          out: 'index.html', lang: 'en',
-    title: 'Acopio — know what is on the shelf without walking there',
-    desc:  'Acopio turns a Google Sheet into a warehouse system: record what ' +
-           'comes in and what goes out, see every rack, and know what is in ' +
-           'stock from any phone.',
+    title: "Acopio — know what's on the shelf without going to look",
+    desc:  'Acopio turns your Google Sheet into a real warehouse system — in, ' +
+           'out, locations, costs and low-stock alerts. We install and set it ' +
+           'up for you.',
     why: 'The landing page itself, both languages in one file.' },
   { src: 'landing/acopio-overview.html', out: 'detalle.html', lang: 'es',
     title: 'Acopio en detalle — qué hace, pantalla por pantalla',
@@ -273,7 +295,7 @@ function headOf(meta) {
 <meta property="og:image" content="${ORIGIN}${OG_IMAGE}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Acopio — warehouse stock, from the shelf to the screen">
+<meta property="og:image:alt" content="Acopio — know what's on the shelf without going to look">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${t}">
 <meta name="twitter:description" content="${d}">
@@ -519,6 +541,79 @@ function escribirLlms() {
     DOCS.map(linea).join('\n') + '\n');
 }
 
+/* ── LAS CINCO DIRECCIONES VIEJAS ───────────────────────────────────────────
+ *
+ * Jose, 2026-10-06, autorizándolo: *"¿le doy? DALE."*
+ *
+ * EL PROBLEMA, encontrado leyendo lo PUBLICADO y no lo que construimos: los
+ * cinco documentos de cliente estaban dos veces en el sitio. En `docs/`, que es
+ * donde los pone este build, y sueltos en la raíz desde una organización
+ * anterior — **con el texto viejo**, comprobado uno a uno (la copia de la raíz
+ * era más pequeña que la de `docs/` en los cinco casos).
+ *
+ * Para un buscador eran dos páginas con el mismo título. Para una persona era
+ * peor: quien llegara a `/instalacion.html` desde un enlace viejo leía
+ * instrucciones de instalación desatendidas — **peor que un 404, porque un 404
+ * es honesto**.
+ *
+ * ── POR QUÉ REDIRECCIÓN Y NO BORRARLAS ────────────────────────────────────
+ *
+ * Porque son direcciones que llevan meses publicadas y alguien puede tenerlas
+ * guardadas, o en un correo que ya mandamos. Borrarlas convierte un documento
+ * caducado en un enlace roto, que no es mejor: es otro fallo distinto.
+ *
+ * Así, el enlace viejo sigue funcionando y lleva al documento de verdad.
+ *
+ * ── LO QUE LLEVA CADA UNA, Y POR QUÉ ──────────────────────────────────────
+ *
+ *   canonical     le dice al buscador CUÁL es la buena. Es lo que hace que deje
+ *                 de haber dos páginas con el mismo título
+ *   location.replace  mueve al visitante sin dejar la página vieja en el
+ *                 historial — con un `href` normal, el botón "atrás" volvería
+ *                 aquí y volvería a saltar: una trampa
+ *   meta refresh  lo mismo para quien tenga el JavaScript apagado
+ *   un enlace     visible, para quien tenga las dos cosas apagadas. Nadie
+ *                 debería quedarse mirando una página en blanco
+ *
+ * NO LLEVA `noindex`, y es a propósito: `noindex` junto a un `canonical` se
+ * contradicen —uno dice "olvida esta página", el otro "cuenta esta para
+ * aquélla"— y Google puede acabar quitando las dos. El canonical solo ya hace
+ * el trabajo.
+ */
+const REDIRECTS = [
+  { from: 'setup.html',              to: '/docs/setup.html' },
+  { from: 'instalacion.html',        to: '/docs/instalacion.html' },
+  { from: 'restaurar.html',          to: '/docs/restaurar.html' },
+  { from: 'soporte.html',            to: '/docs/soporte.html' },
+  { from: 'vista-por-pasillo.html',  to: '/docs/vista-por-pasillo.html' }
+];
+
+function redirectShell(r) {
+  const destino = ORIGIN + r.to;
+  return `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Acopio</title>
+<link rel="canonical" href="${destino}">
+<meta http-equiv="refresh" content="0; url=${destino}">
+<script>location.replace(${JSON.stringify(destino)});</script>
+<style>
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+       background:#F0F2F5;color:#1A1A2E;
+       font:16px/1.7 Inter,-apple-system,BlinkMacSystemFont,sans-serif;padding:1.4rem}
+  p{text-align:center;max-width:30rem}
+  a{color:#1E52A0}
+</style>
+</head>
+<body>
+<p>Esta página se movió.<br><a href="${destino}">Seguir hasta el documento</a></p>
+</body>
+</html>
+`;
+}
+
 function collect() {
   const files = [];
   PAGES.forEach(p => files.push({ out: p.out, kind: 'page', src: p.src }));
@@ -544,6 +639,8 @@ function collect() {
   activos.forEach(a => {
     if (fs.existsSync(path.join(ROOT, a.src))) files.push({ out: a.out, kind: 'asset', src: a.src });
   });
+  REDIRECTS.forEach(r => files.push({ out: r.out || r.from, kind: 'generated',
+    src: '(dirección vieja → ' + r.to + ')' }));
   files.push({ out: 'sitemap.xml', kind: 'generated', src: '(every page above, with its date)' });
   files.push({ out: 'robots.txt',  kind: 'generated', src: '(open, and points at the sitemap)' });
   files.push({ out: 'llms.txt',    kind: 'generated', src: '(the same list, for an assistant)' });
@@ -696,6 +793,10 @@ DOCS.forEach(d => {
     addFavicon(docShell(d, stripComments(mdToHtml(stripComments(md))))));
 });
 
+/* Se escriben ANTES del sitemap para que no haga falta acordarse de excluirlas:
+ * el sitemap se construye de PAGES y DOCS, y éstas no están en ninguna de las
+ * dos. Una redirección en un sitemap es mandar al buscador a dar un rodeo. */
+REDIRECTS.forEach(r => fs.writeFileSync(path.join(OUT, r.from), redirectShell(r)));
 escribirSitemap();
 escribirRobots();
 escribirLlms();

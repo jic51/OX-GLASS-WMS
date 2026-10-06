@@ -56,11 +56,27 @@ function paginas(dir, base) {
     .flatMap(e => e.isDirectory() ? paginas(path.join(dir || '.', e.name), base + e.name + '/')
            : (/\.html$/.test(e.name) ? [base + e.name] : []));
 }
-const PAGINAS = paginas('').sort();
+const TODAS   = paginas('').sort();
 const ORIGIN  = 'https://www.acopio.net';
 
+/* Una redirección NO es una página, y medirla con la vara de una página sería
+ * mentirse: no necesita descripción, ni tarjeta de compartir, ni H1 — no la lee
+ * nadie, dura un parpadeo. Pero tampoco se la deja sin mirar: abajo tiene su
+ * propia sección, con las tres cosas que sí tiene que cumplir.
+ *
+ * Se reconocen por lo que SON (llevan un canonical a otra página y un refresh),
+ * no por una lista de nombres escrita aquí: una lista sería una tercera copia
+ * de algo que ya decide build-site.js. */
+function esRedireccion(rel) {
+  const t = fs.readFileSync(path.join(SITE, rel), 'utf8');
+  return /http-equiv=["']refresh["']/i.test(t) && t.length < 2000;
+}
+const REDIR   = TODAS.filter(esRedireccion);
+const PAGINAS = TODAS.filter(r => REDIR.indexOf(r) === -1);
+
 console.log('\n═══ 1. La cabecera, en TODAS — no en casi todas ═══\n');
-console.log('  ' + PAGINAS.length + ' páginas publicadas\n');
+console.log('  ' + PAGINAS.length + ' páginas publicadas, ' +
+            REDIR.length + ' redirecciones\n');
 
 check('hay páginas que mirar', PAGINAS.length >= 10, PAGINAS.length);
 
@@ -144,6 +160,40 @@ console.log('\n═══ 2. La imagen de compartir existe de verdad ═══\n'
     check('...y no pesa tanto que la vista previa no cargue (< 900 KB)',
           kb < 900, Math.round(kb) + ' KB');
   }
+}
+
+console.log('\n═══ 2-bis. Las direcciones viejas llevan a la buena ═══\n');
+{
+  /* Cinco direcciones de una organización anterior del sitio que llevan meses
+   * publicadas. No se borran —alguien puede tenerlas guardadas o en un correo
+   * que ya mandamos— así que apuntan al documento de verdad.
+   *
+   * Lo que de verdad hay que comprobar no es que exista el fichero: es que
+   * APUNTE A ALGO QUE EXISTE. Una redirección a una página que ya no está es
+   * peor que no tener redirección, porque esconde el 404 detrás de un salto. */
+  const rotas = [], sinCanon = [], sinSalto = [];
+  REDIR.forEach(rel => {
+    const t = fs.readFileSync(path.join(SITE, rel), 'utf8');
+    const c = (/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']*)["']/i.exec(t) || [])[1];
+    if (!c) { sinCanon.push(rel); return; }
+    const destino = c.replace(ORIGIN, '').replace(/^\//, '');
+    if (!fs.existsSync(path.join(SITE, destino))) rotas.push(rel + ' → ' + c);
+    if (!/location\.replace/.test(t)) sinSalto.push(rel);
+  });
+  check('cada dirección vieja apunta a un documento QUE EXISTE — una redirección ' +
+        'a una página que ya no está esconde el 404 detrás de un salto',
+        !rotas.length, rotas);
+  check('...con canonical, que es lo que hace que deje de haber dos páginas con ' +
+        'el mismo título', !sinCanon.length, sinCanon);
+  check('...y mueve al visitante sin dejar rastro en el historial (location.replace) — ' +
+        'con un enlace normal, el botón atrás volvería aquí y volvería a saltar',
+        !sinSalto.length, sinSalto);
+  /* Y ninguna en el sitemap: mandar al buscador a una redirección es mandarlo a
+   * dar un rodeo para llegar a donde ya le podíamos haber mandado. */
+  const sm = fs.existsSync(path.join(SITE, 'sitemap.xml'))
+    ? fs.readFileSync(path.join(SITE, 'sitemap.xml'), 'utf8') : '';
+  const enSitemap = REDIR.filter(r => sm.indexOf('<loc>' + ORIGIN + '/' + r + '</loc>') !== -1);
+  check('y ninguna está en el sitemap', !enSitemap.length, enSitemap);
 }
 
 console.log('\n═══ 3. La verificación de Search Console sigue ahí ═══\n');

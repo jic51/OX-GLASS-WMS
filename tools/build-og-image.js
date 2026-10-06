@@ -96,6 +96,15 @@ const ANCHO = 1200, ALTO = 630;
 // y que el cambio no se propague solo es lo que obliga a volver a mirarla.
 const NAVY = '#1B2A4A', AZUL = '#3B7DD8', TINTA = '#1A1A2E';
 
+/* EL TITULAR ES EL DE LA PORTADA, LETRA POR LETRA. Jose lo cazó poniendo la
+ * vista previa de WhatsApp al lado de la página: decían cosas distintas porque
+ * yo había escrito el de aquí de memoria. La tarjeta es la promesa de lo que
+ * hay al otro lado del clic; si no coincide, el que pulsa llega a un sitio
+ * PARECIDO al que le enseñaron, no al mismo.
+ *
+ * Si algún día cambia el titular de la portada, cambia aquí también — y hay una
+ * prueba que lo comprueba, para que no dependa de que alguien se acuerde. */
+
 function plantilla(logoDataUri, fuentesCss) {
   return `<!doctype html><html><head><meta charset="utf-8">
 <style>
@@ -125,8 +134,8 @@ ${fuentesCss}</style>
 </style></head><body>
   <div class="luz"></div>
   <div class="marca"><img src="${logoDataUri}" alt=""><span>Acopio</span></div>
-  <h1>Know what's on the shelf without walking there</h1>
-  <p>Warehouse stock, movements and every rack — in a Google Sheet you already own.</p>
+  <h1>Know what's on the shelf without going to look.</h1>
+  <p>Your Google Sheet, turned into a real warehouse system.</p>
   <div class="pie"><span class="punto"></span><span>www.acopio.net</span></div>
 </body></html>`;
 }
