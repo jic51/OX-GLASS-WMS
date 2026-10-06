@@ -494,3 +494,59 @@ dado un número malo del que no se sabría qué parte era el viewport. Ahora el
 sitio está sano y se puede medir de verdad, con **PageSpeed Insights**
 (`pagespeed.web.dev`, gratis, se pega la dirección y ya). Es trabajo de Jose
 porque hay que abrirlo desde fuera; si sale algo, se anota y se arregla.
+
+
+---
+
+## 9. 🔴 LO QUE LA AUDITORÍA NO VIO — y por qué
+
+Al comprobar lo publicado (leyendo el repositorio del sitio con `git`, porque el
+proxy de esta máquina no deja abrir `acopio.net`) apareció esto:
+
+```
+setup.html              docs/setup.html
+instalacion.html        docs/instalacion.html
+restaurar.html          docs/restaurar.html
+soporte.html            docs/soporte.html
+vista-por-pasillo.html  docs/vista-por-pasillo.html
+```
+
+**Los cinco documentos de cliente están DOS VECES en el sitio**: en `docs/`, que
+es donde los pone el build de hoy, y sueltos en la raíz, de una organización
+anterior. `publish-site.js` no los borra a propósito —lo dice en pantalla cada
+vez que publica: *"son URLs públicas; borrarlas es decisión de Jose"*— pero
+nadie había mirado qué hay dentro.
+
+**Qué hay dentro:** la versión VIEJA. Comprobado por tamaño, uno a uno: la copia
+de la raíz es más pequeña que la de `docs/` en los cinco casos (por ejemplo,
+`setup.html` 8.688 bytes contra 10.012). Mismos títulos, texto distinto.
+
+### Por qué importa, y no es sólo SEO
+
+- **Para un buscador** son dos páginas con **el mismo título** y casi el mismo
+  texto. Es el caso exacto para el que existe el canonical — y las de la raíz
+  **no tienen canonical**, porque no pasan por nuestro build.
+- **Y para una persona es peor.** Quien llegue a `acopio.net/instalacion.html`
+  —de un enlace viejo, de un correo de hace meses, de Google— lee **instrucciones
+  de instalación desatendidas**. Para una guía de instalación y una de
+  restauración, eso es peor que un 404: un 404 es honesto.
+
+### Por qué mi auditoría no lo vio, dicho claro
+
+**Audité `_site/`, que es lo que construimos, y no lo que está servido.** Son
+cosas distintas en cuanto el sitio acumula historia, y ésta la acumuló. Es el
+mismo error de fondo que vengo encontrando en el código: *medir lo que produces
+en vez de lo que hay*.
+
+### Lo que propongo, y es decisión de Jose
+
+**Convertir las cinco en redirecciones a su copia de `docs/`**, generadas por el
+build. No se borra ninguna dirección —los enlaces viejos siguen funcionando— y
+deja de haber dos copias: quien entre por la vieja acaba en la buena y leyendo lo
+que de verdad dice hoy.
+
+Es mejor que borrarlas (rompería enlaces que alguien pueda tener) y mejor que
+dejarlas (texto caducado con la firma de Acopio). **Media hora, con su prueba.**
+
+**Y de paso:** en la raíz hay un fichero llamado `download` de **0 bytes**. No es
+nada ni dice nada; es basura de alguna publicación vieja. Lo quitaría.

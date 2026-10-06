@@ -113,7 +113,17 @@ que un ✅ optimista.
     Jose pulse Verificar** ahora que está publicada.
 38. ✅ **HECHO (06/10) — Enforce HTTPS**, según Jose. No lo he podido comprobar
     yo: el proxy de esta máquina da 403 contra acopio.net.
-39. **Medir Core Web Vitals** en `pagespeed.web.dev` — ahora sí tiene sentido,
+39. 🔴 **Los cinco documentos de cliente están DOS VECES en el sitio** — en
+    `docs/` (los de hoy) y sueltos en la raíz, de una organización anterior y
+    **con el texto viejo**. Para un buscador son páginas duplicadas con el mismo
+    título; para una persona, instrucciones de instalación desatendidas, que es
+    peor que un 404. `publish-site.js` no los borra a propósito y deja la
+    decisión a Jose. **Propuesta: convertirlas en redirecciones a su copia de
+    `docs/`** — no se rompe ningún enlace viejo y deja de haber dos copias.
+    Media hora con su prueba. Y quitar el fichero `download` de 0 bytes.
+    Encontrado el 06/10 al comprobar lo PUBLICADO; la auditoría no lo vio porque
+    miró `_site/` —lo que construimos— y no lo que está servido.
+40. **Medir Core Web Vitals** en `pagespeed.web.dev` — ahora sí tiene sentido,
     con el viewport arreglado. Antes habría dado un número malo del que no se
     sabría qué parte era el viewport.
 
@@ -124,8 +134,8 @@ lo mismo, que es justo lo que acabamos de arreglar en los usuarios.
 
 ### 🔍 Sin revisar
 
-40. El estándar de las ventanas (lista de revisión del 2026-09-17).
-41. La sección histórica del 2026-09-09 — casi toda ✅ v11.x, con dos ⛔ dentro
+41. El estándar de las ventanas (lista de revisión del 2026-09-17).
+42. La sección histórica del 2026-09-09 — casi toda ✅ v11.x, con dos ⛔ dentro
     que no se han vuelto a mirar.
 
 ---
