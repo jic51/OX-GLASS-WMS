@@ -92,6 +92,15 @@ const SE_ALINEA_SOLA = /new\s+Date\s*\(\s*\)/;
 // test-cost-privacy a su lista INTERNAL, y por la misma razón — una excepción
 // que nadie vuelve a mirar deja de ser una excepción y pasa a ser un agujero.
 const REVISADAS = {
+  'test-informe-diario-hora.js':
+    'Nombra runDailyReport_ y dailyReportMovements_, pero NO LAS EJECUTA: las ' +
+    'lee con A.fnSrc para comprobar que la regla del día y el formato de fecha ' +
+    'están donde tienen que estar. Lo único que sí ejecuta es diaDelInforme_ y ' +
+    'fechaUS_, y las dos reciben la fecha POR PARÁMETRO — no hay un new Date() ' +
+    'en ninguna de las dos. Las fechas fijas son el sujeto de la prueba: que el ' +
+    '6 de octubre a las 2 AM se informe del 5, y que se escriba 10/06/2026. ' +
+    'Congelarlas no la puede desalinear de nada, porque no hay reloj con el que ' +
+    'desalinearse. Mismo caso que test-andamio.',
   'test-andamio.js':
     'La "fecha" es parte del TEXTO de una etiqueta —"la doble cita del ' +
     '2026-09-15 sería invisible aquí"—, no un dato. Y aunque nombra ' +

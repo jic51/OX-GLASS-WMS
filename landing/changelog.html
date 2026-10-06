@@ -97,6 +97,36 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.44</span>
+      <span class="tag fix">Fix</span>
+      <h3>The daily report was telling you about a day that had not happened</h3>
+      <p>Three things were wrong at once, and together they meant <b>the
+         movements of a working day were never reported at all</b>. The email
+         arrived, looked fine, and always said nothing had happened.</p>
+      <p><b>It went out at the wrong hour.</b> The app wrote down the hour it had
+         scheduled the job for, and later trusted that note instead of the job
+         itself — and Google gives no way to ask a scheduled job what time it
+         runs, so the note could never be checked. Once the two drifted apart,
+         Settings said 4:00 PM and the email came at 2:53 AM. Now the job wakes
+         up every hour and <b>the app decides when it is time</b>, so there is
+         nothing left that can drift. Changing the time in Settings takes effect
+         without touching anything.</p>
+      <p><b>And it always reported "today", whenever it ran.</b> At 2 AM, "today"
+         is three hours old and empty. The rule now: <b>a morning email reports
+         the day that ended; an evening one reports the day that is ending.</b>
+         The email still names the day it covers, so a quiet day reads as a quiet
+         day instead of as a lie.</p>
+      <p><b>The date is written the US way.</b> October 6th was printing as
+         06/10/2026, which reads as June 10th.</p>
+      <p>Separately: <b>🏭 Acopio → Check installation now fills in missing column
+         names</b> on your tabs. The code to do it existed and nothing ever called
+         it outside first-time setup, so an installation that was already running
+         could never get it — which is why RESERVATIONS and AUDIT_LOG had blank
+         headers. A column with no name looks like junk, and sooner or later
+         somebody deletes it.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.43</span>
       <span class="tag fix">Fix</span>
       <h3>Material can no longer be put in a rack that does not exist</h3>

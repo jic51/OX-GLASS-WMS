@@ -34,14 +34,10 @@ que un ✅ optimista.
 
 ### 🔴 Lo siguiente, y es de datos
 
-3-bis. 🔴 **EL CORREO DIARIO INFORMA DE UN DÍA QUE NO HA PASADO.** Settings dice
-   4 PM y sale a las 2:53 AM; informa de "hoy", que a esa hora está vacío; y los
-   movimientos de un día de trabajo **no los informa nunca**. El correo llega,
-   se ve bien y siempre dice que no pasó nada. Son dos fallos: la zona horaria
-   del disparador (hay que mirar la del proyecto de script, y afecta igual a los
-   otros tres trabajos automáticos) y el informe dando por hecho que "hoy" es
-   "el día del que informo". Y la fecha, a formato de EE. UU.
-3-ter. 🔴 **Dos pestañas sin nombres en las columnas** (RESERVATIONS, AUDIT_LOG).
+3-bis. ✅ **HECHO (v12.44) — el correo diario informaba de un día que no había
+   pasado.** La causa no era la zona horaria (mi primera hipótesis, falsa): era
+   una nota sobre el disparador que nada podía verificar.
+3-ter. ✅ **HECHO (v12.44) — dos pestañas sin nombres en las columnas** (RESERVATIONS, AUDIT_LOG).
    Los nombres existen en el código y la reparación también — pero **a esa
    función no la llama nadie salvo el asistente de instalación**, así que una
    instalación que ya existía no los recibe nunca. Cuarto caso del mismo patrón:
@@ -7398,7 +7394,24 @@ es:** las 20 son fontanería. Ninguna hace que alguien busque Acopio. Hacen que,
 cuando alguien busque, el sitio no se descalifique solo, y que cuando Jose mande
 el enlace, se vea serio.
 
-# ══ 🔴 URGENTE — EL CORREO DIARIO INFORMA DE UN DÍA QUE NO HA PASADO ══
+# ══ ✅ HECHO (v12.44) — EL CORREO DIARIO INFORMABA DE UN DÍA QUE NO HA PASADO ══
+#
+#    Y MI PRIMERA HIPÓTESIS ERA FALSA. Dije que sería la zona horaria del
+#    proyecto; Jose la miró y es GMT-06:00 Denver, la correcta. El fallo era
+#    otro y peor: la hora del disparador se guardaba en una PROPIEDAD, y
+#    `ensureDailyReportTrigger_` comparaba la propiedad con los ajustes en vez
+#    del disparador — que es imposible de consultar, porque un Trigger de Apps
+#    Script no sabe decir a qué hora corre. Las dos se separaron, la nota decía
+#    16, el disparador salía a las 2, y la función miraba la nota.
+#
+#    Arreglado quitando el sitio donde se podían separar: el disparador corre
+#    CADA HORA y el código decide. Más la regla del día (mañana → el día que
+#    acabó; tarde → el día que está acabando) y la fecha en formato de EE. UU.
+#
+#    tools/test-informe-diario-hora.js — 32 comprobaciones, 4 mutaciones.
+#    El diagnóstico original se conserva debajo, con la hipótesis equivocada
+#    incluida, porque equivocarse en la zona horaria fue lo que llevó a mirar
+#    la propiedad.
 
 Jose, 2026-10-06, con tres capturas: *"4pm y 2:53 am no son la misma hora;
 también está enviando los movimientos del día 6 de octubre a las 2 am, cuando el
@@ -7523,7 +7536,9 @@ interruptor lo diga con esas palabras.
 **Esto va DESPUÉS de arreglar la hora y la ventana.** Añadirle secciones a un
 informe que informa del día equivocado es multiplicar el error por seis.
 
-# ══ 🔴 ABIERTO — DOS PESTAÑAS SIN NOMBRES EN LAS COLUMNAS ══
+# ══ ✅ HECHO (v12.44) — DOS PESTAÑAS SIN NOMBRES EN LAS COLUMNAS ══
+#    "Check installation" llama ahora a ensureCoreSheets_ y dice lo que reparó.
+#    Jose: córrelo una vez y RESERVATIONS y AUDIT_LOG recuperan sus nombres.
 
 Jose, 2026-10-06, con dos capturas: `RESERVATIONS` está vacía del todo y
 `AUDIT_LOG` tiene datos, **y ninguna de las dos tiene nombres en las columnas**:

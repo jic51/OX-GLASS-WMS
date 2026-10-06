@@ -75,10 +75,17 @@ function makeSandbox(props, triggers) {
       getProjectTriggers: () => T.map(t => ({ getHandlerFunction: () => t.fn, _t: t })),
       deleteTrigger: h => { const i = T.indexOf(h._t); if (i >= 0) T.splice(i, 1); },
       newTrigger: name => {
-        const spec = { fn: name, hour: null };
+        const spec = { fn: name, hour: null, cadaHoras: null };
         const api = {
           timeBased: () => api,
           everyDays: () => api,
+          /* Desde la v12.44 el informe diario usa un disparador DE CADA HORA y
+           * es el codigo quien decide si toca. El motivo esta en
+           * ensureDailyReportTrigger_: la hora se guardaba en una propiedad que
+           * nada podia verificar -un Trigger de Apps Script no sabe decir a que
+           * hora corre- y se separo de la realidad, asi que Ajustes decia 4 PM
+           * y el correo salia a las 2:53 AM. */
+          everyHours: n => { spec.cadaHoras = n; return api; },
           atHour: h => {
             // Apps Script rechaza una hora fuera de 0–23. Se imita, porque el
             // punto de la validación en dailyReportSettings_ es no llegar aquí
@@ -114,36 +121,52 @@ function makeSandbox(props, triggers) {
   return sandbox;
 }
 
-// ── 1. La hora que cambia ───────────────────────────────────────────────────
-console.log('\n═══ cambiar la hora cambia el disparador de verdad ═══\n');
+// ── 1. El disparador ────────────────────────────────────────────────────────
+//
+// ESTE BLOQUE CAMBIÓ ENTERO EN LA v12.44, y el motivo merece quedarse escrito
+// porque lo que comprobaba antes era precisamente el diseño que falló.
+//
+// Antes: el disparador se creaba `.atHour(la hora de los ajustes)`, y la hora se
+// guardaba aparte en DAILY_REPORT_TRIGGER_HOUR para poder saber "a qué hora está
+// instalado". Estas comprobaciones vigilaban que las dos coincidieran.
+//
+// Y coincidían — en la propiedad. **Un Trigger de Apps Script no sabe decir a
+// qué hora corre**: no hay forma de preguntárselo. Así que la propiedad no era
+// una copia verificable del disparador, era UNA NOTA SOBRE ÉL. En la instalación
+// de Jose las dos se separaron, la nota decía 16, el disparador salía a las 2, y
+// esta función miraba la nota y decía "ya está bien". Dos cosas que tienen que
+// coincidir sin que nada lo obligue, otra vez.
+//
+// Ahora el disparador corre CADA HORA y `runDailyReport_` mira el reloj. No hay
+// dos sitios, así que no hay nada que pueda separarse — y la hora pasa a ser un
+// dato que se compara y se puede probar, que es lo que se comprueba abajo y en
+// tools/test-informe-diario-hora.js.
+console.log('\n═══ el disparador corre cada hora, y el código decide ═══\n');
 {
-  // Encendido a las 20, sin nada instalado.
   let s = makeSandbox({ DAILY_REPORT_ENABLED: 'true', DAILY_REPORT_HOUR: '20' }, []);
   let r = vm.runInContext('ensureDailyReportTrigger_()', s);
   check('se instala cuando está encendido y no había ninguno', r === 'installed');
-  check('...a la hora guardada',
-    s._triggers.length === 1 && s._triggers[0].hour === 20);
+  check('...y corre CADA HORA, no a una hora concreta',
+    s._triggers.length === 1 && s._triggers[0].cadaHoras === 1 && s._triggers[0].hour === null);
 
-  // Correr otra vez sin cambiar nada no debe duplicarlo.
   r = vm.runInContext('ensureDailyReportTrigger_()', s);
   check('correrlo otra vez no lo duplica', r === 'unchanged' && s._triggers.length === 1);
 
-  // EL CASO QUE IMPORTA: el admin cambia la hora.
+  // EL CASO QUE ANTES ERA EL DELICADO Y AHORA NO EXISTE: cambiar la hora.
   s._props.DAILY_REPORT_HOUR = '6';
   r = vm.runInContext('ensureDailyReportTrigger_()', s);
-  check('cambiar la hora REHACE el disparador — no basta con que exista uno',
-    r === 'rescheduled');
-  check('...y el vivo queda a la hora nueva, uno solo',
-    s._triggers.length === 1 && s._triggers[0].hour === 6);
+  check('CAMBIAR LA HORA YA NO TOCA EL DISPARADOR — no hay nada que rehacer, ' +
+        'porque la hora vive en un solo sitio y la lee el código',
+    r === 'unchanged' && s._triggers.length === 1);
+  check('...y no queda ninguna nota sobre la hora instalada, que era la que se ' +
+        'separaba de la realidad', !('DAILY_REPORT_TRIGGER_HOUR' in s._props));
 
-  // Apagarlo lo quita. Un disparador vivo con la función apagada mandaría
-  // correo igual, porque runDailyReport_ es lo único que mira el interruptor.
+  // Apagarlo lo quita. Un disparador vivo con la función apagada despertaría
+  // cada hora para nada, y runDailyReport_ es lo único que mira el interruptor.
   s._props.DAILY_REPORT_ENABLED = 'false';
   r = vm.runInContext('ensureDailyReportTrigger_()', s);
   check('apagarlo borra el disparador, no sólo el interruptor',
     r === 'off' && s._triggers.length === 0);
-  check('...y olvida la hora instalada, para que volver a encenderlo lo cree',
-    !('DAILY_REPORT_TRIGGER_HOUR' in s._props));
 
   s._props.DAILY_REPORT_ENABLED = 'true';
   r = vm.runInContext('ensureDailyReportTrigger_()', s);
@@ -151,15 +174,23 @@ console.log('\n═══ cambiar la hora cambia el disparador de verdad ══�
 }
 
 // ── 2. Una hora imposible no deja la instalación sin reporte ────────────────
+//
+// Sigue importando, aunque ya no llegue a .atHour(): una hora basura hacía que
+// el correo no saliera NUNCA, porque runDailyReport_ compara el reloj con ella y
+// nunca coincidiría. El sitio donde se defiende es el mismo de siempre,
+// dailyReportSettings_, y por eso se comprueba ahí.
 console.log('\n═══ una hora inválida no rompe nada ═══\n');
 {
   ['25', '-1', '', 'ocho', 'null'].forEach(bad => {
     const s = makeSandbox({ DAILY_REPORT_ENABLED: 'true', DAILY_REPORT_HOUR: bad }, []);
     let threw = false, hour = null;
-    try { vm.runInContext('ensureDailyReportTrigger_()', s); hour = s._triggers[0].hour; }
-    catch (e) { threw = true; }
+    try {
+      vm.runInContext('ensureDailyReportTrigger_()', s);
+      hour = vm.runInContext('dailyReportSettings_().hour', s);
+    } catch (e) { threw = true; }
     check('DAILY_REPORT_HOUR = ' + JSON.stringify(bad) +
-          ' cae a la hora por omisión en vez de lanzar', !threw && hour === 20);
+          ' cae a la hora por omisión en vez de dejar el correo sin salir nunca',
+          !threw && hour === 20);
   });
 }
 
