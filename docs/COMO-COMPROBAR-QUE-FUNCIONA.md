@@ -70,8 +70,8 @@ en pasar por un sitio nuevo.
 
 | Dónde | Qué miras | Qué quieres ver |
 |---|---|---|
-| **Páginas** (menú izquierdo, *Indexación*) | Cuántas ha indexado | Que vaya subiendo hacia **13**. Si alguna sale como "Excluida", dime cuál y por qué |
-| **Sitemaps** | Pega `sitemap.xml` y dale a Enviar | Que diga **Correcto** y que detectó 13 direcciones |
+| **Páginas** (menú izquierdo, *Indexación*) | Cuántas ha indexado | Que vaya subiendo hacia **12**. Si alguna sale como "Excluida", dime cuál y por qué |
+| **Sitemaps** | Pega `sitemap.xml` y dale a Enviar | Que diga **Correcto** y que detectó 12 direcciones |
 | **Rendimiento** | Qué busca la gente que llega | Vacío al principio. En unas semanas, **qué palabras escribió la gente** — y eso vale más que cualquier opinión mía |
 
 **Lo más útil de los tres es el tercero**, y no hoy: dentro de un mes. Te va a
