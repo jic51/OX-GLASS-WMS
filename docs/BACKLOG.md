@@ -34,6 +34,19 @@ que un ✅ optimista.
 
 ### 🔴 Lo siguiente, y es de datos
 
+3-bis. 🔴 **EL CORREO DIARIO INFORMA DE UN DÍA QUE NO HA PASADO.** Settings dice
+   4 PM y sale a las 2:53 AM; informa de "hoy", que a esa hora está vacío; y los
+   movimientos de un día de trabajo **no los informa nunca**. El correo llega,
+   se ve bien y siempre dice que no pasó nada. Son dos fallos: la zona horaria
+   del disparador (hay que mirar la del proyecto de script, y afecta igual a los
+   otros tres trabajos automáticos) y el informe dando por hecho que "hoy" es
+   "el día del que informo". Y la fecha, a formato de EE. UU.
+3-ter. 🔴 **Dos pestañas sin nombres en las columnas** (RESERVATIONS, AUDIT_LOG).
+   Los nombres existen en el código y la reparación también — pero **a esa
+   función no la llama nadie salvo el asistente de instalación**, así que una
+   instalación que ya existía no los recibe nunca. Cuarto caso del mismo patrón:
+   una protección escrita y nunca ejecutada. Una línea en Check installation.
+
 4. 🔶 **Los campos libres que deberían ser listas** — ✅ **ubicaciones hechas en
    la v12.43**; faltan **proyecto, proveedor y categoría**. Mismo agujero,
    mismas consecuencias, y el patrón ya está resuelto para copiarlo.
@@ -101,6 +114,16 @@ que un ✅ optimista.
     registro de lo que enseña cada uno está en `VIDEOS-DE-UX.md`.
 35. **Permisos por persona** — ✅ decidido por Jose el 05/10; va después de la
     guardia de escritura (nº 5).
+35-bis. 🔵 **El correo diario con secciones elegibles** — idea de Jose del 06/10
+    (stock bajo, incomings sin registrar, quién se conectó…), con interruptor por
+    sección. **A favor**, con dos reglas: una sección sin nada que decir no se
+    imprime, y un solo cálculo para el correo, la pantalla y la descarga. Va
+    DESPUÉS de arreglar la hora y la ventana — añadir secciones a un informe que
+    informa del día equivocado es multiplicar el error por seis.
+35-ter. 🔵 **Un chat dentro de la app** — Jose preguntó por Google Chat con Apps
+    Script. Sí se puede, pero **Chat es de Workspace**: no funcionaría para los
+    clientes con Gmail personal, y sería otra app aparte. Yo lo haría dentro de
+    Acopio, con el latido que ya existe. Para la v2 y detrás de los informes.
 36. **Informes** — ✅ decidido el 06/10: **los tres sitios** (pantalla, correo y
     descarga), un solo cálculo. Qué informes y en qué orden, en
     `LO-QUE-FALTA-EN-LA-APP.md`; confirmado desde fuera en `COMPETIDOR-EXCEL.md`.
@@ -7374,3 +7397,222 @@ primero que ve es una página de escritorio reducida.**
 es:** las 20 son fontanería. Ninguna hace que alguien busque Acopio. Hacen que,
 cuando alguien busque, el sitio no se descalifique solo, y que cuando Jose mande
 el enlace, se vea serio.
+
+# ══ 🔴 URGENTE — EL CORREO DIARIO INFORMA DE UN DÍA QUE NO HA PASADO ══
+
+Jose, 2026-10-06, con tres capturas: *"4pm y 2:53 am no son la misma hora;
+también está enviando los movimientos del día 6 de octubre a las 2 am, cuando el
+trabajo de ese día aún no ha empezado. Y el del día anterior, a la misma hora,
+dice que no hay movimientos — pero ayer sí hubo, sólo que entre las 7 am y las
+4 pm."*
+
+**Tiene razón en las tres, y juntas significan algo peor que lo que parecen:
+los movimientos de un día de trabajo NO SE INFORMAN NUNCA.** El correo sale, se
+ve bien, y siempre dice que no pasó nada. Un informe que miente en silencio es
+peor que un informe que falta: éste lleva meses llegando y nadie sospecha.
+
+## Son dos fallos distintos, y el segundo es el de fondo
+
+### A. La hora a la que de verdad se dispara
+
+Settings dice **4:00 PM**. El correo llegó a las **2:53 AM** — en los dos días
+de las capturas, a la misma hora.
+
+`ensureDailyReportTrigger_` crea el disparador con
+`.atHour(cfg.hour)`, y **Apps Script interpreta esa hora en la zona horaria DEL
+PROYECTO DE SCRIPT**, no en la de la persona ni en la de la hoja. El minuto 53
+encaja con cómo funcionan estos disparadores: se dispara en un momento
+cualquiera dentro de la hora elegida.
+
+**Lo que hay que comprobar antes de tocar nada** —y no lo puedo ver desde aquí—
+es qué zona horaria tiene el proyecto de Jose: Extensiones → Apps Script →
+⚙️ Configuración del proyecto → *Zona horaria*. Si no es la de Utah, ahí está la
+diferencia entera, y la misma diferencia afecta a **los otros tres trabajos
+automáticos** (copia de seguridad, archivado nocturno, informe de la mañana),
+que nadie ha mirado con esta lupa.
+
+### B. El informe siempre cuenta "hoy", corra cuando corra
+
+Y éste no depende de ninguna zona horaria: es un fallo de diseño.
+
+`dailyReportMovements_` filtra por `Utilities.formatDate(new Date(), tz,
+'yyyy-MM-dd')` — **el día en que el correo se está enviando**. Eso sólo es
+correcto si el correo sale por la tarde. A las 2 de la mañana del día 6, "hoy"
+es el día 6, que lleva tres horas empezado y no tiene nada dentro. **Y el día 5,
+con sus movimientos de 7 am a 4 pm, no lo cuenta ningún correo: ni el del 5 —que
+salió antes de que ocurrieran— ni el del 6, que sólo mira el 6.**
+
+**El arreglo no es mover la hora.** Es que el informe cubra **una ventana
+explícita** y diga de qué día habla, en vez de dar por hecho que "hoy" y "el día
+del que informo" son lo mismo. Si sale de madrugada, informa del día anterior
+completo; si sale por la tarde, del día en curso.
+
+Y mientras no esté arreglado, **el `(no movements)` del asunto es una
+afirmación falsa**, no un dato que falta.
+
+### C. La fecha, en formato de Estados Unidos
+
+Jose: *"la fecha debe estar siempre en formato de EE. UU., la del título y la
+del mensaje."*
+
+`runDailyReport_` usa `'dd/MM/yyyy'`, así que el 6 de octubre sale `06/10/2026`
+y se lee como 10 de junio. Tiene que ser **`MM/dd/yyyy`**.
+
+Una línea — **pero hay que repasar todas las fechas que salen de la app hacia
+fuera** (correos, informes, lo que se imprima) con el mismo criterio, no sólo
+ésta. Una app que escribe la fecha de dos maneras es peor que una que la escribe
+mal siempre.
+
+## Tamaño
+
+La fecha, cinco minutos. La ventana explícita, medio día **con su prueba** —y la
+prueba es la mitad que importa: tiene que correr el informe a las 2 de la mañana
+y a las 4 de la tarde y comprobar que los dos cuentan el día que les toca. La
+zona horaria, una comprobación de Jose y luego lo que diga.
+
+# ══ 🔵 IDEA DE JOSE — EL CORREO DIARIO, CON LO QUE DE VERDAD HACE FALTA ══
+
+Jose, 2026-10-06: *"no solo quiero que envíe los movimientos del día, también
+quiero que envíe más información que el usuario puede necesitar: quiénes
+estuvieron conectados, el stock bajo, los incomings (si los recibieron y no
+hicieron el entry, y también si lo hicieron)… cada una de esas cosas debe ser
+seleccionada desde Settings para que el admin decida si quiere todos esos datos
+o sólo los más importantes. ¿Qué piensas de la idea?"*
+
+**Me parece buena, y el acierto es el interruptor por sección.** Un correo que lo
+lleva todo deja de leerse a la tercera semana, y entonces no sirve ni para lo que
+servía. Que lo decida cada instalación es lo correcto.
+
+## Las secciones, y mi opinión de cada una
+
+| Sección | ¿Vale la pena? | Por qué |
+|---|---|---|
+| **Movimientos del día** | ✅ es lo que ya hay | — |
+| **Stock bajo** | ✅ **la más valiosa de todas** | El mínimo ya existe y hoy sólo se ve si alguien abre el Dashboard. En un correo, llega a quien compra |
+| **Incoming esperado que llegó y NO se registró** | ✅ **la segunda** | Es la única que señala **trabajo sin hacer**. Las demás cuentan lo que pasó; ésta dice lo que falta |
+| **Incoming que sí se registró** | 🟡 a medias | Ya aparece en los movimientos del día. Sólo tiene sentido si se enseña **junto a lo que faltaba**, como "3 de 5 entregas registradas" |
+| **Quién estuvo conectado** | 🟡 con cuidado | Ver abajo |
+| **Cuánto tiempo estuvo cada uno** | ❌ **no** | Jose ya dudaba, y tiene razón: eso no es un dato de almacén, es un control horario. Convierte el correo en otra cosa, y es la clase de dato que incomoda a quien aparece en él. Si hace falta, que viva en la app y que no lo mande nadie por correo |
+
+## Lo que yo añadiría, que Jose no nombró
+
+- **Ajustes (ADJUST) del día, con su motivo.** Son las correcciones de conteo:
+  cada uno dice que una cifra estaba mal. Es lo primero que mira alguien que
+  desconfía de los números.
+- **Desperdicio (WASTE) del día.** Es dinero, y hoy no se ve en ninguna parte
+  salvo un total que nunca se reinicia.
+- **Lo que no se movió en N meses**, una vez por semana y no a diario.
+
+## Las dos reglas de diseño, antes de construir nada
+
+1. **Una sección que no tiene nada que decir NO SE IMPRIME.** El interruptor
+   decide si la sección puede salir; los datos deciden si sale. Un correo con
+   seis títulos y cinco "nada que informar" enseña a no leerlo.
+2. **Un solo cálculo, tres salidas.** Ya está decidido el 06/10 para los
+   informes: lo que va en el correo tiene que salir del mismo cálculo que lo que
+   se ve en pantalla y lo que se descarga. Si no, el correo y la pantalla dirán
+   cifras distintas del mismo día.
+
+**Y una advertencia sobre "quién estuvo conectado":** hoy el correo le llega al
+admin **y a la lista que él escriba**, que puede incluir gente de bodega. Una
+lista de quién entró y quién no, repartida por correo todos los días, es
+vigilancia, no un informe de almacén — y encima sale de la empresa en cuanto
+alguien reenvía el correo. Si se hace, que sea **sólo al admin**, y que el
+interruptor lo diga con esas palabras.
+
+**Esto va DESPUÉS de arreglar la hora y la ventana.** Añadirle secciones a un
+informe que informa del día equivocado es multiplicar el error por seis.
+
+# ══ 🔴 ABIERTO — DOS PESTAÑAS SIN NOMBRES EN LAS COLUMNAS ══
+
+Jose, 2026-10-06, con dos capturas: `RESERVATIONS` está vacía del todo y
+`AUDIT_LOG` tiene datos, **y ninguna de las dos tiene nombres en las columnas**:
+sólo la fila azul del encabezado, en blanco.
+
+## La causa, encontrada — y es la de siempre
+
+`ensureCoreSheets_` **sí** tiene los nombres de esas columnas escritos
+(`'Timestamp','Action','User','Details','Old Value','New Value'` para AUDIT_LOG,
+y nueve para RESERVATIONS), y `fillMissingHeaders_` **sí** sabe rellenar los
+huecos de una hoja que ya existe sin tocar lo que tenga texto.
+
+**El problema es que a esa función no la llama nadie salvo el asistente de
+instalación.** Buscado en el archivo: `ensureCoreSheets_(ss)` aparece **una sola
+vez**, dentro de `saveSetupWizard`. Así que una instalación que ya existía —la de
+Jose— no va a recibir esos nombres nunca, por mucho que el código los tenga.
+
+**Es el cuarto caso este mes del mismo patrón: una protección escrita y nunca
+ejecutada.** Y es más irónico de lo normal, porque el comentario que hay encima
+de `fillMissingHeaders_` cuenta exactamente este daño:
+
+> *"Jose estuvo a punto de borrar las columnas U y V de su archivo —Unit Cost y
+> Total Cost— precisamente porque sus cabeceras estaban en blanco y no había
+> forma de saber qué eran. Una columna sin nombre en una hoja de cálculo parece
+> basura, y alguien acaba limpiándola."*
+
+El arreglo escrito para ese daño **no puede llegar a la hoja donde ese daño
+ocurrió**.
+
+## El arreglo
+
+**Una línea:** que `menuCheckInstallation` llame a `ensureCoreSheets_(ss)` y
+cuente lo que reparó, como ya hace con todo lo demás. Es la función que la gente
+ejecuta cuando quiere saber si su instalación está sana, y "a dos de tus
+pestañas les faltan los nombres de las columnas" es exactamente eso.
+
+**Y la prueba que falta, que es la que impide que vuelva a pasar:** que ninguna
+reparación quede sin alguien que la ejecute. Hoy no hay nada que lo compruebe, y
+por eso ésta llevaba aquí desde que se escribió.
+
+# ══ 🔵 PREGUNTA DE JOSE — UN CHAT DENTRO DE LA APP, ¿CON GOOGLE CHAT? ══
+
+Jose, 2026-10-06: *"¿recuerdas cuando te dije que creáramos un chat dentro de la
+app? Google tiene una página en Workspace que dice «Build a Google Chat app with
+Google Apps Script». ¿Será que se puede? Podemos intentarlo para alguna versión
+futura, ¿qué piensas?"*
+
+**Lo que sé, y lo digo separado de lo que habría que comprobar.**
+
+## Sí se puede, y no es lo que buscamos
+
+Sí: se pueden construir aplicaciones de Google Chat con Apps Script. Hace falta
+un proyecto de Google Cloud con la API de Chat configurada — el mismo trámite que
+ya nos cerró la puerta de la activación automática de la app web, y que está
+contado en `selfActivateWebApp_`.
+
+**Pero hay una pega que decide el asunto, y no es técnica: Google Chat es un
+producto de Workspace.** Un cliente con dominio propio lo tiene. Un cliente con
+Gmail personal, no — y ésos son los escenarios C y D de `VENTAS.md`, que no son
+el caso raro.
+
+O sea que sería **un chat que sólo funciona para algunos clientes, instalado
+aparte, en otra aplicación distinta de Acopio**. Eso no es "un chat dentro de la
+app": es mandar a la gente a otro sitio.
+
+> **Lo que habría que comprobar antes de decidir nada**, y yo no puedo desde
+> aquí: si hoy se puede publicar una app de Chat para un dominio concreto sin
+> pasar por la revisión de Google, y qué pide exactamente. Eso cambia cada año y
+> no me lo voy a inventar.
+
+## Lo que yo haría en su lugar, y es más barato
+
+**Un chat dentro de Acopio.** Una pestaña, una hoja `MESSAGES` y el latido que ya
+existe —la app ya sabe quién está conectado ahora mismo, eso está construido—.
+
+Ventajas que no son pequeñas:
+
+- **Funciona para todos los clientes**, con dominio o sin él.
+- **No hay nada que instalar aparte.**
+- **Los mensajes viven en la hoja del cliente**, que es exactamente lo que
+  promete la política de privacidad. Un chat en Google Chat guarda las
+  conversaciones en Google, no en su Drive.
+- Y puede estar **pegado al trabajo**: un mensaje colgado de un movimiento o de
+  un estante vale más que un chat suelto.
+
+**Lo que no hay que fingir:** un chat hecho así no va a ser instantáneo. Apps
+Script consulta cada pocos segundos, así que un mensaje tarda. Para "¿queda
+sellador en B2A?" sirve de sobra; para una conversación seguida, no — y hay que
+decirlo antes de construirlo, no después.
+
+**Para la v2, y detrás de los informes.** Un almacén sin informes y con chat es
+un almacén que sigue sin saber qué tiene.
