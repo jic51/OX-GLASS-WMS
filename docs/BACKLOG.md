@@ -7633,3 +7633,90 @@ decirlo antes de construirlo, no después.
 
 **Para la v2, y detrás de los informes.** Un almacén sin informes y con chat es
 un almacén que sigue sin saber qué tiene.
+
+---
+
+# AUDITORÍA DE COLUMNAS — LO QUE QUEDÓ ABIERTO (2026-10-06)
+
+La auditoría entera está en `docs/AUDITORIA-DE-COLUMNAS.md`. Aquí sólo lo que
+hay que hacer y en qué orden, para que no se pierda.
+
+## Sin riesgo — se puede hacer en cuanto Jose conteste dos preguntas
+
+1. **`Total Cost` en la pasada de auto-reparación.** Es `Qty × Unit Cost` y es
+   la única de las tres columnas derivadas del archivo que **nadie vigila**:
+   `Status` y `Mat ID` tienen reparación, ésta no. Corregir a mano un `Unit Cost`
+   en el Sheet deja `Total Cost` mintiendo para siempre. Unas líneas en la misma
+   pasada que ya arregla las otras dos. **Esto arregla un fallo, no limpia.**
+2. **Las 5 columnas muertas de las hojas calculadas** — `LIVE_STOCK` G
+   (`Location_Type`, siempre el texto `RACK`) y H (`Last_Updated`),
+   `SITE_STOCK` F (`Status`, siempre `At Site`) y G, `WASTED_STOCK` E. Se
+   escriben en cada reconstrucción y **no las lee nadie**. Coste cero: esas
+   hojas se reescriben enteras. **Antes hay que preguntar si algo externo
+   (fórmula, Looker Studio, Excel) las lee por letra de columna.**
+   · `SITE_STOCK` C (`Project`) **NO se quita**: la app no la lee hoy, pero es lo
+   único que dice de qué obra es el material en obra, y la pantalla que la va a
+   necesitar ya está en esta lista.
+3. **`CONFIG` H y N avisan si están en la fila equivocada.** `Admin Email` y
+   `Archive Cutoff Months` sólo se leen de la primera fila de datos
+   (`if (row[7] && i === 1)`). Escribirlos más abajo no da error: la app no los
+   ve y nada lo dice. Que *Check installation* lo diga con el número de fila.
+   Mismo patrón que el informe diario: dos cosas que deben coincidir sin que
+   nada lo obligue.
+4. **Nota en A1 de `RESERVATIONS`.** La app no escribe ni lee esa hoja desde el
+   2026-09-20; lo que se llama "reservar" vive en `MATERIAL_LOCKS`. Es la
+   pestaña vacía de la imagen 4 de Jose. Una línea: *"Reservations are kept in
+   MATERIAL_LOCKS. This sheet is from an earlier version and is not used."*
+   **No borrar la pestaña**: en la copia de un cliente puede haber filas
+   escritas a mano y eso no tiene vuelta atrás.
+5. **`AUDIT_LOG` E y F → `Detail 2` y `Detail 3`.** De 56 escrituras, 19 dejan
+   las dos vacías y 17 llenan una sola: el nombre "Old Value / New Value"
+   describe bien una minoría de las filas. Dos celdas, con la tanda de formato.
+
+## Con riesgo — orden y motivo
+
+6. **`MATERIAL_LOCKS`: quitar `MatId`** (es `Category` + `Name`, y los tres
+   están). **Primero** que `getActiveLocksMap_` la componga al leer, como hace
+   `packKey_` en `MATERIAL_PACKS` — que es la hoja que lo hace bien. Cuando la
+   columna ya no decida nada, quitarla. **Nunca al revés:** esta hoja no se
+   reconstruye, y una migración cortada a medias deja candados que no se
+   cumplen, o sea **material apartado que se puede sacar**. Necesita una prueba
+   que ponga tres candados, migre y compruebe que los tres siguen cumpliéndose.
+7. **`CONFIG` F/G (lista vieja de usuarios): esperar a que se vacíe sola.** Ya
+   es una puerta de un solo sentido desde la v12.45 y la app migra a quien llega
+   por ahí. Lo que falta para poder decidir: **que *Check installation* diga
+   cuántos correos quedan ahí sin migrar.** Hoy no lo dice, así que quitarlas
+   sería a ciegas y podría costarle el acceso a alguien que aún no ha entrado.
+8. **`INCOMING_V3` no tiene `Mat ID`.** Un material renombrado deja las entradas
+   futuras apuntando al nombre viejo. Va con *"Incoming y Project View:
+   estandarizar columnas"*, que ya estaba en esta lista — ahora sé qué columna
+   falta.
+
+## Decididas: se quedan como están
+
+- **`Status` del archivo** (col L). Derivada de `MoveType`, **pero** es lo único
+  que dice el tipo de movimiento en las filas anteriores a que existiera
+  `MoveType`, y hay una reparación escrita *y llamada* que las mantiene de
+  acuerdo. Una repetición vigilada no es el fallo que estamos cazando.
+- **`Mat ID` del archivo** (col O). El código ya dice *"never trust the stored
+  MatID column"* y la repara sola en cada reconstrucción. Inofensiva, y es lo
+  único que, abriendo el Sheet, dice que dos filas son el mismo material.
+- **`Total Cost`** se queda como columna (contabilidad la suma); lo que cambia
+  es el punto 1.
+- **`System Date` vs `Date Received`** y **`Received By` vs `User Email`**: dos
+  parejas que parecen repetidas y no lo son. Ver la auditoría.
+
+## Preguntas abiertas para Jose
+
+- ¿Algo fuera de la app lee `LIVE_STOCK` o `SITE_STOCK`? (decide el punto 2)
+- ¿Usa el desplegable de camiones al despachar, o apunta el camión en los
+  comentarios? (decide si `CONFIG` I/J/K se quedan)
+
+## Y una cosa que la auditoría encontró del formato
+
+`aplicarFormatoEstandar_` **ya existe** y ya pone color de pestaña por familia,
+cabecera, nota en A1, protección en aviso y anchos. Lo que **no** hace es lo que
+pidió Jose: la cabecera es del mismo azul en todas, el color de pestaña es por
+familia (cuatro, no uno por pestaña) y **no hay filas intercaladas**. El mockup
+`landing/mockup-formato-hojas.html` es sobre esa diferencia, no sobre empezar de
+cero.

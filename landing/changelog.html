@@ -97,6 +97,25 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.46</span>
+      <span class="tag fix">Fix</span>
+      <h3>Renaming: one at a time, and nothing you typed gets thrown away</h3>
+      <p>In Settings, pressing the pencil on several categories opened them all
+         for editing — but saving one <b>repaints the list and threw away
+         whatever you had typed in the others</b>, with no warning. The app was
+         offering work it could not deliver.</p>
+      <p>Now one rename is open at a time. If the open one has unsaved text, the
+         new one <b>does not open</b> and the app says why — your typing is never
+         discarded to make room. If it is untouched, it just closes and the next
+         one opens, because pressing the wrong pencil and correcting yourself is
+         the most common thing there is.</p>
+      <p>It saves one at a time on purpose: renaming a category rewrites every
+         movement that used it and then rebuilds the stock cache. Five at once is
+         five of those passes, and if the third fails you are left with half a
+         batch applied and no way to tell which half.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.45</span>
       <span class="tag safe">Security</span>
       <h3>Two guards that said yes by default</h3>

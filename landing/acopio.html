@@ -886,8 +886,51 @@ function acopioToggleLang(ev){
    * mandarle a un amigo una dirección española que a él le sale en inglés. */
   var deLaRuta = (window.ACOPIO_RUTA_LANG === 'es' || window.ACOPIO_RUTA_LANG === 'en')
                  ? window.ACOPIO_RUTA_LANG : null;
-  var wanted = deLaRuta || saved ||
-               ((navigator.language || 'en').toLowerCase().indexOf('es') === 0 ? 'es' : 'en');
+  var navEs = (navigator.language || 'en').toLowerCase().indexOf('es') === 0;
+
+  /* ── UN NAVEGADOR EN ESPAÑOL EN `/` SE VA A `/es/` ──────────────────────────
+   *
+   * Jose, 2026-10-06, con dos capturas lado a lado: su teléfono decía *"Sin
+   * cargo por usuario · Diez personas en el almacén…"* y su ordenador *"Sin
+   * cobro por usuario · Diez personas en la bodega…"*. Dos españoles distintos
+   * para el mismo párrafo.
+   *
+   * ── NO ERA FALTA DE SINCRONIZACIÓN, Y ESO ES LO IMPORTANTE ──────────────
+   *
+   * Ese texto **no existe ni ha existido nunca en el repositorio** — buscado en
+   * los ficheros y en toda la historia de git. Es la traducción automática de
+   * Chrome de NUESTRO INGLÉS, palabra por palabra: *"No charge per user"* →
+   * *"Sin cargo por usuario"*; *"Ten people in the warehouse"* → *"Diez
+   * personas en el almacén"*; *"Pricing"* → *"Precios"*, donde el nuestro dice
+   * *"Precio"*.
+   *
+   * O sea: **el teléfono tradujo la página en vez de enseñar nuestra
+   * traducción.** Y lo hizo porque `/` declara `lang="en"` —se lo dijimos
+   * nosotros en la v12.44, cuando se le puso cabecera a la página; antes no lo
+   * declaraba y Chrome tenía que adivinar—. A un navegador en español, una
+   * página que se declara inglesa es una invitación a traducirla, y la
+   * traducción de la máquina gana a la nuestra.
+   *
+   * Es peor que feo: la nuestra dice *"bodega"* y *"cobra por puesto"*, que es
+   * como se habla en el oficio; la de la máquina dice *"almacén"* y *"cobra por
+   * usuario"*. El comprador lee una página que no escribimos.
+   *
+   * ── EL ARREGLO ─────────────────────────────────────────────────────────
+   *
+   * Mandarle a `/es/`, que declara `lang="es"` y ya trae el español dentro. Así
+   * no hay nada que traducir y Chrome no se mete.
+   *
+   * Y sólo cuando **no hay una elección guardada**: quien ya pulsó "English"
+   * desde un teléfono en español se queda en inglés, que es lo que pidió.
+   * `replace` y no `href`, para no dejar `/` en el historial y que el botón
+   * "atrás" no rebote eternamente. */
+  if (!saved && !deLaRuta && navEs &&
+      location.protocol.indexOf('http') === 0 && location.pathname === '/') {
+    location.replace('/es/' + location.search + location.hash);
+    return;
+  }
+
+  var wanted = deLaRuta || saved || (navEs ? 'es' : 'en');
   acopioApplyLang(wanted);
 })();
 </script>
