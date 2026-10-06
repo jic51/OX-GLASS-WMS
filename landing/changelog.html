@@ -97,6 +97,31 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.43</span>
+      <span class="tag fix">Fix</span>
+      <h3>Material can no longer be put in a rack that does not exist</h3>
+      <p>Typing a rack that is not in your warehouse — <b>A1P</b> when you meant
+         A1B — used to <b>save it anyway</b>, and a brand-new location appeared
+         on your warehouse map with material in it. That is worse than a typo:
+         <b>an invented rack is not on any shelf</b>, so the app says the
+         material is somewhere nobody can go to.</p>
+      <p>Now the app checks the rack the material is <b>arriving at</b>, and if
+         it is not one of yours it says so — and offers the one you probably
+         meant. If you can manage the catalog, you can create it right there and
+         the movement saves without retyping it.</p>
+      <p><b>Taking material OUT of a rack that does not exist is still allowed,
+         on purpose.</b> Whatever ended up in A1P before this fix has to be able
+         to come out, or the fix would trap it there for good. So the rack list
+         you pick from when material <i>leaves</i> still shows everywhere stock
+         actually is; the one for where it <i>goes</i> shows only real
+         locations.</p>
+      <p>Importing a file still creates the racks it names — importing means
+         "this is my warehouse as it stands" — but it <b>adds them to your
+         location list and tells you how many</b>, instead of creating them
+         quietly.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.42</span>
       <span class="tag new">Easier</span>
       <h3>The link to the app is a link now — click it</h3>

@@ -127,7 +127,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.42';
+var APP_VERSION = '12.43';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -139,7 +139,7 @@ var APP_VERSION = '12.42';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '7fa7ba83';
+var APP_BUILD = '934d377c';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -3618,7 +3618,112 @@ function dataStamp_() {
   } catch (e) { return ''; }
 }
 
-function addMovementsBatch_(ss, archive, movements, auth) {
+/* ── UNA UBICACIÓN QUE NO EXISTE NO ES UNA UBICACIÓN ─────────────────────────
+ *
+ * Jose, 2026-10-05, con dos capturas: escribió `A1p` en el estante de un ENTRY
+ * —una ubicación que no existe— y **la app la guardó tal cual**. En el mapa del
+ * almacén apareció `A1P` como una ubicación más, con material dentro.
+ *
+ * Es peor que un nombre mal escrito. Un nombre mal escrito se corrige; **una
+ * ubicación inventada no está en ninguna estantería**. El material consta en un
+ * sitio al que nadie puede ir. Y es por donde entra la mitad de la suciedad que
+ * luego persigue "Check my data": un campo libre donde debería haber una lista
+ * cerrada produce `A1P`, `A1 P` y `A-1-P`, y el stock de un estante acaba
+ * repartido en tres sitios que nadie suma.
+ *
+ * ══ LA REGLA, Y NO ES "VALIDAR LAS DOS CASILLAS" ══════════════════════════
+ *
+ * **Se comprueba el lado por el que el material LLEGA. Nunca el lado por el que
+ * se va.** Es la diferencia entre cerrar el agujero y tapiar la puerta con la
+ * gente dentro:
+ *
+ *   · Meter material en un sitio que no existe es EL FALLO. Se rechaza.
+ *   · Sacar material de un sitio que no existe es LIMPIAR EL FALLO. Si también
+ *     se rechazara, las unidades que la app ya metió en `A1P` se quedarían ahí
+ *     **para siempre, sin forma de sacarlas desde la app** — y el arreglo sería
+ *     peor que el problema que arregla.
+ *
+ * Por tipo de movimiento, qué lado es el de llegada (sacado de
+ * applyMovementToSnapshot_, que es quien de verdad lo decide):
+ *
+ *   ENTRY     el destino; o el origen si el destino va vacío
+ *   RETURN    el destino
+ *   TRANSFER  el destino SOLAMENTE — el origen puede ser el sitio inventado
+ *             que se está vaciando, y vaciarlo es justo lo que se quiere
+ *   ADJUST    el destino, y sólo cuando es él el que está relleno: ese ajuste
+ *             hace APARECER material. El ajuste a la baja no se comprueba
+ *   EXIT      ninguno
+ *   WASTE     ninguno
+ *
+ * ══ Y UNA CASILLA VACÍA NO ES UN ERROR ════════════════════════════════════
+ *
+ * Recibir material y no decir todavía en qué estante va es un caso real —el
+ * motor lo guarda como `UNASSIGNED`— y lleva funcionando desde siempre.
+ * Convertir eso en un error al arreglar otra cosa sería romper lo que funciona
+ * para arreglar lo que no. */
+function mapaDeUbicaciones_(cfg) {
+  var mapa = {};
+  var lista = (cfg && cfg.locations) || [];
+  for (var i = 0; i < lista.length; i++) {
+    var nombre = String((lista[i] && lista[i].name) || '').trim();
+    if (nombre) mapa[normalizeString(nombre)] = nombre;
+  }
+  return mapa;
+}
+
+/** Qué valor tiene que existir para este movimiento, o '' si ninguno. */
+function ubicacionDeLlegada_(mt, src, dest) {
+  if (mt === 'ENTRY')    return dest || src;
+  if (mt === 'RETURN')   return dest;
+  if (mt === 'TRANSFER') return dest;
+  if (mt === 'ADJUST')   return (dest && !src) ? dest : '';
+  return '';
+}
+
+/* La ubicación conocida que más se parece a lo que se tecleó, o ''.
+ *
+ * Importa más de lo que parece: el mensaje "A1P no existe" deja a alguien
+ * mirando la pantalla, y "A1P no existe, ¿querías decir A1B?" lo resuelve en un
+ * segundo. El fallo real de Jose fue teclear `A1p` existiendo `A1A`, `A1B` y
+ * `A1C` — un carácter de diferencia.
+ *
+ * Distancia de edición con un tope de dos: por encima de eso ya no es una
+ * errata y sugerir algo lejano confunde más de lo que ayuda. */
+function sugerirUbicacion_(buscada, mapa) {
+  var objetivo = normalizeString(buscada);
+  var mejor = '', mejorD = 3;
+  Object.keys(mapa).forEach(function (clave) {
+    var d = distanciaEdicion_(objetivo, clave, mejorD);
+    if (d < mejorD) { mejorD = d; mejor = mapa[clave]; }
+  });
+  return mejor;
+}
+
+/** Levenshtein con tope: en cuanto toda una fila pasa del tope, se abandona. */
+function distanciaEdicion_(a, b, tope) {
+  if (a === b) return 0;
+  if (Math.abs(a.length - b.length) >= tope) return tope;
+  var fila = [], i, j;
+  for (j = 0; j <= b.length; j++) fila[j] = j;
+  for (i = 1; i <= a.length; i++) {
+    var anterior = fila[0];
+    fila[0] = i;
+    var minFila = i;
+    for (j = 1; j <= b.length; j++) {
+      var tmp = fila[j];
+      fila[j] = Math.min(
+        fila[j] + 1,
+        fila[j - 1] + 1,
+        anterior + (a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1));
+      anterior = tmp;
+      if (fila[j] < minFila) minFila = fila[j];
+    }
+    if (minFila >= tope) return tope;
+  }
+  return fila[b.length];
+}
+
+function addMovementsBatch_(ss, archive, movements, auth, opciones) {
   var EMPTY = { status: 'success', firstRowIdx: null, rowCount: 0, fileError: null, emailError: null, availableByMat: {} };
   if (!movements || !movements.length) return EMPTY;
 
@@ -3666,8 +3771,22 @@ function addMovementsBatch_(ss, archive, movements, auth) {
     // written back to CONFIG only after the archive write is VERIFIED further
     // down — never before, so a cost blend can never be recorded for a
     // movement that did not actually save.
-    var avgCostMap  = loadConfig().avgCost || {};
+    var cfgAhora    = loadConfig();
+    var avgCostMap  = cfgAhora.avgCost || {};
     var costTouched = {};   // matId -> true, for the ones this batch actually changes
+
+    /* Las ubicaciones que existen de verdad, de la misma lectura de CONFIG que
+     * ya se hacía para los costes: ni un viaje más a Google.
+     *
+     * `crearUbicaciones` lo pasa SÓLO la importación, y por una razón concreta:
+     * importar es decirle a la app "esto es mi almacén tal como está", así que
+     * las estanterías que nombra el fichero son las que hay. Rechazarlas sería
+     * exigirle a alguien que teclee cuarenta ubicaciones a mano antes de poder
+     * meter sus datos — y entonces no importa nadie. Lo que no se hace es
+     * crearlas EN SILENCIO: se devuelven para que la pantalla las cuente. */
+    var ubicaciones = mapaDeUbicaciones_(cfgAhora);
+    var crearUbic   = !!(opciones && opciones.crearUbicaciones);
+    var ubicNuevas  = [];
 
     // ── Validate every movement against the live snapshot, build its row ─────
     for (var i = 0; i < movements.length; i++) {
@@ -3745,6 +3864,25 @@ function addMovementsBatch_(ss, archive, movements, auth) {
       var dest    = String(d.destLoc   || '').toUpperCase().trim();
       var srcKey  = normalizeString(src);
       var destKey = normalizeString(dest);
+
+      // ── La ubicación por la que LLEGA el material tiene que existir ────────
+      var llega = ubicacionDeLlegada_(mt, src, dest);
+      if (llega) {
+        var llegaKey = normalizeString(llega);
+        if (!ubicaciones[llegaKey]) {
+          if (crearUbic) {
+            ubicaciones[llegaKey] = llega;
+            ubicNuevas.push(llega);
+          } else {
+            /* Con tubería y no en prosa, como DUPLICATE_MOVEMENT: la pantalla
+             * tiene que poder OFRECER crearla en vez de enseñar un texto rojo
+             * que deja a la persona sin salida. Lo de después de la tubería no
+             * se enseña nunca tal cual. */
+            throw new Error('UNKNOWN_LOCATION|' + llega + '|' +
+                            sugerirUbicacion_(llega, ubicaciones));
+          }
+        }
+      }
 
       // Duplicate guard — only when not forced. Scans recent rows of the
       // archive snapshot we already read (no extra read).
@@ -4077,7 +4215,10 @@ function addMovementsBatch_(ss, archive, movements, auth) {
       emailError:     emailError,
       refreshError:   refreshError,
       availableByMat: availableByMat,
-      stockAfter:     stockAfter
+      stockAfter:     stockAfter,
+      // Sólo tiene algo cuando quien llamó pidió `crearUbicaciones` — es decir,
+      // la importación. Vacío en cualquier otro caso, por construcción.
+      ubicacionesCreadas: ubicNuevas
     };
 
   } finally {
@@ -8057,9 +8198,28 @@ function commitImport(data, auth) {
     };
   });
 
-  var res = addMovementsBatch_(ss, archive, movements, auth);
+  var res = addMovementsBatch_(ss, archive, movements, auth, { crearUbicaciones: true });
+  /* Las ubicaciones que traía el fichero y no existían se dan de alta, porque
+   * importar es decir "esto es mi almacén". Pero SE ESCRIBEN EN LA LISTA y se
+   * cuentan: una importación que crea quince estanterías en silencio deja a
+   * alguien con quince sitios que no sabe que tiene. */
+  var creadas = res.ubicacionesCreadas || [];
+  if (creadas.length) {
+    try {
+      var cfgSheet = ss.getSheetByName(SHEETS.CONFIG);
+      var yaHay = (loadConfig().locations || []).map(function (l) { return l.name; });
+      writeConfigColumns_(cfgSheet, 3, [yaHay.concat(creadas),
+        (loadConfig().locations || []).map(function (l) { return l.type || 'RACK'; })
+          .concat(creadas.map(function () { return 'RACK'; }))]);
+      auditLog_(ss, 'LOCATIONS_CREATED', auth.email,
+        creadas.length + ' location(s) came in with an import: ' + creadas.join(', '), '', '');
+    } catch (eLoc) {
+      logError_(ss, 'WARN', 'backend', 'commitImport/locations', auth.email,
+        'Could not record the imported locations: ' + (eLoc && eLoc.message), null, '');
+    }
+  }
   auditLog_(ss, 'BULK_IMPORT', auth.email, rows.length + ' row(s) imported', '', '');
-  return { status: 'success', rowCount: res.rowCount };
+  return { status: 'success', rowCount: res.rowCount, newLocations: creadas };
 }
 
 function runReconciliation_(ss) {

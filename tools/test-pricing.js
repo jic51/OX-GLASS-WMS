@@ -105,7 +105,21 @@ FakeSheet.prototype.getRange = function (r, c, nr, nc) {
 
 function buildSandbox() {
   var archive = new FakeSheet();
+  /* El CONFIG de mentira ahora tiene UBICACIONES, en la columna D (índice 3),
+   * que es donde las guarda la app de verdad.
+   *
+   * Hizo falta en la v12.43 y el fallo que dio fue el correcto: esta prueba
+   * mete material en `A1A` y `A1B`, y desde esa versión el motor rechaza meter
+   * material en un estante que no está en la lista. No estaban, porque este
+   * CONFIG estaba vacío. **La prueba se quejó de algo que de verdad pasaría**
+   * — un almacén sin ubicaciones dadas de alta no puede recibir nada— y lo que
+   * había que arreglar era el decorado, no el producto. */
   var cfg     = new FakeSheet();
+  cfg.rows = [['Projects','Categories','Suppliers','Locations','LocType']];
+  [['A1A','RACK'], ['A1B','RACK'], ['B1A','RACK'], ['B1B','RACK'], ['B2A','RACK']].forEach(function (u) {
+    var fila = []; fila[3] = u[0]; fila[4] = u[1];
+    cfg.rows.push(fila);
+  });
   var ss = {
     getSheetByName: function (name) {
       if (name === 'MASTER_ARCHIVE_V3') return archive;
@@ -144,7 +158,15 @@ function buildSandbox() {
     'getActiveLocksMap_', 'enforceMaterialLock_', 'reservedQtyFromRacks_',
     'loadConfig', 'saveAvgCostUpdates_',
     'ensureArchiveWidth_', 'newMovId_', 'uniqueMovId_', 'dedupeMovementIds_',
-    'writeMovIdColumn_', 'addMovementsBatch_'
+    'writeMovIdColumn_',
+    // Añadidas en la v12.43 con la comprobación de ubicaciones. Esta prueba
+    // mantiene su lista de dependencias A MANO —es anterior al andamio— así que
+    // cada función nueva que addMovementsBatch_ llame hay que apuntarla aquí, y
+    // el fallo es un "no está definida" que parece del producto y es de la caja.
+    // Es exactamente lo que el andamio existe para evitar; esta prueba está
+    // pendiente de migrar.
+    'mapaDeUbicaciones_', 'ubicacionDeLlegada_', 'sugerirUbicacion_', 'distanciaEdicion_',
+    'addMovementsBatch_'
   ].forEach(function (name) { vm.runInContext(extractFn(name), sandbox); });
 
   return { sandbox: sandbox, ss: ss, archive: archive, cfg: cfg };

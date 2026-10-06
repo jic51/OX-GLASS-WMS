@@ -34,10 +34,9 @@ que un ✅ optimista.
 
 ### 🔴 Lo siguiente, y es de datos
 
-4. **Se puede escribir una ubicación que no existe** y la app la crea en
-   silencio (`A1p`). El material consta en un sitio que no está en ninguna
-   estantería. Y los mismos campos libres que deberían ser listas: proyecto,
-   proveedor, categoría.
+4. 🔶 **Los campos libres que deberían ser listas** — ✅ **ubicaciones hechas en
+   la v12.43**; faltan **proyecto, proveedor y categoría**. Mismo agujero,
+   mismas consecuencias, y el patrón ya está resuelto para copiarlo.
 5. **La guardia de escritura es una lista de quién NO** (`role === 'VIEWER'`).
    Hoy da el mismo resultado; el día que haya un rol más, entra escribiendo sin
    que nadie lo decida. Una línea y una prueba con un rol inventado.
@@ -7010,7 +7009,28 @@ correo— pero **salen en la pantalla de usuarios** y ensucian la lista. Hay que
 averiguar qué las escribió (sospecha: el generador de datos de demostración) y
 limpiarlas.
 
-# ══ 🔴 URGENTE — SE PUEDE ESCRIBIR UNA UBICACIÓN QUE NO EXISTE ══
+# ══ ✅ HECHO (v12.43) — SE PODÍA ESCRIBIR UNA UBICACIÓN QUE NO EXISTE ══
+#
+#    LA DECISIÓN QUE IMPORTA, y no estaba en esta entrada: se comprueba el lado
+#    por el que el material LLEGA, nunca por el que se va. Meter material en un
+#    sitio que no existe es el fallo; sacarlo de ahí es LIMPIARLO. Si también se
+#    hubiera rechazado la salida, las unidades que la app ya metió en `A1P`
+#    estarían encerradas ahí para siempre y el arreglo sería peor que el
+#    problema. El diagnóstico original se conserva debajo.
+#
+#    Y el desplegable se partió en dos por el mismo motivo: el de ORIGEN sigue
+#    ofreciendo todo donde hay stock —aunque no debiera existir—, el de DESTINO
+#    sólo lo real. Una lista que propone lo que el servidor va a rechazar es
+#    peor que una lista corta.
+#
+#    La importación sí crea las que falten —importar es decir "esto es mi
+#    almacén tal como está"— pero las escribe en la lista y las cuenta, en vez
+#    de crearlas en silencio.
+#
+#    tools/test-ubicacion-que-no-existe.js — 41 comprobaciones, 3 mutaciones.
+#    SIGUE ABIERTO lo de los otros campos libres: proyecto, proveedor,
+#    categoría. Mismo agujero, mismas consecuencias, y ahora con el patrón ya
+#    resuelto para copiarlo.
 
 Jose, con dos capturas: escribió `A1p` en el rack de un ENTRY —una ubicación que
 no existe— y **la app la guardó tal cual**. En el Warehouse Map aparece ahora

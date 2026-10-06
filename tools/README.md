@@ -71,6 +71,7 @@ node tools/test-barra-conexion.js
 node tools/test-revocar-acceso.js
 node tools/test-acceso-denegado.js
 node tools/test-enlace-pulsable.js
+node tools/test-ubicacion-que-no-existe.js
 node tools/test-sysact-followthrough.js
 node tools/test-daily-report.js
 node tools/test-morning-closes.js

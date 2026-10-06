@@ -4510,7 +4510,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.42';
+var APP_VERSION = '12.43';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -4522,7 +4522,7 @@ var APP_VERSION = '12.42';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '7fa7ba83';
+var APP_BUILD = '934d377c';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -9797,6 +9797,103 @@ function _stripTags(err){
  * Devuelve true si se ocupó del error. Corrige el stock conocido con lo que el
  * servidor acaba de decir, repinta el formulario y explica qué pasó.
  */
+/* ── UNA UBICACIÓN QUE NO EXISTE ─────────────────────────────────────────────
+ *
+ * El servidor rechaza meter material en un sitio que no está en la lista — el
+ * fallo de `A1p` que Jose encontró el 05/10, que la app guardaba tal cual y
+ * dejaba material en una estantería que no existe.
+ *
+ * Aquí no se enseña el rechazo y ya. Un error rojo que dice "esa ubicación no
+ * existe" deja a alguien de bodega con el material en la mano, delante de una
+ * pantalla que no le ofrece nada: o abre los ajustes —si es que puede—, o
+ * abandona el movimiento. Las dos salidas son malas, y la segunda es la que
+ * pasa.
+ *
+ * Así que se ofrece lo que quería hacer:
+ *   · Si lo tecleado se parece a una que SÍ existe, se propone ésa primero. Es
+ *     el caso de verdad: `A1p` con `A1A`, `A1B` y `A1C` en la lista.
+ *   · Si además tiene permiso para tocar el catálogo, puede crearla y seguir.
+ *   · Y si no lo tiene, se le dice A QUIÉN pedírselo, en vez de dejarle
+ *     mirando una puerta cerrada.
+ *
+ * Devuelve true si se ha hecho cargo del error. */
+function _ubicacionDesconocida(err, reintentar){
+  var msg = (err && err.message) || String(err || '');
+  var i = msg.indexOf('UNKNOWN_LOCATION|');
+  if (i === -1) return false;
+
+  var partes  = msg.substring(i).split('|');
+  var tecleada = (partes[1] || '').trim();
+  var parecida = (partes[2] || '').trim();
+  var puede    = (userRole === 'ADMIN') ||
+                 (userRole === 'WAREHOUSE' && !!(rolePerms || {}).canManageCatalog);
+
+  if (parecida) {
+    _showConfirm({
+      icon: '📍',
+      title: 'No such location: ' + tecleada,
+      message: 'There is no "' + tecleada + '" in your warehouse.\n\n' +
+               'Did you mean ' + parecida + '?',
+      confirmText: 'Use ' + parecida,
+      onConfirm: function(){ _ponerUbicacion(parecida); }
+    });
+    return true;
+  }
+  if (puede) {
+    _showConfirm({
+      icon: '📍',
+      title: 'No such location: ' + tecleada,
+      message: 'There is no "' + tecleada + '" in your warehouse yet.\n\n' +
+               'Create it as a new location and save this movement?',
+      confirmText: 'Create ' + tecleada,
+      onConfirm: function(){
+        _cfgAddValue('locations', tecleada, function(ok, e2){
+          if (!ok){ showToast('Could not create it: ' + e2, 'err', 6000); return; }
+          /* La lista local se actualiza antes de reintentar: si no, el
+           * desplegable seguiría sin ofrecerla y el siguiente movimiento
+           * volvería a chocar con lo mismo que acabamos de arreglar. */
+          if (config && Array.isArray(config.locations) &&
+              !config.locations.some(function(l){ return String(l.name).toUpperCase() === tecleada.toUpperCase(); })) {
+            config.locations.push({ name: tecleada, type: 'RACK' });
+            var dlDest = document.getElementById('rackListDest');
+            if (dlDest) { var op = document.createElement('option'); op.value = tecleada; dlDest.appendChild(op); }
+          }
+          showToast('Location ' + tecleada + ' created', 'ok');
+          if (typeof reintentar === 'function') reintentar();
+        });
+      }
+    });
+    return true;
+  }
+  _showConfirm({
+    icon: '📍',
+    title: 'No such location: ' + tecleada,
+    message: 'There is no "' + tecleada + '" in your warehouse, and material ' +
+             'cannot be put somewhere that does not exist.\n\n' +
+             'Check the rack label, or ask an admin to add it in ' +
+             'App Settings → Locations.',
+    confirmText: 'OK',
+    soloAviso: true
+  });
+  return true;
+}
+
+/* Deja la ubicación corregida donde estaba la mala. Qué casilla es depende del
+ * tipo de movimiento, y es la misma regla que usa el servidor: el destino,
+ * salvo cuando el movimiento sólo tiene origen. */
+function _ponerUbicacion(valor){
+  var ids = ['destLoc', 'em_destLoc', 'sourceLoc', 'em_sourceLoc'];
+  for (var i = 0; i < ids.length; i++){
+    var el = document.getElementById(ids[i]);
+    if (el && el.offsetParent !== null && String(el.value || '').trim()){
+      el.value = valor;
+      el.focus();
+      return;
+    }
+  }
+  showToast('Type ' + valor + ' in the location box and save again', 'info', 6000);
+}
+
 function _shortStockFix(err){
   var info = _shortStockInfo(err);
   if (!info) return false;
@@ -10470,6 +10567,7 @@ async function submitMovement(){
         // ── Otro se llevó el material mientras esta ventana estaba abierta ─
         _btnReset(btn);
         _setModalBusy('moveOverlay', false);
+        if (_ubicacionDesconocida(err, function(){ _doSubmit(force); })) return;
         if (_shortStockFix(err)) return;
         // ── Any other error ────────────────────────────────────────────────
         showToast('Error: ' + _stripTags(err), 'err', 6000);
@@ -17593,17 +17691,27 @@ function refreshDropdowns(){
   var rackNames = config.locations
     .filter(function(l){ return String(l.type || '').toUpperCase() !== 'ARCHIVED'; })
     .map(function(l){ return l.name; });
-  var rackSet   = Array.from(new Set(
-    rackNames.concat(
-      movements.map(function(m){ return m.sourceLoc; }).filter(Boolean),
-      movements.map(function(m){ return m.destLoc; }).filter(Boolean)
-    )
-  )).sort();
-  rackSet.forEach(function(r){
-    [rd1, rd2].forEach(function(dl){
-      var o = document.createElement('option'); o.value = r; dl.appendChild(o);
-    });
-  });
+  /* ── LAS DOS LISTAS DEJAN DE SER LA MISMA ──────────────────────────────
+   *
+   * Hasta la v12.43 las dos se llenaban igual: las ubicaciones de la lista MÁS
+   * todas las que aparecieran en cualquier movimiento. Eso tiene sentido para
+   * el ORIGEN —si hay material en un sitio, hay que poder sacarlo de ahí,
+   * aunque ese sitio sea uno que nunca debió existir— y ninguno para el
+   * DESTINO: ofrecer `A1P` para meter material es ofrecer el fallo otra vez.
+   *
+   * Y desde la v12.43 el servidor rechaza meter material en un sitio que no
+   * está en la lista, así que una sugerencia así ya no sería sólo mala idea:
+   * sería un camino que la pantalla ofrece y el servidor corta. Una lista que
+   * propone lo que luego se rechaza es peor que una lista corta.
+   *
+   * Es la misma asimetría que hay en el servidor, y por el mismo motivo: meter
+   * material donde no existe es el fallo; sacarlo de ahí es limpiarlo. */
+  var deMovimientos = movements.map(function(m){ return m.sourceLoc; }).filter(Boolean)
+    .concat(movements.map(function(m){ return m.destLoc; }).filter(Boolean));
+  var origenSet  = Array.from(new Set(rackNames.concat(deMovimientos))).sort();
+  var destinoSet = Array.from(new Set(rackNames)).sort();
+  origenSet.forEach(function(r){ var o = document.createElement('option'); o.value = r; rd1.appendChild(o); });
+  destinoSet.forEach(function(r){ var o = document.createElement('option'); o.value = r; rd2.appendChild(o); });
 
   var sd = document.getElementById('supplierList'); sd.innerHTML = '';
   var supSet = Array.from(new Set(config.suppliers.concat(movements.map(function(m){ return m.supplier; }).filter(Boolean)))).sort();
