@@ -330,7 +330,75 @@ Poco de estilo y dos cosas de fondo, que es mejor reparto del que parecía:
 
 ---
 
+## Quinta tanda, 2026-10-06 (2 vídeos) — y uno de ellos ya lo teníamos hecho
+
+| Vídeo | Qué es | ¿Sirve para Acopio? |
+|---|---|---|
+| **El botón, en seis pasos** (*Clintontheuiuxguy*) | Seis mejoras con NÚMEROS: tamaño, etiqueta, contraste, profundidad, detalle y movimiento | **SÍ — y el primero ya está hecho, mejor que en el vídeo.** Ver abajo |
+| **Cómo crece una app de red** (*Building*) | Tácticas de arranque: traer un amigo, lista de espera, el efecto red | **No.** Acopio no es una app de red. Ver abajo |
+
+### El del botón — el primero ya lo teníamos, y de los otros cinco valen tres
+
+Es el único de los veintisiete que trae **números comprobables**, así que lo he
+medido contra nuestro CSS en vez de opinar.
+
+**1. TAMAÑO — *"44 px o el dedo falla"*. ✅ YA ESTÁ, Y NUESTRA VERSIÓN ES MEJOR.**
+
+El vídeo dice 44 px de alto mínimo. Nosotros lo tenemos desde hace tiempo y
+además **con el criterio correcto**: la regla está bajo `@media (pointer: coarse)`
+—el dedo— y no bajo un ancho de pantalla, con el motivo escrito en el propio
+archivo:
+
+> *"(pointer: coarse) y no un ancho, a propósito: esto va del dedo, no de la
+> ventana. Una tableta a 1024 px sigue siendo una pantalla táctil, y una ventana
+> estrecha en un portátil sigue siendo un ratón — una regla por ancho se
+> equivoca en los dos casos."*
+
+Dentro hay 44 px para botones y pestañas, 36–40 px para los sueltos, y **34 px a
+propósito dentro de una fila de tabla**, también razonado (44 doblaría el alto de
+cada fila). El vídeo lo llamaría un fallo; nosotros lo decidimos sabiendo lo que
+costaba. **Eso no se cambia por un vídeo.**
+
+**2. ETIQUETA — *"di lo que va a pasar"*.** Ya lo hacemos (*Save*, *Release*,
+*Publish*), y es la regla que seguimos en los avisos. Nada que corregir.
+
+**3. CONTRASTE — *"un borde que se vea"*: etiqueta ≥ 4,5:1 y borde ≥ 3:1 contra
+la página.** 🟡 **Esto sí hay que medirlo.** Nuestros `.btn-ghost` son fondo
+transparente con `1px solid var(--border)`, y un borde gris claro sobre fondo
+claro es justo el caso que el vídeo señala: *"un relleno al 1,6:1 no tiene borde,
+y el botón desaparece"*. **No lo he medido todavía.** Es una comprobación
+objetiva y barata, y encaja con lo que Jose pidió para las columnas escondidas
+(*"opacas, no transparentes"*).
+
+**4. PROFUNDIDAD y 5. DETALLE** (sombra hacia abajo, borde superior iluminado,
+radio de pastilla, icono de 20 px con 10 px de hueco) — **es estilo**, y va con
+el rediseño. Se guarda, no se hace suelto.
+
+**6. MOVIMIENTO — *"cada toque contesta"*: 200 ms al pasar, 120 ms al pulsar y se
+hunde 1 px.** 🟡 Hoy tenemos `transition:.15s` y un `filter:brightness(.92)` al
+pasar por encima, **y nada al pulsar**. Y resulta que **esto conecta con un fallo
+real que Jose ya reportó**: el botón de Release no parecía hacer nada. Una
+respuesta al pulsar es la mitad de ese arreglo — la otra mitad es refrescar el
+cartel, que ya está anotado.
+
+### El de la app de red — no, y conviene decir por qué
+
+Habla de cómo arranca una app que **vale más cuanto más gente la usa** (invitar a
+un amigo, listas de espera). **Acopio no es eso.** Su valor para OX Glass no sube
+porque lo use otra empresa; cada instalación es un mundo cerrado, y ésa es una
+decisión de diseño y de seguridad, no una carencia.
+
+**Lo único que rescato, y es pequeño:** la invitación que acabamos de construir
+en la v12.42 es, técnicamente, un *"trae a un compañero"* — y es lo único de ese
+vídeo que aplica, porque **dentro de una misma empresa** sí hay un efecto de que
+entren todos.
+
+Lo demás —lista de espera, viralidad— es para vender a consumidores. Lo que
+mueve la aguja aquí está en `VENTAS.md` y no se parece.
+
+---
+
 ## Estado
 
-**25 vídeos recogidos. Esperando el resto.** Cuando lleguen, estas tablas crecen
+**27 vídeos recogidos. Esperando el resto.** Cuando lleguen, estas tablas crecen
 y entonces —y no antes— se decide el rediseño y se trocea en el backlog.

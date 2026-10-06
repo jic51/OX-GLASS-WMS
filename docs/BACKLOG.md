@@ -86,6 +86,10 @@ que un ✅ optimista.
 27. Incoming agrupado por fecha.
 28. Una prueba de navegador a un zoom que no sea el 100 % — Jose trabaja al
     157 % y ahí hay una clase de fallos que desde aquí no vemos.
+28-bis. **Las 20 comprobaciones de SEO del sitio** — auditadas el 06/10 contra el
+    sitio publicado. El hallazgo gordo: **la portada no tiene `viewport`** y sale
+    en escritorio encogido en los teléfonos. Plan de cinco tandas en
+    `SEO-DEL-SITIO.md`; la primera cubre 6 de las 20 en una tarde.
 
 ### 🔵 Esperando a Jose
 
@@ -95,13 +99,21 @@ que un ✅ optimista.
 31. Stripe.
 32. La plantilla maestra y el ensayo de restauración.
 33. **Otro tipo de usuario** — ya no hace falta: lo cierra el nº 35.
-34. Los vídeos de UX/UI — **van llegando** (25 el 05/10, faltan más). El
+34. Los vídeos de UX/UI — **van llegando** (27, faltan más). El
     registro de lo que enseña cada uno está en `VIDEOS-DE-UX.md`.
 35. **Permisos por persona** — ✅ decidido por Jose el 05/10; va después de la
     guardia de escritura (nº 5).
-36. **Informes** — qué falta y en qué orden, en `LO-QUE-FALTA-EN-LA-APP.md`. Lo
-    primero: la actividad de las personas dentro de la app (hoy AUDIT_LOG es el
-    único dato que obliga a abrir la hoja).
+36. **Informes** — ✅ decidido el 06/10: **los tres sitios** (pantalla, correo y
+    descarga), un solo cálculo. Qué informes y en qué orden, en
+    `LO-QUE-FALTA-EN-LA-APP.md`; confirmado desde fuera en `COMPETIDOR-EXCEL.md`.
+    Lo primero: la actividad de las personas dentro de la app (hoy AUDIT_LOG es
+    el único dato que obliga a abrir la hoja).
+37. **Search Console** — hay que darlo de alta y mandarme la etiqueta de
+    verificación. Sin esto, todo lo demás del SEO es a ciegas. Pasos click a
+    click en `SEO-DEL-SITIO.md`.
+38. **Enforce HTTPS** en los ajustes de `jic51/acopio-site` — una casilla. No lo
+    puedo comprobar desde aquí: el sitio no responde a esta máquina y la ruta de
+    la API de GitHub está bloqueada.
 
 ### 🔵 La v2
 
@@ -110,8 +122,8 @@ lo mismo, que es justo lo que acabamos de arreglar en los usuarios.
 
 ### 🔍 Sin revisar
 
-37. El estándar de las ventanas (lista de revisión del 2026-09-17).
-38. La sección histórica del 2026-09-09 — casi toda ✅ v11.x, con dos ⛔ dentro
+39. El estándar de las ventanas (lista de revisión del 2026-09-17).
+40. La sección histórica del 2026-09-09 — casi toda ✅ v11.x, con dos ⛔ dentro
     que no se han vuelto a mirar.
 
 ---
@@ -7145,6 +7157,10 @@ vídeos para que veas cómo quiero cambiar la app, en especial la UX/UI, pero es
 más tarde o en los próximos días"*). No se apunta nada de eso hasta verlos.
 
 # ══ 🔴 ABIERTO — EL CARTEL DE RESERVAS SE QUEDA VIEJO, Y LA APP CULPA A UN TERCERO ══
+#    Jose, 2026-10-06: "anótalo para arreglarlo bien más adelante."
+#    CONFIRMADO COMO TAREA PROPIA, no como parche. Cuando se haga va el arreglo
+#    de los tres puntos de abajo —el refresco, el mensaje y el repaso del resto
+#    de mensajes que suponen la causa— y una prueba, no sólo el primero.
 
 Medido en el vídeo de Jose del 2026-10-05 (`2053-37`), fotograma a fotograma.
 
@@ -7234,3 +7250,95 @@ script (`ROLE_PERMS_WAREHOUSE`), y pasarían a columnas de USERS_V3.
 
 **Y va DESPUÉS de dar la vuelta a la guardia de escritura**, que es de una línea
 y está más arriba en esta lista.
+
+# ══ 🔵 DECIDIDO POR JOSE (2026-10-06) — LOS INFORMES, EN LOS TRES SITIOS ══
+
+Pregunté: *"¿quien lleva las cuentas en OX Glass va a entrar a la app, o
+preferiría el informe por correo el día 1?"* Jose: **"prefiero que se pueda ver
+en los 2 lados, enviado por correo si se requiere o descargar en la
+computadora."**
+
+Decidido, y **es la respuesta correcta**: son tres salidas del MISMO informe, no
+tres informes.
+
+**La consecuencia de diseño, que es lo que hay que escribir antes de construir
+nada:** el informe se calcula **una vez, en el servidor**, y devuelve datos. Las
+tres salidas son tres formas de pintar esos datos:
+
+- **En pantalla** — una pestaña Reports con la lista dentro y su rango de fechas.
+- **Por correo** — el mismo cálculo, pintado en HTML, cuando alguien lo pide.
+  (Y el día que se quiera automático el día 1, ya está hecho: es el mismo
+  cálculo con un disparador delante.)
+- **Descargado** — el mismo cálculo, en CSV o PDF.
+
+**Lo que NO se hace:** tres funciones que calculen lo mismo por separado. Es el
+patrón que ya nos ha mordido cuatro veces este mes —*dos cosas que tienen que
+coincidir sin que nada lo obligue*— y aquí el fallo sería el peor de todos: **el
+informe de la pantalla y el del correo diciendo cifras distintas del mismo mes**,
+delante de quien lleva las cuentas.
+
+**Una prueba desde el primer informe**: que las tres salidas vengan de la misma
+llamada y den los mismos totales. Si eso no se puede comprobar, están separadas.
+
+Qué informes y en qué orden: `LO-QUE-FALTA-EN-LA-APP.md`, confirmado desde fuera
+por el competidor en `COMPETIDOR-EXCEL.md`.
+
+# ══ 🔴 ABIERTO — LAS 20 COMPROBACIONES DE SEO DEL SITIO ══
+
+Jose, 2026-10-06, con una imagen de 20 comprobaciones: *"verifica si las
+necesitamos y si ya las tenemos… luego haz un plan."*
+
+**Hecho y comprobado contra el sitio publicado, fichero por fichero:
+`docs/SEO-DEL-SITIO.md`.** Aquí sólo el resumen y lo que hay que hacer.
+
+## El hallazgo gordo, y es más que SEO
+
+**Las cuatro páginas principales —incluida la portada— no tienen
+`<meta viewport>`, ni `<!DOCTYPE html>`, ni `<html lang>`, ni `<meta charset>`.**
+Empiezan directamente en `<title>`. Las cinco de `docs/` sí lo tienen, porque las
+construye `build-site.js` con un molde; **las cuatro escritas a mano son las que
+no**.
+
+Sin `viewport`, un teléfono dibuja la página a ancho de escritorio y la encoge.
+**Jose manda el enlace por WhatsApp: el comprador lo abre en el móvil y lo
+primero que ve es una página de escritorio reducida.**
+
+## Cómo está la lista
+
+- **Ya se cumplen (9):** sin `noindex`, orden de encabezados, texto alternativo
+  (sólo hay una imagen en todo el sitio y lo tiene), enlaces internos, enlaces
+  rotos (con prueba automática), URLs limpias, HTTPS en el contenido, y los
+  títulos y el H1 único **con dos peros**: el `<title>` de la portada es
+  *"Acopio"* a secas, y `docs/instalacion.html` tiene **dos H1**.
+- **Faltan y hacen falta (6):** viewport/móvil, `og:image`, descripciones,
+  canonical, sitemap + robots, y datos estructurados.
+- **Faltan y NO corren prisa (3):** `llms.txt` —y conviene decirlo: **es una
+  convención propuesta, no un estándar; ningún buscador la exige**—, Core Web
+  Vitals (no se mide hasta arreglar el viewport, o se mide el sitio roto) y
+  comprimir imágenes (hay dos ficheros; el favicon pesa 24 KB y se carga en las
+  11 páginas).
+- **Sólo puede hacerlas Jose (2):** Enforce HTTPS y Search Console. **Lo intenté
+  y no pude**: desde esta máquina el sitio no responde y la ruta de la API de
+  GitHub está bloqueada. Las instrucciones click a click están en el documento.
+
+## El plan, en orden
+
+1. **La cabecera de los cuatro ficheros de `landing/` + el molde de
+   `build-site.js`.** Una sola tarea que cubre **6 de las 20** y el fallo de
+   fondo. Una tarde.
+2. **La imagen de compartir** (1200×630). Sin ella, el paso 1 apunta a nada.
+3. **`sitemap.xml`, `robots.txt` y `llms.txt` GENERADOS POR `build-site.js`** a
+   partir de la lista que ya tiene. A mano no: sería otra lista que tiene que
+   coincidir con la de al lado sin que nada lo obligue.
+   **Y con `tools/test-site-seo.js`**, que compruebe que cada página publicada
+   lleva su título, descripción, canonical, viewport y doctype, y que el sitemap
+   tiene exactamente las páginas que hay. Sin esa prueba, esto se cumple hoy y se
+   incumple en la tercera página nueva.
+4. **El `ld+json`** de la portada.
+5. **Los pequeños**: el segundo H1, los dos enlaces relativos de los changelogs,
+   y adelgazar el favicon.
+
+**Y lo que la lista no cubre, dicho para que el plan no se lea mejor de lo que
+es:** las 20 son fontanería. Ninguna hace que alguien busque Acopio. Hacen que,
+cuando alguien busque, el sitio no se descalifique solo, y que cuando Jose mande
+el enlace, se vea serio.
