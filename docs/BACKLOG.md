@@ -133,7 +133,16 @@ que un ✅ optimista.
     Jose pulse Verificar** ahora que está publicada.
 38. ✅ **HECHO (06/10) — Enforce HTTPS**, según Jose. No lo he podido comprobar
     yo: el proxy de esta máquina da 403 contra acopio.net.
-39. 🔴 **Los cinco documentos de cliente están DOS VECES en el sitio** — en
+39. ✅ **HECHO — y la lista estaba equivocada, no el sitio.** Lo comprobé el
+    07/10 contra lo PUBLICADO: las cinco direcciones de la raíz
+    (`setup.html`, `instalacion.html`, `restaurar.html`, `soporte.html`,
+    `vista-por-pasillo.html`) **ya son redirecciones** a su copia de `docs/` —
+    entre 819 y 867 bytes cada una— y el fichero `download` de 0 bytes ya no
+    está. Lo arregló el mecanismo `REDIRECTS` de `build-site.js` cuando se
+    añadió, y **esta entrada nunca se actualizó**. Queda escrito porque una
+    lista que dice que algo está roto cuando ya está arreglado es una lista que
+    se deja de creer, y eso cuesta más que el fallo. El texto original decía:
+    *Los cinco documentos de cliente están DOS VECES en el sitio* — en
     `docs/` (los de hoy) y sueltos en la raíz, de una organización anterior y
     **con el texto viejo**. Para un buscador son páginas duplicadas con el mismo
     título; para una persona, instrucciones de instalación desatendidas, que es
@@ -7720,3 +7729,53 @@ pidió Jose: la cabecera es del mismo azul en todas, el color de pestaña es por
 familia (cuatro, no uno por pestaña) y **no hay filas intercaladas**. El mockup
 `landing/mockup-formato-hojas.html` es sobre esa diferencia, no sobre empezar de
 cero.
+
+---
+
+# DECIDIDO EL 07/10/2026
+
+## ✅ LOTES — NIVEL 1 (trazabilidad), aprobado por Jose
+
+*"ME GUSTA, EMPEZAMOS POR LA 1 ENTONCES."*
+
+**Qué es:** una columna `Lote` que se escribe en la ENTRADA, viaja con el
+movimiento, se ve en las tablas y **se busca**. Contesta *"¿a qué obras fue el
+lote 2451?"* — la pregunta real cuando el fabricante avisa de un defecto o entra
+una reclamación de garantía.
+
+**Qué NO es:** no cuenta existencias por lote y no elige lote al sacar. Eso es el
+nivel 2 y sólo se construye si un cliente lo pide de verdad.
+
+**Cómo, sin romper nada:** la columna se **añade al final** del archivo
+(`AC_WIDTH` pasa de 23 a 24), exactamente como se añadieron `UNIT_COST`,
+`TOTAL_COST` y `MOV_ID`. Insertarla entre las que ya hay desplazaría cada
+columna posterior en toda instalación que haya guardado un movimiento. Ese
+camino ya está probado tres veces.
+
+**Lo que hay que tocar:** `AC` + `AC_WIDTH`, la cabecera de `ensureCoreSheets_`,
+el formulario de entrada, `parseArchiveRow`, la búsqueda, y las tablas que lo
+muestren. **No se toca el motor de existencias**, que es justamente lo que lo
+hace barato.
+
+**Por qué el nivel 1 y no el 2:** cubre el 80% de la necesidad real del vidrio
+(trazabilidad hacia atrás) por una fracción del trabajo. El nivel 2 añade una
+tercera dimensión a la clave de existencias (`material ||| estante ||| lote`) y
+arrastra las hojas calculadas, la validación de salida y los apartados.
+
+## 🔴 LA CLAVE DE GEMINI — documentado, y una cosa que arreglar
+
+Todo en `docs/CLAVE-DE-GEMINI.md`. Lo que queda por hacer:
+
+1. **La comprobación de la clave prueba CUATRO modelos, y debería probar uno.**
+   `geminiFetch_` recorre la lista de respaldo hasta que uno conteste. Esa lista
+   existe para el uso real —si Google retira un modelo, la app sigue— pero
+   **para validar una clave no aporta nada**: si la clave está mal, está mal
+   para los cuatro. El resultado es que la rueda de "verificando" da vueltas
+   cuatro veces más tiempo del necesario, que es exactamente lo que Jose vio.
+   **Pequeño.**
+2. **La nota dentro de la app**, en ⚙️ Settings → System → AI, con las tres
+   cosas que de verdad deciden: la clave, la *Generative Language API*, y —la
+   que nadie espera— **el permiso de Workspace**. Una cuenta de empresa con AI
+   Studio apagado en el panel de administración no puede usar ninguna clave, y
+   hoy la app no lo dice en ningún sitio. Texto propuesto al final del
+   documento. **Pequeño, va en la próxima versión de la app.**
