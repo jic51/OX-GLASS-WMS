@@ -7904,3 +7904,76 @@ Aplica a nuestros tres sitios de subida: fotos de estante, documentos de un
 movimiento, y el logo de la empresa. Lo más barato y lo que más se nota: **decir
 qué formatos y qué tamaño se aceptan**, que hoy no se dice en ninguno.
 Registrado también en `VIDEOS-DE-UX.md`.
+
+## 🔴 DOCUMENTACIÓN DE SOPORTE CON IMÁGENES — pedido por Jose el 07/10
+
+*"todo esto lo debemos tener bien documentado y hasta con imágenes por si
+alguien lo quiere leer, pero nosotros somos los que les daremos soporte a los
+usuarios, así que debemos saberlo de memoria nosotros primero, y también el
+cliente no debe ir al sheet nunca."*
+
+Lo escrito hasta hoy —`DE-CERO-A-CLIENTE.md`, `CLAVE-DE-GEMINI.md`,
+`PROYECTO-DE-CLOUD.md`, `INSTALL-GUIDE.md`, `CUSTOMER-SETUP.md`— **es para
+nosotros**: son mapas y razonamientos, no una guía con capturas que alguien
+siga sin saber nada. Falta eso, y falta en los dos sentidos:
+
+1. **La chuleta de soporte** (nuestra): el síntoma a la izquierda, la causa y la
+   frase exacta que se le dice al cliente a la derecha. La de la clave de
+   Gemini ya está en `ADD-ONS.md` y sirve de molde. **Un 503 no es una clave
+   mala** — esa confusión ya costó un día.
+2. **La guía con capturas** (del cliente): las cuatro piezas, con imagen de cada
+   pantalla. **Las capturas sólo las puede hacer Jose**, y el bloqueo es el
+   mismo de siempre: la copia demo con datos inventados.
+
+**Y una regla que Jose dejó dicha y conviene que esté escrita donde se lea:**
+**el cliente no debe ir al Sheet nunca.** Ya es la dirección del producto —
+está en `LO-QUE-FALTA-EN-LA-APP.md`— pero ahora también manda sobre la
+documentación: una guía que en algún paso diga "abre la hoja y busca la pestaña
+tal" es una guía que admite una derrota del producto. Si un paso necesita el
+Sheet, lo que falta es una pantalla, no un párrafo.
+
+## 🔵 DECIDIDO (07/10) — EL PROYECTO DE CLOUD VA SIEMPRE, Y EN LA CUENTA DEL CLIENTE
+
+Jose: *"si crear un proyecto en el workspace de cloud es lo mejor entonces
+debemos hacerlos siempre… eso se ve profesional y, si es para vernos más
+profesionales, quiero hacerlo."*
+
+**Sí, y buscándolo apareció una razón más fuerte que la estética.** Hay dos
+pantallas de permisos y no tienen el mismo coste (todo en
+`DE-CERO-A-CLIENTE.md`):
+
+- Un proyecto **Interno**, en el Workspace del cliente, **no necesita revisión
+  de Google ni para los permisos restringidos**: no hay pantalla gris, no hay
+  tope de 100 usuarios, y **no cuesta nada**.
+- Si todos los clientes colgaran de NUESTRO proyecto, sería **Externo** con
+  permiso restringido (`drive`) → **evaluación de seguridad anual de pago**
+  (CASA), para siempre.
+
+O sea: el camino que ya recomendábamos por limpieza **es además el único
+gratis**. Y hay que empezar en Interno, porque de Interno se puede pasar a
+Externo pero **no se vuelve** una vez que alguien autorizó.
+
+**Pendiente de comprobar antes de darlo por cerrado:** un cliente SIN Workspace
+(Gmail personal) no puede tener proyecto Interno. Hay que medir qué ve
+exactamente ése y si el tope de 100 usuarios le afecta. Para un almacén
+pequeño, 100 sobra — pero eso hay que verlo, no suponerlo.
+
+## 🔵 DECIDIDO (07/10) — EL CLIENTE DE OAuth TAMBIÉN VA, Y ES BARATO
+
+Jose quiere ofrecerlo para que un cliente sin dominio propio pueda trabajar con
+su correo personal y con su gente.
+
+**Y leyendo el código resulta que es mucho menos arriesgado de lo que parecía:**
+`_startGoogleLogin` pide **sólo `openid email profile`** — los tres permisos más
+básicos que existen. **No son sensibles ni restringidos.** El permiso temido
+(`drive`) está en la OTRA pantalla, la que firma el dueño de la copia una sola
+vez.
+
+El cliente de OAuth se crea **en el proyecto del cliente**, no en el nuestro, y
+sus credenciales van a las Script Properties **de la copia del cliente**. Nada
+nuestro se consume, y por eso esto escala: cien clientes no son más lentos que
+uno porque no hay nada compartido en medio.
+
+**La regla que sale de aquí y no hay que romper nunca:** *nunca poner una
+credencial nuestra en la instalación de un cliente* — ni Gemini, ni OAuth, ni
+nada. Su consumo sería nuestro consumo y su tope nuestro tope.
