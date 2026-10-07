@@ -7978,7 +7978,40 @@ uno porque no hay nada compartido en medio.
 credencial nuestra en la instalación de un cliente* — ni Gemini, ni OAuth, ni
 nada. Su consumo sería nuestro consumo y su tope nuestro tope.
 
-## 🔴 LA DIRECCIÓN DE LA APP TIENE TRES FORMAS Y SÓLO UNA SIRVE — 07/10
+## ⚠️ CORREGIDO EL 07/10 (mismo día) — ME EQUIVOQUÉ CON LO DE `/a/macros/`
+
+**Lo que escribí abajo es falso en su parte principal y lo dejo escrito entero
+para que se vea el error, no para esconderlo.**
+
+Dije que la forma buena de la dirección era `/a/macros/…` y que `/macros/…` no
+sirve. **Jose lo probó y falla igual.** Y su captura de *Manage deployments*
+remata el asunto: **la dirección que da Google es exactamente la que yo di por
+mala**, `https://script.google.com/macros/s/AKfy…/exec`, sin `/a/`.
+
+**De dónde salió el error:** del vídeo, donde la forma `/a/macros/ox-glass.com/…`
+pintó la app y la forma `/macros/…` no. De ahí deduje una regla —"los scripts de
+Workspace se sirven bajo /a/macros/"— que explica lo que vi y **no es verdad**.
+El prefijo `/a/macros/<dominio>/` lo pone Google según **con qué cuenta está
+mirando el navegador**, no según de quién es el script. No es una dirección
+distinta: es la misma vestida para una sesión.
+
+Clasifiqué dos cosas juntas porque aparecían juntas, que es el mismo error de
+medir que llevo semanas cazando en el código.
+
+**Lo único de abajo que sigue en pie, y sigue valiendo:** una dirección con
+`/u/<número>/` dentro **nunca es compartible** — ese `u/0` significa "la cuenta
+número 0 DE ESTE NAVEGADOR", así que funciona en la máquina donde se copió y
+falla en las demás. Que el asistente la rechace sigue siendo correcto.
+
+**La causa de verdad, que es otra y encaja con todo:** ver la entrada de abajo
+sobre la autorización rota. Un script cuya autorización dejó de valer no puede
+ejecutarse, y Google sirve exactamente ese error genérico de Drive. **Mismo día
+—el 1 de octubre— en que pararon los respaldos de la DEMO.** Una sola causa,
+dos síntomas.
+
+---
+
+## ~~🔴 LA DIRECCIÓN DE LA APP TIENE TRES FORMAS Y SÓLO UNA SIRVE~~ — 07/10 (EQUIVOCADO, ver arriba)
 
 Jose no podía entrar en la DEMO. **No era un permiso, ni el cliente de OAuth, ni
 el cambio de proyecto. Era la dirección.** Medido en su vídeo, mismo
@@ -8036,3 +8069,89 @@ Un informe de diagnóstico que obliga a interpretar no es un diagnóstico. Debe
 decir **"✓ las anchuras están bien"** o **"✗ MASTER_ARCHIVE_V3 tiene 20 y el
 modelo necesita 23"**, y dejar las cifras debajo para quien quiera mirarlas.
 Pequeño, y vale para todo el informe, no sólo para este bloque.
+
+
+## 🔴 CAMBIAR EL PROYECTO DE CLOUD MATA LOS TRABAJOS NOCTURNOS, EN SILENCIO — 07/10
+
+**El hallazgo, y es el que de verdad explica la DEMO.**
+
+Jose: *"en la DEMO el backup se paró desde el día 1 de octubre."* Su lista lo
+confirma: respaldos automáticos todas las noches a las 2:19 hasta el **1 de
+octubre**, y después nada hasta el que hizo a mano el 7.
+
+**El 1 de octubre es el día que enlazó la DEMO al proyecto ACOPIO.** Está
+escrito en `PROYECTO-DE-CLOUD.md`, con sus propias palabras y la captura.
+
+Cambiar el proyecto de Cloud **invalida la autorización anterior** — eso ya lo
+teníamos escrito como "el único efecto molesto". Lo que NO habíamos atado es lo
+que arrastra:
+
+- Los **disparadores por tiempo** corren con la autorización del dueño. Sin
+  ella fallan, y Google acaba desactivándolos.
+- **La app web también.** Un despliegue cuyo dueño no tiene autorización válida
+  no puede ejecutarse, y Google sirve *"Sorry, unable to open the file at this
+  time"* — el mensaje genérico de Drive, que no dice nada de autorizaciones.
+
+**Una causa, dos síntomas, la misma fecha.** Y ninguno de los dos se anuncia.
+
+**Y esto es un problema del PRODUCTO, no de la DEMO**, porque acabamos de
+decidir que cada cliente tenga su propio proyecto de Cloud. Tal y como está
+hoy, ese paso **apaga los respaldos del cliente sin avisar a nadie** hasta que
+el dueño vuelve a autorizar.
+
+**Lo que hay que construir, y por orden:**
+
+1. **Que la app note que el respaldo nocturno dejó de correr.** Hoy
+   `getBackupStatus` enseña el último respaldo y la lista, y **nada compara esa
+   fecha con hoy**. Si el último automático tiene más de ~36 horas, debe decirlo
+   en voz alta en Settings → System y en el correo diario. Vale contra esta
+   causa y contra todas las demás, que es lo que lo hace la pieza correcta.
+2. **Lo mismo para los otros tres trabajos** (archivado 3am, informe diario,
+   revisión 9am). El patrón es idéntico y ya está en la lista como *"la versión
+   en los otros tres trabajos automáticos"*.
+3. **Documentar el paso que falta** en `DE-CERO-A-CLIENTE.md`: después de
+   cambiar el proyecto hay que **volver a autorizar Y volver a desplegar**. Hoy
+   el documento dice "hay que volver a autorizar una vez" y se queda corto.
+
+**Predicción comprobable, y conviene comprobarla antes de dar esto por cerrado:**
+si la causa es ésta, en la DEMO habrán parado **los cuatro** trabajos el 1 de
+octubre, no sólo el respaldo. Se mira en Apps Script → Ejecuciones.
+
+## 🔴 CAMBIAR EL NOMBRE DE LA EMPRESA DEJA LAS CARPETAS VIEJAS A SU SUERTE — 07/10
+
+Jose: *"al cambiar el nombre de la empresa en la app, el nombre de las carpetas
+no cambia, y tampoco el de los archivos de backup, y eso hace que se cree una
+nueva carpeta… mejor debemos arreglarlos, ¿no crees?"*
+
+Sí. Su DEMO ha cambiado de nombre **dos veces** (PRODUCTION → MY WAREHOUSE →
+MY WAREHOUSE DEMO) y el resultado está en sus capturas: **dos carpetas maestras
+distintas** en el Drive, `Acopio_MY_WAREHOUSE` y `Acopio_PRODUCTION_OX_GLASS`,
+una dentro de la otra por accidente, y los respaldos repartidos entre nombres
+que ya no significan nada.
+
+**Lo que sí funciona hoy, y conviene decirlo antes de alarmar:** la app **no
+pierde** los respaldos. `getOrCreateFolder_` guarda el **ID** de la carpeta en
+Script Properties y busca por ID, no por nombre — por eso la lista de la app los
+enseña todos aunque la carpeta se llame como se llame. Renombrar la empresa
+**no rompe nada**.
+
+**Lo que está mal es lo que una persona ve:** carpetas y archivos con el nombre
+de una empresa que ya no existe, y la sospecha razonable de que algo se perdió.
+
+**Las tres piezas, y la primera es la que importa:**
+
+1. **Renombrar al cambiar el nombre de la empresa.** La carpeta maestra, las
+   tres hijas. Por ID, que es seguro. El ID no cambia, así que no se rompe
+   ningún enlace ni ningún documento ya subido.
+2. **Los respaldos ya creados NO se renombran.** Deliberado: el nombre de un
+   respaldo dice qué empresa era **el día que se hizo**, y reescribir eso es
+   falsificar el pasado. Es la misma regla que ya rige los movimientos
+   (*"existing movements keep the name they were recorded with"*).
+3. **Recoger lo que quedó suelto de renombrados anteriores.** `organizeDriveFolders_`
+   ya hace justo esto para las carpetas que conoce por ID; le falta encontrar
+   las de nombres **anteriores**. `FOLDER_PREFIX_HISTORY` ya existe y guarda los
+   nombres viejos — para los documentos. Reusarlo aquí.
+
+**Y lo que no se toca:** nada se borra ni se fusiona por decisión nuestra. Si
+una carpeta vieja tiene archivos, se mueve bajo la maestra actual y se dice qué
+se movió, como ya hace *Tidy up my Drive*.
