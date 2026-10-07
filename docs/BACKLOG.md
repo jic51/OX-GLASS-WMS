@@ -7977,3 +7977,62 @@ uno porque no hay nada compartido en medio.
 **La regla que sale de aquí y no hay que romper nunca:** *nunca poner una
 credencial nuestra en la instalación de un cliente* — ni Gemini, ni OAuth, ni
 nada. Su consumo sería nuestro consumo y su tope nuestro tope.
+
+## 🔴 LA DIRECCIÓN DE LA APP TIENE TRES FORMAS Y SÓLO UNA SIRVE — 07/10
+
+Jose no podía entrar en la DEMO. **No era un permiso, ni el cliente de OAuth, ni
+el cambio de proyecto. Era la dirección.** Medido en su vídeo, mismo
+identificador de implementación, dos prefijos:
+
+| Dirección | Qué pasa |
+|---|---|
+| `script.google.com/**a/macros**/s/AKfy…/exec` | **entra** |
+| `script.google.com/**macros**/s/AKfy…/exec` | *"Sorry, unable to open the file at this time."* |
+| `script.google.com/macros/**u/0**/s/AKfy…/exec` | igual de muerta, y además depende del navegador |
+
+Un script que vive en un dominio de Workspace se sirve bajo `/a/macros/…`. La
+forma `/macros/…` —la de las cuentas personales— **no resuelve**, y el error que
+da es de Drive y no dice nada: parece que la app no existe.
+
+**Y la tercera forma es la peor de todas.** `/macros/u/0/s/…` es la que copia
+cualquiera de la barra del navegador, y ese `u/0` significa *"la cuenta número 0
+DE ESTE NAVEGADOR"*. Funciona en la máquina donde se copió y falla en todas las
+demás. Es un enlace que parece bueno porque a quien lo copia le funciona.
+
+**Lo que hay que hacer, y son dos cosas distintas:**
+
+1. **Que la app no acepte una dirección que no puede funcionar.** `WEB_APP_URL`
+   se pega a mano en el asistente. Hoy se guarda lo que sea. Debe rechazar
+   cualquier dirección con `/u/<número>/` dentro —nunca es compartible— y, si
+   el script vive en un dominio, avisar cuando le den la forma `/macros/` en vez
+   de `/a/macros/`.
+2. **Que *Open WMS App* y el correo de invitación manden la buena.** Hoy salen
+   de `savedWebAppUrl_()`, o sea de lo que se pegó. Si lo pegado está mal, está
+   mal en todos los sitios a la vez — y es justo lo que pasó.
+
+**Esto ya había mordido antes y se le echó la culpa a otra cosa.** En
+`selfActivateWebApp_` está escrito que una copia hereda la dirección del script
+original y enseña *"Sorry, unable to open the file at this time"*. **Mismo
+mensaje.** Aquel diagnóstico puede haber sido correcto a medias: el síntoma
+también lo produce esto, y nadie comprobó cuál de los dos era.
+
+## 🔵 EL INFORME DEL ARCHIVADO IMPRIME NÚMEROS Y NO DICE SI ESTÁN BIEN — 07/10
+
+Jose, al pulsar *Test nightly archive*: *"¿qué significa esto?"*
+
+```
+SHEET WIDTHS — this is what the "23 vs 20" error is about
+  The row model needs   : 23 columns
+  MASTER_ARCHIVE_V3 has : 25   (last column in use: 23)
+  ARCHIVE_HISTORY has   : 26   (last column in use: 23)
+```
+
+**Esos números son el caso sano** —las dos hojas son más anchas que el modelo, y
+sobrar está bien; lo que rompe es faltar— **y aun así preguntó**, porque el
+bloque dice la palabra "error" en el encabezado y después deja tres cifras para
+que uno las compare a mano.
+
+Un informe de diagnóstico que obliga a interpretar no es un diagnóstico. Debe
+decir **"✓ las anchuras están bien"** o **"✗ MASTER_ARCHIVE_V3 tiene 20 y el
+modelo necesita 23"**, y dejar las cifras debajo para quien quiera mirarlas.
+Pequeño, y vale para todo el informe, no sólo para este bloque.

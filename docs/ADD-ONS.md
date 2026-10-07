@@ -70,7 +70,7 @@ puede hacer solo.
 | | Qué | Por qué lo pagan |
 |---|---|---|
 | **Instalación llave en mano** | La copia, el asistente, el deploy, el proyecto de Cloud, las APIs, los usuarios | Son los únicos pasos técnicos que hay, y dan miedo |
-| **Migrar su Excel** | Su inventario actual dentro, limpio y cuadrado | Es el trabajo que decide si adoptan la app o la abandonan la primera semana |
+| **Migrar su Excel** ⚠️ | Su inventario actual dentro, limpio y cuadrado | Es el trabajo que decide si adoptan la app o la abandonan la primera semana |
 | **Montar su bodega** | Ubicaciones, categorías, mínimos, el mapa dibujado como está su nave | Un almacén sin ubicaciones registradas no puede recibir nada |
 | **Formación** | Una sesión con su gente | — |
 | **Soporte con compromiso** | Responder en X horas, no "cuando pueda" | Es lo que convierte una herramienta en un proveedor |
@@ -78,6 +78,34 @@ puede hacer solo.
 | **Entrar con correo personal** | El cliente de OAuth, para quien no tiene dominio propio | Le ahorra comprar un dominio |
 | **Respaldo y ensayo de restauración** | Comprobar delante de él que su copia se puede recuperar | Nadie lo hace, y es lo que se agradece el día malo |
 | **Ajustes a su medida** | Lo que la landing ahora promete: *"cuéntanos qué necesita tu bodega"* | — |
+
+## ⚠️ Sobre migrar un Excel — Jose tiene razón y hay que decirlo
+
+*"NUNCA HEMOS MIGRADO UN EXCEL REAL, NO SABEMOS CÓMO VAYA A FUNCIONAR."*
+
+Correcto, y por eso lleva un aviso en vez de estar en la lista a secas.
+
+**Lo que SÍ está construido y probado:** el importador (`parseImportFile` +
+`commitImport`), con su pantalla de revisión antes de guardar y sus guardias de
+ubicación y categoría. Eso funciona.
+
+**Lo que NO sabemos:** cómo es el Excel de un almacén que no es el nuestro. Una
+hoja real trae columnas combinadas, cabeceras a media página, totales metidos
+entre las filas, fechas en tres formatos, el mismo material escrito de cinco
+maneras y cantidades con texto dentro. **Nada de eso lo hemos visto todavía.**
+
+**Así que no se vende "te migramos tu Excel" a precio cerrado.** Lo honesto, y
+además es mejor comercialmente:
+
+> *"Mándanos tu archivo y te decimos qué se puede traer y qué no, sin
+> compromiso."*
+
+Eso convierte el riesgo en una conversación, y **de paso nos da el primer
+Excel real** — que es exactamente lo que falta para poder venderlo después a
+precio cerrado.
+
+**Hasta que hayamos migrado dos o tres de verdad: se cobra por horas, nunca
+cerrado.**
 
 ---
 

@@ -127,7 +127,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.46';
+var APP_VERSION = '12.47';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -139,7 +139,7 @@ var APP_VERSION = '12.46';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '3bfa8137';
+var APP_BUILD = '54c1ca20';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -1489,37 +1489,87 @@ function setAiKey(data, auth) {
   // the Generative Language API switched off fails identically to no key at
   // all — days later, in front of somebody trying to read an email. Better to
   // find out here, in the one place where the person can still fix it.
+  //
+  // UN SOLO MODELO, y antes probaba cuatro. `geminiFetch_` recorre la lista de
+  // respaldo hasta que uno conteste, y eso es lo correcto PARA TRABAJAR: si
+  // Google retira un modelo, la app sigue. Pero PARA COMPROBAR UNA CLAVE no
+  // aporta nada —si la clave está mal, está mal para los cuatro— y lo que sí
+  // hace es multiplicar por cuatro el tiempo que la rueda da vueltas. Jose,
+  // 2026-10-07: *"lleva mucho tiempo verificando con Google, así que creo que
+  // está mal"*. Creyó que la clave fallaba porque tardaba. Tardaba por esto.
   var probe;
   try {
     probe = geminiFetch_({
       contents: [{ parts: [{ text: 'Reply with the single word: ok' }] }],
       generationConfig: { maxOutputTokens: 5 }
-    }, key);
+    }, key, true);
   } catch (e) {
     throw new Error('Could not reach Google to check the key: ' + e.message);
   }
 
   var code = probe.getResponseCode();
+
+  /* ── UN 503 NO ES UNA SENTENCIA SOBRE LA CLAVE ────────────────────────────
+   *
+   * Jose, 2026-10-07, con la captura: `Google rejected that key (HTTP 503)`.
+   * GOOGLE NO RECHAZÓ LA CLAVE. Un 503 es "estoy saturado"; un 429, "ahora no".
+   * Ninguno de los dos mira la clave siquiera. La suya podía estar perfecta.
+   *
+   * Y creyéndose el mensaje borró claves que funcionaban y se pasó un día
+   * sacando otras: *"creo que vamos a tener que empezar de nuevo… no entiendo
+   * nada"*. Ese "no entiendo nada" no era suyo: era de una frase nuestra que
+   * afirmaba algo que no sabía.
+   *
+   * ASÍ QUE AQUÍ SE GUARDA. Rechazar una clave por un fallo pasajero de Google
+   * deja a la persona sin poder avanzar por algo que no ha hecho ella, y a
+   * cambio de nada: la comprobación existe para cazar una clave MALA, y esto
+   * no demuestra que lo sea. Se guarda, se dice en voz alta que no se pudo
+   * comprobar, y si luego falla de verdad, el sitio donde se usa ya traduce el
+   * error bien desde hace meses.
+   *
+   * La traducción de los códigos YA ESTABA ESCRITA en geminiErrorText_ —con un
+   * comentario encima que nombra a Jose topándose con este mismo 503 en otra
+   * pantalla— y esta función no la llamaba: se armaba su propio texto a mano y
+   * decía "rejected" para todo lo que no fuera 200. Quinto caso del patrón de
+   * siempre: la respuesta correcta escrita en el archivo y nunca llamada. */
+  if (code === 429 || code >= 500) {
+    p.setProperty('GEMINI_API_KEY', key);
+    auditLog_(ss, 'AI_KEY', auth.email, 'GEMINI_API_KEY', 'set', 'saved, not verified (Google busy)');
+    return {
+      status: 'success', configured: true, hint: '…' + key.slice(-4), verified: false,
+      message: 'Key saved — but Google was too busy to check it just now, so we could ' +
+               'not confirm it works.\n\nThis is on Google\'s side, not yours. Try the ' +
+               'document reader in a few minutes; if it still fails, come back and paste ' +
+               'the key again.'
+    };
+  }
+
+  // Lo que sí es una sentencia sobre la clave: 400 y 403. Mal copiada, o la
+  // "Generative Language API" apagada en su proyecto.
   if (code !== 200) {
-    var why = 'Google rejected that key (HTTP ' + code + ').';
-    if (code === 400 || code === 403) {
-      why += '\n\nThe usual causes: the key was copied incompletely, or the ' +
-             '"Generative Language API" is not enabled on the Google project ' +
-             'the key belongs to.';
-    }
-    throw new Error(why);
+    var errTxt = '';
+    try {
+      var eo = JSON.parse(probe.getContentText() || '{}');
+      errTxt = (eo.error && eo.error.message) ? eo.error.message : '';
+    } catch (e2) {}
+    throw new Error(geminiErrorText_(code, errTxt || ('HTTP ' + code)));
   }
 
   p.setProperty('GEMINI_API_KEY', key);
   // Never the key itself, not even partially, into a sheet anyone can open.
   auditLog_(ss, 'AI_KEY', auth.email, 'GEMINI_API_KEY', 'set', 'verified against Google');
-  return { status: 'success', configured: true, hint: '…' + key.slice(-4) };
+  return { status: 'success', configured: true, hint: '…' + key.slice(-4), verified: true };
 }
 
 // One call, trying each model until one answers. Returns the HTTPResponse of
 // the first success, or of the last attempt so the caller can report something.
-function geminiFetch_(requestBody, apiKey) {
-  var models = geminiModels_();
+//
+// `unSoloModelo` — para COMPROBAR una clave, no para trabajar. Recorrer la
+// lista de respaldo cuando lo que se quiere saber es si la clave vale sólo
+// multiplica la espera: una clave mala lo es para todos los modelos. Ver
+// setAiKey.
+function geminiFetch_(requestBody, apiKey, unSoloModelo) {
+  var models = unSoloModelo ? [geminiModel_()] : geminiModels_();
   var last = null;
   for (var i = 0; i < models.length; i++) {
     last = UrlFetchApp.fetch(geminiUrl_(models[i], apiKey), {

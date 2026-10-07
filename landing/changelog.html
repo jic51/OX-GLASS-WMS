@@ -97,6 +97,26 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.47</span>
+      <span class="tag fix">Fix</span>
+      <h3>&ldquo;Google rejected that key&rdquo; when Google had rejected nothing</h3>
+      <p>Saving an AI key while Google&rsquo;s service was busy produced
+         <b>&ldquo;Google rejected that key (HTTP 503)&rdquo;</b>. A 503 means Google is
+         overloaded. It does not look at the key at all &mdash; so a perfectly good
+         key was reported as bad, and the obvious response is to go and make
+         another one, and another.</p>
+      <p>A busy Google is no longer treated as a verdict on your key. The key is
+         <b>saved</b>, and the app says plainly that it could not be checked right
+         now and why. Only the errors that really are about the key &mdash; copied
+         incompletely, or the Generative Language API switched off &mdash; still
+         refuse it, and now they say which.</p>
+      <p>Checking a key also stopped trying four models in a row. That fallback
+         list exists so the reader keeps working when Google retires a model; it
+         proves nothing about a key, and it made the wait four times longer than
+         it needed to be.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.46</span>
       <span class="tag fix">Fix</span>
       <h3>Renaming: one at a time, and nothing you typed gets thrown away</h3>

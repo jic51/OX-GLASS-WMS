@@ -65,15 +65,29 @@ function build(opts) {
     requireAuth_: () => ({ email: 'boss@oxglass.com', role: 'ADMIN' }),
     auditLog_: (...a) => { audit.push(a); },
     geminiModel_: () => 'gemini-2.5-flash',
-    geminiFetch_: (body, key) => {
-      fetches.push({ body, key });
-      if (opts.reject) return { getResponseCode: () => opts.reject };
+    // El tercer argumento es "prueba UN solo modelo". Se registra para poder
+    // comprobarlo abajo: validar una clave con cuatro modelos multiplicaba por
+    // cuatro la espera y no demostraba nada más.
+    geminiFetch_: (body, key, unSoloModelo) => {
+      fetches.push({ body, key, unSoloModelo });
+      if (opts.reject) {
+        return {
+          getResponseCode: () => opts.reject,
+          getContentText: () => JSON.stringify({ error: { message: 'fake google message' } })
+        };
+      }
       if (opts.throw) throw new Error('network down');
-      return { getResponseCode: () => 200 };
+      return { getResponseCode: () => 200, getContentText: () => '{}' };
     }
   };
   vm.createContext(sandbox);
-  vm.runInContext(extractFn('getAiStatus') + '\n' + extractFn('setAiKey'), sandbox);
+  // geminiErrorText_ VA DE VERDAD, no como doble. Es la traducción compartida
+  // de los códigos de Google, y la v12.47 hizo que setAiKey la usara en vez de
+  // escribir la suya a mano. Con un doble, esta prueba diría que el texto está
+  // bien sin haber mirado el texto que de verdad se enseña — que es justo el
+  // fallo que esta versión arregla.
+  vm.runInContext(extractFn('geminiErrorText_') + '\n' +
+                  extractFn('getAiStatus') + '\n' + extractFn('setAiKey'), sandbox);
   return { sandbox, props, audit, fetches };
 }
 
@@ -142,6 +156,52 @@ console.log('\n═══ verify before storing, not after ═══\n');
   try { sandbox.setAiKey({ key: REAL_KEY }); } catch (e) {}
   check('a rejected REPLACEMENT leaves the working key alone — a failed edit must not turn a working feature off',
     props.GEMINI_API_KEY === 'old-key-still-good');
+}
+
+/* ─── UN GOOGLE OCUPADO NO ES UNA SENTENCIA SOBRE LA CLAVE ──────────────────
+ *
+ * Jose, 2026-10-07, con la captura: `Google rejected that key (HTTP 503)`.
+ * GOOGLE NO RECHAZÓ NADA. Un 503 es "estoy saturado" y un 429 es "ahora no";
+ * ninguno de los dos mira la clave. La suya podía estar perfecta — y
+ * creyéndose el mensaje borró claves buenas y se pasó un día sacando otras.
+ *
+ * Esto es lo que mide este bloque, y es la parte que no se puede volver a
+ * perder: que un fallo pasajero de Google NO cueste la clave, NO se presente
+ * como culpa de la persona, y NO se disfrace de éxito.
+ */
+console.log('\n═══ Google ocupado ≠ clave mala ═══\n');
+
+[429, 500, 503].forEach(function (code) {
+  const { sandbox, props, audit } = build({ reject: code });
+  let res = null, threw = null;
+  try { res = sandbox.setAiKey({ key: REAL_KEY }); } catch (e) { threw = e.message; }
+
+  check('HTTP ' + code + ': la clave SE GUARDA — rechazarla por un fallo de Google deja a la ' +
+        'persona sin poder avanzar por algo que no ha hecho ella',
+    !threw && props.GEMINI_API_KEY === REAL_KEY);
+  check('HTTP ' + code + ': ...y se dice que NO se pudo comprobar, en vez de cantar victoria',
+    res && res.verified === false && /too busy|could not/i.test(res.message || ''));
+  check('HTTP ' + code + ': ...y el mensaje NO dice que Google rechazara la clave, porque no la miró',
+    res && !/reject/i.test(res.message || ''));
+  check('HTTP ' + code + ': ...y la auditoría deja escrito que quedó sin comprobar',
+    JSON.stringify(audit).indexOf('not verified') !== -1);
+});
+
+{
+  const { sandbox } = build({});
+  const res = sandbox.setAiKey({ key: REAL_KEY });
+  check('una clave que Google SÍ contesta queda marcada como comprobada — guardada y comprobada ' +
+        'no son lo mismo y la pantalla las distingue',
+    res.verified === true);
+}
+
+{
+  // La espera que hizo creer a Jose que la clave estaba mal.
+  const { sandbox, fetches } = build({});
+  sandbox.setAiKey({ key: REAL_KEY });
+  check('comprobar una clave pide UN SOLO MODELO — la lista de respaldo sirve para trabajar, ' +
+        'no para validar: si la clave está mal, está mal para los cuatro',
+    fetches.length === 1 && fetches[0].unSoloModelo === true);
 }
 
 {

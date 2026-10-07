@@ -98,6 +98,26 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.47</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>&laquo;Google rechaz&oacute; esa clave&raquo; cuando Google no hab&iacute;a rechazado nada</h3>
+      <p>Guardar una clave de IA mientras el servicio de Google estaba saturado
+         daba <b>&laquo;Google rejected that key (HTTP 503)&raquo;</b>. Un 503 significa que
+         Google est&aacute; sobrecargado: no mira la clave siquiera. As&iacute; que una clave
+         perfectamente buena se daba por mala, y lo que uno hace entonces es ir a
+         sacar otra, y otra.</p>
+      <p>Que Google est&eacute; ocupado ya no se toma como una sentencia sobre tu clave.
+         La clave <b>se guarda</b>, y la app dice con claridad que no se pudo
+         comprobar ahora y por qu&eacute;. S&oacute;lo la rechazan los errores que s&iacute; hablan de
+         la clave &mdash;mal copiada, o la Generative Language API apagada&mdash; y ahora
+         dicen cu&aacute;l de los dos es.</p>
+      <p>Comprobar una clave tambi&eacute;n dej&oacute; de probar cuatro modelos seguidos. Esa
+         lista de respaldo existe para que el lector siga funcionando si Google
+         retira un modelo; no demuestra nada sobre una clave, y hac&iacute;a la espera
+         cuatro veces m&aacute;s larga de lo necesario.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.46</span>
       <span class="tag fix">Arreglo</span>
       <h3>Renombrar: de uno en uno, y sin tirar lo que escribiste</h3>

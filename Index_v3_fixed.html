@@ -4510,7 +4510,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.46';
+var APP_VERSION = '12.47';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -4522,7 +4522,7 @@ var APP_VERSION = '12.46';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '3bfa8137';
+var APP_BUILD = '54c1ca20';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -13524,9 +13524,22 @@ function _aiSaveKey(){
   if (msg) { msg.style.color = 'var(--muted)'; msg.textContent = 'Checking the key with Google…'; }
   _btnBusy(btn, 'Checking…');
   google.script.run
-    .withSuccessHandler(function(){
+    /* GUARDADA NO ES LO MISMO QUE COMPROBADA, y decir "on" en los dos casos
+     * es la mentira pequeña que luego cuesta un día. Cuando Google está
+     * saturado el servidor guarda la clave y avisa de que no pudo comprobarla
+     * (ver setAiKey); si aquí se dijera "Document reader is on" igual, la
+     * persona se iría convencida de que funciona y se enteraría de que no
+     * delante de un proveedor. */
+    .withSuccessHandler(function(res){
       if (inp) inp.value = '';
-      showToast('Document reader is on.', 'ok');
+      var sinComprobar = res && res.verified === false;
+      if (sinComprobar) {
+        if (msg) { msg.style.color = 'var(--amber, #B45309)'; msg.textContent = res.message || ''; }
+        showToast('Key saved — Google was too busy to check it.', 'warn', 6000);
+      } else {
+        if (msg) msg.textContent = '';
+        showToast('Document reader is on.', 'ok');
+      }
       _loadAiStatus();
     })
     .withFailureHandler(function(e){
