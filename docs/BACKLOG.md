@@ -7779,3 +7779,128 @@ Todo en `docs/CLAVE-DE-GEMINI.md`. Lo que queda por hacer:
    Studio apagado en el panel de administración no puede usar ninguna clave, y
    hoy la app no lo dice en ningún sitio. Texto propuesto al final del
    documento. **Pequeño, va en la próxima versión de la app.**
+
+---
+
+# ANOTADO EL 07/10/2026
+
+## 🔴 EL ERROR 503 DE LA CLAVE DE GEMINI MIENTE — y es nuestro
+
+Jose, con la captura: `Error: Google rejected that key (HTTP 503)`.
+
+**Google NO rechazó la clave.** Un 503 es *"estoy saturado, vuelve luego"*. La
+clave podía estar perfecta. Y Jose, creyéndose el mensaje, **borró claves que
+funcionaban y se pasó un día creando otras nuevas** — un rato entero perdido
+por una frase equivocada.
+
+**Y la respuesta correcta YA ESTÁ ESCRITA EN EL ARCHIVO.** `geminiErrorText_`
+(línea 1420) traduce el 503 exactamente bien: *"The AI reader is busy right now
+— this is on Google's side, not yours, and nothing was lost."* Tiene un
+comentario encima que dice por qué se escribió, y nombra a Jose topándose con
+ese mismo 503 en otra pantalla.
+
+**Pero `setAiKey` no la llama.** Arma su propio texto a mano y dice "rejected"
+para cualquier código que no sea 200. `geminiErrorText_` tiene **un solo
+llamador** en todo el archivo (línea 14405).
+
+Quinto caso del mismo patrón: **la protección escrita y nunca llamada.** Los
+anteriores: `ensureCoreSheets_`, la reparación de cabeceras, el canario del
+archivado, la validación de llegada.
+
+**El arreglo es de una línea**, y va con esto:
+
+1. `setAiKey` usa `geminiErrorText_` para todo lo que no sea 200.
+2. **Y no borra la clave ni se niega a guardarla en un 503 o un 429**, porque un
+   fallo pasajero de Google no es una prueba de nada sobre la clave. Que diga
+   "Google está ocupado, inténtalo en un minuto" y deje lo que había.
+3. **La comprobación prueba UN modelo, no cuatro** (ver la entrada de la clave
+   de Gemini): la lista de respaldo sirve para el uso real, no para validar.
+
+## 🔵 VISTA POR PASILLO COMO MODO DEL MAPA — idea de Jose, y es mejor que la mía
+
+*"¿no sería mejor en el mapa poner un botón que diga 'vista por pasillo' y que
+cambie la forma de ver todo y ahí trabajar de esa forma? también el cíclico se
+puede poner dentro de esa vista por pasillo, así la opción del cíclico sólo
+aparece al cambiar la forma de la vista."*
+
+**Sí, y resuelve tres problemas que yo no había juntado:**
+
+1. **No añade una pestaña.** Yo la tenía apuntada como pantalla nueva; la barra
+   ya tiene cinco y cada una cuesta sitio y atención. Un interruptor dentro del
+   mapa no cuesta ninguna.
+2. **Pone el conteo donde se usa.** El conteo cíclico se recorre andando el
+   pasillo. Si el botón de contar sólo existe en la vista que se usa andando,
+   la herramienta aparece en el momento y el sitio en que hace falta — y **no
+   estorba** al 95% de los días en que nadie cuenta.
+3. **Mismo dato, dos formas de leerlo.** El mapa y el pasillo salen los dos de
+   `LIVE_STOCK`. Un interruptor sobre el mismo dato, no una pantalla nueva con
+   su propia carga.
+
+**Lo que hay que cuidar, y lo digo antes de construirlo:** un modo que cambia
+la pantalla entera es un sitio clásico para perderse. El modo tiene que
+**decir en voz alta que está activo** y tener una salida visible; y tiene que
+**recordarse** entre visitas, porque quien trabaja por pasillo trabaja por
+pasillo siempre.
+
+**Orden:** la vista primero (es leer, no se puede romper nada), el conteo
+después (escribe ajustes de verdad). La vista sola ya vale por sí misma.
+
+## 🔵 CÓDIGOS DE BARRAS Y QR — el plan, que es más grande que "leer un código"
+
+*"debemos trabajar en los códigos de barras o en los QR… que la app permita
+escanear locaciones, y códigos de barras para hacer todo tipo de movimientos.
+entonces también debe crear códigos para las locaciones."*
+
+Jose tiene razón en la parte que casi siempre se olvida: **antes de leer un
+código hay que tenerlo pegado en el estante.** Son cuatro trabajos, no uno, y
+el orden importa porque cada uno sirve de algo aunque el siguiente no llegue.
+
+| # | Qué | Tamaño | Sirve solo? |
+|---|---|---|---|
+| 1 | **Generar e imprimir el código de cada ubicación** | pequeño | **Sí** — un estante etiquetado ya se lee a ojo |
+| 2 | **Leer un código con la cámara del móvil** | mediano | Sí — buscar un estante al instante |
+| 3 | **Escanear dentro de un movimiento** (origen, destino, material) | mediano | Sí |
+| 4 | **Modo escaneo continuo** (pistola, sin tocar la pantalla) | grande | Es el que convierte la bodega |
+
+**Decisiones que hay que tomar antes de teclear nada:**
+
+- **QR, no código de barras**, para las ubicaciones. Un QR se lee torcido, roto
+  y desde más lejos, y cabe en una etiqueta pequeña. El código de barras lineal
+  tiene sentido si el cliente ya tiene lector de barras o si los materiales
+  vienen con código del fabricante.
+- **¿Qué lleva dentro el código?** Hay dos caminos y es irreversible una vez
+  impresas las etiquetas:
+  - **El nombre tal cual** (`A1A`) → simple, legible por humanos, y **se rompe
+    el día que se renombra un estante.**
+  - **Un identificador propio** que no cambia nunca → sobrevive a los
+    renombrados, pero hace falta una tabla que lo traduzca y una etiqueta que
+    muestre las dos cosas.
+  **Yo iría por el identificador propio**, por lo mismo que `MOV_ID`: ya nos
+  mordió una vez apuntar a algo por su nombre (ver la fusión de ubicaciones).
+- **El material es más difícil que la ubicación.** Una ubicación es única; un
+  material puede traer el código del fabricante, no traer ninguno, o traer uno
+  distinto por proveedor. **Empezar por ubicaciones** es lo correcto: son pocas,
+  son nuestras, y ya tienen pantalla (el mapa).
+- **La cámara del móvil ya se puede usar** sin librería externa en navegadores
+  modernos. Hay que comprobar que funciona dentro del iframe de Apps Script
+  **antes** de prometerlo — es la misma clase de muro que nos paró con la vista
+  previa de los PDF.
+- **La impresión ya existe** (las etiquetas de 4×6 de la v11.79). El punto 1 es
+  en buena parte reusar eso.
+
+**Encaja con lo de arriba:** el escaneo de ubicaciones y la vista por pasillo son
+la misma persona andando con el teléfono en la mano. Conviene pensarlas juntas,
+aunque se construyan por separado.
+
+## 🎬 VÍDEO DE UX (07/10) — la subida de archivos
+
+Referencia de diseño, no un fallo: *Profile Upload UI — Basic vs Premium*.
+Compara un botón de subir pelado con uno que trae **vista previa antes de
+subir**, **el nombre del archivo elegido** (o "No File Chosen"), **un anillo de
+progreso con porcentaje**, y **los formatos y el tamaño máximo escritos
+debajo**.
+
+Aplica a nuestros tres sitios de subida: fotos de estante, documentos de un
+movimiento, y el logo de la empresa. Lo más barato y lo que más se nota: **decir
+qué formatos y qué tamaño se aceptan**, que hoy no se dice en ninguno.
+Registrado también en `VIDEOS-DE-UX.md`.
