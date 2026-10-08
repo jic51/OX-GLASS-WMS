@@ -218,7 +218,10 @@ function mundo(){
     fnSrc(GS, 'padRow_'), fnSrc(GS, 'readWidth_'), fnSrc(GS, 'ensureArchiveWidth_'),
     fnSrc(GS, 'ensureTrashSheet_'), fnSrc(GS, 'findMovementById_'),
     fnSrc(GS, 'findTrashedById_'), fnSrc(GS, 'ensureArchiveHistorySheet_'),
-    fnSrc(GS, 'manageMaterialLocked_')
+    fnSrc(GS, 'manageMaterialLocked_'),
+    // Desde la v12.50 el borrado anota qué material era ANTES de quitar la
+    // fila, para devolver sus cifras de después. Necesita estas dos.
+    fnSrc(GS, 'getMaterialId'), fnSrc(GS, 'normalizeString')
   ].join('\n'), c);
 
   return {

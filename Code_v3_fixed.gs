@@ -127,7 +127,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.49';
+var APP_VERSION = '12.50';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -139,7 +139,7 @@ var APP_VERSION = '12.49';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '113a081f';
+var APP_BUILD = '38266b1a';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -3574,20 +3574,90 @@ var DATA_STAMP_KEY = 'WMS_DATA_STAMP';
 // una vez, en vez de N veces a quien estaba borrando filas.
 var REFRESH_PENDING_KEY = 'WMS_REFRESH_PENDING';
 
+/* Devuelve `true` si DE VERDAD refrescó, y `false` si lo aplazó.
+ *
+ * Hasta la v12.50 no devolvía nada, y quien llamaba no tenía forma de saber si
+ * las hojas calculadas estaban al día en ese instante. Eso importa desde que
+ * borrar y editar mandan de vuelta las cifras de después: sólo se pueden leer
+ * cuando el refresco ha ocurrido. Aplazado, lo honesto es no mandar nada —
+ * mandar cifras de antes diciendo que son de después es peor que no mandarlas. */
 function refreshOrDefer_(ss, data) {
   if (data && data._skipRefresh) {
     try {
       PropertiesService.getScriptProperties().setProperty(REFRESH_PENDING_KEY, '1');
+      return false;
     } catch (e) {
       // Si no se pudo dejar la marca, NO se aplaza: refrescar de más cuesta
       // segundos; no refrescar cuando nadie va a hacerlo cuesta números falsos.
       Logger.log('refreshOrDefer_: no se pudo marcar, refrescando ahora: ' + e.message);
       refreshDerivedSheets_(ss);
+      return true;
     }
-    return;
   }
   refreshDerivedSheets_(ss);
   _clearRefreshPending_();
+  return true;
+}
+
+/* ── LAS CIFRAS DE DESPUÉS, PARA BORRAR Y PARA EDITAR ────────────────────────
+ *
+ * Jose, 2026-10-08: *"eso va para TODO lo que hace la app"*. Guardar ya las
+ * manda desde la v12.49. Esto es lo mismo para las otras dos operaciones que
+ * mueven existencias.
+ *
+ * LEE EL MISMO CAMINO QUE getInitialData, a propósito, y no una cuenta nueva.
+ * `buildStockFromDerivedSheets_` + `applyReservationsAndFinalize_` es
+ * exactamente lo que la app usa para dibujar el Dashboard al entrar; si aquí se
+ * escribiera una segunda aritmética, el día que las dos discrepen el número de
+ * la pantalla dependería de si llegaste por un borrado o por una recarga. Ésa
+ * es la familia de fallos que llevamos meses cerrando.
+ *
+ * SÓLO SE LLAMA DESPUÉS DE UN REFRESCO DE VERDAD. Las hojas calculadas acaban
+ * de reescribirse, así que leerlas son tres viajes cortos, una vez por tanda —
+ * no por operación. Aplazado, el que llama no pide nada y manda `null`.
+ *
+ * Devuelve sólo los materiales que se piden, con la forma exacta que espera
+ * `_aplicarStockDelServidor` en el navegador. Ni uno más: mandar el almacén
+ * entero por borrar una fila sería pagar con la red lo que se ahorró en la
+ * hoja.
+ */
+function stockAfterParaIds_(ss, ids) {
+  var out = {};
+  try {
+    var quiero = {};
+    (ids || []).forEach(function (id) { if (id) quiero[id] = true; });
+    if (!Object.keys(quiero).length) return out;
+
+    var stock = buildStockFromDerivedSheets_(ss);
+    if (!stock) return out;                       // todavía no se construyeron
+    applyReservationsAndFinalize_(stock, getActiveLocksMap_(ss));
+
+    for (var k in quiero) {
+      if (!quiero.hasOwnProperty(k)) continue;
+      var s = stock[k];
+      /* UN MATERIAL QUE YA NO ESTÁ SE MANDA EN CERO, no se omite. Borrar la
+       * única entrada de algo lo deja sin filas en LIVE_STOCK, así que
+       * `stock[k]` no existe — y omitirlo dejaría en la pantalla la cifra de
+       * antes, que es justo el número falso que esto venía a evitar. */
+      out[k] = s ? {
+        warehouseQty:  s.warehouseQty,
+        siteQty:       s.siteQty,
+        reservedQty:   s.reservedQty,
+        availableQty:  s.availableQty,
+        totalQty:      s.totalQty,
+        warehouseLocs: s.warehouseLocs
+      } : {
+        warehouseQty: 0, siteQty: 0, reservedQty: 0,
+        availableQty: 0, totalQty: 0, warehouseLocs: {}
+      };
+    }
+  } catch (e) {
+    // Comodidad, nunca una razón para tumbar un borrado o una edición que ya
+    // están hechos. Vacío significa "no sé", y el navegador recarga.
+    Logger.log('stockAfterParaIds_: ' + e.message);
+    return {};
+  }
+  return out;
 }
 
 function _clearRefreshPending_() {
@@ -12965,12 +13035,38 @@ function manageMaterialLocked_(data, auth) {
     auditLog_(ss, 'DELETE_ROW', auth.email, String(found.row[AC.CATEGORY]), String(found.row[AC.NAME]),
               movId + ' — ' + JSON.stringify(found.row.slice(0, 8)));
 
+    /* EL MATERIAL, ANTES DE BORRAR LA FILA. Después ya no se puede leer: la
+     * fila desaparece y con ella la categoría y el nombre que componen su id. */
+    var matBorrado = getMaterialId(
+      normalizeString(found.row[AC.CATEGORY] || ''),
+      normalizeString(found.row[AC.NAME]     || ''));
+
     found.sheet.deleteRow(found.rowIdx);
     // LIVE_STOCK/SITE_STOCK/WASTED_STOCK are aggregates built from the archive —
     // deleting a row without recomputing them leaves stale totals behind forever
     // (the deleted movement's effect stays baked in even though the row is gone).
-    refreshOrDefer_(ss, data);
-    return { status: 'success', movId: movId, trashed: true };
+    var refrescado = refreshOrDefer_(ss, data);
+
+    /* LAS CIFRAS DE DESPUÉS, CUANDO SE PUEDEN SABER.
+     *
+     * Jose llevaba tiempo con esto y estaba anotado desde la v12.24: la fila se
+     * va al pulsar, pero las cifras del Dashboard se quedaban esperando la
+     * recarga. Se dejó pendiente porque calcularlas en CADA borrado devolvería
+     * la ráfaga lenta que arregló la v11.96 — trece borrados, trece
+     * reconstrucciones del almacén.
+     *
+     * Pero esa objeción sólo valía para los borrados APLAZADOS. El último de la
+     * tanda refresca de verdad, y en ese momento las hojas calculadas acaban de
+     * reescribirse: leer de ellas el material tocado son tres viajes cortos,
+     * UNA VEZ por tanda. Ahí sí se puede, y ahí es justo cuando alguien mira.
+     *
+     * Aplazado se manda `null`, que el navegador entiende como "todavía no" y
+     * deja para la recarga. Mandar las cifras de antes como si fueran las de
+     * después sería peor que no mandar nada. */
+    return {
+      status: 'success', movId: movId, trashed: true,
+      stockAfter: refrescado ? stockAfterParaIds_(ss, [matBorrado]) : null
+    };
 
   } else if (op === 'restoreMovement') {
     // Undo. The row goes back EXACTLY as it was — the trash kept the movement's
@@ -14084,6 +14180,17 @@ function modifyMovementLocked_(data, auth) {
   var range   = archive.getRange(rowIdx, 1, 1, readWidth_(archive));
   var rowVals = range.getValues()[0];
 
+  /* EL MATERIAL DE ANTES, ANOTADO AHORA. `rowVals` se muta más abajo, así que
+   * leerlo después daría el de después.
+   *
+   * Y HACEN FALTA LOS DOS. Cambiar la categoría o el nombre MUEVE existencias
+   * de un material a otro: el de antes se queda con menos y el de después con
+   * más. Mandar sólo uno dejaría al otro con la cifra vieja en pantalla — el
+   * número falso que esto venía a evitar, sólo que en la otra fila. */
+  var matAntes = getMaterialId(
+    normalizeString(rowVals[AC.CATEGORY] || ''),
+    normalizeString(rowVals[AC.NAME]     || ''));
+
   // Row numbers shift whenever archiveOldMovements() reconciles the sheet —
   // guard against silently editing the wrong movement if the client's cached
   // rowIdx is now stale (e.g. an archiving pass ran between page load and this
@@ -14201,7 +14308,11 @@ function modifyMovementLocked_(data, auth) {
   // Same class of bug as manageMaterial's deleteRow: qty/category/location edits
   // change what LIVE_STOCK/SITE_STOCK/WASTED_STOCK should total to — without this,
   // the derived sheets keep reflecting the pre-edit numbers indefinitely.
-  refreshOrDefer_(ss, data);
+  var refrescado = refreshOrDefer_(ss, data);
+
+  var matDespues = getMaterialId(
+    normalizeString(rowVals[AC.CATEGORY] || ''),
+    normalizeString(rowVals[AC.NAME]     || ''));
 
   // Audit log
   auditLog_(ss, 'MODIFY_MOVEMENT', auth.email,
@@ -14237,7 +14348,37 @@ function modifyMovementLocked_(data, auth) {
     { name: (companySettings_().name || 'Warehouse') + ' — ' + PRODUCT_NAME }
   );
 
-  return { status: 'success', changes: changes.length };
+  /* LA FILA COMO QUEDÓ, Y LAS CIFRAS DE DESPUÉS.
+   *
+   * Lo mismo que hace guardar desde la v12.49, por el mismo motivo: la pantalla
+   * no tiene por qué volver a preguntar por una fila que esta función acaba de
+   * escribir y tiene delante.
+   *
+   * Se manda LO QUE QUEDÓ EN LA HOJA, no lo que pidió el formulario. Esta
+   * función recalcula el Mat ID, normaliza y puede rechazar partes de lo
+   * pedido; pintar la petición en vez del resultado enseñaría una fila que no
+   * existe. Es la misma regla que en el guardado.
+   *
+   * En try, como todo lo de esta familia: una edición que YA está escrita no se
+   * tumba por un fallo preparando lo que se va a pintar. */
+  var filaEditada = null;
+  try {
+    filaEditada = parseArchiveRow(padRow_(rowVals, AC_WIDTH), rowIdx);
+    if (!canSeeCosts_(auth)) { filaEditada.unitCost = null; filaEditada.totalCost = null; }
+  } catch (eFila) {
+    Logger.log('modifyMovement, returning the edited row: ' + eFila.message);
+    filaEditada = null;
+  }
+
+  return {
+    status: 'success',
+    changes: changes.length,
+    movimiento: filaEditada,
+    // Los DOS materiales: el de antes y el de después. Son el mismo salvo que
+    // se haya editado la categoría o el nombre, y ahí está justo el caso que
+    // dejaría una cifra vieja en pantalla.
+    stockAfter: refrescado ? stockAfterParaIds_(ss, [matAntes, matDespues]) : null
+  };
 }
 
 // ── Diagnostic — run this in GAS Editor to identify load issues ───────────────

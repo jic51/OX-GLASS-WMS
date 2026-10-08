@@ -97,6 +97,25 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.50</span>
+      <span class="tag fix">Fix</span>
+      <h3>Deleting and editing now update the figures the moment they finish</h3>
+      <p>Deleting a movement took the row off the screen at once, but the totals
+         underneath kept the old number until the next refresh &mdash; which reads as
+         if the delete had not counted. The figures now come back with the delete
+         itself.</p>
+      <p>They come back only on the delete that actually rebuilt the totals &mdash;
+         the last one of a batch. Working them out on <i>every</i> delete would bring
+         back the slow burst fixed in v11.96, and sending the old numbers as if they
+         were the new ones would be worse than sending nothing.</p>
+      <p>Editing a movement used to redraw the row by <b>redoing the server's own
+         tidying in the browser</b> &mdash; two sums that had to agree with nothing making
+         them. The server now returns the row exactly as it was written, and the
+         totals for both materials, because changing a category or a name moves
+         stock from one to the other.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.49</span>
       <span class="tag fix">Fix</span>
       <h3>What you just saved now appears the second the server confirms it</h3>

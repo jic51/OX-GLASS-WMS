@@ -8269,3 +8269,43 @@ segundo**— está cumplido para GUARDAR. Falta para el resto:
    aparece en Movements en ese mismo instante porque sale de la misma
    respuesta. **No hay dos caminos que puedan desincronizarse** — que es
    justamente lo que Jose quería asegurar al preguntarlo.
+
+## ✅ HECHO (v12.50) — BORRAR Y EDITAR TAMBIÉN SE VEN EN EL ACTO
+
+Cerrado lo que quedaba del principio de Jose (*"eso va para TODO lo que hace la
+app"*). Las cinco operaciones que mueven existencias —entrada, salida,
+movimiento suelto, borrado y edición— aplican ya las cifras que el servidor
+devuelve.
+
+**Borrar:** la objeción que lo tenía parado desde la v12.24 era buena pero sólo
+cubría la mitad. Calcular las cifras en CADA borrado devolvería la ráfaga lenta
+de la v11.96; pero el último borrado de la tanda refresca de verdad, y ahí las
+hojas calculadas acaban de reescribirse. Leerlas son tres viajes cortos, una
+vez por tanda, y justo cuando alguien mira. Aplazado manda `null`.
+
+**Editar:** quitada una SEGUNDA ARITMÉTICA del navegador. Rehacía la
+normalización del servidor para pintar la fila, y su propio comentario avisaba
+del parpadeo si las dos no coincidían. Ahora el servidor manda la fila como
+quedó en la hoja, y los totales de los DOS materiales — editar la categoría o
+el nombre mueve existencias de uno a otro, y mandar sólo uno dejaría al otro
+con la cifra vieja.
+
+`stockAfterParaIds_` lee por `buildStockFromDerivedSheets_` +
+`applyReservationsAndFinalize_`, que es el MISMO camino que dibuja el Dashboard
+al entrar. No hay cuenta nueva que pueda discrepar.
+
+### Lo que queda del principio, y ya es pequeño
+
+- **Restaurar de la papelera** usa el mismo `refreshOrDefer_` y podría devolver
+  las cifras igual. No lo toqué en esta tanda para no mezclar; es media hora.
+- **Importar** (`commitImport`) mueve existencias en masa y recarga entero. Ahí
+  la recarga sí está justificada —cambia medio almacén— pero conviene mirarlo.
+- **Fusionar y renombrar** materiales o ubicaciones: mismo caso que importar.
+
+### Y una nota para quien venga después
+
+Las cinco llamadas a `_aplicarStockDelServidor(res)` son el contrato. Si se
+añade una sexta operación que mueva existencias y no la llama, **no habrá
+síntoma**: la recarga silenciosa acabará cuadrándolo, tarde, y nadie sabrá por
+qué esa pantalla va más lenta que las otras. `test-borrar-y-editar-se-ven.js`
+las cuenta por eso.

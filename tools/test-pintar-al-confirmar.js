@@ -307,7 +307,7 @@ function correrAdjunto(respuesta){
 console.log('\n── 4. saveEditMov: la fila editada, en el acto y normalizada ──');
 
 {
-  let pintados = 0;
+  let pintados = 0, cifras = 0;
   const llamadas = [];
   const dom = nuevoDom({
     em_reason:'se escribió mal', em_category:'screen', em_name:'  yogu   yogu  ',
@@ -323,6 +323,9 @@ console.log('\n── 4. saveEditMov: la fila editada, en el acto y normalizada 
     _editMovRowIdx: 12, _editMovOrigCategory:'WINDOW', _editMovOrigName:'OTRA COSA',
     TOAST_QUICK: 2000,
     renderAll(){ pintados++; },
+    // Las cifras de después, nuevas en la v12.50. Se espían para poder afirmar
+    // que la edición las mueve, que es lo que antes no hacía.
+    _aplicarStockDelServidor(r){ if (r && r.stockAfter) cifras++; return 0; },
     _acWrite(o){ llamadas.push(o); },
     _btnBusy(){}, _btnLabel(){}, _setModalBusy(){}, closeModal(){}, showToast(){},
     _clearMovSelection(){}, loadDataFromGoogle(){}, _humanErr(e){ return String(e); },
@@ -331,7 +334,8 @@ console.log('\n── 4. saveEditMov: la fila editada, en el acto y normalizada 
   vm.createContext(ctx);
   vm.runInContext(A.levantar(HTML, ['saveEditMov'], {
     dobles: ['_acWrite','renderAll','_btnBusy','_btnLabel','_setModalBusy','closeModal',
-             'showToast','_clearMovSelection','loadDataFromGoogle','_humanErr','_h']
+             'showToast','_clearMovSelection','loadDataFromGoogle','_humanErr','_h',
+             '_aplicarStockDelServidor']
   }), ctx);
 
   vm.runInContext('saveEditMov()', ctx);
@@ -340,18 +344,50 @@ console.log('\n── 4. saveEditMov: la fila editada, en el acto y normalizada 
   check('ANTES del sí del servidor la fila NO cambia',
         ctx.movements[0].name === 'OTRA COSA', ctx.movements[0].name);
 
-  llamadas[0].ok({ status:'success', changes: 5 });
+  /* LO QUE SE PINTA LO MANDA EL SERVIDOR, DESDE LA v12.50.
+   *
+   * Hasta aquí esta prueba comprobaba que el NAVEGADOR dejara la fila con el
+   * nombre en mayúsculas, los espacios colapsados, los estantes en mayúsculas
+   * y la cantidad en valor absoluto — es decir, que rehiciera a mano la
+   * normalización del servidor. Funcionaba, y el propio comentario del código
+   * avisaba del riesgo: *"si las dos mitades no coinciden, la recarga corrige
+   * algo que ya estaba bien y se ve un parpadeo"*. Dos aritméticas que tienen
+   * que coincidir sin que nada lo obligue — el fallo que este mes hemos
+   * encontrado seis veces en el producto.
+   *
+   * Ahora no hay segunda aritmética: `modifyMovement` devuelve LA FILA COMO
+   * QUEDÓ EN LA HOJA y el navegador la pone tal cual. Así que lo que hay que
+   * medir cambia de "¿la normaliza bien?" a "¿se cree lo que le dicen?" — y de
+   * paso se mide lo que la versión anterior NO PODÍA hacer, que es mover los
+   * totales. */
+  llamadas[0].ok({
+    status: 'success', changes: 5,
+    movimiento: { rowIdx:12, movId:'M-1', category:'SCREEN', name:'YOGU YOGU', qty:40,
+                  unit:'UNIT', sourceLoc:'A1A', destLoc:'B2B', project:'Casa',
+                  po:'99', pm:'PM1', comments:'ok' },
+    stockAfter: { 'SCREEN|||YOGU YOGU': { warehouseQty: 7, siteQty: 0, reservedQty: 0,
+                                          availableQty: 7, totalQty: 7, warehouseLocs: {} } }
+  });
   const m = ctx.movements[0];
-  check('la fila ya lleva el nombre nuevo', m.name === 'YOGU YOGU', m.name);
-  check('...normalizado como cleanDisplay_ (mayúsculas, trim, espacios colapsados)',
-        m.name === 'YOGU YOGU', JSON.stringify(m.name));
-  check('la categoría en mayúsculas, como el servidor', m.category === 'SCREEN', m.category);
-  check('los estantes en mayúsculas, como el servidor',
-        m.sourceLoc === 'A1A' && m.destLoc === 'B2B', { src:m.sourceLoc, dst:m.destLoc });
-  check('la cantidad en valor absoluto, como parseArchiveRow', m.qty === 40, m.qty);
-  check('los demás campos también', m.project === 'Casa' && m.po === '99' && m.pm === 'PM1',
-        { project:m.project, po:m.po, pm:m.pm });
+  check('la fila es LA QUE MANDÓ EL SERVIDOR, no una reconstruida aquí — si el servidor ' +
+        'corrigió algo al guardarlo, se ve lo corregido', m.name === 'YOGU YOGU' &&
+        m.category === 'SCREEN' && m.qty === 40 && m.movId === 'M-1', m);
+  check('...incluidos los campos que el navegador ni tocaba',
+        m.sourceLoc === 'A1A' && m.destLoc === 'B2B' && m.po === '99', m);
   check('se repintó', pintados > 0, pintados);
+  check('Y LOS TOTALES SE MUEVEN — es justo lo que la versión anterior dejaba escrito que ' +
+        'no podía hacer: "si el cambio fue de cantidad, los totales siguen esperando la ' +
+        'recarga"', cifras === 1, cifras);
+
+  /* El servidor puede no mandarla —el refresco iba aplazado, o algo falló
+   * preparándola—. Entonces no se inventa una fila a medias: se deja como
+   * está y manda la recarga. */
+  ctx.movements[0] = { rowIdx:12, movId:'M-1', name:'YOGU YOGU' };
+  const antes = pintados;
+  llamadas[0].ok({ status:'success', changes: 1 });
+  check('sin `movimiento` no se toca la fila ni se inventa nada — vacío significa "no sé"',
+        ctx.movements[0].name === 'YOGU YOGU' && pintados === antes,
+        { name: ctx.movements[0].name, pintados, antes });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

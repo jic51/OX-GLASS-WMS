@@ -98,6 +98,25 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.50</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Borrar y editar actualizan las cifras en el momento en que terminan</h3>
+      <p>Al borrar un movimiento la fila se iba de la pantalla en el acto, pero los
+         totales de abajo se quedaban con el n&uacute;mero viejo hasta la siguiente
+         recarga &mdash;y eso se lee como que el borrado no cont&oacute;&mdash;. Ahora las cifras
+         vuelven con el propio borrado.</p>
+      <p>Vuelven s&oacute;lo en el borrado que de verdad rehizo los totales: el &uacute;ltimo de
+         la tanda. Calcularlas en <i>cada</i> borrado devolver&iacute;a la r&aacute;faga lenta que
+         arregl&oacute; la v11.96, y mandar las cifras de antes como si fueran las de
+         despu&eacute;s ser&iacute;a peor que no mandar nada.</p>
+      <p>Al editar un movimiento, el navegador <b>rehac&iacute;a por su cuenta la
+         normalizaci&oacute;n del servidor</b> para pintar la fila &mdash;dos cuentas que ten&iacute;an
+         que coincidir sin que nada lo obligara&mdash;. Ahora el servidor devuelve la fila
+         exactamente como qued&oacute; escrita, y los totales de los dos materiales, porque
+         cambiar la categor&iacute;a o el nombre mueve existencias de uno a otro.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.49</span>
       <span class="tag fix">Arreglo</span>
       <h3>Lo que acabas de guardar aparece en el segundo en que el servidor lo confirma</h3>

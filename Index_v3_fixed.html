@@ -4510,7 +4510,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.49';
+var APP_VERSION = '12.50';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -4522,7 +4522,7 @@ var APP_VERSION = '12.49';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '113a081f';
+var APP_BUILD = '38266b1a';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -8714,9 +8714,20 @@ function _doDeleteMovementRow(rowIdx){
       var carga = { op: 'deleteRow', movId: mov.movId || '', rowIdx: rowIdx };
       _marcarAplazable(carga);
       google.script.run
-        .withSuccessHandler(function(){
+        .withSuccessHandler(function(res){
           _delGen++;   // una foto pedida antes de esto ya no vale
           if (mov.movId) delete _delPending[mov.movId];
+          /* LAS CIFRAS DE DESPUÉS, SI EL SERVIDOR LAS SUPO.
+           *
+           * La fila se va al pulsar desde la v11.66, pero el Dashboard seguía
+           * esperando la recarga — quedaba la fila fuera y el total sin
+           * cambiar, que es peor que no mover nada: parece que el borrado no
+           * contó.
+           *
+           * Sólo vienen en el borrado que SÍ refrescó, que es el último de la
+           * tanda. En los aplazados llega `null`, y entonces manda la recarga,
+           * igual que antes. Ver stockAfterParaIds_. */
+          _aplicarStockDelServidor(res);
           // La fila ya se fue al pulsar, hace unos cuatro segundos. Esto es el
           // seguro por si la animación no llegó a correr —pestaña en segundo
           // plano, movimiento reducido, una fila que no estaba pintada— y
@@ -24487,43 +24498,42 @@ function saveEditMov() {
     btn:  btn,
     what: 'Could not save',
     ok: function(res) {
-      // LA FILA EDITADA, al día en el acto. Ver "PINTAR EN CUANTO EL SERVIDOR
-      // DICE SÍ", junto a _incAplicarLocal.
-      //
-      // Se normaliza IGUAL que el servidor —mayúsculas en categoría y estantes,
-      // cleanDisplay_ en el nombre (mayúsculas + trim + espacios colapsados)—
-      // porque si las dos mitades no coinciden, la recarga "corrige" algo que
-      // ya estaba bien y se ve un parpadeo donde antes había un retraso. Un
-      // parpadeo es peor: el retraso al menos no miente dos veces.
-      //
-      // LO QUE ESTO NO ARREGLA, y hay que decirlo: si el cambio fue de CANTIDAD,
-      // los totales del dashboard siguen esperando la recarga. El navegador no
-      // puede recalcularlos — el stock sale de las hojas derivadas del servidor,
-      // no de sumar movimientos aquí. La fila que la persona acaba de editar
-      // cambia al instante; el total del material tarda lo que tarde el viaje.
-      if (typeof movements !== 'undefined' && movements){
-        var limpio = function(v){ return String(v || '').toUpperCase().trim().replace(/\s+/g, ' '); };
+      /* LA FILA EDITADA, Y LA MANDA EL SERVIDOR.
+       *
+       * Aquí vivía una SEGUNDA NORMALIZACIÓN: el navegador rehacía lo que el
+       * servidor hace —mayúsculas en categoría y estantes, cleanDisplay_ en el
+       * nombre— para pintar la fila sin esperar. Funcionaba, y su propio
+       * comentario avisaba del peligro: *"si las dos mitades no coinciden, la
+       * recarga corrige algo que ya estaba bien y se ve un parpadeo"*. Dos
+       * aritméticas que tienen que coincidir sin que nada lo obligue.
+       *
+       * Y traía escrito lo que no podía hacer: *"si el cambio fue de CANTIDAD,
+       * los totales del dashboard siguen esperando la recarga"*.
+       *
+       * Desde la v12.50 las dos cosas vienen hechas: `res.movimiento` es LA
+       * FILA COMO QUEDÓ EN LA HOJA —no lo que pidió el formulario— y
+       * `res.stockAfter` trae las cifras del material de antes y del de
+       * después, porque editar la categoría o el nombre mueve existencias de
+       * uno a otro.
+       *
+       * Si el servidor no las mandó, no se inventa nada: manda la recarga,
+       * como antes. */
+      if (res && res.movimiento && typeof movements !== 'undefined' && movements){
         for (var i = 0; i < movements.length; i++){
-          if (movements[i].rowIdx !== payload.rowIdx) continue;
           var m = movements[i];
-          m.category    = String(payload.category || '').trim().toUpperCase();
-          m.name        = limpio(payload.name);
-          m.qty         = Math.abs(Number(payload.qty) || 0);
-          m.unit        = payload.unit || '';
-          m.dateRec     = payload.dateRec || '';
-          m.responsible = payload.responsible || '';
-          m.sourceLoc   = String(payload.sourceLoc || '').trim().toUpperCase();
-          m.destLoc     = String(payload.destLoc || '').trim().toUpperCase();
-          m.project     = payload.project || '';
-          m.gc          = payload.gc || '';
-          m.supplier    = payload.supplier || '';
-          m.po          = payload.po || '';
-          m.pm          = payload.pm || '';
-          m.comments    = payload.comments || '';
+          // Por id propio cuando lo hay; por posición sólo en las filas viejas
+          // que todavía no lo tienen.
+          var esta = (res.movimiento.movId && m.movId)
+            ? (m.movId === res.movimiento.movId)
+            : (m.rowIdx === payload.rowIdx);
+          if (!esta) continue;
+          movements[i] = res.movimiento;
           break;
         }
         renderAll();
       }
+      // Y los totales, que es lo que la versión anterior no podía hacer.
+      _aplicarStockDelServidor(res);
       _setModalBusy('editMovOverlay', false);
       closeModal('editMovOverlay');
       // EL CHECK SE VA AQUÍ. Jose: "una vez que se selecciona un movimiento, se

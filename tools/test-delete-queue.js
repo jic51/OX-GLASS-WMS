@@ -93,6 +93,11 @@ function mundo(){
     _cierreDeTanda: () => {},
     _hayMasEscrituras: () => false,
     _reloadWhenIdle: () => { eventos.push('reload'); },
+    /* Desde la v12.50 el borrado aplica las cifras que el servidor devuelve —
+     * el último de la tanda las trae; los aplazados mandan null. Esta prueba
+     * mide la COLA (orden, reintentos, cierre de tanda), no el pintado, así
+     * que basta con que exista. */
+    _aplicarStockDelServidor: () => 0,
     // Y el aviso de "borrado" ya no es un toast, es una línea que cuenta —
     // trece borrados daban trece avisos apilados. Se anota como evento para que
     // el ORDEN, que es lo que mide este archivo, se siga viendo entero.
