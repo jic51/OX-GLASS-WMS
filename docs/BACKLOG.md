@@ -8479,3 +8479,40 @@ cada uno — incluido el que NO es de direcciones (*Access not granted*, que es
 
 El detalle técnico se queda en `LAS-TRES-DIRECCIONES.md`, que es nuestro y no
 se publica.
+
+
+## 🔴 ESTANDARIZAR LA PANTALLA — AHORA CON LAS CIFRAS CONTADAS, NO A OJO
+
+Jose preguntó si estaba analizando los vídeos de verdad —colores, formas,
+tamaños— y la respuesta honesta era **no a ese nivel**. Medido ya, sobre
+nuestra propia hoja de estilos:
+
+| Qué | Distintos hoy | Debería ser |
+|---|---|---|
+| Tamaños de texto | **41** (338 usos) | 5 o 6 |
+| Radios de esquina | **15** | 3 o 4 |
+| Interlineados | **13** (de 1 a 1.9) | 2, en función del tamaño |
+| Sombras | **45** | 2 o 3 |
+| Reglas con borde **Y** sombra | **9** | 0 |
+
+**La entrada vieja de esta lista decía 18 tamaños de texto. SON 41.** Lo conté
+a ojo entonces y me quedé a menos de la mitad. Ésta es la cifra contada.
+
+La escala propuesta y el razonamiento completo, en `VIDEOS-DE-UX.md`. Lo que
+importa aquí: **esta tanda ya no es "que se vea bien", tiene criterio escrito**,
+y cuatro de las reglas se pueden atar a una prueba:
+
+1. No más de 6 tamaños de texto distintos.
+2. No más de 4 radios.
+3. No más de 3 sombras.
+4. **Cero reglas con borde y sombra a la vez** (hoy 9).
+
+Sigue valiendo el aviso de tamaño: toca cientos de reglas de CSS, va pantalla
+por pantalla con la prueba delante, en `siguiente` y en una sola entrega.
+
+## ✅ Y EL COLOR YA LO CUMPLIMOS
+
+Medido con la misma vara que los cinco reels: ellos gastan **menos del 2 % de
+los píxeles** en color de marca; nosotros **1,0 % – 1,7 %**. La regla "un color,
+lo demás gris" está cumplida. **Conviene saberlo para no "arreglar" lo que está
+bien.**

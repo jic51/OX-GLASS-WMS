@@ -491,3 +491,112 @@ van por color semántico (verde / ámbar / rojo), que es lo que la regla permite
 —tamaños de texto, altos de fila, anchos de ventana— y que avisé que toca
 cientos de líneas de CSS y no se hace a ojo. Estas reglas le dan por fin un
 criterio escrito en vez de "que se vea bien".
+
+---
+
+# LO QUE NO HABÍA HECHO, Y AHORA SÍ — 2026-10-09
+
+Jose: *"¿también analizaste así los vídeos anteriores? ¿Aprendiendo cómo lo
+hacen otros, viendo colores, formas, tamaños, tiempo de reacción de todo,
+diseño en general?"*
+
+**Respuesta honesta: no a ese nivel.** De los anteriores saqué **la técnica y si
+nos sirve** —y eso está bien hecho: ahí está lo de *container queries* contra
+nuestros anchos de estante contados a mano—. Pero **colores exactos, radios,
+escalas de espaciado y tiempos no los medí.** Los juzgué a ojo.
+
+Esta sección es esa medida, hecha de verdad.
+
+---
+
+## Lo que SÍ se puede medir de un vídeo, y lo que no
+
+| | ¿Se puede? |
+|---|---|
+| **Color** | **Sí.** Muestreo de píxeles de la zona de la maqueta |
+| **Proporciones y tamaños** | **Sí cuando el vídeo los imprime** —y estos los imprimen: `200 × 64`, `HEADING 32 / 1.10`, `BODY 16 / 1.50`. Eso vale más que medir píxeles a ojo |
+| **Tiempos de animación** | **NO con rigor.** Un reel tiene sus propios cortes y scroll constante: no hay un reposo contra el que medir una transición. Lo intenté y salieron tres detecciones en seis vídeos — ruido, no datos. **No voy a dar números que no puedo defender** |
+
+---
+
+## LA MEDIDA DEL COLOR, Y CONFIRMA LA REGLA Nº 5
+
+Doce fotogramas por vídeo, sólo la zona de la maqueta, agrupando tonos casi
+iguales:
+
+| Reel | Los dos colores que mandan | ¿Y el color de marca? |
+|---|---|---|
+| Cards | `#F0F0F0` 43 % · `#000010` 13 % | **No aparece en los ocho primeros** |
+| Features | `#F0F0F0` 25 % · `#000010` 19 % | idem |
+| Typography | `#F0F0F0` 31 % · `#000010` 20 % | idem |
+| Two buttons | `#000000` 43 % · `#000010` 17 % | idem |
+| One color | `#000010` 34 % · `#101010` 22 % | idem |
+
+> **El color de marca ocupa menos del 2 % de los píxeles en los cinco.** Eso es
+> "one color, everything else grey" convertido en un número que se puede
+> comprobar.
+
+### Y la misma vara sobre nuestra app
+
+| | Gris/blanco/negro | Con color |
+|---|---|---|
+| Movements | **98,3 %** | 1,7 % |
+| Dashboard | **99,0 %** | 1,0 % |
+
+**Esta regla ya la cumplimos**, y conviene saberlo para no "arreglarla".
+*(Aviso honesto: la muestra incluye el marco del navegador, así que es
+indicativa, no exacta.)*
+
+---
+
+## LA MEDIDA DE LAS FORMAS Y LOS TAMAÑOS — aquí sí estamos mal
+
+Contado sobre nuestra propia hoja de estilos:
+
+| Qué | Cuántos distintos | Lo que debería ser |
+|---|---|---|
+| **Tamaños de texto** | **41** (338 usos) | 5 o 6 |
+| **Radios de esquina** | **15** | 3 o 4 |
+| **Interlineados** | **13** (de 1 a 1.9) | 2 o 3, **y en función del tamaño** |
+| **Sombras** | **45** | 2 o 3 |
+| **Reglas con borde Y sombra a la vez** | **9** | 0 — rompe la regla nº 1 |
+
+**El apunte que había en la lista decía 18 tamaños de texto. Son 41.** Lo medí a
+ojo entonces y me quedé a menos de la mitad; ésta es la cifra de verdad, contada.
+
+### La escala que propongo, derivada de las reglas y no del gusto
+
+```
+TEXTO      0.72  0.82  0.95  1.15  1.45  2.00 rem     (6 pasos)
+INTERLÍNEA  ≥1.15rem → 1.15    ·   <1.15rem → 1.50     (la regla nº 2)
+RADIOS     4px (controles) · 8px (tarjetas) · 14px (ventanas) · 999px (píldoras)
+SOMBRAS    una de tarjeta · una de ventana flotante. Y nunca con borde
+```
+
+**Lo que esto cuesta, dicho antes de empezar:** toca cientos de reglas de CSS y
+**no se hace a ojo ni de una sentada**. Va pantalla por pantalla, con una
+comprobación delante en cada paso, en la rama `siguiente` y entregado en una
+tanda — es lo mismo que ya avisé de *"estandarizar la pantalla"*, sólo que
+ahora hay un criterio escrito en vez de "que se vea bien".
+
+### Y lo que sí se puede atar a una prueba
+
+- **Contar tamaños de texto distintos y que no suba de 6.** Aritmética sobre el
+  CSS.
+- **Contar radios y sombras distintos.**
+- **Que ninguna regla tenga borde y sombra a la vez** (hoy hay 9).
+- **Un solo `btn-primary` por ventana.**
+
+Cuatro guardias baratos que convierten esto en algo que no se deshace solo.
+
+---
+
+## Lo que cambia en cómo miro los vídeos a partir de ahora
+
+1. **Medir antes de opinar.** El color se muestrea, los tamaños se cuentan.
+2. **Si el vídeo imprime un número, ése vale más que mi estimación.**
+3. **Decir cuándo no se puede medir** en vez de inventar una cifra: los tiempos
+   de animación de un reel no se pueden sacar, y punto.
+4. **Comparar siempre contra nuestra propia hoja de estilos**, que es donde se
+   ve si la regla nos sirve o ya la cumplimos. Sin eso, un vídeo sólo da una
+   opinión más.
