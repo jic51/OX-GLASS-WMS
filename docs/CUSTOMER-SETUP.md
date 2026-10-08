@@ -1,5 +1,13 @@
 # Setting up your warehouse system
 
+> ### ⚠️ BEFORE YOU START — AND AGAIN IF ANYTHING FAILS
+> Your app's `/exec` address must be in **three places and be identical in all
+> three**: the deployment, Script Properties (`WEB_APP_URL` and
+> `OAUTH_REDIRECT_URI`), and your OAuth client's *Authorized redirect URIs*.
+> None of them warns you when one is missing. See
+> **`docs/LAS-TRES-DIRECCIONES.md`** — it is the first place to look when
+> somebody cannot sign in.
+
 About 10 minutes, once. You do not need to install anything, and you do not need
 to be technical — but there is one screen partway through that looks alarming and
 isn't. It's explained below, in step 4.
@@ -103,3 +111,22 @@ Both are needed.
 domain (a personal Gmail, a contractor) need one extra setup step that is
 switched on separately. Ask whoever set the system up; the full workflow and
 troubleshooting is in `ACCESO-Y-LOGIN.md`.
+
+---
+
+## ⚠️ IF SIGNING IN FAILS, START WITH THE ADDRESSES
+
+Before looking anywhere else, read **`docs/LAS-TRES-DIRECCIONES.md`**.
+
+Your app's `/exec` address has to be in **three places at once**, and be the
+same in all three: the deployment itself, Script Properties (`WEB_APP_URL` and
+`OAUTH_REDIRECT_URI`), and — if people sign in with Google — the *Authorized
+redirect URIs* of your OAuth client in Cloud Console.
+
+**None of the three warns you when one is missing**, and they drift apart on
+their own: copying the sheet, making a new deployment instead of updating the
+existing one, and changing the Cloud project all do it.
+
+The two symptoms: `Error 400: redirect_uri_mismatch` means the OAuth client is
+missing it; *"Sorry, unable to open the file at this time"* means the saved
+address points somewhere else.

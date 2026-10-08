@@ -8410,3 +8410,33 @@ sospecha. **Pendiente, y es la pieza que de verdad cierra esto.**
 2. **`FOLDER_PREFIX` sigue siendo `Acopio_PRODUCTION_OX_GLASS`** aunque la
    empresa se llame `MY WAREHOUSE`. Es exactamente lo que él describió de las
    carpetas, y confirma que el renombrado pendiente es real y no cosmético.
+
+## ✅ ESCRITO (08/10) — `docs/LAS-TRES-DIRECCIONES.md`
+
+Jose lo encontró él, y su frase es la que había que escribir en algún sitio:
+*"eran las URL… el problema es que llevamos algunas sesiones con el mismo
+problema pero no sabíamos qué detalle faltaba revisar."*
+
+La dirección `/exec` tiene que estar en **tres sitios y ser la misma en los
+tres**: el despliegue, las Script Properties (`WEB_APP_URL` y
+`OAUTH_REDIRECT_URI`) y los *Authorized redirect URIs* del cliente de OAuth.
+**Ninguno de los tres avisa**, y se desalinean solas al copiar la hoja, al
+crear un despliegue nuevo y al cambiar el proyecto de Cloud.
+
+El documento lleva: de dónde se copia la buena (y de dónde NO — la barra del
+navegador miente), los dos síntomas con su significado, qué comprueba la app
+sola y qué no puede comprobar, y una lista de un minuto para el final de cada
+instalación.
+
+Enlazado **arriba y abajo** en `INSTALL-GUIDE`, `CUSTOMER-SETUP`,
+`DE-CERO-A-CLIENTE`, `PROYECTO-DE-CLOUD` y `CLAVE-DE-GEMINI`, y con el detalle
+de "de dónde se copia" metido en el Paso 3 de la guía, que es donde se pega.
+
+### Lo que sigue pendiente de esto
+
+**Que el servidor PRUEBE la petición de OAuth** y vea si Google contesta
+`redirect_uri_mismatch`. Hoy *Check installation* sólo puede comparar las dos
+direcciones que están de nuestro lado; el tercer sitio está en Cloud Console y
+desde el navegador no se puede leer. Con esa prueba, *Check installation*
+podría **afirmarlo** en vez de nombrarlo como sospecha, y esto dejaría de
+necesitar un documento.

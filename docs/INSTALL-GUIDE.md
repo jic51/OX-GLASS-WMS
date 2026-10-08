@@ -1,5 +1,12 @@
 # Guía de instalación — Acopio
 
+> ### ⚠️ ANTES DE EMPEZAR, Y DESPUÉS SI ALGO FALLA
+> La dirección `/exec` de la app tiene que estar **en tres sitios y ser la misma
+> en los tres**: el despliegue, las Script Properties (`WEB_APP_URL` y
+> `OAUTH_REDIRECT_URI`) y los *Authorized redirect URIs* del cliente de OAuth.
+> Ninguno avisa si falta. **`docs/LAS-TRES-DIRECCIONES.md`** — es el primer sitio
+> donde mirar cuando alguien no puede entrar.
+
 **Tiempo estimado: 5 minutos.** No necesitas saber programación. Solo una
 cuenta de Google (Gmail normal o de empresa).
 
@@ -57,6 +64,19 @@ Nada de esto se pierde si cierras la ventana a medias — retoma donde ibas.
 ---
 
 ## Paso 3 — El único paso técnico (una sola vez)
+
+
+> **⚠️ DE DÓNDE SE COPIA LA DIRECCIÓN, Y DE DÓNDE NO**
+>
+> Cópiala **sólo** de `Deploy → Manage deployments → Web app · URL`.
+>
+> **NO la copies de la barra del navegador.** Ahí Google le añade trozos según
+> con qué cuenta estés mirando (`/a/macros/tuempresa.com/…`, `/macros/u/0/…`) y
+> esas variantes **no funcionan** pegadas en ningún sitio: dan *"Sorry, unable
+> to open the file at this time"*.
+>
+> Y acuérdate de que **esa misma dirección hace falta en dos sitios más** —ver el
+> aviso del principio—. Si alguien no puede entrar, es casi siempre eso.
 
 Al final del asistente, te va a pedir **publicar tu sistema**. Es el único
 paso donde vas a ver algo parecido a "código", y el asistente te lleva de la
@@ -188,3 +208,18 @@ to…".
 > Si cambió `appsscript.json`, el cliente re-autoriza. Si no cambió, no.
 > Ante la duda, mándalo igual: re-autorizar cuesta treinta segundos, y
 > diagnosticar un permiso que falta cuesta una tarde.
+
+---
+
+## ⚠️ SI ALGO FALLA AL ENTRAR, EMPIEZA POR LAS DIRECCIONES
+
+Antes de buscar en ningún otro sitio: **`docs/LAS-TRES-DIRECCIONES.md`**.
+
+La dirección `/exec` de la app tiene que estar **en tres sitios a la vez** y ser
+la misma en los tres: el despliegue, las Script Properties (`WEB_APP_URL` y
+`OAUTH_REDIRECT_URI`) y, si usas inicio de sesión con Google, los *Authorized
+redirect URIs* del cliente de OAuth en Cloud Console.
+
+**Ninguno de los tres avisa cuando falta**, y se desalinean solas al copiar la
+hoja, al crear un despliegue nuevo y al cambiar el proyecto de Cloud. Esto nos
+costó varias sesiones y tres diagnósticos equivocados antes de encontrarlo.

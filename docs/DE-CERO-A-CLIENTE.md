@@ -1,5 +1,12 @@
 # De cero a un cliente funcionando — el mapa completo
 
+> ### ⚠️ ANTES DE EMPEZAR, Y DESPUÉS SI ALGO FALLA
+> La dirección `/exec` de la app tiene que estar **en tres sitios y ser la misma
+> en los tres**: el despliegue, las Script Properties (`WEB_APP_URL` y
+> `OAUTH_REDIRECT_URI`) y los *Authorized redirect URIs* del cliente de OAuth.
+> Ninguno avisa si falta. **`docs/LAS-TRES-DIRECCIONES.md`** — es el primer sitio
+> donde mirar cuando alguien no puede entrar.
+
 Jose, 2026-10-07: *"todo se me está complicando en la mente, dame un respiro y
 luego empezamos paso a paso… exactamente de dónde salen y dónde van y en qué
 orden."*
@@ -324,3 +331,18 @@ documentos valen lo que valen.
 > Ni la de Gemini, ni un cliente de OAuth, ni nada. En el momento en que una
 > credencial nuestra vive en la copia de un cliente, su consumo es nuestro
 > consumo, su tope es nuestro tope, y el día que uno abusa se cae para todos.
+
+---
+
+## ⚠️ SI ALGO FALLA AL ENTRAR, EMPIEZA POR LAS DIRECCIONES
+
+Antes de buscar en ningún otro sitio: **`docs/LAS-TRES-DIRECCIONES.md`**.
+
+La dirección `/exec` de la app tiene que estar **en tres sitios a la vez** y ser
+la misma en los tres: el despliegue, las Script Properties (`WEB_APP_URL` y
+`OAUTH_REDIRECT_URI`) y, si usas inicio de sesión con Google, los *Authorized
+redirect URIs* del cliente de OAuth en Cloud Console.
+
+**Ninguno de los tres avisa cuando falta**, y se desalinean solas al copiar la
+hoja, al crear un despliegue nuevo y al cambiar el proyecto de Cloud. Esto nos
+costó varias sesiones y tres diagnósticos equivocados antes de encontrarlo.

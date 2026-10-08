@@ -139,3 +139,18 @@ La versión de una línea, que es la que va a ir dentro de la app:
 - [Using Gemini API keys — ai.google.dev](https://ai.google.dev/gemini-api/docs/api-key)
 - [Manage access to Gemini features in Workspace services](https://knowledge.workspace.google.com/admin/gemini/manage-access-to-gemini-features-in-workspace-services)
 - [Configuration requirements for using Google AI Studio with Workspace and GCP](https://discuss.ai.google.dev/t/configuration-requirements-for-using-google-ai-studio-with-google-workspace-and-gcp/94050)
+
+---
+
+## ⚠️ SI ALGO FALLA AL ENTRAR, EMPIEZA POR LAS DIRECCIONES
+
+Antes de buscar en ningún otro sitio: **`docs/LAS-TRES-DIRECCIONES.md`**.
+
+La dirección `/exec` de la app tiene que estar **en tres sitios a la vez** y ser
+la misma en los tres: el despliegue, las Script Properties (`WEB_APP_URL` y
+`OAUTH_REDIRECT_URI`) y, si usas inicio de sesión con Google, los *Authorized
+redirect URIs* del cliente de OAuth en Cloud Console.
+
+**Ninguno de los tres avisa cuando falta**, y se desalinean solas al copiar la
+hoja, al crear un despliegue nuevo y al cambiar el proyecto de Cloud. Esto nos
+costó varias sesiones y tres diagnósticos equivocados antes de encontrarlo.

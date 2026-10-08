@@ -113,3 +113,18 @@ Project*. Lo que diga ahí decide el resto.
 
 Hasta que eso esté comprobado, **la plantilla maestra no sale de una copia
 enlazada a tu proyecto.**
+
+---
+
+## ⚠️ SI ALGO FALLA AL ENTRAR, EMPIEZA POR LAS DIRECCIONES
+
+Antes de buscar en ningún otro sitio: **`docs/LAS-TRES-DIRECCIONES.md`**.
+
+La dirección `/exec` de la app tiene que estar **en tres sitios a la vez** y ser
+la misma en los tres: el despliegue, las Script Properties (`WEB_APP_URL` y
+`OAUTH_REDIRECT_URI`) y, si usas inicio de sesión con Google, los *Authorized
+redirect URIs* del cliente de OAuth en Cloud Console.
+
+**Ninguno de los tres avisa cuando falta**, y se desalinean solas al copiar la
+hoja, al crear un despliegue nuevo y al cambiar el proyecto de Cloud. Esto nos
+costó varias sesiones y tres diagnósticos equivocados antes de encontrarlo.
