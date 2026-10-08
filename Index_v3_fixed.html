@@ -4510,7 +4510,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.48';
+var APP_VERSION = '12.49';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -4522,7 +4522,7 @@ var APP_VERSION = '12.48';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '8874fefd';
+var APP_BUILD = '113a081f';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -6775,6 +6775,59 @@ function _aplicarStockDelServidor(res){
   // una línea más. Ése era el sentido de unificar los estados y éste es el
   // primer sitio donde se cobra.
   if (puestos) renderAll();
+  return puestos;
+}
+
+/* ── LO GUARDADO SE VE EN EL MISMO SEGUNDO ───────────────────────────────────
+ *
+ * Jose, 2026-10-08: *"lo que quiero es que la app muestre lo que guardó,
+ * modificó, cambió, borró, etc. exactamente en el mismo segundo que termina de
+ * hablar con el servidor. Y eso va para todo lo que hace la app."*
+ *
+ * Cronometrado en su vídeo, guardando diez entradas: la ventana se cerraba a
+ * los 14,3 segundos y la tabla tardaba DIECISÉIS Y MEDIO MÁS en enseñarlas.
+ * Dieciséis segundos mirando una tabla que no contiene lo que acabas de meter
+ * es exactamente cuando uno piensa que falló y vuelve a darle.
+ *
+ * Y no tardaba por lenta: tardaba porque pedía la foto entera otra vez para
+ * enterarse de unas filas que el servidor ACABABA DE ESCRIBIR y le estaba
+ * devolviendo en la misma respuesta. Ahora vienen en `res.movimientos` (ver
+ * addMovementsBatch_) y se meten aquí.
+ *
+ * TRES REGLAS, Y LAS TRES IMPORTAN:
+ *
+ *   1. NO SE INVENTA NADA. Esto no reconstruye el movimiento a partir de lo
+ *      que se tecleó: pinta lo que el servidor dice que guardó, con su
+ *      identificador, su hora y sus costes ya tapados si no se pueden ver. Si
+ *      el servidor corrigió algo al guardarlo, lo que se ve es lo corregido.
+ *   2. SI NO VIENEN, NO PASA NADA. Lista vacía = no sé, y entonces manda la
+ *      recarga de siempre. Un fallo pintando no puede tumbar un guardado hecho.
+ *   3. LA RECARGA SIGUE EN PIE, en silencio y detrás. Esto adelanta lo que ya
+ *      se sabe; no sustituye a la foto completa. Si algo no cuadrara, la
+ *      recarga lo corrige sin que nadie haga nada — y por eso esto puede ser
+ *      optimista sin ser peligroso.
+ *
+ * Y NO SE PINTAN DE UNA EN UNA, a propósito, aunque Jose lo pidió así: las
+ * diez se guardan en UNA sola operación con un solo candado, y o entran todas
+ * o no entra ninguna. Enseñarlas goteando fingiría un progreso que no existe
+ * —ya están las diez— y sería la clase de adorno que este archivo lleva meses
+ * quitando. Aparecen juntas en el segundo en que el servidor dice que están.
+ */
+function _pintarGuardado(res){
+  var nuevos = res && res.movimientos;
+  if (!nuevos || !nuevos.length) return 0;
+  var yaEstan = {};
+  movements.forEach(function(m){ if (m && m.movId) yaEstan[m.movId] = true; });
+  var puestos = 0;
+  nuevos.forEach(function(m){
+    // Por id, no por posición: una recarga que se cruce no puede duplicar una
+    // fila, y volver a guardar lo mismo tampoco.
+    if (!m || (m.movId && yaEstan[m.movId])) return;
+    movements.push(m);           // `movements` va en orden de hoja; la tabla lo invierte
+    if (m.movId) yaEstan[m.movId] = true;
+    puestos++;
+  });
+  if (puestos) renderMovements();
   return puestos;
 }
 
@@ -10546,6 +10599,9 @@ async function submitMovement(){
         // Las cifras REALES de después, que el servidor acaba de mandar, y la
         // foto completa detrás en silencio. Ver _aplicarStockDelServidor.
         _aplicarStockDelServidor(res);
+        // Y las filas, en el mismo segundo. Ver _pintarGuardado: la recarga de
+        // abajo sigue estando, en silencio, para cuadrar lo que falte.
+        _pintarGuardado(res);
         _reloadWhenIdle();
         setTimeout(function(){
           if (res && (res.emailError || res.fileError || res.refreshError)){
@@ -11834,6 +11890,9 @@ function submitMultiExit(){
         // Las cifras REALES de después, que el servidor acaba de mandar, y la
         // foto completa detrás en silencio. Ver _aplicarStockDelServidor.
         _aplicarStockDelServidor(res);
+        // Y las filas, en el mismo segundo. Ver _pintarGuardado: la recarga de
+        // abajo sigue estando, en silencio, para cuadrar lo que falte.
+        _pintarGuardado(res);
         _reloadWhenIdle();
       })
       .withFailureHandler(function(err){
@@ -12023,6 +12082,9 @@ function submitMultiEntry(){
         // Las cifras REALES de después, que el servidor acaba de mandar, y la
         // foto completa detrás en silencio. Ver _aplicarStockDelServidor.
         _aplicarStockDelServidor(res);
+        // Y las filas, en el mismo segundo. Ver _pintarGuardado: la recarga de
+        // abajo sigue estando, en silencio, para cuadrar lo que falte.
+        _pintarGuardado(res);
         _reloadWhenIdle();
         setTimeout(function(){
           var count = (res && res.count) ? res.count : materials.length;

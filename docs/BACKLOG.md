@@ -8217,3 +8217,55 @@ ya usan los demás. 21 comprobaciones, dos mutaciones verificadas.
    muestra una tabla sin lo que acabas de meter, que es exactamente cuando uno
    piensa que falló y vuelve a darle. **Lo que hay que arreglar primero no son
    los 31 segundos: es que la tabla no mienta mientras llegan.**
+
+## ✅ HECHO (v12.49) — LOS 16,6 SEGUNDOS, Y LO QUE APARECIÓ DEBAJO
+
+Jose: *"lo que quiero es que la app muestre lo que guardó, modificó, cambió,
+borró, etc. exactamente en el mismo segundo que termina de hablar con el
+servidor. Y eso va para todo lo que hace la app."*
+
+La tabla no tardaba por lenta: **pedía la foto entera otra vez para enterarse
+de unas filas que el servidor acababa de escribir.** Ahora vienen en
+`res.movimientos` y se meten directas.
+
+**Y al abrirlo apareció algo más gordo:** `stockAfter` —el arreglo de la
+v12.24, *"el servidor ya tenía las cifras de después y las tiraba"*— lo producía
+`addMovementsBatch_` y **ninguna de las envolturas lo reenviaba**. Las tres
+pantallas llamaban a `_aplicarStockDelServidor(res)` y recibían `undefined`. Un
+arreglo escrito, probado y **muerto en el camino de vuelta** durante versiones,
+sin síntoma porque la recarga de detrás acababa cuadrándolo — tarde.
+
+Sexto caso del patrón: dos cosas que tienen que coincidir sin que nada lo
+obligue, esta vez entre dos funciones del mismo archivo.
+
+### Lo que Jose pidió y NO se hizo, con su motivo
+
+*"cada uno debe ir apareciendo en la lista uno por uno"*. **Las diez se guardan
+en UNA operación con un solo candado: o entran todas o no entra ninguna.**
+Pintarlas goteando fingiría un progreso que no existe —ya están las diez
+cuando el servidor contesta— y sería adorno. Aparecen juntas, en el segundo en
+que el servidor dice que están.
+
+Si de verdad hiciera falta una barra por fila, habría que partir el guardado en
+diez llamadas: diez veces más lento, y con la posibilidad de quedarse a medias.
+**La atomicidad vale más que la animación**, y conviene que quede escrito antes
+de que a alguien le tiente deshacerlo.
+
+### Lo que queda de esto, y es lo que conecta con su lista estilo Google
+
+El principio de Jose —**que la pantalla enseñe lo confirmado en el mismo
+segundo**— está cumplido para GUARDAR. Falta para el resto:
+
+1. **Borrar.** La fila se va al pulsar desde la v11.66, pero las cifras del
+   Dashboard esperan la recarga. Ya estaba anotado: `deleteRow` no tiene
+   snapshot a mano y calcularlo en cada borrado devolvería la ráfaga lenta que
+   arregló la v11.96. La forma que encaja: calcularlo **sólo cuando el refresco
+   no se aplaza**, que es el final de la tanda y justo cuando alguien mira.
+2. **Editar un movimiento.** Mismo caso que guardar y la misma solución:
+   `modifyMovement` sabe cómo queda la fila y puede devolverla.
+3. **Ajustes** (categorías, ubicaciones, usuarios): ya se parchean en sitio.
+4. **La lista de operaciones tipo Google.** Cuando exista, la regla ya está
+   puesta: el check verde se pinta con lo que el servidor confirmó, y la fila
+   aparece en Movements en ese mismo instante porque sale de la misma
+   respuesta. **No hay dos caminos que puedan desincronizarse** — que es
+   justamente lo que Jose quería asegurar al preguntarlo.

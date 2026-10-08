@@ -98,6 +98,27 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.49</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Lo que acabas de guardar aparece en el segundo en que el servidor lo confirma</h3>
+      <p>Guardando diez entregas, cronometrado fotograma a fotograma: la ventana se
+         cerraba a los 14 segundos y la lista de movimientos tardaba <b>diecis&eacute;is y
+         medio m&aacute;s</b> en ense&ntilde;arlas. Diecis&eacute;is segundos mirando una tabla que no
+         contiene lo que acabas de meter es justo cuando alguien decide que fall&oacute; y
+         vuelve a darle a guardar.</p>
+      <p>No era lentitud. El navegador ped&iacute;a la foto entera otra vez para enterarse
+         de unas filas que <b>el servidor acababa de escribir y le estaba devolviendo
+         en la misma respuesta</b>. Ahora entran directas en la lista, con su
+         identificador propio para que la recarga silenciosa de detr&aacute;s no pueda
+         ense&ntilde;ar nada dos veces.</p>
+      <p>Al abrirlo apareci&oacute; algo m&aacute;s gordo: las cifras de existencias que el servidor
+         calcula desde la v12.24 &mdash;para que la pantalla no tenga que preguntarlas&mdash;
+         <b>no las reenviaba ninguno de los tres caminos de guardado</b>. El navegador
+         las ped&iacute;a y recib&iacute;a nada. Arreglado en los tres, con una prueba que ahora
+         sujeta el viaje de vuelta entero.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.48</span>
       <span class="tag fix">Arreglo</span>
       <h3>Una errata en un correo s&oacute;lo se pod&iacute;a arreglar en la hoja</h3>

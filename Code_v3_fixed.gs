@@ -127,7 +127,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.48';
+var APP_VERSION = '12.49';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -139,7 +139,7 @@ var APP_VERSION = '12.48';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '8874fefd';
+var APP_BUILD = '113a081f';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -3181,6 +3181,9 @@ function processMovementInner_(ss, action, data, auth) {
         fileError:  entryRes.fileError,
         emailError: entryRes.emailError,
         refreshError: entryRes.refreshError,
+        stockAfter:     entryRes.stockAfter     || null,
+        availableByMat: entryRes.availableByMat || null,
+        movimientos:    entryRes.movimientos    || [],
         message:    'ENTRY recorded' + (entryRes.rowCount > 1 ? ' (' + entryRes.rowCount + ' locations).' : '.')
       };
     }
@@ -3220,6 +3223,9 @@ function processMovementInner_(ss, action, data, auth) {
         fileError:  exitRes.fileError,
         emailError: exitRes.emailError,
         refreshError: exitRes.refreshError,
+        stockAfter:     exitRes.stockAfter     || null,
+        availableByMat: exitRes.availableByMat || null,
+        movimientos:    exitRes.movimientos    || [],
         message:    'EXIT recorded' + (exitRes.rowCount > 1 ? ' (' + exitRes.rowCount + ' locations).' : '.')
       };
     }
@@ -3255,6 +3261,9 @@ function processMovementInner_(ss, action, data, auth) {
         fileError:  transferRes.fileError,
         emailError: transferRes.emailError,
         refreshError: transferRes.refreshError,
+        stockAfter:     transferRes.stockAfter     || null,
+        availableByMat: transferRes.availableByMat || null,
+        movimientos:    transferRes.movimientos    || [],
         message:    'TRANSFER recorded' + (transferRes.rowCount > 1 ? ' (' + transferRes.rowCount + ' pairs).' : '.')
       };
     }
@@ -3297,7 +3306,10 @@ function processMovementInner_(ss, action, data, auth) {
       availableAfter: availAfter != null ? availAfter : null,
       fileError:      singleRes.fileError,
       emailError:     singleRes.emailError,
-      refreshError:   singleRes.refreshError
+      refreshError:   singleRes.refreshError,
+      stockAfter:     singleRes.stockAfter     || null,
+      availableByMat: singleRes.availableByMat || null,
+      movimientos:    singleRes.movimientos    || []
     };
   }
   if (action === 'addMultiEntry')         return addMultiEntry(ss, archive, data, auth);
@@ -4358,6 +4370,50 @@ function addMovementsBatch_(ss, archive, movements, auth, opciones) {
       };
     }
 
+    /* ── LAS FILAS QUE ACABAN DE ESCRIBIRSE, DE VUELTA ────────────────────────
+     *
+     * Jose, 2026-10-08, después de que yo cronometrara su vídeo: *"lo que
+     * quiero es que la app muestre lo que guardó, modificó, cambió, borró,
+     * etc. exactamente en el mismo segundo que termina de hablar con el
+     * servidor."*
+     *
+     * Medido en ese vídeo, guardando diez entradas: la ventana se cerraba a
+     * los 14,3 segundos y la tabla tardaba DIECISÉIS Y MEDIO MÁS en enseñar lo
+     * guardado. Durante esos dieciséis segundos la pantalla mostraba una tabla
+     * SIN lo que la persona acababa de meter — que es exactamente cuando uno
+     * piensa que falló y vuelve a darle.
+     *
+     * Y la tabla no tardaba por lenta: tardaba porque NO SE LE DECÍA NADA. El
+     * navegador pedía la foto entera otra vez (`_reloadWhenIdle`) para
+     * enterarse de unas filas que ESTA FUNCIÓN ACABABA DE ESCRIBIR y tenía
+     * delante en `newRows`.
+     *
+     * Es el mismo hallazgo que `stockAfter` en la v12.24, y lo escribí
+     * entonces: **el servidor ya tenía las cifras de después y las tiraba.**
+     * También tenía las filas. Esto es la otra mitad de aquello.
+     *
+     * Se mandan EXACTAMENTE como las manda getInitialData —el mismo
+     * parseArchiveRow, el mismo tapado de costes— porque la pantalla las va a
+     * meter en la misma lista. Dos formas distintas del mismo dato es el fallo
+     * que llevamos meses cazando, y aquí sería gratuito.
+     *
+     * En try, y si falla va vacío: esto es comodidad, y un fallo pintando una
+     * fila NO puede tumbar un guardado que ya está hecho. Vacío significa "no
+     * sé", y el navegador entonces hace lo de siempre, que es recargar.
+     */
+    var guardados = [];
+    try {
+      var verCostes = canSeeCosts_(auth);
+      for (var g = 0; g < newRows.length; g++) {
+        var mg = parseArchiveRow(newRows[g], startRow + g);
+        if (!verCostes) { mg.unitCost = null; mg.totalCost = null; }
+        guardados.push(mg);
+      }
+    } catch (eGuardados) {
+      Logger.log('returning saved movements: ' + eGuardados.message);
+      guardados = [];
+    }
+
     return {
       status:         'success',
       firstRowIdx:    startRow,
@@ -4367,6 +4423,8 @@ function addMovementsBatch_(ss, archive, movements, auth, opciones) {
       refreshError:   refreshError,
       availableByMat: availableByMat,
       stockAfter:     stockAfter,
+      // Las filas recién guardadas, listas para pintar. Ver el bloque de arriba.
+      movimientos:    guardados,
       // Sólo tiene algo cuando quien llamó pidió `crearUbicaciones` — es decir,
       // la importación. Vacío en cualquier otro caso, por construcción.
       ubicacionesCreadas: ubicNuevas,
@@ -4622,6 +4680,23 @@ function addMultiEntry(ss, archive, data, auth) {
     emailError: res.emailError || null,
     refreshError: res.refreshError || null,
     pmError:    pmError,
+      /* LO QUE EL SERVIDOR YA SABE, REENVIADO. Y hasta la v12.49 no lo era.
+       *
+       * `addMovementsBatch_` calcula `stockAfter` desde la v12.24 —las cifras
+       * de después, para que la pantalla no tenga que preguntarlas— y estas
+       * tres envolturas NO LO PASABAN. El navegador llamaba a
+       * `_aplicarStockDelServidor(res)` y recibía `undefined`, así que se
+       * salía por la primera línea y no ponía nada. Un arreglo escrito,
+       * probado y muerto en el camino de vuelta.
+       *
+       * Dos cosas que tienen que coincidir —lo que una función produce y lo
+       * que la de arriba reenvía— sin que nada lo obligue. El mismo patrón de
+       * siempre, esta vez entre dos funciones del mismo archivo.
+       *
+       * `movimientos` es nuevo en la v12.49 y viene por la misma puerta. */
+    stockAfter:     res.stockAfter     || null,
+    availableByMat: res.availableByMat || null,
+    movimientos:    res.movimientos    || [],
     message:    totalMats + ' material(s), ' + res.rowCount + ' row(s) recorded.'
   };
 }
@@ -4670,6 +4745,23 @@ function addMultiExit(ss, archive, data, auth) {
     count:    totalMats,
     rowCount: res.rowCount,
     refreshError: res.refreshError || null,
+      /* LO QUE EL SERVIDOR YA SABE, REENVIADO. Y hasta la v12.49 no lo era.
+       *
+       * `addMovementsBatch_` calcula `stockAfter` desde la v12.24 —las cifras
+       * de después, para que la pantalla no tenga que preguntarlas— y estas
+       * tres envolturas NO LO PASABAN. El navegador llamaba a
+       * `_aplicarStockDelServidor(res)` y recibía `undefined`, así que se
+       * salía por la primera línea y no ponía nada. Un arreglo escrito,
+       * probado y muerto en el camino de vuelta.
+       *
+       * Dos cosas que tienen que coincidir —lo que una función produce y lo
+       * que la de arriba reenvía— sin que nada lo obligue. El mismo patrón de
+       * siempre, esta vez entre dos funciones del mismo archivo.
+       *
+       * `movimientos` es nuevo en la v12.49 y viene por la misma puerta. */
+    stockAfter:     res.stockAfter     || null,
+    availableByMat: res.availableByMat || null,
+    movimientos:    res.movimientos    || [],
     message:  totalMats + ' material(s), ' + res.rowCount + ' row(s) recorded.'
   };
 }

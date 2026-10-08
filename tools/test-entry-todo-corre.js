@@ -133,6 +133,11 @@ function mundo(opciones){
      * que esta prueba mide es el ORDEN de los pasos —saldar, cerrar, refrescar—
      * y no de qué manera se refresca. */
     _aplicarStockDelServidor: () => { visto.orden.push('cifras'); return 0; },
+    /* Desde la v12.49 el guardado también mete las FILAS que el servidor acaba
+     * de devolver, para que lo guardado se vea en el mismo segundo en vez de
+     * dieciséis después. Se espía con el mismo criterio que las cifras: esta
+     * prueba mide el ORDEN de los pasos, no cómo pinta cada uno. */
+    _pintarGuardado: () => { visto.orden.push('filas'); return 0; },
     _reloadWhenIdle: () => { visto.orden.push('recargar'); },
     showToast: () => {},
     closeModal: (id) => { visto.cerrado.push(id); visto.orden.push('cerrar'); },

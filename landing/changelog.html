@@ -97,6 +97,26 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.49</span>
+      <span class="tag fix">Fix</span>
+      <h3>What you just saved now appears the second the server confirms it</h3>
+      <p>Saving ten deliveries, timed frame by frame: the window closed after
+         14 seconds and the movement list took <b>a further 16 and a half</b> to
+         show them. Sixteen seconds looking at a table that does not contain what
+         you just entered is exactly when somebody decides it failed and presses
+         save again.</p>
+      <p>It was not slow. The browser was asking for the whole picture again to
+         learn about rows <b>the server had just written and was already handing
+         back</b>. Those rows now go straight into the list, with their own ids so
+         the quiet refresh behind them cannot show anything twice.</p>
+      <p>Opening this up turned up something bigger: the live stock figures the
+         server has calculated since v12.24 &mdash; so the screen would not have to
+         ask &mdash; <b>were never being passed on</b> by any of the three save paths.
+         The browser asked for them and got nothing. Fixed in all three, with a
+         test that now pins the whole return trip.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.48</span>
       <span class="tag fix">Fix</span>
       <h3>A typo in an email address could only be fixed in the spreadsheet</h3>
