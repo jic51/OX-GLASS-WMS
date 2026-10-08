@@ -44,6 +44,7 @@ node tools/test-correo-mal-escrito.js
 node tools/test-respaldo-parado.js
 node tools/test-se-ve-al-guardar.js
 node tools/test-borrar-y-editar-se-ven.js
+node tools/test-borrar-usuario.js
 node tools/test-brand-corner.js
 node tools/test-terms-checkbox.js
 node tools/test-entry-autofill.js
@@ -428,6 +429,7 @@ come back from — is invisible to both. Those get a browser test.
 - `test-respaldo-parado.js` — que la app diga que el respaldo nocturno dejó de correr, y que se calle cuando no pasa nada
 - `test-se-ve-al-guardar.js` — lo guardado se ve en el mismo segundo: el servidor devuelve las filas que escribió y las tres pantallas las pintan sin volver a preguntar
 - `test-borrar-y-editar-se-ven.js` — lo mismo para borrar y editar: las cifras de después cuando el refresco de verdad ocurrió, y la fila editada tal como quedó en la hoja
+- `test-borrar-usuario.js` — borrar de verdad una fila de usuario, con el rastro escrito antes y la lista vieja de CONFIG limpiada para que no vuelva sola
   instead of the Apps Script editor. The feature is small; the failure modes
   are not, so both are held shut here: the key must never come back to the
   BROWSER (getAiStatus returns configured + the last four characters and

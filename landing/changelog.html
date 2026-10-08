@@ -97,6 +97,24 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.51</span>
+      <span class="tag fix">Fix</span>
+      <h3>A user row you never meant to create can now be removed</h3>
+      <p>An address registered with a typo could not be renamed &mdash; the correct one
+         already existed on another row &mdash; and could not be removed either, because
+         the only option was Deactivate. Two sealed exits and no door: the mistake
+         was locked in.</p>
+      <p>There is now <b>Delete permanently</b>, inside the user's own card, in red
+         and away from Save. It is for a row that should never have existed: a typo,
+         a duplicate, something a migration brought in twice. For somebody who
+         actually worked here, Deactivate is still the right answer and the warning
+         says so.</p>
+      <p>The whole row goes into the audit log before it disappears, and the address
+         is cleared from the old CONFIG list at the same time &mdash; otherwise the
+         account simply comes back on its own the next time that list is checked.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.50</span>
       <span class="tag fix">Fix</span>
       <h3>Deleting and editing now update the figures the moment they finish</h3>

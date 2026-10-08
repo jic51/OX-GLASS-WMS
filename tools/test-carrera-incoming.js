@@ -228,10 +228,18 @@ console.log('\n═══ y quitar un usuario ya no borra una fila de CONFIG ═�
   // En CONFIG cada COLUMNA es una lista: A proyectos, B categorías, C
   // proveedores, D locaciones, F/G usuarios. deleteRow se llevaba por delante
   // lo que compartiera renglón con el usuario.
+  /* EL BORRADO DE LA CELDA VIVE EN `limpiarUsuarioDeConfig_` DESDE LA v12.51.
+   * `removeUser_` lo llama y ya. Se separó porque hacen falta dos cosas: aquí,
+   * donde NO estar en la lista vieja es un error que hay que decir, y al borrar
+   * una fila de USERS_V3, donde no estar es lo normal. Esta prueba se puso roja
+   * al moverlo —correctamente: miraba el sitio de antes— y lo que mide no
+   * cambia ni un ápice. */
   const cuerpo = fnSrc(GS, 'removeUser_');
-  check('removeUser_ ya no llama a deleteRow', !/deleteRow/.test(cuerpo), cuerpo);
+  const limpia = fnSrc(GS, 'limpiarUsuarioDeConfig_');
+  check('removeUser_ ya no llama a deleteRow',
+    !/deleteRow/.test(cuerpo) && !/deleteRow/.test(limpia), cuerpo);
   check('...y vacía sólo las dos celdas del usuario, F y G',
-    /getRange\(i \+ 1, 6, 1, 2\)\.setValues\(\[\['', ''\]\]\)/.test(cuerpo));
+    /getRange\(i \+ 1, 6, 1, 2\)\.setValues\(\[\['', ''\]\]\)/.test(limpia));
 
   // Y que de verdad haga lo que dice, ejecutándolo.
   const cfg = new Hoja('CONFIG', [

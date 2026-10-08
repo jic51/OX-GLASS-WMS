@@ -98,6 +98,25 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.51</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Una fila de usuario creada por error ya se puede quitar</h3>
+      <p>Un correo registrado con una errata no se pod&iacute;a renombrar &mdash;el bueno ya
+         exist&iacute;a en otra fila&mdash; y tampoco se pod&iacute;a quitar, porque lo &uacute;nico que hab&iacute;a
+         era Desactivar. Dos salidas tapiadas y ninguna puerta: el error quedaba
+         encerrado.</p>
+      <p>Ahora hay <b>Borrar definitivamente</b>, dentro de la ficha del propio
+         usuario, en rojo y lejos de Guardar. Es para una fila que nunca debi&oacute;
+         existir: una errata, un duplicado, algo que una migraci&oacute;n trajo dos veces.
+         Para alguien que s&iacute; trabaj&oacute; aqu&iacute;, lo correcto sigue siendo Desactivar, y el
+         aviso lo dice.</p>
+      <p>La fila entera queda escrita en el registro de auditor&iacute;a antes de
+         desaparecer, y el correo se limpia a la vez de la lista vieja de CONFIG
+         &mdash;si no, la cuenta vuelve a aparecer sola la pr&oacute;xima vez que esa lista se
+         revisa.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.50</span>
       <span class="tag fix">Arreglo</span>
       <h3>Borrar y editar actualizan las cifras en el momento en que terminan</h3>

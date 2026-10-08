@@ -8309,3 +8309,51 @@ añade una sexta operación que mueva existencias y no la llama, **no habrá
 síntoma**: la recarga silenciosa acabará cuadrándolo, tarde, y nadie sabrá por
 qué esa pantalla va más lenta que las otras. `test-borrar-y-editar-se-ven.js`
 las cuenta por eso.
+
+## 🔴 `OAUTH_REDIRECT_URI` PUEDE APUNTAR A UN DESPLIEGUE MUERTO, Y NADIE LO MIRA — 08/10
+
+**ÉSTA ES LA CAUSA de que Jose no pudiera entrar en la DEMO con su cuenta de
+empresa**, y no las dos que supuse antes. Su captura lo enseña sin lugar a
+dudas: la página está en
+
+    .../s/AKfycbzxKF659yaTtULpAYx4HngN_DoEF0VrdH4CwHhMbGKCAlEKvGYKEjAGfCuJxSP1XKcw/exec
+
+y la ventanita de *Sign in with Google* que se abre encima muere en
+
+    .../s/AKfycbzxQ1YeehasKAj2o1…
+
+**Dos identificadores de despliegue distintos.** El inicio de sesión vuelve a
+`redirectUri_()`, que lee `OAUTH_REDIRECT_URI` de Script Properties — y esa
+propiedad apunta a un despliegue viejo. La ventana muere con el error genérico
+de Drive, y la página se queda en *"Waiting for sign-in…"* para siempre, sin
+decir por qué.
+
+**Es el patrón de siempre:** dos cosas que tienen que coincidir —la dirección
+guardada y el despliegue vivo— sin que nada lo obligue. Y se desalinean solas en
+tres casos normales: al copiar la hoja, al crear un despliegue nuevo en vez de
+actualizar el que había, y al cambiar el proyecto de Cloud.
+
+**El arreglo inmediato (de configuración, sin código):** borrar
+`OAUTH_REDIRECT_URI`, o ponerle la dirección `/exec` actual, y comprobar que el
+cliente de OAuth la tenga en *Authorized redirect URIs*.
+
+**Lo que hay que construir, y es la guarda que falta:**
+
+1. **Que la app lo compare.** `savedWebAppUrl_()` y `OAUTH_REDIRECT_URI` deben
+   tener el mismo identificador de despliegue. Si no, decirlo en
+   *Check installation* y en Ajustes → Sistema, con las dos direcciones
+   delante. Es una comparación de cadenas.
+2. **Que el inicio de sesión no se cuelgue en silencio.** Hoy la ventanita
+   muere y la página espera indefinidamente. Si a los ~30 segundos no llegó
+   nada, debe decir *"la ventana de Google no volvió; puede que la dirección de
+   retorno esté mal configurada"* y ofrecer reintentar. Una espera sin final es
+   lo que convirtió esto en un día perdido.
+3. **Que `selfActivateWebApp_` lo actualice.** Es la única función que conoce la
+   dirección buena de primera mano —acaba de crearla— y ya aprendió esta
+   lección una vez: la v12.42 le añadió `saveWebAppUrl(url)` por el mismo
+   motivo. Le falta hacer lo mismo con la de retorno.
+
+**Y dos diagnósticos míos equivocados antes de éste, que quedan escritos arriba:
+la forma `/a/macros/` y la autorización caducada.** Los dos explicaban lo que
+veía y ninguno era la causa. El dato que lo resolvió —las dos direcciones
+distintas en la misma captura— lo trajo Jose.
