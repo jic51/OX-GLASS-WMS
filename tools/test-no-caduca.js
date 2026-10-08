@@ -112,6 +112,14 @@ const REVISADAS = {
     'para componer el id (INC-<milisegundos>). Señalada por este mismo guardia ' +
     'el día que se escribió, que es exactamente para lo que está: la forma ' +
     'estaba, el daño no.',
+  'test-correo-mal-escrito.js':
+    'Nombra _guardarUsuario_, pero NO LO EJECUTA: lo lee con fnSrc para ' +
+    'comprobar que el guardado manda el correo viejo Y el nuevo. Lo único que ' +
+    'se ejecuta de verdad es updateUser, _distanciaTexto y _dominioParecido, y ' +
+    'ninguna de las tres mira el reloj. La fecha fija es la columna "Added At" ' +
+    'de la hoja de mentira, que nadie compara con nada — está ahí para que la ' +
+    'fila tenga la forma de una fila de verdad. Misma forma que test-andamio: ' +
+    'la fecha existe, el reloj no.',
   'test-config-snapshot.js':
     'La fecha es el VALOR de LAST_BACKUP_AT, y lo que la prueba comprueba es ' +
     'que ese valor NO salga en el volcado. El new Date() de writeConfigSnapshot_ ' +

@@ -4510,7 +4510,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.47';
+var APP_VERSION = '12.48';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -4522,7 +4522,7 @@ var APP_VERSION = '12.47';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '54c1ca20';
+var APP_BUILD = '8874fefd';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -13710,6 +13710,34 @@ function _drawBackupBox(st){
   // window can scroll past yesterday's backup in well under a day even
   // though the file is sitting safely in Drive the whole time. This line
   // can't be scrolled past.
+  /* ── QUE SE PARÓ HAY QUE DECIRLO, NO DEJARLO DEDUCIR ────────────────────────
+   *
+   * Jose tardó SEIS DÍAS en ver que los respaldos de la DEMO se habían parado,
+   * y lo vio de casualidad. Todo lo que había en esta caja era correcto: el
+   * interruptor en verde, la lista llena, el último con su fecha y su enlace.
+   * Nada decía que esa fecha era de la semana pasada.
+   *
+   * Un sistema de respaldo que falla en silencio es peor que no tener ninguno,
+   * porque el que no tiene ninguno lo sabe. Esto va ARRIBA DEL TODO de la
+   * caja, antes que el interruptor, porque es lo único que hay que leer
+   * cuando pasa. */
+  var alarmaHtml = '';
+  if (st.backupStalled) {
+    var dias = Math.floor((st.hoursSinceBackup || 0) / 24);
+    alarmaHtml =
+      '<div class="snap-warn" style="margin-bottom:.6rem">⚠ <b>The nightly backup has not run ' +
+      (dias >= 1 ? 'in ' + dias + ' day' + (dias === 1 ? '' : 's') : 'since yesterday') + '.</b> ' +
+      'It is switched on, so something is stopping it. The most common cause is that the ' +
+      'script needs to be authorised again — open Extensions → Apps Script, run any function ' +
+      'once and accept the permissions. Press <b>Back up now</b> below to make a copy ' +
+      'immediately in the meantime.</div>';
+  } else if (st.backupNeverRan) {
+    alarmaHtml =
+      '<div class="snap-warn" style="margin-bottom:.6rem">⚠ <b>No backup has been made yet.</b> ' +
+      'The nightly copy is switched on but has not run for the first time. Press ' +
+      '<b>Back up now</b> if you would rather not wait for tonight.</div>';
+  }
+
   var lastHtml = '';
   if (st.lastBackupAt) {
     var link = st.lastBackupFileId
@@ -13759,6 +13787,7 @@ function _drawBackupBox(st){
       '</details>';
   }
   box.innerHTML =
+    alarmaHtml +
     '<label class="sw" style="margin-bottom:.5rem">' +
       '<input type="checkbox" id="backupSw"' + (on ? ' checked' : '') + ' onchange="_toggleBackup(this)">' +
       '<span class="sw-track"></span>' +
@@ -21910,12 +21939,74 @@ function toggleSelectedUsers(){
   });
 }
 
+/* ── "NADIE MÁS ESTÁ EN ESE DOMINIO. ¿QUISISTE DECIR…?" ──────────────────────
+ *
+ * `jose@ox-glasss.com` es un correo perfectamente válido. Ninguna comprobación
+ * de forma lo caza, ni debe: el dominio existe o no existe, y eso no se sabe
+ * desde aquí. Lo que SÍ se sabe es que los otros cinco usuarios están en
+ * `ox-glass.com` y que éste se parece muchísimo a ése sin serlo.
+ *
+ * LA REGLA ES "PARECIDO PERO DISTINTO", y es deliberadamente estrecha:
+ *
+ *   · dominio que ya usa alguien  → callado. Es el caso normal.
+ *   · dominio lejano (un gmail de un contratista) → callado. Es legítimo y
+ *     frecuente, y un aviso ahí sería ruido que se aprende a ignorar.
+ *   · dominio a una o dos letras de uno que ya se usa → SE PREGUNTA.
+ *
+ * Una errata es exactamente eso: casi igual. Avisar sólo de los casi-iguales es
+ * lo que hace que el aviso signifique algo el día que salta.
+ *
+ * Y pregunta, no bloquea: puede haber dos dominios de verdad parecidos, y la
+ * app no está para decirle a nadie cómo se llama su empresa.
+ */
+function _distanciaTexto(a, b) {
+  a = String(a || ''); b = String(b || '');
+  if (a === b) return 0;
+  var fila = [], i, j;
+  for (j = 0; j <= b.length; j++) fila[j] = j;
+  for (i = 1; i <= a.length; i++) {
+    var ant = fila[0]; fila[0] = i;
+    for (j = 1; j <= b.length; j++) {
+      var tmp = fila[j];
+      fila[j] = Math.min(fila[j] + 1, fila[j - 1] + 1,
+                         ant + (a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1));
+      ant = tmp;
+    }
+  }
+  return fila[b.length];
+}
+
+function _dominioParecido(email, omitirEmail) {
+  var dom = String(email || '').split('@')[1] || '';
+  if (!dom) return '';
+  var vistos = {}, mejor = '', mejorD = 99;
+  (_usersData || []).forEach(function(u){
+    var e = String(u.email || '').toLowerCase();
+    if (!e || e === String(omitirEmail || '').toLowerCase()) return;
+    var d = e.split('@')[1] || '';
+    if (d) vistos[d] = true;
+  });
+  if (vistos[dom]) return '';                 // alguien más ya lo usa: normal
+  Object.keys(vistos).forEach(function(d){
+    var dist = _distanciaTexto(dom, d);
+    if (dist < mejorD) { mejorD = dist; mejor = d; }
+  });
+  // Dos letras de margen. Con tres ya se parecen dominios que no tienen nada
+  // que ver, y el aviso empezaría a salir cuando no toca.
+  return (mejorD >= 1 && mejorD <= 2) ? mejor : '';
+}
+
 function editUser(email) {
   var u = _usersData.find(function(x){ return x.email === email; });
   if (!u) return;
   _editingUser = email;
   document.getElementById('uEmail').value = u.email;
-  document.getElementById('uEmail').disabled = true; // can't change email
+  // EDITABLE DESDE LA v12.48. Estuvo bloqueado porque el correo es la
+  // identidad, y eso sigue siendo verdad — pero la consecuencia era que una
+  // errata de una letra sólo se podía arreglar ABRIENDO LA HOJA, que es
+  // justo lo que el producto entero intenta que nadie tenga que hacer.
+  // Las guardas están en updateUser, donde no se pueden saltar.
+  document.getElementById('uEmail').disabled = false;
   document.getElementById('uName').value  = u.name  || '';
   document.getElementById('uRole').value  = u.role  || 'WAREHOUSE';
   document.getElementById('userFormTitle').textContent = '✏️ Editing: ' + u.email;
@@ -21961,12 +22052,47 @@ function saveUser() {
   var role  = document.getElementById('uRole').value;
   if (!email) { _userFormMsg('Email is required.', 'error'); return; }
 
+  // El aviso de la errata va AQUÍ, antes de guardar, porque después ya no sirve
+  // de nada: la fila queda escrita y quien la leyera la daría por buena. Ver
+  // _dominioParecido.
+  var sugerido = _dominioParecido(email, _editingUser);
+  if (sugerido) {
+    var local = email.split('@')[0];
+    _showConfirm({
+      icon: '✉️',
+      title: 'Check this address',
+      message: 'Nobody else in this system uses “@' + email.split('@')[1] + '”, and it ' +
+               'is one or two letters away from “@' + sugerido + '”, which the others use.\n\n' +
+               'An address with a typo is accepted by Google, shows up here as a normal ' +
+               'user, and then simply never lets that person in.',
+      confirmText: 'Use ' + local + '@' + sugerido,
+      cancelText:  'Keep what I typed',
+      onConfirm: function(){
+        document.getElementById('uEmail').value = local + '@' + sugerido;
+        saveUser();
+      },
+      onCancel: function(){ _guardarUsuario_(); }
+    });
+    return;
+  }
+  _guardarUsuario_();
+}
+
+function _guardarUsuario_() {
+  var email = (document.getElementById('uEmail').value || '').trim().toLowerCase();
+  var name  = (document.getElementById('uName').value  || '').trim();
+  var role  = document.getElementById('uRole').value;
+
   var btn = document.getElementById('btnSaveUser');
   _btnBusy(btn, 'Saving…');
 
   var action  = _editingUser ? 'updateUser' : 'addUser';
   var invitar = !_editingUser && !!(document.getElementById('uInvite') || {}).checked;
-  var payload = { email: email, name: name, role: role, active: true, invite: invitar };
+  // Al editar, `email` es el de la fila que se busca y `newEmail` el que se
+  // escribe. Mandar sólo uno dejaría al servidor sin saber a cuál apuntar.
+  var payload = _editingUser
+    ? { email: _editingUser, newEmail: email, name: name, role: role, active: true }
+    : { email: email, name: name, role: role, active: true, invite: invitar };
 
   google.script.run
     .withSuccessHandler(function(res) {
@@ -21981,9 +22107,14 @@ function saveUser() {
       // The row is patched in place rather than the whole list being fetched
       // again: the browser already knows exactly what changed, and re-reading
       // the sheet to learn it puts a "Loading…" flash over a list of four names.
+      // Al EDITAR se busca por el correo con el que se abrió la ficha, no por
+      // el tecleado: si lo que se acaba de corregir es justamente el correo,
+      // buscar por el nuevo no encuentra nada y la lista se quedaría con la
+      // fila vieja Y una fila nueva, las dos de la misma persona.
+      var buscar = _editingUser || email;
       var found = null;
-      _usersData.forEach(function(u){ if (u.email === email) found = u; });
-      if (found){ found.name = name; found.role = role; found.active = true; }
+      _usersData.forEach(function(u){ if (u.email === buscar) found = u; });
+      if (found){ found.email = email; found.name = name; found.role = role; found.active = true; }
       else _usersData.push({ email: email, name: name, role: role, active: true,
                              addedBy: userEmail, addedAt: _isoDate(new Date()) });
       _sysCachePut('users', _usersData, true);   // ya está al día, no hay que ir a buscarla
@@ -24007,10 +24138,17 @@ function renderActiveUsers(users){
 }
 
 // ── Custom Confirm Dialog ─────────────────────────────────────────────────────
-var _confirmCb = null;
+var _confirmCb = null, _confirmCancelCb = null;
 function _showConfirm(opts) {
-  // opts: { icon, title, message, confirmText, danger, onConfirm }
-  _confirmCb = opts.onConfirm || null;
+  // opts: { icon, title, message, confirmText, cancelText, danger, onConfirm, onCancel }
+  _confirmCb       = opts.onConfirm || null;
+  /* `onCancel` y `cancelText` existen desde la v12.48, y la razón importa: hay
+   * avisos donde las DOS respuestas son acciones, no una acción y una retirada.
+   * El de la errata en el correo es el primero: "usa la que te sugiero" y
+   * "guarda la que escribí" son los dos un guardado. Sin esto, el segundo botón
+   * no hacía nada y había que volver a pulsar Guardar — un botón que parece
+   * contestar la pregunta y en realidad la tira. */
+  _confirmCancelCb = opts.onCancel  || null;
   document.getElementById('confirmIcon').textContent    = opts.icon    || (opts.danger ? '🗑️' : '⚠️');
   document.getElementById('confirmTitle').textContent   = opts.title   || 'Confirm';
   document.getElementById('confirmMessage').textContent = opts.message || '';
@@ -24021,16 +24159,21 @@ function _showConfirm(opts) {
   // propuesto nada. Con soloAviso el botón de la izquierda desaparece y el de
   // la derecha dice lo único que se puede hacer, que es enterarse.
   var cancelBtn = document.getElementById('confirmCancelBtn');
-  if (cancelBtn) cancelBtn.hidden = !!opts.soloAviso;
+  if (cancelBtn) {
+    cancelBtn.hidden = !!opts.soloAviso;
+    cancelBtn.textContent = opts.cancelText || 'Cancel';
+  }
   document.getElementById('confirmOverlay').classList.add('show');
 }
 function _confirmOk() {
   document.getElementById('confirmOverlay').classList.remove('show');
+  _confirmCancelCb = null;
   if (_confirmCb) { var cb = _confirmCb; _confirmCb = null; cb(); }
 }
 function _confirmCancel() {
   _confirmCb = null;
   document.getElementById('confirmOverlay').classList.remove('show');
+  if (_confirmCancelCb) { var cc = _confirmCancelCb; _confirmCancelCb = null; cc(); }
 }
 
 // ── Ask for a value, in the app's own dialog ─────────────────────────────────

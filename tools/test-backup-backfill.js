@@ -43,6 +43,18 @@ FakeFolder.prototype.getFiles = function () {
   return { hasNext: function () { return i < files.length; }, next: function () { return files[i++]; } };
 };
 
+// El reloj de esta prueba. El nombre empieza por "Reloj" a propósito:
+// test-no-caduca reconoce así que el reloj está controlado, y es la convención
+// que ya usa el resto de la suite.
+const RELOJ_FIJO = new Date('2026-08-20T12:00:00Z').getTime();
+function RelojCongelado(a, b, c, d, e, f, g) {
+  return arguments.length ? new Date(a, b, c, d, e, f, g) : new Date(RELOJ_FIJO);
+}
+RelojCongelado.now       = function () { return RELOJ_FIJO; };
+RelojCongelado.prototype = Date.prototype;
+RelojCongelado.parse     = Date.parse;
+RelojCongelado.UTC       = Date.UTC;
+
 function newSandbox(props, folderFiles) {
   const sandbox = {
     console: console,
@@ -59,7 +71,20 @@ function newSandbox(props, folderFiles) {
     backupEnabled_: function () { return true; },
     backupFolderName_: function () { return 'Acopio Backups'; },
     BACKUP_RETENTION_DAYS: 30,
-    getOrCreateFolder_: function () { return new FakeFolder(folderFiles); }
+    getOrCreateFolder_: function () { return new FakeFolder(folderFiles); },
+    /* EL RELOJ, CONGELADO. Desde la v12.48 getBackupStatus le resta a HOY la
+     * fecha del último respaldo, para poder decir que el trabajo nocturno se
+     * paró. Esta prueba fija fechas de agosto de 2026, así que al cambiar el
+     * código pasó a comparar fechas fijas con el reloj de verdad — y
+     * `test-no-caduca` la señaló el mismo día, que es exactamente para lo que
+     * está ese guardia.
+     *
+     * Hoy el riesgo es teórico: esta prueba no afirma nada sobre las cifras
+     * nuevas. Pero una prueba que ejecuta código que lee el reloj sin
+     * controlarlo es una prueba que SE PUEDE desalinear sola, y arreglarlo
+     * cuesta tres líneas. Congelado, además, deja afirmar sobre esas cifras a
+     * quien venga después. */
+    Date: RelojCongelado
   };
   vm.createContext(sandbox);
   vm.runInContext(extractFn('_findMostRecentBackup_') + '\n' + extractFn('getBackupStatus'), sandbox);

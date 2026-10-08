@@ -8155,3 +8155,65 @@ de una empresa que ya no existe, y la sospecha razonable de que algo se perdió.
 **Y lo que no se toca:** nada se borra ni se fusiona por decisión nuestra. Si
 una carpeta vieja tiene archivos, se mueve bajo la maestra actual y se dice qué
 se movió, como ya hace *Tidy up my Drive*.
+
+---
+
+# ANOTADO EL 08/10/2026
+
+## ⚠️ OTRA CORRECCIÓN MÍA — la re-autorización tampoco era la causa
+
+Dije que había que volver a autorizar el script y que eso arreglaría la DEMO.
+Jose: *"no me pidió nada."* O sea que **la autorización estaba bien**, y mi
+segunda hipótesis también estaba equivocada.
+
+Llevo dos diagnósticos fallados seguidos sobre lo mismo, y los dos por el mismo
+vicio: **explicar lo que vi en vez de medir lo que pasa.** Lo escribo porque la
+tercera explicación de abajo la encontró él, no yo.
+
+**Lo que sigue SIN explicación, y no lo voy a rellenar con una tercera
+hipótesis:** por qué los respaldos automáticos de la DEMO pararon el 1 de
+octubre. La correlación con el cambio de proyecto de Cloud sigue ahí y sigue
+siendo sospechosa, pero **la autorización no era el mecanismo.** Se mira en
+Apps Script → Ejecuciones, filtrando por `dailyBackupTrigger`: ahí está el
+error de verdad, con fecha. Hasta entonces, abierto.
+
+**Y lo que esto cambia del plan:** el aviso de "el respaldo lleva X días sin
+correr" (hecho en la v12.48) era la pieza correcta **precisamente porque no
+depende de conocer la causa.** Protege igual contra ésta y contra las que no
+hemos visto.
+
+## ✅ HECHO (v12.48) — EL CORREO MAL ESCRITO, Y LA SALIDA QUE NO HABÍA
+
+Jose encontró la causa real de no poder entrar en la DEMO: `jose@ox-glasss.com`,
+con tres eses, en `USERS_V3`.
+
+**Es un correo válido**, así que ninguna comprobación de forma lo cazaba ni debe
+cazarlo: el dominio existe o no existe y eso no se sabe desde el código. La app
+lo guardó, lo pintó Activo, y la pantalla de acceso le dijo —con razón— que esa
+cuenta no estaba registrada. **Dos pantallas que se contradicen y ninguna
+miente.**
+
+**Lo grave era la salida: el correo no se podía editar.** Campo `disabled`. Para
+corregir una letra había que abrir el Sheet — justo lo que Jose acaba de dejar
+escrito que un cliente no debe hacer nunca.
+
+Arreglado en la v12.48: se edita desde la app, con tres guardas en el servidor
+(no al correo de otra fila, no al propio, y queda escrito de dónde a dónde), y
+un aviso ANTES de guardar cuando el dominio está a una o dos letras de uno que
+ya usan los demás. 21 comprobaciones, dos mutaciones verificadas.
+
+## 🔵 LO QUE QUEDÓ ABIERTO DE ESTO
+
+1. **`addUser` no tiene el aviso del dominio parecido en el servidor.** El aviso
+   vive en el navegador, que es donde se puede preguntar. Un alta hecha por otra
+   vía —si algún día existe— no lo tendría. Pequeño, y de momento no hay otra
+   vía.
+2. **La misma errata puede estar en `PM_DIRECTORY` y en `CONFIG`** (correo del
+   administrador, proveedores). Ninguna tiene aviso. El patrón ya está escrito y
+   es reusable.
+3. **Los 16,6 segundos de tabla mentirosa.** Medido en el vídeo del 07/10: al
+   guardar 10 movimientos, la ventana se cierra a los 14,3 s y **la tabla tarda
+   16,6 s MÁS** en enseñar lo guardado. Durante esos 16 segundos la pantalla
+   muestra una tabla sin lo que acabas de meter, que es exactamente cuando uno
+   piensa que falló y vuelve a darle. **Lo que hay que arreglar primero no son
+   los 31 segundos: es que la tabla no mienta mientras llegan.**

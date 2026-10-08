@@ -40,6 +40,8 @@ node tools/test-category-rename.js
 node tools/test-cfg-rename-reload.js
 node tools/test-space-usage.js
 node tools/test-ai-key.js
+node tools/test-correo-mal-escrito.js
+node tools/test-respaldo-parado.js
 node tools/test-brand-corner.js
 node tools/test-terms-checkbox.js
 node tools/test-entry-autofill.js
@@ -420,6 +422,8 @@ come back from — is invisible to both. Those get a browser test.
   sentence that meant nothing. Fixed with strict bounds plus a 15% floor
   below which volume is treated as weather, not a trend.
 - `test-ai-key.js` — the Gemini key, now settable from Settings → System
+- `test-correo-mal-escrito.js` — una errata en un correo de usuario: se puede corregir desde la app, con sus guardas, y se avisa del dominio casi-igual antes de guardar
+- `test-respaldo-parado.js` — que la app diga que el respaldo nocturno dejó de correr, y que se calle cuando no pasa nada
   instead of the Apps Script editor. The feature is small; the failure modes
   are not, so both are held shut here: the key must never come back to the
   BROWSER (getAiStatus returns configured + the last four characters and

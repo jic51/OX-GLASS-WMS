@@ -97,6 +97,39 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.48</span>
+      <span class="tag fix">Fix</span>
+      <h3>A typo in an email address could only be fixed in the spreadsheet</h3>
+      <p>An address registered with one letter wrong &mdash; <code>@ox-glasss.com</code>
+         instead of <code>@ox-glass.com</code> &mdash; is a perfectly valid email, so
+         nothing refused it. It sat in the user list looking active, and simply
+         never let that person in. <b>And the email field could not be edited</b>,
+         so correcting one letter meant opening the Google Sheet by hand.</p>
+      <p>An administrator can now correct an address in the app. Three guards sit
+         behind it: an address already registered to someone else is refused,
+         nobody can change <b>their own</b> address (they would lose access the
+         instant it saved), and the change is recorded from-and-to in the audit log.</p>
+      <p>And before saving, an address whose domain is <b>one or two letters away</b>
+         from one everybody else already uses now asks whether you meant the other
+         one. Close-but-different is exactly what a typo looks like; a genuinely
+         different domain &mdash; a contractor on Gmail &mdash; says nothing.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v12.48</span>
+      <span class="tag fix">Fix</span>
+      <h3>The nightly backup can stop without anybody noticing</h3>
+      <p>The switch stays green, the list stays full, the newest copy still has its
+         date and a link that opens. Nothing said that date was from last week.
+         A backup system that fails in silence is worse than having none, because
+         anyone with none knows it.</p>
+      <p>Settings &rarr; System now says it outright when the nightly copy has not run
+         for more than a day and a half, names the most common cause, and points at
+         <b>Back up now</b>. It stays quiet when the backup is switched off on purpose,
+         and it does not cry wolf over a single late night.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.47</span>
       <span class="tag fix">Fix</span>
       <h3>&ldquo;Google rejected that key&rdquo; when Google had rejected nothing</h3>

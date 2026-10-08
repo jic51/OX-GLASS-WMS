@@ -262,7 +262,16 @@ console.log('\n═══ 4. Avisar nunca puede deshacer el alta ═══\n');
   /* La pantalla tiene que contar lo que dijo el servidor. Si pintara el éxito
    * por su cuenta, un correo que no salió se vería como uno que sí. */
   const H = A.fuente('html');
-  const sv = (H.match(/function saveUser\(\)[\s\S]*?\n}/) || [''])[0];
+  /* `_guardarUsuario_` y no `saveUser` desde la v12.48. El guardado se partió
+   * en dos: `saveUser` pregunta por la errata del dominio y `_guardarUsuario_`
+   * guarda. Esta prueba miraba la primera mitad y por eso se puso roja al
+   * partirla — correctamente: lo que mide vive en la segunda. El recorte por
+   * expresión regular es lo que la hizo frágil, así que ahora usa el mismo
+   * contador de llaves que el resto de la suite y falla ruidosamente si la
+   * función desaparece, en vez de medir una cadena vacía. */
+  const sv = A.fnSrc(H, '_guardarUsuario_') || '';
+  check('la mitad que guarda existe y se encontró — un recorte vacío haría pasar todo ' +
+        'lo de abajo sin haber mirado nada', sv.length > 200, sv.length);
   check('el navegador lee la respuesta del servidor, no su propia intención',
         /res\.invited/.test(sv) && /res\.inviteNote/.test(sv), sv.substring(0, 80));
   check('y cuando no salió, la ventana SE QUEDA ABIERTA con el motivo — un aviso ' +

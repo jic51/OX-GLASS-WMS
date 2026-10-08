@@ -127,7 +127,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.47';
+var APP_VERSION = '12.48';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -139,7 +139,7 @@ var APP_VERSION = '12.47';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '54c1ca20';
+var APP_BUILD = '8874fefd';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -6072,6 +6072,38 @@ function getBackupStatus(auth) {
       }
     } catch (e) { Logger.log('getBackupStatus backfill: ' + e.message); }
   }
+  /* ── UN NÚMERO QUE NADIE COMPARA NO VIGILA NADA ────────────────────────────
+   *
+   * Jose, 2026-10-07: *"en la DEMO el backup se paró desde el día 1 de
+   * octubre."* Se dio cuenta SEIS DÍAS DESPUÉS, y sólo porque fue a mirar la
+   * lista por otra cosa.
+   *
+   * Esta función ya sabía la fecha del último respaldo, y la enseñaba, y la
+   * lista entera debajo. Lo que no hacía nadie —ni aquí ni en ninguna
+   * pantalla— era RESTARLE HOY. La respuesta estaba en la pantalla y la
+   * pregunta no se hacía.
+   *
+   * Y el modo de fallo es el peor que hay en un sistema de inventario: todo se
+   * ve normal. El interruptor sigue en verde, la lista sigue llena de
+   * respaldos, el último tiene su fecha y su enlace. Sólo que es de la semana
+   * pasada. Alguien se entera el día que necesita restaurar, que es el único
+   * día en que ya no se puede arreglar.
+   *
+   * 36 horas, y no 24, a propósito: el trabajo corre de noche, y una ventana
+   * de un día justo convertiría cualquier retraso normal de Google en una
+   * alarma. Lo que se persigue es "lleva días sin correr", no "hoy llegó
+   * tarde". Una alarma que salta cuando no pasa nada es una alarma que se
+   * aprende a ignorar, y entonces no sirve el día que importa.
+   *
+   * Se calcula aquí y no en el navegador porque la hora del servidor es la que
+   * manda: el reloj de una máquina del almacén puede estar en cualquier sitio.
+   */
+  var horasDesde = null;
+  if (lastAt) {
+    var t = new Date(lastAt).getTime();
+    if (isFinite(t)) horasDesde = Math.floor((Date.now() - t) / 3600000);
+  }
+
   return {
     enabled:          backupEnabled_(),
     retentionDays:    BACKUP_RETENTION_DAYS,
@@ -6079,6 +6111,14 @@ function getBackupStatus(auth) {
     lastBackupAt:     lastAt || '',
     lastBackupName:   lastName || '',
     lastBackupFileId: lastId || '',
+    hoursSinceBackup: horasDesde,
+    // Sólo cuenta como parado si está ENCENDIDO. Apagado a propósito no es un
+    // fallo, y decirle "lleva 9 días sin respaldo" a quien lo apagó él mismo es
+    // exactamente el ruido que vacía de significado a los avisos.
+    backupStalled:    !!(backupEnabled_() && horasDesde !== null && horasDesde >= 36),
+    // Nunca ha corrido ninguno, estando encendido. Es distinto de "se paró" y
+    // merece otra frase: aquí no hay nada que restaurar todavía.
+    backupNeverRan:   !!(backupEnabled_() && !lastAt),
     // How the configuration snapshot went on the last run: a number of
     // properties saved, or "FAILED: …". Surfaced because a backup that quietly
     // stopped carrying the configuration looks exactly like a healthy one
@@ -11600,24 +11640,89 @@ function invitarUsuario_(ss, email, name, role, auth) {
   }
 }
 
+/* ── UN CORREO MAL ESCRITO SÓLO SE PODÍA ARREGLAR EN LA HOJA ─────────────────
+ *
+ * Jose, 2026-10-07, después de un día entero sin poder entrar en la DEMO con su
+ * cuenta de empresa: *"el correo de jose@ox-glass.com está mal escrito, nadie se
+ * enteró de que estaba mal… y otra cosa, la app no me permite editar el correo,
+ * sólo el nombre y el tipo de usuario."*
+ *
+ * Decía `jose@ox-glasss.com`, con tres eses. La app lo aceptó sin pestañear —es
+ * un correo perfectamente válido, sólo que de un dominio que no existe—, lo
+ * enseñó en la lista con su palomita verde de Activo, y cuando él intentó
+ * entrar le dijo, con razón y sin ayudar en nada, que esa cuenta no estaba
+ * registrada. Dos pantallas que se contradicen y ninguna miente.
+ *
+ * Y LO PEOR NO ERA EL FALLO, ERA LA SALIDA: el correo no se podía editar. El
+ * campo estaba `disabled` desde que se escribió, así que la única forma de
+ * corregir una letra era **abrir el Sheet y editarla a mano** — justo lo que
+ * toda la dirección del producto lleva meses intentando que nadie tenga que
+ * hacer nunca.
+ *
+ * Por qué estaba bloqueado, que no fue un descuido: el correo ES la identidad.
+ * Cambiarlo cambia quién puede entrar. Pero "esto es delicado" no se resuelve
+ * quitando el botón; se resuelve poniendo las guardas. Son tres:
+ *
+ *   1. NO al correo de otra fila. Dos filas con el mismo correo es la clase de
+ *      lío donde una dice ADMIN y la otra VIEWER y nadie sabe cuál gana.
+ *   2. NO a cambiarse el suyo propio. Quien lo hiciera perdería el acceso en el
+ *      acto, y sería el administrador — o sea, nadie podría arreglarlo desde la
+ *      app. Es la misma regla que ya tiene removeUser.
+ *   3. EL CAMBIO QUEDA ESCRITO, de dónde a dónde. Para eso existen las dos
+ *      últimas columnas de AUDIT_LOG y ésta es exactamente su razón de ser.
+ */
 function updateUser(data, auth) {
   auth = requireAuth_('ADMIN');   // ignores any caller-supplied `auth` — see requireAuth_
   var email = String(data.email || '').toLowerCase().trim();
   if (!email) throw new Error('Email required.');
 
+  // El correo nuevo, si lo hay. Vacío o igual al de antes = no se toca.
+  var nuevo = String((data.newEmail === undefined ? '' : data.newEmail) || '').toLowerCase().trim();
+  if (nuevo === email) nuevo = '';
+
   var ss    = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName('USERS_V3');
   if (!sheet) throw new Error('Users sheet not found.');
 
+  if (nuevo) {
+    // Forma, antes de nada. No prueba que el dominio exista —`ox-glasss.com` es
+    // válido y no existe— pero sí caza lo que no es un correo.
+    if (!/^[^\s@]+@[^\s@.]+\.[^\s@]+$/.test(nuevo)) {
+      throw new Error('That does not look like an email address: ' + nuevo);
+    }
+    if (email === String(auth.email || '').toLowerCase().trim()) {
+      throw new Error('You cannot change your own email address — you would lose access ' +
+                      'the moment it saved, and nobody could undo it from inside the app. ' +
+                      'Ask another administrator, or add the new address as a second user.');
+    }
+  }
+
   var rows = sheet.getDataRange().getValues();
+
+  // Una pasada previa, porque el duplicado hay que verlo ANTES de escribir
+  // nada: media actualización aplicada es peor que ninguna.
+  if (nuevo) {
+    for (var d = 1; d < rows.length; d++) {
+      if (String(rows[d][1] || '').toLowerCase().trim() === nuevo) {
+        throw new Error('That email is already registered: ' + nuevo);
+      }
+    }
+  }
+
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][1] || '').toLowerCase().trim() === email) {
       var rowNum = i + 1;
+      if (nuevo)                     sheet.getRange(rowNum, 2).setValue(textCell_(nuevo));
       if (data.name !== undefined)   sheet.getRange(rowNum, 3).setValue(textCell_(String(data.name).trim()));
       if (data.role !== undefined)   sheet.getRange(rowNum, 4).setValue(textCell_(String(data.role).toUpperCase().trim()));
       if (data.active !== undefined) sheet.getRange(rowNum, 7).setValue(!!data.active);
-      auditLog_(ss, 'UPDATE_USER', auth.email, email + ' → ' + (data.role || 'no role change'), '', '');
-      return { status: 'success' };
+      if (nuevo) {
+        auditLog_(ss, 'CHANGE_USER_EMAIL', auth.email,
+                  'Corrected a registered email address', email, nuevo);
+      }
+      auditLog_(ss, 'UPDATE_USER', auth.email,
+                (nuevo || email) + ' → ' + (data.role || 'no role change'), '', '');
+      return { status: 'success', email: nuevo || email };
     }
   }
   throw new Error('User not found: ' + email);
