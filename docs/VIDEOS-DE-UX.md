@@ -402,3 +402,92 @@ mueve la aguja aquí está en `VENTAS.md` y no se parece.
 
 **27 vídeos recogidos. Esperando el resto.** Cuando lleguen, estas tablas crecen
 y entonces —y no antes— se decide el rediseño y se trocea en el backlog.
+
+---
+
+# 2026-10-09 — CINCO REELS DE «DESIGN MOTION»
+
+Jose: *"mira la parte donde modifica botones; eso quiero aplicar en la app: la
+forma, el espaciado y el tamaño de los botones y también de las palabras,
+párrafos y títulos."*
+
+Son cinco lecciones numeradas de un mismo autor, cada una con una regla corta.
+Lo útil de todas es que **dan una regla comprobable**, no una opinión.
+
+## 1. «Cards are a system · 03 — The background picks the treatment»
+
+> `white → border · tinted → shadow · panel → flat`
+
+Una tarjeta **blanca** sobre blanco necesita **borde**. Sobre un fondo
+**teñido**, lo que la separa es la **sombra**. Dentro de un **panel**, va
+**plana**: ni borde ni sombra, porque el panel ya hace de separador.
+
+El error que señala es poner las tres cosas a la vez. **Y es el nuestro:**
+nuestras tarjetas llevan borde *y* sombra sobre fondo gris claro.
+
+## 2. «Typography is a system · 05 — Leading moves against size»
+
+> `size up → leading down`
+
+Interlineado **1.10** para un titular de 32, **1.50** para un cuerpo de 16. La
+regla es que el interlineado **baja cuando el tamaño sube**, y lo que no vale es
+un 1.40 para todo.
+
+**Es la que más nos sirve**, y empalma con lo que ya está en la lista: tenemos
+**18 tamaños de texto** distintos en el archivo. Si se van a ordenar, que sea
+con esta regla y no a ojo.
+
+## 3. «Tell 03 · Features — List what changes, not what repeats»
+
+> `list the diff, not the set`
+
+En tres planes de precio: 12 viñetas → 4 / 3 / 3, y los de arriba empiezan con
+*"Everything in Starter, plus…"*. Repetir lo común hace que no se vea lo que
+diferencia.
+
+Aplica a **la landing**, no a la app.
+
+## 4. «Tell 03 · Two buttons — One primary» ← la que Jose señaló
+
+> `One primary · one text link`
+
+Dos botones del mismo tamaño y peso **se reparten el clic 50/50**: el vídeo lo
+dibuja literalmente con una barra partida por la mitad. Si los dos pesan igual,
+ninguno es la acción principal.
+
+La regla: **uno primario, y el otro como enlace de texto.**
+
+**Dónde lo rompemos:** en varias ventanas los dos botones del pie tienen el
+mismo tamaño. El aviso de borrar usuario es la excepción sana —uno rojo, uno
+gris— y es el molde.
+
+**Y hay un sitio donde NO hay que aplicarla, a propósito:** los avisos
+destructivos. Ahí la salida segura no puede ser un enlace de texto pequeño al
+lado de un botón rojo grande. Esa asimetría es justamente lo que protege.
+
+## 5. «Decision 03 · One color. Everything else grey»
+
+> `1 brand color · icons for status`
+
+Un solo color de marca. Los estados —en progreso, hecho, bloqueado— con
+**iconos y gris**, no con siete colores.
+
+**Esto ya lo hacemos** y conviene no romperlo: el acento es uno y los estados
+van por color semántico (verde / ámbar / rojo), que es lo que la regla permite.
+
+---
+
+## Lo que de aquí se puede medir, y lo que es opinión
+
+| Regla | ¿Se puede atar a una prueba? |
+|---|---|
+| Interlineado según tamaño | **Sí** — es aritmética sobre el CSS |
+| Un solo primario por ventana | **Sí** — contar botones `btn-primary` por diálogo |
+| Fondo → tratamiento de la tarjeta | A medias: se puede comprobar que no haya borde **y** sombra a la vez |
+| Un color de marca | **Sí** — ya lo vigila el uso de variables |
+| Listar la diferencia | No. Es criterio |
+
+**Va con la tanda de "estandarizar la pantalla"**, que ya está en la lista
+—tamaños de texto, altos de fila, anchos de ventana— y que avisé que toca
+cientos de líneas de CSS y no se hace a ojo. Estas reglas le dan por fin un
+criterio escrito en vez de "que se vea bien".

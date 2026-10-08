@@ -1,12 +1,12 @@
 # Setting up your warehouse system
 
-> ### ⚠️ BEFORE YOU START — AND AGAIN IF ANYTHING FAILS
-> Your app's `/exec` address must be in **three places and be identical in all
-> three**: the deployment, Script Properties (`WEB_APP_URL` and
-> `OAUTH_REDIRECT_URI`), and your OAuth client's *Authorized redirect URIs*.
-> None of them warns you when one is missing. See
-> **`docs/LAS-TRES-DIRECCIONES.md`** — it is the first place to look when
-> somebody cannot sign in.
+> ### ⚠️ IF SOMEBODY CANNOT SIGN IN, START WITH THE ADDRESS
+> It is almost always the same cause: **your app's address is not where it needs
+> to be**, or is not the same everywhere. Before looking at anything else, open
+> your sheet and run **🏭 Acopio → 🔧 Advanced → 🩺 Check this installation** — it
+> checks the address and repairs it. If it still will not let anyone in, write to
+> whoever set the system up and tell them the exact message you see.
+
 
 About 10 minutes, once. You do not need to install anything, and you do not need
 to be technical — but there is one screen partway through that looks alarming and
@@ -114,19 +114,15 @@ troubleshooting is in `ACCESO-Y-LOGIN.md`.
 
 ---
 
-## ⚠️ IF SIGNING IN FAILS, START WITH THE ADDRESSES
+## ⚠️ IF SIGNING IN FAILS, START WITH THE ADDRESS
 
-Before looking anywhere else, read **`docs/LAS-TRES-DIRECCIONES.md`**.
+**🏭 Acopio → 🔧 Advanced → 🩺 Check this installation.** It checks your app's
+address and repairs it.
 
-Your app's `/exec` address has to be in **three places at once**, and be the
-same in all three: the deployment itself, Script Properties (`WEB_APP_URL` and
-`OAUTH_REDIRECT_URI`), and — if people sign in with Google — the *Authorized
-redirect URIs* of your OAuth client in Cloud Console.
+The three messages you might see, and what each one means:
 
-**None of the three warns you when one is missing**, and they drift apart on
-their own: copying the sheet, making a new deployment instead of updating the
-existing one, and changing the Cloud project all do it.
-
-The two symptoms: `Error 400: redirect_uri_mismatch` means the OAuth client is
-missing it; *"Sorry, unable to open the file at this time"* means the saved
-address points somewhere else.
+| What you see | What it is |
+|---|---|
+| *"Sorry, unable to open the file at this time"* | The saved address points somewhere else. **Check this installation** fixes it |
+| *"Access blocked — redirect_uri_mismatch"* | A permission is missing on your company's Google account. **You cannot fix this one yourself** — write to whoever set the system up |
+| *"Access not granted — this account is not registered"* | **Not the address.** That email is not registered, or is misspelled. An administrator fixes it in ⚙️ Settings → Permissions |

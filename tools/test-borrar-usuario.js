@@ -184,18 +184,77 @@ console.log('\n═══ 6. La pantalla ═══\n');
 
   const fn = A.fnSrc(HTML, 'deleteUserPermanently');
   check('pregunta antes', /_showConfirm/.test(fn) && /danger: true/.test(fn));
+
+  /* ── UN AVISO QUE SE LEE, Y NO UNO QUE SE SALTA ─────────────────────────
+   *
+   * Jose, 2026-10-09: *"la actual advertencia no me gusta, tiene mucho texto y
+   * no es directa y no parece una advertencia."* Tenía razón: eran tres
+   * viñetas y un párrafo final, y eso no se lee — se salta. Un aviso que se
+   * salta no avisa de nada.
+   *
+   * Lo que queda arriba es UNA frase que dice qué pasa y qué no. El matiz baja
+   * a una ⓘ plegada: disponible para quien dude, fuera del camino de quien no. */
+  const msg = (fn.match(/message:[\s\S]*?,\s*\n\s*masLabel/) || [''])[0];
+  check('el aviso es UNA frase, no una lista — se mide por lo que NO tiene: viñetas',
+    msg.indexOf('•') === -1, msg);
+  check('...nombra a quien va a desaparecer', /correo \+ ' will be deleted/.test(msg), msg);
+  check('...y dice las dos cosas en el orden que importan: lo que se queda y lo que se va',
+    /Everything they recorded stays/.test(msg) && /not be able to sign in again/.test(msg));
+  check('el matiz va plegado detrás de una ⓘ, no dentro del aviso',
+    /masLabel:/.test(fn) && /mas:/.test(fn));
+  check('...y ahí siguen las dos cosas que no se pueden perder: que para alguien real lo ' +
+        'correcto es Deactivate, y que esto no se deshace',
+    /use Deactivate/.test(fn) && /cannot be undone/.test(fn));
   /* Las tres cosas que hay que saber ANTES de pulsar. La segunda es la que
    * tranquiliza, y sin ella el aviso sólo da miedo. */
-  check('...y el aviso dice que lo que esa persona REGISTRÓ no se toca',
-    /Everything they recorded stays/.test(fn));
-  check('...que no se puede deshacer', /cannot be undone/.test(fn));
-  check('...y que para alguien que sí trabajó aquí lo correcto es Deactivate',
-    /use Deactivate/.test(fn));
   check('la lista se arregla en el acto, sin volver a preguntar al servidor',
     /_usersData = \(_usersData \|\| \[\]\)\.filter/.test(fn) && /_renderUsersTable\(\)/.test(fn));
   check('el botón no se enseña sobre tu propia fila — un botón que siempre va a decir que ' +
         'no es una forma de mentir',
     /btnDeleteUser[\s\S]{0,260}userEmail/.test(A.fnSrc(HTML, 'editUser')));
+}
+
+console.log('\n═══ 7. Los botones de fila no existen hasta que hay una fila ═══\n');
+{
+  /* Jose, 2026-10-09: *"no quiero ningún botón visible antes de seleccionar una
+   * checkbox."* La regla de esta app era "apagados, no escondidos", y él tiene
+   * razón en que aquí no aplica: estos botones no actúan sobre la pantalla,
+   * actúan sobre una fila. Sin fila marcada no es que no estén disponibles: es
+   * que no hay nada sobre lo que puedan actuar. */
+  const barra = A.fnSrc(HTML, '_updateUsrActionBar');
+  check('el grupo entero se esconde sin selección', /usrRowActions/.test(barra) &&
+    /visibility = n \? 'visible' : 'hidden'/.test(barra), barra.slice(0, 80));
+  /* Con `visibility` y no con `display`: el hueco se mantiene y la tabla no da
+   * un salto al marcar la primera casilla. Un salto justo debajo del dedo es
+   * cómo se pulsa lo que no se quería. */
+  check('...con visibility y NO con display, para que la tabla no salte bajo el dedo al ' +
+        'marcar la primera casilla', !/usrRowActions[\s\S]{0,120}display\s*=/.test(barra));
+  check('Add User SE QUEDA siempre — no es un botón de fila, es el que crea la primera; ' +
+        'escondido, una instalación nueva no podría dar de alta a nadie',
+    /id="usrRowActions"[\s\S]{0,400}btnUsrEdit/.test(HTML) &&
+    HTML.indexOf('Add User') < HTML.indexOf('id="usrRowActions"'));
+  check('y hay un botón de borrar en la barra', /id="btnUsrDelete"/.test(HTML));
+  /* De uno en uno a propósito: el aviso tiene que poder NOMBRAR a quien va a
+   * desaparecer. "¿Borrar 4 usuarios?" es la pregunta que se contesta que sí
+   * sin leer, y esto no se deshace. */
+  check('...pero borrar es DE UNO EN UNO: el aviso tiene que poder nombrar a quien ' +
+        'desaparece', /del\.disabled = n !== 1/.test(barra));
+}
+
+console.log('\n═══ 8. Y la ventana tiene salida arriba ═══\n');
+{
+  check('hay una X para cerrar, que es donde la gente la busca', /id="confirmXBtn"/.test(HTML));
+  check('...con nombre para quien no la ve', /aria-label="Close"/.test(HTML));
+  /* Y SE QUEDA TAMBIÉN EL BOTÓN SEGURO. En un aviso destructivo la salida
+   * segura no puede ser más pequeña ni estar más lejos que la peligrosa: la X
+   * mide 30 píxeles en una esquina y "Delete" es un botón entero al lado del
+   * pulgar. */
+  check('...y el botón seguro NO desaparece: en un aviso destructivo la salida segura no ' +
+        'puede ser más pequeña ni estar más lejos que la peligrosa',
+    /id="confirmCancelBtn"/.test(HTML));
+  check('la X cancela de verdad — llama al mismo camino que el botón, así que un onCancel ' +
+        'registrado se ejecuta igual',
+    /id="confirmXBtn"[\s\S]{0,80}_confirmCancel\(\)/.test(HTML));
 }
 
 console.log('\n' + (fail ? '✗ ' + fail + ' fallo(s), ' : '✓ ') + ok + ' comprobaciones\n');

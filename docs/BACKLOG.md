@@ -8440,3 +8440,42 @@ direcciones que están de nuestro lado; el tercer sitio está en Cloud Console y
 desde el navegador no se puede leer. Con esa prueba, *Check installation*
 podría **afirmarlo** en vez de nombrarlo como sospecha, y esto dejaría de
 necesitar un documento.
+
+## 🔵 LAS CINCO REGLAS DE DISEÑO DE LOS VÍDEOS DEL 09/10
+
+Todas en `VIDEOS-DE-UX.md`. Lo que importa para la lista: **dan un criterio
+escrito** a la tanda de "estandarizar la pantalla", que hasta ahora era "que se
+vea bien".
+
+| Regla | ¿Se puede atar a una prueba? |
+|---|---|
+| **Interlineado contra tamaño** (32 → 1.10, 16 → 1.50) | **Sí**, es aritmética sobre el CSS. Y empalma con los **18 tamaños de texto** que ya están anotados |
+| **Un solo botón primario por ventana** | **Sí** — contar `btn-primary` por diálogo |
+| Fondo blanco → borde; teñido → sombra; panel → plano | A medias: sí se puede comprobar que no haya borde **y** sombra a la vez. **Hoy lo rompemos** |
+| Un color de marca, estados por color semántico | **Sí**, y ya lo cumplimos |
+| Listar la diferencia, no el conjunto | No. Es criterio, y es de la landing |
+
+**La excepción que hay que escribir antes de aplicar "un solo primario":** en
+un aviso destructivo la salida segura NO puede ser un enlace de texto al lado
+de un botón rojo. Esa asimetría es la protección. Aplicar la regla a ciegas ahí
+sería hacer la app más bonita y más peligrosa.
+
+## ⚠️ EL GUARDIÁN DE PRIVACIDAD CAZÓ MI PROPIO DOCUMENTO — 09/10
+
+Al escribir el aviso de las tres direcciones lo metí también en
+`INSTALL-GUIDE.md` y `CUSTOMER-SETUP.md`, que **se publican** como
+`docs/instalacion.html` y `docs/setup.html`. `test-site-privacy` se puso roja:
+*"no published page contains instructions about Script Properties"*.
+
+**Tenía razón, y el arreglo es mejor que el texto que escribí.** Un cliente no
+debe abrir Apps Script nunca —es la regla que Jose dejó escrita— así que
+decirle "ve a Script Properties" era malo por dos motivos a la vez, y la regla
+de privacidad cazó el segundo.
+
+Las páginas públicas dicen ahora lo que el cliente **sí** puede hacer: usar
+**Check this installation**, y los tres mensajes de error con lo que significa
+cada uno — incluido el que NO es de direcciones (*Access not granted*, que es
+`USERS_V3`) y que se confunde con ellos todo el tiempo.
+
+El detalle técnico se queda en `LAS-TRES-DIRECCIONES.md`, que es nuestro y no
+se publica.

@@ -1,11 +1,12 @@
 # Guía de instalación — Acopio
 
-> ### ⚠️ ANTES DE EMPEZAR, Y DESPUÉS SI ALGO FALLA
-> La dirección `/exec` de la app tiene que estar **en tres sitios y ser la misma
-> en los tres**: el despliegue, las Script Properties (`WEB_APP_URL` y
-> `OAUTH_REDIRECT_URI`) y los *Authorized redirect URIs* del cliente de OAuth.
-> Ninguno avisa si falta. **`docs/LAS-TRES-DIRECCIONES.md`** — es el primer sitio
-> donde mirar cuando alguien no puede entrar.
+> ### ⚠️ SI ALGUIEN NO PUEDE ENTRAR, EMPIEZA POR LA DIRECCIÓN
+> Casi siempre es la misma causa: **la dirección de tu app no está donde tiene
+> que estar**, o no es la misma en todos los sitios. Antes de buscar nada más,
+> abre tu hoja y usa **🏭 Acopio → 🔧 Advanced → 🩺 Check this installation**: lo
+> comprueba y lo repara solo. Si después de eso sigue sin dejar entrar, escribe
+> a quien te instaló el sistema y dile exactamente qué mensaje ves.
+
 
 **Tiempo estimado: 5 minutos.** No necesitas saber programación. Solo una
 cuenta de Google (Gmail normal o de empresa).
@@ -68,15 +69,15 @@ Nada de esto se pierde si cierras la ventana a medias — retoma donde ibas.
 
 > **⚠️ DE DÓNDE SE COPIA LA DIRECCIÓN, Y DE DÓNDE NO**
 >
-> Cópiala **sólo** de `Deploy → Manage deployments → Web app · URL`.
+> Cópiala **sólo** de la pantalla donde el asistente te la muestra al publicar.
 >
 > **NO la copies de la barra del navegador.** Ahí Google le añade trozos según
-> con qué cuenta estés mirando (`/a/macros/tuempresa.com/…`, `/macros/u/0/…`) y
-> esas variantes **no funcionan** pegadas en ningún sitio: dan *"Sorry, unable
-> to open the file at this time"*.
+> con qué cuenta estés mirando, y esas variantes **no funcionan** pegadas en
+> ningún sitio: dan *"Sorry, unable to open the file at this time"*.
 >
-> Y acuérdate de que **esa misma dirección hace falta en dos sitios más** —ver el
-> aviso del principio—. Si alguien no puede entrar, es casi siempre eso.
+> Si te equivocas, no pasa nada: **🏭 Acopio → 🔧 Advanced → 🩺 Check this
+> installation** lo detecta y lo corrige.
+
 
 Al final del asistente, te va a pedir **publicar tu sistema**. Es el único
 paso donde vas a ver algo parecido a "código", y el asistente te lleva de la
@@ -211,15 +212,15 @@ to…".
 
 ---
 
-## ⚠️ SI ALGO FALLA AL ENTRAR, EMPIEZA POR LAS DIRECCIONES
+## ⚠️ SI ALGO FALLA AL ENTRAR, EMPIEZA POR LA DIRECCIÓN
 
-Antes de buscar en ningún otro sitio: **`docs/LAS-TRES-DIRECCIONES.md`**.
+**🏭 Acopio → 🔧 Advanced → 🩺 Check this installation.** Comprueba la dirección
+de tu app y la arregla si hace falta.
 
-La dirección `/exec` de la app tiene que estar **en tres sitios a la vez** y ser
-la misma en los tres: el despliegue, las Script Properties (`WEB_APP_URL` y
-`OAUTH_REDIRECT_URI`) y, si usas inicio de sesión con Google, los *Authorized
-redirect URIs* del cliente de OAuth en Cloud Console.
+Los dos mensajes más comunes y qué significan:
 
-**Ninguno de los tres avisa cuando falta**, y se desalinean solas al copiar la
-hoja, al crear un despliegue nuevo y al cambiar el proyecto de Cloud. Esto nos
-costó varias sesiones y tres diagnósticos equivocados antes de encontrarlo.
+| Lo que ves | Qué es |
+|---|---|
+| *"Sorry, unable to open the file at this time"* | La dirección guardada apunta a otro sitio. Lo arregla **Check this installation** |
+| *"Access blocked — redirect_uri_mismatch"* | Falta un permiso en la cuenta de Google de tu empresa. **Esto no lo puedes arreglar tú**: escribe a quien te instaló el sistema |
+| *"Access not granted — this account is not registered"* | **No es la dirección.** Ese correo no está dado de alta, o está mal escrito. Lo arregla un administrador en ⚙️ Settings → Permissions |
