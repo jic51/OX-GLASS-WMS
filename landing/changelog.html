@@ -97,6 +97,24 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.52</span>
+      <span class="tag fix">Fix</span>
+      <h3>Signing in could send you back to a copy of the app that no longer answers</h3>
+      <p>Press <b>Sign in with Google</b>, the window opens, you pick your account &mdash; and
+         the window dies on a Google Drive error while the page waits four minutes to
+         say &ldquo;Timed out. Please try again.&rdquo; Trying again does exactly the same thing.</p>
+      <p>The return address is stored, and it can end up pointing at an <b>older
+         deployment</b> of the app: that happens when the sheet is copied, when a new
+         deployment is made instead of updating the existing one, and when the Cloud
+         project is changed. Nothing ever compared it with the app actually running.</p>
+      <p>Now the page compares them <b>before opening the window</b>. If they are not the
+         same app it says so at once, shows both, and names the menu item that repairs
+         it &mdash; rather than opening a window it already knows cannot come back.
+         <b>Check this installation</b> resets it, and publishing an update keeps it in
+         step from then on.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.51</span>
       <span class="tag fix">Fix</span>
       <h3>A user row you never meant to create can now be removed</h3>

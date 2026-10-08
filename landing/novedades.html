@@ -98,6 +98,25 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.52</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Iniciar sesi&oacute;n pod&iacute;a devolverte a una copia de la app que ya no contesta</h3>
+      <p>Pulsas <b>Sign in with Google</b>, se abre la ventana, eliges tu cuenta &mdash;y la
+         ventana muere con un error de Google Drive mientras la p&aacute;gina espera cuatro
+         minutos para decir &laquo;Timed out. Please try again.&raquo;. Volver a intentarlo hace
+         exactamente lo mismo.</p>
+      <p>La direcci&oacute;n de vuelta se guarda, y puede acabar apuntando a un <b>despliegue
+         m&aacute;s viejo</b> de la app: pasa al copiar la hoja, al crear un despliegue nuevo en
+         vez de actualizar el que hab&iacute;a, y al cambiar el proyecto de Cloud. Nada la
+         compar&oacute; nunca con la app que de verdad est&aacute; corriendo.</p>
+      <p>Ahora la p&aacute;gina las compara <b>antes de abrir la ventana</b>. Si no son la misma
+         app lo dice en el acto, ense&ntilde;a las dos, y nombra la opci&oacute;n del men&uacute; que lo
+         repara &mdash;en vez de abrir una ventana que ya sabe que no va a poder volver&mdash;.
+         <b>Check this installation</b> la corrige, y publicar una actualizaci&oacute;n la
+         mantiene al d&iacute;a a partir de entonces.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.51</span>
       <span class="tag fix">Arreglo</span>
       <h3>Una fila de usuario creada por error ya se puede quitar</h3>

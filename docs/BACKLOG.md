@@ -8357,3 +8357,56 @@ cliente de OAuth la tenga en *Authorized redirect URIs*.
 la forma `/a/macros/` y la autorización caducada.** Los dos explicaban lo que
 veía y ninguno era la causa. El dato que lo resolvió —las dos direcciones
 distintas en la misma captura— lo trajo Jose.
+
+## ⚠️ TERCERA CORRECCIÓN MÍA SOBRE LO MISMO — era `redirect_uri_mismatch`
+
+Jose mandó sus Script Properties y la pantalla del cliente de OAuth, y zanjan
+el asunto:
+
+    OAUTH_REDIRECT_URI = …/s/AKfycbzxKF659yaTtULpAYx4HngN…/exec
+    WEB_APP_URL        = …/s/AKfycbzxKF659yaTtULpAYx4HngN…/exec   ← IGUALES
+
+**Y la ventana decía, en letras grandes: `Error 400: redirect_uri_mismatch`.**
+
+La causa real: el cliente de OAuth `Acopio - Production` tiene **Authorized
+redirect URIs VACÍO**. Ninguna dirección. Google rechaza la petición antes de
+mirar nada más.
+
+**Tres diagnósticos míos y tres equivocados**, en orden: la forma `/a/macros/`,
+la autorización caducada, y los dos despliegues distintos. Los tres explicaban
+lo que veía. Ninguno era la causa.
+
+**Y hay que decir una cosa incómoda sobre el arreglo de la v12.52: NO HABRÍA
+SERVIDO AQUÍ.** Compara `OAUTH_REDIRECT_URI` con `WEB_APP_URL`, y en su
+instalación coinciden. Es una guarda buena para un fallo real que existe —se
+desalinean solas al copiar la hoja, al desplegar de nuevo y al cambiar de
+proyecto— pero no es la que le hacía falta a él.
+
+Lo que sí sirve de la v12.52 es la otra mitad: la espera dejó de ser muda, y el
+mensaje ahora **nombra `redirect_uri_mismatch` y dice exactamente dónde se
+arregla**. Esa parte sí habría ahorrado el día.
+
+### Lo que falta, y no se puede hacer desde el navegador
+
+La ventana de Google es de otro dominio: **no se puede leer su contenido**. Así
+que la app nunca va a ver el `redirect_uri_mismatch` por sí misma. Lo único
+posible es lo que ya se hizo: nombrarlo como causa probable y decir dónde
+mirar.
+
+**Pero sí hay algo comprobable desde el servidor y no está hecho:** el
+instalador puede intentar una petición de prueba al endpoint de OAuth con esa
+`redirect_uri` y ver si Google la rechaza. Si contesta `redirect_uri_mismatch`,
+*Check installation* puede decirlo con certeza en vez de nombrarlo como
+sospecha. **Pendiente, y es la pieza que de verdad cierra esto.**
+
+### Y dos cosas sueltas de sus propiedades
+
+1. **`GEMINI_API_KEY` empieza por `AQ.`, no por `AIza`.** Las claves de la
+   Gemini API que hemos visto empiezan por `AIza`. No afirmo que la suya esté
+   mal —Google ha cambiado formatos— pero es lo primero que miraría si el
+   lector de documentos sigue fallando. Nuestra comprobación sólo mira que
+   tenga 20 caracteres y no lleve espacios, así que una clave de otro tipo
+   entra sin protestar.
+2. **`FOLDER_PREFIX` sigue siendo `Acopio_PRODUCTION_OX_GLASS`** aunque la
+   empresa se llame `MY WAREHOUSE`. Es exactamente lo que él describió de las
+   carpetas, y confirma que el renombrado pendiente es real y no cosmético.
