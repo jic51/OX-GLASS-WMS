@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Estandarizar la forma</title>
+<style>
+:root{
+  /* Los tokens REALES de Acopio, copiados del :root de Index_v3_fixed.html.
+     Este mockup usa los de la app a propósito: un mockup con otros colores
+     compara dos cosas distintas y no dice nada sobre la app. */
+  --navy:#1B2A4A; --steel:#2C3E6B; --accent:#3B7DD8; --accent2:#2563EB;
+  --bg:#F0F2F5; --card:#FFFFFF; --text:#1a1a2e; --muted:#6B7280;
+  --green:#059669; --green-bg:#D1FAE5; --red:#DC2626; --red-bg:#FEE2E2;
+  --yellow:#D97706; --yellow-bg:#FEF3C7; --border:#E5E7EB;
+  --shadow:0 1px 3px rgba(0,0,0,.08); --radius:10px;
+
+  --papel:#F0F2F5; --tinta:#1a1a2e; --tenue:#6B7280;
+  --linea:#E5E7EB; --panel:#FFFFFF; --malo:#DC2626; --bueno:#059669;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --papel:#11151f; --tinta:#E8EAF0; --tenue:#9AA3B2; --linea:#283040;
+    --panel:#171d2a; --card:#171d2a; --text:#E8EAF0; --muted:#9AA3B2;
+    --border:#283040; --bg:#11151f; --navy:#dbe3f5; --accent:#6CA0E8;
+    --shadow:0 1px 3px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --papel:#11151f; --tinta:#E8EAF0; --tenue:#9AA3B2; --linea:#283040;
+  --panel:#171d2a; --card:#171d2a; --text:#E8EAF0; --muted:#9AA3B2;
+  --border:#283040; --bg:#11151f; --navy:#dbe3f5; --accent:#6CA0E8;
+  --shadow:0 1px 3px rgba(0,0,0,.5);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--papel); color:var(--tinta);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  line-height:1.55; -webkit-text-size-adjust:100%;
+}
+.env{max-width:960px; margin:0 auto; padding:0 16px 80px}
+header{padding:48px 0 8px}
+h1{font-size:clamp(1.5rem,4.5vw,2.1rem); line-height:1.15; margin:0 0 .3em; text-wrap:balance; letter-spacing:-.02em}
+.sub{color:var(--tenue); font-size:.95rem; max-width:62ch; margin:0}
+h2{font-size:clamp(1.05rem,2.6vw,1.3rem); margin:52px 0 6px; letter-spacing:-.01em; text-wrap:balance}
+h3{font-size:.95rem; margin:26px 0 8px; letter-spacing:-.005em}
+p{max-width:68ch}
+.lede{font-size:1rem}
+small,.nota{color:var(--tenue); font-size:.84rem}
+code{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.88em;
+     background:color-mix(in srgb,var(--tenue) 14%,transparent); padding:.1em .35em; border-radius:4px}
+hr{border:0; border-top:1px solid var(--linea); margin:40px 0}
+
+/* ── el dato grande ─────────────────────────────────────────── */
+.cifras{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:22px 0}
+.cifra{background:var(--panel); border:1px solid var(--linea); border-radius:10px; padding:16px}
+.cifra b{display:block; font-size:2rem; line-height:1; font-variant-numeric:tabular-nums; letter-spacing:-.03em}
+.cifra span{display:block; color:var(--tenue); font-size:.8rem; margin-top:6px; line-height:1.35}
+.cifra.mal b{color:var(--malo)} .cifra.bien b{color:var(--bueno)}
+
+/* barra de adopción */
+.barra{height:10px; background:color-mix(in srgb,var(--tenue) 20%,transparent); border-radius:999px; overflow:hidden; margin:7px 0 3px}
+.barra i{display:block; height:100%; background:var(--bueno); border-radius:999px}
+.barra i.poco{background:var(--malo)}
+.fila-tok{display:grid; grid-template-columns:1fr; gap:2px; margin:14px 0}
+.fila-tok .et{display:flex; justify-content:space-between; gap:10px; font-size:.84rem}
+.fila-tok .et b{font-variant-numeric:tabular-nums}
+
+/* ── antes / después ────────────────────────────────────────── */
+.par{display:grid; grid-template-columns:1fr; gap:14px; margin:18px 0}
+@media(min-width:720px){ .par{grid-template-columns:1fr 1fr} }
+.caja{background:var(--panel); border:1px solid var(--linea); border-radius:10px; overflow:hidden}
+.caja>.cab{padding:9px 14px; font-size:.74rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+           border-bottom:1px solid var(--linea)}
+.caja.antes>.cab{color:var(--malo); background:color-mix(in srgb,var(--malo) 9%,transparent)}
+.caja.despues>.cab{color:var(--bueno); background:color-mix(in srgb,var(--bueno) 9%,transparent)}
+.caja>.cuerpo{padding:18px 14px; display:flex; flex-wrap:wrap; gap:9px; align-items:center}
+
+/* botones — ANTES: las medidas REALES que hay hoy en la app, copiadas tal cual */
+.b{border:0; cursor:pointer; font-family:inherit; color:#fff; background:var(--accent); font-weight:600;
+   display:inline-flex; align-items:center; justify-content:center; white-space:nowrap}
+.a1{padding:5px 9px;      border-radius:6px;  font-size:.72rem; min-height:34px}
+.a2{padding:3px 10px;     border-radius:5px;  font-size:.78rem; min-height:36px}
+.a3{padding:2px 8px;      border-radius:7px;  font-size:.85rem; min-height:38px}
+.a4{padding:.35rem .85rem;border-radius:8px;  font-size:.8rem;  min-height:40px}
+.a5{padding:.5rem 1rem;   border-radius:10px; font-size:.9rem;  min-height:44px}
+.a6{padding:.38rem .75rem;border-radius:6px;  font-size:.74rem; min-height:36px}
+/* botones — DESPUÉS: tres tamaños, un radio, un peso */
+.d{border:0; cursor:pointer; font-family:inherit; color:#fff; background:var(--accent); font-weight:600;
+   border-radius:var(--radius); display:inline-flex; align-items:center; justify-content:center;
+   white-space:nowrap; transition:filter .12s ease}
+.d:hover{filter:brightness(1.07)}
+.d:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.d-sm{padding:0 12px; min-height:36px; font-size:.78rem}
+.d-md{padding:0 16px; min-height:40px; font-size:.82rem}
+.d-lg{padding:0 20px; min-height:44px; font-size:.88rem}
+.d.fantasma{background:transparent; color:var(--accent); box-shadow:inset 0 0 0 1px var(--border)}
+.d.peligro{background:var(--malo)}
+
+/* regla de 44 px */
+.regla{position:relative; padding-left:0}
+.marca{display:flex; align-items:center; gap:8px; font-size:.78rem; color:var(--tenue); margin-top:10px}
+.pastilla{font-size:.7rem; font-weight:700; padding:2px 7px; border-radius:999px; white-space:nowrap}
+.pastilla.no{background:var(--red-bg); color:#991B1B}
+.pastilla.si{background:var(--green-bg); color:#065F46}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .pastilla.no{background:#3b1113;color:#FCA5A5}
+  :root:not([data-theme="light"]) .pastilla.si{background:#0b2e22;color:#6EE7B7} }
+
+/* ── escala de letra ────────────────────────────────────────── */
+.escala{background:var(--panel); border:1px solid var(--linea); border-radius:10px; padding:4px 0; margin:14px 0}
+.esc{display:grid; grid-template-columns:72px 1fr; gap:14px; align-items:baseline; padding:9px 16px; border-bottom:1px solid var(--linea)}
+.esc:last-child{border-bottom:0}
+.esc .v{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.76rem; color:var(--tenue); font-variant-numeric:tabular-nums}
+.esc .m{line-height:1.3}
+
+/* tabla de opciones */
+.tabla{width:100%; border-collapse:collapse; margin:16px 0; font-size:.86rem}
+.tabla th,.tabla td{text-align:left; padding:10px 12px; border-bottom:1px solid var(--linea); vertical-align:top}
+.tabla th{font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--tenue); font-weight:700}
+.tabla td.n{font-variant-numeric:tabular-nums; white-space:nowrap}
+.tabla tr.reco td{background:color-mix(in srgb,var(--bueno) 7%,transparent)}
+.envuelve{overflow-x:auto; -webkit-overflow-scrolling:touch}
+
+/* fila de movimientos, como en la app */
+.mov{width:100%; border-collapse:collapse; font-size:.78rem}
+.mov th{background:var(--navy); color:#fff; font-size:.68rem; text-transform:uppercase; letter-spacing:.05em;
+        padding:7px 9px; text-align:left; font-weight:700}
+:root[data-theme="dark"] .mov th, :root:not([data-theme="light"]) .mov th{color:var(--bg)}
+.mov td{padding:8px 9px; border-bottom:1px solid var(--linea)}
+.mov td.q{text-align:right; font-variant-numeric:tabular-nums}
+.chip{font-size:.66rem; font-weight:700; padding:2px 7px; border-radius:4px; background:var(--green-bg); color:#065F46}
+
+ul{max-width:68ch; padding-left:1.15em}
+li{margin:.4em 0}
+.ojo{border-left:3px solid var(--accent); padding:2px 0 2px 14px; margin:18px 0; max-width:66ch}
+.ojo p{margin:.35em 0}
+</style>
+</head>
+<body>
+<div class="env">
+
+<header>
+  <h1>Estandarizar la forma de la app</h1>
+  <p class="sub">Mockup para decidir. <b>Aquí no se cambia nada</b> — es para que lo mires y elijas.
+     Todas las cifras están medidas sobre <code>Index_v3_fixed.html</code> en la v12.54.</p>
+</header>
+
+<h2>Lo que encontré no es lo que esperaba</h2>
+
+<p class="lede">La app <b>ya tiene</b> los tokens escritos. En su <code>:root</code> están
+<code>--radius:10px</code> y <code>--shadow</code>, junto a los colores. No hay que inventar
+un sistema.</p>
+
+<p>El problema es que sólo se usa la mitad. <b>Los tokens de color se usan de verdad.
+Los de forma, casi nunca.</b></p>
+
+<div class="fila-tok">
+  <div class="et"><span><code>--border</code> · color</span><b>135 usos</b></div>
+  <div class="barra"><i style="width:100%"></i></div>
+</div>
+<div class="fila-tok">
+  <div class="et"><span><code>--muted</code> · color</span><b>108 usos</b></div>
+  <div class="barra"><i style="width:80%"></i></div>
+</div>
+<div class="fila-tok">
+  <div class="et"><span><code>--accent</code> · color</span><b>91 usos</b></div>
+  <div class="barra"><i style="width:67%"></i></div>
+</div>
+<div class="fila-tok">
+  <div class="et"><span><code>--shadow</code> · forma</span><b>6 de 61 sombras — 10%</b></div>
+  <div class="barra"><i class="poco" style="width:10%"></i></div>
+</div>
+<div class="fila-tok">
+  <div class="et"><span><code>--radius</code> · forma</span><b>5 de 224 esquinas — 2%</b></div>
+  <div class="barra"><i class="poco" style="width:2%"></i></div>
+</div>
+
+<div class="ojo">
+  <p><b>Es el mismo patrón de siempre, otra vez.</b> «Una cosa escrita y nunca ejecutada»
+  — la sexta vez este mes, pero en el diseño en vez de en el código.</p>
+  <p>Y eso lo vuelve <b>mucho menos arriesgado</b> de lo que parecía: la disciplina ya está
+  probada dentro de este mismo archivo, en los colores. No hay que demostrar que funciona.
+  Hay que terminarla.</p>
+</div>
+
+<div class="cifras">
+  <div class="cifra mal"><b>40</b><span>tamaños de letra distintos, en 338 sitios</span></div>
+  <div class="cifra mal"><b>23</b><span>radios de esquina, en 224 sitios</span></div>
+  <div class="cifra mal"><b>45</b><span>sombras distintas… para 61 usos</span></div>
+  <div class="cifra mal"><b>26</b><span>paddings distintos sólo en botones</span></div>
+</div>
+
+<p><b>Las 45 sombras para 61 usos</b> es la cifra que más dice: casi cada sombra de la app
+está hecha a medida y se usa una sola vez.</p>
+
+<p class="nota">No cuento los tamaños en <code>mm</code> de las etiquetas impresas.
+Ésos son otro medio —papel— y su comentario en el código dice que los escalones salen de
+una medida real de cuántos caracteres entran en una etiqueta. <b>Esos no se tocan.</b></p>
+
+<hr>
+
+<h2>Los botones</h2>
+
+<p>Esto es lo que me pediste de los reels: «la forma, el espaciado y el tamaño de los
+botones». Hay <b>147 reglas de botón</b> y entre ellas 26 paddings, 9 radios y 16 tamaños
+de letra. Mezclando unidades para lo mismo: <code>5px 9px</code> junto a
+<code>.35rem .85rem</code>.</p>
+
+<p><b>Los de la izquierda son reales</b>, copiados uno a uno de la app de hoy:</p>
+
+<div class="par">
+  <div class="caja antes">
+    <div class="cab">Hoy · seis formas distintas</div>
+    <div class="cuerpo">
+      <button class="b a1">Save</button>
+      <button class="b a2">Add User</button>
+      <button class="b a3">Delete</button>
+      <button class="b a4">Entry</button>
+      <button class="b a5">Confirm</button>
+      <button class="b a6">Edit</button>
+    </div>
+  </div>
+  <div class="caja despues">
+    <div class="cab">Propuesta · tres tamaños, un radio</div>
+    <div class="cuerpo">
+      <button class="d d-sm">Save</button>
+      <button class="d d-sm">Add User</button>
+      <button class="d d-md peligro">Delete</button>
+      <button class="d d-md">Entry</button>
+      <button class="d d-lg">Confirm</button>
+      <button class="d d-sm fantasma">Edit</button>
+    </div>
+  </div>
+</div>
+
+<h3>Y uno que no es de gusto, sino de uso</h3>
+
+<p>Las alturas de hoy son <b>34, 36, 38, 40 y 44 px</b>. El mínimo recomendado para tocar
+con el dedo es <b>44 px</b>. Tu gente usa la app <b>en el teléfono, dentro de la bodega</b>,
+muchas veces con guantes.</p>
+
+<div class="par">
+  <div class="caja antes">
+    <div class="cab">34 px — el más pequeño que hay hoy</div>
+    <div class="cuerpo regla" style="display:block">
+      <button class="b a1">Delete</button>
+      <div class="marca"><span class="pastilla no">10 px por debajo</span> difícil de acertar con guantes</div>
+    </div>
+  </div>
+  <div class="caja despues">
+    <div class="cab">44 px en lo que destruye algo</div>
+    <div class="cuerpo regla" style="display:block">
+      <button class="d d-lg peligro">Delete</button>
+      <div class="marca"><span class="pastilla si">cumple</span> y el seguro nunca más pequeño que el peligroso</div>
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<h2>La letra</h2>
+
+<p>40 tamaños distintos, y <b>26 de ellos caben entre 9,9 px y 14,4 px</b>. Eso son 26
+escalones en 4,5 píxeles: la diferencia media entre uno y el siguiente es de
+<b>0,18 px</b>. Nadie puede verla.</p>
+
+<h3>Lo que propongo (opción A)</h3>
+
+<div class="escala">
+  <div class="esc"><span class="v">.62rem</span><span class="m" style="font-size:.62rem">Códigos, pies de tabla, sellos de hora</span></div>
+  <div class="esc"><span class="v">.68rem</span><span class="m" style="font-size:.68rem">Cabeceras de tabla, etiquetas pequeñas</span></div>
+  <div class="esc"><span class="v">.72rem</span><span class="m" style="font-size:.72rem">El tamaño más usado de la app — 46 sitios</span></div>
+  <div class="esc"><span class="v">.78rem</span><span class="m" style="font-size:.78rem">Filas de movimientos, texto de tabla</span></div>
+  <div class="esc"><span class="v">.82rem</span><span class="m" style="font-size:.82rem">Texto normal de formularios y botones</span></div>
+  <div class="esc"><span class="v">.85rem</span><span class="m" style="font-size:.85rem">Texto de lectura, párrafos de ajustes</span></div>
+  <div class="esc"><span class="v">.9rem</span><span class="m" style="font-size:.9rem">Subtítulos</span></div>
+  <div class="esc"><span class="v">1rem</span><span class="m" style="font-size:1rem">Títulos de sección</span></div>
+  <div class="esc"><span class="v">1.05rem</span><span class="m" style="font-size:1.05rem">Títulos de ventana</span></div>
+  <div class="esc"><span class="v">1.2rem</span><span class="m" style="font-size:1.2rem">Títulos grandes</span></div>
+  <div class="esc"><span class="v">1.4rem</span><span class="m" style="font-size:1.4rem">Cifras del tablero</span></div>
+  <div class="esc"><span class="v">1.8rem</span><span class="m" style="font-size:1.8rem">Cifras grandes</span></div>
+  <div class="esc"><span class="v">2.5rem</span><span class="m" style="font-size:2.5rem; line-height:1.1">Número</span></div>
+</div>
+
+<h3>Tres formas de hacerlo, y qué cuesta cada una</h3>
+
+<div class="envuelve">
+<table class="tabla">
+  <thead><tr><th>Opción</th><th class="n">Escalones</th><th class="n">Qué se mueve</th><th class="n">Mayor salto</th><th>Qué significa</th></tr></thead>
+  <tbody>
+    <tr class="reco">
+      <td><b>A · conservadora</b><br><small>recomendada</small></td>
+      <td class="n">13</td><td class="n">44% de los usos</td><td class="n">4,8 px</td>
+      <td>Los <b>tres</b> tamaños más usados —<code>.72</code> (46 sitios), <code>.78</code> (35)
+          y <code>.85</code> (29)— <b>no se mueven nada</b>. Los dos siguientes
+          (<code>.7</code> y <code>.8</code>, 55 sitios entre los dos) se mueven
+          <b>0,32 px</b>: un tercio de píxel. El salto de 4,8 px cae sobre <b>un solo sitio</b>
+          (<code>2.2rem</code>, una cifra grande). En la banda donde vive el <b>90% del
+          texto</b>, nada se mueve más de <b>0,80 px</b>.</td>
+    </tr>
+    <tr>
+      <td><b>C · intermedia</b></td>
+      <td class="n">10</td><td class="n">57%</td><td class="n">4,8 px</td>
+      <td>Más limpia. Desaparece <code>.82rem</code> (26 usos) y <code>.9rem</code> (10), que
+          se van a sus vecinos. Se nota algo más en formularios.</td>
+    </tr>
+    <tr>
+      <td><b>B · apretada</b></td>
+      <td class="n">8</td><td class="n">67%</td><td class="n">4,8 px</td>
+      <td>La más ordenada de ver en el código y la que más cambia la pantalla. Los títulos se
+          mueven hasta 3,2 px. <b>No la recomiendo</b> para una app que ya está en uso.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Cómo se ve una fila de movimientos en cada una</h3>
+
+<div class="par">
+  <div class="caja antes">
+    <div class="cab">Hoy</div>
+    <div style="padding:0;overflow-x:auto">
+      <table class="mov">
+        <thead><tr><th style="font-size:.66rem">Fecha</th><th style="font-size:.7rem">Material</th><th style="font-size:.68rem">Rack</th><th style="font-size:.72rem">Cant.</th></tr></thead>
+        <tbody>
+          <tr><td style="font-size:.74rem">10/09</td><td style="font-size:.78rem">WINDOW — W-1 <span class="chip">ENTRY</span></td><td style="font-size:.76rem">B1A</td><td class="q" style="font-size:.8rem">40</td></tr>
+          <tr><td style="font-size:.74rem">10/09</td><td style="font-size:.78rem">GLASS — 3/4 TEMP</td><td style="font-size:.76rem">A2</td><td class="q" style="font-size:.8rem">12</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="padding:8px 14px"><small>cuatro tamaños en la cabecera, tres en el cuerpo</small></div>
+  </div>
+  <div class="caja despues">
+    <div class="cab">Opción A</div>
+    <div style="padding:0;overflow-x:auto">
+      <table class="mov">
+        <thead><tr><th>Fecha</th><th>Material</th><th>Rack</th><th>Cant.</th></tr></thead>
+        <tbody>
+          <tr><td>10/09</td><td>WINDOW — W-1 <span class="chip">ENTRY</span></td><td>B1A</td><td class="q">40</td></tr>
+          <tr><td>10/09</td><td>GLASS — 3/4 TEMP</td><td>A2</td><td class="q">12</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="padding:8px 14px"><small>uno en la cabecera, uno en el cuerpo</small></div>
+  </div>
+</div>
+
+<hr>
+
+<h2>Qué NO tocaría</h2>
+
+<ul>
+  <li><b>Los <code>mm</code> de las etiquetas impresas.</b> Están medidos sobre papel, con el
+      porqué escrito en el código. Tocarlos rompe la impresión.</li>
+  <li><b>Los radios que no son decoración.</b> <code>50%</code> hace círculos (avatares,
+      la campana) y <code>8px 8px 0 0</code> hace pestañas. Ésos dicen algo.</li>
+  <li><b>Los colores.</b> Ya están bien y ya usan sus tokens. No hay nada que arreglar ahí.</li>
+  <li><b>El <code>clamp()</code></b> que adapta un tamaño al ancho de pantalla. Es la única
+      regla que ya hace lo correcto; no la voy a sustituir por un número fijo.</li>
+</ul>
+
+<h2>Cómo lo haría, si dices que sí</h2>
+
+<ul>
+  <li><b>Por tandas, no de golpe</b>, y cada tanda con su prueba: botones primero, luego
+      tablas, luego ventanas, luego ajustes.</li>
+  <li><b>Una prueba que cuente</b> los valores distintos y falle si vuelven a subir. Sin eso,
+      en tres versiones estamos otra vez en 40 — que es exactamente cómo llegamos aquí.</li>
+  <li><b>Capturas antes y después</b> de cada pantalla, para que veas lo que se movió.</li>
+</ul>
+
+<div class="ojo">
+  <p><b>Lo que esto no arregla.</b> Ordenar los tamaños no hace la app más bonita por sí
+  solo: hace que las decisiones de diseño se puedan tomar <i>una vez</i> en vez de 338.
+  Lo bonito viene después, y se decide mirando pantallas, no contando números.</p>
+</div>
+
+<p class="nota" style="margin-top:36px">
+  Medido el 2026-10-09 sobre la v12.54 · build <code>39f7c662</code>.
+  Los botones de «Hoy» son medidas copiadas del archivo, no reconstrucciones de memoria.
+</p>
+
+</div>
+</body>
+</html>
