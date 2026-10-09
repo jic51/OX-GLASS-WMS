@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>El techo de Acopio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@0,500;0,600;1,400&display=swap">
+<style>
+:root{
+  --tinta:#131A2B; --tinta-2:#3C4863; --tenue:#6B7689;
+  --papel:#F7F8FA; --panel:#FFFFFF; --linea:#DFE3EA; --linea-2:#EDF0F4;
+  --navy:#1B2A4A; --azul:#2F6FD0; --azul-claro:#E8F0FC;
+  --rojo:#C32F2F; --rojo-bg:#FCEDED; --verde:#15745A; --verde-bg:#E6F4EF;
+  --ambar:#9A6400; --ambar-bg:#FBF2DF;
+  --sans:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --serif:"IBM Plex Serif",Georgia,serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --tinta:#E6EAF2; --tinta-2:#B6BFD2; --tenue:#8C97AC;
+  --papel:#0E1320; --panel:#161C2B; --linea:#2A3345; --linea-2:#202839;
+  --navy:#C9D6EE; --azul:#79AAEE; --azul-claro:#182742;
+  --rojo:#F08A8A; --rojo-bg:#351A1C; --verde:#6FD3B2; --verde-bg:#102E26;
+  --ambar:#E0B560; --ambar-bg:#332814;
+}}
+:root[data-theme="dark"]{
+  --tinta:#E6EAF2; --tinta-2:#B6BFD2; --tenue:#8C97AC;
+  --papel:#0E1320; --panel:#161C2B; --linea:#2A3345; --linea-2:#202839;
+  --navy:#C9D6EE; --azul:#79AAEE; --azul-claro:#182742;
+  --rojo:#F08A8A; --rojo-bg:#351A1C; --verde:#6FD3B2; --verde-bg:#102E26;
+  --ambar:#E0B560; --ambar-bg:#332814;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0; background:var(--papel); color:var(--tinta); font-family:var(--sans);
+     font-size:16px; line-height:1.6; font-feature-settings:"kern" 1}
+.env{max-width:880px; margin:0 auto; padding:0 16px 96px}
+.n{font-family:var(--mono); font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1}
+
+/* ── portada ─────────────────────────────────────────────── */
+.port{padding:64px 0 36px; border-bottom:2px solid var(--tinta)}
+.sello{font-family:var(--mono); font-size:.72rem; letter-spacing:.14em; text-transform:uppercase;
+       color:var(--azul); margin-bottom:18px}
+h1{font-family:var(--serif); font-weight:600; font-size:clamp(2rem,7vw,3.4rem); line-height:1.02;
+   margin:0 0 .3em; letter-spacing:-.025em; text-wrap:balance}
+.bajada{font-size:clamp(1rem,2.2vw,1.12rem); color:var(--tinta-2); max-width:56ch; margin:0}
+.firma{margin-top:26px; font-size:.82rem; color:var(--tenue); font-family:var(--mono)}
+
+h2{font-family:var(--serif); font-weight:600; font-size:clamp(1.3rem,3.4vw,1.75rem);
+   line-height:1.15; margin:68px 0 4px; letter-spacing:-.018em; text-wrap:balance}
+h2 .num{font-family:var(--mono); font-size:.62em; color:var(--azul); font-weight:500;
+        display:block; letter-spacing:.1em; margin-bottom:6px}
+h3{font-size:1rem; font-weight:600; margin:34px 0 8px; letter-spacing:-.006em}
+p{max-width:66ch; margin:.85em 0}
+.lead{font-size:1.06rem; color:var(--tinta-2)}
+b,strong{font-weight:600}
+em{font-style:italic}
+code{font-family:var(--mono); font-size:.86em; background:var(--linea-2); padding:.12em .4em; border-radius:3px}
+a{color:var(--azul)}
+
+/* ── veredicto ───────────────────────────────────────────── */
+.veredicto{background:var(--navy); color:#fff; border-radius:3px; padding:30px 28px; margin:36px 0 0}
+:root[data-theme="dark"] .veredicto, :root:not([data-theme="light"]) .veredicto{
+  background:var(--panel); border:1px solid var(--linea); color:var(--tinta)}
+.veredicto h3{margin:0 0 14px; font-family:var(--mono); font-size:.72rem; letter-spacing:.14em;
+              text-transform:uppercase; opacity:.75}
+.veredicto p{max-width:58ch; margin:.6em 0; color:inherit}
+.veredicto .grande{font-family:var(--serif); font-size:clamp(1.25rem,3.2vw,1.6rem); line-height:1.3;
+                   margin:.1em 0 .5em; letter-spacing:-.015em}
+
+/* ── cifra suelta ────────────────────────────────────────── */
+.hito{display:flex; gap:22px; align-items:baseline; flex-wrap:wrap;
+      border-top:1px solid var(--linea); border-bottom:1px solid var(--linea);
+      padding:26px 0; margin:30px 0}
+.hito .big{font-family:var(--mono); font-weight:600; font-size:clamp(2.6rem,9vw,4rem);
+           line-height:.9; letter-spacing:-.04em; color:var(--azul)}
+.hito .txt{flex:1 1 230px; min-width:0; color:var(--tinta-2); font-size:.95rem}
+.hito.alerta .big{color:var(--rojo)}
+
+/* ── tablas ──────────────────────────────────────────────── */
+.wrap{overflow-x:auto; margin:20px 0; -webkit-overflow-scrolling:touch;
+      border:1px solid var(--linea); border-radius:3px; background:var(--panel)}
+table{width:100%; border-collapse:collapse; font-size:.875rem; min-width:460px}
+th{text-align:left; font-family:var(--mono); font-size:.68rem; letter-spacing:.09em;
+   text-transform:uppercase; color:var(--tenue); font-weight:500;
+   padding:12px 14px; border-bottom:1px solid var(--linea); white-space:nowrap; background:var(--panel)}
+td{padding:11px 14px; border-bottom:1px solid var(--linea-2); vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right; font-family:var(--mono); font-variant-numeric:tabular-nums; white-space:nowrap}
+tr.mark td{background:var(--azul-claro)}
+tr.bad td{background:var(--rojo-bg)}
+tr.good td{background:var(--verde-bg)}
+caption{caption-side:bottom; text-align:left; padding:11px 14px; font-size:.78rem;
+        color:var(--tenue); border-top:1px solid var(--linea-2)}
+
+/* ── marcas de verificación ──────────────────────────────── */
+.chk{display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px;
+     border-radius:50%; font-size:.68rem; font-weight:600; flex:none}
+.chk.ok{background:var(--verde-bg); color:var(--verde)}
+.chk.no{background:var(--rojo-bg); color:var(--rojo)}
+
+/* ── avisos ──────────────────────────────────────────────── */
+.aviso{border-left:3px solid var(--ambar); background:var(--ambar-bg); padding:16px 18px;
+       margin:26px 0; border-radius:0 3px 3px 0}
+.aviso p{margin:.4em 0; max-width:60ch}
+.aviso .et{font-family:var(--mono); font-size:.68rem; letter-spacing:.12em; text-transform:uppercase;
+           color:var(--ambar); font-weight:600; display:block; margin-bottom:6px}
+.aviso.rojo{border-color:var(--rojo); background:var(--rojo-bg)}
+.aviso.rojo .et{color:var(--rojo)}
+.aviso.azul{border-color:var(--azul); background:var(--azul-claro)}
+.aviso.azul .et{color:var(--azul)}
+
+/* ── barra de etapas ─────────────────────────────────────── */
+.etapas{display:grid; gap:1px; background:var(--linea); border:1px solid var(--linea);
+        border-radius:3px; overflow:hidden; margin:24px 0}
+.et-fila{display:grid; grid-template-columns:1fr; gap:1px; background:var(--linea)}
+@media(min-width:660px){ .et-fila{grid-template-columns:92px 1fr 128px} }
+.et-c{background:var(--panel); padding:13px 15px}
+.et-c.k{font-family:var(--mono); font-size:.8rem; color:var(--azul); font-weight:600}
+.et-c.v{font-family:var(--mono); font-size:.86rem; text-align:left; font-variant-numeric:tabular-nums}
+@media(min-width:660px){ .et-c.v{text-align:right} }
+.et-c small{display:block; color:var(--tenue); font-size:.78rem; margin-top:2px}
+
+ul{max-width:66ch; padding-left:1.2em}
+li{margin:.45em 0}
+.fuente{font-size:.8rem; color:var(--tenue); margin-top:60px; padding-top:20px; border-top:1px solid var(--linea)}
+.fuente p{max-width:70ch}
+</style>
+</head>
+<body>
+<div class="env">
+
+<div class="port">
+  <div class="sello">Acopio · Nota del director financiero · 9 oct 2026</div>
+  <h1>El techo de $124</h1>
+  <p class="bajada">Cuántos clientes hacen falta para $10.000 al mes y para $1.000.000 al año,
+     qué cuesta eso en horas, y en qué momento exacto deja de poder hacerse solo.</p>
+  <p class="firma">Todos los precios y las horas salen de <code>docs/PRECIOS-Y-COMPETENCIA.md</code>
+     y <code>docs/PLAN-5-ANIOS.md</code>. Lo que es supuesto está marcado como tal.</p>
+</div>
+
+<div class="veredicto">
+  <h3>Lo que tienes que saber si no lees nada más</h3>
+  <p class="grande">Acopio, como está hoy, es un negocio de $124 la hora.
+     Y trabajando solo, eso es menos de lo que deberías cobrar como consultor.</p>
+  <p>Cada cliente nuevo trae $61,75 al mes y cuesta media hora de soporte al mes. Ese cociente
+     no mejora nunca: con 10 clientes o con 10.000, el siguiente cliente sigue valiendo lo mismo
+     por hora.</p>
+  <p>La palanca no es vender más. <b>Es contratar.</b> El día que tengas una persona a tiempo
+     completo, tu tarifa por hora salta de $84 a $365, porque empiezas a ganar sobre las horas
+     de otros. Ése es el único momento en que Acopio deja de ser un empleo y se vuelve un negocio.</p>
+</div>
+
+<h2><span class="num">01</span>Tus cuentas están bien. El modelo no.</h2>
+
+<p class="lead">Las seis operaciones que te pasaron son correctas, una por una.</p>
+
+<div class="wrap">
+<table>
+  <thead><tr><th></th><th>Operación</th><th class="num">Resultado</th><th class="num">Dijeron</th></tr></thead>
+  <tbody>
+    <tr><td><span class="chk ok">✓</span></td><td>40 h/sem × 52 semanas</td><td class="num">2.080</td><td class="num">2.080</td></tr>
+    <tr><td><span class="chk ok">✓</span></td><td>$120.000 ÷ 2.080</td><td class="num">57,69</td><td class="num">57,69</td></tr>
+    <tr><td><span class="chk ok">✓</span></td><td>$120.000 ÷ 1.920</td><td class="num">62,50</td><td class="num">62,50</td></tr>
+    <tr><td><span class="chk ok">✓</span></td><td>$1.000.000 ÷ 2.080</td><td class="num">480,77</td><td class="num">480,77</td></tr>
+    <tr><td><span class="chk ok">✓</span></td><td>57,69 × 1,30</td><td class="num">75,00</td><td class="num">75,00</td></tr>
+    <tr><td><span class="chk ok">✓</span></td><td>480,77 × 1,30</td><td class="num">625,00</td><td class="num">625,00</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="aviso rojo">
+  <span class="et">Pero hay dos errores de fondo</span>
+  <p><b>Uno.</b> Las 2.080 horas son las <em>horas pagadas de un empleado</em>, y ya incluyen
+     sus vacaciones y feriados. Un independiente que factura 2.080 horas es uno que no descansó
+     ni un día en todo el año.</p>
+  <p><b>Dos, y es el caro.</b> El <b>+30%</b> cubre impuestos y prestaciones. <b>No cubre</b>
+     que un independiente no factura todas las horas que trabaja. Vender, cotizar, administrar,
+     el soporte que no se cobra — todo eso es trabajo y nada se factura. La utilización típica
+     de un consultor solo es del <b>50 al 70%</b>. Son dos ajustes distintos y ese texto los
+     fundió en uno.</p>
+</div>
+
+<div class="wrap">
+<table>
+  <thead><tr><th>Utilización</th><th class="num">Horas facturables</th><th class="num">Para $10k/mes</th><th class="num">Para $1M/año</th></tr></thead>
+  <tbody>
+    <tr><td>70% · optimista</td><td class="num">1.456</td><td class="num">$107/h</td><td class="num">$893/h</td></tr>
+    <tr class="mark"><td>60% · realista</td><td class="num">1.248</td><td class="num">$125/h</td><td class="num">$1.042/h</td></tr>
+    <tr><td>50% · conservador</td><td class="num">1.040</td><td class="num">$150/h</td><td class="num">$1.250/h</td></tr>
+    <tr class="bad"><td>Lo que te dijeron</td><td class="num">2.080</td><td class="num">$75/h</td><td class="num">$625/h</td></tr>
+  </tbody>
+  <caption>La tarifa que te dieron se queda corta en un 67%. Si cobraras $75/h creyendo que
+    llegas a $10k/mes, llegarías a unos $6.000.</caption>
+</table>
+</div>
+
+<h2><span class="num">02</span>Cuántos clientes, de verdad</h2>
+
+<p>El ingreso medio por cliente —lo que en finanzas se llama ARPU— no es $49. Es más, porque
+   algunos contratan complementos. Estas tasas de contratación son <b>supuestos míos</b>: no
+   tenemos un solo cliente de pago todavía, así que no hay nada que medir.</p>
+
+<div class="wrap">
+<table>
+  <thead><tr><th>Concepto</th><th class="num">Toma</th><th class="num">Precio</th><th class="num">Aporta</th></tr></thead>
+  <tbody>
+    <tr><td>Suscripción base</td><td class="num">100%</td><td class="num">$49</td><td class="num">$49,00</td></tr>
+    <tr><td>Soporte prioritario</td><td class="num">30%</td><td class="num">$20</td><td class="num">$6,00</td></tr>
+    <tr><td>Lector de correos</td><td class="num">20%</td><td class="num">$15</td><td class="num">$3,00</td></tr>
+    <tr><td>Bodega adicional</td><td class="num">15%</td><td class="num">$25</td><td class="num">$3,75</td></tr>
+    <tr class="mark"><td><b>ARPU</b></td><td class="num"></td><td class="num"></td><td class="num"><b>$61,75</b></td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="hito">
+  <div class="big n">162</div>
+  <div class="txt"><b>clientes para $10.000 al mes.</b> Son 204 si nadie contrata complementos.
+    Cuesta <b>111 horas al mes</b> — 81 de soporte, 20 de desarrollo, 10 de reponer bajas.
+    Equivale a <b>4,3 horas al día de lunes a sábado</b>, sin vender nada nuevo.</div>
+</div>
+
+<div class="hito alerta">
+  <div class="big n">1.350</div>
+  <div class="txt"><b>clientes para $1.000.000 al año.</b> Cuesta <b>776 horas al mes</b>:
+    26,7 horas al día si lo hicieras solo. Es físicamente imposible.
+    <b>Necesitas cuatro personas a tiempo completo además de ti</b>, y eso no es opcional.</div>
+</div>
+
+<h2><span class="num">03</span>El techo, y por qué no se mueve</h2>
+
+<p class="lead">Cada cliente marginal: <b class="n">$61,75 ÷ 0,5 h = $124 por hora</b>.
+   Para siempre.</p>
+
+<p>Por eso tu tarifa sube rápido al principio —las 20 horas fijas de desarrollo se reparten
+   entre más gente— y luego <b>se aplana en unos $115</b>. No es un problema de retención ni
+   de volumen: es la estructura del producto.</p>
+
+<div class="wrap">
+<table>
+  <thead><tr><th>Si cambiaras…</th><th class="num">$/h marginal</th><th class="num">Clientes para $1M</th></tr></thead>
+  <tbody>
+    <tr class="bad"><td>Hoy: $49 base, 0,5 h/mes de soporte</td><td class="num">$124</td><td class="num">1.350</td></tr>
+    <tr><td>Subir a $69 (cuando haya códigos de barras)</td><td class="num">$164</td><td class="num">1.019</td></tr>
+    <tr><td>Bajar soporte a 0,25 h/mes (autoservicio)</td><td class="num">$247</td><td class="num">1.350</td></tr>
+    <tr class="good"><td>Las dos cosas</td><td class="num">$327</td><td class="num">1.019</td></tr>
+    <tr class="good"><td>Agresivo: $89 y 0,2 h/mes</td><td class="num">$509</td><td class="num">819</td></tr>
+  </tbody>
+  <caption>Las dos columnas dicen cosas distintas: bajar el soporte no cambia cuántos clientes
+    necesitas — cambia cuánta gente necesitas para atenderlos. Subir el precio sí baja los clientes.</caption>
+</table>
+</div>
+
+<h3>La instalación paga mejor que la suscripción, y eso sorprende</h3>
+
+<p><b>$500 por 3 horas son $167/hora</b>, un 35% mejor que las suscripciones. Pero se cobra
+   una vez. Juntando las dos cosas a lo largo de la vida de un cliente:</p>
+
+<div class="wrap">
+<table>
+  <thead><tr><th>Fuga mensual</th><th class="num">Vida media</th><th class="num">Valor total</th><th class="num">Horas totales</th><th class="num">$/hora real</th></tr></thead>
+  <tbody>
+    <tr><td>0,5%</td><td class="num">200 meses</td><td class="num">$12.850</td><td class="num">103 h</td><td class="num">$125</td></tr>
+    <tr><td>1%</td><td class="num">100 meses</td><td class="num">$6.675</td><td class="num">53 h</td><td class="num">$126</td></tr>
+    <tr class="mark"><td>2%</td><td class="num">50 meses</td><td class="num">$3.588</td><td class="num">28 h</td><td class="num">$128</td></tr>
+    <tr><td>5%</td><td class="num">20 meses</td><td class="num">$1.735</td><td class="num">13 h</td><td class="num">$133</td></tr>
+  </tbody>
+  <caption>La última columna apenas se mueve. Da igual que un cliente se quede 20 meses o 200:
+    la hora sigue valiendo ~$125. Eso confirma que el techo es estructural.</caption>
+</table>
+</div>
+
+<h2><span class="num">04</span>Cuándo contratar — el número exacto</h2>
+
+<div class="etapas">
+  <div class="et-fila"><div class="et-c k">42</div>
+    <div class="et-c">Tope con tu empleo actual (10 h/semana).<small>Escenario B: mes 26 · Escenario C: mes 20</small></div>
+    <div class="et-c v">10 h/sem</div></div>
+  <div class="et-fila"><div class="et-c k">162</div>
+    <div class="et-c"><b>$10.000 al mes.</b> Todavía cabe en una persona a tiempo completo.<small>B: mes 48 · C: mes 35</small></div>
+    <div class="et-c v">26 h/sem</div></div>
+  <div class="et-fila"><div class="et-c k">274</div>
+    <div class="et-c">Tope solo, a tiempo completo de lunes a viernes.<small>B: mes 61 · C: mes 42 — aquí contratas o frenas</small></div>
+    <div class="et-c v">40 h/sem</div></div>
+  <div class="et-fila"><div class="et-c k">335</div>
+    <div class="et-c">Tope solo trabajando también los sábados.<small>Sólo 61 clientes más que lo anterior</small></div>
+    <div class="et-c v">48 h/sem</div></div>
+  <div class="et-fila"><div class="et-c k">428</div>
+    <div class="et-c">Tope con una persona de medio tiempo (~$20.000/año).</div>
+    <div class="et-c v">60 h/sem</div></div>
+  <div class="et-fila"><div class="et-c k">583</div>
+    <div class="et-c">Tope con una persona a tiempo completo (~$45.000/año).</div>
+    <div class="et-c v">80 h/sem</div></div>
+  <div class="et-fila"><div class="et-c k">892</div>
+    <div class="et-c">Tope con dos personas a tiempo completo.</div>
+    <div class="et-c v">120 h/sem</div></div>
+  <div class="et-fila"><div class="et-c k">1.350</div>
+    <div class="et-c"><b>$1.000.000 al año.</b> Cuatro personas a tiempo completo además de ti.</div>
+    <div class="et-c v">179 h/sem</div></div>
+</div>
+
+<div class="aviso azul">
+  <span class="et">La decisión que hay que tomar antes de que llegue</span>
+  <p>El punto de ruptura real no son los 274 clientes. <b>Son los 42</b>, porque ahí se te
+     acaba el tiempo que tienes mientras sigas empleado — y eso llega en el <b>mes 20 al 26</b>,
+     no en cinco años.</p>
+  <p>A los 42 clientes Acopio te da unos <b>$2.193 al mes netos</b>. La pregunta a esa altura
+     no es «¿contrato?», es «¿esto reemplaza mi sueldo?». Si no lo reemplaza, contratar medio
+     tiempo es lo que te deja seguir creciendo sin dejar el empleo.</p>
+</div>
+
+<h2><span class="num">05</span>Tu tarifa por hora, etapa por etapa</h2>
+
+<div class="wrap">
+<table>
+  <thead><tr><th class="num">Clientes</th><th class="num">Contratados</th><th class="num">Neto para ti</th><th class="num">Tus horas/mes</th><th class="num">Tu $/hora</th></tr></thead>
+  <tbody>
+    <tr class="bad"><td class="num">42</td><td class="num">0</td><td class="num">$2.193</td><td class="num">44</td><td class="num">$50</td></tr>
+    <tr class="bad"><td class="num">162</td><td class="num">0</td><td class="num">$9.352</td><td class="num">111</td><td class="num">$84</td></tr>
+    <tr class="good"><td class="num">274</td><td class="num">1</td><td class="num">$12.284</td><td class="num">34</td><td class="num">$365</td></tr>
+    <tr class="good"><td class="num">400</td><td class="num">1</td><td class="num">$19.801</td><td class="num">40</td><td class="num">$495</td></tr>
+    <tr class="good"><td class="num">800</td><td class="num">2</td><td class="num">$39.915</td><td class="num">60</td><td class="num">$665</td></tr>
+    <tr class="good"><td class="num">1.350</td><td class="num">4</td><td class="num">$65.227</td><td class="num">88</td><td class="num">$745</td></tr>
+  </tbody>
+  <caption>Mira el salto entre la fila 162 y la 274. No lo produce vender más: lo produce contratar.</caption>
+</table>
+</div>
+
+<p><b>Las dos primeras filas están en rojo a propósito.</b> Con 162 clientes ganas $9.352 al mes
+   —que es tu meta— pero trabajando 111 horas para conseguirlo: <b>$84 la hora</b>. Como consultor
+   deberías cobrar $125. <b>Trabajando solo, consultoría te paga mejor que Acopio.</b></p>
+
+<h2><span class="num">06</span>¿Lunes a sábado ayuda?</h2>
+
+<div class="wrap">
+<table>
+  <thead><tr><th>Jornada</th><th class="num">h/semana</th><th class="num">Clientes que aguantas solo</th></tr></thead>
+  <tbody>
+    <tr><td>L–S, 6 h</td><td class="num">36</td><td class="num">243</td></tr>
+    <tr class="mark"><td>L–V, 8 h</td><td class="num">40</td><td class="num">274</td></tr>
+    <tr><td>L–S, 8 h</td><td class="num">48</td><td class="num">335</td></tr>
+    <tr><td>L–V, 10 h</td><td class="num">50</td><td class="num">351</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p><b>Mi recomendación como director financiero: no.</b> Trabajar los sábados te da un 20% más
+   de capacidad —61 clientes, unos $3.767 al mes— a cambio de no tener sábados nunca más.
+   Esos mismos 61 clientes los cubre <b>una persona de medio tiempo</b> que cuesta $20.000 al año,
+   y a esa altura eso son nueve días de ingreso. Tu sábado vale más que nueve días de ingreso.</p>
+
+<p>Como recurso puntual para un pico de instalaciones, sí. Como estrategia, no.</p>
+
+<h2><span class="num">07</span>Tus horas cuando ya tengas gente</h2>
+
+<p class="lead">La respuesta va contra el instinto: <b>en cuanto tengas una persona a tiempo
+   completo, tus horas de soporte de primer nivel deben ser cero.</b></p>
+
+<p>Con el número delante: una hora tuya haciendo soporte vale $124. Una hora tuya bajando el
+   soporte de 0,5 a 0,25 horas por cliente vale, a 500 clientes, <b>125 horas al mes recuperadas
+   para siempre</b>. No hay comparación posible.</p>
+
+<div class="wrap">
+<table>
+  <thead><tr><th class="num">Clientes</th><th class="num">Gente</th><th>Ellos hacen</th><th>Tú haces</th><th class="num">Tus h/día (L–S)</th></tr></thead>
+  <tbody>
+    <tr><td class="num">162</td><td class="num">0</td><td>—</td><td>Todo: 111 h/mes</td><td class="num">4,3</td></tr>
+    <tr><td class="num">400</td><td class="num">1</td><td>204 h: soporte 1er nivel + instalaciones</td><td>Desarrollo 20 h + escalaciones 20 h</td><td class="num">1,5</td></tr>
+    <tr><td class="num">800</td><td class="num">2</td><td>408 h</td><td>Desarrollo 20 h + escalaciones 40 h</td><td class="num">2,3</td></tr>
+    <tr><td class="num">1.350</td><td class="num">4</td><td>688 h</td><td>Desarrollo 20 h + escalaciones 68 h</td><td class="num">3,4</td></tr>
+  </tbody>
+  <caption>De tus 3,4 h/día a los 1.350 clientes, sólo 2,6 son soporte — y del tipo que nadie
+    más puede resolver. El resto es producto.</caption>
+</table>
+</div>
+
+<h2><span class="num">08</span>Lo que este modelo NO incluye</h2>
+
+<div class="aviso rojo">
+  <span class="et">El agujero más grande: cuánto cuesta conseguir un cliente</span>
+  <p>No aparece en ninguno de nuestros documentos y no lo podemos inventar. Pero conseguir
+     1.350 clientes no es gratis, y además hay que <b>reponer 324 al año</b> sólo para no encoger
+     (con 2% de fuga mensual).</p>
+  <p>A $200 de costo por cliente: <b>$270.000 acumulados</b> para construir la base, y
+     <b>$64.800 al año</b> para sostenerla. Eso baja el neto del millón de $783.000 a $718.000
+     — un 8%. No es fatal, pero es real, y es lo primero que debes empezar a medir en cuanto
+     tengas los tres clientes piloto.</p>
+</div>
+
+<p>Tampoco incluye: impuestos sobre la ganancia, contabilidad, seguros, asesoría legal, ni el
+   costo de tu propio tiempo antes de que haya un solo cliente pagando. Y asume que la comisión
+   de Stripe es 2,9% + $0,30 — <b>confírmalo antes de usarlo en una decisión</b>.</p>
+
+<div class="veredicto" style="margin-top:56px">
+  <h3>Lo que yo haría, como CEO</h3>
+  <p class="grande">El millón no se alcanza vendiendo más. Se alcanza haciendo que cada cliente
+     cueste menos de media hora al mes.</p>
+  <p><b>1 · Mide el soporte real desde el primer cliente.</b> Las 0,5 h/mes son un supuesto que
+     nunca hemos verificado, y es <em>el</em> número del que cuelga todo este documento. Si
+     resultan ser 1,5 h, el millón necesita doce personas en vez de cuatro.</p>
+  <p><b>2 · Trata «bajar el soporte» como la función más valiosa del producto.</b> Por encima de
+     códigos de barras y de conteo cíclico. Cada décima de hora que le quites a un cliente vale
+     más que cualquier ajuste de precio.</p>
+  <p><b>3 · Decide lo del empleo antes del cliente 42</b>, no después. Llega en el mes 20 al 26.</p>
+  <p><b>4 · El escenario B no llega al millón ni en diez años.</b> El C llega en el mes 79.
+     Si el millón es la meta de verdad, el plan actual no es el plan — y eso hay que decidirlo
+     con los ojos abiertos, no descubrirlo en el año cuatro.</p>
+</div>
+
+<div class="fuente">
+  <p><b>De dónde sale cada número.</b> Precios, complementos y horas de instalación y soporte:
+     <code>docs/PRECIOS-Y-COMPETENCIA.md</code> y <code>docs/PLAN-5-ANIOS.md</code>, en el repositorio.
+     Escenarios de crecimiento B y C: las tablas del plan a cinco años, extendidas más allá del año 5
+     con un crecimiento del 30% anual.</p>
+  <p><b>Supuestos míos, marcados para que puedas discutirlos:</b> las tasas de contratación de
+     complementos (30/20/15%), la fuga mensual del 2%, la comisión de Stripe, y la utilización
+     del 60% para la tarifa de consultoría. Ninguno está medido porque todavía no hay clientes
+     de pago. En cuanto los haya, este documento se rehace con datos.</p>
+</div>
+
+</div>
+</body>
+</html>
