@@ -98,6 +98,44 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.54</span>
+      <span class="tag safe">Datos</span>
+      <h3>Cinco cosas calladas de la hoja, ahora vigiladas</h3>
+      <p><b>El total ya tiene quien lo mire.</b> <i>Total Cost</i> es Qty &times; Unit Cost,
+         siempre, y era la &uacute;nica columna calculada que nadie vigilaba. Si alguien corregía
+         un precio unitario a mano, el total se quedaba con el n&uacute;mero viejo para siempre:
+         quien suma esa columna &mdash;que es contabilidad&mdash; sumaba un n&uacute;mero que ya no era
+         verdad. Ahora se recalcula en cada reconstrucci&oacute;n y la correcci&oacute;n se anota con el
+         n&uacute;mero de fila, para poder ir a mirarla. Las filas <i>sin</i> coste unitario no se
+         tocan: ahí el total vac&iacute;o es deliberado, y un cero inventado en la columna de
+         contabilidad ser&iacute;a un dato falso.</p>
+      <p><b>Cinco columnas que se escrib&iacute;an y no le&iacute;a nadie se han ido.</b> Dos no eran ni
+         datos &mdash;<i>Location_Type</i> llevaba la palabra RACK en todas las filas, y
+         <i>Status</i> llevaba &ldquo;At Site&rdquo; en todas&mdash;. Las otras tres llevaban la misma
+         hora repetida una vez por material: con 400 materiales, el mismo minuto 400 veces.
+         Nada fuera de la app lee esas hojas, y se reescriben enteras en cada guardado, as&iacute;
+         que no hab&iacute;a nada que migrar.</p>
+      <p><b>CONFIG ahora dice lo que est&aacute; ignorando.</b> Dos de sus columnas &mdash;<i>Admin
+         Email</i> y <i>Archive Cutoff Months</i>&mdash; son ajustes &uacute;nicos que s&oacute;lo se leen de
+         la fila 2, en una hoja donde todas las dem&aacute;s columnas son listas que crecen hacia
+         abajo. Escribir un segundo correo de administrador debajo del primero no hac&iacute;a
+         nada, y nada lo dec&iacute;a. <i>Check this installation</i> ahora nombra la columna, los
+         n&uacute;meros de fila y cu&aacute;l es el valor que de verdad est&aacute; en uso.</p>
+      <p><b>La pesta&ntilde;a RESERVATIONS deja de desinformar.</b> Est&aacute; vac&iacute;a porque no la usa
+         nada &mdash;las reservas viven en MATERIAL_LOCKS&mdash;, pero su propia nota dec&iacute;a que
+         se &ldquo;reconstruye desde el archivo y lo editado a mano se sobreescribe&rdquo;.
+         Ninguna de las dos cosas es verdad, y quien la abriera s&oacute;lo pod&iacute;a concluir que la
+         app le hab&iacute;a borrado sus reservas. La pesta&ntilde;a se queda, por si alguna instalaci&oacute;n
+         antigua dej&oacute; datos ahí; la nota ahora dice lo que pasa.</p>
+      <p><b>Dos nombres de columna de AUDIT_LOG describ&iacute;an algo que no estaba ahí.</b>
+         <i>Old Value</i> y <i>New Value</i>: de los 56 sitios que escriben en el registro, 19
+         dejan las dos vac&iacute;as y 17 llenan una con contexto en vez de con un valor anterior.
+         Le&iacute;do desde la hoja, eso parece un registro roto. Ahora son <i>Detail 2</i> y
+         <i>Detail 3</i>. No se movi&oacute; ni una entrada &mdash;s&oacute;lo el nombre, y s&oacute;lo donde
+         segu&iacute;a diciendo las palabras viejas&mdash;.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.53</span>
       <span class="tag ui">Interfaz</span>
       <h3>Usuarios: sin botones hasta elegir a alguien, y una advertencia que se lee</h3>

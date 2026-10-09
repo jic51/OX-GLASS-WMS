@@ -7650,7 +7650,42 @@ un almacén que sigue sin saber qué tiene.
 La auditoría entera está en `docs/AUDITORIA-DE-COLUMNAS.md`. Aquí sólo lo que
 hay que hacer y en qué orden, para que no se pierda.
 
-## Sin riesgo — se puede hacer en cuanto Jose conteste dos preguntas
+## ✅ Sin riesgo — LAS CINCO, HECHAS EN LA v12.54 (2026-10-09)
+
+Jose: *"Primero las 5 sin riesgo"*. Las cinco están en la v12.54, con
+`tools/test-cinco-sin-riesgo.js` (68 comprobaciones) detrás. Lo que salió
+distinto de como estaba escrito abajo, y por qué:
+
+- **La nota de `RESERVATIONS` no se añadió: se CORRIGIÓ.** La hoja está en el
+  grupo "calculada" de `gruposDeFormato_`, así que ya tenía nota — y decía
+  *"Rebuilt by Acopio from MASTER_ARCHIVE_V3. Edits here are overwritten."*
+  **Ninguna de las dos frases es verdad.** Quien abriera esa pestaña vacía con
+  esa nota encima sólo podía concluir que la app le había borrado sus reservas.
+  Hizo falta `notasPorHoja_()`, una excepción por hoja sobre la nota del grupo.
+  Una nota falsa es peor que ninguna, porque se lee como información.
+- **Renombrar `AUDIT_LOG` E/F hizo falta código nuevo.** `fillMissingHeaders_`
+  rellena HUECOS y nunca pisa texto, a propósito —una cabecera escrita es de
+  quien la escribió— así que un nombre que estaba mal desde el principio no se
+  arreglaba nunca por esa vía. `renombrarCabeceras_` toca la celda **sólo si
+  dice exactamente el nombre viejo**: si el cliente la renombró a mano, es suya.
+- **El arreglo del total trajo dos cosas que no estaban en el plan.** Una,
+  `AUTO_REPAIR_TOTAL_COST` en `SYSTEM_EVENT_LABELS`: sin eso la fila se escribe
+  en `AUDIT_LOG` y la app no la enseña nunca — dinero corregido en silencio, que
+  es justo lo que no se puede hacer con dinero. Dos, las filas del histórico se
+  anotan aparte (`archive-history rows 2`) porque el botón *Show the movement*
+  abre filas **del archivo**: un `2` suelto llevaría a un movimiento que nadie
+  tocó.
+- **Se fue también `var now = new Date()`** de `refreshDerivedSheets_`: lo único
+  que lo usaba eran las tres columnas `Last_Updated`.
+- **El aviso de `CONFIG` NO repara.** Leer varios `Admin Email` significa decidir
+  qué pasa con dos admins distintos, y eso cambia a quién obedece la app. El
+  aviso dice la columna, los números de fila y cuál está en uso; mover el valor
+  lo decide una persona.
+- **Lo que sigue abierto de este punto:** leer H y N de más de una fila (las dos
+  decisiones de arriba), que es lo que haría el aviso innecesario.
+
+<details>
+<summary>El plan original, tal como estaba escrito el 06/10</summary>
 
 1. **`Total Cost` en la pasada de auto-reparación.** Es `Qty × Unit Cost` y es
    la única de las tres columnas derivadas del archivo que **nadie vigila**:
@@ -7681,6 +7716,8 @@ hay que hacer y en qué orden, para que no se pierda.
 5. **`AUDIT_LOG` E y F → `Detail 2` y `Detail 3`.** De 56 escrituras, 19 dejan
    las dos vacías y 17 llenan una sola: el nombre "Old Value / New Value"
    describe bien una minoría de las filas. Dos celdas, con la tanda de formato.
+
+</details>
 
 ## Con riesgo — orden y motivo
 

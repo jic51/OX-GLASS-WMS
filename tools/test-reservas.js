@@ -319,10 +319,21 @@ check('pero la hoja RESERVATIONS se sigue creando, no se destruye nada',
  *
  * Se descuenta por su CUERPO y no subiendo el número a 2: un `=== 2` se
  * rompería otra vez a la próxima mención —o peor, pasaría en verde sobre un
- * lector de verdad que ocupara el hueco del que se fue—. */
-const sinFormato = gsLimpio.replace(A.sinComentarios(A.fnSrc(GS, 'gruposDeFormato_') || ''), '');
+ * lector de verdad que ocupara el hueco del que se fue—.
+ *
+ * Y SE DESCUENTA `notasPorHoja_` POR LO MISMO, desde la v12.54. La nota que el
+ * grupo le ponía a esta hoja decía *"Rebuilt by Acopio from MASTER_ARCHIVE_V3 —
+ * edits here are overwritten"*, y ninguna de las dos frases es verdad: nada la
+ * reconstruye y nada la pisa. Quien abriera la pestaña vacía con esa nota
+ * encima concluía que la app le había borrado sus reservas. `notasPorHoja_` le
+ * da la suya —"NOT USED. Reservations are kept in MATERIAL_LOCKS"— y no hace
+ * nada más: ni abre la hoja, ni lee una fila, ni calcula con ella. Es
+ * exactamente la misma clase de mención que la de los colores. */
+const sinFormato = gsLimpio
+  .replace(A.sinComentarios(A.fnSrc(GS, 'gruposDeFormato_') || ''), '')
+  .replace(A.sinComentarios(A.fnSrc(GS, 'notasPorHoja_')    || ''), '');
 const lectores = (sinFormato.match(/SHEETS\.RESERVATIONS/g) || []).length;
-check('y ya sólo se la nombra UNA vez fuera del formato — la creación',
+check('y ya sólo se la nombra UNA vez fuera del formato y de las notas — la creación',
       lectores === 1, lectores);
 
 // ═══════════════════════════════════════════════════════════════════════════

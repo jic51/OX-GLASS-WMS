@@ -11,6 +11,32 @@ DÉJAME DECIDIR."*
 
 ---
 
+## ✅ ESTADO: LAS CINCO SIN RIESGO, HECHAS EN LA v12.54 (2026-10-09)
+
+Jose decidió el 09/10: *"Primero las 5 sin riesgo"*. Hechas las cinco:
+
+| # | Qué | Dónde quedó |
+|---|---|---|
+| 1 | `Total Cost` entra en la pasada de auto-reparación | `refreshDerivedSheets_`, con aviso `AUTO_REPAIR_TOTAL_COST` |
+| 2 | Las 5 columnas muertas, fuera | `LIVE_STOCK` a 6 columnas, `SITE_STOCK` a 5, `WASTED_STOCK` a 4 |
+| 3 | `CONFIG` H y N avisan de lo que ignoran | `revisarConfigFila2_` + *Check this installation* |
+| 4 | `RESERVATIONS` deja de mentir en su nota | `notasPorHoja_()` |
+| 5 | `AUDIT_LOG` E/F → `Detail 2` / `Detail 3` | el SPEC + `renombrarCabeceras_` |
+
+Prueba: `tools/test-cinco-sin-riesgo.js`, 68 comprobaciones. **El resto de este
+documento sigue siendo la lista para que decidas** — del 6 en adelante, los con
+riesgo, nada se ha tocado.
+
+Tres cosas salieron distintas de como estaban planeadas, y están contadas con su
+motivo en `docs/BACKLOG.md` (sección *Auditoría de columnas*): la nota de
+`RESERVATIONS` no se añadió sino que se **corrigió** —la que tenía decía algo
+falso—, el renombrado de `AUDIT_LOG` hizo falta código nuevo porque
+`fillMissingHeaders_` nunca pisa texto a propósito, y el arreglo del total
+necesitó además que la app lo **enseñe**: una corrección de dinero que no sale
+en ninguna pantalla es dinero cambiado en silencio.
+
+---
+
 ## CÓMO SE HIZO, Y POR QUÉ ESO IMPORTA
 
 No miré tu hoja. Leí el **código que la escribe y la lee**, que es una cosa

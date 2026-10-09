@@ -97,6 +97,43 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.54</span>
+      <span class="tag safe">Data</span>
+      <h3>Five quiet things in the spreadsheet, now looked after</h3>
+      <p><b>Total Cost is watched.</b> It is Qty × Unit Cost, always &mdash; and it was the one
+         calculated column with nobody checking it. Correct a unit price by hand and the
+         total kept the old number for good, so whoever adds up that column was adding up
+         something that had stopped being true. It is now recalculated on every rebuild,
+         and the correction is reported with the row number so you can go and look. Rows
+         with <i>no</i> unit cost are left alone: an empty total there is deliberate, and
+         a zero we invented in an accounting column would be a false figure.</p>
+      <p><b>Five columns that were written and never read are gone.</b> Two of them were not
+         even data &mdash; <i>Location_Type</i> held the word RACK in every single row, and
+         <i>Status</i> held &ldquo;At Site&rdquo; in every single row. The other three held the same
+         timestamp repeated once per material: with 400 materials, the same minute 400
+         times. Nothing outside the app reads these sheets, and they are rebuilt whole on
+         every save, so there was nothing to migrate.</p>
+      <p><b>CONFIG now says what it is ignoring.</b> Two of its columns &mdash; <i>Admin Email</i>
+         and <i>Archive Cutoff Months</i> &mdash; are single settings read from row 2 only, in a
+         sheet whose every other column is a list that grows downwards. Write a second
+         admin address underneath the first and nothing happened, and nothing said so.
+         <i>Check this installation</i> now names the column, the row numbers, and which
+         value is actually in use.</p>
+      <p><b>The RESERVATIONS tab stops misinforming you.</b> It is empty because nothing uses
+         it &mdash; reservations live in MATERIAL_LOCKS &mdash; but its own note said it was
+         &ldquo;rebuilt from the archive, edits here are overwritten&rdquo;. Neither is true, and
+         anyone opening it could only conclude the app had deleted their reservations. The
+         tab is kept, in case an older installation left data there; the note now says what
+         is going on.</p>
+      <p><b>Two column names in AUDIT_LOG were describing something that was not there.</b>
+         <i>Old Value</i> and <i>New Value</i>: of 56 places that write to the audit trail, 19
+         leave both empty and 17 fill one with context rather than a previous value. Read
+         from the sheet, that looks like a broken record. They are now <i>Detail 2</i> and
+         <i>Detail 3</i>. Not one entry moved &mdash; only the labels changed, and only where
+         they still said the old words.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.53</span>
       <span class="tag ui">UI</span>
       <h3>User management: no buttons until you pick somebody, and a warning you can read</h3>
