@@ -85,6 +85,69 @@
          element: opacity fades the whole subtree, which is what made the
          count badge and the ✕ unreadable. */
       --card-ghost:rgba(255,255,255,.52);--navy-ghost:rgba(27,42,74,.55);
+
+      /* ── LA ESCALA DE LETRA ─────────────────────────────────────────────
+       *
+       * Medido el 2026-10-09 sobre la v12.54: la app tenía CUARENTA tamaños
+       * de letra distintos repartidos en 338 sitios. Veintiséis de ellos
+       * caben entre 9,9 px y 14,4 px — veintiséis escalones en cuatro
+       * píxeles y medio, con 0,18 px de diferencia media entre uno y el
+       * siguiente. Nadie puede verlos distintos.
+       *
+       * No era que faltara un sistema: el :root de aquí arriba YA tenía
+       * `--radius` y `--shadow` escritos. Lo que faltaba era usarlos —
+       * `--radius` aparecía en 5 de 224 esquinas, `--shadow` en 6 de 61
+       * sombras—. Los tokens de COLOR sí se usan (--border 135 veces,
+       * --muted 108). Los de FORMA no. Mismo patrón que este repositorio ya
+       * tiene contado seis veces: algo escrito y nunca ejecutado.
+       *
+       * Jose eligió la opción A del mockup (mockups/estandarizacion.html):
+       * trece escalones, anclados en los tamaños que YA se usaban mucho para
+       * que casi nada se mueva. Los tres más usados —.72 (46 sitios), .78
+       * (35) y .85 (29)— no se mueven ni un píxel. En la banda donde vive el
+       * 90% del texto, nada se mueve más de 0,80 px.
+       *
+       * NO se tocan los `mm` de las etiquetas impresas: están medidos sobre
+       * papel y su comentario explica de dónde sale cada escalón.
+       */
+      --fs-2xs:.62rem;  /* códigos, sellos de hora, pies de tabla */
+      --fs-xs:.68rem;   /* cabeceras de tabla, etiquetas pequeñas */
+      --fs-sm:.72rem;   /* el más usado de la app */
+      --fs-md:.78rem;   /* filas de movimientos, texto de tabla */
+      --fs-base:.82rem; /* texto normal de formularios y botones */
+      --fs-lg:.85rem;   /* texto de lectura, párrafos de ajustes */
+      --fs-xl:.9rem;    /* subtítulos */
+      --fs-2xl:1rem;    /* títulos de sección */
+      --fs-3xl:1.05rem; /* títulos de ventana */
+      --fs-4xl:1.2rem;  /* títulos grandes */
+      --fs-5xl:1.4rem;  /* cifras del tablero */
+      --fs-6xl:1.8rem;  /* cifras grandes */
+      --fs-7xl:2.5rem;  /* la cifra suelta del tablero */
+
+      /* ── LOS BOTONES ────────────────────────────────────────────────────
+       *
+       * 147 reglas tocaban botones y entre ellas había 26 paddings, 9 radios
+       * y 16 tamaños de letra — mezclando unidades para lo mismo
+       * (`5px 9px` junto a `.35rem .85rem`).
+       *
+       * Un radio, tres tamaños. `--r-btn` es 6px porque era el más usado
+       * (12 reglas), no porque me gustara más: mover el valor más común es
+       * mover la mayor cantidad de pantalla.
+       *
+       * LAS ALTURAS NO SON GUSTO. Eran 34, 36, 38, 40 y 44 px. El mínimo
+       * para acertar con el dedo son 44, y la gente de Jose usa la app en el
+       * teléfono, dentro de la bodega, muchas veces con guantes. `--h-btn-lg`
+       * es el que va en todo lo que destruye algo.
+       */
+      --r-btn:6px;
+      --h-btn-sm:36px; --h-btn-md:40px; --h-btn-lg:44px;
+      /* El de dentro de una tabla es MENOR que el mínimo táctil a sabiendas:
+       * subir cada botón de fila a 44px duplicaría la altura de todas las
+       * filas. Tiene nombre propio para que se lea como una decisión y no
+       * como un número que alguien dejó ahí. Lo que destruye algo queda
+       * fuera de esta excepción — ver la regla de .btn-danger. */
+      --h-btn-tabla:34px;
+      --px-btn-sm:12px; --px-btn-md:16px; --px-btn-lg:20px;
     }
     body{font-family:'Inter','DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;transition:background .25s,color .25s}
     button{font-family:inherit;cursor:pointer}
@@ -154,7 +217,7 @@
     .app-logo.logo-square{max-height:36px;max-width:36px}
     .app-logo.logo-tall{max-height:44px;max-width:34px}
     .nav{display:flex;gap:2px;background:var(--steel);padding:3px;border-radius:8px;flex-wrap:wrap;flex-shrink:1;min-width:0;max-width:100%}
-    .nav button{background:none;border:none;color:rgba(255,255,255,.6);padding:.45rem clamp(.4rem,1.5vw,1rem);border-radius:6px;font-size:clamp(.68rem,1.2vw,.8rem);font-weight:600;transition:.2s;white-space:nowrap}
+    .nav button{background:none;border:none;color:rgba(255,255,255,.6);padding:.45rem clamp(.4rem,1.5vw,1rem);border-radius:var(--r-btn);font-size:clamp(.68rem,1.2vw,.8rem);font-weight:600;transition:.2s;white-space:nowrap}
     .nav button:hover{color:#fff;background:rgba(255,255,255,.08)}
     .nav button.active{background:var(--accent);color:#fff}
     /* Trimmed from 4px/.7rem: this badge is the bottom of the brand stack, so
@@ -256,13 +319,13 @@
     .toolbar{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
     .toolbar input,.toolbar select{padding:.4rem .75rem;border:1px solid var(--border);border-radius:6px;font-size:.8rem;background:#fff}
     /* ── BUTTONS ── */
-    .btn{padding:.5rem 1rem;border:none;border-radius:6px;font-size:.85rem;font-weight:600;display:inline-flex;align-items:center;gap:.35rem;justify-content:center;transition:.15s}
+    .btn{padding:.5rem 1rem;border:none;border-radius:var(--r-btn);font-size:var(--fs-lg);font-weight:600;display:inline-flex;align-items:center;gap:.35rem;justify-content:center;transition:.15s}
     .btn:hover{filter:brightness(.92)}
     .btn-primary{background:var(--accent);color:#fff}
     .btn-danger{background:var(--red);color:#fff}
     .btn-ghost{background:transparent;color:var(--accent);border:1px solid var(--border)}
-    .btn-sm{padding:.3rem .65rem;font-size:.78rem}
-    .btn-icon{background:transparent;border:none;font-size:1rem;cursor:pointer;transition:.15s;padding:2px}
+    .btn-sm{padding:.3rem .65rem;font-size:var(--fs-md)}
+    .btn-icon{background:transparent;border:none;font-size:var(--fs-2xl);cursor:pointer;transition:.15s;padding:2px}
     .btn-icon:hover{transform:scale(1.15)}
     /* ── TABLES ── */
     .table-wrapper{overflow-x:auto;max-height:65vh;overflow-y:auto;position:relative}
@@ -458,7 +521,7 @@
     .rack-drawer.open{transform:translateX(0)}
     .rack-drawer-hdr{background:var(--navy);color:#fff;padding:.85rem 1.1rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
     .rack-drawer-hdr h3{font-size:1rem;font-weight:700;margin:0}
-    .rack-drawer-hdr button{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:.85rem}
+    .rack-drawer-hdr button{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:var(--r-btn);padding:3px 10px;cursor:pointer;font-size:var(--fs-lg)}
     .rack-drawer-body{flex:1;overflow-y:auto;padding:.5rem}
     .rdw-item{display:flex;align-items:center;gap:.5rem;padding:.5rem .65rem;border-radius:7px;margin-bottom:3px;transition:background .12s}
     .rdw-item:hover{background:#F8FAFC}
@@ -471,7 +534,7 @@
     .rdw-rack-qty{font-size:.82rem;font-weight:700;color:var(--red);flex-shrink:0}
     .rdw-total-qty{font-size:.72rem;color:var(--muted);flex-shrink:0}
     .rdw-lock-badge{flex-shrink:0;font-size:.9rem;cursor:default}
-    .rdw-lock-btn{flex-shrink:0;font-size:.68rem;font-weight:700;background:var(--border);color:var(--text);border:none;border-radius:5px;padding:2px 7px;cursor:pointer;white-space:nowrap;transition:.15s}
+    .rdw-lock-btn{flex-shrink:0;font-size:var(--fs-xs);font-weight:700;background:var(--border);color:var(--text);border:none;border-radius:var(--r-btn);padding:2px 7px;cursor:pointer;white-space:nowrap;transition:.15s}
     .rdw-lock-btn:hover{background:var(--red);color:#fff}
     .rack-drawer-overlay{display:none;position:fixed;inset:0;z-index:var(--z-drawer-back);background:rgba(0,0,0,.3)}
     .rack-drawer-overlay.open{display:block}
@@ -503,12 +566,12 @@
     .wiz-nav .btn{border:1px solid #E5E7EB;background:#fff;color:#374151}
     .wiz-nav .btn-primary{background:#3B7DD8;border-color:#3B7DD8;color:#fff}
     .wiz-preset{display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1rem}
-    .wiz-preset button{flex:1;min-width:150px;padding:.85rem;border:2px solid #E5E7EB;border-radius:10px;background:#fff;cursor:pointer;font-family:inherit;font-size:.85rem;font-weight:600;color:#111827;transition:.15s;text-align:left}
+    .wiz-preset button{flex:1;min-width:150px;padding:.85rem;border:2px solid #E5E7EB;border-radius:var(--radius);background:#fff;cursor:pointer;font-family:inherit;font-size:var(--fs-lg);font-weight:600;color:#111827;transition:.15s;text-align:left}
     .wiz-preset button:hover,.wiz-preset button.sel{border-color:#3B7DD8;background:#EFF6FF}
     .wiz-preset span{display:block;font-size:.72rem;font-weight:400;color:#6B7280;margin-top:.2rem}
     .chip-box{display:flex;flex-wrap:wrap;gap:.4rem;padding:.6rem;border:1px solid #E5E7EB;border-radius:8px;min-height:52px;background:#F8FAFC}
     .chip{display:inline-flex;align-items:center;gap:.35rem;background:#DBEAFE;color:#2563EB;border-radius:16px;padding:3px 8px 3px 11px;font-size:.8rem;font-weight:600}
-    .chip button{border:none;background:none;color:#2563EB;cursor:pointer;font-size:.9rem;line-height:1;padding:0 2px;opacity:.6}
+    .chip button{border:none;background:none;color:#2563EB;cursor:pointer;font-size:var(--fs-xl);line-height:1;padding:0 2px;opacity:.6}
     .chip button:hover{opacity:1;color:#EF4444}
     .wiz-gen{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem}
     .wiz-userrow{display:grid;grid-template-columns:1fr 130px 34px;gap:.5rem;margin-bottom:.5rem;align-items:center}
@@ -533,12 +596,12 @@
     .setup-nudge.returning{animation:nudge-return 1.15s cubic-bezier(.22,.61,.36,1) both}
     .setup-nudge .nudge-act{display:none;margin-top:.55rem;gap:.4rem}
     .setup-nudge:hover .nudge-act{display:flex}
-    .setup-nudge button{border:none;border-radius:6px;padding:.3rem .6rem;font-size:.74rem;font-weight:600;cursor:pointer;font-family:inherit}
+    .setup-nudge button{border:none;border-radius:var(--r-btn);padding:.3rem .6rem;font-size:var(--fs-sm);font-weight:600;cursor:pointer;font-family:inherit}
     @media (max-width:640px){.setup-nudge{left:12px;right:12px;bottom:76px;max-width:none}.wiz-box{padding:1.25rem}.wiz-gen{grid-template-columns:1fr}}
     .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:var(--z-overlay);align-items:center;justify-content:center;padding:15px}
     .ri-photo-thumb{position:relative;width:52px;height:52px;flex-shrink:0}
     .ri-photo-thumb img{width:52px;height:52px;object-fit:cover;border-radius:6px;border:1px solid var(--border);display:block}
-    .ri-photo-thumb button{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--red);color:#fff;border:none;font-size:.65rem;cursor:pointer;line-height:1;padding:0}
+    .ri-photo-thumb button{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--red);color:#fff;border:none;font-size:var(--fs-2xs);cursor:pointer;line-height:1;padding:0}
     .overlay.show{display:flex}
     /* ── An open window is the only thing you can touch ──────────────────────
        The dark backdrop already covers the screen, so the MOUSE was never the
@@ -666,7 +729,7 @@
     .flash-hdr{animation:hdr-flash .55s ease}
     /* ── MOVE TYPE BAR ── */
     .modal-type-bar{display:flex;gap:4px;background:#F3F4F6;padding:4px;border-radius:8px;margin-bottom:1.25rem;flex-wrap:wrap}
-    .modal-type-bar button{flex:1;border:none;border-radius:6px;padding:.45rem .5rem;font-size:.78rem;font-weight:600;background:transparent;color:var(--muted);transition:.18s;min-width:60px}
+    .modal-type-bar button{flex:1;border:none;border-radius:var(--r-btn);padding:.45rem .5rem;font-size:var(--fs-md);font-weight:600;background:transparent;color:var(--muted);transition:.18s;min-width:60px}
     .modal-type-bar button:hover{background:rgba(0,0,0,.06);color:var(--text)}
     .modal-type-bar button.active-entry{background:var(--green-bg);color:var(--green)}
     .modal-type-bar button.active-exit{background:var(--red-bg);color:var(--red)}
@@ -735,7 +798,7 @@
        con la que llegaron. */
     .modal-actions .btn,
     .modal-actions .btn.btn-sm{min-width:7.5rem;flex:0 0 auto;
-      padding:.5rem 1rem;font-size:.85rem}
+      padding:.5rem 1rem;font-size:var(--fs-lg)}
     .btn{white-space:nowrap}
     /* ── NOTIFY SECTION ── */
     .notify-section{margin-top:1rem;padding:1rem;background:#F8FAFC;border:1px dashed var(--border);border-radius:8px}
@@ -755,9 +818,9 @@
     .loc-row input[type="text"]:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 2px rgba(5,150,105,.12)}
     .loc-row input[type="number"]{flex:1;padding:.45rem .55rem;border:1px solid var(--border);border-radius:6px;font-size:.85rem;font-family:inherit;min-width:60px}
     .loc-row input[type="number"]:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 2px rgba(5,150,105,.12)}
-    .loc-row .btn-remove-loc{background:var(--red-bg);color:var(--red);border:none;border-radius:5px;padding:5px 9px;cursor:pointer;font-size:.85rem;font-weight:700;line-height:1;transition:.15s;flex-shrink:0}
+    .loc-row .btn-remove-loc{background:var(--red-bg);color:var(--red);border:none;border-radius:var(--r-btn);padding:5px 9px;cursor:pointer;font-size:var(--fs-lg);font-weight:700;line-height:1;transition:.15s;flex-shrink:0}
     .loc-row .btn-remove-loc:hover{background:var(--red);color:#fff}
-    .btn-add-loc{background:none;border:1px dashed #059669;color:var(--green);border-radius:6px;padding:.35rem .85rem;font-size:.8rem;font-weight:600;cursor:pointer;margin-top:.35rem;width:100%;transition:.15s}
+    .btn-add-loc{background:none;border:1px dashed #059669;color:var(--green);border-radius:var(--r-btn);padding:.35rem .85rem;font-size:var(--fs-base);font-weight:600;cursor:pointer;margin-top:.35rem;width:100%;transition:.15s}
     .btn-add-loc:hover{background:var(--green-bg)}
     /* ── MULTI-SOURCE (EXIT) ── */
     .multi-exit-section{margin-top:.75rem;padding:.85rem 1rem;background:#FFF5F5;border:1px solid #FECACA;border-radius:8px}
@@ -774,7 +837,7 @@
        "ok" state is a real number worth one-tapping into place. */
     .exit-avail.ok, .el-avail.ok, .mstock-avail.ok{cursor:pointer}
     .exit-avail.ok:hover, .el-avail.ok:hover{text-decoration:underline}
-    .exit-row .btn-remove-loc{background:var(--red-bg);color:var(--red);border:none;border-radius:5px;padding:5px 9px;cursor:pointer;font-size:.85rem;font-weight:700;line-height:1;transition:.15s;flex-shrink:0}
+    .exit-row .btn-remove-loc{background:var(--red-bg);color:var(--red);border:none;border-radius:var(--r-btn);padding:5px 9px;cursor:pointer;font-size:var(--fs-lg);font-weight:700;line-height:1;transition:.15s;flex-shrink:0}
     .exit-row .btn-remove-loc:hover{background:var(--red);color:#fff}
     /* ── MULTI-PAIR TRANSFER ── */
     .transfer-row{display:flex;gap:.5rem;margin-bottom:.4rem;align-items:center}
@@ -783,7 +846,7 @@
     .transfer-row input[type="number"]{flex:1;padding:.45rem .55rem;border:1px solid var(--border);border-radius:6px;font-size:.85rem;font-family:inherit;min-width:60px}
     .transfer-row input[type="number"]:focus{outline:none;border-color:var(--accent2);box-shadow:0 0 0 2px rgba(59,130,246,.12)}
     .transfer-row .exit-avail{flex:1.6;font-size:.78rem;font-weight:600;padding:2px 6px;border-radius:5px;white-space:nowrap;min-width:80px}
-    .transfer-row .btn-remove-loc{background:var(--red-bg);color:var(--red);border:none;border-radius:5px;padding:5px 9px;cursor:pointer;font-size:.85rem;font-weight:700;line-height:1;transition:.15s;flex-shrink:0}
+    .transfer-row .btn-remove-loc{background:var(--red-bg);color:var(--red);border:none;border-radius:var(--r-btn);padding:5px 9px;cursor:pointer;font-size:var(--fs-lg);font-weight:700;line-height:1;transition:.15s;flex-shrink:0}
     .transfer-row .btn-remove-loc:hover{background:var(--red);color:#fff}
     .transfer-loc-chip.used{opacity:.4;cursor:default;pointer-events:none}
     /* ── The material box for TRANSFER / RETURN / WASTE ──
@@ -891,8 +954,8 @@
     .pack-note.known{background:var(--green-bg);color:var(--green);border:1px solid #BBF7D0}
     .pack-note .pack-qty{width:5.5rem;padding:.25rem .45rem;border:1px solid var(--border);
                          border-radius:5px;font-family:inherit;font-size:.8rem}
-    .pack-note button{border:none;border-radius:5px;padding:.25rem .7rem;cursor:pointer;
-                      font-family:inherit;font-size:.76rem;font-weight:600;transition:.15s}
+    .pack-note button{border:none;border-radius:var(--r-btn);padding:.25rem .7rem;cursor:pointer;
+                      font-family:inherit;font-size:var(--fs-md);font-weight:600;transition:.15s}
     .pack-note .pack-save{background:var(--accent2);color:#fff}
     .pack-note .pack-save:hover{background:var(--accent)}
     .pack-note .pack-change{background:none;color:var(--green);text-decoration:underline;padding:.25rem .2rem}
@@ -1065,7 +1128,7 @@
     .cconfirm-body h3{font-size:1.05rem;font-weight:700;margin-bottom:.4rem;color:var(--text)}
     .cconfirm-body p{font-size:.88rem;color:var(--muted);line-height:1.5;white-space:pre-line}
     .cconfirm-footer{padding:.85rem 1.25rem 1.25rem;display:flex;gap:.6rem;justify-content:center}
-    .cconfirm-footer button{flex:1;max-width:160px;padding:.55rem 1rem;border-radius:8px;font-size:.9rem;font-weight:600;border:none;cursor:pointer;transition:.15s}
+    .cconfirm-footer button{flex:1;max-width:160px;padding:.55rem 1rem;border-radius:var(--r-btn);font-size:var(--fs-xl);font-weight:600;border:none;cursor:pointer;transition:.15s}
     .cconfirm-footer button:hover{filter:brightness(.9)}
     .cconfirm-cancel{background:var(--border);color:var(--text)}
     /* La X de salir. `position:relative` en el diálogo para que se ancle a él. */
@@ -1106,7 +1169,7 @@
     .el-avail.ok{color:var(--green)}.el-avail.warn{color:var(--red)}.el-avail.neutral{color:var(--muted)}
     .exit-loc-row .el-rm{background:none;border:none;color:var(--red);font-size:1rem;cursor:pointer;flex-shrink:0;line-height:1;padding:0 2px}
     .exit-mat-foot{display:flex;gap:.4rem;margin-top:.35rem}
-    .exit-mat-foot button{flex:1;font-size:.8rem;padding:.35rem .85rem;border-radius:6px;cursor:pointer;font-family:inherit;border:1px dashed;font-weight:600;transition:.15s;background:none}
+    .exit-mat-foot button{flex:1;font-size:var(--fs-base);padding:.35rem .85rem;border-radius:var(--r-btn);cursor:pointer;font-family:inherit;border:1px dashed;font-weight:600;transition:.15s;background:none}
     .exit-mat-foot .btn-add-exit-loc{border-color:var(--red);color:var(--red);background:none}
     .exit-mat-foot .btn-add-exit-loc:hover{background:var(--red-bg)}
     .exit-mat-foot .btn-autofill-exit{border-color:var(--accent);color:var(--accent);background:none}
@@ -1186,7 +1249,7 @@
        link and a bug button side by side, which is a lot of furniture to read
        past before getting to the inventory. */
     .acct-wrap{position:relative}
-    .acct-btn{width:34px;height:34px;border-radius:50%;border:2px solid rgba(255,255,255,.28);background:var(--accent);color:#fff;font-size:.76rem;font-weight:800;letter-spacing:.02em;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;transition:box-shadow .15s,transform .15s;font-family:inherit}
+    .acct-btn{width:34px;height:34px;border-radius:50%;border:2px solid rgba(255,255,255,.28);background:var(--accent);color:#fff;font-size:var(--fs-md);font-weight:800;letter-spacing:.02em;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;transition:box-shadow .15s,transform .15s;font-family:inherit}
     .acct-btn:hover{transform:scale(1.05)}
     .acct-btn.open{box-shadow:0 0 0 4px rgba(255,255,255,.16)}
     .acct-menu{display:none;position:absolute;right:0;top:calc(100% + 12px);background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 14px 44px rgba(0,0,0,.26);width:320px;max-width:calc(100vw - 24px);z-index:600;overflow:hidden;animation:acct-in .16s ease}
@@ -1319,7 +1382,7 @@
     .media-preview-box{background:var(--card);border-radius:12px;overflow:hidden;width:100%;max-width:900px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.4)}
     .media-preview-hdr{display:flex;justify-content:space-between;align-items:center;padding:.6rem .9rem;background:var(--navy);color:#fff;flex-shrink:0}
     .media-preview-hdr span{font-size:.85rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:.75rem}
-    .media-preview-hdr button{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:.9rem;flex-shrink:0}
+    .media-preview-hdr button{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:var(--r-btn);padding:3px 10px;cursor:pointer;font-size:var(--fs-xl);flex-shrink:0}
     .media-preview-hdr button:hover{background:rgba(255,255,255,.28)}
     .media-preview-body{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;background:#111}
     .media-preview-body img{max-width:100%;max-height:80vh;object-fit:contain}
@@ -1335,7 +1398,7 @@
     .rack-photo-card .rpc-empty{width:52px;height:52px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:1.4rem;background:#f3f4f6;border:1px dashed var(--border);border-radius:5px}
     .rack-photo-card .rpc-name{font-size:.63rem;font-weight:600;color:var(--text);text-align:center;word-break:break-word;line-height:1.2;max-width:72px}
     .rack-photo-card .rpc-qty{font-size:.58rem;font-weight:600;color:var(--accent2)}
-    .rack-photo-card .rpc-btn{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--navy);color:#fff;border:2px solid var(--card);font-size:.6rem;cursor:pointer;line-height:1;padding:0;opacity:0;transition:.15s}
+    .rack-photo-card .rpc-btn{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--navy);color:#fff;border:2px solid var(--card);font-size:var(--fs-2xs);cursor:pointer;line-height:1;padding:0;opacity:0;transition:.15s}
     .rack-photo-card:hover .rpc-btn,.rack-photo-card .rpc-btn:focus{opacity:1}
     .rack-photo-card .rpc-btn:hover{background:var(--accent)}
     @media (hover:none){.rack-photo-card .rpc-btn{opacity:1}}
@@ -1677,7 +1740,7 @@
     .cfg-item:last-child{border-bottom:none}
     .cfg-item-name{flex:1;font-weight:500}
     .cfg-item-input{flex:1;padding:.3rem .5rem;border:1px solid var(--accent);border-radius:5px;font-size:.85rem;font-family:inherit}
-    .cfg-btn{background:none;border:1px solid var(--border);border-radius:5px;padding:2px 8px;font-size:.75rem;cursor:pointer;transition:.15s;white-space:nowrap}
+    .cfg-btn{background:none;border:1px solid var(--border);border-radius:var(--r-btn);padding:2px 8px;font-size:var(--fs-sm);cursor:pointer;transition:.15s;white-space:nowrap}
     .cfg-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
     .cfg-btn-danger{border-color:var(--red);color:var(--red)}
     .cfg-btn-danger:hover{background:var(--red);color:#fff;border-color:var(--red)}
@@ -1699,7 +1762,7 @@
     .stock-detail-panel{display:none;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 4px 16px rgba(0,0,0,.1);margin-bottom:1rem;overflow:hidden}
     .stock-detail-panel.open{display:block}
     .stock-detail-hdr{display:flex;align-items:center;justify-content:space-between;padding:.65rem 1rem;background:var(--navy);color:#fff;font-size:.8rem;font-weight:700}
-    .stock-detail-hdr button{background:none;border:none;color:rgba(255,255,255,.7);font-size:1rem;cursor:pointer}
+    .stock-detail-hdr button{background:none;border:none;color:rgba(255,255,255,.7);font-size:var(--fs-2xl);cursor:pointer}
     .stock-detail-hdr button:hover{color:#fff}
     .stock-detail-body{display:grid;grid-template-columns:1fr 1fr;gap:0}
     .sdp-section{padding:.75rem 1rem}
@@ -1712,7 +1775,7 @@
     .alert-banner{cursor:pointer;transition:opacity .15s}
     .alert-banner:hover{opacity:.88}
     .alert-banner-actions{display:flex;gap:.5rem;align-items:center;margin-left:auto;flex-shrink:0}
-    .alert-banner-actions button{background:rgba(0,0,0,.15);border:none;color:inherit;border-radius:6px;padding:2px 8px;font-size:.75rem;cursor:pointer;font-weight:600;white-space:nowrap}
+    .alert-banner-actions button{background:rgba(0,0,0,.15);border:none;color:inherit;border-radius:var(--r-btn);padding:2px 8px;font-size:var(--fs-sm);cursor:pointer;font-weight:600;white-space:nowrap}
     .alert-banner-actions button:hover{background:rgba(0,0,0,.28)}
     /* La oferta de crear el Entry, dentro de la ventana de la entrega. Se
        muestra sólo cuando el estado es Arrived: ofrecerla sobre algo que
@@ -1921,7 +1984,7 @@
     .morning-overlay.show .morning-popup{transform:translateY(0)}
     .morning-popup-hdr{background:var(--navy);color:#fff;padding:1.1rem 1.4rem;display:flex;align-items:center;justify-content:space-between;border-radius:14px 14px 0 0}
     .morning-popup-hdr h3{font-size:1rem;font-weight:700;margin:0}
-    .morning-popup-hdr button{background:none;border:none;color:rgba(255,255,255,.7);font-size:1.2rem;cursor:pointer;line-height:1;padding:0}
+    .morning-popup-hdr button{background:none;border:none;color:rgba(255,255,255,.7);font-size:var(--fs-4xl);cursor:pointer;line-height:1;padding:0}
     .morning-popup-body{overflow-y:auto;padding:1rem 1.4rem;flex:1}
     .morning-today{background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:.75rem 1rem;margin-bottom:.75rem}
     .morning-today-label{font-size:.7rem;font-weight:700;color:var(--accent2);text-transform:uppercase;margin-bottom:.4rem}
@@ -2277,7 +2340,7 @@
     .cfg-card-lbl{font-size:.63rem;text-transform:uppercase;letter-spacing:.05em;color:#a1b0cb;font-weight:700}
     .cfg-card-val{font-weight:700;margin:.15rem 0 .45rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .cfg-card-acts{display:flex;gap:.4rem;align-items:center}
-    .cfg-card-acts button{border:none;border-radius:6px;padding:.28rem .6rem;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit}
+    .cfg-card-acts button{border:none;border-radius:var(--r-btn);padding:.28rem .6rem;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit}
     .cfg-card-add{background:var(--accent);color:#fff}
     .cfg-card-add:disabled{opacity:.6;cursor:default}
     .cfg-card-skip{background:rgba(255,255,255,.14);color:#dbe4f5}
@@ -2309,7 +2372,7 @@
     .cfg-bell-panel{display:none;position:fixed;top:60px;right:12px;left:12px;max-width:380px;margin-left:auto;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.3);z-index:var(--z-bell);max-height:70vh;overflow-y:auto}
     .cfg-bell-panel.show{display:block}
     .cfg-bell-hdr{display:flex;justify-content:space-between;align-items:center;padding:.6rem .8rem;border-bottom:1px solid var(--border);font-size:.8rem;font-weight:700;color:var(--text);position:sticky;top:0;background:var(--card)}
-    .cfg-bell-hdr button{background:none;border:none;color:var(--muted);font-size:.95rem;cursor:pointer}
+    .cfg-bell-hdr button{background:none;border:none;color:var(--muted);font-size:var(--fs-xl);cursor:pointer}
     .cfg-bell-row{padding:.6rem .8rem;border-bottom:1px solid var(--border)}
     .cfg-bell-row:last-child{border-bottom:none}
     .cfg-bell-row .cfg-card-lbl{color:var(--muted)}
@@ -2373,7 +2436,7 @@
        until a mode is switched on, so a list reads as a list and deleting is
        something you have to mean. */
     .row-mode-bar{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;margin:0 0 .7rem}
-    .rm-btn{display:inline-flex;align-items:center;gap:.3rem;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:.3rem .7rem;font-size:.78rem;font-weight:700;font-family:inherit;cursor:pointer;transition:.15s}
+    .rm-btn{display:inline-flex;align-items:center;gap:.3rem;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:var(--r-btn);padding:.3rem .7rem;font-size:var(--fs-md);font-weight:700;font-family:inherit;cursor:pointer;transition:.15s}
     .rm-btn:hover{border-color:var(--accent)}
     .rm-btn.on{background:var(--navy);border-color:var(--navy);color:#fff}
     .rm-btn.rm-del:hover{border-color:var(--red)}
@@ -2385,7 +2448,7 @@
        the instant a hint appeared. Text always renders below the buttons
        now, and the buttons themselves stay put since the bar's own width
        no longer grows with the hint's length. */
-    .rm-hint{font-size:.74rem;color:var(--muted);flex-basis:100%}
+    .rm-hint{font-size:var(--fs-sm);color:var(--muted);flex-basis:100%}
     .row-mode-bar.is-del .rm-hint{color:var(--red);font-weight:600}
     /* Only ever ADDS display:none — when the mode is on the rule stops matching
        and each control keeps whatever display it had. */
@@ -2412,7 +2475,7 @@
     .col-name-ro{font-weight:700}
     .col-eye,.col-lock{background:none;border:none;cursor:pointer;font-size:.78rem;margin-left:.3rem;padding:0}
     .col-lock{cursor:default;opacity:.6}
-    .cat-fix-btn{margin-top:.35rem;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:.3rem .55rem;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit}
+    .cat-fix-btn{margin-top:.35rem;background:var(--accent);color:#fff;border:none;border-radius:var(--r-btn);padding:.3rem .55rem;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit}
     .cat-fix-btn:hover{filter:brightness(1.1)}
     /* Own tooltip instead of the browser's title bubble: that one cannot be
        styled at all — its shape, delay, colours and single-line wrapping are
@@ -2496,8 +2559,8 @@
     .ap-mail{font-size:.74rem;color:var(--muted);line-height:1.35;margin-top:.1rem}
     .ap-acts{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.55rem}
     .ap-btn{display:inline-flex;align-items:center;gap:.25rem;text-decoration:none;
-      font-size:.72rem;font-weight:600;color:var(--accent);
-      border:1px solid var(--border);border-radius:7px;padding:.25rem .5rem;
+      font-size:var(--fs-sm);font-weight:600;color:var(--accent);
+      border:1px solid var(--border);border-radius:var(--r-btn);padding:.25rem .5rem;
       background:var(--bg);white-space:nowrap}
     .ap-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
 
@@ -2564,7 +2627,7 @@
        on the menu itself - hovering the button alone would close it the moment
        the pointer travelled down toward a choice. */
     .loc-plus-wrap:hover .loc-plus-menu,.loc-plus-menu:hover{display:block}
-    .loc-plus-menu button{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--border);color:var(--text);font-size:.8rem;font-family:inherit;padding:.5rem .7rem;cursor:pointer}
+    .loc-plus-menu button{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--border);color:var(--text);font-size:var(--fs-base);font-family:inherit;padding:.5rem .7rem;cursor:pointer}
     .loc-plus-menu button:first-child{border-radius:8px 8px 0 0}
     .loc-plus-menu button:last-child{border-radius:0 0 8px 8px;border-top:none}
     .loc-plus-menu button:hover{background:var(--bg)}
@@ -2593,7 +2656,7 @@
     .loc-group-archived .loc-group-hdr{background:var(--bg)}
     .loc-group-archived .loc-item{background:transparent;border-style:dashed;color:var(--muted)}
     .loc-arch-note{font-size:.66rem;color:var(--muted);margin-left:.4rem}
-    .loc-arch-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.8rem;padding:0 0 0 .2rem;line-height:1}
+    .loc-arch-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:var(--fs-base);padding:0 0 0 .2rem;line-height:1}
     .loc-arch-btn:hover{color:var(--accent)}
     /* The bin is destructive, so it does not share the archive button's accent
        hover — a row with both must not read as two shades of the same action. */
@@ -2657,12 +2720,12 @@
     .cfg-new-ok{color:var(--green);font-weight:700}
     .doc-photo-bad{border:1.5px solid var(--red)!important;background:#FEF2F2!important}
     .doc-drive-row{display:flex;gap:.4rem;align-items:center;margin-top:.45rem}
-    .doc-drive-row input{flex:1;min-width:0;padding:.38rem .6rem;border:1.5px solid var(--border);border-radius:7px;font-size:.78rem;font-family:inherit;background:var(--card);color:var(--text);min-height:36px}
+    .doc-drive-row input{flex:1;min-width:0;padding:.38rem .6rem;border:1.5px solid var(--border);border-radius:7px;font-size:.78rem;font-family:inherit;background:var(--card);color:var(--text);min-height:var(--h-btn-sm)}
     .doc-drive-row input:focus{outline:none;border-color:var(--accent)}
-    .btn-camera{background:var(--navy);color:#fff;border:none;border-radius:7px;padding:.38rem .75rem;font-size:.78rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:.3rem;flex-shrink:0;min-height:36px}
+    .btn-camera{background:var(--navy);color:#fff;border:none;border-radius:var(--r-btn);padding:.38rem .75rem;font-size:var(--fs-md);font-weight:600;cursor:pointer;display:flex;align-items:center;gap:.3rem;flex-shrink:0;min-height:var(--h-btn-sm)}
     .btn-camera:hover{filter:brightness(1.15)}
     .btn-camera:active{transform:scale(.97)}
-    .btn-gallery{background:#fff;color:var(--navy);border:1.5px solid var(--border);border-radius:7px;padding:.38rem .75rem;font-size:.78rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:.3rem;flex-shrink:0;min-height:36px}
+    .btn-gallery{background:#fff;color:var(--navy);border:1.5px solid var(--border);border-radius:var(--r-btn);padding:.38rem .75rem;font-size:var(--fs-md);font-weight:600;cursor:pointer;display:flex;align-items:center;gap:.3rem;flex-shrink:0;min-height:var(--h-btn-sm)}
     .btn-gallery:hover{border-color:var(--accent);color:var(--accent)}
     .doc-photo-count{font-size:.72rem;color:var(--muted);font-weight:500;margin-left:auto}
     .doc-processing{font-size:.75rem;color:var(--purple);font-style:italic}
@@ -2672,7 +2735,7 @@
     .ai-field-row{display:flex;align-items:center;gap:.5rem;padding:.2rem 0;font-size:.8rem}
     .ai-field-row label{width:90px;color:var(--muted);font-size:.73rem;flex-shrink:0}
     .ai-field-row input,.ai-field-row select{flex:1;padding:.25rem .5rem;border:1px solid #C4B5FD;border-radius:4px;font-size:.8rem;background:#fff}
-    .ai-accept-btn{background:var(--purple);color:#fff;border:none;border-radius:6px;padding:.35rem .75rem;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:.5rem}
+    .ai-accept-btn{background:var(--purple);color:#fff;border:none;border-radius:var(--r-btn);padding:.35rem .75rem;font-size:var(--fs-md);font-weight:600;cursor:pointer;margin-top:.5rem}
     .ai-accept-btn:hover{filter:brightness(.9)}
     /* ── DARK MODE ── */
     [data-theme="dark"]{
@@ -2791,7 +2854,7 @@
     .btn-danger:active{filter:brightness(.88)}
     .nav button:active{transform:scale(.96)}
     /* ── TOUCH TARGET FIX ── */
-    .btn-icon{min-width:36px;min-height:36px;display:inline-flex;align-items:center;justify-content:center}
+    .btn-icon{min-width:var(--h-btn-sm);min-height:var(--h-btn-sm);display:inline-flex;align-items:center;justify-content:center}
     /* ── TAB FADE TRANSITION ── */
     .section.active{animation:tabFadeIn .18s ease}
     @keyframes tabFadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
@@ -2857,19 +2920,41 @@
        layout, so the app looks the same and simply becomes usable. */
     @media (pointer: coarse){
       .toolbar input,.toolbar select,.toolbar button,
-      .btn,.btn-sm{min-height:44px}
+      .btn,.btn-sm{min-height:var(--h-btn-lg)}
       /* Inside a table row the buttons stay compact — 44px each would double
          the height of every row — but 22px is not a target either. */
-      td .btn-sm,td button,.cfg-btn{min-height:34px;min-width:34px}
-      .acct-btn{width:44px;height:44px;font-size:.85rem}
-      .cfg-bell{min-width:44px;min-height:44px}
-      .nav button{min-height:44px}
+      td .btn-sm,td button,.cfg-btn{min-height:var(--h-btn-tabla);min-width:var(--h-btn-tabla)}
+
+      /* ── SALVO LO QUE DESTRUYE ALGO ───────────────────────────────────────
+       *
+       * La excepción de arriba es correcta y se queda: subir TODOS los botones
+       * de tabla a 44px duplicaría la altura de cada fila, y eso lo decidió
+       * alguien mirando el problema de verdad.
+       *
+       * Pero no se aplica igual a los dos lados. Fallar un tap en «Edit»
+       * cuesta un toque más. Fallarlo en «Delete» borra algo. Cuando las dos
+       * consecuencias son tan distintas, el mismo tamaño para las dos es la
+       * decisión equivocada aunque la altura de fila lo pida.
+       *
+       * Y el contexto manda: la gente de Jose usa esto en el teléfono, dentro
+       * de la bodega, muchas veces con guantes. 34px con guante no es un
+       * objetivo, es una apuesta.
+       *
+       * Sólo las de borrar. Una fila con un botón de 44 y los demás de 34
+       * crece 10px; subirlos todos la duplicaría. */
+      .btn-danger,.btn-remove-loc,.cfg-btn-danger,.loc-del-btn,.packs-del,
+      td .btn-danger,td .rm-btn,td .btn-remove-loc,td .cfg-btn-danger
+        {min-height:var(--h-btn-lg);min-width:var(--h-btn-lg)}
+
+      .acct-btn{width:44px;height:44px;font-size:var(--fs-lg)}
+      .cfg-bell{min-width:var(--h-btn-lg);min-height:var(--h-btn-lg)}
+      .nav button{min-height:var(--h-btn-lg)}
       /* The ones with no class of their own — a bare <button> inherits none of
          the sizing above, which is exactly why these were the smallest things
          on the screen: the ✕ on the morning popup measured 16×19. */
       .alert-banner-actions button,.morning-popup-hdr button,.rack-drawer-hdr button,
-      .rm-btn,.sys-card-x,.cfg-card-add,.cfg-card-skip{min-height:36px;min-width:36px}
-      .rm-btn,.alert-banner-actions button{min-height:40px}
+      .rm-btn,.sys-card-x,.cfg-card-add,.cfg-card-skip{min-height:var(--h-btn-sm);min-width:var(--h-btn-sm)}
+      .rm-btn,.alert-banner-actions button{min-height:var(--h-btn-md)}
       /* The connection dot keeps its size and gains a 44px hit area around it.
          A pseudo-element with no paint of its own still takes the tap, so the
          design does not change at all — the target simply stops being the size
@@ -2877,19 +2962,19 @@
       .conn-btn{position:relative}
       .conn-btn::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%}
       /* Anything a finger has to land on inside a modal, too. */
-      .modal input,.modal select,.modal textarea,.modal-type-bar button{min-height:44px}
+      .modal input,.modal select,.modal textarea,.modal-type-bar button{min-height:var(--h-btn-lg)}
     }
     /* ── RESPONSIVE ── */
     @media(max-width:768px){
       .topbar{padding:.7rem 1rem .6rem}
-      .nav button{flex-grow:1;text-align:center;min-height:38px}
+      .nav button{flex-grow:1;text-align:center;min-height:var(--h-btn-sm)}
       .toolbar{flex-direction:column;align-items:stretch;width:100%}
       .toolbar input,.toolbar select,.toolbar button{width:100%}
       .form-grid{grid-template-columns:1fr}
       .modal{--mpad:1.25rem}
       th,td{padding:.45rem .5rem}
       .charts-grid{grid-template-columns:1fr}
-      .modal-type-bar button{padding:.4rem .25rem;font-size:.72rem;min-height:40px}
+      .modal-type-bar button{padding:.4rem .25rem;font-size:var(--fs-sm);min-height:var(--h-btn-md)}
       /* EL AVISO EN EL TELÉFONO. Jose lo fotografió dos veces, y la segunda
          vez porque la primera lo arreglé a medias.
          Esta regla pone bottom/left/right pero NO anulaba las dos cosas que
@@ -4561,7 +4646,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.54';
+var APP_VERSION = '12.55';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -4573,7 +4658,7 @@ var APP_VERSION = '12.54';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '39f7c662';
+var APP_BUILD = 'd3866eb9';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for

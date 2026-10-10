@@ -47,6 +47,7 @@ node tools/test-borrar-y-editar-se-ven.js
 node tools/test-borrar-usuario.js
 node tools/test-vuelta-del-login.js
 node tools/test-cinco-sin-riesgo.js
+node tools/test-escala.js
 node tools/test-brand-corner.js
 node tools/test-terms-checkbox.js
 node tools/test-entry-autofill.js
@@ -434,6 +435,7 @@ come back from — is invisible to both. Those get a browser test.
 - `test-borrar-usuario.js` — borrar de verdad una fila de usuario, con el rastro escrito antes y la lista vieja de CONFIG limpiada para que no vuelva sola
 - `test-vuelta-del-login.js` — que la dirección de vuelta del inicio de sesión apunte a ESTA app y no a otra, y que si no, se diga antes de abrir una ventana que va a morir
 - `test-cinco-sin-riesgo.js` — los cinco arreglos sin riesgo de la auditoría de columnas, y sobre todo el lado por el que cada uno falla: el total sólo se recalcula cuando se puede saber cuál debe ser, las tres hojas calculadas pierden cinco columnas sin que su único lector pierda un número, el aviso de CONFIG vigila exactamente las columnas que `loadConfig` lee de la fila 2, la nota de RESERVATIONS es la suya y la pestaña no se borra, y el renombrado de `AUDIT_LOG` no toca una cabecera que el cliente escribió
+- `test-escala.js` — la escala de letra y la forma de los botones no se deshacen solas: los trece escalones de la opción A existen y están ordenados, los tres tamaños más usados no se movieron, ningún botón lleva un tamaño ni una altura a pelo, y lo que BORRA algo se MIDE en un navegador táctil —no se busca en el CSS— porque buscarlo en el CSS pasaba en verde con un botón de 34 px en pantalla
   instead of the Apps Script editor. The feature is small; the failure modes
   are not, so both are held shut here: the key must never come back to the
   BROWSER (getAiStatus returns configured + the last four characters and

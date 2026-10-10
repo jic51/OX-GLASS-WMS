@@ -98,6 +98,28 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.55</span>
+      <span class="tag ui">Interfaz</span>
+      <h3>Botones: una sola forma, y los de borrar al tama&ntilde;o del dedo</h3>
+      <p>La app ten&iacute;a <b>147 reglas de bot&oacute;n y entre ellas 26 espaciados distintos, 9 radios
+         de esquina y 16 tama&ntilde;os de letra</b>, mezclando unidades para lo mismo. Nadie decidi&oacute;
+         eso: se fue acumulando, una decisi&oacute;n razonable cada vez.</p>
+      <p>Y al medirlo apareci&oacute; algo que no esper&aacute;bamos: la app <b>ya ten&iacute;a</b> los tokens de
+         dise&ntilde;o escritos. <code>--radius</code> y <code>--shadow</code> llevaban versiones ah&iacute;.
+         Los de color s&iacute; se usaban &mdash;<code>--border</code> en 135 sitios&mdash;; los de forma
+         no: <code>--radius</code> aparec&iacute;a en <b>5 de 224</b> esquinas. No faltaba un sistema.
+         Faltaba usarlo.</p>
+      <p>Ahora los botones comparten un radio y una escala de trece tama&ntilde;os. Los tres tama&ntilde;os
+         m&aacute;s usados de la app no se movieron ni un p&iacute;xel, as&iacute; que las pantallas se ven igual.</p>
+      <p><b>Y un cambio que no es de aspecto.</b> Las alturas eran 34, 36, 38, 40 y 44 p&iacute;xeles.
+         El m&iacute;nimo para que un dedo acierte son 44. Todo lo que <b>borra</b> algo mide ahora 44
+         en pantalla t&aacute;ctil, aunque est&eacute; dentro de una fila de tabla: fallar en
+         &laquo;Edit&raquo; cuesta un toque m&aacute;s, fallar en &laquo;Delete&raquo; destruye algo,
+         y el mismo tama&ntilde;o para los dos era la decisi&oacute;n equivocada. Los dem&aacute;s botones de fila
+         se quedan compactos, porque subirlos todos duplicar&iacute;a la altura de cada fila.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.54</span>
       <span class="tag safe">Datos</span>
       <h3>Cinco cosas calladas de la hoja, ahora vigiladas</h3>

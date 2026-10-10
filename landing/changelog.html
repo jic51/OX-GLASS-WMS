@@ -97,6 +97,29 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.55</span>
+      <span class="tag ui">UI</span>
+      <h3>Buttons: one shape, and the ones that delete are big enough for a thumb</h3>
+      <p>The app had <b>147 button rules between them holding 26 different paddings, 9 corner
+         radii and 16 text sizes</b> &mdash; mixing units for the same thing. Nobody decided that;
+         it accumulated one reasonable choice at a time.</p>
+      <p>What the measuring turned up was not what we expected: the app <b>already had</b> the
+         design tokens written down. <code>--radius</code> and <code>--shadow</code> had been
+         sitting in the stylesheet for versions. The colour tokens were used properly &mdash;
+         <code>--border</code> in 135 places. The shape ones were not: <code>--radius</code>
+         appeared in <b>5 of 224</b> corners. There was no missing system. It just was not
+         being used.</p>
+      <p>Buttons now share one corner radius and one text scale of thirteen steps. The three
+         most-used sizes in the whole app did not move a pixel, so the screens look the same.</p>
+      <p><b>And one change that is not about looks.</b> Button heights were 34, 36, 38, 40 and
+         44 pixels. The minimum a thumb reliably hits is 44. Anything that <b>deletes</b>
+         something is now 44 on a touchscreen, even inside a table row &mdash; missing
+         &ldquo;Edit&rdquo; costs you a tap, missing &ldquo;Delete&rdquo; destroys something, and the
+         same size for both was the wrong call. The other table buttons stay compact, because
+         raising all of them would double the height of every row.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.54</span>
       <span class="tag safe">Data</span>
       <h3>Five quiet things in the spreadsheet, now looked after</h3>
