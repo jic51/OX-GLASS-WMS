@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Revisión de botones y tablas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --papel:#F6F7F9; --panel:#FFFFFF; --tinta:#161D2E; --tinta2:#49536B; --tenue:#78829A;
+  --linea:#E1E5EC; --azul:#2F6FD0; --azul-bg:#EAF1FC;
+  --verde:#15745A; --verde-bg:#E4F3EE; --rojo:#C32F2F; --rojo-bg:#FBEDED;
+  --ambar:#9A6400; --ambar-bg:#FBF2DF;
+  --s:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --papel:#0F1420; --panel:#171E2C; --tinta:#E7EBF3; --tinta2:#B4BDCE; --tenue:#8A94A8;
+  --linea:#29324450; --azul:#79AAEE; --azul-bg:#17273F;
+  --verde:#6FD3B2; --verde-bg:#102E26; --rojo:#F08A8A; --rojo-bg:#351A1C;
+  --ambar:#E0B560; --ambar-bg:#332814;
+}}
+:root[data-theme="dark"]{
+  --papel:#0F1420; --panel:#171E2C; --tinta:#E7EBF3; --tinta2:#B4BDCE; --tenue:#8A94A8;
+  --linea:#293244; --azul:#79AAEE; --azul-bg:#17273F;
+  --verde:#6FD3B2; --verde-bg:#102E26; --rojo:#F08A8A; --rojo-bg:#351A1C;
+  --ambar:#E0B560; --ambar-bg:#332814;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--papel);color:var(--tinta);font-family:var(--s);
+     line-height:1.55;-webkit-text-size-adjust:100%}
+.env{max-width:680px;margin:0 auto;padding:0 16px 80px}
+header{padding:40px 0 10px}
+h1{font-size:clamp(1.55rem,5.5vw,2.1rem);line-height:1.1;margin:0 0 .35em;letter-spacing:-.02em;text-wrap:balance}
+.sub{color:var(--tinta2);margin:0;font-size:1rem}
+h2{font-size:1.05rem;margin:40px 0 10px;letter-spacing:-.01em;display:flex;align-items:center;gap:9px}
+h2 .pin{width:26px;height:26px;border-radius:7px;background:var(--azul);color:#fff;
+        display:inline-flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;flex:none}
+p{margin:.7em 0;max-width:60ch}
+
+/* qué buscar */
+.guia{background:var(--panel);border:1px solid var(--linea);border-radius:10px;padding:4px 0;margin:20px 0}
+.g{display:flex;gap:12px;padding:13px 16px;border-bottom:1px solid var(--linea);align-items:flex-start}
+.g:last-child{border-bottom:0}
+.g .ic{font-size:1.1rem;flex:none;line-height:1.3}
+.g b{display:block;font-size:.92rem;margin-bottom:1px}
+.g span{color:var(--tinta2);font-size:.88rem}
+
+/* checklist */
+.bloque{background:var(--panel);border:1px solid var(--linea);border-radius:10px;overflow:hidden;margin:14px 0}
+.bloque > .cab{padding:12px 16px;border-bottom:1px solid var(--linea);display:flex;
+               justify-content:space-between;align-items:center;gap:10px}
+.bloque > .cab b{font-size:.98rem}
+.bloque > .cab .cnt{font-size:.76rem;color:var(--tenue);white-space:nowrap;font-variant-numeric:tabular-nums}
+label.it{display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid var(--linea);
+         cursor:pointer;align-items:flex-start;transition:background .12s}
+label.it:last-child{border-bottom:0}
+label.it:hover{background:var(--azul-bg)}
+label.it input{appearance:none;width:21px;height:21px;border:2px solid var(--linea);border-radius:6px;
+               flex:none;margin-top:1px;cursor:pointer;position:relative;background:var(--panel);transition:.12s}
+label.it input:checked{background:var(--verde);border-color:var(--verde)}
+label.it input:checked::after{content:'✓';position:absolute;inset:0;color:#fff;font-size:.8rem;
+                              font-weight:700;display:flex;align-items:center;justify-content:center}
+label.it input:focus-visible{outline:2px solid var(--azul);outline-offset:2px}
+label.it .tx{flex:1;min-width:0}
+label.it .tx b{display:block;font-size:.93rem;font-weight:600}
+label.it .tx span{display:block;color:var(--tinta2);font-size:.86rem;margin-top:1px}
+label.it input:checked ~ .tx{opacity:.5}
+label.it input:checked ~ .tx b{text-decoration:line-through}
+.et{display:inline-block;font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:999px;
+    margin-left:7px;vertical-align:1px;white-space:nowrap}
+.et.bot{background:var(--azul-bg);color:var(--azul)}
+.et.tab{background:var(--ambar-bg);color:var(--ambar)}
+.et.ambos{background:var(--verde-bg);color:var(--verde)}
+
+.aviso{border-left:3px solid var(--rojo);background:var(--rojo-bg);padding:14px 16px;border-radius:0 8px 8px 0;margin:22px 0}
+.aviso b{display:block;margin-bottom:3px}
+.aviso p{margin:.3em 0;font-size:.92rem}
+
+.barra{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--linea);
+       padding:13px 16px;margin:28px -16px 0;display:flex;align-items:center;gap:14px}
+.barra .pr{flex:1;height:8px;background:var(--linea);border-radius:999px;overflow:hidden}
+.barra .pr i{display:block;height:100%;background:var(--verde);width:0;transition:width .25s}
+.barra .tot{font-size:.85rem;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--tinta2)}
+.barra button{border:1px solid var(--linea);background:transparent;color:var(--tinta2);
+              border-radius:7px;padding:7px 12px;font:inherit;font-size:.8rem;cursor:pointer;min-height:36px}
+.barra button:hover{background:var(--azul-bg);color:var(--azul)}
+.pie{color:var(--tenue);font-size:.85rem;margin-top:34px;padding-top:18px;border-top:1px solid var(--linea)}
+</style>
+</head>
+<body>
+<div class="env">
+
+<header>
+  <h1>Qué revisar después de los botones y las tablas</h1>
+  <p class="sub">v12.55 y v12.56. Ve marcando; se guarda solo en este teléfono o computadora.</p>
+</header>
+
+<h2><span class="pin">?</span>Qué estás buscando</h2>
+
+<div class="guia">
+  <div class="g"><span class="ic">👆</span><div><b>¿Puedes darle al botón de borrar con el pulgar?</b>
+    <span>Es lo único que cambió de tamaño a propósito. Pruébalo en el teléfono, y si puedes, con guante.</span></div></div>
+  <div class="g"><span class="ic">⬜</span><div><b>¿Todos los botones tienen la misma esquina?</b>
+    <span>Antes había 5, 6 y 7 píxeles mezclados. Ahora todos iguales. Si ves uno distinto, apúntalo.</span></div></div>
+  <div class="g"><span class="ic">📏</span><div><b>¿Alguna fila de tabla cambió de alto?</b>
+    <span>No debería moverse casi nada. Si una tabla se ve más apretada o más suelta, dímelo.</span></div></div>
+  <div class="g"><span class="ic">✂️</span><div><b>¿Algo se corta, se sale o se parte en dos líneas?</b>
+    <span>Lo más importante. Si un texto de botón se parte o una columna se sale, es un fallo mío.</span></div></div>
+</div>
+
+<div class="aviso">
+  <b>Revisa en los dos lados</b>
+  <p>En el <b>teléfono</b> y en la <b>computadora</b>. Las alturas grandes de los botones sólo
+  se activan en pantalla táctil, así que en la computadora se ven más pequeños <b>y eso está bien</b>.</p>
+</div>
+
+<h2><span class="pin">1</span>Las cinco pestañas</h2>
+
+<div class="bloque">
+  <div class="cab"><b>Barra de arriba</b><span class="cnt">5 pestañas</span></div>
+  <label class="it"><input type="checkbox"><span class="tx"><b>Stock Dashboard<span class="et ambos">botones + tabla</span></b><span>La tabla de materiales, la barra de selección, y los botones de arriba.</span></span></label>
+  <label class="it"><input type="checkbox"><span class="tx"><b>Movements &amp; History<span class="et ambos">botones + tabla</span></b><span>La tabla principal de la app. Mira el alto de fila y los botones de cada fila.</span></span></label>
+  <label class="it"><input type="checkbox"><span class="tx"><b>Project View<span class="et ambos">botones + tabla</span></b><span>La tabla por obra y el botón de exportar.</span></span></label>
+  <label class="it"><input type="checkbox"><span class="tx"><b>Warehouse Map<span class="et bot">botones</span></b><span>Los estantes y el cajón que se abre al tocar uno.</span></span></label>
+  <label class="it"><input type="checkbox"><span class="tx"><b>📦 Incoming<span class="et ambos">botones + tabla</span></b><span>Las entregas agrupadas. Aquí cambió el espaciado de las filas de grupo.</span></span></label>
+</div>
+
+<h2><span class="pin">2</span>Las ventanas que se abren</h2>
+
+<div class="bloque">
+  <div class="cab"><b>Movimientos</b><span class="cnt">4 ventanas</span></div>
+  <label class="it"><input type="checkbox"><span class="tx"><b>Entry — registrar entrada<span class="et bot">botones</span></b><span>Los botones de + Location y de quitar una línea.</span></span></label>
+  <label class="it"><input type="checkbox"><span class="tx"><b>Exit — despachar<span class="et bot">botones</span></b><span>Igual: añadir y quitar filas de material.</span></span></label>
+  <label class="it"><input type="checkbox"><span class="tx"><b>Transfer — mover entre estantes<span class="et bot">botones</span></b><span>Los botones de quitar fila.</span></span></label>
+  <label class="it"><input type="checkbox"><span class="tx"><b>Editar un movimiento<span class="et bot">botones</span></b><span>Y el de borrar, que debe ser grande.</span></span></label>
+</div>
+
+<div class="bloque">
+  <div class="cab"><b>Ajustes</b><span class="cnt">6 ventanas</span></div>
+  <label class="it"><input type="checkbox"><span class="tx"><b>Manage Users<span class="et ambos">botones + tabla</span></b><span>Tabla de usuarios. <b>El Delete debe ser grande.</b> Marca un usuario y mira los botones que aparecen.</span></span></label>
+  <label class="it"><input type="checkbox"><span class="tx"><b>Categorías y materiales<span class="et bot">botones</span></b><span>Los Edit y Delete pequeños de cada fila: el Delete debe ser grande ahora.</span></span></label>
+  <label class="it"><input type="checkbox"><span class="tx"><b>Proyectos, proveedores, ubicaciones<span class="et bot">botones</span></b><span>Las mismas listas con sus botones de borrar.</span></span></label>
+  <label class="it"><input type="checkbox"><span class="tx"><b>Camiones y personas<span class="et bot">botones</span></b><span>Lo mismo.</span></span></label>
+  <label class="it"><input type="checkbox"><span class="tx"><b>System — clave de IA, respaldos<span class="et bot">botones</span></b><span>Los botones de guardar y probar.</span></span></label>
+  <label class="it"><input type="checkbox"><span class="tx"><b>Registro de errores<span class="et tab">tabla</span></b><span>Una tabla compacta: mira que no se salga de ancho.</span></span></label>
+</div>
+
+<div class="bloque">
+  <div class="cab"><b>Las demás</b><span class="cnt">7 ventanas</span></div>
+  <label class="it"><input type="checkbox"><span class="tx"><b>Adjuntar foto o documento<span class="et bot">botones</span></b><span>Los de Camera y Gallery, que comparten alto con el campo de texto de al lado.</span></span></label>
+  <label class="it"><input type="checkbox"><span class="tx"><b>Importar de un correo<span class="et bot">botones</span></b><span>El botón de aceptar lo que leyó la IA.</span></span></label>
+  <label class="it"><input type="checkbox"><span class="tx"><b>Apartar material (lock)<span class="et bot">botones</span></b><span>El botón pequeño de apartar y soltar.</span></span></label>
+  <label class="it"><input type="checkbox"><span class="tx"><b>Programar la semana<span class="et tab">tabla</span></b><span>La cuadrícula de días.</span></span></label>
+  <label class="it"><input type="checkbox"><span class="tx"><b>Reportar un problema<span class="et bot">botones</span></b><span>Enviar y cancelar.</span></span></label>
+  <label class="it"><input type="checkbox"><span class="tx"><b>Términos y privacidad<span class="et bot">botones</span></b><span>Que el texto siga igual de legible.</span></span></label>
+  <label class="it"><input type="checkbox"><span class="tx"><b>Ver una foto en grande<span class="et bot">botones</span></b><span>La ✕ de cerrar y las flechas.</span></span></label>
+</div>
+
+<h2><span class="pin">3</span>Las cuatro que más me preocupan</h2>
+
+<p>Si no tienes tiempo para todo, revisa <b>sólo estas</b>. Son donde el cambio
+   puede notarse de verdad.</p>
+
+<div class="bloque">
+  <div class="cab"><b>Prioridad</b><span class="cnt">4 sitios</span></div>
+  <label class="it"><input type="checkbox"><span class="tx"><b>Movements, en el teléfono<span class="et tab">tabla</span></b><span>Es la tabla más larga de la app y la que más filas enseña. Si el alto de fila cambió, se nota aquí.</span></span></label>
+  <label class="it"><input type="checkbox"><span class="tx"><b>Manage Users, el botón Delete<span class="et bot">botones</span></b><span>Pasó de 34 a 44 píxeles. Pruébalo con el pulgar.</span></span></label>
+  <label class="it"><input type="checkbox"><span class="tx"><b>Incoming, las filas de grupo<span class="et tab">tabla</span></b><span>Es la única fila que se hizo 1,6 px más alta. Es el cambio más grande de toda la tanda.</span></span></label>
+  <label class="it"><input type="checkbox"><span class="tx"><b>Cualquier pantalla al 125% de zoom<span class="et ambos">botones + tabla</span></b><span>Si algo iba justo de ancho, el zoom lo saca a la luz antes que nada.</span></span></label>
+</div>
+
+<h2><span class="pin">4</span>Lo que NO cambió — por si lo ves raro</h2>
+
+<div class="guia">
+  <div class="g"><span class="ic">🖨️</span><div><b>Las etiquetas impresas</b>
+    <span>Ni un milímetro. Están medidas sobre papel de verdad.</span></div></div>
+  <div class="g"><span class="ic">⭕</span><div><b>Los botones redondos</b>
+    <span>El de tu cuenta, la campana, el punto de conexión. Siguen redondos a propósito.</span></div></div>
+  <div class="g"><span class="ic">🎨</span><div><b>Los colores</b>
+    <span>Ninguno. Esa parte ya estaba bien.</span></div></div>
+  <div class="g"><span class="ic">📐</span><div><b>Los botones pequeños dentro de una fila de tabla</b>
+    <span>Siguen compactos menos los de borrar. Subirlos todos duplicaría el alto de cada fila.</span></div></div>
+</div>
+
+<div class="barra">
+  <span class="tot" id="tot">0 de 0</span>
+  <span class="pr"><i id="pr"></i></span>
+  <button type="button" id="limpiar">Empezar de nuevo</button>
+</div>
+
+<p class="pie">Si encuentras algo, mándame una captura y dime en qué pantalla y si fue
+   en el teléfono o en la computadora. Con eso lo ubico sin preguntarte más.</p>
+
+</div>
+<script>
+(function(){
+  var CLAVE='acopio_revision_v1256';
+  var cajas=[].slice.call(document.querySelectorAll('label.it input'));
+  var tot=document.getElementById('tot'), pr=document.getElementById('pr');
+
+  // localStorage puede fallar o venir vacío (ventana privada, datos
+  // bloqueados, vista previa). La página tiene que funcionar igual, así que
+  // cada lectura y cada escritura van envueltas.
+  function leer(){
+    try{ return JSON.parse(localStorage.getItem(CLAVE)||'[]')||[]; }catch(e){ return []; }
+  }
+  function guardar(){
+    try{ localStorage.setItem(CLAVE,JSON.stringify(
+      cajas.map(function(c){return c.checked?1:0}))); }catch(e){}
+  }
+  function pintar(){
+    var n=cajas.filter(function(c){return c.checked}).length;
+    tot.textContent=n+' de '+cajas.length;
+    pr.style.width=(cajas.length? Math.round(100*n/cajas.length):0)+'%';
+  }
+  var guardado=leer();
+  cajas.forEach(function(c,i){
+    if(guardado[i]) c.checked=true;
+    c.addEventListener('change',function(){ guardar(); pintar(); });
+  });
+  document.getElementById('limpiar').addEventListener('click',function(){
+    cajas.forEach(function(c){c.checked=false}); guardar(); pintar();
+  });
+  pintar();
+})();
+</script>
+</body>
+</html>
