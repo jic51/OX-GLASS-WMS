@@ -97,6 +97,21 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.56</span>
+      <span class="tag ui">UI</span>
+      <h3>Tables: two row densities instead of eight near-identical ones</h3>
+      <p>Second batch of the standardisation. Eight rules set the padding of a table cell and
+         between them held <b>eight different values</b> &mdash; but looking at them, they were not
+         eight decisions. They were <b>two</b> nobody had named: the normal table and the compact
+         ones, with half a pixel of noise around each.</p>
+      <p>Cell padding is the one thing in this batch that changes something you can see: it sets
+         the row height, and with it how many rows fit on a screen. So the two values were picked
+         so nothing moves more than <b>0.8 of a pixel</b> per side, not so they would come out round.</p>
+      <p>Table text sizes and line heights now come from the same scale as the buttons. The largest
+         any of them moved is <b>a third of a pixel</b>.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.55</span>
       <span class="tag ui">UI</span>
       <h3>Buttons: one shape, and the ones that delete are big enough for a thumb</h3>

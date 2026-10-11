@@ -225,6 +225,35 @@ async function mideBotonesDestructivos() {
 /* ════════════════════════════════════════════════════════════════════════════
    3 · LOS TOPES — que esto no vuelva a crecer sin que nadie lo decida
    ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n═══ 2b · las tablas ═══\n');
+const esTabla = r => /\b(table|thead|tbody|tfoot|tr|th|td)\b|tabla|-tbl|\.mov-|\.inc-|\.usr-/.test(r.sel)
+                     && !/\.lbl/.test(r.sel);
+
+const fsTab = valores('font-size', esTabla);
+const fsTabCrudos = [...fsTab.keys()].filter(v => /^(\.\d+|\d+\.?\d*)rem$/.test(v));
+check('ninguna regla de tabla trae un tamaño de letra en rem suelto',
+  fsTabCrudos.length === 0, fsTabCrudos);
+
+/* EL ESPACIADO DE CELDA es lo único de esta tanda que mueve algo que se ve:
+ * cambia la altura de la fila, y con ella cuántas filas caben en la pantalla.
+ * Por eso los dos valores se eligieron para que nada se mueva más de 0,8 px
+ * por lado, no para que salieran redondos. */
+const padCelda = valores('padding', r => /(?<![\w-])\b(th|td)\b/.test(r.sel));
+const padCrudos = [...padCelda.keys()].filter(v => !v.startsWith('var(') && v !== '0');
+check('ninguna CELDA trae su espaciado a pelo — eran ocho reglas con ocho ' +
+      'valores distintos, y resultaron ser dos densidades que nadie había nombrado',
+  padCrudos.length === 0, padCrudos);
+check('las dos densidades están en :root con nombre',
+  /--pad-celda:/.test(ROOT_DECL) && /--pad-celda-sm:/.test(ROOT_DECL));
+
+const lhTab = valores('line-height', esTabla);
+const lhCrudos = [...lhTab.keys()].filter(v => !v.startsWith('var(') && !v.startsWith('0'));
+check('ninguna altura de línea de tabla queda a pelo',
+  lhCrudos.length === 0, lhCrudos);
+check('...salvo el `line-height:0` de la animación de borrado de fila, que no ' +
+      'es una altura: es cómo la fila se cierra sobre sí misma al irse',
+  [...lhTab.keys()].some(v => v.startsWith('0')), [...lhTab.keys()]);
+
 console.log('\n═══ 3 · los topes ═══\n');
 
 // Las etiquetas impresas van en MILÍMETROS y son otro medio: sus escalones
@@ -270,6 +299,39 @@ const shCrudas = [...shTodos.keys()].filter(v => !v.startsWith('var('));
 check(`quedan ${shCrudas.length} sombras a pelo (el tope es ${TOPE_SOMBRAS}). ` +
       `Siguen siendo casi una por uso: es la próxima tanda, no ésta`,
   shCrudas.length <= TOPE_SOMBRAS, { ahora: shCrudas.length, tope: TOPE_SOMBRAS });
+
+/* ── LA CIFRA QUE SÍ MIDE EL AVANCE ───────────────────────────────────────
+ *
+ * Contar valores distintos no sirve para medir progreso, y costó dos tandas
+ * descubrirlo: los botones y las tablas no tenían tamaños PROPIOS —usaban los
+ * mismos que todo lo demás— así que pasarlos a token no eliminó ni un valor
+ * del archivo. La cuenta de 40 no se mueve hasta el final.
+ *
+ * Lo que sí avanza tanda a tanda es la ADOPCIÓN: cuántas de las declaraciones
+ * de tamaño de letra van por token en vez de a pelo. Esa sube con cada tanda
+ * y es la que hay que mirar.
+ *
+ * El suelo sube cada vez. Nunca baja: una tanda que deshaga trabajo hecho
+ * falla aquí. */
+const PISO_ADOPCION = 20;   // %, medido tras la tanda de tablas (v12.56)
+{
+  let porToken = 0, aPelo = 0;
+  REGLAS.forEach(r => {
+    if (/:root/.test(r.sel) || /\.lbl/.test(r.sel)) return;
+    const re = /(?<![\w-])font-size:\s*([^;}\n]+)/g;
+    let m;
+    while ((m = re.exec(r.decl))) {
+      const v = m[1].trim();
+      if (v.startsWith('var(')) porToken++;
+      else if (/^(\.\d+|\d+\.?\d*)rem$/.test(v)) aPelo++;
+    }
+  });
+  const pct = Math.round(100 * porToken / (porToken + aPelo));
+  check(`el ${pct}% de los tamaños de letra ya van por token (${porToken} de ` +
+        `${porToken + aPelo}). El suelo es ${PISO_ADOPCION}% y sube con cada tanda; ` +
+        `si esto baja, una tanda deshizo trabajo hecho`,
+    pct >= PISO_ADOPCION, { ahora: pct, piso: PISO_ADOPCION, porToken, aPelo });
+}
 
 console.log(`
   Los topes bajan tanda a tanda. Hoy sólo se hicieron los BOTONES, así que

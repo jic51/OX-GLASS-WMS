@@ -373,7 +373,27 @@ console.log('\n═══ el "Arrived" grande, y sólo en el popup ═══\n');
 {
   const base  = cssRule('.inc-status-arrived');
   const enPop = cssRule('#morningPopupBody .inc-status-arrived');
-  const tam = (r) => { const m = r.match(/font-size:\s*([\d.]+)rem/); return m ? Number(m[1]) : null; };
+  /* RESUELVE EL TOKEN, no sólo el número suelto.
+   *
+   * Desde la v12.56 los tamaños de tabla van por token —`var(--fs-xs)` en vez
+   * de `.68rem`— y esta comprobación empezó a leer `null` en los dos lados,
+   * con lo que la comparación «el del popup es mayor» pasaba a comparar nada
+   * contra nada. El contrato que guarda es de Jose y es concreto: el ARRIVED
+   * del popup más grande, el de Incoming igual que estaba. Así que lo que hay
+   * que leer es el VALOR, venga escrito como venga. */
+  const raiz = cssRule(':root') || CSS.match(/:root\s*\{([\s\S]*?)\n\s*\}/)[0];
+  const tam = (r) => {
+    if (!r) return null;
+    const m = r.match(/font-size:\s*([^;}\n]+)/);
+    if (!m) return null;
+    const v = m[1].trim();
+    const directo = v.match(/^(\.\d+|\d+\.?\d*)rem$/);
+    if (directo) return Number(directo[1].startsWith('.') ? '0' + directo[1] : directo[1]);
+    const tok = v.match(/var\(\s*(--[\w-]+)/);
+    if (!tok) return null;
+    const def = raiz.match(new RegExp(tok[1] + ':\\s*((?:\\.\\d+|\\d+\\.?\\d*))rem'));
+    return def ? Number(def[1].startsWith('.') ? '0' + def[1] : def[1]) : null;
+  };
   check('la regla del popup existe', !!enPop, enPop);
   check('...y agranda la etiqueta (' + tam(base) + 'rem → ' + tam(enPop) + 'rem)',
     tam(base) !== null && tam(enPop) !== null && tam(enPop) > tam(base));
