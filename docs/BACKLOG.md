@@ -7645,6 +7645,86 @@ un almacén que sigue sin saber qué tiene.
 
 ---
 
+# DOCUMENTOS ADJUNTOS — DOS COSAS QUE JOSE YA HABÍA DICHO (2026-10-12)
+
+Jose: *"ya habíamos hablado de eso antes"* — de las dos. **Tenía razón, y no
+estaban anotadas.** Por eso se perdieron. Aquí quedan, con la causa medida.
+
+## 1 · La vista previa recorta el documento por ARRIBA y no deja llegar
+
+Jose, con captura: la cabecera de la vista previa *"no deja ver todo el
+documento"*. En su captura falta la parte de arriba del Bill of Lading —el
+logo de ANDERSEN y la cabecera— y **hay barra de scroll, pero no sube**.
+
+**CAUSA, y no es la cabecera.** La cabecera está en una columna flex y no
+monta sobre nada. El fallo está en el contenedor de la imagen del PDF
+(`holder`, dentro de `openMediaPreview`):
+
+    display:flex; align-items:center; overflow:auto
+
+Centrar con `align-items:center` un hijo MÁS ALTO que su caja empuja su
+principio fuera del área visible **y el scroll no lo alcanza**. Es un
+comportamiento conocido de flexbox: el desbordamiento por el lado del inicio
+no es alcanzable. La barra aparece, mueve lo de abajo, y lo de arriba se
+queda inaccesible para siempre.
+
+**Arreglo:** centrar con `margin:auto` en el hijo en vez de `align-items` en
+el padre, o usar `justify-content:safe center`. Las dos conservan el centrado
+cuando la imagen CABE, y dejan de recortar cuando no.
+
+**Comprobado de paso:** la rama de imagen suelta (sin PDF) **no** tiene este
+problema — medido, 720px de imagen en 720px de caja, sin recorte. Es sólo el
+camino del PDF, que mete una barra de aviso de más y deja al `holder` sin
+altura definida contra la que resolver el `max-height:100%` de la imagen.
+
+## 2 · Las fotos pasadas a PDF salen con media hoja en blanco, y giradas
+
+Jose: *"todas las fotos que se hacen pdf salen mal, no ocupan toda la hoja,
+siempre hay una parte en blanco… y además la última imagen que subí se movió
+y sale en landscape"*.
+
+**LAS DOS SON LA MISMA CAUSA, y conviene verlo junto.**
+
+`photosToDocPdf_` mete las fotos en un Google Doc y exporta ese Doc. Escala
+con:
+
+    scale = Math.min(PAGE_W / origW, PAGE_H / origH)
+
+Eso es "contener": la imagen entra entera y toca UN borde, nunca los dos. Si
+la foto es más ancha que alta, llena el ancho y deja blanco abajo.
+
+**Y por qué es más ancha que alta aunque la tomaras de pie:** un teléfono
+guarda la foto como un mapa de bits APAISADO más una marca EXIF que dice
+"gírala 90°". Quien respeta el EXIF la enseña derecha; **`appendImage` de
+Google Docs no lo respeta** y usa el mapa de bits crudo. De ahí salen las dos
+quejas a la vez:
+
+  · entra apaisada  → *"sale en landscape"*
+  · apaisada en una hoja vertical → limita por el ancho → *"parte en blanco"*
+
+**Y queda un resto aunque se arregle el EXIF:** una foto 4:3 de pie tiene
+proporción 1,333 y la hoja Carta 1,294. Siguen sobrando dos tiras finas a los
+lados. Un Google Doc tiene UN tamaño de hoja para todo el documento, así que
+con fotos de orientaciones distintas no hay tamaño que sirva para todas.
+
+**Los dos arreglos, en orden de valor:**
+
+1. **Enderezar la foto en el NAVEGADOR antes de subirla**: dibujarla en un
+   canvas aplicando su orientación EXIF y volver a codificarla. Arregla el
+   giro en TODAS partes —la vista previa, la miniatura, el PDF— no sólo aquí,
+   y de paso la foto pesa menos. Es el que vale la pena.
+2. **Dejar de pasar por Google Docs.** Construir el PDF desde HTML
+   (`Utilities.newBlob(html,'text/html').getAs('application/pdf')`) permite
+   una hoja por imagen CON EL TAMAÑO DE ESA IMAGEN, y entonces no sobra
+   blanco en ninguna. Es más trabajo y toca un camino que hoy funciona.
+
+**Nota sobre la vista previa de varias páginas:** Jose ya sabe y acepta que
+sólo se vea la página 1 (Drive la renderiza del lado del servidor; el visor
+de PDF de Chrome es un plugin y no arranca dentro del marco aislado en el que
+Apps Script sirve la app). Eso NO es lo que pide arreglar.
+
+---
+
 # AUDITORÍA DE COLUMNAS — LO QUE QUEDÓ ABIERTO (2026-10-06)
 
 La auditoría entera está en `docs/AUDITORIA-DE-COLUMNAS.md`. Aquí sólo lo que
