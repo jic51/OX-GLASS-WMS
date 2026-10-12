@@ -97,6 +97,27 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.59</span>
+      <span class="tag fix">Fix</span>
+      <h3>Three answers that were not true</h3>
+      <p><b>The app blamed a colleague who did not exist.</b> Release a reservation, press
+         Release again, and it said <i>&ldquo;someone else got there first&rdquo;</i>. Nobody else was
+         there &mdash; you released it yourself, seconds earlier. All the code knew was that the
+         reservation was no longer active; <i>who</i> released it was a guess. Now it reads the
+         <code>UnlockedBy</code> column that was sitting there all along and says
+         <b>&ldquo;you already released this one&rdquo;</b>, or names the person, or simply says it was
+         already released. No accusations by elimination.</p>
+      <p><b>Searching said &ldquo;nothing matches&rdquo; without looking in the archive.</b> Search a PO
+         from last year and the only possible conclusion was that it does not exist. On an
+         inventory system that is worse than an error: it is a false answer wearing the face of a
+         good one. Now it says the archive has not been searched and offers a button to do it.</p>
+      <p><b>Merging two locations left reservations and photos behind.</b> It rewrote the archive
+         and the location list &mdash; everything you can see &mdash; and left the lock and photo
+         records pointing at a shelf that no longer exists. Material held on a shelf the map does
+         not show, and photos the surviving shelf never inherits. Both move now.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.58</span>
       <span class="tag fix">Fix</span>
       <h3>Four things found by filming the app on a phone</h3>

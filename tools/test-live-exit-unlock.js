@@ -187,24 +187,43 @@ console.log('\n═══ desbloquear algo que otro ya desbloqueó no es un error
   check('EL SERVIDOR YA NO LANZA: devuelve éxito. La persona quería el material ' +
         'desbloqueado y está desbloqueado — que lo consiguiera otro no lo ' +
         'convierte en un fallo suyo',
-    /return \{ status: 'success', alreadyGone: true \}/.test(fn) &&
+    /return \{ status: 'success', alreadyGone: true[,}]/.test(fn) &&
     !/throw new Error\('Lock not found/.test(fn));
 
   const cli = fnSrc(SRC, '_doUnlockMaterial');
   check('el navegador distingue los dos casos para poder decirlo con otras ' +
         'palabras', /res && res\.alreadyGone/.test(cli));
+  /* `Already released` a secas dejó de existir en la v12.59: la frase acusaba a
+   * «someone else» por descarte, y trabajando solo eso es falso. Ahora hay tres
+   * frases para tres cosas que SÍ se pueden saber. Lo que esta comprobación
+   * protege no es el texto: es que NINGUNA de ellas diga «Error». */
   check('...y no dice "Error" en ninguno de los dos',
     !/showToast\('Error[\s\S]{0,80}alreadyGone/.test(cli) &&
-    /Already released/.test(cli));
+    /already released/i.test(cli));
 
   // LO QUE DE VERDAD ARREGLA EL CANDADO PINTADO: que este caso pase por el
   // manejador de ÉXITO, que ya quitaba el candado y repintaba. El de FALLO no
   // hacía nada de eso, y por eso el candado se quedaba en pantalla con la
   // palabra "Unlock" al lado.
   const exito = cli.slice(cli.indexOf('withSuccessHandler'), cli.indexOf('withFailureHandler'));
-  check('EL CANDADO DESAPARECE DE LA PANTALLA: el camino de éxito lo quita de ' +
-        'la lista...', /materialLocks = materialLocks\.filter/.test(exito));
-  check('...reconstruye el índice...', /_rebuildLocksIndex\(\)/.test(exito));
+  /* ── ESTAS DOS SE REESCRIBIERON EN LA v12.59, Y CONVIENE DECIR POR QUÉ ──────
+   *
+   * Medían la FORMA del código —`materialLocks = materialLocks.filter` y
+   * `_rebuildLocksIndex()` escritos aquí mismo— y las dos cosas se mudaron a
+   * `_aplicarCandados`, una función que hace eso y además obedece la lista real
+   * que ahora manda el servidor. El comportamiento que esta prueba protege
+   * sigue intacto; lo que cambió es dónde está escrito.
+   *
+   * Así que ahora se comprueba lo que importa —que el camino de éxito ACTUALICE
+   * la lista de candados— y, aparte, que esa función haga las dos cosas. Medir
+   * la línea exacta en vez del efecto es el error que este repositorio ya tiene
+   * anotado varias veces; aquí lo pagó una prueba ajena al cambio. */
+  check('EL CANDADO DESAPARECE DE LA PANTALLA: el camino de éxito actualiza la ' +
+        'lista de candados', /_aplicarCandados\(res,/.test(exito), exito);
+  const aplicar = fnSrc(SRC, '_aplicarCandados');
+  check('...y esa función quita lo soltado y reconstruye el índice',
+    /materialLocks = materialLocks\.filter/.test(aplicar) &&
+    /_rebuildLocksIndex\(\)/.test(aplicar), aplicar);
   check('...y repinta el estante abierto y el mapa — esto es lo que faltaba, y ' +
         'no había que escribirlo: ya existía en el camino equivocado',
     /openRackDrawer/.test(exito) && /renderWarehouseMap\(\)/.test(exito));
@@ -241,8 +260,14 @@ console.log('\n═══ desbloquear algo que otro ya desbloqueó no es un error
   const doUnlock = fnSrc(SRC, '_doUnlockMaterial');
   check('y al soltarlo el aviso dice QUÉ se soltó, no sólo que se soltó',
     /lock && lock\.name/.test(doUnlock));
-  check('...leyéndolo ANTES de quitarlo de la lista, porque después ya no está',
-    doUnlock.indexOf('_lockById(lockId)') < doUnlock.indexOf('materialLocks.filter'));
+  /* El orden sigue importando por la misma razón; lo que cambió de nombre es lo
+   * que viene después. La lista ya no se recorta con un `filter` escrito aquí:
+   * la actualiza `_aplicarCandados` con lo que manda el servidor. Leer el
+   * candado después de eso devolvería nada, igual que antes. */
+  check('...leyéndolo ANTES de actualizar la lista, porque después ya no está',
+    doUnlock.indexOf('_lockById(lockId)') !== -1 &&
+    doUnlock.indexOf('_aplicarCandados(') !== -1 &&
+    doUnlock.indexOf('_lockById(lockId)') < doUnlock.indexOf('_aplicarCandados('));
 }
 
 console.log('\n' + '─'.repeat(72));

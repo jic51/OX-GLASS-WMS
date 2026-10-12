@@ -127,7 +127,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.58';
+var APP_VERSION = '12.59';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -139,7 +139,7 @@ var APP_VERSION = '12.58';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '83a78ea1';
+var APP_BUILD = 'c215d3bd';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -7848,6 +7848,27 @@ function lockMaterial(data, auth) {
   return { status: 'success', lock: { id: id, matId: matId, category: data.category, name: data.name, rack: rack, allowedDest: allowedDest, reason: reason, lockedBy: auth.email, lockedAt: nowStr } };
 }
 
+/* EL ESTADO DE VERDAD, EN LA MISMA RESPUESTA.
+ *
+ * Jose, vídeo del 05/10: el cartel de reservas ofrecía soltar cosas que ya
+ * estaban sueltas, y al pulsarlas el servidor —que sí estaba al día— contestaba
+ * lo único que sabía. El cartel no se quedaba viejo por un fallo de pintado:
+ * se quedaba viejo porque el navegador adivinaba el estado nuevo quitando de
+ * su lista lo que creía haber soltado, y adivinar es exactamente lo que falla
+ * cuando no aciertas.
+ *
+ * Esto devuelve la lista REAL de candados activos con cada soltada. El
+ * navegador deja de deducir y pasa a obedecer.
+ *
+ * Y NO CUESTA UNA LLAMADA MÁS NI CUOTA: `getMaterialLocks` lee una hoja que
+ * estas funciones ya acaban de tocar, y va dentro de la respuesta que ya se
+ * estaba enviando. Es el mismo trato que `addMovementsBatch_` hace con
+ * `stockAfter` desde la v12.50 — el servidor sabe cómo queda la cosa, así que
+ * lo dice en vez de dejar que el otro lado lo suponga. */
+function candadosDespues_() {
+  try { return getMaterialLocks(); } catch (e) { Logger.log('candadosDespues_: ' + e.message); return null; }
+}
+
 function unlockMaterial(data, auth) {
   auth = requireAuth_('ADMIN');   // ignores any caller-supplied `auth` — see requireAuth_
   var ss    = SpreadsheetApp.getActiveSpreadsheet();
@@ -7859,7 +7880,7 @@ function unlockMaterial(data, auth) {
       sheet.getRange(i + 1, 10, 1, 3).setValues([['Removed', auth.email, new Date()]]);
       auditLog_(ss, 'UNLOCK_MATERIAL', auth.email, String(rows[i][3]) + ' @ ' + String(rows[i][4]), '', '');
       CacheService.getScriptCache().remove('materialLocksV1');
-      return { status: 'success' };
+      return { status: 'success', locksAfter: candadosDespues_() };
     }
   }
   // NO ES UN ERROR: EL OBJETIVO SE CUMPLIÓ.
@@ -7883,7 +7904,35 @@ function unlockMaterial(data, auth) {
   //
   // `alreadyGone` es para poder decirlo con otras palabras, no para decidir
   // nada distinto.
-  return { status: 'success', alreadyGone: true };
+  //
+  // ── Y DESDE LA v12.59 DICE QUIÉN, PORQUE LO SABE ──────────────────────────
+  //
+  // Jose, con vídeo del 05/10: soltó una reserva, volvió a pulsar, y la app le
+  // contestó «someone else got there first». NO HABÍA NADIE MÁS. Estaba solo.
+  // La había soltado él, segundos antes, en esa misma pantalla.
+  //
+  // El fallo no era el dato: era la CONCLUSIÓN. Lo único que este código sabía
+  // es que la reserva ya no estaba activa; de ahí a «alguien se te adelantó»
+  // hay un salto que nadie puede dar, y trabajando solo —que es el caso normal
+  // de una bodega pequeña— ese salto es FALSO y manda a buscar a un compañero
+  // que no ha tocado nada.
+  //
+  // Y la columna 11 de esta misma hoja (`UnlockedBy`) tenía la respuesta
+  // escrita desde el principio. Sólo había que leerla y devolverla.
+  //
+  // Hermano de «una guardia que dice que sí»: aquí es UN MENSAJE QUE SUPONE.
+  var quien = '', cuando = '';
+  for (var j = 1; j < rows.length; j++) {
+    if (String(rows[j][0]) === String(data.id)) {
+      quien  = String(rows[j][10] || '').trim();
+      cuando = rows[j][11] ? new Date(rows[j][11]).toISOString() : '';
+      break;
+    }
+  }
+  return { status: 'success', alreadyGone: true, locksAfter: candadosDespues_(),
+           unlockedBy: quien, unlockedAt: cuando,
+           // El navegador no tiene por qué saber comparar correos: se le dice.
+           unlockedByYou: !!quien && quien.toLowerCase() === String(auth.email || '').toLowerCase() };
 }
 
 /** Soltar VARIAS reservas de una pasada.
@@ -7909,7 +7958,7 @@ function unlockMaterials(data, auth) {
 
   var ss    = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName('MATERIAL_LOCKS');
-  if (!sheet) return { status: 'success', released: 0, alreadyGone: ids.length };
+  if (!sheet) return { status: 'success', released: 0, alreadyGone: ids.length, locksAfter: [] };
 
   var pedidas = {};
   ids.forEach(function(id){ pedidas[id] = true; });
@@ -7925,8 +7974,25 @@ function unlockMaterials(data, auth) {
     soltadas++;
   }
   if (soltadas) CacheService.getScriptCache().remove('materialLocksV1');
+
+  /* QUIÉN SOLTÓ LAS QUE YA ESTABAN SUELTAS. Misma razón que en
+   * `unlockMaterial`: el mensaje decía «had already been released by someone
+   * else» y en el vídeo de Jose ese «someone else» era él mismo. Se cuentan
+   * aparte las que soltó quien pregunta, para poder decir la verdad en vez de
+   * una deducción. */
+  var porTi = 0, porOtros = 0;
+  if (ids.length - soltadas > 0) {
+    var yo = String(auth.email || '').toLowerCase();
+    for (var k = 1; k < rows.length; k++) {
+      if (!pedidas[String(rows[k][0])]) continue;
+      if (String(rows[k][9] || '').toUpperCase() === 'ACTIVE') continue;  // ésta sí se soltó ahora
+      var q = String(rows[k][10] || '').trim().toLowerCase();
+      if (q && q === yo) porTi++; else porOtros++;
+    }
+  }
   return { status: 'success', released: soltadas,
-           alreadyGone: ids.length - soltadas };
+           alreadyGone: ids.length - soltadas, locksAfter: candadosDespues_(),
+           yaSoltadasPorTi: porTi, yaSoltadasPorOtros: porOtros };
 }
 
 // ─── DOCUMENT UPLOAD ─────────────────────────────────────────────────────────
@@ -12453,6 +12519,34 @@ function mergeLocations(data, auth) {
   return withStockLock_(function () { return mergeLocationsLocked_(data, auth, into, from); });
 }
 
+/** Reapunta una columna de nombres de ubicación de una hoja pequeña.
+ *
+ *  `col` es 0-based. `wanted` son los nombres que desaparecen, ya en mayúsculas.
+ *  Devuelve cuántas celdas cambiaron; 0 si no había nada que mover, y entonces
+ *  no se escribe.
+ *
+ *  Una sola lectura y una sola escritura: estas hojas tienen decenas de filas,
+ *  no miles, así que celda a celda serían decenas de viajes a Sheets para algo
+ *  que cabe en dos.
+ *
+ *  Sin comilla de texto a propósito, igual que `mergeLocationsLocked_` hace con
+ *  el archivo: la pone quien escribe en el borde, y ponerla dos veces deja una
+ *  DENTRO del valor. Lo cazó `test-text-stays-text.js` el día que se escribió
+ *  aquel arreglo y la lección vale igual aquí.
+ */
+function reapuntarColumna_(sheet, col, wanted, into) {
+  if (!sheet || sheet.getLastRow() < 2) return 0;
+  var rango = sheet.getRange(2, col + 1, sheet.getLastRow() - 1, 1);
+  var vals  = rango.getValues();
+  var n = 0;
+  for (var i = 0; i < vals.length; i++) {
+    var cur = String(vals[i][0] || '').trim();
+    if (cur && wanted[cur.toUpperCase()]) { vals[i][0] = into; n++; }
+  }
+  if (n) rango.setValues(vals);
+  return n;
+}
+
 function mergeLocationsLocked_(data, auth, into, from) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var wanted = {};
@@ -12510,9 +12604,48 @@ function mergeLocationsLocked_(data, auth, into, from) {
     writeConfigColumns_(cfg, 3, [names, types]);   // emparejadas, en una escritura
   }
 
+  /* ── LO QUE NO SE VE TAMBIÉN SE MUEVE ──────────────────────────────────────
+   *
+   * Jose, 2026-10-12: *"al fusionar las ubicaciones, todos los documentos,
+   * fotos y candados se quedan con la ubicación que queda. ¿Eso es todo, o
+   * no?"* — No lo era.
+   *
+   * Hasta hoy esta función reescribía el archivo, el histórico y la lista de
+   * CONFIG. O sea, todo lo que se ve en una pantalla. Y dejaba intactas dos
+   * hojas que también guardan el nombre del estante:
+   *
+   *   MATERIAL_LOCKS  columna E (Rack) — una reserva puesta en «A1A» seguía
+   *                   diciendo A1A después de fusionarla. MATERIAL APARTADO EN
+   *                   UN ESTANTE QUE YA NO EXISTE: el mapa no lo enseña, el
+   *                   cartel de reservas lo cuenta, y nadie puede soltarlo
+   *                   desde el estante porque el estante no está.
+   *   RACK_PHOTOS     columna A (Location) — las fotos del estante se quedaban
+   *                   colgadas de un nombre muerto, así que el estante
+   *                   superviviente perdía sus fotos sin que nada avisara.
+   *
+   * Es el mismo patrón que este repositorio ya tiene contado: la mitad que se
+   * ve se arregla y la que no se ve se queda. Jose: *"hay que arreglar eso
+   * entonces."*
+   *
+   * Se escribe columna a columna y sólo si hay algo que cambiar: estas dos
+   * hojas son pequeñas, pero una escritura que no cambia nada es cuota
+   * gastada en nada.
+   */
+  var candadosMovidos = 0, fotosMovidas = 0;
+  try { candadosMovidos = reapuntarColumna_(ss.getSheetByName('MATERIAL_LOCKS'), 4, wanted, storedInto); }
+  catch (eL) { Logger.log('merge · MATERIAL_LOCKS: ' + eL.message); }
+  try { fotosMovidas    = reapuntarColumna_(ss.getSheetByName('RACK_PHOTOS'),    0, wanted, storedInto); }
+  catch (eF) { Logger.log('merge · RACK_PHOTOS: ' + eF.message); }
+  if (candadosMovidos) { try { CacheService.getScriptCache().remove('materialLocksV1'); } catch (eC) {} }
+
   refreshOrDefer_(ss, data);
-  auditLog_(ss, 'MERGE_LOCATIONS', auth.email, from.join(' + ') + ' → ' + into, String(rowsChanged) + ' cells', '');
-  return { status: 'success', rowsChanged: rowsChanged, into: into };
+  auditLog_(ss, 'MERGE_LOCATIONS', auth.email, from.join(' + ') + ' → ' + into,
+            String(rowsChanged) + ' cells',
+            candadosMovidos || fotosMovidas
+              ? (candadosMovidos + ' reservation(s), ' + fotosMovidas + ' photo(s) moved too')
+              : '');
+  return { status: 'success', rowsChanged: rowsChanged, into: into,
+           locksMoved: candadosMovidos, photosMoved: fotosMovidas };
 }
 
 // ─── COLUMN LABELS AND VISIBILITY ────────────────────────────────────────────

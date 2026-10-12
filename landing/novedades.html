@@ -98,6 +98,28 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.59</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Tres respuestas que no eran verdad</h3>
+      <p><b>La app culpaba a un compa&ntilde;ero que no exist&iacute;a.</b> Sueltas una reserva, vuelves a
+         pulsar Release, y dec&iacute;a <i>&laquo;someone else got there first&raquo;</i>. No hab&iacute;a nadie
+         m&aacute;s &mdash; la hab&iacute;as soltado t&uacute;, segundos antes. Lo &uacute;nico que el c&oacute;digo sab&iacute;a es que ya
+         no estaba activa; <i>qui&eacute;n</i> la solt&oacute; era una suposici&oacute;n. Ahora lee la columna
+         <code>UnlockedBy</code> que llevaba ah&iacute; desde el principio y dice <b>&laquo;la soltaste
+         t&uacute;&raquo;</b>, o nombra a la persona, o simplemente dice que ya estaba suelta. Sin acusar a
+         nadie por descarte.</p>
+      <p><b>Buscar dec&iacute;a &laquo;no hay nada&raquo; sin mirar en el archivo.</b> Buscas un PO del a&ntilde;o
+         pasado y la &uacute;nica conclusi&oacute;n posible era que no existe. Sobre un sistema de inventario
+         eso es peor que un error: es una respuesta falsa con cara de respuesta buena. Ahora dice
+         que el archivo no se ha buscado y ofrece un bot&oacute;n para hacerlo.</p>
+      <p><b>Fusionar dos ubicaciones dejaba atr&aacute;s las reservas y las fotos.</b> Reescrib&iacute;a el
+         archivo y la lista de ubicaciones &mdash;todo lo que se ve&mdash; y dejaba los candados y
+         las fotos apuntando a un estante que ya no existe. Material apartado en un estante que el
+         mapa no ense&ntilde;a, y fotos que el estante superviviente nunca hereda. Ahora se mueven los
+         dos.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.58</span>
       <span class="tag fix">Arreglo</span>
       <h3>Cuatro cosas encontradas grabando la app en un tel&eacute;fono</h3>
