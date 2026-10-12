@@ -102,6 +102,37 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.62</span>
+      <span class="tag ui">UI</span>
+      <h3>The same label stops looking like two labels</h3>
+      <p><b>&ldquo;Arrived&rdquo; is one label, and it was drawn two ways.</b> In the incoming
+         table its green capsule had one amount of padding; inside the morning popup, the same
+         label had another. Nothing in the app required them to match, so they didn't. Twenty rules
+         across the app draw that same thing &mdash; a short word or a number inside a coloured
+         capsule &mdash; and between the twenty there were <b>fourteen different paddings, ten text
+         sizes and six corner radii</b>. Now there is one capsule. The morning popup still uses
+         bigger text, because you read it from further away, but the capsule around it is the same
+         one as everywhere else.</p>
+      <p><b>The corners were free.</b> These capsules are 16 to 22 pixels tall, and anything above
+         a 10&nbsp;pixel radius already rounds them completely &mdash; so 10, 16, 20 and 999 looked
+         <i>identical</i>. Four values became one and nothing moved by a pixel. The three that stay
+         square stay square on purpose: they are counters, not labels, and that is how you tell
+         them apart at a glance.</p>
+      <p><b>And the small line under a bigger line.</b> Fourteen places put a quiet second line
+         under a title &mdash; a date under a name, an email under a user, a note under a card
+         &mdash; using three different gaps. One job, one gap.</p>
+      <p><b>Underneath, the spacing got a scale.</b> 697 paddings, margins and gaps with 57
+         different lengths between them, and the same illness the text sizes had: between 4.8 and
+         12 pixels there were <i>ten</i> values each used thirty times or more, spaced eight tenths
+         of a pixel apart. Nobody can see eight tenths of a pixel. This release converts only the
+         355 declarations that land exactly on a step, so nothing moves at all &mdash; verified in
+         a real browser, 504 rules resolved before and after, zero differences. The ones that would
+         move are counted and named for next time.</p>
+      <p>Visible change in total: twenty capsules whose side padding shifts by at most two pixels,
+         in exchange for all of them finally matching.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.61</span>
       <span class="tag ui">UI</span>
       <h3>Four depths instead of forty-five shadows</h3>

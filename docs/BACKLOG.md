@@ -82,6 +82,18 @@ que un ✅ optimista.
 17. El salto pequeño que queda al cargar más — **esperando el vídeo de Jose**.
 18. La columna DOC: dos al lado y una flecha, en vez de apilarse.
 19. Las etiquetas no se pueden apagar.
+20. **El espaciado mezcla `px` y `rem` para la misma distancia, y eso se
+    descuadra con el texto grande del teléfono.** Medido el 12/10/2026 en la
+    v12.62: hay 17 longitudes en `px` dentro de `padding`/`margin`/`gap`, y casi
+    todas tienen gemela en `rem` —`8px` y `.5rem` miden lo mismo, `12px` y
+    `.75rem` también—. Sólo miden lo mismo **si el navegador está en su tamaño
+    de letra por defecto**: si el lector lo sube (la opción de texto grande de
+    Android o de iOS), el `rem` crece y el `px` no. El resultado es que un
+    relleno crece y el de al lado no, y el ritmo se descuadra de forma
+    desigual. Por eso la tanda de espaciado **no** cambió ningún `px` por su
+    gemelo en `rem`: no es limpieza, es decidir si el espaciado debe crecer con
+    la letra. Lo primero es **mirarlo**: cargar la app con el root a 20 px y ver
+    qué se rompe. Después se decide.
 
 ### 🔴 Abierto, mediano
 
