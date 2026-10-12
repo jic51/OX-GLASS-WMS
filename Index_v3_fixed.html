@@ -575,6 +575,54 @@
     .rdw-lock-badge{flex-shrink:0;font-size:.9rem;cursor:default}
     .rdw-lock-btn{flex-shrink:0;font-size:var(--fs-xs);font-weight:700;background:var(--border);color:var(--text);border:none;border-radius:var(--r-btn);padding:2px 7px;cursor:pointer;white-space:nowrap;transition:.15s}
     .rdw-lock-btn:hover{background:var(--red);color:#fff}
+    /* ── EL NOMBRE DEL MATERIAL, QUE ERA LO ÚNICO QUE NO SE PODÍA LEER ──────
+     *
+     * Jose, 2026-10-12, con un vídeo del teléfono: los nombres salían como
+     * "P…", "L…", "LGI…", "KA…". Uno o tres caracteres.
+     *
+     * LA CAUSA ESTABA EN UNA LÍNEA. `.rdw-name` tiene `flex:1` —o sea que
+     * puede encogerse— y TODO lo demás de la fila lleva `flex-shrink:0`: el
+     * punto de color, la cantidad, el total y el botón de reservar. Cuando el
+     * cajón se estrecha, el nombre es lo ÚNICO que cede, y cede hasta
+     * desaparecer. En un teléfono el cajón mide unos 262 px y al nombre le
+     * quedaban unos 60.
+     *
+     * Y POR QUÉ IMPORTA MÁS DE LO QUE PARECE: ésta es la pantalla desde la
+     * que se pulsa «Exit». Se estaba sacando material del almacén sin poder
+     * leer cuál. El dato que decide la acción era el único invisible.
+     *
+     * El arreglo no es darle más sitio quitándoselo a otro —en 262 px no hay
+     * reparto que alcance— sino darle LA LÍNEA ENTERA y bajar lo demás. Una
+     * fila de dos líneas en un teléfono no cuesta nada; una equivocación de
+     * inventario sí.
+     *
+     * Sólo en pantalla estrecha. En el escritorio el cajón mide 400 px y ahí
+     * la fila de una línea entra bien y se lee entera. */
+    @media (max-width:560px){
+      /* EL ANCHO NO SE TOCA. Lo puse en 92vw y `test-responsive-polish.js` me
+         paró en seco: los dos tercios los decidió Jose en la v9.89, y el
+         comentario de esa prueba lo dice con todas las letras — "wider than
+         the other two on purpose (Jose's own distinction), not nearly the
+         whole screen either".
+         Y resulta que no hacía falta: apilando la fila, el nombre pasa de
+         ~60px a ~225px dentro de los mismos 262px del cajón. Mi cambio no
+         arreglaba nada que esto no arregle ya, y encima deshacía una decisión
+         suya. La prueba hizo exactamente su trabajo. */
+      .rdw-item{flex-wrap:wrap;row-gap:.3rem}
+      /* La línea entera para el nombre: con 100% menos lo que ocupa el punto,
+         empuja a los demás a la fila de abajo. */
+      /* 1.6rem y no 1.1: el punto mide 10px y el hueco entre elementos es
+         .5rem (8px), o sea 18px en total. Con `calc(100% - 1.1rem)` —17,6px—
+         me quedaba corto por cuatro décimas de píxel y el punto se caía a su
+         propia línea, encima del nombre. Medido en el navegador, no a ojo. */
+      .rdw-name{flex:1 0 calc(100% - 1.6rem);white-space:normal;overflow:visible;
+                text-overflow:clip;font-size:var(--fs-base)}
+      /* Y los números se alinean con el nombre, no con el punto. */
+      .rdw-rack-qty{margin-left:1.6rem}
+      /* El botón de reservar al final de su fila, para que la cantidad y el
+         total queden juntos y se lean como una sola cosa. */
+      .rdw-lock-btn,.rdw-lock-badge{margin-left:auto}
+    }
     .rack-drawer-overlay{display:none;position:fixed;inset:0;z-index:var(--z-drawer-back);background:rgba(0,0,0,.3)}
     .rack-drawer-overlay.open{display:block}
     /* ── ALERTS ── */
@@ -733,7 +781,31 @@
        que girar signifique lo mismo en toda la app. */
     .top-banner .tb-spin{width:12px;height:12px;border:2px solid rgba(255,255,255,.4);
       border-top-color:#fff;border-radius:50%;display:inline-block;animation:btnspin .7s linear infinite}
-    .modal{--mpad:1.75rem;background:var(--card);border-radius:14px;padding:0 var(--mpad) var(--mpad);width:100%;max-width:min(640px,92vw);max-height:90vh;overflow-y:auto;scrollbar-gutter:stable;box-shadow:0 12px 30px rgba(0,0,0,.25)}
+    /* ── EL TECLADO Y EL BOTÓN DE GUARDAR ───────────────────────────────────
+     *
+     * Jose, 2026-10-12, con vídeo del teléfono: abre el formulario de salida,
+     * toca un campo, sale el teclado y el botón de guardar no está por ningún
+     * lado. Hay que cerrar el teclado y buscarlo.
+     *
+     * Y NO ERA QUE FALTARA LA BARRA FIJA: `.modal-actions` es `position:sticky;
+     * bottom:…` desde hace versiones y funciona. El fallo estaba aquí, en una
+     * sola letra.
+     *
+     * `vh` en Android NO ENCOGE cuando sale el teclado. Es el "large viewport":
+     * mide la pantalla entera a propósito, para que una página no dé saltos
+     * cada vez que aparece y desaparece la barra del navegador. O sea que la
+     * ventana seguía midiendo el 90% de la pantalla COMPLETA, y su barra fija
+     * se quedaba pegada al fondo de una ventana que continúa por debajo del
+     * teclado. Fija, sí — pero fija donde no se ve.
+     *
+     * `dvh` es el "dynamic viewport": el que SÍ encoge con el teclado. Con él
+     * la ventana se recorta a lo que de verdad queda visible y su barra de
+     * botones vuelve a quedar donde tiene que estar, justo encima del teclado.
+     *
+     * Las dos líneas, y en este orden: un navegador que no entienda `dvh`
+     * ignora la segunda y se queda con `vh`, que es exactamente como se
+     * comporta hoy. No puede empeorar en ningún sitio. */
+    .modal{--mpad:1.75rem;background:var(--card);border-radius:14px;padding:0 var(--mpad) var(--mpad);width:100%;max-width:min(640px,92vw);max-height:90vh;max-height:90dvh;overflow-y:auto;scrollbar-gutter:stable;box-shadow:0 12px 30px rgba(0,0,0,.25)}
     /* Standardized size tiers (scale with viewport via min(), never grow past
        that from content) — every popup uses one of these three instead of an
        ad-hoc per-modal pixel value. Content still picks the tier that fits it
@@ -2220,16 +2292,82 @@
     /* Arriving from off-screen right. The card is already at its resting size
        when it lands, so it does not grow and slide at the same time — one
        movement at a time is what makes either of them readable. */
-    @keyframes deck-in-rest{from{transform:translateX(150%) scale(.88);opacity:0}to{transform:scale(.88);opacity:1}}
-    @keyframes deck-in-open{from{transform:translateX(150%);opacity:0}to{transform:none;opacity:1}}
-    .deck:not(.open) .deck-card.entering{animation:deck-in-rest var(--deck-in) var(--deck-ease) both}
-    .deck.open .deck-card.entering{animation:deck-in-open var(--deck-in) var(--deck-ease) both}
+    /* ── UNA ENTRADA, Y DOS SALIDAS QUE SIGNIFICAN COSAS DISTINTAS ──────────
+     *
+     * Jose, 2026-10-12: "hay 2 movimientos de entrada y 1 de salida, no debe
+     * ser asi". Tenía razón. Había DOS animaciones de entrada:
+     *
+     *     deck-in-rest   — con el mazo cerrado, acaba en scale(.88)
+     *     deck-in-open   — con el mazo abierto, acaba en scale(1)
+     *
+     * Existían porque la tarjeta descansa al 88% cerrada y al 100% abierta, y
+     * una animación de keyframes tiene que terminar en un sitio CONCRETO. Tres
+     * problemas salían de ahí:
+     *
+     *   · Dos cosas que tienen que coincidir sin que nada lo obligue — el
+     *     patrón que este repositorio ya tiene contado ocho veces.
+     *   · Si el mazo se ABRÍA mientras una tarjeta entraba, la regla que
+     *     aplica cambiaba a media animación y la tarjeta PEGABA UN SALTO.
+     *   · La entrada era `animation` y la salida `transition`. Dos mecanismos
+     *     para el mismo movimiento, y por eso entrar y salir no se sentían
+     *     igual aunque el tiempo fuera el mismo.
+     *
+     * AHORA ES UNA TRANSICIÓN, como la salida. La tarjeta nace desplazada a la
+     * derecha; al quitarle la clase en el cuadro siguiente transiciona hacia
+     * SU transform normal — `scale(.88)` cerrada, `none` abierta — porque la
+     * regla de reposo ya existe (`.deck:not(.open) .deck-card`). Un solo
+     * bloque sirve para los dos estados, así que no hay nada que pueda
+     * desincronizarse, y si el mazo se abre a media entrada la transición
+     * simplemente cambia de destino sin saltar: eso es lo que una transición
+     * hace y una animación no.
+     *
+     * Los dos selectores son para ganarle en especificidad a la regla de
+     * reposo (0-3-0). Son dos selectores de UN MISMO bloque, que no es lo
+     * mismo que dos bloques: no hay dos verdades que mantener de acuerdo. */
+    .deck:not(.open) .deck-card.llegando,
+    .deck.open .deck-card.llegando{transform:translateX(150%) scale(.88);opacity:0}
+
+    /* ── LA DIRECCIÓN DICE QUÉ PASÓ ─────────────────────────────────────────
+     *
+     * Idea de Jose, y el fundamento es correcto: hasta hoy la tarjeta se iba
+     * POR DONDE VINO —hacia la derecha— tanto si la aceptabas como si la
+     * descartabas. Irse hacia atrás se lee como "deshacer", que es justo lo
+     * contrario de lo que pasa cuando algo se guarda.
+     *
+     *   ACEPTADA  → sigue de largo hacia la IZQUIERDA, hacia dentro de la
+     *               app, mientras se desvanece. "Esto entró al sistema."
+     *   DESCARTADA → se desvanece SIN MOVERSE. "Esto no hizo nada."
+     *
+     *       se mueve = algo pasó  ·  no se mueve = no pasó nada
+     *
+     * MUEVE POCO, y es deliberado. Jose propuso que cruzara; una tarjeta
+     * volando media pantalla por encima del mapa de la bodega es ruido, y la
+     * dirección se lee igual de bien con un palmo que con media pantalla. Lo
+     * justo para entenderla.
+     *
+     * Y la descartada NO desaparece de golpe, que es lo que Jose propuso
+     * primero: una tarjeta que se borra en un cuadro, con las de abajo
+     * saltando a llenar el hueco, parece que la app se rompió en vez de que
+     * tomaste una decisión. Desvanecerse en su sitio conserva entera la
+     * distinción que él quería —se mueve / no se mueve— sin parecer una
+     * avería. Si al verlo prefiere el corte seco, es quitar la transición de
+     * opacidad de esta regla y ya está.
+     *
+     * Las dos devuelven su altura igual (margin-bottom negativo), para que lo
+     * de abajo suba con suavidad en los dos casos. Eso no es decoración: sin
+     * ello el resto del mazo da un salto. */
+    .deck-card.saliendo-aceptada,
+    .deck-card.saliendo-descartada{opacity:0;pointer-events:none;
+      margin-bottom:calc(-1 * (var(--card-h) + .45rem));transition-delay:0s!important}
+    .deck-card.saliendo-aceptada{transform:translateX(-22%) scale(.94)}
     /* Leaving. The card slides out to the right and gives its height back over
        the same beat, so everything below rises into the gap instead of jumping.
        margin-bottom is what moves the others: shrinking it by the card's own
        height pulls the whole column up, and because it is on the transition
        list above it does it over time rather than in one frame. */
-    .deck-card.leaving{opacity:0;transform:translateX(150%) scale(.9);margin-bottom:calc(-1 * (var(--card-h) + .45rem));pointer-events:none;transition-delay:0s!important}
+    /* `.leaving` se retiró en la v12.58. Era la salida ÚNICA —hacia la
+       derecha, por donde la tarjeta había venido— y la sustituyen las dos de
+       arriba, que dicen cosas distintas. */
     .sys-card{--card-h:112px;--card-w:352px;cursor:pointer}
 
     /* ── LA TARJETA DE ENTRADA PENDIENTE ──────────────────────────────────────
@@ -3006,6 +3144,38 @@
     /* ── RESPONSIVE ── */
     @media(max-width:768px){
       .topbar{padding:.7rem 1rem .6rem}
+
+      /* ── LA CABECERA SE ENCOGE AL BAJAR ─────────────────────────────────
+       *
+       * Jose, 2026-10-12, con vídeo del teléfono: medido sobre su captura, el
+       * logo + «OX Glass LLC.» + la insignia Acopio + las DOS filas de
+       * pestañas ocupan cerca del 28% de la pantalla, y están ahí siempre.
+       * Antes de ver un solo dato ya has perdido casi un tercio del teléfono.
+       *
+       * El modo compacto YA EXISTE (`.topbar.merged`) y está apagado a
+       * propósito por debajo de 769 px — ver `_syncBrandWidth`. Y con razón:
+       * mete la marca DENTRO de la fila de pestañas, y en un teléfono eso no
+       * cabe. Así que esto no lo enciende; hace otra cosa.
+       *
+       * QUÉ SE VA Y QUÉ SE QUEDA. Se van el nombre de la empresa y la
+       * insignia: los lees UNA vez al abrir y no vuelven a decirte nada. Se
+       * queda el logo, encogido — es lo que confirma de un vistazo que estás
+       * en la app correcta, que importa cuando tienes doce pestañas abiertas,
+       * como se ve en el vídeo.
+       *
+       * Vuelven al subir, porque subir es el gesto de «llévame al principio».
+       *
+       * `max-height` en vez de `display:none`: lo segundo no se puede animar y
+       * la cabecera daría un salto seco. Y `overflow:hidden` para que el texto
+       * no se desborde mientras encoge. */
+      .topbar{transition:padding .18s ease}
+      .topbar.compacta{padding-top:.35rem;padding-bottom:.35rem}
+      .topbar.compacta #appTitle,
+      .topbar.compacta .brand-mark{max-height:0;opacity:0;margin:0;overflow:hidden}
+      .topbar #appTitle,.topbar .brand-mark{max-height:60px;opacity:1;
+        transition:max-height .18s ease,opacity .14s ease}
+      .topbar.compacta .app-logo{transform:scale(.72);transform-origin:left center}
+      .topbar .app-logo{transition:transform .18s ease}
       .nav button{flex-grow:1;text-align:center;min-height:var(--h-btn-sm)}
       .toolbar{flex-direction:column;align-items:stretch;width:100%}
       .toolbar input,.toolbar select,.toolbar button{width:100%}
@@ -4687,7 +4857,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.57';
+var APP_VERSION = '12.58';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -4699,7 +4869,7 @@ var APP_VERSION = '12.57';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '28e22c97';
+var APP_BUILD = '83a78ea1';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -6782,6 +6952,45 @@ function _syncProductLinks(productName){
 // fixed pixel breakpoint keeps being wrong — this is a measure-then-verify
 // pass, not a guess, exactly like _tipPlace's edge avoidance elsewhere
 // in this file.
+/* ── EL BLOQUE DE MARCA SE RETIRA AL BAJAR, EN EL TELÉFONO ─────────────────
+ *
+ * Ver el comentario del CSS. Aquí sólo está el disparador, y tiene tres
+ * cuidados que no son adorno:
+ *
+ *  · SÓLO por debajo de 769 px. En el escritorio la cabecera no estorba y
+ *    `.topbar.merged` ya se ocupa de ella; encogerla también sería dos
+ *    sistemas peleando por lo mismo.
+ *  · HISTÉRESIS: se encoge pasando de 60 px y se despliega por debajo de 20,
+ *    no en el mismo número. Con un solo umbral, un dedo quieto a 60 px exactos
+ *    hace que la cabecera parpadee entre los dos estados — y como al encogerse
+ *    la página se acorta, el propio cambio mueve el scroll y se realimenta.
+ *  · requestAnimationFrame: el evento de scroll se dispara decenas de veces por
+ *    segundo y tocar clases en cada uno es trabajo tirado. Así se toca una vez
+ *    por cuadro pintado, que es todo lo que se puede ver.
+ */
+var _cabCompacta = false;
+function _syncCabecera(){
+  var tb = document.querySelector('.topbar');
+  if (!tb) return;
+  if (window.innerWidth >= 769){
+    if (_cabCompacta){ tb.classList.remove('compacta'); _cabCompacta = false; }
+    return;
+  }
+  var y = window.pageYOffset || document.documentElement.scrollTop || 0;
+  if (!_cabCompacta && y > 60){ tb.classList.add('compacta');    _cabCompacta = true;  }
+  else if (_cabCompacta && y < 20){ tb.classList.remove('compacta'); _cabCompacta = false; }
+}
+(function(){
+  var pedido = false;
+  function alScroll(){
+    if (pedido) return;
+    pedido = true;
+    requestAnimationFrame(function(){ pedido = false; _syncCabecera(); });
+  }
+  window.addEventListener('scroll', alScroll, { passive: true });
+  window.addEventListener('resize', alScroll, { passive: true });
+})();
+
 function _syncBrandWidth(){
   var brandEl = document.querySelector('.topbar-brand');
   var topbarEl = document.querySelector('.topbar');
@@ -17419,10 +17628,11 @@ function _recomputeCfgDeck(){
 function _unqueueCfgAdd(type, value){
   var key = _cfgKey(type, value);
   var el  = document.querySelector('.cfg-card[data-key="' + (window.CSS && CSS.escape ? CSS.escape(key) : key) + '"]');
+  // Desde el aviso del formulario: el valor SÍ se registró, así que sale aceptada.
   _deckCardLeave(el, function(){
     _pendingCfgAdds = _pendingCfgAdds.filter(function(p){ return _cfgKey(p.type, p.value) !== key; });
     _renderCfgDeck();
-  });
+  }, 'aceptada');
 }
 
 // All of them — no cap here. The pile only ever shows _DECK_VISIBLE at a time,
@@ -17456,9 +17666,18 @@ var _deckSeenIds = {};
 // the ones below rise into the gap. Redrawing first would rebuild the pile and
 // leave nothing to animate, so the redraw waits for the movement to finish.
 var _DECK_LEAVE_ANIM_MS = 500;
-function _deckCardLeave(el, then){
+
+/* DOS SALIDAS, PORQUE SON DOS COSAS DISTINTAS. Ver el comentario largo del CSS.
+ *
+ *   'aceptada'  — se registró: sigue de largo hacia la izquierda y se desvanece
+ *   'descartada'— se ignoró: se desvanece sin moverse
+ *
+ * El `then` espera a que el movimiento termine. Redibujar antes reconstruiría
+ * el mazo y no quedaría nada que animar, que es el fallo que esta función
+ * existe para impedir. */
+function _deckCardLeave(el, then, modo){
   if (!el){ if (then) then(); return; }
-  el.classList.add('leaving');
+  el.classList.add(modo === 'aceptada' ? 'saliendo-aceptada' : 'saliendo-descartada');
   setTimeout(function(){ if (then) then(); }, _DECK_LEAVE_ANIM_MS);
 }
 
@@ -17510,8 +17729,15 @@ function _paintDeck(){
     var id = card.getAttribute('data-card-id') || card.getAttribute('data-key');
     if (!id || _deckSeenIds[id]) return;
     _deckSeenIds[id] = 1;
-    card.classList.add('entering');
-    card.addEventListener('animationend', function(){ card.classList.remove('entering'); }, { once: true });
+    /* Nace desplazada y se le quita la clase en el cuadro SIGUIENTE. Los dos
+     * requestAnimationFrame no son superstición: con uno solo el navegador
+     * puede no haber pintado todavía el estado inicial, y entonces no hay dos
+     * estados entre los que transicionar — la tarjeta aparece ya colocada y no
+     * se mueve nada. El primero espera al pintado, el segundo cambia. */
+    card.classList.add('llegando');
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){ card.classList.remove('llegando'); });
+    });
   });
 
   // The badge counts the WHOLE pile, including the cards held back from the
@@ -17690,6 +17916,38 @@ function _cfgAddAll(){
   });
 }
 
+/* ── LAS TARJETAS EN VUELO ─────────────────────────────────────────────────
+ *
+ * Jose, 2026-10-12, con vídeo: "mira lo que pasa al dar clic a mas de una de
+ * las tarjetas de proyectos".
+ *
+ * Lo que pasaba: pulsabas «+ Add to list» en la tarjeta A y en la B. Volvía la
+ * respuesta de A, el código redibujaba el mazo ENTERO con `innerHTML = …`, y
+ * el botón de B dejaba de decir «Adding…» porque su botón ya no existía: era
+ * uno nuevo recién creado, habilitado. Un segundo clic mandaba el MISMO
+ * proyecto dos veces al servidor.
+ *
+ * El botón «All 5» sí tenía guarda (`_cfgAddAllRunning`). La de una en una,
+ * no: a alguien se le ocurrió para el lote y no para el caso normal.
+ *
+ * ── POR QUÉ NO SE ARREGLA "RESPETANDO EL ESTADO AL REDIBUJAR" ──────────────
+ *
+ * Fue mi primera propuesta y es la peor. Jose preguntó lo correcto: ¿por qué
+ * hay que redibujar? Respuesta: redibujar NO cuesta ni una llamada al servidor
+ * —es todo local— pero SÍ hace falta, por una sola razón: en el mazo sólo caben
+ * `_DECK_VISIBLE` tarjetas, así que cuando una se va, la siguiente de la cola
+ * tiene que ocupar su sitio.
+ *
+ * Lo que sobra no es redibujar: es redibujar MIENTRAS algo está en vuelo. Así
+ * que el redibujo ESPERA a que no quede ninguna. Las tarjetas en vuelo no se
+ * tocan, y su estado sobrevive solo — sin código que lo guarde y lo reponga,
+ * que sería una tercera cosa que mantener de acuerdo con las otras dos.
+ *
+ * De paso se hace UN redibujo por tanda en vez de uno por tarjeta.
+ */
+var _cfgEnVuelo = {};
+function _cfgHayVuelo(){ for (var k in _cfgEnVuelo) if (_cfgEnVuelo[k]) return true; return false; }
+
 // One handler for both the desktop deck and the phone panel.
 function _cfgCardAction(act, key, btn){
   var p = null;
@@ -17699,27 +17957,56 @@ function _cfgCardAction(act, key, btn){
   if (!p) return;
 
   if (act === 'skip'){
+    if (_cfgEnVuelo[key]) return;        // se está registrando: no se descarta a medias
     _dismissCfgAdd(p.type, p.value);
     // Also drop it from the typed set, or the next keystroke in that field
     // would re-add what was just waved off.
     _typedCfgAdds = _typedCfgAdds.filter(function(t){ return _cfgKey(t.type, t.value) !== key; });
-    // Recompute rather than just splice: with only a handful rendered, the next
-    // unregistered value has to take the freed slot. Splicing alone emptied the
-    // deck after a few dismissals and nothing returned until a page reload.
-    _recomputeCfgDeck();
+    // Se desvanece en su sitio —no hizo nada— y SÓLO entonces se redibuja:
+    // reconstruir antes dejaría nada que animar.
+    var elSkip = document.querySelector('.cfg-card[data-key="' +
+                   (window.CSS && CSS.escape ? CSS.escape(key) : key) + '"]');
+    _deckCardLeave(elSkip, function(){
+      // Recompute rather than just splice: with only a handful rendered, the next
+      // unregistered value has to take the freed slot. Splicing alone emptied the
+      // deck after a few dismissals and nothing returned until a page reload.
+      if (!_cfgHayVuelo()) _recomputeCfgDeck();
+    }, 'descartada');
     return;
   }
 
+  // EL SEGUNDO CLIC NO HACE NADA. Es la guarda que faltaba.
+  if (_cfgEnVuelo[key]) return;
+  _cfgEnVuelo[key] = 1;
+
+  // `_btnBusy` ya pone el aro girando Y esconde el «Not now» dejándole su hueco
+  // (visibility:hidden, no display:none — si desapareciera, el botón de al lado
+  // saltaría a ocupar su sitio justo cuando el dedo ya va en camino).
   if (btn){ _btnBusy(btn, 'Adding…'); }
+
+  // La línea de abajo a la izquierda, la misma de borrar movimientos. Se llama
+  // con 1 en cada clic: `_progStart` SUMA cuando ya hay una tanda viva con la
+  // misma etiqueta, y `_progPaint` esconde el contador mientras el total sea 1
+  // —"1 of 1" no le dice nada a nadie—. O sea que una sola tarjeta sólo enseña
+  // el aro de su botón, y a partir de dos aparece "2 of 3" sin código extra.
+  _progStart(1, 'Adding to your lists', _progFinListas);
+
   _cfgAddValue(p.type, p.value, function(ok, err){
-    if (ok){
-      // Sin aviso: la tarjeta sale del mazo, que es la respuesta.
-    } else {
+    delete _cfgEnVuelo[key];
+    _progStep(!!ok);
+    if (!ok){
       _btnLabel(btn, '+ Add to list');
       showToast('Could not add: ' + err, 'err', 5000);
       return;
     }
-    _recomputeCfgDeck();
+    // Se registró: sale hacia la izquierda, hacia dentro de la app.
+    var elOk = document.querySelector('.cfg-card[data-key="' +
+                 (window.CSS && CSS.escape ? CSS.escape(key) : key) + '"]');
+    _deckCardLeave(elOk, function(){
+      // El redibujo espera a que no quede ninguna en vuelo, o destruiría el
+      // «Adding…» de las que siguen trabajando.
+      if (!_cfgHayVuelo()) _recomputeCfgDeck();
+    }, 'aceptada');
   });
 }
 
@@ -23178,10 +23465,11 @@ function _dismissSysCard(id){
   // jump into the gap with no motion at all, which is what made the deck feel
   // like a list rather than a stack of paper.
   var el = document.querySelector('[data-card-id="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"]');
+  // La ✕ de una notificación es "ya lo leí", no "esto se guardó": descartada.
   _deckCardLeave(el, function(){
     _sysCards = _sysCards.filter(function(c){ return c.id !== id; });
     _renderSysDeck();
-  });
+  }, 'descartada');
 }
 
 // A notification stays until somebody presses its ✕. It used to carry a

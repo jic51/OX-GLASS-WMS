@@ -98,6 +98,33 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.58</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Cuatro cosas encontradas grabando la app en un tel&eacute;fono</h3>
+      <p><b>No se pod&iacute;a leer qu&eacute; estabas sacando.</b> En el caj&oacute;n del estante los nombres sal&iacute;an
+         como &laquo;P&hellip;&raquo;, &laquo;L&hellip;&raquo;, &laquo;KA&hellip;&raquo;. La causa era una
+         l&iacute;nea: el nombre era lo &uacute;nico de la fila con permiso para encogerse, as&iacute; que se encog&iacute;a
+         hasta desaparecer mientras el bot&oacute;n de reservar conservaba todo su ancho. Y &eacute;sa es la
+         pantalla desde la que se pulsa <b>Exit</b> &mdash; sal&iacute;a material del almac&eacute;n con el nombre
+         ilegible. En pantalla estrecha el nombre ocupa ahora su propia l&iacute;nea entera.</p>
+      <p><b>El teclado tapaba el bot&oacute;n de guardar.</b> La barra fija ya exist&iacute;a; el fallo era
+         <code>90vh</code>, que en Android <i>no</i> encoge cuando sale el teclado. La ventana
+         segu&iacute;a midiendo la pantalla completa y su barra quedaba debajo del teclado. Lo arregla
+         una letra: <code>dvh</code>.</p>
+      <p><b>Las tarjetas entraban de dos formas y sal&iacute;an de una.</b> Ahora entran de una sola, y
+         <b>salen de dos maneras que significan cosas distintas</b>: la que aceptas sigue de largo
+         hacia la izquierda, hacia dentro de la app &mdash; la que descartas se desvanece en su
+         sitio. Moverse quiere decir que algo pas&oacute;; no moverse, que no pas&oacute; nada.</p>
+      <p><b>Pulsar una segunda tarjeta cancelaba el progreso de la primera.</b> Registrar un
+         proyecto redibujaba el mazo entero, lo que borraba el &laquo;Adding&hellip;&raquo; de
+         cualquier tarjeta que siguiera trabajando &mdash; y permit&iacute;a mandar la misma dos veces al
+         servidor. Ahora el redibujo espera a que no quede ninguna en vuelo, y una l&iacute;nea abajo a
+         la izquierda las va contando.</p>
+      <p>Y en el tel&eacute;fono la cabecera se encoge al bajar, devolviendo cerca de un tercio de la
+         pantalla, y vuelve al subir.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.57</span>
       <span class="tag ui">Interfaz</span>
       <h3>El Delete ya es rojo, y exactamente del mismo tama&ntilde;o</h3>

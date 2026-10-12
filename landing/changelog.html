@@ -97,6 +97,32 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.58</span>
+      <span class="tag fix">Fix</span>
+      <h3>Four things found by filming the app on a phone</h3>
+      <p><b>You could not read what you were dispatching.</b> In the rack drawer the material
+         names came out as &ldquo;P&hellip;&rdquo;, &ldquo;L&hellip;&rdquo;, &ldquo;KA&hellip;&rdquo;.
+         One line was the cause: the name was the only part of the row allowed to shrink, so it
+         shrank to nothing while the Reserve button kept its full width. That is the screen you
+         press <b>Exit</b> from &mdash; material was leaving the warehouse with its name unreadable.
+         On a narrow screen the name now gets the whole line to itself.</p>
+      <p><b>The keyboard hid the Save button.</b> The sticky bar was already there; the fault was
+         <code>90vh</code>, which on Android does <i>not</i> shrink when the keyboard opens. The
+         window stayed the height of the whole screen and its bar sat below the keyboard. One
+         letter fixes it: <code>dvh</code>.</p>
+      <p><b>The cards moved in two ways coming in and one going out.</b> Now one way in, and
+         <b>two different ways out that mean different things</b>: a card you accept carries on
+         to the left, into the app &mdash; a card you dismiss just fades where it is.
+         Moving means something happened; not moving means nothing did.</p>
+      <p><b>Clicking a second card cancelled the first one's progress.</b> Adding a project
+         redrew the whole pile, which wiped the &ldquo;Adding&hellip;&rdquo; state off any card still
+         working &mdash; and let you send the same one to the server twice. The redraw now waits
+         until nothing is in flight, and a progress line counts them off at the bottom left.</p>
+      <p>The header also shrinks as you scroll down on a phone, giving back about a third of the
+         screen, and comes back when you scroll up.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.57</span>
       <span class="tag ui">UI</span>
       <h3>Delete is red now, and exactly the same size</h3>
