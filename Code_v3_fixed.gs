@@ -127,7 +127,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.59';
+var APP_VERSION = '12.60';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -139,7 +139,7 @@ var APP_VERSION = '12.59';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'c215d3bd';
+var APP_BUILD = '98e6581e';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -4445,13 +4445,38 @@ function addMovementsBatch_(ss, archive, movements, auth, opciones) {
       row[AC.TIMESTAMP]   = now;
       row[AC.CATEGORY]    = cleanDisplay_(d.category);  // stored as typed (keeps , - /)
       row[AC.NAME]        = cleanDisplay_(d.name);      // matId above still uses normalized form
-      row[AC.GC]          = String(d.gc || '').trim();
-      row[AC.PO]          = String(d.po || '').trim();
+      /* ── MAYÚSCULAS AL GUARDAR, Y POR QUÉ SÓLO EN ESTAS CUATRO ──────────
+       *
+       * Jose, 2026-10-12: *"«Window» y «WINDOW» se guardan como dos cosas. Hay
+       * que trabajar en esto también; no creo que sea difícil; ya la app lo
+       * hace."* Las dos cosas ciertas: no es difícil, y la app ya lo hacía —
+       * en la mitad de los sitios.
+       *
+       * Lo que YA estaba cubierto antes de hoy:
+       *   CATEGORY y NAME  → `cleanDisplay_`, que pone mayúsculas
+       *   PROJECT          → `normalizeString`, que además quita puntuación
+       *
+       * Lo que NO, y es lo que se arregla aquí: GC, PO, SUPPLIER y
+       * RESPONSIBLE pasaban con un `.trim()` pelado. Escribir «Amsco» un día y
+       * «AMSCO» otro dejaba dos proveedores donde hay uno, y el filtro de la
+       * tabla —que compara texto— sólo encontraba la mitad de las entregas.
+       *
+       * `cleanDisplay_` y no `normalizeString`: la segunda borra comas, puntos
+       * y guiones, y un PO «07-6329» tiene que seguir siendo «07-6329». La
+       * primera sólo sube a mayúsculas y junta espacios repetidos.
+       *
+       * NO TOCA LO YA GUARDADO. Las filas viejas se quedan como están; esto
+       * sólo decide cómo entra lo nuevo. Unificar el pasado es otra tarea y
+       * tiene su propia pregunta —qué hacer cuando dos grafías tienen ya
+       * movimientos cada una— que no se contesta de paso.
+       */
+      row[AC.GC]          = cleanDisplay_(d.gc);
+      row[AC.PO]          = cleanDisplay_(d.po);
       row[AC.QTY]         = qty;
       row[AC.UNIT]        = String(d.unit || 'UNIT').toUpperCase();
       row[AC.DATE_REC]    = d.dateRec || tzDate;
       row[AC.SRC_LOC]     = src;
-      row[AC.SUPPLIER]    = String(d.supplier || '').trim();
+      row[AC.SUPPLIER]    = cleanDisplay_(d.supplier);
       row[AC.COMMENTS]    = String(d.comments || '').trim();
       row[AC.STATUS]      = statusVal;
       // "Received By" — who physically took delivery. Left blank when unknown,
@@ -4460,7 +4485,7 @@ function addMovementsBatch_(ss, archive, movements, auth, opciones) {
       // enters a delivery on another person's behalf, and it is unfalsifiable
       // after the fact. Who entered it is already captured, separately and
       // truthfully, in USER_EMAIL below.
-      row[AC.RESPONSIBLE] = String(d.responsible || '').trim();
+      row[AC.RESPONSIBLE] = cleanDisplay_(d.responsible);
       row[AC.PROJECT]     = proj;
       row[AC.MAT_ID]      = matId;
       row[AC.DOC_LINKS]   = '';

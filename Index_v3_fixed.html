@@ -4857,7 +4857,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.59';
+var APP_VERSION = '12.60';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -4869,7 +4869,7 @@ var APP_VERSION = '12.59';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'c215d3bd';
+var APP_BUILD = '98e6581e';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -6242,12 +6242,85 @@ function _userCellHtml(email){
          dentro + '</span>';
 }
 
-function getBase64(file){
+/* ── LA FOTO SE ENDEREZA ANTES DE SUBIRLA ───────────────────────────────────
+ *
+ * Jose, 2026-10-12, con dos capturas: *"todas las fotos que se hacen pdf salen
+ * mal, no ocupan toda la hoja, siempre hay una parte en blanco… y además la
+ * última imagen que subí se movió y sale en landscape"*.
+ *
+ * LAS DOS QUEJAS SON LA MISMA CAUSA, y verlas juntas es lo que la resuelve.
+ *
+ * Un teléfono casi nunca gira los píxeles al hacer una foto. Guarda el mapa de
+ * bits como salió del sensor —APAISADO— y añade una marca EXIF que dice
+ * «gírala 90° al enseñarla». Quien respeta esa marca la ve derecha. Y
+ * `appendImage` de Google Docs NO LA RESPETA: usa el mapa de bits crudo. De ahí
+ * salen las dos cosas a la vez:
+ *
+ *     entra apaisada                      → «sale en landscape»
+ *     apaisada en una hoja vertical       → limita por el ancho
+ *                                         → «siempre hay una parte en blanco»
+ *
+ * SE ARREGLA AQUÍ Y NO EN EL SERVIDOR, a propósito: ésta es la puerta por la
+ * que pasan TODAS las fotos de la app, así que enderezarlas aquí las endereza
+ * en el PDF, en la vista previa, en la miniatura del estante y en cualquier
+ * sitio que venga después. Arreglarlo en `photosToDocPdf_` habría arreglado
+ * sólo el PDF, y las otras dos pantallas seguirían torcidas.
+ *
+ * ── LOS CUATRO CUIDADOS, Y NINGUNO SOBRA ───────────────────────────────────
+ *
+ *  · SÓLO JPEG. Esta puerta también sube PDFs (ver `payload.docFile`) y PNGs.
+ *    Un PDF que pase por un canvas deja de ser un PDF. La marca de orientación
+ *    es cosa de JPEG/HEIC; el resto pasa intacto.
+ *  · SÓLO SI DE VERDAD GIRÓ. Si el mapa de bits ya venía derecho, volver a
+ *    codificarlo sería perder calidad a cambio de nada. Se compara el tamaño
+ *    que da el navegador respetando la marca con el crudo, y sólo se reescribe
+ *    cuando no coinciden.
+ *  · TODO DENTRO DE UN try, Y CON VUELTA AL ORIGINAL. Si el navegador no
+ *    conoce `createImageBitmap` con `imageOrientation`, o la imagen está rota,
+ *    o el canvas falla, se sube lo que había. Una foto torcida es un fastidio;
+ *    una foto que no se sube es trabajo perdido.
+ *  · CALIDAD 0.92. Alta, pero no 1: a 1 el JPEG pesa casi el doble sin que
+ *    nadie vea la diferencia, y estas fotos viajan en base64 dentro de una
+ *    llamada de Apps Script.
+ */
+function _leerBase64Crudo(file){
   return new Promise(function(res,rej){
     var r = new FileReader();
     r.readAsDataURL(file);
     r.onload = function(){ res(r.result.split(',')[1]); };
     r.onerror = rej;
+  });
+}
+
+function getBase64(file){
+  var tipo = String((file && file.type) || '').toLowerCase();
+  var esJpeg = tipo === 'image/jpeg' || tipo === 'image/jpg';
+  if (!esJpeg || typeof createImageBitmap !== 'function') return _leerBase64Crudo(file);
+
+  return new Promise(function(res){
+    var listo = function(b64){ res(b64); };
+    var alCrudo = function(){ _leerBase64Crudo(file).then(listo).catch(function(){ listo(''); }); };
+    try {
+      // Las dos lecturas: una respetando la marca y otra ignorándola. Si dan el
+      // mismo tamaño, la foto ya venía derecha y no hay nada que hacer.
+      Promise.all([
+        createImageBitmap(file, { imageOrientation: 'from-image' }),
+        createImageBitmap(file, { imageOrientation: 'none' })
+      ]).then(function(par){
+        var derecha = par[0], cruda = par[1];
+        if (derecha.width === cruda.width && derecha.height === cruda.height) {
+          try { derecha.close(); cruda.close(); } catch (e) {}
+          return alCrudo();                       // ya estaba bien: sin recodificar
+        }
+        var c = document.createElement('canvas');
+        c.width = derecha.width; c.height = derecha.height;
+        c.getContext('2d').drawImage(derecha, 0, 0);
+        try { derecha.close(); cruda.close(); } catch (e) {}
+        var url = c.toDataURL('image/jpeg', 0.92);
+        if (!url || url.indexOf(',') === -1) return alCrudo();
+        listo(url.split(',')[1]);
+      }).catch(alCrudo);
+    } catch (e) { alCrudo(); }
   });
 }
 
@@ -19488,9 +19561,30 @@ function openMediaPreview(url, label){
       hint.innerHTML = 'Preview of page 1 — use <strong>↗ Open</strong> above for the full document.';
       body.appendChild(hint);
 
+      /* ── POR QUÉ `margin:auto` Y NO `align-items:center` ────────────────────
+       *
+       * Jose, 2026-10-12, con captura: *"el header de la vista previa no deja
+       * ver todo el documento"*. En su captura falta la parte de arriba del
+       * Bill of Lading —el logo y la cabecera— Y HAY BARRA DE SCROLL, PERO NO
+       * SUBE.
+       *
+       * Y la cabecera no tenía la culpa. La culpa era esta línea.
+       *
+       * Centrar con `align-items:center` un hijo MÁS ALTO que su caja empuja su
+       * principio fuera del área visible, y el scroll NO LO ALCANZA: el
+       * desbordamiento por el lado del inicio no es alcanzable en flexbox. La
+       * barra aparece, baja, y lo de arriba queda inaccesible para siempre.
+       * Medido aparte: la vista previa de una imagen suelta no tiene este
+       * problema —720px en 720px— porque ahí nada desborda. Es sólo el camino
+       * del PDF, que mete la barra de aviso de más.
+       *
+       * `margin:auto` en el HIJO centra igual cuando cabe, y cuando no cabe
+       * deja de centrar en vez de recortar. Es la misma diferencia que
+       * `justify-content: safe center`, escrita de la forma que entienden todos
+       * los navegadores. */
       var holder = document.createElement('div');
-      holder.style.cssText = 'flex:1;min-height:0;width:100%;display:flex;align-items:center;' +
-        'justify-content:center;overflow:auto;padding:.75rem';
+      holder.style.cssText = 'flex:1;min-height:0;width:100%;display:flex;' +
+        'overflow:auto;padding:.75rem';
       holder.innerHTML = '<p style="color:#fff">Rendering preview…</p>';
       body.appendChild(holder);
 
@@ -19500,7 +19594,11 @@ function openMediaPreview(url, label){
           var pimg = document.createElement('img');
           pimg.src = bigUrl;
           pimg.alt = label || '';
-          pimg.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;' +
+          // `margin:auto` centra mientras cabe y se rinde cuando no — ver arriba.
+          // Y sin `max-height:100%`: dentro de un contenedor cuya altura sale de
+          // `flex:1` ese porcentaje no tiene contra qué resolverse, así que no
+          // limitaba nada y encima tapaba la regla de la hoja de estilos.
+          pimg.style.cssText = 'max-width:100%;object-fit:contain;margin:auto;' +
             'background:#fff;border-radius:4px';
           holder.appendChild(pimg);
         } else {

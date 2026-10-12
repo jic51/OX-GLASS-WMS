@@ -97,6 +97,27 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.60</span>
+      <span class="tag fix">Fix</span>
+      <h3>Photos stop arriving sideways, and a PO stops being two POs</h3>
+      <p><b>Photos were being uploaded rotated, and that caused two complaints that looked
+         unrelated.</b> A phone rarely turns the pixels when you take a picture: it stores the
+         sensor's own landscape bitmap and attaches a tag saying &ldquo;turn this 90&deg;&rdquo;.
+         Google Docs ignores that tag &mdash; so the photo went into the PDF <i>sideways</i>, and a
+         sideways photo on an upright page fits the width and leaves the bottom blank. One cause,
+         two symptoms. Photos are now straightened in the browser before upload, which fixes the
+         PDF, the preview and the shelf thumbnail at once.</p>
+      <p><b>The document preview cut off the top of the page.</b> The header was not to blame:
+         centring something taller than its box pushes its beginning out of reach, and the
+         scrollbar cannot get back to it. Now it centres while it fits and stops centring when it
+         does not.</p>
+      <p><b>&ldquo;Amsco&rdquo; one day and &ldquo;AMSCO&rdquo; the next left two suppliers where
+         there is one.</b> Category, name and project were already stored one way; PO, GC, supplier
+         and received-by were not. They are now. Dashes survive &mdash; a PO like
+         <code>07-6329</code> is still <code>07-6329</code>. Nothing already saved is touched.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.59</span>
       <span class="tag fix">Fix</span>
       <h3>Three answers that were not true</h3>

@@ -50,6 +50,7 @@ node tools/test-cinco-sin-riesgo.js
 node tools/test-escala.js
 node tools/test-telefono.js
 node tools/test-verdad-y-huerfanos.js
+node tools/test-fotos-y-mayusculas.js
 node tools/test-brand-corner.js
 node tools/test-terms-checkbox.js
 node tools/test-entry-autofill.js
@@ -440,6 +441,7 @@ come back from — is invisible to both. Those get a browser test.
 - `test-escala.js` — la escala de letra y la forma de los botones no se deshacen solas: los trece escalones de la opción A existen y están ordenados, los tres tamaños más usados no se movieron, ningún botón lleva un tamaño ni una altura a pelo, y lo que BORRA algo se MIDE en un navegador táctil —no se busca en el CSS— porque buscarlo en el CSS pasaba en verde con un botón de 34 px en pantalla
 - `test-telefono.js` — las cuatro cosas que Jose encontró grabando la app en su teléfono, todas MEDIDAS en un navegador: que el nombre del material quepa en el cajón del estante (salía como "P…" en la pantalla desde la que se pulsa Exit), que la entrada al mazo sea UNA y valga abierto y cerrado, que la salida aceptada se mueva y la descartada no, que la ventana use `dvh` para que el teclado no tape el botón de guardar, y que la cabecera se encoja al bajar en el teléfono y NO en el escritorio
 - `test-verdad-y-huerfanos.js` — tres cosas que daban una respuesta FALSA con cara de respuesta buena: que la app no acuse a un compañero inexistente de soltar una reserva (lo dedujo del efecto; el dato real estaba en la columna UnlockedBy sin leer), que el cartel obedezca el estado que manda el servidor en vez de adivinarlo, que buscar DIGA cuándo no miró el archivo en vez de contestar "no hay nada", y que fusionar dos ubicaciones mueva también los candados y las fotos — lo que no se ve se quedaba apuntando a un estante muerto
+- `test-fotos-y-mayusculas.js` — que la foto se enderece antes de subirla (y que eso NO toque los PDFs, que pasan por la misma puerta y dejarían de ser PDFs si cruzaran un canvas), que la vista previa deje de recortar el documento por arriba, y que PO, GC, proveedor y recibido-por se guarden con una sola grafía. El giro se MIDE ejecutando `getBase64` con un JPEG construido a mano que lleva marca de orientación 6
   instead of the Apps Script editor. The feature is small; the failure modes
   are not, so both are held shut here: the key must never come back to the
   BROWSER (getAiStatus returns configured + the last four characters and

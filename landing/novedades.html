@@ -98,6 +98,28 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.60</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Las fotos dejan de llegar de lado, y un PO deja de ser dos POs</h3>
+      <p><b>Las fotos se sub&iacute;an giradas, y eso causaba dos quejas que parec&iacute;an distintas.</b>
+         Un tel&eacute;fono casi nunca gira los p&iacute;xeles al hacer una foto: guarda el mapa de bits
+         apaisado tal como sali&oacute; del sensor y le pega una marca que dice &laquo;g&iacute;rala
+         90&deg;&raquo;. Google Docs ignora esa marca &mdash; as&iacute; que la foto entraba al PDF
+         <i>de lado</i>, y una foto de lado en una hoja vertical llena el ancho y deja el fondo en
+         blanco. Una causa, dos s&iacute;ntomas. Ahora se enderezan en el navegador antes de subirlas,
+         lo que arregla el PDF, la vista previa y la miniatura del estante a la vez.</p>
+      <p><b>La vista previa cortaba la parte de arriba del documento.</b> La cabecera no ten&iacute;a la
+         culpa: centrar algo m&aacute;s alto que su caja empuja su principio fuera del alcance, y la
+         barra de scroll no puede volver ah&iacute;. Ahora centra mientras cabe y deja de centrar
+         cuando no.</p>
+      <p><b>&laquo;Amsco&raquo; un d&iacute;a y &laquo;AMSCO&raquo; otro dejaban dos proveedores donde
+         hay uno.</b> La categor&iacute;a, el nombre y el proyecto ya se guardaban de una sola forma; el
+         PO, el GC, el proveedor y el recibido-por, no. Ahora s&iacute;. Los guiones sobreviven &mdash;
+         un PO como <code>07-6329</code> sigue siendo <code>07-6329</code>. Lo ya guardado no se
+         toca.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.59</span>
       <span class="tag fix">Arreglo</span>
       <h3>Tres respuestas que no eran verdad</h3>
