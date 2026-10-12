@@ -53,15 +53,20 @@
   .entry p{margin:0;color:#3F4756}
   .entry p + p{margin-top:.5rem}
 
-  /* Three kinds of change, colour-coded, because a customer reads this page
-     with one of three questions: what can I do now, what stopped being
-     broken, and is anyone still working on this. */
+  /* Four kinds of change, colour-coded, because a customer reads this page
+     with one of four questions: what can I do now, what stopped being
+     broken, is anyone still working on this, and what moved on screen.
+     `ui` had no colour of its own until v12.61 — four entries were rendering
+     as bare text beside three pills. It gets the sunk grey: a change in how
+     something looks is not a new capability, so it should not borrow the
+     blue that means one. */
   .tag{display:inline-block;font:600 var(--step--1)/1 Inter,sans-serif;
        padding:.3rem .55rem;border-radius:999px;margin-bottom:.55rem;
        letter-spacing:.02em}
   .tag.new{background:#E3EEFC;color:var(--accent-ink)}
   .tag.fix{background:#E8F6F0;color:#046C4E}
   .tag.safe{background:var(--amber-wash);color:#92400E}
+  .tag.ui{background:var(--sunk);color:#4B5563}
 
   .ver{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:var(--step--1);
        color:var(--steel);float:right;margin-left:1rem}
@@ -95,6 +100,31 @@
        save, does the screen change now or in eleven seconds? Deleting thirteen
        movements went from about two and a half minutes to fifty-five seconds
        along the way.</p>
+
+    <div class="entry">
+      <span class="ver">v12.61</span>
+      <span class="tag ui">UI</span>
+      <h3>Four depths instead of forty-five shadows</h3>
+      <p><b>Every panel, card and menu that lifts off the page had its own hand-written shadow.</b>
+         Forty-five different ones across sixty-one places &mdash; near enough one bespoke shadow
+         per use. Nothing was wrong with any single one; what was wrong was that two cards sitting
+         side by side could float at visibly different heights for no reason anyone chose. There
+         are now <b>four depths</b> &mdash; resting on the page, floating above it, a panel, and on
+         top of everything &mdash; and the steps between them are proportional, because the eye
+         reads blur as a ratio and not as a count of pixels.</p>
+      <p><b>The focus rings turned out to be a second system wearing the first one's clothes.</b>
+         A ring around the field you are typing in is written the same way as a shadow, but it has
+         no blur and it is not depth: it says <i>which one is selected</i>. Separating them left
+         four rings &mdash; neutral, good, bad and warning &mdash; so a selected row looks the same
+         whichever screen you are on.</p>
+      <p><b>Twenty-one shadows stay outside the system, each for a written reason:</b> the three
+         tinted with the brand blue (a tinted shadow looks like the same material; a black one
+         looks like tape), the one that casts sideways because the drawer slides in from the edge,
+         the small sharp ones on controls, the inset ones, and the frames of animated pulses. They
+         are recorded as exceptions rather than left as leftovers.</p>
+      <p>Nothing moved, nothing resized, no screen changed shape. If it looks like nothing
+         happened, that is the result.</p>
+    </div>
 
     <div class="entry">
       <span class="ver">v12.60</span>

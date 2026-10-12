@@ -293,11 +293,22 @@ const radPx = [...radTodos.keys()].filter(v => !v.startsWith('var('));
 check(`quedan ${radPx.length} radios a pelo (el tope es ${TOPE_RADIOS})`,
   radPx.length <= TOPE_RADIOS, { ahora: radPx.length, tope: TOPE_RADIOS });
 
-const TOPE_SOMBRAS = 45;
+/* Bajado de 45 a 21 en la v12.61. Y la cuenta de «valores distintos» POR FIN
+ * se mueve, que es lo contrario de lo que pasó con la letra y con las tablas:
+ * allí los botones compartían tamaños con todo lo demás, así que pasarlos a
+ * token no eliminaba ningún valor del archivo. Las sombras no se comparten —
+ * cada una se escribió a medida para su elemento— así que convertirlas sí las
+ * borra de la cuenta.
+ *
+ * Los 21 que quedan son los que NO deben entrar al sistema, cada uno por su
+ * motivo, y están contados en el comentario de `--sh-1` del propio archivo:
+ * las teñidas (3), las que proyectan de lado (1), las pequeñas y nítidas de
+ * controles (4), los `inset` (5) y los fotogramas de pulsos animados (8). */
+const TOPE_SOMBRAS = 21;
 const shTodos = valores('box-shadow', r => !esImpresion(r));
 const shCrudas = [...shTodos.keys()].filter(v => !v.startsWith('var('));
 check(`quedan ${shCrudas.length} sombras a pelo (el tope es ${TOPE_SOMBRAS}). ` +
-      `Siguen siendo casi una por uso: es la próxima tanda, no ésta`,
+      `Eran 45 antes de la v12.61; las que quedan están excluidas a propósito`,
   shCrudas.length <= TOPE_SOMBRAS, { ahora: shCrudas.length, tope: TOPE_SOMBRAS });
 
 /* ── LA CIFRA QUE SÍ MIDE EL AVANCE ───────────────────────────────────────
@@ -313,7 +324,7 @@ check(`quedan ${shCrudas.length} sombras a pelo (el tope es ${TOPE_SOMBRAS}). ` 
  *
  * El suelo sube cada vez. Nunca baja: una tanda que deshaga trabajo hecho
  * falla aquí. */
-const PISO_ADOPCION = 20;   // %, medido tras la tanda de tablas (v12.56)
+const PISO_ADOPCION = 20;   // %, medido tras la tanda de tablas (v12.56). Sólo mira el tamaño de letra; las sombras tienen su propio suelo abajo.
 {
   let porToken = 0, aPelo = 0;
   REGLAS.forEach(r => {
@@ -332,6 +343,35 @@ const PISO_ADOPCION = 20;   // %, medido tras la tanda de tablas (v12.56)
         `si esto baja, una tanda deshizo trabajo hecho`,
     pct >= PISO_ADOPCION, { ahora: pct, piso: PISO_ADOPCION, porToken, aPelo });
 }
+
+/* LA ADOPCIÓN DE LAS SOMBRAS, que es lo que esta tanda movió. Igual que con
+ * la letra: el porcentaje sube con cada tanda y NUNCA baja. */
+const PISO_SOMBRAS = 62;   // %, medido tras la tanda de sombras (v12.61)
+{
+  let porTok = 0, aPelo = 0;
+  REGLAS.forEach(r => {
+    if (/:root/.test(r.sel) || /\.lbl/.test(r.sel)) return;
+    const re = /(?<![\w-])box-shadow:\s*([^;}\n]+)/g;
+    let m;
+    while ((m = re.exec(r.decl))) (m[1].trim().startsWith('var(') ? porTok++ : aPelo++);
+  });
+  const pct = Math.round(100 * porTok / (porTok + aPelo));
+  check(`el ${pct}% de las sombras van por token (${porTok} de ${porTok + aPelo}). ` +
+        `Era el 10% antes de esta tanda; el suelo es ${PISO_SOMBRAS}%`,
+    pct >= PISO_SOMBRAS, { ahora: pct, piso: PISO_SOMBRAS, porTok, aPelo });
+}
+
+/* LOS ANILLOS NO SON SOMBRAS, y el token tiene que existir para que nadie los
+ * vuelva a mezclar. `0 0 0 Npx` sin desenfoque es un borde dibujado por fuera
+ * que no ocupa sitio — por eso se hace con box-shadow y no con border: no mueve
+ * nada de su lugar al aparecer. */
+['--ring-accent','--ring-ok','--ring-bad','--ring-warn'].forEach(t => {
+  check('`' + t + '` existe: los anillos de foco tienen su propio sistema',
+    new RegExp(t + ':').test(ROOT_DECL));
+});
+['--sh-1','--sh-2','--sh-3','--sh-4'].forEach(t => {
+  check('`' + t + '` existe', new RegExp(t + ':').test(ROOT_DECL));
+});
 
 console.log(`
   Los topes bajan tanda a tanda. Hoy sólo se hicieron los BOTONES, así que
