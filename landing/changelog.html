@@ -97,6 +97,22 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.57</span>
+      <span class="tag ui">UI</span>
+      <h3>Delete is red now, and exactly the same size</h3>
+      <p>The <b>Delete</b> button in Movements and in Manage Users was grey, the same as Edit and
+         Labels beside it. The one button on that bar that destroys something looked like the ones
+         that do not. It is red now.</p>
+      <p>Measured before and after, because &ldquo;make it red&rdquo; turned out not to be free:
+         <code>.btn-ghost</code> carries a 1px border and <code>.btn-danger</code> carried none, so
+         simply recolouring it would have made it <b>2px shorter and 2px narrower</b> than the
+         buttons next to it. It now carries a transparent border of the same width, so the box is
+         identical &mdash; 44&times;76 on a touchscreen, 26&times;76 with a mouse, before and after.</p>
+      <p>That also lines up every other red button in the app with the grey ones beside it. They
+         had been 2px out of step in every bar where both appear.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.56</span>
       <span class="tag ui">UI</span>
       <h3>Tables: two row densities instead of eight near-identical ones</h3>

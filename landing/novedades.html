@@ -98,6 +98,23 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.57</span>
+      <span class="tag ui">Interfaz</span>
+      <h3>El Delete ya es rojo, y exactamente del mismo tama&ntilde;o</h3>
+      <p>El bot&oacute;n <b>Delete</b> de Movements y de Manage Users era gris, igual que Edit y Labels
+         a su lado. El &uacute;nico bot&oacute;n de esa barra que destruye algo se ve&iacute;a igual que los que no.
+         Ahora es rojo.</p>
+      <p>Medido antes y despu&eacute;s, porque &laquo;ponlo rojo&raquo; result&oacute; no ser gratis:
+         <code>.btn-ghost</code> lleva un borde de 1px y <code>.btn-danger</code> no llevaba
+         ninguno, as&iacute; que recolorearlo sin m&aacute;s lo habr&iacute;a dejado <b>2px m&aacute;s bajo y 2px m&aacute;s
+         estrecho</b> que los de al lado. Ahora lleva un borde transparente del mismo grosor, as&iacute;
+         que la caja es id&eacute;ntica &mdash; 44&times;76 en pantalla t&aacute;ctil, 26&times;76 con rat&oacute;n, antes
+         y despu&eacute;s.</p>
+      <p>Eso adem&aacute;s alinea todos los dem&aacute;s botones rojos de la app con los grises que tienen al
+         lado. Estaban 2px desparejos en cada barra donde conviven.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.56</span>
       <span class="tag ui">Interfaz</span>
       <h3>Tablas: dos densidades de fila en vez de ocho casi iguales</h3>

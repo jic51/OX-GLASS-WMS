@@ -349,7 +349,19 @@
     .btn{padding:.5rem 1rem;border:none;border-radius:var(--r-btn);font-size:var(--fs-lg);font-weight:600;display:inline-flex;align-items:center;gap:.35rem;justify-content:center;transition:.15s}
     .btn:hover{filter:brightness(.92)}
     .btn-primary{background:var(--accent);color:#fff}
-    .btn-danger{background:var(--red);color:#fff}
+    /* EL BORDE TRANSPARENTE NO ES ADORNO: ES LO QUE IGUALA LA CAJA.
+     *
+     * `.btn` declara `border:none` y `.btn-ghost` le pone `1px solid`. O sea
+     * que un botón gris y uno rojo puestos uno al lado del otro NO median lo
+     * mismo: el rojo salía 2 px más bajo y 2 px más estrecho, medido en el
+     * navegador (24 px contra 26).
+     *
+     * Jose pidió el Delete en rojo "del mismo tamaño que tiene ahora", y ésta
+     * es la forma de cumplirlo sin tocar el relleno: un borde que ocupa su
+     * sitio y no se ve. De paso alinea todos los `.btn-danger` con los grises
+     * que tienen al lado, que hasta hoy estaban 2 px desparejos en cada
+     * barra donde conviven. */
+    .btn-danger{background:var(--red);color:#fff;border:1px solid transparent}
     .btn-ghost{background:transparent;color:var(--accent);border:1px solid var(--border)}
     .btn-sm{padding:.3rem .65rem;font-size:var(--fs-md)}
     .btn-icon{background:transparent;border:none;font-size:var(--fs-2xl);cursor:pointer;transition:.15s;padding:2px}
@@ -3403,7 +3415,7 @@
       <span class="mov-act-sep" id="usrRowActions" style="visibility:hidden">
         <button class="btn btn-ghost btn-sm" id="btnUsrEdit" onclick="editSelectedUser()">✏️ Edit</button>
         <button class="btn btn-ghost btn-sm" id="btnUsrActive" onclick="toggleSelectedUsers()">🚫 Deactivate</button>
-        <button class="btn btn-ghost btn-sm" id="btnUsrDelete" onclick="deleteSelectedUser()">🗑 Delete</button>
+        <button class="btn btn-danger btn-sm" id="btnUsrDelete" onclick="deleteSelectedUser()">🗑 Delete</button>
         <span id="usrSelCount" class="mov-sel-count"></span>
       </span>
     </div>
@@ -3589,7 +3601,7 @@
         <span class="info-ic tip" tabindex="0" data-tip="Drag a heading to move it &#183; click the eye to hide it &#183; click a name to rename it for everyone. Your order and what you hide are yours; a renamed heading is the company's and everyone sees it.">i</span>
         <span class="mov-act-sep" id="movActBar" style="display:none">
           <button class="btn btn-ghost btn-sm" id="btnMovEdit" onclick="editSelectedMovement()" disabled>✏️ Edit</button>
-          <button class="btn btn-ghost btn-sm" id="btnMovDel"  onclick="deleteSelectedMovements()" disabled>🗑 Delete</button>
+          <button class="btn btn-danger btn-sm" id="btnMovDel"  onclick="deleteSelectedMovements()" disabled>🗑 Delete</button>
           <!-- IMPRIMIR ETIQUETAS DESPUÉS, no sólo al guardar. Jose: "debemos
                poner alguna forma de que el usuario seleccione un material o
                movimiento y la app imprima el label que él quiera." Hasta ahora
@@ -4675,7 +4687,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.56';
+var APP_VERSION = '12.57';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -4687,7 +4699,7 @@ var APP_VERSION = '12.56';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '92444dc0';
+var APP_BUILD = '28e22c97';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
