@@ -4996,7 +4996,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.62';
+var APP_VERSION = '12.63';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5008,7 +5008,7 @@ var APP_VERSION = '12.62';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '710571f1';
+var APP_BUILD = 'ea368de3';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -18604,9 +18604,37 @@ function _cfgAddInline(type, value, hintEl){
   });
 }
 
-// 'change' rather than 'input': it fires on blur and on picking a datalist
-// suggestion, so the prompt appears once the value is settled instead of
-// flickering on every keystroke.
+/* ── CUÁNDO APARECE Y CUÁNDO SE VA EL «+ Add it» ─────────────────────────────
+ *
+ * 'change' y no 'input': dispara al salir del campo y al elegir del
+ * desplegable, así que el cartel sale cuando el valor está decidido en vez de
+ * parpadear en cada tecla. Eso sigue bien.
+ *
+ * EL FALLO QUE JOSE GRABÓ EL 13/10, Y LA CAUSA EXACTA. Faltaba la pareja de
+ * `focusin`. La secuencia era:
+ *
+ *   1. escribes un proyecto nuevo y sales  → `change` dispara → sale el cartel
+ *   2. vuelves a pinchar en el casillero   → `focusin` lo borra
+ *   3. sales SIN tocar el texto            → `change` NO DISPARA, porque el
+ *                                            valor no cambió
+ *
+ * Y entonces no queda ningún evento que pueda traerlo de vuelta: `change` sólo
+ * volverá a disparar si el texto cambia otra vez. El cartel se iba **para
+ * siempre** en cuanto pinchabas dos veces en el mismo campo. La tarjeta del
+ * mazo seguía ahí —vive en `_typedCfgAdds`, que no se tocó— y por eso parecía
+ * que el proyecto se había creado a medias: el mazo lo ofrecía, el formulario
+ * no.
+ *
+ * Borrar al entrar está BIEN y se queda: un cartel que dice «proyecto nuevo»
+ * mientras estás editando el nombre habla de un valor que ya no es el que hay.
+ * Lo que faltaba era volver a mirar AL SALIR, pase lo que pase con el texto.
+ *
+ * `focusout` cubre los dos casos —cambió y no cambió— así que `change` queda
+ * casi de adorno. Se deja porque elegir del desplegable con el ratón da el
+ * cartel sin esperar a salir del campo, y eso se nota.
+ *
+ * `_maybeOfferCfgAdd` empieza por `_clearCfgHint`, así que que los dos eventos
+ * disparen seguidos no dibuja dos carteles. */
 document.addEventListener('change', function(e){
   var el = e.target;
   if (el && el.getAttribute && el.getAttribute('data-cfg-new')) _maybeOfferCfgAdd(el);
@@ -18614,6 +18642,10 @@ document.addEventListener('change', function(e){
 document.addEventListener('focusin', function(e){
   var el = e.target;
   if (el && el.getAttribute && el.getAttribute('data-cfg-new')) _clearCfgHint(el);
+});
+document.addEventListener('focusout', function(e){
+  var el = e.target;
+  if (el && el.getAttribute && el.getAttribute('data-cfg-new')) _maybeOfferCfgAdd(el);
 });
 
 function refreshDropdowns(){

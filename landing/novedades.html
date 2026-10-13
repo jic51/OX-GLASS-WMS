@@ -103,6 +103,44 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.63</span>
+      <span class="tag safe">Seguridad</span>
+      <h3>Seis puertas que miraban qui&eacute;n eres pero no cu&aacute;ntas veces llamas</h3>
+      <p><b>Seis puertas de la app ten&iacute;an cerradura y no ten&iacute;an tope.</b> Seis
+         funciones &mdash;leer los entrantes, darlos de alta, cambiarlos, borrarlos, leer los
+         materiales vigilados y preguntar si la instalaci&oacute;n est&aacute; configurada&mdash;
+         comprobaban <i>identidad</i> bien pero no contaban llamadas, mientras las dos m&aacute;s
+         pesadas s&iacute; lo hac&iacute;an. Ninguna dejaba hacer nada indebido. Lo que
+         dejaban hacer es <b>agotar la cuota diaria de Google de la instalaci&oacute;n</b>, y eso
+         deja la app muerta para todos hasta el d&iacute;a siguiente. Una pesta&ntilde;a olvidada
+         reintentando en bucle pod&iacute;a conseguirlo sin querer.</p>
+      <p>Las seis tienen ya su techo, y cada n&uacute;mero est&aacute; dos &oacute;rdenes de
+         magnitud por encima del uso real medido: tiene que estorbar a un bucle, nunca a una
+         persona. Las tres que escriben <b>comparten un solo contador</b>, para que alternarlas no
+         triplique el cupo. El contador es <b>por persona</b>, para que una pesta&ntilde;a atascada
+         no deje fuera a la bodega entera. Y el tope va <i>despu&eacute;s</i> de la
+         comprobaci&oacute;n de identidad, para que a un desconocido se le siga diciendo que no
+         est&aacute; identificado y no que vuelva m&aacute;s tarde.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v12.63</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>El &laquo;+ Add it&raquo; deja de irse para siempre</h3>
+      <p><b>Escrib&iacute;as un proyecto nuevo, volv&iacute;as a pinchar en el casillero, y la
+         opci&oacute;n de a&ntilde;adirlo desaparec&iacute;a para siempre.</b> No tardaba en
+         volver: no volv&iacute;a. Pinchar en el campo quitaba el cartel (correcto: mientras
+         editas, estar&iacute;a hablando de un valor que ya no es el que hay), pero lo
+         &uacute;nico que pod&iacute;a reponerlo dispara <i>cuando el texto cambia</i>. Sales del
+         casillero sin tocar una letra y no dispara nada. Y ya no volver&iacute;a a disparar
+         nunca.</p>
+      <p>Lo que lo hac&iacute;a confuso es que la tarjeta de la esquina s&iacute; se quedaba, as&iacute;
+         que la app ofrec&iacute;a el proyecto en un sitio y en el otro no, y parec&iacute;a que se
+         hab&iacute;a creado a medias. Ahora el cartel se vuelve a mirar cada vez que sales del
+         campo, haya cambiado el texto o no.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.62</span>
       <span class="tag ui">Interfaz</span>
       <h3>La misma etiqueta deja de parecer dos etiquetas</h3>

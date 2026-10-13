@@ -102,6 +102,40 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.63</span>
+      <span class="tag safe">Safety</span>
+      <h3>Six doors that checked who you are but not how often you knock</h3>
+      <p><b>Six of the app's doors had a lock and no limit.</b> Six functions &mdash; reading
+         incoming deliveries, adding, changing and deleting them, reading your watched materials,
+         and asking whether the installation is set up &mdash; checked <i>identity</i> correctly
+         but never counted calls, while the two heaviest ones already did. None of them let anyone
+         do anything they shouldn't. What they let anyone do is <b>burn through the installation's
+         daily Google quota</b>, and that leaves the app dead for everyone until the next day. A
+         forgotten browser tab retrying in a loop could do it by accident.</p>
+      <p>All six now have a ceiling, and every number is two orders of magnitude above real
+         measured use: it should get in the way of a loop, never of a person. The three that write
+         <b>share one counter</b>, so alternating between them doesn't triple the allowance. The
+         counter is <b>per person</b>, so one jammed tab doesn't lock out the warehouse. And the
+         limit sits <i>after</i> the identity check, so a stranger is still told they are not
+         signed in rather than told to come back later.</p>
+    </div>
+
+    <div class="entry">
+      <span class="ver">v12.63</span>
+      <span class="tag fix">Fix</span>
+      <h3>&ldquo;+ Add it&rdquo; stops disappearing for good</h3>
+      <p><b>Type a new project, click back into the box, and the offer to add it was gone
+         forever.</b> Not slow to return &mdash; gone. Clicking into the field cleared the prompt
+         (correct: while you are editing, it would be describing a value that is no longer there),
+         but the only thing that could bring it back fired <i>when the text changed</i>. Leave the
+         box without touching a character and nothing fires. Nothing ever would again.</p>
+      <p>What made it confusing is that the card in the corner deck stayed, so the app offered the
+         project in one place and not in the other, and it looked like the project had been
+         half-created. Now the prompt is re-checked every time you leave the field, whether the
+         text changed or not.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.62</span>
       <span class="tag ui">UI</span>
       <h3>The same label stops looking like two labels</h3>

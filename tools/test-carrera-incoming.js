@@ -63,7 +63,7 @@ function mundo(){
   const candado = { tomado: 0, maximoSimultaneo: 0, vecesTomado: 0 };
 
   const ctx = vm.createContext({
-    console, String, Number, Math, Array, Object, JSON, Date,
+    console, String, Number, Math, Array, Object, JSON, Date, Buffer,
     SpreadsheetApp: { getActiveSpreadsheet: () => ({ getSheetByName: () => hoja }) },
     ensureIncomingSheet_: () => hoja,
     getUserRole: () => ({ role: 'ADMIN', email: 'jose@ox' }),
@@ -74,6 +74,18 @@ function mundo(){
       candado.maximoSimultaneo = Math.max(candado.maximoSimultaneo, candado.tomado);
       try { return fn(); } finally { candado.tomado--; }
     },
+    /* v12.63: las tres acciones de entregas ganaron tope de llamadas, y
+     * `A.levantar` se trajo `requireQuota_` y `throttle_` solos —que es
+     * exactamente lo que promete el comentario de abajo—. Lo que no puede
+     * traerse solo son los globales de Apps Script que usan. El limitador que
+     * entra aquí es EL DE VERDAD: con 120 por cada cinco minutos y cinco
+     * entregas en la prueba, no estorba, y si algún día alguien baja el tope
+     * por debajo de lo que esta prueba hace, se enterará aquí. */
+    Utilities: { base64EncodeWebSafe: (t) => Buffer.from(String(t)).toString('base64') },
+    CacheService: { getScriptCache: () => { const a = {}; return {
+      get: k => (a[k] === undefined ? null : a[k]),
+      put: (k, v) => { a[k] = v; }
+    }; } },
     incomingStatus_:   (v) => String(v || 'Pending'),
     incomingDateMode_: (v) => String(v || 'exact'),
     incomingDateCell_: (v) => String(v || ''),

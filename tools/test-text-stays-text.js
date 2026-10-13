@@ -426,6 +426,11 @@ console.log('\n═══ el PO de una entrega esperada sobrevive a ida y vuelta 
       ensureIncomingSheet_: () => inc,
       getUserRole: () => ({ role: 'ADMIN', email: 'jose@ox.com' }),
       uploadIncomingDoc_: () => '',
+      Utilities: { base64EncodeWebSafe: (t) => Buffer.from(String(t)).toString('base64') },
+      CacheService: { getScriptCache: () => { const a = {}; return {
+        get: k => (a[k] === undefined ? null : a[k]),
+        put: (k, v) => { a[k] = v; }
+      }; } },
       INCOMING_STATUSES: ['Pending', 'Arrived', 'Cancelled']
     });
     // La constante se levanta DEL ARCHIVO, no se copia aquí: una copia a mano
@@ -447,6 +452,12 @@ console.log('\n═══ el PO de una entrega esperada sobrevive a ida y vuelta 
       // deje pasar — lo que el candado impide se mide en
       // test-carrera-incoming.js, que es su sitio.
       'function withStockLock_(fn){ return fn(); }',
+      /* v12.63: addIncoming y updateIncoming ganaron tope de llamadas. Esta
+       * lista se escribe a mano justo para esto —se queja cuando el producto
+       * gana una dependencia— y se quejó: `requireQuota_ is not defined`. Entra
+       * el limitador de verdad con su caché de mentira; con 120 por cinco
+       * minutos no estorba a lo que esta prueba hace. */
+      fnSrc(GS, 'throttle_'), fnSrc(GS, 'requireQuota_'),
       fnSrc(GS, 'addIncoming'), fnSrc(GS, 'updateIncoming')
     ].join('\n'), c);
     return {
