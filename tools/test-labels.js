@@ -330,7 +330,12 @@ Object.assign(window.google,{script:{run:new Proxy({},{get(t,k){
         alto:  lbl.getBoundingClientRect().height,
         salto: getComputedStyle(lbl).breakAfter || getComputedStyle(lbl).pageBreakAfter,
         saltoUltima: getComputedStyle(ultima).breakAfter || getComputedStyle(ultima).pageBreakAfter,
-        codBorde: cs.borderTopWidth, codColor: cs.color
+        codBorde: cs.borderTopWidth, codColor: cs.color,
+        hayQr: !!(cod && cod.querySelector('svg')),
+        qrNegro: (function(){ var pa = cod && cod.querySelector('svg path');
+                              return pa ? pa.getAttribute('fill') === '#000' ? 'rgb(0, 0, 0)' : pa.getAttribute('fill') : ''; })(),
+        qrFondo: (function(){ var re = cod && cod.querySelector('svg rect');
+                              return re ? re.getAttribute('fill') === '#fff' ? 'rgb(255, 255, 255)' : re.getAttribute('fill') : ''; })()
       };
     });
     check('LA APP ENTERA DESAPARECE: no queda ningún hermano de <body> visible ' +
@@ -347,11 +352,29 @@ Object.assign(window.google,{script:{run:new Proxy({},{get(t,k){
     check('...menos la ÚLTIMA, que no lleva salto: si lo llevara, cada tanda ' +
           'acabaría escupiendo una página en blanco de papel térmico',
       /auto/.test(r.saltoUltima), r.saltoUltima);
-    check('EN PAPEL EL HUECO DEL CÓDIGO NO LLEVA NI CONTORNO NI TEXTO: es ' +
-          'espacio. Un recuadro vacío impreso se lee como una etiqueta a medio ' +
-          'hacer',
-      (r.codBorde === '0px' || r.codBorde === '') &&
-      /rgba\(0, 0, 0, 0\)|transparent/.test(r.codColor), r);
+    /* ── REESCRITA EN LA v12.66 ───────────────────────────────────────────
+     *
+     * Lo que comprobaba antes: que en papel el hueco del código no llevara ni
+     * contorno ni texto. Tenía todo el sentido mientras ahí dentro había un
+     * RECUADRO DE PUNTOS que decía «QR / BARCODE» — un marcador de sitio que
+     * impreso se lee como una etiqueta a medio hacer, así que en papel se
+     * escondía con `border:none;color:transparent`.
+     *
+     * Desde la v12.66 ahí vive un QR de verdad. La regla de «sin contorno»
+     * sigue valiendo y por un motivo mejor que antes: una impresora térmica
+     * QUEMA lo negro, y un marco alrededor de un código es tinta que no dice
+     * nada. Pero la de «sin texto» ya no: lo que hay que comprobar es que el
+     * código ESTÉ, y que sea negro sobre blanco, que es lo único que un lector
+     * sabe leer.
+     *
+     * No se tocó el tope ni se aflojó nada: se cambió lo que se mide porque
+     * cambió lo que hay. */
+    check('EN PAPEL EL HUECO DEL CÓDIGO NO LLEVA CONTORNO: una térmica quema ' +
+          'lo negro, y un marco alrededor del código es tinta que no dice nada',
+      r.codBorde === '0px' || r.codBorde === '', r);
+    check('...y dentro hay un QR de verdad, no un hueco', r.hayQr === true, r);
+    check('...negro puro sobre blanco puro, que es lo único que un lector lee',
+      r.qrNegro === 'rgb(0, 0, 0)' && r.qrFondo === 'rgb(255, 255, 255)', r);
     await page.emulateMedia({ media: 'screen' });
   }
 

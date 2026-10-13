@@ -113,6 +113,44 @@ que un ✅ optimista.
     la letra. Lo primero es **mirarlo**: cargar la app con el root a 20 px y ver
     qué se rompe. Después se decide.
 
+21. **La tarjeta naranja «ARRIVED · ENTRY NOT MADE» tapa la tabla de
+    movimientos.** Visto en los vídeos de Jose del 05/10 y otra vez en el del
+    13/10: la tarjeta del mazo de la esquina inferior derecha se superpone a
+    las últimas filas de Movements & History, que quedan debajo y no se pueden
+    leer ni pulsar. No es el mazo de valores sin registrar —ése está arriba—:
+    es el aviso de entregas llegadas sin entrada hecha. Jose lo señaló primero
+    con una imagen sin texto y lo volvió a nombrar el 13/10. **Anotado, sin
+    arreglar.** Lo que hay que decidir antes de tocarlo es si la tabla debe
+    reservar sitio abajo (y entonces pierde filas siempre, haya tarjeta o no) o
+    si la tarjeta debe apartarse al llegar al final del desplazamiento.
+
+22. **Imprimir en la térmica desde el teléfono.** Jose, 13/10: *"tengo una
+    impresora de calor JADEN JD-268BT e intenté imprimir desde la app pero
+    parece que Chrome no me deja."* Investigado el 13/10 y **Chrome no está
+    bloqueando nada**: en Android, el cuadro de impresión sólo ofrece las
+    impresoras que estén dadas de alta en el servicio de impresión del sistema,
+    y una térmica Bluetooth barata no se da de alta ahí — el fabricante la
+    maneja con su propia app. Así que no hay impresora que ofrecer, y eso no es
+    un fallo de Acopio.
+
+    Lo que SÍ funciona hoy, sin tocar código: desde un **ordenador** con la
+    impresora instalada, el botón 🖨 Print de la app imprime bien (es
+    `window.print()` con la hoja a 101,6 × 152,4 mm). Y desde el teléfono,
+    *Guardar como PDF* y abrirlo con la app del fabricante.
+
+    Lo que habría que construir, por orden de coste:
+    1. **Compartir la etiqueta como imagen** (`navigator.share` con un PNG), para
+       que la app de JADENS salga en el menú de compartir del teléfono. Es el
+       salto grande por poco trabajo. **Hay que probarlo en el teléfono de
+       Jose**: Acopio corre dentro de un iframe de Apps Script y no está
+       verificado que `navigator.share` con ficheros funcione ahí.
+    2. **Web Bluetooth directo a la impresora.** Casi seguro imposible dentro
+       del iframe de Apps Script —la política de permisos bloquea `bluetooth` en
+       un iframe de otro origen salvo que el que embebe ponga
+       `allow="bluetooth"`, y eso lo controla Google, no nosotros— y además
+       haría falta el lenguaje de comandos de la impresora, que el fabricante no
+       publica. **No antes de agotar el punto 1.**
+
 ### 🔴 Abierto, mediano
 
 20. La lista de avisos agrupada, como la de Google — **sin el offline dentro**
