@@ -609,16 +609,48 @@ Object.assign(window.google,{script:{run:new Proxy({},{get(t,k){
           'puede tragarse la pregunta siguiente', r.veces === 1, r);
   }
 
+  /* ── EL TAMAÑO DE PAPEL, DICHO ANTES DE GASTAR PAPEL ──────────────────────
+   *
+   * Jose, 13/10, con un vídeo de cuatro minutos: su térmica SÍ sale en el
+   * cuadro de impresión de Android —«Jadens Printer»—, pero el tamaño estaba
+   * en ISO A4, así que la etiqueta salía del tamaño correcto en medio de una
+   * hoja enorme. No era un fallo de la app ni de Chrome: era un desplegable
+   * que nadie mira hasta después de gastar el papel.
+   *
+   * Se comprueba en los DOS anchos porque el texto cambia: en el teléfono hay
+   * que decir dónde está el ajuste, en el ordenador basta la medida. */
+  {
+    const pg = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await pg.goto('file://' + f);
+    await pg.waitForTimeout(600);
+    const grande = await pg.evaluate(() => {
+      _labelsPintarPapel();
+      return (document.getElementById('labelsPaper') || {}).textContent || '';
+    });
+    check('en pantalla grande el aviso dice la medida',
+      /101\.6/.test(grande) && /4×6/.test(grande), grande);
+    await pg.setViewportSize({ width: 390, height: 844 });
+    const movil = await pg.evaluate(() => {
+      _labelsPintarPapel();
+      return (document.getElementById('labelsPaper') || {}).textContent || '';
+    });
+    check('en teléfono dice ADEMÁS dónde está el ajuste, que es lo que faltaba',
+      /101\.6/.test(movil) && /Paper size/i.test(movil) && movil.length > grande.length, movil);
+    check('...y nombra el fallo concreto: que el cuadro suele abrirse en A4',
+      /A4/.test(movil), movil);
+    await pg.close();
+  }
+
   check('sin errores de página' + (errs.length ? ' — ' + errs.join('; ') : ''), errs.length === 0);
   await browser.close();
 
   console.log('\n────────────────────────────────────────────────────────────────────────');
-  console.log('EL HUECO DEL CÓDIGO ESTÁ VACÍO A PROPÓSITO. Jose pidió "un lugar');
-  console.log('donde podamos poner el QR o código de barras", y eso es lo que');
-  console.log('hay. Qué se codifica dentro es una decisión más grande que el');
-  console.log('hueco: lo que lleve decide PARA QUÉ sirve escanearlo — encontrar');
-  console.log('el movimiento, ver el stock del material, o mover material');
-  console.log('escaneando en vez de tecleando. Eso se habla antes de elegirlo.');
+  console.log('EL HUECO DEL CÓDIGO YA NO ESTÁ VACÍO (v12.66). Decía aquí que');
+  console.log('lo estaba a propósito y que lo que llevara dentro era una');
+  console.log('decisión más grande que el hueco. Esa decisión se tomó: lleva');
+  console.log('categoría, material, estante y movimiento, con la versión del');
+  console.log('formato en la primera línea. Lo que sigue abierto es LEERLO —');
+  console.log('la cámara, y qué ofrecer después de escanear.');
   console.log('────────────────────────────────────────────────────────────────────────\n');
 
   console.log(fail ? `labels: ${fail} FALLO(S), ${ok} ok` : `labels: ok (${ok})`);
