@@ -4996,7 +4996,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.63';
+var APP_VERSION = '12.64';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5008,7 +5008,7 @@ var APP_VERSION = '12.63';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'ea368de3';
+var APP_BUILD = '93caa000';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -10629,6 +10629,53 @@ function _ponerUbicacion(valor){
   showToast('Type ' + valor + ' in the location box and save again', 'info', 6000);
 }
 
+/* ── UN SOLO SITIO QUE DECIDE QUÉ HACER CON UN ERROR MARCADO ────────────────
+ *
+ * El servidor marca ciertos rechazos con tubería —`UNKNOWN_LOCATION|P|B`,
+ * `UNKNOWN_CATEGORY|…`, `INSUFFICIENT_STOCK|…`— para que la PANTALLA pueda
+ * ofrecer la salida en vez de enseñar un texto rojo. Lo de después de la
+ * tubería no se enseña nunca tal cual.
+ *
+ * ESO ERA LA INTENCIÓN. LO QUE PASABA ERA OTRA COSA, y Jose lo grabó el 13/10:
+ *
+ *     ✕ Error: UNKNOWN_LOCATION|P|B [ID: 3ce2353a]
+ *
+ * en un toast rojo de seis segundos, en el formulario de entrada con varios
+ * materiales. Parece que la app se rompió. No se rompió: rechazó bien y lo
+ * contó mal.
+ *
+ * LA CAUSA: la cadena de manejadores estaba escrita TRES VECES, una por cada
+ * camino de guardado, y sólo UNA de las tres la tenía completa.
+ *
+ *     addMovement     categoría · ubicación · stock corto     ← completa
+ *     addMultiEntry   sólo duplicado                          ← la del vídeo
+ *     addMultiExit    sólo stock corto
+ *
+ * Tres copias de una lista que tienen que coincidir sin que nada lo obligue.
+ * Es el décimo caso de este patrón en el proyecto.
+ *
+ * Y LO PEOR: ESTABA PREDICHO POR ESCRITO. El comentario del manejador de
+ * `addMultiEntry` decía, palabra por palabra: *"hoy ninguna acción de este
+ * camino lanza un error marcado, así que no se veía —pero la asimetría es la
+ * trampa, no el síntoma: el día que el servidor marque un error de entrada, el
+ * usuario leería SYSTEM_BUSY| en su pantalla"*. Llegó el día. No fue
+ * SYSTEM_BUSY, fue UNKNOWN_LOCATION. Alguien escribió el fallo exacto que iba
+ * a ocurrir y lo dejó escrito en vez de arreglarlo.
+ *
+ * Así que ahora la cadena vive AQUÍ, una vez. Los tres caminos la llaman. El
+ * cuarto que alguien añada la llamará también, o no compilará su intención:
+ * no hay lista que copiar y por tanto no hay lista que se quede corta.
+ *
+ * Devuelve true si se ha hecho cargo del error y no hay que enseñar nada más.
+ * `reintentar` es opcional: sólo los caminos que pueden volver a intentarlo
+ * solos lo pasan. */
+function _errorConocido(err, reintentar){
+  if (_categoriaDesconocida(err)) return true;
+  if (_ubicacionDesconocida(err, reintentar)) return true;
+  if (_shortStockFix(err)) return true;
+  return false;
+}
+
 function _shortStockFix(err){
   var info = _shortStockInfo(err);
   if (!info) return false;
@@ -11305,9 +11352,7 @@ async function submitMovement(){
         // ── Otro se llevó el material mientras esta ventana estaba abierta ─
         _btnReset(btn);
         _setModalBusy('moveOverlay', false);
-        if (_categoriaDesconocida(err)) return;
-        if (_ubicacionDesconocida(err, function(){ _doSubmit(force); })) return;
-        if (_shortStockFix(err)) return;
+        if (_errorConocido(err, function(){ _doSubmit(force); })) return;
         // ── Any other error ────────────────────────────────────────────────
         showToast('Error: ' + _stripTags(err), 'err', 6000);
       })
@@ -12573,7 +12618,7 @@ function submitMultiExit(){
         // Otro se llevó el material mientras esta ventana estaba abierta. Va
         // DESPUÉS del aviso de duplicado y antes del error genérico: los dos
         // son rechazos legítimos, pero éste trae el número bueno consigo.
-        if (_shortStockFix(err)) return;
+        if (_errorConocido(err, function(){ doSubmit(force); })) return;
         showToast('Error: '+_stripTags(err),'err',6000);
       })
       .processMovement('addMultiExit', _h({
@@ -12787,12 +12832,14 @@ function submitMultiEntry(){
           });
           return;
         }
-        // _stripTags, igual que la salida. Era la única de las dos que
-        // enseñaba el texto crudo: la entrada decía 'Error: ' + msg y la
-        // salida ya pasaba por aquí. Hoy ninguna acción de este camino lanza
-        // un error marcado, así que no se veía —pero la asimetría es la
-        // trampa, no el síntoma: el día que el servidor marque un error de
-        // entrada, el usuario leería SYSTEM_BUSY| en su pantalla.
+        /* ÉSTE ES EL CAMINO DEL VÍDEO DEL 13/10. El comentario que había aquí
+         * decía: *"hoy ninguna acción de este camino lanza un error marcado,
+         * así que no se veía —pero la asimetría es la trampa, no el síntoma:
+         * el día que el servidor marque un error de entrada, el usuario leería
+         * SYSTEM_BUSY| en su pantalla"*. Llegó el día, y lo que leyó fue
+         * `UNKNOWN_LOCATION|P|B`. La predicción estaba bien; lo que faltó fue
+         * actuar sobre ella. Ver `_errorConocido`. */
+        if (_errorConocido(err, function(){ _doMultiSubmit(force); })) return;
         showToast('Error: ' + _stripTags(err), 'err', 6000);
       })
       .processMovement('addMultiEntry', _h(payload));
@@ -18603,6 +18650,160 @@ function _cfgAddInline(type, value, hintEl){
     setTimeout(function(){ if (hintEl.parentNode) hintEl.remove(); }, 2500);
   });
 }
+
+/* ── LA UBICACIÓN QUE NO EXISTE, AVISADA MIENTRAS SE ESCRIBE ─────────────────
+ *
+ * Jose, 13/10, en vídeo: *"la app no avisa ni dice nada con una location que
+ * no existe, hasta que se trata de guardar, eso no es útil, debe informar que
+ * la locación no existe, y tal vez ofrecer crearla."*
+ *
+ * Y tenía razón por un motivo peor que el que dijo: en el vídeo el formulario
+ * llega a componer el CORREO DE AVISO —*"152 UNIT(s) of MIRRORS → p9a"*— con
+ * una ubicación que no existe. Todo el formulario se comporta como si `p9a`
+ * fuera un sitio real hasta el segundo en que se pulsa guardar.
+ *
+ * ESTE AVISO NO SUSTITUYE AL RECHAZO DEL SERVIDOR, y es importante decirlo: la
+ * lista de ubicaciones de aquí es una copia que puede estar vieja —alguien
+ * acaba de crear un estante en otra pestaña—, así que quien decide sigue
+ * siendo el servidor. Esto es cortesía temprana, no validación. Por eso NO
+ * bloquea el botón de guardar: si la copia local se equivoca, el servidor
+ * acepta y no ha estorbado nadie.
+ *
+ * SE PARECE AL «+ Add it» DE LOS PROYECTOS A PROPÓSITO: mismas clases, mismo
+ * sitio bajo el campo, mismo botón. Dos avisos que dicen «esto no está en tu
+ * lista» no deberían verse distintos según el campo.
+ *
+ * SE DISPARA EN `change` Y EN `focusout`, que es la pareja que le faltaba al
+ * de proyectos y que costó un vídeo descubrir: `change` solo no vuelve cuando
+ * entras y sales sin tocar el texto. */
+
+function _ubicacionesConocidas(){
+  var set = {};
+  ((config && config.locations) || []).forEach(function(l){
+    var k = String((l && l.name) || l || '').trim().toUpperCase();
+    if (k) set[k] = true;
+  });
+  return set;
+}
+
+/* La más parecida, para proponerla. Mismo criterio que `sugerirUbicacion_` del
+ * servidor en lo que importa —el caso real es `A1p` contra `A1A`, una letra
+ * distinta— sin traerse el algoritmo entero: aquí sólo hay que acertar lo
+ * evidente, y si no acierta, el aviso sigue sirviendo sin sugerencia. */
+function _ubicacionParecida(txt, conocidas){
+  var t = String(txt || '').trim().toUpperCase();
+  if (!t) return '';
+  var nombres = Object.keys(conocidas), mejor = '', mejorD = 99;
+  for (var i = 0; i < nombres.length; i++){
+    var n = nombres[i];
+    if (Math.abs(n.length - t.length) > 1) continue;
+    var d = 0, j = 0, k = 0;
+    while (j < t.length && k < n.length){
+      if (t[j] !== n[k]) d++;
+      j++; k++;
+    }
+    d += Math.abs(t.length - n.length);
+    if (d > 0 && d < mejorD){ mejorD = d; mejor = n; }
+  }
+  return mejorD <= 1 ? mejor : '';
+}
+
+function _esCampoDeUbicacion(el){
+  if (!el || el.tagName !== 'INPUT') return false;
+  if (el.id === 'lockAllowedDest') return false;   // lleva varias separadas por comas
+  var lista = el.getAttribute('list') || '';
+  if (lista === 'rackList' || lista === 'rackListDest') return true;
+  return !!(el.classList && (el.classList.contains('loc-rack') ||
+                             el.classList.contains('el-rack')));
+}
+
+function _quitarAvisoUbic(input){
+  var sig = input.nextElementSibling;
+  if (sig && sig.classList && sig.classList.contains('ubic-hint')) sig.remove();
+}
+
+function _avisarUbicacion(input){
+  _quitarAvisoUbic(input);
+  var val = String(input.value || '').trim();
+  if (!val) return;
+  var conocidas = _ubicacionesConocidas();
+  /* Sin lista cargada todavía no se opina: decir «no existe» porque aún no ha
+   * llegado la configuración sería mentir con cara de ayuda. */
+  if (!Object.keys(conocidas).length) return;
+  if (conocidas[val.toUpperCase()]) return;
+
+  var puede = (userRole === 'ADMIN') ||
+              (userRole === 'WAREHOUSE' && !!(rolePerms || {}).canManageCatalog);
+  var parecida = _ubicacionParecida(val, conocidas);
+
+  var hint = document.createElement('div');
+  hint.className = 'cfg-new-hint ubic-hint';
+  var txt = document.createElement('span');
+  txt.textContent = '📍 ' + val + ' is not a location in your warehouse yet.';
+  hint.appendChild(txt);
+
+  if (parecida){
+    var bUsar = document.createElement('button');
+    bUsar.type = 'button';
+    bUsar.className = 'cfg-new-add';
+    bUsar.textContent = 'Use ' + parecida;
+    bUsar.addEventListener('click', function(){
+      input.value = parecida;
+      _quitarAvisoUbic(input);
+      /* Los dos eventos a mano: cambiar `value` por código no los dispara, y de
+       * ellos cuelgan el total por ubicación y la vista previa del correo. */
+      input.dispatchEvent(new Event('input',  { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      input.focus();
+    });
+    hint.appendChild(bUsar);
+  }
+
+  if (puede){
+    var bNueva = document.createElement('button');
+    bNueva.type = 'button';
+    bNueva.className = 'cfg-new-add';
+    bNueva.textContent = '+ Create ' + val;
+    bNueva.addEventListener('click', function(){
+      _btnBusy(bNueva, 'Creating…');
+      _cfgAddValue('locations', val, function(ok, e2){
+        if (!ok){ _btnLabel(bNueva, '+ Create ' + val);
+                  showToast('Could not create it: ' + e2, 'err', 6000); return; }
+        /* La copia local primero, por lo mismo que en `_ubicacionDesconocida`:
+         * si no, el desplegable seguiría sin ofrecerla y el siguiente material
+         * volvería a chocar con lo que acabamos de arreglar. */
+        if (config && Array.isArray(config.locations) &&
+            !config.locations.some(function(l){
+              return String(l.name).toUpperCase() === val.toUpperCase(); })){
+          config.locations.push({ name: val, type: 'RACK' });
+          ['rackList', 'rackListDest'].forEach(function(id){
+            var dl = document.getElementById(id);
+            if (dl){ var op = document.createElement('option'); op.value = val; dl.appendChild(op); }
+          });
+        }
+        hint.innerHTML = '<span class="cfg-new-ok">✓ ' + _he(val) + ' added to your locations</span>';
+        setTimeout(function(){ if (hint.parentNode) hint.remove(); }, 2500);
+      });
+    });
+    hint.appendChild(bNueva);
+  } else {
+    var quien = document.createElement('span');
+    quien.textContent = 'Ask an admin to add it in App Settings → Locations.';
+    hint.appendChild(quien);
+  }
+
+  input.insertAdjacentElement('afterend', hint);
+}
+
+document.addEventListener('change', function(e){
+  if (_esCampoDeUbicacion(e.target)) _avisarUbicacion(e.target);
+});
+document.addEventListener('focusin', function(e){
+  if (_esCampoDeUbicacion(e.target)) _quitarAvisoUbic(e.target);
+});
+document.addEventListener('focusout', function(e){
+  if (_esCampoDeUbicacion(e.target)) _avisarUbicacion(e.target);
+});
 
 /* ── CUÁNDO APARECE Y CUÁNDO SE VA EL «+ Add it» ─────────────────────────────
  *

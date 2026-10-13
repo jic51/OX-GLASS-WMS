@@ -231,17 +231,45 @@ console.log('\n═══ y el texto que ve una persona no lleva etiquetas ══
 // ── 3. Los caminos que pueden recibirlo ─────────────────────────────────────
 console.log('\n═══ los caminos que pueden quedarse cortos ═══\n');
 {
+  /* ── ESTE BLOQUE SE REESCRIBIÓ EN LA v12.64, Y MERECE LA EXPLICACIÓN ──────
+   *
+   * Lo que hacía antes era buscar el texto `_shortStockFix(err)` DENTRO de
+   * cada función de guardado. Funcionó mientras los tres caminos tenían su
+   * propia copia de la cadena de manejadores... que es exactamente lo que
+   * resultó ser el fallo: tres listas que tenían que coincidir sin que nada
+   * lo obligara, y la de la entrada con varios materiales se quedó corta, así
+   * que el usuario acabó leyendo `UNKNOWN_LOCATION|P|B` en pantalla.
+   *
+   * Al juntar las tres en `_errorConocido`, esta prueba se puso roja. Y tenía
+   * razón en quejarse —la llamada ya no estaba donde miraba— pero estaba
+   * mirando lo que no era: buscaba DÓNDE ESTÁ ESCRITA la llamada, no SI SE
+   * ALCANZA. Es la cuarta vez que este repositorio comete ese mismo error de
+   * medida.
+   *
+   * Ahora se mide la cadena entera: cada camino llega a `_errorConocido`, y
+   * `_errorConocido` llega a `_shortStockFix`. Eso es alcanzable, que es lo
+   * que la prueba quería decir desde el principio.
+   *
+   * Y LA TERCERA COMPROBACIÓN SE CAE A PROPÓSITO. Decía que el camino de
+   * ENTRADAS no debía llevarlo, porque una entrada añade material y no puede
+   * quedarse corta: ponerlo ahí sería código muerto. Era verdad con tres
+   * cadenas escritas a mano. Con una sola compartida, «qué manejadores lleva
+   * este camino» deja de ser una decisión por camino — y eso es justamente lo
+   * que arregla el fallo. El precio es una llamada que en la entrada siempre
+   * devuelve false. Pagarlo es mejor que volver a tener tres listas que
+   * alguien tiene que acordarse de igualar. */
+  const cadena = fnSrc(SRC, '_errorConocido');
+  check('existe UNA cadena compartida de manejadores (`_errorConocido`)', !!cadena);
+  check('...y pasa por `_shortStockFix`, que es lo que corrige el número',
+    /_shortStockFix\(\s*err\s*\)/.test(cadena || ''));
+
   [['salidas (el de la prueba de Jose)', 'submitMultiExit'],
-   ['movimiento suelto: exit, transfer y waste', 'submitMovement']
+   ['movimiento suelto: exit, transfer y waste', 'submitMovement'],
+   ['entrada con varios materiales (el del vídeo del 13/10)', 'submitMultiEntry']
   ].forEach(([que, fn]) => {
-    check(que + ': corrige el número en vez de enseñar el error crudo',
-      /_shortStockFix\(err\)/.test(fnSrc(SRC, fn)));
+    check(que + ': su manejador de fallo llega a la cadena',
+      /_errorConocido\(/.test(fnSrc(SRC, fn) || ''));
   });
-  // Y el de ENTRADAS no, porque una entrada AÑADE material: no puede quedarse
-  // corta. Meterlo ahí sería código que no se ejecuta nunca.
-  check('el de entradas NO lo lleva — una entrada añade material y no puede ' +
-        'quedarse corta; ponerlo ahí sería código muerto',
-    !/_shortStockFix\(err\)/.test(fnSrc(SRC, 'submitMultiEntry')));
 }
 
 console.log('\n' + '─'.repeat(72));

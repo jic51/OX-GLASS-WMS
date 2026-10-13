@@ -102,6 +102,29 @@
        along the way.</p>
 
     <div class="entry">
+      <span class="ver">v12.64</span>
+      <span class="tag fix">Fix</span>
+      <h3>A location that doesn't exist now says so while you type</h3>
+      <p><b>Type a rack that isn't in your warehouse and the app said nothing at all</b> &mdash;
+         not while you typed it, not when you added the quantity, not even when it wrote the
+         notification email naming that rack. The whole form behaved as though the place were real,
+         right up to the second you pressed Save. Now the field says so as soon as you leave it,
+         offers the one you probably meant (<code>A1p</code> &rarr; <code>A1A</code>), and offers
+         to create it if you're allowed to. It never blocks saving: the list in your browser can be
+         a few seconds out of date, so the server still has the last word.</p>
+      <p><b>And when it did finally complain, it complained in code.</b> What appeared was
+         <code>Error: UNKNOWN_LOCATION|P|B</code> in a red bar that vanished after six seconds.
+         That looks like the app broke. It hadn't: it refused correctly and reported it terribly.
+         The app marks certain refusals so the screen can offer a way out instead of showing red
+         text &mdash; but that handling was written three times, once per save path, and only one
+         of the three was complete. Multi-material entry, which is the one most people use, had the
+         shortest list. It is now written once and all three use it.</p>
+      <p>The explanation was already in the code, word for word: <i>&ldquo;the day the server marks
+         an entry error, the user will read SYSTEM_BUSY| on their screen&rdquo;</i>. The day came.
+         It wasn't SYSTEM_BUSY.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.63</span>
       <span class="tag safe">Safety</span>
       <h3>Six doors that checked who you are but not how often you knock</h3>

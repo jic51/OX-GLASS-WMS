@@ -114,6 +114,13 @@
     transition: transform .15s ease, background .15s ease;
   }
   .btn:hover { transform: translateY(-1px); background: #000; }
+  /* La pantalla de después de enviar. Hereda la caja del formulario para que
+     no parezca que la página cambió de sitio: lo que cambia es el contenido,
+     no el marco. */
+  .enviado-tit { margin: 0 0 .5rem; font-weight: 700; font-size: 1.15rem;
+                 color: var(--good, #059669); letter-spacing: -.01em }
+  .enviado-botones { display: flex; gap: .7rem; flex-wrap: wrap }
+  .enviado-botones .btn { text-decoration: none }
   .btn-ghost { background: transparent; color: var(--ink); border-color: var(--line); }
   .btn-ghost:hover { background: var(--sunk); transform: none; }
   .hero-note { font-size: var(--step--1); color: var(--steel); margin-top: 1.1rem; }
@@ -681,7 +688,13 @@ var ACOPIO_ES = {
   "m4": "Cómo llevan el inventario hoy:\n",
   "m5": "Solicitud de demo de Acopio — ",
   "m6": "Enviando…",
-  "m7": "Recibido — te contestamos en un día hábil.",
+  "m7": "Recibido.",
+  "m8": "Te contesto yo, en un día hábil o menos.",
+  "m9": "Lo siguiente son veinte minutos por llamada: miro cómo tienen el correo montado, te enseño la app con tus propios estantes y proyectos, y los dos sabemos si encaja. Si no encaja, te lo digo.",
+  "m10": "Mientras tanto",
+  "m11": "Cómo funciona, pantalla por pantalla",
+  "m12": "Cuánto cuesta",
+  "m13": "¿Prisa? Escríbeme directo:",
   "t1": "Qué hace",
   "t2": "Precio",
   "t3": "Hablemos",
@@ -1011,9 +1024,82 @@ function acopioToggleLang(ev){
 
        once:true because the iframe fires load again on any later submit, and
        stacking handlers would show the thank-you more than once. */
+    /* ── LO QUE SE VE DESPUÉS DE ENVIAR ───────────────────────────────────
+       Aquí había UNA FRASE GRIS y nada más. Jose, 13/10: *"me parece muy poco
+       profesional y poco útil mostrar ese texto ahí. Es como cuando se acaba
+       una película y tienes que regresar a casa. Horrible."*
+
+       Tenía razón, y el motivo es de negocio, no de estética: ésta es la
+       persona MÁS interesada que va a pasar por la página en todo el día
+       —acaba de levantar la mano— y se la dejaba sin absolutamente nada que
+       hacer. Un callejón sin salida justo donde más atención hay.
+
+       Lo que lleva ahora, y por qué cada pieza:
+         · QUÉ PASA DESPUÉS, concreto. «Un día hábil» es una promesa; «veinte
+           minutos por llamada, miro cómo tienen el correo, te enseño la app con
+           tus estantes» es una expectativa. La segunda se puede comprobar.
+         · DOS SITIOS A DONDE IR, que son los dos que contestan las preguntas
+           que quedan después de pedir una demo: cómo es por dentro, y cuánto
+           cuesta.
+         · EL CORREO DIRECTO, en voz baja. Quien tiene prisa no quiere esperar
+           un día hábil, y hacerle buscar el correo otra vez es castigarle por
+           tener prisa.
+
+       Se construye con `textContent` y no pegando HTML con el nombre dentro:
+       lo que escribió el visitante no vuelve a la página en ningún momento. */
     sink.addEventListener('load', function () {
-      f.innerHTML = '<p class="sub" style="margin:0">' +
-        acopioT('m7', 'Got it — we\'ll reply within one business day.') + '</p>';
+      var caja = document.createElement('div');
+      caja.className = 'enviado';
+
+      var h = document.createElement('p');
+      h.className = 'enviado-tit';
+      h.textContent = '✓ ' + acopioT('m7', 'Got it.');
+      caja.appendChild(h);
+
+      var p1 = document.createElement('p');
+      p1.className = 'sub';
+      p1.style.margin = '0';
+      p1.textContent = acopioT('m8', "I'll reply myself, within one business day or less.");
+      caja.appendChild(p1);
+
+      var p2 = document.createElement('p');
+      p2.className = 'sub';
+      p2.style.margin = '.7rem 0 0';
+      p2.textContent = acopioT('m9',
+        'Next is twenty minutes on a call: I look at how your email is set up, ' +
+        'show you the app with your own racks and projects, and we both find out ' +
+        'whether it fits. If it does not, I will say so.');
+      caja.appendChild(p2);
+
+      var lbl = document.createElement('span');
+      lbl.className = 'eyebrow';
+      lbl.style.cssText = 'display:block;margin:1.5rem 0 .6rem';
+      lbl.textContent = acopioT('m10', 'In the meantime');
+      caja.appendChild(lbl);
+
+      var fila = document.createElement('div');
+      fila.className = 'enviado-botones';
+      [['/detalle.html', acopioT('m11', 'How it works, screen by screen'), 'btn'],
+       ['#price',        acopioT('m12', 'What it costs'),                  'btn btn-ghost']
+      ].forEach(function(b){
+        var a = document.createElement('a');
+        a.href = b[0]; a.className = b[2]; a.textContent = b[1];
+        fila.appendChild(a);
+      });
+      caja.appendChild(fila);
+
+      var pie = document.createElement('p');
+      pie.className = 'formnote';
+      pie.style.marginTop = '1.4rem';
+      pie.textContent = acopioT('m13', 'In a hurry? Write me directly: ') + ' ';
+      var mail = document.createElement('a');
+      mail.href = 'mailto:joseisrael5101@gmail.com';
+      mail.textContent = 'joseisrael5101@gmail.com';
+      pie.appendChild(mail);
+      caja.appendChild(pie);
+
+      f.innerHTML = '';
+      f.appendChild(caja);
     }, { once: true });
 
     f.submit();

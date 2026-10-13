@@ -103,6 +103,33 @@
        cinco segundos por el camino.</p>
 
     <div class="entry">
+      <span class="ver">v12.64</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Una ubicaci&oacute;n que no existe ahora lo dice mientras escribes</h3>
+      <p><b>Escrib&iacute;as un estante que no est&aacute; en tu bodega y la app no dec&iacute;a
+         nada</b> &mdash;ni al escribirlo, ni al poner la cantidad, ni siquiera cuando
+         compon&iacute;a el correo de aviso nombrando ese estante&mdash;. Todo el formulario se
+         comportaba como si el sitio fuera real, hasta el segundo en que pulsabas guardar. Ahora el
+         campo lo dice en cuanto sales de &eacute;l, propone la que probablemente quer&iacute;as
+         (<code>A1p</code> &rarr; <code>A1A</code>) y ofrece crearla si tienes permiso. No bloquea
+         guardar en ning&uacute;n momento: la lista que tiene tu navegador puede llevar unos
+         segundos de retraso, as&iacute; que la &uacute;ltima palabra sigue siendo del servidor.</p>
+      <p><b>Y cuando por fin se quejaba, se quejaba en c&oacute;digo.</b> Lo que sal&iacute;a era
+         <code>Error: UNKNOWN_LOCATION|P|B</code> en una barra roja que desaparec&iacute;a a los
+         seis segundos. Eso parece que la app se rompi&oacute;. No se hab&iacute;a roto: rechaz&oacute;
+         bien y lo cont&oacute; fatal. La app marca ciertos rechazos para que la pantalla pueda
+         ofrecer una salida en vez de ense&ntilde;ar texto rojo &mdash;pero ese manejo estaba
+         escrito tres veces, una por cada camino de guardado, y s&oacute;lo uno de los tres lo
+         ten&iacute;a entero. La entrada con varios materiales, que es la que m&aacute;s se usa,
+         ten&iacute;a la lista m&aacute;s corta. Ahora est&aacute; escrito una vez y los tres lo
+         usan.</p>
+      <p>La explicaci&oacute;n ya estaba en el c&oacute;digo, palabra por palabra: <i>&laquo;el
+         d&iacute;a que el servidor marque un error de entrada, el usuario leer&aacute;
+         SYSTEM_BUSY| en su pantalla&raquo;</i>. Lleg&oacute; el d&iacute;a. No fue
+         SYSTEM_BUSY.</p>
+    </div>
+
+    <div class="entry">
       <span class="ver">v12.63</span>
       <span class="tag safe">Seguridad</span>
       <h3>Seis puertas que miraban qui&eacute;n eres pero no cu&aacute;ntas veces llamas</h3>

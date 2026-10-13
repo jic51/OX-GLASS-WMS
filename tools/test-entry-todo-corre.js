@@ -184,6 +184,23 @@ function mundo(opciones){
     else alOk({ count: 1, rowCount: 1 });
   };
 
+  /* `_errorConocido` DE VERDAD, con sus tres manejadores dobles. Desde la
+   * v12.64 el camino de fallo pasa por ella: es la cadena única que sustituyó
+   * a las tres copias que tenía cada guardado —y cuya copia corta en la
+   * entrada es la que hacía que el usuario leyera `UNKNOWN_LOCATION|P|B` en
+   * pantalla—.
+   *
+   * Los tres manejadores van dobles y devuelven false a propósito: lo que esta
+   * prueba mide es que un error CUALQUIERA llegue hasta el mensaje genérico y
+   * que la tarjeta no se salde. Si fueran los de verdad, abrirían ventanas de
+   * confirmación que aquí no hay quien cierre. Pero la cadena es la real, así
+   * que si alguien la vacía, esta prueba lo nota. */
+  vm.runInContext(
+    'function _categoriaDesconocida(){ return false; }\n' +
+    'function _ubicacionDesconocida(){ return false; }\n' +
+    'function _shortStockFix(){ return false; }\n' +
+    fnSrc('_errorConocido'), ctx);
+
   // LA FUNCIÓN DE VERDAD, sacada del archivo.
   vm.runInContext(fnSrc('submitMultiEntry'), ctx);
 
