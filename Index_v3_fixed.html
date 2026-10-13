@@ -1546,6 +1546,64 @@
     .acct-actions{padding:var(--sp-2)}
     .acct-item{width:100%;display:flex;align-items:center;gap:var(--sp-4);background:none;border:none;border-radius:10px;padding:.55rem .7rem;font-size:.85rem;font-weight:600;font-family:inherit;color:var(--text);cursor:pointer;text-align:left;transition:.12s}
     .acct-item:hover{background:var(--bg)}
+    /* ── LA VENTANA DE NOVEDADES ───────────────────────────────────────────
+     *
+     * Jose la pidió el 13/10, y la pidió DESPUÉS de que yo le dijera que no a
+     * otra cosa. Conviene dejar escrita la diferencia, porque desde fuera se
+     * parecen:
+     *
+     *   LO QUE DIJE QUE NO: un aviso cada cierto tiempo diciendo «hay
+     *   actualizaciones, contáctanos». Aparece PORQUE PASÓ EL TIEMPO. No
+     *   cambió nada para quien lo lee. Interrumpe su trabajo para pedirle algo
+     *   que nos conviene a nosotros. Eso es publicidad.
+     *
+     *   LO QUE ES ESTO: aparece el día que SU app cambió de versión, y cuenta
+     *   lo que cambió en la app que tiene delante. Aparece PORQUE LES PASÓ
+     *   ALGO, dice algo verdadero sobre lo que están mirando, y no pide nada.
+     *   Eso es un recibo.
+     *
+     * La pregunta que separa las dos: ¿sale porque algo les pasó a ellos, o
+     * porque pasó el tiempo para nosotros?
+     *
+     * Y LA PIEZA QUE LA HACE NO SER UNA INTERRUPCIÓN es la última que pidió
+     * Jose: se puede cerrar, pero queda en un sitio permanente. Se cierra sin
+     * pensar PRECISAMENTE porque se sabe dónde encontrarla. Un aviso que no se
+     * puede recuperar obliga a leerlo; uno que sí, se puede ignorar sin coste.
+     */
+    .nv-art{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:var(--sp-5) 0 var(--sp-6)}
+    .nv-fila{display:flex;align-items:flex-start;gap:var(--sp-4);padding:var(--sp-4) var(--sp-5);font-size:var(--fs-sm);line-height:var(--lh-normal)}
+    .nv-fila+.nv-fila{border-top:1px solid var(--border)}
+    .nv-marca{flex:0 0 auto;font-weight:800;font-size:var(--fs-xs);letter-spacing:.04em;
+              padding:var(--pad-pildora);border-radius:var(--r-pildora);white-space:nowrap}
+    .nv-antes .nv-marca{background:var(--red-bg);color:var(--red)}
+    .nv-antes  code,.nv-antes  span.nv-txt{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--red)}
+    .nv-ahora{background:var(--green-bg)}
+    .nv-ahora .nv-marca{background:var(--green);color:#fff}
+    .nv-ahora .nv-txt{color:var(--text);font-weight:600}
+    .nv-txt{overflow-wrap:anywhere}
+    /* 180 ms y seis píxeles. Lo que enseñan los reels: las cosas caras se
+     * mueven poco. Un «antes y después» que salta llama la atención sobre el
+     * movimiento en vez de sobre el cambio. */
+    .overlay.show .nv-ahora{animation:nv-entra .18s ease both .12s}
+    @keyframes nv-entra{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+    @media (prefers-reduced-motion:reduce){.overlay.show .nv-ahora{animation:none}}
+    .nv-lista{margin:0;padding-left:var(--sp-7);display:flex;flex-direction:column;gap:var(--sp-3)}
+    .nv-lista li{font-size:var(--fs-lg);line-height:var(--lh-amplia);color:var(--text)}
+    .nv-ver{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:var(--fs-xs);
+            color:var(--muted);letter-spacing:.02em}
+    .nv-pie{margin-top:var(--sp-7);padding-top:var(--sp-5);border-top:1px solid var(--border);
+            font-size:var(--fs-sm);color:var(--muted);line-height:var(--lh-normal)}
+    .nv-pie a{color:var(--accent2);font-weight:600}
+    .nv-acciones{display:flex;gap:var(--sp-4);flex-wrap:wrap;align-items:center;margin-top:var(--sp-6)}
+    /* El punto de «sin leer». Va en el botón de la cuenta y en su línea del
+     * menú, porque el menú está cerrado la mayor parte del tiempo y un aviso
+     * que sólo se ve al abrir no avisa de nada. */
+    .nv-punto{display:inline-block;width:8px;height:8px;border-radius:50%;
+              background:var(--accent);flex:0 0 auto;margin-left:auto}
+    .acct-btn{position:relative}
+    .acct-btn.nv-hay::after{content:'';position:absolute;top:-2px;right:-2px;
+              width:10px;height:10px;border-radius:50%;background:#F59E0B;
+              border:2px solid var(--navy)}
     .acct-foot{padding:.55rem var(--sp-6) .7rem;text-align:center;font-size:.67rem;color:var(--muted);border-top:1px solid var(--border)}
     .acct-legal{margin-top:var(--sp-1);display:flex;gap:.35rem;justify-content:center;align-items:center}
     .acct-legal a{color:var(--muted);text-decoration:none;font-weight:600}
@@ -3619,6 +3677,12 @@
           <button class="acct-item" id="btnWeekSchedule" onclick="closeAccountMenu();openWeekSchedule()">☀️ <span>This week's arrivals</span></button>
           <button class="acct-item" id="btnSettings"  onclick="closeAccountMenu();openSettingsModal()" style="display:none">⚙️ <span>App Settings</span></button>
           <button class="acct-item" id="btnUsersMgmt" onclick="closeAccountMenu();openUsersModal()"    style="display:none">👥 <span>Manage Users</span></button>
+          <!-- Sin filtro de rol: lo que cambió en la app lo tiene que poder
+               leer quien la usa, no sólo quien la administra. Y el punto de
+               novedad vive AQUÍ y en el círculo de la cuenta, porque el menú
+               está cerrado casi siempre y un aviso que sólo se ve al abrir no
+               avisa de nada. -->
+          <button class="acct-item" id="btnNovedades" onclick="closeAccountMenu();abrirNovedades()">✨ <span>What's new</span><span class="nv-punto" id="nvPunto" style="display:none"></span></button>
           <button class="acct-item" id="btnReportIssue" onclick="closeAccountMenu();openReportIssueModal()">🐞 <span>Report a problem</span></button>
           <button class="acct-item" id="btnDarkMode" onclick="toggleDarkMode()"><span id="darkIcon">🌙</span> <span id="darkLabel">Dark mode</span></button>
           <button class="acct-item" id="acctSwitch" onclick="_signOut()" style="display:none">⇄ <span>Switch account</span></button>
@@ -3660,6 +3724,22 @@
      no shared address to send them to, and a policy nobody can open is the
      same as not having one. Source of truth is legal/*.md in the repo — change
      it there and re-generate. -->
+<!-- ══ WHAT'S NEW ════════════════════════════════════════════════════════════
+     El texto viaja DENTRO del archivo, no se descarga. Dos motivos y los dos
+     son de Jose: funciona sin internet, y nadie tiene que salir de la app para
+     enterarse de lo que cambió en la app. El enlace al final es opcional —para
+     quien quiera la nota entera— y apunta SÓLO a la versión de esta ventana,
+     no al historial desde el principio. -->
+<div class="overlay" id="novedadesOverlay">
+  <div class="modal modal-md">
+    <div class="mhdr">
+      <h3 id="nvTitulo">What's new</h3>
+      <button class="modal-x" onclick="cerrarNovedades()" title="Close">✕</button>
+    </div>
+    <div id="nvCuerpo"></div>
+  </div>
+</div>
+
 <div class="overlay" id="legalOverlay">
   <div class="modal modal-md">
     <div class="mhdr">
@@ -4996,7 +5076,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.64';
+var APP_VERSION = '12.65';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5008,7 +5088,7 @@ var APP_VERSION = '12.64';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '93caa000';
+var APP_BUILD = '64288996';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -7124,6 +7204,11 @@ function _setFavicon(href){
  * por su cuenta.
  */
 var PRODUCT_SITE = 'https://www.acopio.net';
+/* El correo al que se escribe por soporte. Vive aquí, al lado de la dirección
+ * del sitio, porque las dos cosas se enseñan bajo la misma condición: sólo
+ * mientras el producto siga llamándose como lo hicimos. Una sola copia para
+ * que no se queden distintas. */
+var ACOPIO_SOPORTE = 'joseisrael5101@gmail.com';
 
 function _syncProductLinks(productName){
   var custom = String(productName || '').trim();
@@ -23782,6 +23867,12 @@ function loadDataFromGoogle(skipCache, quiet){
         try { checkMorningPopup();        } catch(e){ console.error('checkMorningPopup:', e); }
         try { _offerSetupIfUnconfigured(data); } catch(e){ console.error('_offerSetupIfUnconfigured:', e); }
         try { _showSetupNudge();          } catch(e){ console.error('_showSetupNudge:', e); }
+        /* La última de la cola, y a propósito: lo que llegó hoy a la bodega
+         * —el popup de la mañana— manda sobre lo que cambió en la app. Y
+         * `_nvAlArrancar` comprueba por sí misma que no haya ninguna ventana
+         * abierta antes de salir, así que llegar la última no basta: también
+         * se aparta si algo se abrió después. */
+        try { _nvAlArrancar();            } catch(e){ console.error('_nvAlArrancar:', e); }
       } catch(outerErr) {
         setConnStatus('offline');
         var sr2 = document.getElementById('statsRow');
@@ -25252,6 +25343,290 @@ var LEGAL_DOCS = {
 <p>Jose Castro — joseisrael5101@gmail.com</p>` }
 };
 /* ─── END GENERATED LEGAL HTML ─── */
+
+/* ══ WHAT'S NEW ═══════════════════════════════════════════════════════════════
+ *
+ * POR QUÉ EXISTE, Y POR QUÉ NO ES EL AVISO QUE RECHAZAMOS
+ *
+ * Escribimos dos notas por versión —inglés y español—, las publicamos, y
+ * dentro de la app había CERO enlaces que llevaran ahí: un cliente nunca se
+ * enteraba de lo que mejoraba. El soporte mensual se justifica justo con eso.
+ *
+ * Jose había propuesto antes un aviso periódico diciendo «hay actualizaciones,
+ * contáctanos», y le dije que no. La diferencia cabe en una pregunta:
+ *
+ *     ¿sale porque algo les pasó a ELLOS, o porque pasó el tiempo para
+ *     NOSOTROS?
+ *
+ * Lo primero es información. Lo segundo es publicidad. Esta ventana sale el
+ * día que SU app cambió de número de versión, cuenta lo que cambió en la app
+ * que tienen delante, y no pide nada. La línea de soporte va al final, en voz
+ * baja, porque en ese momento sí viene a cuento: «esto cambió; si necesitas
+ * ayuda con ello, aquí».
+ *
+ * LAS CUATRO REGLAS QUE LA HACEN SOPORTABLE
+ *
+ *  1. SÓLO SI HUBO UN CAMBIO DE VERSIÓN DE VERDAD. Se compara con la última
+ *     que vio ESTE navegador.
+ *  2. NUNCA EN LA PRIMERA VISITA. Sin versión guardada no se enseña nada: se
+ *     apunta la actual y se calla. Enseñarle «lo que cambió» a alguien que
+ *     entra por primera vez es contarle el final de una película que no ha
+ *     visto.
+ *  3. SE PUEDE CERRAR Y QUEDA EN UN SITIO FIJO. Ésta es la pieza que pidió
+ *     Jose y es la que la convierte en algo que no interrumpe: se cierra sin
+ *     pensar PRECISAMENTE porque se sabe dónde encontrarla. Menú de la cuenta
+ *     → What's new, siempre, con o sin novedad.
+ *  4. EL TEXTO VIAJA EN EL ARCHIVO. Funciona sin internet y nadie tiene que
+ *     salir de la app. El enlace de abajo es para quien quiera la nota entera,
+ *     y apunta a ESTA versión, no al historial desde el principio.
+ *
+ * MANTENIMIENTO: esta lista es una VENTANA DE LAS ÚLTIMAS CUATRO, no el
+ * historial. Al publicar una versión se añade arriba y se quita la de abajo.
+ * Si creciera sin fin, cada cliente se descargaría años de notas para leer
+ * una. `tools/test-novedades.js` comprueba que la primera entrada es la
+ * versión actual y que no hay más de cuatro.
+ *
+ * EL «ANTES Y DESPUÉS» NO ES UNA ILUSTRACIÓN: son las dos cadenas de verdad,
+ * la que salía y la que sale. Jose pidió que se viera algo de lo que cambió, y
+ * un dibujo bonito se separa del texto a la primera versión que nadie redibuja.
+ * Esto no puede separarse porque sale de la misma entrada.
+ */
+
+var NOVEDADES = [
+  { ver: '12.65',
+    titulo: 'The app finally tells you what changed',
+    puntos: [
+      'This window. It opens once when your version changes, and never again for that version.',
+      'It lives in the account menu under <b>What\'s new</b>, so closing it costs nothing — you always know where it went.',
+      'Four releases are kept here. The full note for each is one click away.'
+    ],
+    antes:  'No way to find out what improved, short of asking',
+    ahora:  'What\'s new, in the account menu, with a dot when there is one' },
+
+  { ver: '12.64',
+    titulo: 'A location that does not exist says so while you type',
+    puntos: [
+      'Type a rack that is not in your warehouse and the field says so when you leave it — not when you press Save.',
+      'It offers the one you probably meant, and offers to create it if you are allowed to.',
+      'It never blocks saving: your browser\'s list can be seconds out of date, so the server still decides.'
+    ],
+    antes:  'Error: UNKNOWN_LOCATION|P|B',
+    ahora:  'A1p is not a location in your warehouse yet — Use A1A' },
+
+  { ver: '12.63',
+    titulo: 'Six doors that checked who you are but not how often you knock',
+    puntos: [
+      'Six functions checked identity correctly but never counted calls — enough to burn the installation\'s daily Google quota and leave the app dead for everyone until the next day.',
+      'All six now have a ceiling, counted per person, so one jammed browser tab cannot shut the warehouse out.',
+      'And <b>+ Add it</b> for a new project stopped disappearing for good when you clicked back into the box.'
+    ],
+    antes:  'A forgotten tab in a retry loop could take the app down for the day',
+    ahora:  'A ceiling on every door, counted per person' },
+
+  { ver: '12.62',
+    titulo: 'The same label stops looking like two labels',
+    puntos: [
+      'Twenty rules drew the same coloured capsule with fourteen different paddings. Now there is one capsule.',
+      '&ldquo;Arrived&rdquo; in the incoming table and &ldquo;Arrived&rdquo; in the morning popup are finally the same shape.',
+      'Nothing moved more than two pixels, and all of them now match.'
+    ],
+    antes:  'Fourteen paddings, ten text sizes and six corner radii for one thing',
+    ahora:  'One capsule, everywhere' }
+];
+
+var NV_CLAVE = 'acopio_novedades_vista';
+
+function _nvVista(){
+  try { return localStorage.getItem(NV_CLAVE) || ''; } catch (e) { return ''; }
+}
+function _nvGuardar(v){
+  try { localStorage.setItem(NV_CLAVE, v); } catch (e) {}
+}
+
+/* Hay novedad cuando la versión de este archivo no es la última que vio este
+ * navegador. No se compara «mayor que»: una vuelta atrás a una versión
+ * anterior también es un cambio que conviene contar. */
+function _nvHayNovedad(){
+  var vista = _nvVista();
+  return !!vista && vista !== APP_VERSION;
+}
+
+function _nvPintarPunto(){
+  var hay = _nvHayNovedad();
+  var btn = document.getElementById('acctBtn');
+  var pt  = document.getElementById('nvPunto');
+  if (btn) btn.classList.toggle('nv-hay', hay);
+  if (pt)  pt.style.display = hay ? 'inline-block' : 'none';
+}
+
+/* El ancla de la nota publicada. Se construye con el número de versión y no se
+ * guarda escrita en cada entrada: una dirección escrita a mano al lado de un
+ * número es otra pareja que tiene que coincidir sin que nada lo obligue, y de
+ * ésas ya llevamos diez contadas. `tools/test-novedades.js` comprueba contra
+ * el changelog publicado que el ancla existe. */
+function _nvEnlace(ver){
+  return PRODUCT_SITE + '/changelog.html#v' + String(ver).replace('.', '-');
+}
+
+/* ── LA MARCA BLANCA MANDA TAMBIÉN AQUÍ ──────────────────────────────────────
+ *
+ * Si un cliente renombró el producto, su gente está usando algo que no se
+ * llama Acopio. Mandarles a acopio.net —o al correo de Jose— desde dentro de
+ * esa app sería contarles de dónde sale, que es justo lo que la marca blanca
+ * existe para no hacer. Es la misma regla que ya cumple `_syncProductLinks`
+ * con el nombre del header, y conviene que la cumplan las dos cosas o
+ * ninguna: una app renombrada con un enlace a acopio.net en una esquina es
+ * peor que una sin renombrar.
+ *
+ * LO QUE CAMBIÓ SÍ SE ENSEÑA IGUAL. Lo que desaparece es de dónde viene: la
+ * ventana queda con su título, su antes y después y su lista, sin enlace y sin
+ * correo. Quien quiera más, le pregunta a quien le vendió la app. */
+function _nvEsDeFabrica(){
+  var custom = String((window.company && company.productName) || '').trim();
+  return !custom || custom === PRODUCT;
+}
+
+function _nvFila(clase, marca, texto){
+  var d = document.createElement('div');
+  d.className = 'nv-fila ' + clase;
+  var m = document.createElement('span');
+  m.className = 'nv-marca';
+  m.textContent = marca;
+  var t = document.createElement('span');
+  t.className = 'nv-txt';
+  t.textContent = texto;
+  d.appendChild(m); d.appendChild(t);
+  return d;
+}
+
+function _nvPintar(entrada){
+  var cuerpo = document.getElementById('nvCuerpo');
+  if (!cuerpo || !entrada) return;
+  cuerpo.innerHTML = '';
+
+  var ver = document.createElement('div');
+  ver.className = 'nv-ver';
+  ver.textContent = 'Version ' + entrada.ver;
+  cuerpo.appendChild(ver);
+
+  var h = document.createElement('p');
+  h.style.cssText = 'font-size:var(--fs-4xl);font-weight:800;margin:.2rem 0 0;line-height:1.25';
+  h.textContent = entrada.titulo;
+  cuerpo.appendChild(h);
+
+  /* El antes y el después, que es «lo que se ve» que pidió Jose. */
+  if (entrada.antes && entrada.ahora){
+    var art = document.createElement('div');
+    art.className = 'nv-art';
+    art.appendChild(_nvFila('nv-antes', 'BEFORE', entrada.antes));
+    art.appendChild(_nvFila('nv-ahora', 'NOW',    entrada.ahora));
+    cuerpo.appendChild(art);
+  }
+
+  var ul = document.createElement('ul');
+  ul.className = 'nv-lista';
+  (entrada.puntos || []).forEach(function(txt){
+    var li = document.createElement('li');
+    li.innerHTML = txt;          /* texto nuestro, escrito aquí arriba */
+    ul.appendChild(li);
+  });
+  cuerpo.appendChild(ul);
+
+  var acc = document.createElement('div');
+  acc.className = 'nv-acciones';
+  var cerrar = document.createElement('button');
+  cerrar.className = 'btn';
+  cerrar.type = 'button';
+  cerrar.textContent = 'Got it';
+  cerrar.onclick = cerrarNovedades;
+  acc.appendChild(cerrar);
+  if (_nvEsDeFabrica()){
+    var leer = document.createElement('a');
+    leer.className = 'btn btn-ghost';
+    leer.href = _nvEnlace(entrada.ver);
+    leer.target = '_blank';
+    leer.rel = 'noopener noreferrer';
+    leer.textContent = 'Read the full note';
+    leer.style.textDecoration = 'none';
+    acc.appendChild(leer);
+  }
+  cuerpo.appendChild(acc);
+
+  if (_nvEsDeFabrica()){
+    var pie = document.createElement('div');
+    pie.className = 'nv-pie';
+    pie.textContent = 'Updates and support are the same subscription. Something not ' +
+                      'working, or something you wish it did? Write to ';
+    /* GMAIL, Y NO EL ESQUEMA DE CORREO DEL SISTEMA. Lo aprendimos con Jose
+     * delante: pulsó el botón ✉ Email, Windows le preguntó con qué app
+     * abrirlo, marcó «Always» sobre Outlook — y desde entonces ese botón sólo
+     * abría una app que no usa. Ese esquema depende de una configuración POR
+     * COMPUTADORA que nadie recuerda haber puesto; una dirección de Gmail no.
+     *
+     * Y ESTE COMENTARIO ESTÁ ESCRITO SIN NOMBRARLO A PROPÓSITO.
+     * `test-tanda-borrado.js` cuenta las apariciones de esa palabra en TODO el
+     * archivo, comentarios incluidos, y la primera versión de esta nota la
+     * decía tres veces: la prueba se puso roja por el texto que explicaba por
+     * qué no hay ninguno. Se podría haber aflojado la prueba para que no mire
+     * los comentarios, pero un recuento de cero en el archivo entero es
+     * trivial de verificar y un quitador de comentarios se atraganta con el
+     * `//` de cualquier URL. Más barato escribir la nota así. */
+    var a = document.createElement('a');
+    a.href = 'https://mail.google.com/mail/?view=cm&fs=1&to=' +
+             encodeURIComponent(ACOPIO_SOPORTE) +
+             '&su=' + encodeURIComponent('Acopio ' + APP_VERSION + ' — ');
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.textContent = ACOPIO_SOPORTE;
+    pie.appendChild(a);
+    pie.appendChild(document.createTextNode('.'));
+    cuerpo.appendChild(pie);
+  }
+}
+
+function abrirNovedades(){
+  /* Siempre se puede abrir a mano, haya novedad o no: es el sitio fijo. Cuando
+   * la versión de este archivo no está en la lista —una instalación con un
+   * archivo más nuevo que esta ventana, o más viejo— se enseña la primera, que
+   * es la más reciente que el archivo conoce. Nunca se queda en blanco. */
+  var entrada = null;
+  for (var i = 0; i < NOVEDADES.length; i++){
+    if (NOVEDADES[i].ver === APP_VERSION){ entrada = NOVEDADES[i]; break; }
+  }
+  if (!entrada) entrada = NOVEDADES[0];
+  _nvPintar(entrada);
+  var ov = document.getElementById('novedadesOverlay');
+  if (ov) ov.classList.add('show');
+  /* Se marca como vista al ABRIR, no al cerrar: si alguien la cierra con la ✕,
+   * con Escape o cerrando la pestaña, ya la vio. Marcarla sólo en el botón
+   * «Got it» la haría volver a salir mañana a quien la leyó y cerró con la ✕,
+   * que es la forma más rápida de convertir esto en lo que no queríamos. */
+  _nvGuardar(APP_VERSION);
+  _nvPintarPunto();
+}
+
+function cerrarNovedades(){
+  var ov = document.getElementById('novedadesOverlay');
+  if (ov) ov.classList.remove('show');
+  _nvPintarPunto();
+}
+
+/* Al arrancar. Va detrás de que la app esté pintada —no compite con la carga—
+ * y detrás del popup de la mañana, que sí es urgente: lo que llegó hoy a la
+ * bodega manda sobre lo que cambió en la app. */
+function _nvAlArrancar(){
+  var vista = _nvVista();
+  if (!vista){ _nvGuardar(APP_VERSION); _nvPintarPunto(); return; }  /* primera visita */
+  if (vista === APP_VERSION){ _nvPintarPunto(); return; }
+  _nvPintarPunto();
+  setTimeout(function(){
+    /* Si hay cualquier otra ventana abierta, no se apila encima: dos ventanas
+     * una sobre otra es el error que costó la v11.29. Se queda el punto, y la
+     * persona la abre cuando quiera. */
+    if (document.querySelector('.overlay.show')) return;
+    abrirNovedades();
+  }, 2500);
+}
 
 function openLegal(which){
   var doc = LEGAL_DOCS[which];
