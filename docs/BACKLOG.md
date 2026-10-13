@@ -27,8 +27,15 @@ que un ✅ optimista.
 ### 🔶 Lo empezado y sin terminar
 
 1. **Estandarizar las columnas** — faltan **Incoming** y **Project View**.
-2. **Que el archivado no se note** — falta **que buscar alcance el archivo**
-   (hoy un PO de hace ocho meses no aparece) y **archivar por tandas**.
+2. **Que el archivado no se note** — ✅ **la búsqueda ya alcanza el archivo
+   (v12.59)**: cuando hay texto buscado, el archivo sin mirar y filas
+   archivadas, la tabla lo DICE —*"Nothing here matches — but the archive has
+   not been searched"*, con la cuenta de cuántas hay— y ofrece el botón que las
+   trae y las busca. Jose eligió esta salida de las dos: avisar y ofrecer, en
+   vez de buscar siempre en los dos, porque el archivo se consulta pocas veces
+   y una llamada por búsqueda sería cuota gastada casi siempre en nada.
+   **Falta `archivar por tandas`**, que es lo que protege contra el techo de
+   seis minutos de Apps Script cuando el archivo es grande.
 3. **Movimientos sin ID** — falta el aviso en la app, y la causa sigue sin
    saberse (depende de que Jose mire un backup del 25/09).
 
@@ -51,16 +58,27 @@ que un ✅ optimista.
    verdad era la categoría, que es la mitad del nombre interno del material.
 5. ✅ **HECHO (v12.45) — la guardia de escritura ya es una lista de quién SÍ.**
    Con una prueba que inventa un rol que no existe y comprueba que no escribe.
-6. **El cartel de reservas se queda viejo y la app culpa a un tercero** — se
-   suelta una reserva, el cartel no se entera, se vuelve a pulsar y contesta
-   *"someone else got there first"* cuando no había nadie más. Medido en el
-   vídeo del 05/10. Y de paso, repasar **todos** los botones que llaman al
-   servidor: feedback y mensajes que no supongan la causa.
+6. ✅ **HECHO (v12.59) — el cartel de reservas ya no culpa a nadie por
+   eliminación.** Lo que decía aquí: se suelta una reserva, el cartel no se
+   entera, se vuelve a pulsar y contesta *"someone else got there first"*
+   cuando no había nadie más. La causa era que el código sólo sabía que la
+   reserva ya no estaba activa; **quién** la soltó era una suposición. Ahora lee
+   la columna `UnlockedBy` que llevaba ahí todo el tiempo y dice **"you already
+   released this one"**, o nombra a la persona, o dice que ya estaba suelta. Y
+   el navegador obedece el estado del servidor (`locksAfter` en los tres
+   caminos) en vez de filtrar su copia local.
+   **Falta la segunda mitad de la entrada:** repasar **todos** los botones que
+   llaman al servidor —feedback y mensajes que no supongan la causa—. Se arregló
+   el que Jose grabó, no la clase entera.
 
 ### 🔴 Abierto, pequeño
 
-7. Mayúsculas al guardar en PO/GC, Received By, Project, Supplier, Category y
-   Name — **no** en Comments, y **sólo** en lo nuevo.
+7. ✅ **HECHO (v12.60) — mayúsculas al guardar.** Categoría, nombre y proyecto
+   ya se guardaban de una sola forma; PO, GC, proveedor y recibido-por no. Ahora
+   sí (`cleanDisplay_` en los cuatro). Los guiones sobreviven: un PO como
+   `07-6329` sigue siendo `07-6329`. **No** se toca Comments y **no** se toca
+   nada de lo ya guardado. Era lo que dejaba dos proveedores donde hay uno
+   —"Amsco" un día y "AMSCO" al siguiente—.
 8. Las columnas escondidas, en gris opaco y no transparentes.
 9. Raw Loc y las columnas de diagnóstico, al soporte y fuera de la vista.
 10. El logo de Acopio en los dos sitios de marca, con el bloque entero como
@@ -101,7 +119,13 @@ que un ✅ optimista.
     (decidido por Jose).
 21. Pausar el mantenimiento nocturno.
 22. La versión en los otros tres trabajos automáticos.
-23. Dependencias de las UBICACIONES al fusionar (`RACK_PHOTOS`, `MATERIAL_LOCKS`).
+23. ✅ **HECHO (v12.59) — dependencias de las UBICACIONES al fusionar.**
+    Fusionar dos ubicaciones reescribía el archivo y el stock y dejaba atrás las
+    reservas y las fotos: `MATERIAL_LOCKS` seguía apuntando al nombre viejo y
+    `RACK_PHOTOS` también. Ahora `mergeLocationsLocked_` reapunta las dos
+    —columna 4 y columna 0—, cada una en su propio `try` para que un fallo en
+    las fotos no tumbe la fusión, invalida la caché `materialLocksV1` y audita
+    cuántas movió cada una.
 24. Archivar por tamaño y no por calendario.
 25. Repasar el menú 🏭 Acopio: qué de eso le sirve al cliente.
 26. Abrir un movimiento nuevo con los datos de otro.
