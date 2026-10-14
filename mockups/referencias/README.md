@@ -104,14 +104,13 @@ admin, y es mejor.
 
 **Por ahora no**, dicho por Jose. Guardada aquí para cuando toque.
 
-### La segunda del menú lateral — LA DE LAS MEDIDAS
+### `06-menu-lateral-medidas.png` — la del menú lateral, CON MEDIDAS
 
 Jose, 2026-10-14: *"te paso otra imagen para guardar y tener como referencia al
 modificar y crear apps y menús."*
 
-**EL ARCHIVO NO LLEGÓ AL DISCO** —sólo se vio en el mensaje— así que lo que se
-guarda aquí es lo que enseña, que además es la parte que vale. Si quieres la
-imagen en el repositorio, vuelve a mandarla.
+`06-menu-lateral-medidas.png`. La primera vez el archivo no llegó al disco y
+aquí sólo quedó la descripción; Jose la reenvió y ya está guardada.
 
 Es el mismo menú lateral de `05`, pero **anotado con sus medidas**: una tira de
 iconos a la izquierda y un panel ancho al lado, con las separaciones marcadas
