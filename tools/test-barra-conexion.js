@@ -67,7 +67,8 @@ function check(label, cond, extra) {
 
 (async () => {
   const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || undefined });
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  const ANCHO_VENTANA = 1280;
+  const page = await browser.newPage({ viewport: { width: ANCHO_VENTANA, height: 800 } });
   const errores = [];
   page.on('pageerror', e => errores.push(e.message));
   await page.goto('file://' + f);
@@ -107,8 +108,23 @@ function check(label, cond, extra) {
           b && /cannot be saved|nothing you type can be saved/i.test(b.txt), b && b.txt);
     check('...y que la app lo sigue intentando sola, para que nadie recargue a lo loco',
           b && /retry|retrying/i.test(b.txt), b && b.txt);
-    check('está ARRIBA DEL TODO y ocupa el ancho entero',
-          b && b.top === 0 && b.ancho >= 1200, b);
+    /* ── CAMBIADA EN LA v12.69 ───────────────────────────────────────────
+     * Decía «arriba del todo y ocupa el ancho entero», que era verdad cuando
+     * la barra EMPUJABA la página. Jose pidió lo contrario: *"que aparezca
+     * como los toast que aparecen frente a la pantalla en la parte de arriba
+     * [...] menos invasivo y más profesional"*. Ahora es una píldora centrada
+     * que flota.
+     *
+     * Lo que se mide ya no es el ancho sino las dos cosas que de verdad
+     * importan: que siga ARRIBA —donde se mira— y que NO llegue de borde a
+     * borde, porque una franja de borde a borde es exactamente lo que
+     * molestaba. Que no empuje nada lo mide `test-franja-conexion.js`, que es
+     * su sitio. */
+    check('sigue ARRIBA, donde se mira (top=' + (b && b.top) + ')',
+          b && b.top >= 0 && b.top <= 60, b);
+    check('...pero ya NO de borde a borde: es una píldora, no una franja ' +
+          '(' + (b && b.ancho) + ' px de ' + ANCHO_VENTANA + ')',
+          b && b.ancho < ANCHO_VENTANA * 0.9, b);
     check('y tiene alto de verdad, no es una línea invisible', b && b.alto >= 20, b);
 
     /* Un latido cada veinte segundos vuelve a llamar con el mismo estado. Si
@@ -159,8 +175,19 @@ function check(label, cond, extra) {
     /* Y SE VA SOLA. Un "ya volvió" que se queda ocupa sitio para siempre
      * contando algo que dejó de ser noticia. Al revés que el de la caída, que
      * se queda porque sigue siendo verdad. */
-    await page.waitForTimeout(5400);
-    check('A LOS CINCO SEGUNDOS SE VA SOLA — al revés que la roja, que se queda ' +
+    /* Seis segundos desde la v12.69, no cinco: al dejar de empujar la página
+     * el aviso es más fácil de pasar por alto, así que lo que se gana en no
+     * estorbar se devuelve en tiempo. Jose: «deben permanecer varios
+     * segundos, para que se noten».
+     *
+     * Se espera de sobra y no al filo. Clavar la espera en el número exacto
+     * hace que ajustar el número rompa la prueba sin que nada esté mal; lo que
+     * hay que defender es que SE VAYA, no cuándo al milisegundo. */
+    await page.waitForTimeout(3000);
+    check('a los 3 segundos SIGUE ahí: varios segundos, no un parpadeo',
+          (await barra()) !== null);
+    await page.waitForTimeout(4000);
+    check('y a los 7 YA SE FUE SOLA — al revés que la roja, que se queda ' +
           'mientras siga siendo verdad', (await barra()) === null);
   }
 

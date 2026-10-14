@@ -104,6 +104,54 @@ admin, y es mejor.
 
 **Por ahora no**, dicho por Jose. Guardada aquí para cuando toque.
 
+### La segunda del menú lateral — LA DE LAS MEDIDAS
+
+Jose, 2026-10-14: *"te paso otra imagen para guardar y tener como referencia al
+modificar y crear apps y menús."*
+
+**EL ARCHIVO NO LLEGÓ AL DISCO** —sólo se vio en el mensaje— así que lo que se
+guarda aquí es lo que enseña, que además es la parte que vale. Si quieres la
+imagen en el repositorio, vuelve a mandarla.
+
+Es el mismo menú lateral de `05`, pero **anotado con sus medidas**: una tira de
+iconos a la izquierda y un panel ancho al lado, con las separaciones marcadas
+en naranja.
+
+**Las medidas, tal como vienen anotadas:**
+
+| | |
+|---|---|
+| margen exterior de la tira | 8 px |
+| hueco entre iconos | 8 px |
+| alto de un icono con su texto | 56 px |
+| separación arriba del bloque | 24 px |
+| alto de una fila del panel | 32 px |
+| alto de la fila destacada (*Create New Workspace*) | 48 px |
+| separación entre grupos del panel | 12 px |
+| margen inferior | 16 px |
+| margen lateral del panel | 8 px · 12 px |
+
+### Lo que esto nos dice, y es más útil que el dibujo
+
+**Es una escala de 4: 8, 12, 16, 24, 32, 48, 56.** Todo múltiplo de cuatro, sin
+excepciones.
+
+La nuestra (`--sp-1` … `--sp-10`, v12.62) es: **4 · 6,4 · 8 · 9,6 · 12 · 16 ·
+20 · 24 · 32 · 48**. Siete de los diez peldaños coinciden con los suyos. Los
+dos que desentonan son **6,4 y 9,6**, y desentonan por un motivo concreto: los
+nuestros salen de `rem` —`.4rem` y `.6rem`— y los suyos de píxeles. Un `.4rem`
+son 6,4 px, que no es múltiplo de cuatro de ninguna manera.
+
+**No propongo cambiarlos.** Esos dos peldaños se eligieron porque eran los
+valores que ya usaba media app, y moverlos movería más pantalla de la que
+arreglaría. Pero queda escrito que la escala de fuera es más limpia que la
+nuestra, y por qué la nuestra no lo es: **nació de lo que había, no de una
+decisión**.
+
+Y una cosa que sí copiaría tal cual: **la fila destacada es más alta (48 px
+contra 32)**, no de otro color. La jerarquía por tamaño aguanta en blanco y
+negro y a dos metros; la jerarquía por color no.
+
 ---
 
 ## LO QUE YO HARÍA, CUANDO TOQUE
