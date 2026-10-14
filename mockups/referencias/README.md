@@ -84,6 +84,26 @@ Lo de abajo (*"Start a Project Brief"*) es un anuncio dentro del producto.
 **Eso no.** Es justo lo que decidimos no hacer al construir la ventana de
 novedades: sale porque pasó el tiempo, no porque le pasara algo al usuario.
 
+### `05-menu-lateral.png` — guardada para una versión futura
+
+Jose, 2026-10-14: *"guárdala porque en alguna versión haremos un menú lateral
+que se vea así, por ahora no."*
+
+Un menú lateral de dos capas: una tira estrecha de iconos siempre visible, y al
+lado el panel ancho con los nombres y los apartados desplegados. Lo que
+resuelve, y por eso vale la pena guardarla: **Acopio navega con pestañas
+arriba**, y en el teléfono esas pestañas se aprietan hasta no leerse. Un menú
+lateral no tiene ese límite — crece hacia abajo, que es donde sobra sitio.
+
+Lo aprovechable: la tira de iconos con la etiqueta flotante al pasar por
+encima, los apartados que se despliegan dentro del propio menú (Settings →
+Data source / Targets / Members), y el candado en las secciones a las que no
+se tiene acceso, que dice «existe y no es para ti» en vez de esconderlas — eso
+último es justo lo contrario de lo que hace Acopio hoy con los botones de
+admin, y es mejor.
+
+**Por ahora no**, dicho por Jose. Guardada aquí para cuando toque.
+
 ---
 
 ## LO QUE YO HARÍA, CUANDO TOQUE
