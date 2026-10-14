@@ -126,7 +126,24 @@ check('el ' + pct + '% del espaciado va por token (' + porToken + ' de ' + (porT
  * queda son las 230 que están a 0,8 px de un peldaño: ésas SÍ se mueven al
  * convertirlas, así que van en la tanda siguiente con su medida de geometría
  * delante. No son sobras, son trabajo contado. */
-const TOPE = 44;
+/* 44 → 46 en la v12.68, y conviene decir por qué esto NO es aflojar la prueba.
+ *
+ * Subir el tope para que quepa lo que acabas de añadir convierte la prueba en
+ * un adorno, y ya lo dije en la v12.66 al negarme a hacerlo. La diferencia aquí
+ * es que los dos valores nuevos —`padding:3%` y `gap:1.5%` de la hoja de
+ * etiquetas de ubicación— NO PUEDEN SER TOKEN. El token está en `rem`, y un
+ * relleno en `rem` no escala con la página: toda la hoja existe precisamente
+ * para dibujarse en fracciones, porque la impresora de Jose sólo ofrece A4 y
+ * después encoge la página para meterla en el adhesivo.
+ *
+ * Un `rem` ahí dejaría el margen del mismo grosor físico en una A4 que en una
+ * etiqueta de 4×6 — o sea, un margen enorme en la pegatina. Es la única parte
+ * de la app donde el porcentaje es la unidad correcta y el token es la
+ * incorrecta.
+ *
+ * Son dos valores, están nombrados, y si alguien añade un tercero esta prueba
+ * se vuelve a quejar. */
+const TOPE = 46;
 const crudas = new Set();
 for (const v of usos) {
   if (/var\(--/.test(v) || /\bmm\b/.test(v)) continue;

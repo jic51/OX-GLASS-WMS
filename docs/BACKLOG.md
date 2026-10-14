@@ -151,6 +151,29 @@ que un ✅ optimista.
        haría falta el lenguaje de comandos de la impresora, que el fabricante no
        publica. **No antes de agotar el punto 1.**
 
+23. **La franja de conexión: que no empuje la app.** Jose, 14/10, con vídeo:
+    *"funciona bien, pero me gustaría cambiarlo y hacerlo menos invasivo y más
+    profesional"*.
+
+    **Lo que molesta no es el color, es que OCUPA SITIO.** `_barraArriba` se
+    inserta como primer hijo de `<body>`, en flujo normal, así que al aparecer
+    empuja la app entera hacia abajo y al irse la sube. El aviso de «Back
+    online» dura 5 segundos: el contenido salta dos veces por un mensaje que no
+    pide nada. Eso es lo que se ve casero.
+
+    **Lo que pidió Jose, con sus palabras:** *"que el mensaje aparezca como los
+    toast que aparecen frente a la pantalla en la parte de arriba, la de
+    'offline' roja y la de 'back online' verde, pero deben permanecer varios
+    segundos, para que se noten."*
+
+    Es decir: **arriba y flotando por encima** —sin empujar nada—, rojo para sin
+    conexión y verde para la vuelta, y **varios segundos**, no un parpadeo. Lo
+    que cambia respecto a hoy es sólo que deja de ocupar sitio en el flujo; el
+    sitio (arriba) y los colores se quedan.
+
+    Yo había propuesto mandar «Back online» a los avisos de abajo a la
+    izquierda y Jose dijo que no. Queda escrito para no volver a proponerlo.
+
 ### 🔴 Abierto, mediano
 
 20. La lista de avisos agrupada, como la de Google — **sin el offline dentro**
