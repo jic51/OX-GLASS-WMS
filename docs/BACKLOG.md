@@ -8730,3 +8730,70 @@ Medido con la misma vara que los cinco reels: ellos gastan **menos del 2 % de
 los píxeles** en color de marca; nosotros **1,0 % – 1,7 %**. La regla "un color,
 lo demás gris" está cumplida. **Conviene saberlo para no "arreglar" lo que está
 bien.**
+
+## 🔵 LAS CUATRO DE JOSE DEL 15/10, CON SU ORDEN Y SU MOTIVO
+
+El día que la app volvió. Jose mandó cuatro cosas en el mismo mensaje y pidió
+opinión antes de que se tocara nada. Queda escrito aquí lo que son y por qué
+van en este orden, que no es el orden en que las dijo.
+
+### 1 · El toast verde que promete lo que todavía no ha pasado — EL ÚNICO URGENTE
+
+Jose: *«es necesario que la app se haya actualizado y esté con los datos
+correctos en el momento de que el toast verde haya desaparecido»*.
+
+**Tiene razón y no es un capricho de forma: hoy el aviso miente.** `_pulseOk`
+llama a `setConnStatus('online')` y DESPUÉS pide los datos con
+`loadDataFromGoogle(true, true)`. El aviso verde dura 6 segundos y una carga
+de Apps Script tarda 10-20. O sea que el verde se va, en el caso normal, antes
+de que lleguen los datos — y si encima le ponemos «data has been updated»,
+estamos firmando un papel que la app no cumple. Alguien que acaba de recuperar
+la conexión lee «ya está al día», mira una cifra vieja y actúa sobre ella.
+
+Lo que hay que hacer: que el verde salga diciendo que está actualizando, y que
+el texto cambie a «actualizado» CUANDO la carga se haya aplicado de verdad —
+y que la cuenta atrás para irse empiece ahí, no antes.
+
+**Y una cosa que no se puede prometer:** «se actualiza sólo lo que cambió
+mientras estaba offline». La app no tiene sincronización por diferencias;
+`getInitialData` trae la foto entera. El resultado para quien mira la pantalla
+es el mismo —los datos quedan correctos— pero no es un delta, y el texto no
+debe sugerir que lo sea.
+
+### 2 · El botón «Scan label» junto a Entry y Exit
+
+Jose: *«sería mucho más útil, práctico y fácil para el usuario que utiliza
+celular»*.
+
+**De acuerdo, y por un motivo concreto:** escanear SIEMPRE acaba en un Entry o
+en un Exit. Hoy vive en el menú de la cuenta, que son dos toques y un objetivo
+pequeño para un dedo con guante; los dos botones a los que lleva están en otra
+pantalla. Ponerlo donde ya se trabaja quita el rodeo entero.
+
+Se queda TAMBIÉN en el menú: no cuesta nada y es donde se busca lo que no se
+usa a diario.
+
+Lo único a cuidar: en un escritorio sin cámara el botón no puede quedarse
+muerto. `_escSePuede()` ya sabe decidirlo; el botón se esconde o se explica,
+no se queda ahí sin hacer nada.
+
+### 3 · El toast de offline, más alto y en dos líneas
+
+Forma, y la forma aquí sí comunica: un título que se lee de un vistazo y
+debajo la instrucción. Va después de la 1 porque comparten el mismo trozo de
+código y hacer las dos a la vez es una entrega, no dos.
+
+**El texto que pidió Jose dice lo contrario de lo que quiere decir:** *«your
+data can be updated»* — lo que pasa sin conexión es que NO se puede guardar
+nada. Propuesto en su lugar, y pendiente de que él lo apruebe:
+
+> **You're offline**
+> Nothing you save will be recorded. Check your connection before making any
+> movement.
+
+### 4 · La tarjeta naranja que tapa la tabla — SIGUE AHÍ
+
+«ARRIVED · ENTRY NOT MADE», encima de las primeras filas del inventario. Está
+en esta lista desde la entrada 21 y vuelve a salir en TRES capturas del 15/10.
+No rompe nada y por eso lleva semanas sin tocarse; aparece en todas las
+capturas que Jose manda, y eso ya es una respuesta sobre cuánto estorba.
