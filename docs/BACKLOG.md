@@ -8967,3 +8967,126 @@ excepciones no se acaba nunca. Las capacidades se preguntan y se contestan.
 **Lo que sí reveló esta pregunta** es que esconder algo en silencio genera la
 pregunta «¿está roto?». Jose tuvo que preguntarlo. Eso vale para el botón de
 escanear y para cualquier otra cosa que desaparezca sin decir por qué.
+
+## 🔴 UN RETURN DE MATERIAL QUE NUNCA SALIÓ CREA STOCK DE LA NADA — 15/10
+
+Encontrado al analizar el vídeo de Jose del 15/10. **No lo provocó él** —usó un
+traslado entre estantes, que es seguro— pero el agujero está abierto y cualquiera
+puede caerse dentro.
+
+`RETURN` hace tres cosas: `siteQty -= qty` (con suelo en cero), `warehouseLocs
+[rack] += qty` y `warehouseQty += qty`. Si el material NUNCA salió a esa obra,
+`siteQty` ya era cero y la resta se la traga en silencio — pero la suma a bodega
+se hace igual. **Cuatro ventanas devueltas de una obra a la que nunca fueron son
+cuatro ventanas nuevas.** Las 51 de Jose habrían pasado a 55.
+
+Es exactamente la clase de fallo que este proyecto ya conoce: el suelo en cero
+oculta la mitad de la operación y la otra mitad sigue adelante.
+
+**El arreglo:** una devolución no puede devolver más de lo que esa obra tiene en
+sitio. Avisar —no bloquear— cuando se pasa, por lo mismo que el aviso de «te
+pasaste del estante»: puede haber historia legítima que la app no contó. Pero
+avisar siempre, porque aquí la consecuencia no es un número raro en una pantalla:
+es inventario inventado.
+
+Se hace igual, haya o no decisión sobre el `Reassign` de abajo.
+
+## 🟠 FALTA «REASSIGN»: EL MATERIAL QUE NUNCA SALIÓ — 15/10
+
+Jose, con vídeo: *"retorno de un material que no ha salido a la bodega, que no se
+va a usar y que quiero usar en otro proyecto... no sé si lo hice bien, pero yo
+creo que no, y no se puede"*.
+
+Tiene razón: no se puede. Lo que hizo fue un **Transfer Between Racks** —4
+ventanas de B2A a A3A— y escribió el cambio de obra en los comentarios, porque no
+hay otro sitio donde ponerlo. El stock quedó bien; el dato no sabe nada.
+
+### Hay DOS formas de que el material quede libre, y la app entiende una
+
+| | ¿Salió a la obra? | ¿La app lo sabe? |
+|---|---|---|
+| Vuelve de la obra | sí, y volvió | ✅ `Return` + proyecto de origen (v12.72) |
+| **Nunca salió** — se compró para A, no se usa, va a B | no | ❌ **no existe** |
+
+Y el segundo es **el más común en construcción**: se pide material para una obra,
+la obra cambia, y el material nunca se movió del estante. Lo que falta no es un
+caso raro; es el caso normal.
+
+### Lo que se propone
+
+Un movimiento `REASSIGN`. Es el boneyard sin el viaje:
+
+- NO mueve ni una unidad. El stock no cambia. A diferencia del traslado, tampoco
+  cambia de estante.
+- Guarda material, cantidad, **de qué obra**, y por qué.
+- Entra al boneyard igual que una devolución: «4 left over from BLACK HOUSE 2».
+
+**La mitad de consumir ya está hecha.** El `Exit` que se lleva esas unidades a
+otra obra las ofrece y registra el origen desde la v12.72, y no hay que tocarlo.
+Lo único que falta es la segunda puerta de entrada.
+
+### Y conviene guardar CUÁL de las dos fue
+
+Las dos cifras de Jose no son iguales: material que nunca salió es un error de
+estimación puro; material que fue y volvió costó además un viaje de camión. Son
+dos números distintos sobre el mismo material y separarlos cuesta una columna.
+
+## ✅ DECIDIDO (15/10) — SALIR DE APPS SCRIPT QUEDA DESCARTADO PARA SIEMPRE
+
+Jose: *"la 3 no es posible y creo que nunca lo será, porque lo que queremos es que
+el usuario use solo lo de Google y por eso usamos el Sheet como base de datos"*.
+
+Queda como DECISIÓN y no como pendiente, porque cambia lo que se puede prometer:
+
+- El vídeo en vivo de la cámara **no va a funcionar nunca** dentro de la app. No
+  es un «todavía no»: es el precio de que los datos vivan en el Drive del cliente,
+  y ese precio se paga a propósito.
+- Cualquier idea futura que empiece por «si la app estuviera en otro sitio…»
+  está muerta antes de escribirse. Ahorra discusiones.
+
+Lo que queda para escanear: la foto (hecho, v12.74), el QR que abre la app con la
+cámara nativa, y la página de escáner alojada fuera.
+
+### Y el ORDEN de esas dos, que lo puso Jose
+
+*"La 2 podemos probarla, pero no quiero hacer la 1 y que la 2 sí funcione."*
+
+Primero **probar** si `postMessage` entre la pestaña del escáner y la app aguanta
+dentro del marco de Apps Script. Si aguanta, es mejor que el redirector —visor en
+vivo y sin recargar la app— y el redirector sobra. Si no aguanta, se hace el
+redirector sabiendo que era la única. Probar antes de construir, no al revés.
+
+### Una aclaración que costó un malentendido
+
+Describí la lectura por foto como «haz una foto de la etiqueta» y Jose entendió
+«hazla, guárdala, búscala y súbela». No es eso: se pulsa, **se abre la cámara del
+teléfono a pantalla completa con su visor en vivo**, se apunta, se dispara, y la
+app lee. Dos o tres toques, y la foto nunca existe como archivo que nadie vea.
+
+Queda escrito porque el error fue mío al contarlo, y porque la diferencia entre
+esas dos descripciones es la diferencia entre «sirve» y «no pienso usar eso».
+
+## 🔵 UNA VERSIÓN GRATIS PARA LA LANDING — IDEA DE JOSE DEL 15/10
+
+Jose: *"quiero crear una versión básica y gratuita de la app para regalar en la
+landing, tan básica que no tenga detección de usuarios ni códigos QR ni reservas...
+sólo entry, exit, transfer, return y waste... que les dé la oportunidad de
+contactarme para pagar por el servicio pro... a las personas les gustan las cosas
+gratis, así podemos subir vídeos a redes"*.
+
+Anotado entero aquí porque la decisión está sin tomar y las razones importan más
+que la lista de funciones. El análisis completo, en la respuesta del 15/10; lo que
+queda escrito para no perderlo:
+
+- **Lo decisivo NO es qué se quita, es cuánto cuesta empezar.** Hoy instalar son
+  diez minutos pegando dos archivos y desplegando. Para algo que se regala, ése es
+  el embudo entero y gotea por todas partes.
+- **Dos códigos no, y no hace falta.** Un solo archivo con una constante de
+  edición, y lo gratis es el mismo archivo con otra constante. Así un fallo de
+  stock se arregla UNA vez. Congelar funciones sí; congelar correcciones no — el
+  agujero del `RETURN` de arriba estaría en la versión que usan quinientos
+  desconocidos.
+- **El muro natural es UNA persona.** Gratis para quien trabaja solo; Pro cuando
+  hay equipo. Se explica en una frase y nadie se siente engañado.
+- **Cada quien instala su propia copia** en su Drive. Sin eso, «sin detección de
+  usuarios» significa que todos escriben en la misma hoja.
