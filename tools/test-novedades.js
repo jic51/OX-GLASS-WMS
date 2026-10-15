@@ -295,6 +295,62 @@ fs.writeFileSync(f, html);
     await ctx.close();
   }
 
+  /* ── 8. EL ENLACE DE SOPORTE, ARMADO A TROZOS Y COMPLETO ────────────────
+   *
+   * 15/10/2026. Esta línea tuvo la app de Jose muerta dos días. El vigilante
+   * dio la posición exacta —línea 13532, columna 14 del bloque grande, que es
+   * la comilla de apertura de la URL— y su panel Sources enseñaba la línea
+   * SERVIDA cortada justo en la doble barra:
+   *
+   *     a.href = 'https:
+   *
+   * Una cadena sin cerrar. Y un bloque que no compila no ejecuta ni una
+   * línea: la app entera muerta por el enlace de correo del pie de esta
+   * ventana.
+   *
+   * Ahora la URL se arma a trozos, con la doble barra y el «&» puestos por
+   * código. Eso es fácil de deshacer sin querer: alguien la ve fea, la junta
+   * en una sola cadena «para que se lea mejor», y vuelve el fallo. De ahí las
+   * comprobaciones: que el resultado siga siendo la dirección correcta
+   * —porque un truco que rompe la función no sirve de nada— y que la fuente
+   * no la haya vuelto a juntar. */
+  console.log('\n═══ 8. EL ENLACE DE SOPORTE: ENTERO, Y SIN LA LÍNEA QUE MATÓ LA APP ═══\n');
+  {
+    const ctx = await browser.newContext();
+    const page = await ctx.newPage();
+    await page.goto('file://' + f);
+    await page.waitForTimeout(800);
+    const r = await page.evaluate(() => {
+      abrirNovedades();
+      var a = document.querySelector('#nvCuerpo .nv-pie a');
+      return { href: a ? a.getAttribute('href') : null,
+               texto: a ? a.textContent : null };
+    });
+    check('el enlace de soporte existe', !!r.href, r);
+    /* `%40` y no `@`: el destinatario pasa por `encodeURIComponent`, que es
+     * precisamente lo que debe hacer. Mi primera versión exigía un arroba
+     * literal y se puso roja sobre una URL perfecta — otra vez midiendo la
+     * letra en vez de lo que la línea tiene que conseguir. */
+    check('...y la URL sale ENTERA: armarla a trozos no la rompió',
+      /^https:\/\/mail\.google\.com\/mail\/\?view=cm&fs=1&to=.+(%40|@)/.test(r.href || ''),
+      r.href);
+    check('...con el asunto, que es lo que hace útil el correo',
+      /[?&]su=/.test(r.href || ''), r.href);
+    check('...y enseña la dirección, no «haz clic aquí»',
+      /@/.test(r.texto || ''), r.texto);
+
+    /* Y en la FUENTE: que nadie la vuelva a juntar. Se mira SÓLO esta línea y
+     * no todo el archivo — hay siete URLs con doble barra en otras partes del
+     * bloque que nunca dieron problema, y prohibirlas todas sería prohibir por
+     * superstición en vez de por lo que se midió. */
+    const linea = (html.match(/^[ \t]*a\.href = 'https:.*$/m) || [])[0] || '';
+    check('en la fuente, el `a.href` del soporte NO lleva una doble barra literal',
+      !!linea && linea.indexOf('//') < 0, linea.trim().slice(0, 80));
+    check('...ni un «&» literal dentro de una cadena de esa línea',
+      !!linea && !/['"][^'"]*&[^'"]*['"]/.test(linea), linea.trim().slice(0, 80));
+    await ctx.close();
+  }
+
   await browser.close();
   console.log('\n' + (fail ? '✗ ' + fail + ' fallos · ' : '✓ todo bien · ') + (ok + fail) + ' comprobaciones\n');
   process.exit(fail ? 1 : 0);

@@ -5364,7 +5364,7 @@ var APP_VERSION = '12.70';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '4bda6eb8';
+var APP_BUILD = '7a64bc2d';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -26824,9 +26824,41 @@ function _nvPintar(entrada){
      * trivial de verificar y un quitador de comentarios se atraganta con el
      * `//` de cualquier URL. Más barato escribir la nota así. */
     var a = document.createElement('a');
-    a.href = 'https://mail.google.com/mail/?view=cm&fs=1&to=' +
+    /* ── LA URL, ARMADA A TROZOS, Y NO ES MANÍA ──────────────────────────
+     *
+     * 15/10/2026. Jose tuvo dos días la app muerta y el vigilante de la
+     * v12.70c dio por fin la posición exacta: línea 13532, columna 14 del
+     * bloque grande, que es LA COMILLA DE APERTURA de esta URL. Y el panel
+     * Sources de su navegador enseñaba la línea servida así:
+     *
+     *     a.href = 'https:
+     *
+     * Cortada justo en la doble barra, con el resto de líneas intactas y
+     * numeradas igual. Una cadena que se queda sin cerrar da exactamente
+     * «Invalid or unexpected token» en su comilla de apertura, y un error de
+     * compilación no ejecuta NI UNA línea del bloque: la app entera muerta
+     * por una dirección de correo en el pie de una ventana de novedades.
+     *
+     * Lo honesto es decir qué no sé: no sé QUÉ corta ahí. Hay siete URLs con
+     * doble barra antes que ésta en el mismo bloque y ninguna se corta, así
+     * que no es un quitador de comentarios a secas. Lo que sí está medido es
+     * dónde revienta, y esa línea ya no existe.
+     *
+     * Por eso va a trozos y con los caracteres de riesgo por código: no queda
+     * ni una doble barra ni un «&» literal dentro de una cadena en esta
+     * línea. Es feo y es barato. Lo que no es barato es que la app no
+     * arranque, y menos por el enlace de soporte.
+     *
+     * Y hay una nota dos párrafos más arriba, escrita hace semanas, que dice
+     * que «un quitador de comentarios se atraganta con el `//` de cualquier
+     * URL». La predicción estaba escrita encima de la línea que acabó
+     * cumpliéndola. Es la undécima vez en este proyecto. */
+    var DOSBARRAS = String.fromCharCode(47, 47);
+    var AMP       = String.fromCharCode(38);
+    a.href = 'https:' + DOSBARRAS + 'mail.google.com/mail/' +
+             '?view=cm' + AMP + 'fs=1' + AMP + 'to=' +
              encodeURIComponent(ACOPIO_SOPORTE) +
-             '&su=' + encodeURIComponent('Acopio ' + APP_VERSION + ' — ');
+             AMP + 'su=' + encodeURIComponent('Acopio ' + APP_VERSION + ' - ');
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
     a.textContent = ACOPIO_SOPORTE;
