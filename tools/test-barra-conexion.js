@@ -104,8 +104,18 @@ function check(label, cond, extra) {
     check('sale la barra', !!b, b);
     check('EN ROJO, que es lo que significa', b && /\bbad\b/.test(b.clase), b && b.clase);
     check('dice que estás sin conexión', b && /offline/i.test(b.txt), b && b.txt);
+    /* LA IDEA, NO LA FRASE. Esto buscaba literalmente «nothing you type can be
+     * saved», y en la v12.71 el texto pasó a «Nothing you save will be
+     * recorded» —dos líneas, título e instrucción, como pidió Jose—. La prueba
+     * se puso roja sobre un aviso que dice exactamente lo mismo y mejor.
+     *
+     * Lo que no puede faltar es la IDEA: que lo que hagas ahora no queda
+     * guardado. Se admite cualquier forma de decirlo y se seguiría cazando el
+     * día que alguien deje sólo «You're offline», que es lo que de verdad
+     * haría daño — un aviso que nombra el problema y se calla la consecuencia. */
     check('...y LO QUE IMPORTA: que lo que escribas no se va a guardar',
-          b && /cannot be saved|nothing you type can be saved/i.test(b.txt), b && b.txt);
+          b && /(not(hing)?|cannot|can't|won't)[^.]*\b(saved?|recorded)\b/i.test(b.txt),
+          b && b.txt);
     check('...y que la app lo sigue intentando sola, para que nadie recargue a lo loco',
           b && /retry|retrying/i.test(b.txt), b && b.txt);
     /* ── CAMBIADA EN LA v12.69 ───────────────────────────────────────────
@@ -172,17 +182,46 @@ function check(label, cond, extra) {
     check('en VERDE', b && /\bgood\b/.test(b.clase), b && b.clase);
     check('y dice que volvió', b && /back online/i.test(b.txt), b && b.txt);
 
-    /* Y SE VA SOLA. Un "ya volvió" que se queda ocupa sitio para siempre
-     * contando algo que dejó de ser noticia. Al revés que el de la caída, que
-     * se queda porque sigue siendo verdad. */
-    /* Seis segundos desde la v12.69, no cinco: al dejar de empujar la página
-     * el aviso es más fácil de pasar por alto, así que lo que se gana en no
-     * estorbar se devuelve en tiempo. Jose: «deben permanecer varios
-     * segundos, para que se noten».
+    /* ── Y AQUÍ CAMBIÓ EL CONTRATO EN LA v12.71 ──────────────────────────
      *
-     * Se espera de sobra y no al filo. Clavar la espera en el número exacto
-     * hace que ajustar el número rompa la prueba sin que nada esté mal; lo que
-     * hay que defender es que SE VAYA, no cuándo al milisegundo. */
+     * Antes el verde se iba a los seis segundos y punto. Jose, 15/10: *"es
+     * necesario que la app se haya actualizado y esté con los datos correctos
+     * en el momento de que el toast verde haya desaparecido"*. Tenía razón y
+     * lo que había era mentira: `_pulseOk` enseñaba el verde y DESPUÉS pedía
+     * los datos; el verde duraba seis segundos y una carga de Apps Script
+     * tarda entre diez y veinte.
+     *
+     * Ahora son dos tiempos, y el segundo lo enciende la carga, no un reloj:
+     *   1. «You are back online · Updating…», SIN cuenta atrás.
+     *   2. `_connDatosAlDia()` —que llama `loadDataFromGoogle` cuando una
+     *      carga queda aplicada— cambia el texto y arranca los seis segundos.
+     *
+     * Por eso esta prueba ya no espera a que se vaya sola sin más: eso sería
+     * volver a aceptar que el aviso se marche antes de que lleguen los datos,
+     * que es exactamente el fallo. Lo que se defiende es LA PROMESA: mientras
+     * no haya datos no dice que los haya. */
+    await page.waitForTimeout(7000);
+    {
+      const b2 = await barra();
+      check('a los 7 SIGUE ahí: sin datos todavía, el aviso no se va — ' +
+            'irse ahora sería dejar en pantalla cifras viejas sin avisar',
+            b2 !== null, b2 && b2.txt);
+      check('...y NO dice que los datos estén al día, porque no lo están',
+            b2 && !/has been updated/i.test(b2.txt), b2 && b2.txt);
+      check('...dice que está actualizando, que es lo que de verdad pasa',
+            b2 && /updating/i.test(b2.txt), b2 && b2.txt);
+    }
+
+    /* Y CUANDO LOS DATOS LLEGAN DE VERDAD. Se llama a mano lo mismo que llama
+     * la carga al aplicarse, que es el único momento honesto para decirlo. */
+    await page.evaluate(() => _connDatosAlDia());
+    await page.waitForTimeout(150);
+    {
+      const b3 = await barra();
+      check('con los datos aplicados, AHORA sí lo dice',
+            b3 && /has been updated/i.test(b3.txt), b3 && b3.txt);
+      check('...y sigue en verde', b3 && /\bgood\b/.test(b3.clase), b3 && b3.clase);
+    }
     await page.waitForTimeout(3000);
     check('a los 3 segundos SIGUE ahí: varios segundos, no un parpadeo',
           (await barra()) !== null);

@@ -940,9 +940,31 @@
     #topToasts{position:fixed;top:calc(var(--tb-alto) + 10px);left:0;right:0;z-index:var(--z-toast);
       display:flex;flex-direction:column;align-items:center;gap:var(--sp-3);
       pointer-events:none;padding:0 var(--sp-5)}
-    #topToasts .top-banner{border-radius:999px;padding:.55rem 1.1rem;
-      max-width:min(560px,100%);box-shadow:var(--sh-3);
+    /* ── DOS LÍNEAS, Y LA FORMA ES PARTE DEL MENSAJE ────────────────────────
+     *
+     * Jose, 15/10: *"lo bajes, lo hagas más alto y menos ancho"*, con el
+     * título grande arriba y la instrucción debajo.
+     *
+     * Y la forma hace trabajo aquí, no es gusto: un aviso de conexión tiene
+     * DOS cosas que decir y no son iguales. Qué pasa —«estás sin conexión»—
+     * se lee de un vistazo desde lejos y a veces es lo único que hace falta.
+     * Qué hacer —«no guardes nada todavía»— se lee de cerca y sólo si la
+     * primera te hizo parar. Metidas en un renglón compiten; apiladas, cada
+     * una se lee cuando toca.
+     *
+     * Deja de ser píldora: dos renglones dentro de un óvalo quedan apretados
+     * contra el borde curvo. Esquinas redondeadas normales y ya. */
+    #topToasts .top-banner{border-radius:12px;padding:.7rem 1.4rem;
+      max-width:min(420px,100%);box-shadow:var(--sh-3);
+      flex-direction:column;align-items:center;gap:.15rem;
       animation:tt-entra .18s ease both}
+    /* El título: lo que se lee desde lejos. */
+    #topToasts .tb-tit{font-size:1rem;font-weight:800;letter-spacing:.01em;
+      display:flex;align-items:center;gap:var(--sp-3)}
+    /* Y la instrucción, al tamaño de antes y sin negrita — Jose lo pidió así,
+     * y tiene razón: si las dos líneas gritan, no grita ninguna. */
+    #topToasts .tb-sub{font-size:.8rem;font-weight:400;line-height:1.35;
+      opacity:.95;text-wrap:balance}
     @keyframes tt-entra{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
     @media (prefers-reduced-motion:reduce){#topToasts .top-banner{animation:none}}
     .top-banner{display:flex;align-items:center;justify-content:center;gap:var(--sp-3);
@@ -4229,6 +4251,25 @@
           <select id="movCatFilter"><option value="">All Categories</option></select>
           <button id="btnExportCSV" class="btn btn-ghost btn-sm">⬇ CSV</button>
           <button id="btnLoadOlderHistory" class="btn btn-ghost btn-sm">📜 Load Older History</button>
+          <!-- ESCANEAR VIVE AQUÍ, JUNTO A LO QUE HACE.
+               Jose, 15/10: *"sería mucho más útil, práctico y fácil para el
+               usuario que utiliza celular... así sólo el usuario entra y
+               empieza a trabajar"*.
+
+               Y el sitio es éste por un motivo y no por gusto: escanear SIEMPRE
+               acaba en un Entry o en un Exit. Estaba sólo en el menú de la
+               cuenta, que son dos toques y un objetivo pequeño para un dedo con
+               guante, y los dos botones a los que lleva estaban en otra
+               pantalla. Puesto donde ya se trabaja, el rodeo desaparece.
+
+               Sigue TAMBIÉN en el menú de la cuenta: no cuesta nada y es donde
+               se busca lo que no se usa a diario.
+
+               Empieza oculto y lo enciende `_escPintarBoton()` sólo donde haya
+               cámara. Un botón que no puede hacer nada enseña el producto como
+               roto, y en un escritorio sin cámara eso es la mayoría de las
+               veces. -->
+          <button id="btnEscanearMov" class="btn btn-ghost" style="display:none">📷 Scan label</button>
           <button id="btnEntry" class="btn btn-primary">+ Entry (IN)</button>
           <button id="btnExit" class="btn btn-danger">− Exit (OUT)</button>
         </div>
@@ -5352,7 +5393,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.70';
+var APP_VERSION = '12.71';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5364,7 +5405,7 @@ var APP_VERSION = '12.70';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '7a64bc2d';
+var APP_BUILD = '30d4609d';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -23247,6 +23288,30 @@ function _escMensajeNo(motivo){
   return 'Scanning needs a secure connection (https).';
 }
 
+/* EL BOTÓN DE LA PANTALLA DE MOVIMIENTOS, ENCENDIDO SÓLO DONDE SIRVE.
+ *
+ * El del menú de la cuenta se queda siempre: está escondido, no estorba, y si
+ * alguien lo pulsa donde no hay cámara `_escAbrir` le explica por qué —que es
+ * mejor que no encontrarlo nunca y pensar que la app no sabe escanear.
+ *
+ * Éste no. Está en la fila de Entry y Exit, a la vista todo el día, y un botón
+ * permanentemente a la vista que no puede hacer nada enseña el producto como
+ * roto. En un escritorio sin cámara eso sería la mayoría de las veces.
+ *
+ * Se mira en cada carga y no una sola vez al arrancar: `BarcodeDetector` y la
+ * cámara no cambian, pero el contexto seguro sí —la misma app abierta por
+ * http y por https— y es gratis volver a preguntarlo. */
+function _escPintarBoton(){
+  var b = document.getElementById('btnEscanearMov');
+  if (!b) return;
+  /* Y el rol, no sólo la cámara. Escanear termina SIEMPRE en un Entry o en un
+   * Exit, así que a quien tiene prohibido guardar no se le ofrece el atajo
+   * para llegar al formulario: sería un camino que acaba en una puerta
+   * cerrada. Es la misma regla que esconde Entry y Exit a su lado. */
+  var puede = (_escSePuede() === 'si') && (userRole !== 'VIEWER');
+  b.style.display = puede ? '' : 'none';
+}
+
 function _escAbrir(){
   var motivo = _escSePuede();
   if (motivo !== 'si'){
@@ -25078,6 +25143,13 @@ function loadDataFromGoogle(skipCache, quiet){
          * abierta antes de salir, así que llegar la última no basta: también
          * se aparta si algo se abrió después. */
         try { _nvAlArrancar();            } catch(e){ console.error('_nvAlArrancar:', e); }
+        /* AQUÍ SE CIERRA LA PROMESA DEL AVISO VERDE, y el sitio importa: esto
+         * es el final del camino de una carga que SE APLICÓ —pasó las dos
+         * carreras, se pintó y se repasaron las ventanas abiertas—, no el de
+         * una que se pidió. Ponerlo arriba, junto a la llamada, sería repetir
+         * exactamente el fallo que esto arregla: decir «ya está al día»
+         * mientras todavía viene en camino. */
+        try { _connDatosAlDia();          } catch(e){ console.error('_connDatosAlDia:', e); }
       } catch(outerErr) {
         setConnStatus('offline');
         var sr2 = document.getElementById('statsRow');
@@ -26224,6 +26296,7 @@ document.addEventListener('DOMContentLoaded', function(){
   // Open modal buttons
   _safeOn('btnEntry','click', function(){ openMoveModal('ENTRY'); });
   _safeOn('btnExit','click',  function(){ openMoveModal('EXIT'); });
+  _safeOn('btnEscanearMov','click', function(){ _escAbrir(); });
 
   // Project selector
   _safeOn('projectSelector','change', renderProjectView);
@@ -26276,6 +26349,12 @@ function applyRoleUI(){
     var el = document.getElementById(id);
     if (el) el.style.display = isViewer ? 'none' : '';
   });
+  /* El de escanear va en la misma fila y tiene DOS motivos para no estar, no
+   * uno: el rol y la cámara. Por eso no entra en la lista de arriba —que sólo
+   * mira el rol y le pondría `display:''` a un botón que no puede hacer nada
+   * en un escritorio—. `_escPintarBoton` los junta y es el único sitio donde
+   * se decide. */
+  _escPintarBoton();
   // Admin-only: Incoming button + Monitor settings gear
   var addInc = document.getElementById('btnAddIncoming');
   if (addInc) addInc.style.display = isAdmin ? '' : 'none';
@@ -26360,28 +26439,91 @@ function setConnStatus(status){
    *    segundos. */
   var estabaCaida = (_connUltimo === 'offline');
   if (status === 'offline') {
-    /* FLOTANDO, desde la v12.69, y el texto acortado porque una píldora
-     * centrada no es una franja de borde a borde.
+    /* FLOTANDO, desde la v12.69, y en DOS LÍNEAS desde la v12.71.
      *
-     * PERO NO SE PUEDE ACORTAR HASTA PERDER INFORMACIÓN, y mi primer intento
-     * lo hizo: quitó «the app keeps retrying» y `test-barra-conexion` se puso
-     * roja con el motivo escrito —«para que nadie recargue a lo loco»—. Quien
-     * lee que no se guarda nada y no sabe que la app reintenta sola, recarga.
-     * Las dos frases se quedan; lo que se va es el relleno. */
+     * EL TEXTO, Y UNA CORRECCIÓN A LO QUE SE PIDIÓ. Jose escribió *"your data
+     * can be updated"*, y eso dice justo lo contrario de lo que pasa: sin
+     * conexión lo que NO se puede es guardar. Se le dijo y lo aprobó. Lo que
+     * queda dice las dos cosas que hacen falta y ninguna más: que nada de lo
+     * que se escriba quedará registrado, y que hay que mirar la conexión
+     * ANTES de mover nada — que es el momento en el que todavía se puede
+     * evitar el problema.
+     *
+     * Y SIGUE SIN PODERSE CERRAR. Mientras la conexión siga caída el aviso
+     * sigue siendo verdad, y un aviso que se cierra sobre un problema que
+     * continúa es peor que no tenerlo. */
+    /* LA TERCERA FRASE NO ESTABA EN LO QUE PIDIÓ JOSE, Y SE QUEDA.
+     *
+     * `test-barra-conexion` se puso roja al quitarla, con el motivo escrito
+     * desde hace meses: «para que nadie recargue a lo loco». Quien lee que no
+     * se guarda nada y NO sabe que la app reintenta sola, recarga la página —
+     * y recargar sin conexión es cómo se pierde lo que había en un formulario
+     * a medio llenar. El aro que gira lo insinúa; un aro no es una frase.
+     *
+     * Es la segunda vez que la quito y la segunda que esta prueba la devuelve.
+     * Queda dicho aquí para que no haya una tercera. */
+    _connEsperandoDatos = false;   // una caída cancela cualquier promesa pendiente
     _barraArriba('connBanner', 'bad',
-      '<span class="tb-spin"></span> Offline — nothing you type can be saved. ' +
-      'Still retrying.',
+      '<div class="tb-tit"><span class="tb-spin"></span>You\'re offline</div>' +
+      '<div class="tb-sub">Nothing you save will be recorded. Check your ' +
+      'connection before making any movement. The app keeps retrying on its own.</div>',
       0, true);
   } else if (status === 'online') {
-    /* SEIS SEGUNDOS y no cinco. Jose: «deben permanecer varios segundos, para
-     * que se noten». Un aviso que flota es más fácil de pasar por alto que uno
-     * que empujaba la página entera, así que lo que se gana en no estorbar hay
-     * que devolverlo en tiempo. */
-    if (estabaCaida) _barraArriba('connBanner', 'good', '✓ Back online', 6, true);
-    else _barraArriba('connBanner', 'good', '', 0, true);
+    /* ── LA VUELTA, EN DOS TIEMPOS, Y ÉSTE ERA UN FALLO DE VERDAD ──────────
+     *
+     * Jose, 15/10: *"es necesario que la app se haya actualizado y esté con
+     * los datos correctos en el momento de que el toast verde haya
+     * desaparecido"*. Tenía razón, y lo que había era peor que feo: era
+     * mentira.
+     *
+     * `_pulseOk` enseñaba el verde y DESPUÉS pedía los datos. El verde duraba
+     * seis segundos y una carga de Apps Script tarda entre diez y veinte, así
+     * que en el caso normal el aviso se iba ANTES de que llegara nada. Poner
+     * «data has been updated» encima de eso es firmar un papel que la app no
+     * cumple: alguien que acaba de recuperar la conexión lee que está al día,
+     * mira una cifra vieja y actúa sobre ella.
+     *
+     * Ahora son dos estados y el segundo lo enciende la carga, no un reloj:
+     *
+     *   1. «You are back online · Updating…», sin cuenta atrás. Se queda
+     *      mientras de verdad esté actualizando.
+     *   2. Cuando la carga se APLICA —lo avisa `_connDatosAlDia()` desde
+     *      `loadDataFromGoogle`— el texto pasa a «Data has been updated in
+     *      the app» y AHÍ empiezan los seis segundos.
+     *
+     * Si la carga no llega nunca, el verde se queda en «Updating…» y no
+     * miente: no promete lo que no ha pasado. */
+    if (estabaCaida) {
+      _connEsperandoDatos = true;
+      _barraArriba('connBanner', 'good',
+        '<div class="tb-tit">✓ You are back online</div>' +
+        '<div class="tb-sub"><span class="tb-spin"></span> Updating…</div>',
+        0, true);
+    } else if (!_connEsperandoDatos) {
+      /* Sin caída previa no hay nada que celebrar — y si HAY una espera en
+       * curso no se borra, que es lo que pasaba antes: el latido llamaba a
+       * esto cada veinte segundos y se llevaba por delante el aviso de la
+       * recuperación a medias. */
+      _barraArriba('connBanner', 'good', '', 0, true);
+    }
   }
   _connUltimo = status;
 }
+
+/* LO QUE CIERRA LA PROMESA. Lo llama `loadDataFromGoogle` cuando una carga
+ * queda APLICADA en pantalla, no cuando se pide. Si no hay recuperación en
+ * curso no hace nada: una carga normal no tiene por qué sacar ningún aviso. */
+function _connDatosAlDia(){
+  if (!_connEsperandoDatos) return;
+  _connEsperandoDatos = false;
+  _barraArriba('connBanner', 'good',
+    '<div class="tb-tit">✓ You are back online</div>' +
+    '<div class="tb-sub">Data has been updated in the app.</div>',
+    6, true);
+}
+/* `true` entre que se recupera la conexión y que llegan los datos. Vive fuera
+ * de `setConnStatus` porque quien lo apaga es la carga, no el estado. */
+var _connEsperandoDatos = false;
 /* El estado anterior, para saber si una vuelta a verde es una RECUPERACIÓN o
  * simplemente el arranque. Sin esto, abrir la app saludaría con "Back online"
  * cada vez. */
@@ -26643,6 +26785,17 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '12.71',
+    titulo: 'Scan from where you work, and a notice that keeps its word',
+    puntos: [
+      '<b>Scan label</b> now sits next to Entry and Exit, where the work happens. It is still in the account menu too.',
+      'On a computer with no camera that button stays out of the way instead of sitting there doing nothing.',
+      'The <b>back online</b> notice no longer leaves before your data arrives. It says <b>Updating</b> until the new numbers are on screen, and only then says they are up to date.',
+      'The offline notice now reads in two lines: what happened, and what to do about it.'
+    ],
+    antes:  'The green notice left in six seconds, with the data still on its way',
+    ahora:  'It waits for the data, and then tells you' },
+
   { ver: '12.70',
     titulo: 'Scan a label with the phone camera',
     puntos: [
@@ -26672,17 +26825,7 @@ var NOVEDADES = [
       'A rack label carries the name and the code and <b>nothing that can go out of date</b> — no quantity, no date, no PO. It gets stuck on once and lives for years.'
     ],
     antes:  'Only the bundle had a code. The shelf had nothing',
-    ahora:  'Scan the bundle, then scan the shelf — the app knows both' },
-
-  { ver: '12.67',
-    titulo: 'The print dialog tells you the paper size',
-    puntos: [
-      'Labels print at <b>4×6 in (101.6 × 152.4 mm)</b>, and the Print window now says so before you spend a sheet.',
-      'On a phone it says where to change it: the Android print dialog usually opens on A4, and then the label comes out the right size in the middle of a big page.',
-      'Nothing was broken — not the app and not Chrome. It was a dropdown nobody looks at until the paper is gone.'
-    ],
-    antes:  'Paper size: ISO A4 — the label printed small, in the middle of a sheet',
-    ahora:  'Paper size: 4x6 in (101.6 x 152.4 mm), said before you print' }
+    ahora:  'Scan the bundle, then scan the shelf — the app knows both' }
 
 ];
 

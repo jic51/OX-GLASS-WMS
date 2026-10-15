@@ -178,9 +178,27 @@ fs.writeFileSync(f, html.replace('</head>', stub + '</head>'));
   const trasTres = await estado();
   check('a los 3 segundos sigue en pantalla: varios segundos, no un parpadeo',
     trasTres.hayConn, trasTres);
-  await page.waitForTimeout(4000);
+
+  /* ── v12.71: EL VERDE YA NO SE VA POR RELOJ ──────────────────────────────
+   *
+   * Esperaba a que desapareciera sola a los 7 segundos. Desde la v12.71 el
+   * verde se queda en «Updating…» hasta que una carga se APLICA de verdad, y
+   * sólo entonces cuenta sus seis segundos — porque el texto promete datos al
+   * día y antes se iba diez segundos antes de que llegara ninguno.
+   *
+   * Aquí no hay carga que llegue: el montaje llama a `setConnStatus` a mano.
+   * Así que lo correcto es que SIGA puesto, y volver a esperar que se vaya
+   * sería pedirle a la app justo el fallo que se arregló. Se dispara a mano lo
+   * mismo que dispara la carga, y a partir de ahí sí se va. */
+  await page.evaluate(() => { _connDatosAlDia(); });
+  /* Siete y no cuatro: `_connDatosAlDia` REARRANCA la cuenta de seis segundos,
+   * que es justo el punto — los seis segundos empiezan cuando llegan los
+   * datos, no cuando vuelve la conexión. Esperar cuatro era medir el reloj
+   * viejo con el contrato nuevo. */
+  await page.waitForTimeout(7000);
   const trasSiete = await estado();
-  check('...y a los 7 ya se fue sola', !trasSiete.hayConn, trasSiete);
+  check('...y una vez aplicados los datos, a los pocos segundos se fue sola',
+    !trasSiete.hayConn, trasSiete);
   check('...sin dejar la barra movida', (await estado()).topbarY === base.topbarY);
 
   console.log('\n═══ 5. EL AVISO DE VERSIONES NO FLOTA, Y NO DEBE ═══\n');

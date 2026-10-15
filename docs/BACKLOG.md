@@ -8797,3 +8797,74 @@ nada. Propuesto en su lugar, y pendiente de que él lo apruebe:
 en esta lista desde la entrada 21 y vuelve a salir en TRES capturas del 15/10.
 No rompe nada y por eso lleva semanas sin tocarse; aparece en todas las
 capturas que Jose manda, y eso ya es una respuesta sobre cuánto estorba.
+
+### Apunte del 15/10 sobre el punto 1, de Jose
+
+Jose: *«pero la app ya lo hace, en lugar de actualizar toda la app sólo cambia
+lo que se cambió o movió»*.
+
+**Tiene razón en lo que se ve y yo la tenía en lo que pasa por el cable, y lo
+que importa es lo primero.** `loadDataFromGoogle(true, true)` —el modo
+silencioso de la v11.47— trae la foto entera pero NO desarma la pantalla:
+repinta, y en pantalla sólo cambia lo que de verdad es distinto. Para quien
+mira, es un delta. Por el cable no lo es.
+
+Lo que esto cambia en la práctica: el texto «Data has been updated in the app»
+es honesto y se puede usar, porque el estado final es correcto. Lo que sigue
+sin poderse prometer es *rapidez* de delta — la carga tarda lo que tarda una
+`getInitialData` entera, diez a veinte segundos, y por eso el aviso verde tiene
+que esperarla en vez de contar seis segundos.
+
+Y lo que Jose recuerda del vídeo: **los movimientos que vuelven de la papelera
+NO se actualizan de esa forma.** Está anotado en esta lista (punto 15 y la
+sección de los dos indicadores de espera) pero sólo por los INDICADORES. Queda
+añadido aquí lo otro: el repintado tras restaurar no se comporta como el resto
+de la app. Pendiente, con el vídeo del 14/10 como referencia.
+
+## 🔵 EL QR QUE ABRE LA APP — IDEA DE JOSE DEL 15/10, Y LO QUE LE FALTA
+
+Jose: *«una persona entra a la bodega de OX, ve un label con un QR, saca su
+teléfono y lo escanea, este lo lleva al link de la app de OX, si está entre los
+usuarios se le da acceso y puede ver la información de ese material»*.
+
+**La idea es buena y el control de acceso ya existe** —`getUserRole` contesta
+DENIED a quien no está en la lista—, así que la mitad difícil está hecha. Lo
+que falta es el enlace, y ahí hay un problema que hay que resolver ANTES de
+imprimir una sola etiqueta.
+
+### Lo que impide hacerlo hoy
+
+**La URL de un despliegue de Apps Script se muere.** Cambia cada vez que se
+crea un despliegue nuevo, y Jose ya archivó todos los enlaces viejos en
+octubre por ese mismo motivo. Una etiqueta de estante vive AÑOS pegada a un
+rack. Imprimir hoy una URL que caduca el mes que viene es fabricar basura con
+cara de inventario: el QR seguiría escaneando y llevaría a una página muerta,
+que es peor que no llevar a ninguna parte.
+
+**Y el código crece.** Hoy una etiqueta de ubicación lleva `ACPL1\nA1A`: once
+caracteres. Una URL de despliegue son ~120. Eso sube los módulos del QR y, con
+el mismo tamaño impreso, baja la distancia de lectura — justo lo que Jose pidió
+cuidar («estos se deben leer de lejos»).
+
+### Lo que lo haría posible, y es trabajo de la web, no de la app
+
+Un redirector corto y permanente en `acopio.net` —`acopio.net/r/<código>`— que
+reenvíe al despliegue actual de cada cliente. Entonces:
+
+- La etiqueta lleva una URL **corta y que no caduca**; el despliegue puede
+  cambiar cien veces y el papel pegado al estante sigue valiendo.
+- El código sigue cabiendo: `acopio.net/r/A1A` son 18 caracteres, no 120.
+- El lector de dentro de la app aprende a leer los dos formatos, que es un
+  `if` — pero cuidado, son **dos formatos que tienen que coincidir** y en este
+  proyecto eso ya ha salido caro once veces. Una sola función que decida.
+
+### Lo que hay que pensar antes, y no es técnico
+
+Una etiqueta pegada a un estante la ve cualquiera que entre a la bodega: un
+transportista, un visitante, alguien que viene a vender algo. Poner la
+dirección del sistema en la pared es publicarla. El control de acceso aguanta
+—quien no está en la lista no entra— pero conviene decidirlo a propósito y no
+descubrirlo después.
+
+**Va después de lo de ahora.** Necesita el redirector, y el redirector es una
+pieza nueva de `acopio-site` con su propio mantenimiento.
