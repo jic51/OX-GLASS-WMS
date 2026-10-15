@@ -133,6 +133,72 @@ async function mirar(browser, { camara, rol }) {
     check('ningún error suelto', errs.length === 0, errs.slice(0, 3));
   }
 
+  console.log('\n═══ 1b. CON LAS APIS PERO SIN PERMISO: TAMPOCO ═══\n');
+  //
+  // Jose, 15/10, con vídeo desde su teléfono: el botón salía, la ventana se
+  // abría con su mira dibujada, decía «Point the camera at a label», y el
+  // recuadro estaba NEGRO. Chrome no llegó a pedir permiso en ningún momento.
+  //
+  // La causa no está en el código: Apps Script sirve la app dentro de un iframe
+  // de OTRO ORIGEN, y desde Chrome 64 un iframe así no tiene cámara salvo que
+  // quien lo incrusta se la conceda con `allow="camera"`. Quien lo incrusta es
+  // Google. `getUserMedia` falla con `NotAllowedError`, el mismo error que una
+  // negativa del usuario, y por eso parecía un problema del teléfono.
+  //
+  // Lo que esta comprobación defiende: que `_escSePuede` pregunte si la cámara
+  // está PERMITIDA y no sólo si la API EXISTE. Las tres comprobaciones que
+  // había miraban existencia —y las tres pasaban en el teléfono de Jose—. Es
+  // la diferencia entre medir la letra y medir la intención, otra vez.
+  {
+    const permisoNo = `<script>
+window.BarcodeDetector = function(){};
+navigator.mediaDevices = navigator.mediaDevices || {};
+navigator.mediaDevices.getUserMedia = function(){ return Promise.reject(new Error('NotAllowedError')); };
+try { Object.defineProperty(window, 'isSecureContext', { value: true, configurable: true }); } catch(e){}
+/* El iframe de Apps Script, fingido: las APIs están y la política dice que no.
+ * Se sobrescriben LAS DOS, y con defineProperty: el navegador de la suite trae
+ * permissionsPolicy nativo —que en un file:// dice que sí a todo— y una
+ * asignación normal no lo tapa. La primera versión de este montaje asignó sólo
+ * featurePolicy y se puso roja midiendo la política de verdad del navegador en
+ * vez de la fingida.
+ *
+ * Y sin comillas invertidas en esta nota: va DENTRO de una plantilla de texto,
+ * y una comilla invertida ahí la cierra a media frase. Lo aprendí cerrándola. */
+['permissionsPolicy','featurePolicy'].forEach(function(n){
+  try {
+    Object.defineProperty(document, n, {
+      configurable: true,
+      get: function(){ return { allowsFeature: function(f){ return f !== 'camera'; } }; }
+    });
+  } catch(e){}
+});
+</scr` + `ipt>`;
+    const f = path.join(os.tmpdir(), 'acopio-escbtn-sinpermiso.html');
+    fs.writeFileSync(f, html.replace('</head>', permisoNo + stub('ADMIN') + '</head>'));
+    const page = await browser.newPage({ viewport: { width: 390, height: 780 } });
+    await page.goto('file://' + f);
+    await page.waitForTimeout(900);
+    const r = await page.evaluate(() => {
+      const b = document.getElementById('btnEscanearMov');
+      return {
+        puede: typeof _escSePuede === 'function' ? _escSePuede() : null,
+        visible: !!(b && getComputedStyle(b).display !== 'none'),
+        mensaje: typeof _escMensajeNo === 'function' ? _escMensajeNo('iframe-sin-camara') : ''
+      };
+    });
+    check('EL MONTAJE REPRODUCE EL CASO: las APIs existen y la política las niega',
+      r.puede === 'iframe-sin-camara', r.puede);
+    check('el botón NO se enseña — enseñarlo acaba en un recuadro negro que ' +
+          'pide apuntar la cámara, que es lo que vio Jose',
+      !r.visible, r);
+    check('...y el mensaje dice que lo bloquea Google, no el teléfono',
+      /frame that does not allow camera/i.test(r.mensaje), r.mensaje.slice(0, 120));
+    check('...y NO manda a pelearse con los ajustes de Chrome, porque ahí no ' +
+          'hay nada que arreglar',
+      !/site settings|allow it in/i.test(r.mensaje), r.mensaje.slice(0, 160));
+    await page.close();
+  }
+
   console.log('\n═══ 2. SIN CÁMARA: NO ESTÁ — un botón muerto enseña el producto roto ═══\n');
   {
     const { r } = await mirar(browser, { camara: false, rol: 'ADMIN' });

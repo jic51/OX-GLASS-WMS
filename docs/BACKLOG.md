@@ -8868,3 +8868,102 @@ descubrirlo después.
 
 **Va después de lo de ahora.** Necesita el redirector, y el redirector es una
 pieza nueva de `acopio-site` con su propio mantenimiento.
+
+## 🔴 LA CÁMARA NO PUEDE FUNCIONAR DENTRO DE APPS SCRIPT — 15/10
+
+Jose, con vídeo desde su teléfono: el botón salía, la ventana se abría con su
+mira dibujada, decía «Point the camera at a label», y **el recuadro estaba
+negro**. Chrome no llegó a pedir permiso de cámara en ningún momento.
+
+### No es un fallo del código. Es dónde vive la app.
+
+Apps Script sirve esta página dentro de un **iframe de otro origen**
+(`googleusercontent.com`, incrustado en `script.google.com`). Desde Chrome 64,
+un iframe de otro origen **no tiene cámara** salvo que la página que lo
+incrusta se la conceda con `allow="camera"`. Quien incrusta este iframe es
+Google. No lo controlamos y no hay forma de cambiarlo desde dentro.
+
+`getUserMedia` falla con `NotAllowedError` — el mismo error que si el usuario
+hubiera dicho que no— y por eso parecía un problema de permisos del teléfono.
+No lo era.
+
+Confirmado con tres fuentes independientes el 15/10. No hay documentación
+oficial de Google sobre esto; hay un proyecto público que lo resuelve alojando
+el escáner FUERA de Apps Script y devolviendo el dato por `doPost`.
+
+### Lo que esto significa para la v12.70
+
+**El lector de códigos que se construyó no puede funcionar donde está.** Toda
+la lógica —leer el texto, decidir el movimiento, rellenar el formulario sin
+guardar— está hecha y probada, y sirve. Lo que no sirve es la fuente de
+imágenes.
+
+Lo que se hizo hoy es que deje de mentir: `_escSePuede` pregunta ahora
+`allowsFeature('camera')` ANTES de encender nada, así que el botón se esconde y
+el mensaje explica que lo bloquea Google y que no es algo que el usuario pueda
+arreglar. Un rectángulo negro que pide apuntar la cámara es peor que no tener
+el botón.
+
+### Las salidas, y la buena ya la propuso Jose
+
+1. **EL QR QUE ABRE LA APP** (idea de Jose del 15/10, ya en esta lista). La
+   cámara que lee es **la del propio teléfono**, no una página nuestra, así
+   que el iframe no pinta nada. Es la única de las tres que no pelea contra la
+   plataforma. Necesita el redirector corto y permanente en `acopio.net/r/<código>`
+   que ya está anotado, y ahora ese redirector deja de ser «una mejora» para
+   ser **la forma de escanear**.
+
+2. **Alojar el escáner fuera** (en `acopio.net`, que ya es nuestro y ya está en
+   GitHub Pages) y devolver el código leído. Funciona, y el coste está en la
+   vuelta: o se recarga la app entera con el código en la URL —diez a veinte
+   segundos por lectura, inviable para treinta lecturas seguidas— o se manda a
+   un `doPost` y el latido lo recoge, con veinte segundos de retraso. Las dos
+   son peores que la 1 para el trabajo diario.
+
+3. **Sacar la app de Apps Script.** No hoy.
+
+**Recomendación: la 1.** Y conviene decirlo entero: eso convierte el
+redirector de `acopio.net` en trabajo necesario, no opcional.
+
+## 🔵 LA CABECERA SE COME EL NOMBRE DE LA EMPRESA AL HACER SCROLL — 15/10
+
+Jose, con el mismo vídeo: *"al hacer scroll el nombre de la empresa desaparece,
+no debería ser así, hay que poner en la lista que debemos trabajar mejor en
+eso"*.
+
+Es la cabecera que se encoge en el teléfono —existe a propósito, y
+`test-telefono` la defiende: *"que la cabecera se encoja al bajar en el
+teléfono y NO en el escritorio"*—. Lo que no se pensó es **qué se sacrifica al
+encogerla**, y resulta que lo primero que se va es el nombre del cliente.
+
+Y ahí está lo que hace que importe más de lo que parece: **ese nombre es suyo,
+no nuestro.** La app es blanca y el nombre de la empresa es media marca
+blanca. Que lo primero en desaparecer sea precisamente eso es lo contrario de
+lo que la cabecera debería proteger.
+
+Lo que hay que decidir cuando toque: qué se encoge primero. Las pestañas
+ocupan dos filas y podrían pasar a una; los botones de la derecha podrían
+juntarse. El nombre debería ser lo ÚLTIMO en irse, no lo primero.
+
+## 🔵 Y UNA PREGUNTA DE JOSE QUE MERECE QUEDAR ESCRITA
+
+*"¿La app actualmente puede diferenciar entre un teléfono y una
+computadora?"*
+
+**No, y es a propósito: detecta CAPACIDADES, no aparatos.** Conviene que esté
+escrito porque explica cosas que de otro modo parecen fallos:
+
+- El CSS responde al **ancho de la ventana**. Una computadora con la ventana
+  estrecha se ve como un teléfono, y debe verse así: lo que importa es cuánto
+  sitio hay, no qué aparato es.
+- El botón de escanear responde a **si hay lector y cámara**. Por eso Jose lo
+  ve en el teléfono y no en su computadora con la ventana estrecha, aunque las
+  dos se vean igual de estrechas. Las dos cosas son correctas.
+
+Detectar el aparato sería peor: una tableta con teclado, un portátil con
+pantalla táctil y un teléfono grande no caen en ninguna casilla, y la lista de
+excepciones no se acaba nunca. Las capacidades se preguntan y se contestan.
+
+**Lo que sí reveló esta pregunta** es que esconder algo en silencio genera la
+pregunta «¿está roto?». Jose tuvo que preguntarlo. Eso vale para el botón de
+escanear y para cualquier otra cosa que desaparezca sin decir por qué.

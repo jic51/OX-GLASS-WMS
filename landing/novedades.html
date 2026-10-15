@@ -102,6 +102,27 @@
        Borrar trece movimientos pasó de unos dos minutos y medio a cincuenta y
        cinco segundos por el camino.</p>
 
+    <div class="entry" id="v12-73">
+      <span class="ver">v12.73</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Por qu&eacute; no se abre la c&aacute;mara, dicho claro</h3>
+      <p><b>Escanear abr&iacute;a un recuadro negro que ped&iacute;a apuntar la c&aacute;mara a una
+         etiqueta.</b> No pod&iacute;a funcionar nunca, y el motivo no est&aacute; en nuestro
+         c&oacute;digo: Google sirve esta app dentro de un marco que pertenece a otro sitio, y desde
+         Chrome 64 un marco as&iacute; no tiene c&aacute;mara salvo que la p&aacute;gina que lo
+         rodea se la conceda. Esa p&aacute;gina es de Google. Nada que t&uacute; o la app
+         pod&aacute;is hacer desde esa pantalla lo cambia.</p>
+      <p>El navegador ni siquiera lleg&oacute; a pedir permiso de c&aacute;mara &mdash;por eso
+         parec&iacute;a un problema del tel&eacute;fono&mdash;. No lo era.</p>
+      <p><b>Ahora la app pregunta si la c&aacute;mara est&aacute; permitida antes de abrir nada.</b>
+         Donde est&aacute; bloqueada, el bot&oacute;n no aparece y el mensaje dice qu&eacute; es lo
+         que estorba, en vez de mandarte a pelear con los ajustes del tel&eacute;fono por un permiso
+         que no iba a servir de nada.</p>
+      <p>El lector en s&iacute; &mdash;leer el c&oacute;digo, decidir el movimiento, rellenar el
+         formulario sin guardar&mdash; est&aacute; hecho y funciona. Lo que necesita es otra puerta
+         de entrada, y &eacute;se es el siguiente trabajo.</p>
+    </div>
+
     <div class="entry" id="v12-72">
       <span class="ver">v12.72</span>
       <span class="tag new">Nuevo</span>

@@ -101,6 +101,26 @@
        movements went from about two and a half minutes to fifty-five seconds
        along the way.</p>
 
+    <div class="entry" id="v12-73">
+      <span class="ver">v12.73</span>
+      <span class="tag fix">Fix</span>
+      <h3>Why the camera does not open, said plainly</h3>
+      <p><b>Scanning opened a black box that asked you to point the camera at a label.</b> It could
+         never have worked, and the reason is not in our code: Google serves this app inside a frame
+         belonging to another site, and since Chrome 64 a frame like that gets no camera unless the
+         page around it grants permission. The page around it is Google's. Nothing you or the app
+         can do from that screen changes it.</p>
+      <p>The browser never even asked for camera permission &mdash; which is why it looked like a
+         phone problem. It was not.</p>
+      <p><b>The app now asks whether the camera is allowed before it opens anything.</b> Where it is
+         blocked, the button stays out of the way and the message says what is in the way, rather
+         than sending you to fight with your phone settings over a permission that was never going
+         to help.</p>
+      <p>The reader itself &mdash; reading the code, deciding the movement, filling the form without
+         saving &mdash; is built and works. What it needs is a different way in, and that is the next
+         piece of work.</p>
+    </div>
+
     <div class="entry" id="v12-72">
       <span class="ver">v12.72</span>
       <span class="tag new">New</span>
