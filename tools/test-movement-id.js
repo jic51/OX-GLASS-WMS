@@ -80,24 +80,60 @@ const AC = (function(){
 const AC_WIDTH = Number((GS.match(/var AC_WIDTH = (\d+);/) || [])[1]);
 
 check('AC.MOV_ID existe', typeof AC.MOV_ID === 'number');
-check('y es la ÚLTIMA columna — añadida al final, que es lo único seguro sobre ' +
-      'datos que ya existen; insertarla en medio correría todas las de después ' +
-      'en cada instalación que haya guardado un movimiento alguna vez',
-  AC.MOV_ID === Math.max.apply(null, Object.keys(AC).map(k => AC[k])));
-check('el ancho de la fila la incluye (AC_WIDTH = ' + AC_WIDTH + ')',
-  AC_WIDTH === AC.MOV_ID + 1);
+
+/* ── LO QUE DE VERDAD HAY QUE DEFENDER, Y NO ES «SER LA ÚLTIMA» ───────────
+ *
+ * Esto decía que MOV_ID tenía que ser la columna más alta. Era verdad cuando
+ * se escribió —entonces era la última— y dejó de serlo en la v12.72, que
+ * añadió dos columnas detrás para el boneyard. La prueba se puso roja sobre un
+ * cambio que seguía exactamente la regla que ella existe para proteger.
+ *
+ * La regla no es «MOV_ID es la última». Es: LAS COLUMNAS SE AÑADEN AL FINAL Y
+ * NINGUNA SE MUEVE. Insertar una en medio correría todas las de después en
+ * cada instalación que haya guardado un movimiento alguna vez, y nadie se
+ * enteraría hasta que una fecha apareciera en la casilla del proveedor.
+ *
+ * Medido como regla: que MOV_ID siga en 22 —donde nació—, que los índices no
+ * tengan huecos ni repetidos, y que el ancho los cubra. Así añadir la columna
+ * 25 mañana pasa sin tocar esto, y moverlas sigue sin pasar. */
+check('MOV_ID sigue en 22, donde nació — una columna que se mueve corre todos ' +
+      'los datos que ya existen a su derecha',
+  AC.MOV_ID === 22, AC.MOV_ID);
+{
+  const idx = Object.keys(AC).map(k => AC[k]).sort((a, b) => a - b);
+  const repes = idx.filter((v, i) => i > 0 && v === idx[i - 1]);
+  check('ningún índice repetido — dos nombres en la misma columna es una ' +
+        'sobrescribiendo a la otra en silencio', repes.length === 0, repes);
+  check('ni huecos: los índices van de 0 a ' + idx[idx.length - 1] + ' seguidos',
+    idx.every((v, i) => v === i), idx);
+  check('y `AC_WIDTH` (' + AC_WIDTH + ') cubre la última columna (' +
+        idx[idx.length - 1] + ') — si se quedara corto, la columna nueva se ' +
+        'escribiría fuera del rango y el guardado reventaría',
+    AC_WIDTH === idx[idx.length - 1] + 1);
+}
 
 const header = (function(){
   const i = GS.indexOf("{ name: SHEETS.ARCHIVE, header: [");
   const j = GS.indexOf('] }', i);
   return GS.slice(GS.indexOf('[', i), j + 1);
 })();
-const headerCols = header.split(',').length;
+/* Se cuentan las CADENAS, no las comas. Partir por comas era frágil por un
+ * motivo que se vio en cuanto esta lista ganó un comentario encima: cualquier
+ * coma en una nota dentro del bloque sumaba una columna fantasma. Las comillas
+ * sólo las llevan los títulos. */
+const headerCols = (header.match(/'[^']*'/g) || []).length;
 check('la cabecera de la hoja tiene exactamente AC_WIDTH títulos (' + headerCols +
-      ') — si no, la columna nueva queda sin nombre en la hoja de Jose, o peor, ' +
-      'los títulos se desplazan respecto a los datos',
-  headerCols === AC_WIDTH);
-check("...y el último dice 'Movement ID'", /'Movement ID'\]/.test(header));
+      ' de ' + AC_WIDTH + ') — si no, la columna nueva queda sin nombre en la ' +
+      'hoja de Jose, o peor, los títulos se desplazan respecto a los datos',
+  headerCols === AC_WIDTH, { titulos: headerCols, ancho: AC_WIDTH });
+check("...y 'Movement ID' sigue estando, en su sitio de siempre",
+  (header.match(/'[^']*'/g) || [])[22] === "'Movement ID'",
+  (header.match(/'[^']*'/g) || [])[22]);
+/* Y LAS DOS NUEVAS TIENEN NOMBRE. Es lo que se escapó al añadirlas: la fila
+ * creció a 25 y la cabecera se quedó en 23, así que en la hoja habrían salido
+ * dos columnas con datos y sin título. */
+check("...y las columnas del boneyard también tienen título",
+  /'Left Over From'/.test(header) && /'From Movement'/.test(header), header.slice(-120));
 
 // ── El id ────────────────────────────────────────────────────────────────────
 console.log('\n═══ dos movimientos no pueden llamarse igual ═══\n');

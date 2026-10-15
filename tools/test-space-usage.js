@@ -158,12 +158,28 @@ console.log('\n═══ guard 2: growth brackets a second number, it does not c
 console.log('\n═══ the arithmetic itself ═══\n');
 
 {
-  // 100 movements/day, half the file already spent. 5,000,000 cells left,
-  // 22 cells a movement, 100 a day → 5e6 / (100*22*365) ≈ 6.2 years.
+  /* ── EL NÚMERO SALE DE `AC_WIDTH`, Y POR ESO YA NO SE ESCRIBE AQUÍ ───────
+   *
+   * Decía «22 columnas» a mano. La v12.72 añadió dos columnas para el boneyard
+   * y `AC_WIDTH` pasó de 23 a 25, así que esto se puso rojo — y tenía razón en
+   * notarlo: cada fila ocupa más celdas y la hoja dura menos. Lo que estaba
+   * mal era clavar el número aquí, porque entonces lo que falla es una cuenta
+   * copiada a mano y no el producto.
+   *
+   * El margen sale ahora de `AC_WIDTH`, que es de donde sale de verdad. Y la
+   * bajada que provoca es REAL y conviene que se vea en la cifra en vez de
+   * esconderla: añadir columnas cuesta años de vida del archivo, y ése es el
+   * precio de poder contestar de dónde salió cada ventana. */
+  const ANCHO = Number((require('fs')
+    .readFileSync(require('path').join(__dirname, '..', 'Code_v3_fixed.gs'), 'utf8')
+    .match(/var AC_WIDTH = (\d+);/) || [])[1]);
+  const esperado = (SHEET_CELL_LIMIT / 2) / (100 * ANCHO * 365);
   const est = spaceEstimate_(sheetOfDaysAgo(steady(100, 120)), null, SHEET_CELL_LIMIT / 2);
-  check('years left = cells remaining ÷ (pace × 22 columns × 365), not a guess: ' +
-        est.years.toFixed(1) + ' years for 100/day with half the file spent',
-    est.years > 5.5 && est.years < 7);
+  check('years left = cells remaining ÷ (pace × ' + ANCHO + ' columns × 365), ' +
+        'not a guess: ' + est.years.toFixed(1) + ' years for 100/day with half ' +
+        'the file spent (expected ~' + esperado.toFixed(1) + ')',
+    est.years > esperado * 0.85 && est.years < esperado * 1.2,
+    { ancho: ANCHO, salio: est.years, esperado: esperado });
 }
 
 {
