@@ -531,6 +531,11 @@
      * Lo único distinto es el color: ámbar, que en esta app significa «algo
      * que mirar», no «algo que está mal». Rojo sería mentira: una sobra no es
      * un problema, es material pagado esperando obra. */
+    /* El botón de la foto, dentro de la ventana de escanear. Ancho entero
+       porque es la acción principal cuando no hay vídeo, y con aire arriba
+       para que no se pegue al recuadro de la cámara cuando sí lo hay. */
+    .sc-foto{margin-top:var(--sp-5);display:flex}
+    .sc-foto .btn{flex:1}
     .bone-marca{display:inline-block;margin-top:2px;font-size:.72rem;
       color:#b45309;font-weight:600}
     :root[data-theme="dark"] .bone-marca{color:#fbbf24}
@@ -3400,12 +3405,45 @@
       .alert-banner-actions button,.morning-popup-hdr button,.rack-drawer-hdr button,
       .rm-btn,.sys-card-x,.cfg-card-add,.cfg-card-skip{min-height:var(--h-btn-sm);min-width:var(--h-btn-sm)}
       .rm-btn,.alert-banner-actions button{min-height:var(--h-btn-md)}
-      /* The connection dot keeps its size and gains a 44px hit area around it.
-         A pseudo-element with no paint of its own still takes the tap, so the
-         design does not change at all — the target simply stops being the size
-         of the dot. */
-      .conn-btn{position:relative}
-      .conn-btn::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%}
+      /* ── EL PUNTO DE CONEXIÓN Y SU ÁREA DE TOQUE ──────────────────────
+       *
+       * Jose, 15/10: *"el botón verde al lado del avatar siempre está muy
+       * lejos y se traslapa con las pestañas al hacer la pantalla más
+       * pequeña, no me gusta"*.
+       *
+       * Lo del traslape era esto. El punto mide 10 px y ganaba un área de
+       * toque de 44 px con un `::after` ABSOLUTO, o sea pintado FUERA del
+       * sitio que el elemento ocupa: sobresalía unos 17 px por cada lado y
+       * robaba los toques de lo que tuviera al lado. En una pantalla estrecha
+       * lo que tiene al lado son las pestañas.
+       *
+       * El arreglo es dejar de robar sitio y RESERVARLO: el botón mide 44 px
+       * de verdad, con fondo transparente, y el punto de 10 px lo pinta un
+       * `::before` en el centro. Se ve exactamente igual, el dedo tiene los
+       * mismos 44 px, y ahora el hueco está en el reparto — así que nada se
+       * le puede poner debajo.
+       *
+       * Lo de «muy lejos» es otra cosa y es de diseño: el punto debería vivir
+       * PEGADO al avatar, como la bolita de presencia de cualquier app de
+       * mensajería, en vez de flotar entre las pestañas y la cuenta. Eso
+       * mueve una pieza de sitio y está anotado en la lista para decidirlo. */
+      .conn-btn{position:relative;width:44px;height:44px;background:transparent}
+      .conn-btn::before{content:'';position:absolute;top:50%;left:50%;
+        transform:translate(-50%,-50%);width:10px;height:10px;border-radius:50%;
+        background:inherit;transition:background .3s,box-shadow .3s}
+      /* El color vive en el punto, no en la caja: la caja es transparente y de
+         44 px, y pintarla la convertiría en un círculo verde enorme. */
+      .conn-btn.online::before {background:#10B981}
+      .conn-btn.stale::before  {background:#F59E0B}
+      .conn-btn.loading::before{background:#9CA3AF}
+      .conn-btn.offline::before{background:#EF4444}
+      .conn-btn.online,.conn-btn.stale,.conn-btn.loading,.conn-btn.offline{background:transparent}
+      /* La animación se la queda el punto; en la caja de 44 px latiría un
+         círculo invisible y no se vería nada. */
+      .conn-btn.stale  {animation:none}
+      .conn-btn.offline{animation:none}
+      .conn-btn.stale::before  {animation:pulse-stale 1.5s ease-in-out infinite}
+      .conn-btn.offline::before{animation:pulse-offline 1s ease-in-out infinite}
       /* Anything a finger has to land on inside a modal, too. */
       .modal input,.modal select,.modal textarea,.modal-type-bar button{min-height:var(--h-btn-lg)}
     }
@@ -4019,6 +4057,25 @@
            el vídeo sin un gesto más. -->
       <video id="scanVideo" playsinline muted autoplay></video>
       <div class="sc-mira"></div>
+    </div>
+    <!-- ── LA FOTO, QUE ES EL CAMINO QUE SÍ FUNCIONA ───────────────────────
+         Jose, 15/10: *"pero si puedo tomar fotos a los documentos para
+         escanearlos, ¿cómo no se puede usar la app para escanear un código
+         QR?"*. Tenía razón y yo había concluido de más.
+
+         `getUserMedia` —el vídeo en vivo— SÍ está bloqueado por el iframe de
+         Apps Script. Pero esto es otra cosa: un `input type=file` con
+         `capture`, que entrega el trabajo a la CÁMARA NATIVA del teléfono y
+         devuelve un archivo. No pasa por la política de permisos del iframe
+         porque no pide la cámara: pide un archivo. La app ya lo usa desde hace
+         versiones para las fotos de los documentos y de «Report a problem».
+
+         Y lo de después ya estaba: `BarcodeDetector.detect()` acepta una
+         imagen igual que un vídeo, y el repuesto —jsQR— lee de un canvas, que
+         es justo lo que hace `test-qr` para comprobar nuestras etiquetas. -->
+    <div class="sc-foto">
+      <button class="btn btn-primary" id="scanFotoBtn" type="button">📸 Take a photo of the label</button>
+      <input type="file" id="scanFotoInput" accept="image/*" capture="environment" style="display:none">
     </div>
     <div id="scanLeido" class="sc-leido"></div>
     <div id="scanAcciones" class="sc-acciones"></div>
@@ -5431,7 +5488,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.73';
+var APP_VERSION = '12.74';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5443,7 +5500,7 @@ var APP_VERSION = '12.73';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '610b8d38';
+var APP_BUILD = '8be480c7';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -23579,11 +23636,16 @@ function _escMensajeNo(motivo){
    * No se le pide que arregle nada porque NO PUEDE: lo bloquea la página de
    * Google que contiene a la app. Decir «dale permiso a la cámara» mandaría a
    * alguien a pelearse diez minutos con los ajustes de Chrome para nada. */
+  /* EL TEXTO CAMBIÓ EN LA v12.74, Y LO PROVOCÓ UNA PREGUNTA DE JOSE.
+   *
+   * Decía que la cámara no se podía usar aquí y que se escribiera a mano. Era
+   * verdad a medias, y la mitad que faltaba era la importante: lo bloqueado es
+   * el VÍDEO EN VIVO; la FOTO funciona y lee las mismas etiquetas. */
   if (motivo === 'iframe-sin-camara')
-    return 'The camera cannot be used here. Google runs this app inside a frame ' +
-           'that does not allow camera access, and that is not something you or ' +
-           'the app can change from this screen. Type the material in by hand for ' +
-           'now — a way to scan that works around this is being built.';
+    return 'The live camera cannot run here: Google serves this app inside a ' +
+           'frame that does not allow it, and nothing you or the app can do from ' +
+           'this screen changes that. Use the photo button instead — it opens ' +
+           'your phone camera and reads the same labels.';
   return 'Scanning needs a secure connection (https).';
 }
 
@@ -23607,21 +23669,52 @@ function _escPintarBoton(){
    * Exit, así que a quien tiene prohibido guardar no se le ofrece el atajo
    * para llegar al formulario: sería un camino que acaba en una puerta
    * cerrada. Es la misma regla que esconde Entry y Exit a su lado. */
-  var puede = (_escSePuede() === 'si') && (userRole !== 'VIEWER');
+  /* BASTA CON QUE HAYA LECTOR. Antes exigía `=== 'si'`, o sea vídeo en vivo, y
+   * eso escondía el botón justo donde la app vive —dentro del iframe de Apps
+   * Script, que bloquea el vídeo— aunque la FOTO funcione perfectamente ahí.
+   * Un botón escondido por una puerta cerrada cuando la de al lado está
+   * abierta es peor que no tener el botón: quita lo que sí se puede hacer. */
+  var puede = (_escSePuede() !== 'sin-lector') && (userRole !== 'VIEWER');
   b.style.display = puede ? '' : 'none';
 }
 
 function _escAbrir(){
   var motivo = _escSePuede();
-  if (motivo !== 'si'){
+
+  /* ── DOS PUERTAS, NO UNA ──────────────────────────────────────────────────
+   *
+   * Antes esto se cerraba en banda ante cualquier impedimento, y eso cerraba
+   * también la puerta que SÍ funciona. Jose lo vio de inmediato: *"si puedo
+   * tomar fotos a los documentos, ¿cómo no se puede escanear un QR?"*.
+   *
+   *   · VÍDEO EN VIVO (`getUserMedia`) — lee solo, apuntando. Es mejor, y es
+   *     lo que el iframe de Apps Script bloquea.
+   *   · FOTO (`input type=file` con `capture`) — tres toques, y NO pasa por la
+   *     política del iframe, porque no pide la cámara: pide un archivo.
+   *
+   * Lo único que impide las dos a la vez es no tener lector de códigos. Todo
+   * lo demás deja abierta la segunda, así que la ventana se abre igual y lo
+   * que cambia es qué se enseña dentro. */
+  if (motivo === 'sin-lector'){
     _showConfirm({ icon: '📷', title: 'Cannot scan here',
                    message: _escMensajeNo(motivo), confirmText: 'OK', soloAviso: true });
     return;
   }
+
   _escReset();
   _escPintar();
   var ov = document.getElementById('scanOverlay');
   if (ov) ov.classList.add('show');
+
+  var cam = document.querySelector('.sc-cam');
+  if (motivo !== 'si'){
+    /* Sin vídeo: se esconde el recuadro en vez de dejarlo en negro pidiendo que
+     * apuntes la cámara, que es exactamente lo que grabó Jose. */
+    if (cam) cam.style.display = 'none';
+    _escPintar(_escMensajeNo(motivo));
+    return;
+  }
+  if (cam) cam.style.display = '';
 
   navigator.mediaDevices.getUserMedia({
     /* La trasera. Sin esto, un teléfono abre la frontal y hay que darle la
@@ -23636,12 +23729,12 @@ function _escAbrir(){
     _escDetector = new BarcodeDetector({ formats: ['qr_code'] });
     _escLatido();
   }).catch(function(e){
-    _escCerrar();
-    _showConfirm({ icon: '📷', title: 'Camera not available',
-                   message: 'Acopio could not open the camera. If the browser asked ' +
-                            'for permission and it was denied, allow it in the site ' +
-                            'settings and try again.',
-                   confirmText: 'OK', soloAviso: true });
+    /* YA NO SE CIERRA LA VENTANA. Antes un fallo de cámara la cerraba entera y
+     * se llevaba por delante el botón de la foto, que sigue funcionando. Se
+     * apaga el vídeo, se dice por qué, y queda lo que sí sirve. */
+    if (cam) cam.style.display = 'none';
+    _escPintar('The live camera could not start. Use the photo button below — ' +
+               'that reads the same labels.');
     try { console.warn('scan:', e && e.message); } catch (e2) {}
   });
 }
@@ -23668,6 +23761,91 @@ function _escLatido(){
   }).catch(function(){}).then(function(){
     _escTimer = setTimeout(_escLatido, ESC_MS);
   });
+}
+
+/* ── LEER DESDE UNA FOTO ────────────────────────────────────────────────────
+ *
+ * El camino que funciona dentro de Apps Script, y lo encontró Jose preguntando
+ * lo evidente: *"si puedo tomar fotos a los documentos, ¿cómo no se puede
+ * escanear un QR?"*.
+ *
+ * Yo había concluido de más. Lo que está bloqueado es `getUserMedia` —el vídeo
+ * en vivo— porque la app corre en un iframe de otro origen y Google no le
+ * concede la cámara. Un `input type=file` con `capture` NO pide la cámara:
+ * pide un ARCHIVO, y de abrir la cámara se encarga el teléfono por su cuenta.
+ * La app ya lo usaba para las fotos de documentos; nadie se dio cuenta de que
+ * era también la puerta de los códigos.
+ *
+ * LO QUE SE PIERDE Y LO QUE SE GANA. El vídeo en vivo lee solo, apuntando; esto
+ * son tres toques por lectura. Para treinta seguidas es peor. Para las que se
+ * hacen de verdad en una bodega, funciona HOY y sin montar nada fuera.
+ *
+ * El vídeo en vivo se queda en el código: donde la política SÍ lo permita
+ * —fuera del iframe, el día que la app viva en otro sitio— sigue siendo mejor.
+ * Los dos caminos acaban en `_escRecibir`, que es donde está toda la decisión. */
+function _escFoto(file){
+  if (!file) return;
+  _escPintar('Reading the photo…');
+  var url = URL.createObjectURL(file);
+  var img = new Image();
+  img.onload = function(){
+    /* A un tamaño de trabajo: una foto de teléfono son doce megapíxeles y
+     * decodificar eso entero tarda y no hace falta. 1400 px de lado largo deja
+     * módulos de sobra para un código impreso a 30 mm. */
+    var esc = Math.min(1, 1400 / Math.max(img.width, img.height));
+    var cv = document.createElement('canvas');
+    cv.width  = Math.max(1, Math.round(img.width  * esc));
+    cv.height = Math.max(1, Math.round(img.height * esc));
+    var cx = cv.getContext('2d');
+    cx.drawImage(img, 0, 0, cv.width, cv.height);
+    URL.revokeObjectURL(url);
+    _escDeLaImagen(cv);
+  };
+  img.onerror = function(){
+    URL.revokeObjectURL(url);
+    _escPintar('That file is not a photo this app can read.');
+  };
+  img.src = url;
+}
+
+/* El lector, sobre el canvas de la foto. Es el MISMO `BarcodeDetector` que usa
+ * el vídeo en vivo: `detect()` acepta una imagen igual que acepta un vídeo, así
+ * que los dos caminos leen con lo mismo y acaban en `_escRecibir`. Si se
+ * separaran, una etiqueta podría leerse por un camino y no por el otro y nadie
+ * sabría por qué.
+ *
+ * NO HAY REPUESTO, Y ESO ES UNA DECISIÓN. Escribí uno con jsQR y lo quité al
+ * darme cuenta de que jsQR NO está en la app: habría sido una protección
+ * escrita y nunca ejecutada, que es el fallo que llevamos toda la semana
+ * persiguiendo. Y no se puede añadir sin romper una regla que está escrita
+ * arriba, junto al codificador: esta app es UN SOLO ARCHIVO a propósito,
+ * porque se instala copiando y pegando. Una etiqueta `<script src>` rompe eso,
+ * y acabamos de pasar dos días con un pegado roto.
+ *
+ * Qué significa en la práctica: donde no hay `BarcodeDetector` —hoy, sobre
+ * todo Safari— no se escanea, y `_escSePuede` lo dice ANTES con un mensaje que
+ * manda a Chrome. Eso es honesto; un repuesto que no existe, no. */
+function _escDeLaImagen(cv){
+  function entregar(textos){
+    var algo = false;
+    (textos || []).forEach(function(t){
+      if (!t) return;
+      algo = true;
+      var r = _escRecibir(t);
+      if (r.estado === 'nuevo'){ _escPintar(); _escPitar(); }
+      else if (r.estado === 'ajeno') _escPintar('That code is not an Acopio label.');
+    });
+    /* El mensaje dice QUÉ HACER, no sólo que no salió. Las tres causas de una
+     * foto ilegible son siempre las mismas y las tres tienen arreglo en el
+     * siguiente intento. */
+    if (!algo) _escPintar('No code found in that photo. Get closer, hold the phone ' +
+                          'steady, and keep the whole code inside the picture.');
+  }
+  try {
+    new BarcodeDetector({ formats: ['qr_code'] }).detect(cv).then(function(res){
+      entregar((res || []).map(function(c){ return c.rawValue; }));
+    }).catch(function(){ entregar([]); });
+  } catch (e) { entregar([]); }
 }
 
 /* Un pitido corto al leer. En una bodega con guantes y ruido, la confirmación
@@ -26596,6 +26774,18 @@ document.addEventListener('DOMContentLoaded', function(){
   _safeOn('btnEntry','click', function(){ openMoveModal('ENTRY'); });
   _safeOn('btnExit','click',  function(){ openMoveModal('EXIT'); });
   _safeOn('btnEscanearMov','click', function(){ _escAbrir(); });
+  /* El botón abre el selector y el selector hace el trabajo. `value=''` al
+   * final para que sacar DOS fotos seguidas de la misma etiqueta vuelva a
+   * disparar `change`: sin eso, la segunda foto idéntica no avisa de nada y
+   * parece que la app se quedó colgada. */
+  _safeOn('scanFotoBtn','click', function(){
+    var i = document.getElementById('scanFotoInput'); if (i) i.click();
+  });
+  _safeOn('scanFotoInput','change', function(){
+    var f = this.files && this.files[0];
+    this.value = '';
+    _escFoto(f);
+  });
 
   // Project selector
   _safeOn('projectSelector','change', renderProjectView);
@@ -27084,6 +27274,16 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '12.74',
+    titulo: 'Scanning works after all — with a photo',
+    puntos: [
+      'Open <b>Scan label</b> and tap <b>Take a photo of the label</b>. Your phone camera opens, you take the picture, and the app reads the code from it.',
+      'The live viewfinder is what Google blocks inside this app. A photo is not blocked, because it is not the app asking for your camera — it is your phone handing back a picture, the same way the app already takes photos of documents.',
+      'Everything after the read is unchanged: it offers what you can do with that label and fills the form. It still never saves on its own.'
+    ],
+    antes:  'A black box asking you to point a camera that was never allowed to turn on',
+    ahora:  'Take the picture, and it reads the label' },
+
   { ver: '12.73',
     titulo: 'Why the camera does not open, said plainly',
     puntos: [
@@ -27104,17 +27304,6 @@ var NOVEDADES = [
     ],
     antes:  'Leftovers filed under a BONEYARD category, with no idea whose they were',
     ahora:  'The material keeps its name, and the leftovers remember their job' },
-
-  { ver: '12.71',
-    titulo: 'Scan from where you work, and a notice that keeps its word',
-    puntos: [
-      '<b>Scan label</b> now sits next to Entry and Exit, where the work happens. It is still in the account menu too.',
-      'On a computer with no camera that button stays out of the way instead of sitting there doing nothing.',
-      'The <b>back online</b> notice no longer leaves before your data arrives. It says <b>Updating</b> until the new numbers are on screen, and only then says they are up to date.',
-      'The offline notice now reads in two lines: what happened, and what to do about it.'
-    ],
-    antes:  'The green notice left in six seconds, with the data still on its way',
-    ahora:  'It waits for the data, and then tells you' },
 
   { ver: '12.68',
     titulo: 'Labels for your racks, not just your material',

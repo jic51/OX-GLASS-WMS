@@ -188,11 +188,30 @@ try { Object.defineProperty(window, 'isSecureContext', { value: true, configurab
     });
     check('EL MONTAJE REPRODUCE EL CASO: las APIs existen y la política las niega',
       r.puede === 'iframe-sin-camara', r.puede);
-    check('el botón NO se enseña — enseñarlo acaba en un recuadro negro que ' +
-          'pide apuntar la cámara, que es lo que vio Jose',
-      !r.visible, r);
-    check('...y el mensaje dice que lo bloquea Google, no el teléfono',
-      /frame that does not allow camera/i.test(r.mensaje), r.mensaje.slice(0, 120));
+    /* ── AQUÍ CAMBIÓ LA RESPUESTA, PORQUE CAMBIÓ EL PRODUCTO ────────────
+     *
+     * La v12.73 escondía el botón en este caso y esta prueba lo defendía. La
+     * v12.74 lo vuelve a enseñar, y es lo correcto: Jose preguntó *"si puedo
+     * tomar fotos a los documentos, ¿cómo no se puede escanear un QR?"* y
+     * tenía razón. Lo bloqueado es el VÍDEO EN VIVO (`getUserMedia`); un
+     * `input type=file` con `capture` no pide la cámara —pide un archivo— y de
+     * abrirla se encarga el teléfono. La app ya hacía eso para las fotos de
+     * documentos desde hace versiones.
+     *
+     * O sea: yo había concluido de más y esta prueba guardaba mi conclusión.
+     * Lo que se defiende ahora es lo que importa de verdad — que el botón no
+     * desaparezca por una puerta cerrada cuando la de al lado está abierta, y
+     * que el mensaje mande a la que funciona. */
+    check('EL BOTÓN SE SIGUE ENSEÑANDO: el vídeo está bloqueado, la foto no, ' +
+          'y esconderlo quitaría lo que sí se puede hacer',
+      r.visible, r);
+    check('el mensaje dice que lo bloqueado es el vídeo EN VIVO, no la cámara entera',
+      /live camera cannot run/i.test(r.mensaje), r.mensaje.slice(0, 130));
+    check('...y manda a la puerta que funciona: la foto',
+      /photo button/i.test(r.mensaje), r.mensaje.slice(0, 200));
+    check('...ni a escribirlo todo a mano, que es lo que decía antes de saber ' +
+          'que la foto funcionaba',
+      !/by hand/i.test(r.mensaje), r.mensaje.slice(0, 200));
     check('...y NO manda a pelearse con los ajustes de Chrome, porque ahí no ' +
           'hay nada que arreglar',
       !/site settings|allow it in/i.test(r.mensaje), r.mensaje.slice(0, 160));
