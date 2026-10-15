@@ -101,6 +101,45 @@
        movements went from about two and a half minutes to fifty-five seconds
        along the way.</p>
 
+    <div class="entry" id="v12-70">
+      <span class="ver">v12.70</span>
+      <span class="tag new">New</span>
+      <h3>Scan a label with the phone camera</h3>
+      <p><b>Scan is in the account menu.</b> Point the camera at a label &mdash; one off a bundle or
+         one off a rack &mdash; and the app offers what you can do with it: take that material out,
+         move it, or see everything on that shelf. Scan a bundle <i>and</i> a shelf and it offers the
+         move with the destination already filled in.</p>
+      <p><b>Scanning never saves anything by itself.</b> It fills the form and stops there, so you
+         read it and press save like always. A camera that can be pointed at the wrong label by
+         accident has no business writing to your sheet on its own.</p>
+      <p>It uses the phone's own code reader when there is one and falls back to reading the picture
+         itself when there is not. One code at a time, not two at once: with two codes in a single
+         frame the fallback reader returns nothing at all, so the app asks for them one after the
+         other &mdash; which also means it can tell you <i>which</i> one it just read.</p>
+
+      <h3 style="margin-top:1.6rem">And when the app does not start, it now says so</h3>
+      <p><b>A loading screen that waits forever is worse than an error.</b> On 14 October both of
+         Jose's installations sat on &ldquo;Connecting to your spreadsheet&hellip;&rdquo; and said
+         nothing more, on every computer and every phone. The server was fine the whole time &mdash;
+         every execution completed, and nothing was wrong with the data.</p>
+      <p>The app already had three protections for exactly this, and all three were written inside
+         the very block of code they were meant to protect. A block that fails to compile runs none
+         of its lines &mdash; not the first, not the last &mdash; so they went down together with
+         what they were guarding, and the loading screen stayed up saying
+         <i>connecting</i> when it meant <i>I died before I started</i>.</p>
+      <p>There is now a small, separate watchdog that cannot go down with the rest. After eight
+         seconds without a sign of life it replaces the loading message with what actually happened
+         and what to do about it &mdash; and it tells the two causes apart, because the fixes have
+         nothing in common: <b>this copy of the app did not start</b> (paste the file again, whole)
+         or <b>could not reach Google</b> (check the connection; nothing is wrong with your data).
+         Either way there is a Reload button instead of a screen that waits forever.</p>
+      <p>Two smaller holes of the same kind closed with it: the charts are loaded from Google's own
+         servers, and if that download failed it took the entire app down with it &mdash; now you
+         just lose the charts and keep the warehouse. And loading the app used to spend three of its
+         own rate limits per visit instead of one, which on a busy morning could have made the
+         incoming list vanish with no explanation.</p>
+    </div>
+
     <div class="entry" id="v12-69">
       <span class="ver">v12.69</span>
       <span class="tag ui">UI</span>

@@ -127,7 +127,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.69';
+var APP_VERSION = '12.70';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -139,7 +139,7 @@ var APP_VERSION = '12.69';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '6ad26205';
+var APP_BUILD = 'f184cfd2';
 
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
@@ -2780,9 +2780,11 @@ function getInitialData(sessionToken) {
 
     // Incoming materials + monitored-materials filter
     var incoming = [];
-    try { incoming = getIncoming(sessionToken); } catch(e) { Logger.log('getIncoming: ' + e.message); }
+    /* `true` = llamada interna: no cobra cupo. Quien está aquí ya pagó arriba,
+     * en el tope de `init`. Ver la nota en `getIncoming`. */
+    try { incoming = getIncoming(sessionToken, true); } catch(e) { Logger.log('getIncoming: ' + e.message); }
     var monitoredMaterials = null;
-    try { monitoredMaterials = getMonitoredMaterials(sessionToken); } catch(e) {}
+    try { monitoredMaterials = getMonitoredMaterials(sessionToken, true); } catch(e) {}
 
     // User list — only sent to ADMINs
     var users = [];
@@ -13953,7 +13955,7 @@ function ensureIncomingSheet_(ss) {
  * que cuenta de menos en una ráfaga. Está dicho donde se define y vale aquí:
  * esto es un techo contra inundaciones, no un medidor exacto.
  */
-function getIncoming(sessionToken) {
+function getIncoming(sessionToken, interno) {
   // Apps Script exposes every top-level function to any web app visitor via
   // google.script.run, regardless of whether the app's own frontend calls it
   // directly — this used to check getUserRole() with no token (always
@@ -13962,10 +13964,25 @@ function getIncoming(sessionToken) {
   // authentication. Now requires a real session.
   var auth = getUserRole(sessionToken);
   if (auth.role === 'DENIED' || auth.role === 'NO_SESSION') throw new Error('Not authenticated.');
-  // El tope va DESPUÉS de la identidad, a propósito: así se cuenta por persona
-  // y no por visitante anónimo, y un desconocido ni siquiera llega a gastar
-  // sitio en la caché de contadores.
-  requireQuota_('inc_read', auth.email || sessionToken, 180, 300);
+  /* El tope va DESPUÉS de la identidad, a propósito: así se cuenta por persona
+   * y no por visitante anónimo, y un desconocido ni siquiera llega a gastar
+   * sitio en la caché de contadores.
+   *
+   * Y NO SE COBRA CUANDO LLAMA `getInitialData`. Esto se me escapó al poner
+   * los topes en la v12.63: sizé el número pensando que esta función sólo se
+   * llamaba desde fuera —«una persona abre la pestaña de entrantes unas pocas
+   * veces por hora»— y resulta que `getInitialData` la llama POR DENTRO, en
+   * cada carga de la app. O sea que cada arranque gastaba tres cupos en vez de
+   * uno: `init`, `inc_read` y `mon_read`.
+   *
+   * No llegó a colgar nada porque las dos llamadas internas van dentro de un
+   * try/catch — pero el efecto era peor que un error: al pasar de 180 cargas
+   * en cinco minutos, la lista de entrantes habría desaparecido EN SILENCIO,
+   * que es la clase de fallo que nadie relaciona con su causa.
+   *
+   * Quien llama desde dentro ya pagó en la puerta de `init`. Cobrar dos veces
+   * por la misma visita no protege de nada: protege del propio producto. */
+  if (!interno) requireQuota_('inc_read', auth.email || sessionToken, 180, 300);
   var ss    = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName('INCOMING_V3');
   if (!sheet) return [];
@@ -15422,10 +15439,12 @@ function parseEmailTextAsIncoming_(bodyText, subject, from, apiKey) {
 // null  = monitor ALL materials (default — no filter)
 // array = monitor only these material names in the low-stock alert banner
 
-function getMonitoredMaterials(sessionToken) {
+function getMonitoredMaterials(sessionToken, interno) {
   var auth = getUserRole(sessionToken);
   if (auth.role === 'DENIED' || auth.role === 'NO_SESSION') throw new Error('Not authenticated.');
-  requireQuota_('mon_read', auth.email || sessionToken, 180, 300);
+  // Mismo caso que `getIncoming`: `getInitialData` la llama por dentro en cada
+  // arranque. Ver la nota larga de allí.
+  if (!interno) requireQuota_('mon_read', auth.email || sessionToken, 180, 300);
   var props = PropertiesService.getScriptProperties();
   var raw   = props.getProperty('WMS_MONITORED_MATERIALS');
   if (!raw) return null;

@@ -158,10 +158,37 @@ console.log('\n═══ el contador no puede retroceder ═══\n');
   check('y el aplicado se sube DESPUÉS de decidir, nunca antes',
     cuerpo.indexOf('if (seq < _loadApplied) return;') <
     cuerpo.indexOf('_loadApplied = seq;'));
-  check('la bandera de "hay una en camino" se baja en los DOS finales, éxito ' +
-        'y fallo — si sólo se bajara en el éxito, un fallo la dejaría trabada ' +
-        'y el latido no volvería a pedir datos nunca',
-    (cuerpo.match(/_loadBusy = false;/g) || []).length === 2);
+  /* CADA SALIDA BAJA LA BANDERA, Y SE MIDE SALIDA POR SALIDA.
+   *
+   * Lo que esto defiende: si una forma de terminar se olvida de bajar
+   * `_loadBusy`, el latido cree que sigue habiendo una petición en camino y no
+   * vuelve a pedir datos NUNCA. La pantalla se queda con lo último que llegó y
+   * sin avisar de nada.
+   *
+   * Antes esto era `=== 2`, contando apariciones. Y contar no es medir: la
+   * v12.70 añadió una TERCERA salida —la puerta que corta cuando no cargó la
+   * librería de Apps Script— que sí baja la bandera, y la prueba se puso roja
+   * igualmente, por el número y no por el fallo. Ahora se busca cada salida
+   * donde vive y se comprueba que la baja ella: añadir una cuarta que se porte
+   * bien no rompe nada, y añadir una que se la olvide sí. */
+  const salidas = [
+    { nombre: "sin la librería de Google, antes de pedir nada",
+      desde: "typeof google === 'undefined'" },
+    { nombre: 'la respuesta buena (withSuccessHandler)', desde: '.withSuccessHandler(' },
+    { nombre: 'el fallo (withFailureHandler)',           desde: '.withFailureHandler(' }
+  ];
+  const dondeEsta = salidas.map(s => cuerpo.indexOf(s.desde));
+  salidas.forEach((s, n) => {
+    const i = dondeEsta[n];
+    /* Cada una se mira en SU trozo —hasta la siguiente salida— y no en todo el
+     * cuerpo: si no, cualquiera daría verde por la de al lado. */
+    const posteriores = dondeEsta.filter(j => j > i);
+    const fin = posteriores.length ? Math.min(...posteriores) : cuerpo.length;
+    const trozo = i < 0 ? '' : cuerpo.slice(i, fin);
+    check('baja la bandera de "hay una en camino" al terminar por ' + s.nombre +
+          ' — la salida que se la olvide deja el latido sin volver a pedir datos nunca',
+      i >= 0 && /_loadBusy = false;/.test(trozo), { salidaEncontrada: i >= 0 });
+  });
 }
 
 console.log('\n═══ y el sello sólo se aprende de una carga aplicada ═══\n');

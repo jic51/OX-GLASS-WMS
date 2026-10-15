@@ -3600,6 +3600,31 @@
     .lloc-name{font-size:2.4vh;font-weight:800;letter-spacing:.08em;
       text-align:center;line-height:1.1;max-width:94%;
       overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    /* ── ESCANEAR ──────────────────────────────────────────────────────────
+     * El vídeo manda y por eso tiene alto fijo en `vh`: dejarlo crecer con la
+     * imagen hace que la ventana salte de tamaño en cuanto la cámara decide su
+     * resolución, que es distinta en cada teléfono. */
+    .sc-modal{max-width:min(520px,94vw)}
+    .sc-cam{position:relative;background:#000;border-radius:10px;overflow:hidden;
+      height:min(46vh,340px);margin-bottom:var(--sp-5)}
+    .sc-cam video{width:100%;height:100%;object-fit:cover;display:block}
+    /* La mira. No recorta nada —se lee de toda la imagen— pero dice dónde
+     * apuntar, que es lo que hace que alguien encuadre a la primera. */
+    .sc-mira{position:absolute;inset:50% auto auto 50%;transform:translate(-50%,-50%);
+      width:58%;aspect-ratio:1;border:2px solid rgba(255,255,255,.9);border-radius:12px;
+      box-shadow:0 0 0 9999px rgba(0,0,0,.28);pointer-events:none}
+    .sc-leido{display:flex;flex-direction:column;gap:var(--sp-3);min-height:3.2rem}
+    .sc-item{display:flex;align-items:center;gap:var(--sp-4);font-size:var(--fs-lg)}
+    .sc-tag{font-size:var(--fs-2xs);font-weight:800;letter-spacing:.06em;
+      padding:var(--pad-pildora);border-radius:var(--r-pildora);flex:0 0 auto}
+    .sc-mat{background:var(--accent);color:#fff}
+    .sc-loc{background:var(--green);color:#fff}
+    .sc-vacio{font-size:var(--fs-sm);color:var(--muted)}
+    .sc-aviso{font-size:var(--fs-sm);color:var(--yellow)}
+    .sc-acciones{display:flex;flex-direction:column;gap:var(--sp-3);margin-top:var(--sp-5)}
+    .sc-accion{display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+      text-align:left;width:100%}
+    .sc-pista{font-size:var(--fs-xs);font-weight:400;opacity:.8}
     .lbl-papel{margin:var(--sp-3) 0 0;font-size:var(--fs-xs);color:var(--muted);
       line-height:var(--lh-normal);text-align:left}
     #labelPreview{display:flex;gap:var(--sp-4);overflow-x:auto;padding:var(--sp-3) 0 .2rem}
@@ -3687,6 +3712,106 @@
 })();
 </script>
 
+<!-- ══ EL VIGILANTE DEL ARRANQUE ═══════════════════════════════════════════════
+
+     14/10/2026. Las dos instalaciones de Jose se quedaron congeladas en
+     «Connecting to your spreadsheet…» y ninguna de las tres protecciones que
+     la app ya tenía para esto dijo nada. Vale la pena anotar por qué, porque
+     la causa no es un descuido: es una forma de fallo que se repite.
+
+     LAS TRES PROTECCIONES, Y DÓNDE VIVEN:
+
+       1. El cartel rojo `#jsVersionTag` que dice «JS NOT LOADED». Existe desde
+          hace meses y su comentario dice, con estas palabras, «si el script no
+          corre, esto es lo único en la página que lo dice». Es verdad — y la
+          pantalla de carga, que llegó después, LO TAPA ENTERO.
+       2. El `window.addEventListener('error')` del final del archivo, que baja
+          la pantalla de carga y enseña el fallo. Vive DENTRO del mismo
+          `<script>` al que protege: si ese bloque no compila, el oyente no se
+          registra nunca.
+       3. La rotación de frases de la pantalla de carga, que a los ~20 segundos
+          ofrece un botón de «↻ Reload». También vive dentro del mismo bloque.
+
+     Las tres se caen juntas por lo mismo: UN `<script>` QUE NO COMPILA NO
+     EJECUTA NI UNA LÍNEA. No la primera, no la última, ninguna. Y este archivo
+     tiene un solo bloque de veintidós mil líneas, así que un carácter de más
+     en cualquier sitio —un pegado que llegó a medias es la forma más común—
+     apaga la app entera y deja la pantalla de carga puesta para siempre,
+     mintiendo: dice «conectando» cuando quiere decir «me morí antes de
+     empezar». Encaja con lo que se vio en los registros de Apps Script: `doGet`
+     anotado y NINGÚN `getInitialData` después. El servidor estaba perfecto.
+
+     POR ESO ESTO VA EN SU PROPIO <script>, y es lo único que hace falta
+     entender de este bloque: cada bloque se compila por separado. Un error en
+     el grande no toca a este pequeño. Es la única manera de que haya alguien
+     vivo para contar que el otro no lo está.
+
+     Reglas que hay que respetar al tocarlo:
+       · No llama a NADA del archivo grande (ni showToast, ni _hideSplash, ni
+         una variable suya). Si lo hiciera, moriría con él y no serviría.
+       · Se queda corto a propósito. Cuanto menos código, menos sitio donde
+         fallar justo cuando es el único que queda.
+       · El aviso lo escribe en la pantalla de carga, que es lo que la persona
+         está mirando. Pintarlo detrás sería repetir el fallo del punto 1.  -->
+<script>
+(function(){
+  /* OCHO SEGUNDOS. No mide lo que tarda el servidor —eso son 10-20 segundos y
+   * es normal—, mide lo que tarda el navegador en COMPILAR el archivo, que en
+   * un teléfono de bodega son décimas. Si a los ocho segundos la bandera no
+   * está puesta, no es que el servidor vaya lento: es que el código nunca
+   * arrancó. */
+  var SEGUNDOS = 8;
+  window.__acopioArranco = false;
+
+  setTimeout(function(){
+    if (window.__acopioArranco) return;          // todo bien, el grande corrió
+
+    /* QUÉ DECIR, y se puede saber cuál de los dos es. La diferencia importa
+     * porque las soluciones no se parecen en nada:
+     *   · Si `google.script` existe, la librería de Apps Script cargó bien y
+     *     el que no arrancó es NUESTRO archivo → se vuelve a pegar.
+     *   · Si no existe, no se pudo bajar la librería de Google → es la red o
+     *     Google, y pegar el archivo otra vez no arregla nada. */
+    var nuestro = !!(window.google && window.google.script);
+    var titulo = nuestro
+      ? 'This copy of the app did not start.'
+      : 'Could not reach Google.';
+    var detalle = nuestro
+      ? 'The page loaded but its code never ran, which almost always means the ' +
+        'file was pasted incompletely. Paste Index.html again, whole, and deploy.'
+      : 'The page loaded but Google’s script library did not. Check the ' +
+        'connection and reload. Nothing is wrong with your data.';
+
+    var nota = document.getElementById('splashNote');
+    if (nota) {
+      nota.innerHTML = '<b>' + titulo + '</b>';
+      var p = document.createElement('div');
+      p.style.cssText = 'margin-top:.5rem;max-width:30rem;font-size:.78rem;' +
+        'line-height:1.45;opacity:.85';
+      p.textContent = detalle;
+      nota.insertAdjacentElement('afterend', p);
+
+      /* Y una salida, siempre. Quedarse mirando un texto sin nada que pulsar
+       * es media protección. */
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = '↻ Reload';
+      btn.style.cssText = 'margin-top:.7rem;background:rgba(255,255,255,.15);' +
+        'border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;' +
+        'padding:.4rem .9rem;font-size:.78rem;font-weight:600;cursor:pointer';
+      btn.onclick = function(){ window.location.reload(); };
+      p.insertAdjacentElement('afterend', btn);
+    }
+
+    /* La barra deja de fingir que avanza. Una barra que sigue creciendo
+     * debajo de «no arrancó» se contradice a sí misma — y en este caso ni
+     * siquiera está creciendo: su reloj también murió con el bloque grande. */
+    var f = document.getElementById('splashFill');
+    if (f) { f.style.width = '100%'; f.style.background = '#e5484d'; }
+  }, SEGUNDOS * 1000);
+})();
+</script>
+
 <!-- ══ TOPBAR ══════════════════════════════════════════════════════════════════ -->
 <div class="topbar">
  <div class="topbar-row1">
@@ -3763,6 +3888,11 @@
                novedad vive AQUÍ y en el círculo de la cuenta, porque el menú
                está cerrado casi siempre y un aviso que sólo se ve al abrir no
                avisa de nada. -->
+          <!-- Sin filtro de rol por el mismo motivo que «This week's arrivals»:
+               escanear es de bodega, no de administración. Lo que se pueda
+               HACER después con lo leído lo decide el formulario que se abre,
+               que ya tiene sus permisos. -->
+          <button class="acct-item" id="btnEscanear" onclick="closeAccountMenu();_escAbrir()">📷 <span>Scan a label</span></button>
           <button class="acct-item" id="btnNovedades" onclick="closeAccountMenu();abrirNovedades()">✨ <span>What's new</span><span class="nv-punto" id="nvPunto" style="display:none"></span></button>
           <button class="acct-item" id="btnReportIssue" onclick="closeAccountMenu();openReportIssueModal()">🐞 <span>Report a problem</span></button>
           <button class="acct-item" id="btnDarkMode" onclick="toggleDarkMode()"><span id="darkIcon">🌙</span> <span id="darkLabel">Dark mode</span></button>
@@ -3811,6 +3941,27 @@
      enterarse de lo que cambió en la app. El enlace al final es opcional —para
      quien quiera la nota entera— y apunta SÓLO a la versión de esta ventana,
      no al historial desde el principio. -->
+<!-- ══ ESCANEAR ══════════════════════════════════════════════════════════════
+     El vídeo ocupa casi todo y lo leído vive debajo, no encima: una lista
+     flotando sobre la imagen tapa justo lo que hay que apuntar. -->
+<div class="overlay" id="scanOverlay">
+  <div class="modal modal-md sc-modal">
+    <div class="mhdr">
+      <h3>Scan</h3>
+      <button class="modal-x" onclick="_escCerrar()" title="Close">✕</button>
+    </div>
+    <div class="sc-cam">
+      <!-- `playsinline` o iOS lo abre a pantalla completa y se lleva la app por
+           delante. `muted` porque sin él algunos navegadores no dejan empezar
+           el vídeo sin un gesto más. -->
+      <video id="scanVideo" playsinline muted autoplay></video>
+      <div class="sc-mira"></div>
+    </div>
+    <div id="scanLeido" class="sc-leido"></div>
+    <div id="scanAcciones" class="sc-acciones"></div>
+  </div>
+</div>
+
 <div class="overlay" id="novedadesOverlay">
   <div class="modal modal-md">
     <div class="mhdr">
@@ -5169,7 +5320,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.69';
+var APP_VERSION = '12.70';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5181,7 +5332,7 @@ var APP_VERSION = '12.69';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '6ad26205';
+var APP_BUILD = 'f184cfd2';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
@@ -22899,6 +23050,289 @@ function _locSheetHtml(nombres){
   return hojas.join('');
 }
 
+/* ══ LEER LOS CÓDIGOS ════════════════════════════════════════════════════════
+ *
+ * Jose, 14/10: la cámara. Tercer paso de tres —imprimir, leer, actuar— y el
+ * que convierte las etiquetas en algo que sirve.
+ *
+ * ── LA SEPARACIÓN QUE HACE QUE ESTO SE PUEDA PROBAR ────────────────────────
+ *
+ * La cámara no se puede probar aquí: ni `getUserMedia` ni `BarcodeDetector`
+ * existen en el navegador con el que corre la suite. Así que todo lo que
+ * decide algo vive SEPARADO de la cámara y recibe TEXTO:
+ *
+ *   `_escLeer(texto)`      → qué es esto
+ *   `_escRecibir(texto)`   → qué tengo ahora y qué puedo ofrecer
+ *   `_escAcciones()`       → los botones que tocan
+ *
+ * La cámara sólo hace una cosa: convertir fotogramas en texto y llamar a
+ * `_escRecibir`. Si mañana el texto llega de un lector de mano por USB, de un
+ * pegado, o de una foto de la galería, nada de esto cambia.
+ *
+ * ── Y NO GUARDA NADA ───────────────────────────────────────────────────────
+ *
+ * Escanear RELLENA un formulario, no lo manda. Dos motivos y los dos pesan:
+ * la persona confirma en una pantalla que ya conoce, y aquí no se duplica la
+ * lógica de guardar —que es donde están el candado, los duplicados y el stock
+ * corto—. Un escáner que guarda solo es un escáner que un día guarda lo que no
+ * era.
+ */
+
+/** Qué es lo que se acaba de leer. Devuelve siempre algo: lo que no entendemos
+ *  también es una respuesta, y decirlo es mejor que quedarse callado. */
+function _escLeer(texto){
+  var t = String(texto == null ? '' : texto);
+  var lineas = t.split('\n');
+  var marca = (lineas[0] || '').trim();
+
+  if (marca === 'ACP1'){
+    return { tipo: 'material',
+             category: (lineas[1] || '').trim(),
+             name:     (lineas[2] || '').trim(),
+             loc:      (lineas[3] || '').trim(),
+             movId:    (lineas[4] || '').trim(),
+             crudo: t };
+  }
+  if (marca === 'ACPL1'){
+    return { tipo: 'ubicacion', name: (lineas[1] || '').trim(), crudo: t };
+  }
+  /* Cualquier otro QR del mundo: el de una caja, el de un cartel, el del wifi.
+   * Se dice que no es nuestro en vez de intentar adivinar. */
+  return { tipo: 'ajeno', crudo: t };
+}
+
+/* Lo leído en esta sesión de escaneo. Uno de cada: volver a escanear un
+ * material SUSTITUYE al anterior en vez de acumular, porque apuntar a otra
+ * etiqueta es cambiar de idea, no añadir. */
+var _escSesion = { material: null, ubicacion: null, ultimo: null };
+
+function _escReset(){
+  _escSesion = { material: null, ubicacion: null, ultimo: null };
+}
+
+/** Recibe un texto leído. Devuelve qué pasó, para que la pantalla lo cuente. */
+function _escRecibir(texto){
+  var leido = _escLeer(texto);
+  if (leido.tipo === 'ajeno'){
+    _escSesion.ultimo = { estado: 'ajeno' };
+    return { estado: 'ajeno', leido: leido };
+  }
+  /* Leer DOS VECES el mismo código no es un suceso: la cámara dispara varias
+   * veces por segundo sobre la misma etiqueta. Sin esto, la pantalla
+   * parpadearía y el aviso sonaría en bucle. */
+  var yaEsta = (leido.tipo === 'material')
+    ? (_escSesion.material && _escSesion.material.crudo === leido.crudo)
+    : (_escSesion.ubicacion && _escSesion.ubicacion.crudo === leido.crudo);
+  if (yaEsta) return { estado: 'repetido', leido: leido };
+
+  if (leido.tipo === 'material') _escSesion.material = leido;
+  else                           _escSesion.ubicacion = leido;
+  _escSesion.ultimo = { estado: 'nuevo', tipo: leido.tipo };
+  return { estado: 'nuevo', leido: leido };
+}
+
+/** Qué se puede hacer con lo que hay escaneado ahora mismo.
+ *
+ *  LA COMBINACIÓN DICE CASI SIEMPRE QUÉ MOVIMIENTO ES, y por eso el orden en
+ *  que se escanea importa: bulto y luego estante es «llevo esto allí». Si los
+ *  dos llegaran a la vez no se sabría cuál es origen y cuál destino.
+ *
+ *  Devuelve una lista de {id, texto, pista}. La pantalla la pinta; quién hace
+ *  qué está en `_escHacer`. */
+function _escAcciones(){
+  var m = _escSesion.material, u = _escSesion.ubicacion;
+  var out = [];
+
+  if (m && u){
+    out.push({ id: 'mover', texto: '⇄ Move to ' + u.name,
+               pista: m.name + (m.loc ? ' · from ' + m.loc : '') });
+    return out;
+  }
+  if (m){
+    out.push({ id: 'sacar',  texto: '↑ Take out',  pista: m.name });
+    out.push({ id: 'mover',  texto: '⇄ Move it',
+               pista: 'or scan a rack label to say where' });
+    return out;
+  }
+  if (u){
+    out.push({ id: 'ver', texto: '📍 See what is in ' + u.name,
+               pista: 'or scan a material label to move it here' });
+  }
+  return out;
+}
+
+/** Hace lo que se eligió. NO guarda: abre el formulario que corresponde, ya
+ *  relleno, y la persona confirma. */
+function _escHacer(id){
+  var m = _escSesion.material, u = _escSesion.ubicacion;
+  _escCerrar();
+
+  if (id === 'ver' && u){ openRackDrawer(u.name); return; }
+  if (!m) return;
+
+  if (id === 'sacar'){
+    openMoveModal('EXIT');
+    _prefillMoveModalMaterial('EXIT', m.category, m.name, m.loc);
+    return;
+  }
+  if (id === 'mover'){
+    openMoveModal('TRANSFER');
+    _prefillMoveModalMaterial('TRANSFER', m.category, m.name, m.loc);
+    /* El destino sólo si se escaneó un estante. Rellenarlo «por si acaso»
+     * pondría en el formulario un sitio que nadie señaló, y eso es lo que
+     * convierte un atajo en un error con prisa. */
+    if (u){
+      var dest = document.querySelector('#transferRowsContainer .transfer-row .tr-dest');
+      if (dest){
+        dest.value = u.name;
+        dest.dispatchEvent(new Event('input',  { bubbles: true }));
+        dest.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+  }
+}
+
+/* ── LA CÁMARA ───────────────────────────────────────────────────────────── */
+
+var _escStream = null, _escDetector = null, _escTimer = null;
+
+/** ¿Se puede escanear en este navegador? Se contesta ANTES de pedir la cámara:
+ *  encender la cámara para después decir que no se sabe leer es gastarle la
+ *  batería y la paciencia a alguien. */
+function _escSePuede(){
+  if (typeof BarcodeDetector === 'undefined') return 'sin-lector';
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return 'sin-camara';
+  if (!window.isSecureContext) return 'sin-https';
+  return 'si';
+}
+
+function _escMensajeNo(motivo){
+  if (motivo === 'sin-lector')
+    return 'This browser cannot read codes. On a phone, open Acopio in Chrome — ' +
+           'that is where scanning works today. You can still type the material in by hand.';
+  if (motivo === 'sin-camara')
+    return 'No camera available on this device.';
+  return 'Scanning needs a secure connection (https).';
+}
+
+function _escAbrir(){
+  var motivo = _escSePuede();
+  if (motivo !== 'si'){
+    _showConfirm({ icon: '📷', title: 'Cannot scan here',
+                   message: _escMensajeNo(motivo), confirmText: 'OK', soloAviso: true });
+    return;
+  }
+  _escReset();
+  _escPintar();
+  var ov = document.getElementById('scanOverlay');
+  if (ov) ov.classList.add('show');
+
+  navigator.mediaDevices.getUserMedia({
+    /* La trasera. Sin esto, un teléfono abre la frontal y hay que darle la
+     * vuelta al bulto para enseñárselo a la pantalla. */
+    video: { facingMode: { ideal: 'environment' } }, audio: false
+  }).then(function(stream){
+    _escStream = stream;
+    var v = document.getElementById('scanVideo');
+    if (!v) return;
+    v.srcObject = stream;
+    v.play().catch(function(){});
+    _escDetector = new BarcodeDetector({ formats: ['qr_code'] });
+    _escLatido();
+  }).catch(function(e){
+    _escCerrar();
+    _showConfirm({ icon: '📷', title: 'Camera not available',
+                   message: 'Acopio could not open the camera. If the browser asked ' +
+                            'for permission and it was denied, allow it in the site ' +
+                            'settings and try again.',
+                   confirmText: 'OK', soloAviso: true });
+    try { console.warn('scan:', e && e.message); } catch (e2) {}
+  });
+}
+
+/* Cuatro veces por segundo. Más no lee mejor —el autofoco de un teléfono tarda
+ * más que eso— y calienta el aparato sin ganar nada. */
+var ESC_MS = 250;
+
+function _escLatido(){
+  if (!_escStream) return;
+  var v = document.getElementById('scanVideo');
+  if (!v || !_escDetector){ _escTimer = setTimeout(_escLatido, ESC_MS); return; }
+  _escDetector.detect(v).then(function(res){
+    /* `detect` devuelve una LISTA. Se procesan todos los que vea, que es lo
+     * que permite leer un bulto y un estante sin volver a apuntar — pero ojo:
+     * leerlos en la misma foto NO es el camino recomendado, porque el único
+     * repuesto que tendríamos donde no exista esta API se atraganta con dos
+     * códigos a la vez. Se aceptan si llegan; no se piden. */
+    (res || []).forEach(function(c){
+      var r = _escRecibir(c.rawValue);
+      if (r.estado === 'nuevo'){ _escPintar(); _escPitar(); }
+      else if (r.estado === 'ajeno') _escPintar('That code is not an Acopio label.');
+    });
+  }).catch(function(){}).then(function(){
+    _escTimer = setTimeout(_escLatido, ESC_MS);
+  });
+}
+
+/* Un pitido corto al leer. En una bodega con guantes y ruido, la confirmación
+ * que sirve es la que se oye: mirar la pantalla obliga a bajar el bulto. */
+function _escPitar(){
+  try {
+    var A = window.AudioContext || window.webkitAudioContext;
+    if (!A) return;
+    var ctx = new A(), osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.frequency.value = 880; g.gain.value = 0.07;
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + 0.08);
+    setTimeout(function(){ try { ctx.close(); } catch (e) {} }, 300);
+  } catch (e) {}
+}
+
+function _escCerrar(){
+  if (_escTimer){ clearTimeout(_escTimer); _escTimer = null; }
+  if (_escStream){
+    try { _escStream.getTracks().forEach(function(t){ t.stop(); }); } catch (e) {}
+    _escStream = null;
+  }
+  _escDetector = null;
+  var v = document.getElementById('scanVideo');
+  if (v) { try { v.srcObject = null; } catch (e) {} }
+  var ov = document.getElementById('scanOverlay');
+  if (ov) ov.classList.remove('show');
+}
+
+/** Pinta lo leído y los botones. Se llama desde el latido, así que no puede
+ *  reconstruir lo que no cambió: tocar el DOM cuatro veces por segundo haría
+ *  que los botones no se pudieran ni pulsar. */
+function _escPintar(aviso){
+  var caja = document.getElementById('scanLeido');
+  var acc  = document.getElementById('scanAcciones');
+  if (!caja || !acc) return;
+
+  var m = _escSesion.material, u = _escSesion.ubicacion;
+  var html = '';
+  if (m) html += '<div class="sc-item"><span class="sc-tag sc-mat">MATERIAL</span>' +
+                 '<span>' + _he(m.name) + (m.loc ? ' <b>· ' + _he(m.loc) + '</b>' : '') + '</span></div>';
+  if (u) html += '<div class="sc-item"><span class="sc-tag sc-loc">RACK</span>' +
+                 '<span>' + _he(u.name) + '</span></div>';
+  if (!m && !u) html = '<div class="sc-vacio">Point the camera at a label.</div>';
+  if (aviso) html += '<div class="sc-aviso">' + _he(aviso) + '</div>';
+  if (caja._ac !== html){ caja.innerHTML = html; caja._ac = html; }
+
+  var botones = _escAcciones().map(function(a){
+    return '<button type="button" class="btn sc-accion" data-esc="' + _he(a.id) + '">' +
+             _he(a.texto) + '<span class="sc-pista">' + _he(a.pista || '') + '</span>' +
+           '</button>';
+  }).join('');
+  if (acc._ac !== botones){
+    acc.innerHTML = botones;
+    acc._ac = botones;
+    Array.prototype.forEach.call(acc.querySelectorAll('[data-esc]'), function(b){
+      b.addEventListener('click', function(){ _escHacer(b.getAttribute('data-esc')); });
+    });
+  }
+}
+
 /** Imprime las etiquetas de las ubicaciones que se pasen. Reutiliza
  *  `#labelSheet` y su regla de impresión —lo demás del <body> desaparece— que
  *  ya está probada; lo único propio es lo que se mete dentro. */
@@ -24489,6 +24923,43 @@ function loadDataFromGoogle(skipCache, quiet){
       '<span class="spin-hg">⏳</span> Connecting to Google Sheets... this may take 10-20 seconds.</div>');
   }
 
+  /* SIN LIBRERÍA DE APPS SCRIPT NO HAY NADA QUE PEDIR, Y HAY QUE DECIRLO.
+   *
+   * `google.script.run` no es nuestro: lo pone una librería que el navegador
+   * baja de los servidores de Google al cargar la página. Si esa descarga
+   * falla —red de bodega, un cortafuegos, un mal rato de Google— `google` no
+   * existe y esta línea reventaba con «Cannot read properties of undefined
+   * (reading 'run')», que no le dice nada a nadie y encima se registraba como
+   * un fallo NUESTRO en ERROR_LOG.
+   *
+   * Explicado, y sin levantar la mano: no se reporta al servidor, porque para
+   * reportarlo hace falta justo lo que falta. Se baja la pantalla de carga
+   * —que si no se queda puesta para siempre— y se dice qué pasa con el aviso
+   * de conexión, que es el sitio donde ya se cuentan estas cosas. */
+  /* `typeof google` y no `window.google`: ésta es la comprobación que no da por
+   * hecho que exista `window`. En un navegador las dos son lo mismo, pero
+   * `test-load-race` ejecuta esta función en un contexto pelado de Node donde
+   * `google` es global y `window` no existe — así que `window.google` reventaba
+   * con «window is not defined» DENTRO de la puerta que existe para no
+   * reventar. Una guardia que necesita que su alrededor esté entero no es una
+   * guardia. */
+  if (typeof google === 'undefined' || !(google.script && google.script.run)) {
+    _loadBusy = false;
+    try { _hideSplash(); } catch (e) {}
+    try { setLoading(false); } catch (e) {}
+    try { setConnStatus('offline'); } catch (e) {}
+    try {
+      /* VEINTE SEGUNDOS, no cero. `showToast` hace `duration || 3500`, así que
+       * un cero —que es como se escribe «quédate» en media interfaz— sale como
+       * tres segundos y medio. El aviso que de verdad se queda hasta que vuelva
+       * la conexión es la píldora de `setConnStatus('offline')` de arriba; esto
+       * es la explicación larga, y con veinte segundos se lee de sobra. */
+      showToast('Could not load Google’s script library, so the app cannot ' +
+                'reach your spreadsheet. Check the connection and reload.', 'err', 20000);
+    } catch (e) {}
+    return;
+  }
+
   google.script.run
     .withSuccessHandler(function(data){
       _loadBusy = false;
@@ -24595,8 +25066,32 @@ function loadDataFromGoogle(skipCache, quiet){
 }
 
 // ── Charts Load ───────────────────────────────────────────────────────────────
-google.charts.load('current', {packages:['corechart']});
-google.charts.setOnLoadCallback(function(){ chartsReady = true; drawInventoryCharts(); });
+//
+// DOS GRÁFICAS NO PUEDEN TUMBAR UN ALMACÉN, y hasta la v12.70 podían.
+//
+// `google.charts` no lo pone Apps Script: lo baja un `<script src>` de
+// `gstatic.com`, que es un tercero. En la red de una bodega eso falla —un
+// cortafuegos, un wifi malo, un mal rato de Google— y entonces `google.charts`
+// no existe y estas dos líneas reventaban AQUÍ, a mitad del bloque grande.
+//
+// Y un error a mitad de bloque se lleva por delante todo lo que viene después,
+// que resulta ser casi todo: la caché, el reloj de la pantalla de carga, el
+// oyente de errores del final y la propia llamada de arranque
+// `loadDataFromGoogle()`. La app entera muerta, y la pantalla de carga puesta
+// para siempre diciendo «conectando», por dos tartas de colores.
+//
+// Envuelto, el peor caso es quedarse sin gráficas: `chartsReady` se queda en
+// `false` y `drawInventoryCharts` ya sabe no dibujar. Las cifras, la tabla, los
+// movimientos y los formularios —todo lo que se usa para trabajar— siguen ahí.
+try {
+  google.charts.load('current', {packages:['corechart']});
+  google.charts.setOnLoadCallback(function(){ chartsReady = true; drawInventoryCharts(); });
+} catch (e) {
+  /* Sin consola no queda rastro de por qué faltan las gráficas, y en silencio
+   * parecería un fallo nuestro. No se enseña nada al usuario: alguien de bodega
+   * no puede hacer nada con esto, y la app sigue sirviendo para su trabajo. */
+  console.warn('Google Charts no cargó; la app sigue sin gráficas:', e && e.message);
+}
 
 // ── SessionStorage Cache ──────────────────────────────────────────────────────
 var _CACHE_KEY   = 'oxwms_data_v3';
@@ -26116,6 +26611,17 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '12.70',
+    titulo: 'Scan a label with the phone camera',
+    puntos: [
+      '<b>Scan</b> in the account menu opens the camera. Point it at a label — material or rack — and the app offers what you can do with it: take it out, move it, or see what is on that shelf.',
+      'Scan a material <b>and</b> a rack and it offers the move, with the destination already filled in.',
+      'Scanning never saves anything on its own. It fills the form and you check it before it goes in.',
+      'And if the app ever fails to start, the loading screen now says so and why, instead of saying <b>Connecting</b> forever.'
+    ],
+    antes:  'Typing the material and the shelf by hand, every time',
+    ahora:  'Point the camera at the label and confirm' },
+
   { ver: '12.69',
     titulo: 'The offline notice stops pushing the app around',
     puntos: [
@@ -26144,17 +26650,7 @@ var NOVEDADES = [
       'Nothing was broken — not the app and not Chrome. It was a dropdown nobody looks at until the paper is gone.'
     ],
     antes:  'Paper size: ISO A4 — the label printed small, in the middle of a sheet',
-    ahora:  'Paper size: 4x6 in (101.6 x 152.4 mm), said before you print' },
-
-  { ver: '12.66',
-    titulo: 'Every label now carries a QR code',
-    puntos: [
-      'The dotted box that said <b>QR / barcode</b> is now a real code, generated inside the app — nothing is sent anywhere and it works with the wifi down.',
-      'It carries what the app already knows about the bundle: category, material, rack, and the movement it came from. No need for anyone to label what arrives from the factory.',
-      'Reading them with the phone camera to fill in an exit is the next step.'
-    ],
-    antes:  'A dotted box printed on every label, saying QR / barcode',
-    ahora:  'A code that scans, printed at 30 mm on the same 4x6 label' }
+    ahora:  'Paper size: 4x6 in (101.6 x 152.4 mm), said before you print' }
 
 ];
 
@@ -27129,6 +27625,14 @@ window.addEventListener('error', function(e){
 window.addEventListener('unhandledrejection', function(){
   try { _hideSplash(); } catch (x) {}
 });
+
+/* LA BANDERA DEL VIGILANTE, y va aquí por un motivo exacto: ésta es la ÚLTIMA
+ * línea ejecutable del bloque grande. Puesta en cualquier otro sitio diría «he
+ * llegado hasta aquí», que no es lo que hace falta saber; puesta aquí dice «he
+ * compilado y corrido de principio a fin», que es lo único que descarta el
+ * fallo contra el que vigila. Ver la nota larga del bloque pequeño, arriba del
+ * TOPBAR, para qué pasa cuando esto no se pone. */
+window.__acopioArranco = true;
 
 // Start
 loadDataFromGoogle();

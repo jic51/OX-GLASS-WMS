@@ -435,11 +435,15 @@
     <div class="notyet rise">
       <h3 data-i18n="t48">What it doesn't do yet</h3>
       <ul>
-        <!-- Label PRINTING moved out of this list in v11.79 and into the one
-             above. Barcode SCANNING stays: the label leaves a space for a QR or
-             a barcode, but nothing in Acopio reads one yet, and the two used to
-             sit in the same line as if they were one feature. -->
-        <li data-i18n="t49">Barcode scanning — the labels leave room for a code, nothing reads one yet</li>
+        <!-- Label PRINTING left this list in v11.79 and SCANNING left it in
+             v12.70. What stays is the half that genuinely does not exist, and
+             it is worth being precise about: Acopio reads the codes ACOPIO
+             PRINTED. It cannot read the manufacturer's barcode on a box that
+             arrives from a supplier, because that needs a catalogue mapping
+             every UPC to a material and nobody has built one. That is the
+             question an experienced warehouse manager actually asks, so it
+             gets its own line rather than hiding inside "barcode scanning". -->
+        <li data-i18n="t49">Reading a supplier's own barcode — Acopio scans the labels it printed, not the maker's code on an incoming box</li>
         <li data-i18n="t50">Cycle counting</li>
         <li data-i18n="t51">Accounting or e-commerce integrations</li>
         <li data-i18n="t52">A native phone app — it's a web app, and works on a phone</li>
@@ -748,7 +752,7 @@ var ACOPIO_ES = {
   "t210": "<div><strong>Un reporte cada tarde</strong>, que llega solo por correo, con todo lo que se movió ese día.</div>",
   "t211": "<div><strong>Cada edición guarda su motivo</strong> — quién cambió qué, de qué a qué, y el cambio sale por correo.</div>",
   "t48": "Lo que todavía no hace",
-  "t49": "Leer códigos de barras — las etiquetas dejan espacio para un código, pero nada lo lee todavía",
+  "t49": "Leer el código del proveedor — Acopio lee las etiquetas que imprimió él, no el código del fabricante en una caja que llega",
   "t50": "Conteo cíclico",
   "t51": "Integraciones con contabilidad o e-commerce",
   "t52": "App nativa de celular — es una app web, y funciona en el celular",

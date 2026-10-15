@@ -110,12 +110,20 @@ const AFIRMACIONES = [
   //
   // Éstas son las que se quedan viejas calladas, y son las que hicieron falta
   // esta vez. Cada marca es lo primero que aparecería el día que se implemente.
+  /* ESCANEAR CAMBIÓ DE LADO EN LA v12.70, y las dos mitades se movieron a la
+   * vez: el producto ganó `BarcodeDetector` y `getUserMedia`, y las páginas
+   * dejaron de prometerlo. Esta prueba se puso roja cuatro veces de golpe
+   * —exactamente para lo que existe— y lo que había que arreglar no era la
+   * prueba: era que la afirmación ya es otra.
+   *
+   * Y la que se queda en la lista de «todavía no» es la mitad que de verdad no
+   * existe, dicha con precisión porque es lo que pregunta un jefe de bodega:
+   * Acopio lee LOS CÓDIGOS QUE IMPRIMIÓ ACOPIO. El código del fabricante en
+   * una caja que llega del proveedor necesita un catálogo que traduzca cada
+   * UPC a un material, y ese catálogo no existe. */
   { pagina:'landing/acopio.html', existe:false,
-    dice:'Barcode scanning',                     marca:'BarcodeDetector',    en:'html',
-    porque:'la API del navegador para leer códigos' },
-  { pagina:'landing/acopio.html', existe:false,
-    dice:'Barcode scanning',                     marca:'getUserMedia',       en:'html',
-    porque:'el acceso a la cámara, que cualquier escáner necesita' },
+    dice:'supplier\'s own barcode',              marca:'upcLookup',          en:'gs',
+    porque:'el catálogo que traduciría el código del fabricante a un material' },
   { pagina:'landing/acopio.html', existe:false,
     dice:'Cycle counting',                       marca:'cycleCount',         en:'html',
     porque:'el conteo cíclico' },
@@ -133,9 +141,14 @@ const AFIRMACIONES = [
   { pagina:'landing/acopio-overview.html', existe:true,
     dice:'Las ventanas abiertas se ponen al día solas', marca:'dataStamp_',  en:'gs',
     porque:'el sello de versión del dato (v11.89–v11.97)' },
+  /* La misma vuelta que arriba, en español. Lo que la página de detalle
+   * promete ahora es entender el código del fabricante, no escanear. */
+  { pagina:'landing/acopio-overview.html', existe:true,
+    dice:'se leen con la cámara',                marca:'BarcodeDetector',    en:'html',
+    porque:'la API del navegador para leer códigos (v12.70)' },
   { pagina:'landing/acopio-overview.html', existe:false,
-    dice:'Leer códigos de barras',               marca:'BarcodeDetector',    en:'html',
-    porque:'la API del navegador para leer códigos' }
+    dice:'código de un proveedor',               marca:'upcLookup',          en:'gs',
+    porque:'el catálogo que traduciría el código del fabricante a un material' }
 ];
 
 console.log('\n── Cada afirmación de las páginas, contra el producto ──\n');

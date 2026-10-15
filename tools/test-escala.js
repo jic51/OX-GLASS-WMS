@@ -304,9 +304,28 @@ check(`quedan ${radPx.length} radios a pelo (el tope es ${TOPE_RADIOS})`,
  * motivo, y están contados en el comentario de `--sh-1` del propio archivo:
  * las teñidas (3), las que proyectan de lado (1), las pequeñas y nítidas de
  * controles (4), los `inset` (5) y los fotogramas de pulsos animados (8). */
+/* Y UNA SEXTA, QUE NO ES UNA EXCEPCIÓN MÁS: ES OTRA COSA.
+ *
+ * `box-shadow:0 0 0 9999px rgba(0,0,0,.28)` no es una sombra. Es la forma
+ * estándar de OSCURECER TODO MENOS UN HUECO: desenfoque cero y una extensión
+ * mayor que cualquier pantalla, que pinta un velo plano por fuera del
+ * elemento. La usa la mira del lector de códigos (v12.70) para decir dónde
+ * apuntar.
+ *
+ * No puede ir por token porque ningún `--sh-*` sirve: los tokens son niveles
+ * de ELEVACIÓN —a qué altura flota algo— y esto no eleva nada. Meterla en el
+ * sistema obligaría a inventar un `--sh-velo` que no es una sombra, y el
+ * sistema dejaría de significar lo que significa.
+ *
+ * Se excluye POR SU FORMA, no por su nombre: cualquier velo futuro queda
+ * fuera de la cuenta sola. Y el tope se queda en 21 en vez de subir a 22,
+ * que era lo fácil y lo malo — subirlo deja un hueco libre para una sombra a
+ * pelo DE VERDAD, que es exactamente lo que el tope existe para impedir. */
+const esVelo = v => /\b[1-9]\d{3,}px\b/.test(v);
+
 const TOPE_SOMBRAS = 21;
 const shTodos = valores('box-shadow', r => !esImpresion(r));
-const shCrudas = [...shTodos.keys()].filter(v => !v.startsWith('var('));
+const shCrudas = [...shTodos.keys()].filter(v => !v.startsWith('var(') && !esVelo(v));
 check(`quedan ${shCrudas.length} sombras a pelo (el tope es ${TOPE_SOMBRAS}). ` +
       `Eran 45 antes de la v12.61; las que quedan están excluidas a propósito`,
   shCrudas.length <= TOPE_SOMBRAS, { ahora: shCrudas.length, tope: TOPE_SOMBRAS });
