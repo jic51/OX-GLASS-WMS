@@ -5,3 +5,7 @@ graphify-out/
 # Generado por tools/build-paste.js — el archivo para pegar en Apps Script.
 # Derivado, no fuente: se regenera con un comando y pesa la mitad del repo.
 pegar/
+
+# Las herramientas usan los módulos instalados globalmente (NODE_PATH), igual
+# que playwright y jsqr. Nada de node_modules dentro del repositorio.
+node_modules/

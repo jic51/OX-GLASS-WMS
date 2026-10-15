@@ -64,7 +64,22 @@
 
 const fs = require('fs');
 const path = require('path');
-const acorn = require('acorn');
+
+/* `acorn` va instalado GLOBALMENTE, como playwright y jsqr, y se encuentra por
+ * `NODE_PATH`. Lo intenté primero con un `node_modules/` dentro del
+ * repositorio y fue un error: mete dos mil archivos de otro en un repositorio
+ * cuyo valor es que todo lo que hay dentro está explicado. El mensaje de abajo
+ * existe porque un `Cannot find module 'acorn'` a secas no le dice a nadie qué
+ * escribir para arreglarlo. */
+let acorn;
+try { acorn = require('acorn'); }
+catch (e) {
+  console.error('\n  Falta `acorn`, que es lo que distingue un comentario de\n' +
+                '  un trozo de texto que lo parece. Instálalo y repite:\n\n' +
+                '      npm install -g acorn\n' +
+                '      NODE_PATH="$(npm root -g)" node tools/build-paste.js\n');
+  process.exit(1);
+}
 
 const RAIZ = path.join(__dirname, '..');
 const SALIDA = path.join(RAIZ, 'pegar');
