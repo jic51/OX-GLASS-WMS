@@ -3763,22 +3763,54 @@
   var SEGUNDOS = 8;
   window.__acopioArranco = false;
 
+  /* EL ERROR, CAZADO Y PUESTO EN PANTALLA. Esto es lo que faltaba.
+   *
+   * Un error de compilación en un bloque POSTERIOR dispara `window.onerror` en
+   * uno anterior — el bloque roto no ejecuta nada, pero el navegador sí avisa.
+   * Así que desde aquí se puede saber exactamente dónde se partió, que es la
+   * única pregunta que importa cuando esto pasa.
+   *
+   * Y va en pantalla, no sólo a la consola. Jose tuvo que abrir DevTools, dar
+   * con la pestaña y mandarme una foto para que yo supiera el número de línea;
+   * sin eso estuve dos días adivinando entre hipótesis que no eran. Lo que
+   * cuesta un renglón aquí costó dos días allí. */
+  var fallo = null;
+  window.addEventListener('error', function(e){
+    if (!fallo && e) fallo = {
+      msg: String(e.message || 'error'),
+      linea: e.lineno || 0,
+      col: e.colno || 0
+    };
+  }, true);
+
   setTimeout(function(){
     if (window.__acopioArranco) return;          // todo bien, el grande corrió
 
-    /* QUÉ DECIR, y se puede saber cuál de los dos es. La diferencia importa
-     * porque las soluciones no se parecen en nada:
-     *   · Si `google.script` existe, la librería de Apps Script cargó bien y
-     *     el que no arrancó es NUESTRO archivo → se vuelve a pegar.
-     *   · Si no existe, no se pudo bajar la librería de Google → es la red o
-     *     Google, y pegar el archivo otra vez no arregla nada. */
+    /* QUÉ DECIR. Tres casos, y se distinguen de verdad en vez de adivinarse:
+     *
+     *  · Hay un error cazado → se dice DÓNDE. Es lo único accionable y es un
+     *    dato, no una hipótesis.
+     *  · No hay error pero `google.script` existe → el archivo llegó entero
+     *    pero no corrió. Ahí sí, lo más probable es un pegado a medias.
+     *  · No existe `google.script` → no se pudo bajar la librería de Google.
+     *    La red o Google. Volver a pegar el archivo no arreglaría nada.
+     *
+     * El primer caso ANTES decía «casi siempre significa que el archivo se
+     * pegó a medias», y eso estaba mal: lo decía con error cazado o sin él, y
+     * mandaba a repetir un pegado que puede no ser la causa. Una protección
+     * que da un consejo seguro sobre algo que no ha comprobado hace perder más
+     * tiempo del que ahorra. */
     var nuestro = !!(window.google && window.google.script);
-    var titulo = nuestro
-      ? 'This copy of the app did not start.'
-      : 'Could not reach Google.';
-    var detalle = nuestro
-      ? 'The page loaded but its code never ran, which almost always means the ' +
-        'file was pasted incompletely. Paste Index.html again, whole, and deploy.'
+    var titulo = fallo ? 'The app stopped while loading.'
+               : nuestro ? 'This copy of the app did not start.'
+               : 'Could not reach Google.';
+    var detalle = fallo
+      ? 'Its code stopped at line ' + fallo.linea + ', column ' + fallo.col +
+        ' — ' + fallo.msg + '. Send this screen to support: the line ' +
+        'number is what identifies the problem. Your data is untouched.'
+      : nuestro
+      ? 'The page loaded but its code never ran. The most likely cause is a ' +
+        'file pasted incompletely — paste Index.html again, whole, and deploy.'
       : 'The page loaded but the Google script library did not. Check the ' +
         'connection and reload. Nothing is wrong with your data.';
 
@@ -5332,7 +5364,7 @@ var APP_VERSION = '12.70';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'e51256dc';
+var APP_BUILD = '4bda6eb8';
 var userRole = 'WAREHOUSE';
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for

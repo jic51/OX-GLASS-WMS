@@ -267,13 +267,34 @@ function romperElBloqueGrande(fuente) {
       });
       check('EL VIGILANTE HABLÓ: la pantalla ya no dice «conectando»',
         !!d.nota && !/Connecting to your spreadsheet/i.test(d.nota), d);
-      check('...y dice que la app no arrancó, no que el servidor vaya lento',
-        /did not start/i.test(d.nota || ''), d.nota);
-      /* El diagnóstico correcto de los dos: aquí `google.script` SÍ existe —lo
-       * pone el stub—, así que el culpable es nuestro archivo y el consejo
-       * tiene que ser volver a pegarlo. */
-      check('...y da el consejo que corresponde: volver a pegar el archivo',
-        /paste/i.test(d.todo || ''), d.todo && d.todo.slice(0, 220));
+      check('...y dice que la app se paró cargando, no que el servidor vaya lento',
+        /stopped while loading/i.test(d.nota || ''), d.nota);
+
+      /* ── LO QUE COSTÓ DOS DÍAS, Y AHORA SALE SOLO ───────────────────────
+       *
+       * Un error de compilación en un bloque posterior dispara `window.onerror`
+       * en uno anterior. Durante el fallo del 14/10 nadie leía ese aviso, así
+       * que la pantalla decía «no arrancó» y se callaba lo único accionable:
+       * EN QUÉ LÍNEA. Jose tuvo que abrir DevTools y mandar una foto para que
+       * yo lo supiera, y hasta entonces estuve persiguiendo hipótesis que no
+       * eran — el tamaño del archivo, un carácter invisible, un pegado a
+       * medias. El número de línea las habría descartado todas el primer día.
+       *
+       * Por eso esto no es un adorno: es la diferencia entre un diagnóstico y
+       * una adivinanza. */
+      check('...Y DICE EN QUÉ LÍNEA SE PARTIÓ — el dato que convierte esto en ' +
+            'un diagnóstico en vez de una adivinanza',
+        /line \d+/i.test(d.todo || ''), d.todo && d.todo.slice(0, 260));
+      check('...y también la columna y el mensaje del navegador, que es lo que ' +
+            'distingue una avería de otra',
+        /column \d+/i.test(d.todo || '') &&
+        /unexpected|invalid|token|syntax/i.test(d.todo || ''),
+        d.todo && d.todo.slice(0, 260));
+      /* Y NO manda a repetir un pegado que puede no ser la causa. El primer
+       * texto lo decía SIEMPRE, con error cazado o sin él. */
+      check('...y con un error cazado NO manda a repegar a ciegas: eso sólo ' +
+            'sirve cuando no se sabe nada, y aquí se sabe la línea',
+        !/paste Index\.html again/i.test(d.todo || ''), d.todo && d.todo.slice(0, 260));
       check('...y deja un botón para salir de ahí', d.hayBoton && /Reload/i.test(d.textoBoton || ''), d);
       await page.close();
     }
@@ -286,8 +307,24 @@ function romperElBloqueGrande(fuente) {
   // solución: una se arregla volviendo a pegar el archivo y la otra no se
   // arregla pegando nada. Decir la equivocada manda a alguien a perder una
   // tarde, así que el vigilante distingue.
+  //
+  // ── POR QUÉ AQUÍ EL BLOQUE SE BORRA Y NO SE ROMPE ─────────────────────────
+  //
+  // La primera versión lo ROMPÍA, como la sección 3, y se puso roja — con
+  // razón, y midiendo mal. Un bloque roto dispara `window.onerror`, así que el
+  // vigilante tenía un error cazado y enseñaba su línea, que es exactamente lo
+  // que debe hacer: un número de línea vale más que cualquier suposición sobre
+  // Google. Lo que no reproducía era el caso que esta sección quiere medir.
+  //
+  // El caso de verdad es «no llegó NADA»: ni código que falle, ni librería. Eso
+  // se consigue borrando el bloque, no partiéndolo. Sin error que cazar y sin
+  // `google.script`, el vigilante no tiene más remedio que razonar, y ahí es
+  // donde tiene que acertar.
   {
-    const roto = romperElBloqueGrande(html);   // SIN stub: no hay `google`
+    const roto = html.replace(
+      /(<script>\n\/\/ ── Global State)[\s\S]*?(<\/script>\n<\/body>)/,
+      '$1\n$2');
+    check('se pudo preparar el archivo sin bloque grande', roto !== html);
     const f = path.join(os.tmpdir(), 'acopio-vig-singoogle.html');
     fs.writeFileSync(f, roto);
     const page = await browser.newPage({ viewport: { width: 375, height: 760 } });
