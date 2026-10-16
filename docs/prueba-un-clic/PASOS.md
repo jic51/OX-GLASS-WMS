@@ -158,10 +158,66 @@ pueden dar por supuestas.
 
 ---
 
+## ⚠️ HAZLO EN UNA COMPUTADORA — visto el 16/10
+
+La primera persona que probó esto lo hizo en un **iPad con Safari** y falló dos
+veces. Llegó a la pantalla de copiar —con el aviso del Apps Script y todo— y al
+pulsar **Crear una copia** salió:
+
+> **No se pudo abrir el archivo en este momento.**
+> Verifica la dirección e inténtalo de nuevo.
+
+**Eso NO es un problema de permisos**, y conviene saberlo porque parece uno: si
+el compartir estuviera mal, la pantalla de copiar no habría llegado a salir.
+
+Las causas conocidas de ese error exacto al copiar una hoja son tres, y la
+persona tenía las tres:
+
+1. **Tablet o teléfono en vez de computadora.** Los enlaces `/copy` no son
+   fiables fuera del escritorio.
+2. **Safari.**
+3. **Varias cuentas de Google abiertas a la vez.**
+
+Si falla en la computadora también, el rodeo que funciona: cambiar `/copy` por
+`/edit` al final del enlace, abrir la hoja, y usar **Archivo → Hacer una copia**
+desde dentro.
+
+### Y esto NO es sólo un problema de la prueba
+
+Si el `/copy` es frágil en el móvil, **lo es también para la versión gratis**. El
+plan es que la gente la descubra en vídeos de redes sociales, y ese público entra
+desde el teléfono. Alguien que ve un reel, pulsa el enlace y recibe «no se pudo
+abrir el archivo» no vuelve.
+
+No mata el plan. Significa que la landing tiene que decir **«hazlo desde una
+computadora»** antes del enlace, y que el vídeo tiene que grabarse en una
+computadora. Es una frase, pero hay que saberla ANTES de montar el embudo.
+
+## ⚠️ Y UNA PREGUNTA ABIERTA QUE SE CONTESTA EN 30 SEGUNDOS
+
+**¿Aparece el menú 🧪 al abrir la hoja de prueba en el teléfono?**
+
+No se pudo confirmar en la documentación si los menús y las ventanas de Apps
+Script se pintan en la app de Sheets del móvil. **Abrir la hoja en el teléfono y
+mirar** lo contesta.
+
+Si NO aparecen, la versión gratis con la ventana dentro de la hoja **sólo
+funciona en computadora** — y eso importa mucho, porque el caso de uso de Acopio
+es un teléfono en la bodega. Habría un corte limpio y honesto:
+
+| | |
+|---|---|
+| **Gratis** | se instala y se usa **en la computadora** |
+| **Pro** | app web desplegada, **funciona en el teléfono** |
+
+Encaja con el otro límite —gratis para quien trabaja solo, Pro para un equipo—
+pero hay que medirlo antes de prometer nada.
+
 ## Si algo sale mal por el camino
 
 | Lo que ves | Qué es |
 |---|---|
+| **«No se pudo abrir el archivo en este momento»** al copiar | Casi siempre tablet/teléfono, Safari, o varias cuentas abiertas. Ver arriba |
 | **«No se encontró el archivo Panel»** | El archivo HTML no se llama exactamente `Panel` |
 | **El menú 🧪 no aparece** | No se guardó el código, o la hoja no se recargó tras guardar |
 | **Cuadro gris de excepción al abrir la hoja** | Algo intenta abrir la ventana solo. En esta prueba no debería pasar: la ventana sólo se abre al pulsar el menú |
