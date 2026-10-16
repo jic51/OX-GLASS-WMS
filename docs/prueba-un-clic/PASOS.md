@@ -322,3 +322,48 @@ guion de prueba en un hecho del producto: **la instalación es de computadora.**
 Para el embudo de la versión gratis significa que la landing tiene que decirlo
 ANTES del enlace, y que el vídeo se graba en una computadora. Quien llegue desde
 un reel en el teléfono va a chocar con esto.
+
+## 5 · Escribe ✅ — y el permiso pequeño alcanza
+
+> ✓ Escrita la fila 2 en «Sheet1»
+
+Con `spreadsheets.currentonly` se escribe en la hoja sin problema. **Eso es todo
+lo que la versión básica necesita hacer**: registrar movimientos. Pregunta 4
+contestada, y en verde.
+
+## 6 · EL TELÉFONO NO PUEDE ABRIRLA — confirmado por Jose
+
+Jose, 16/10: *"intenté abrir el sheet en mi teléfono pero sólo abre la
+aplicación Sheets y no aparece el menú"*.
+
+Confirmado, y la conclusión es correcta: **la app dentro de la hoja no se puede
+abrir desde un teléfono.** La app de Sheets del móvil no pinta los menús ni las
+ventanas de Apps Script.
+
+### Esto es lo que más cambia el plan, y conviene decirlo entero
+
+El caso de uso de Acopio **es un teléfono en una bodega**. Una versión gratis que
+sólo funciona en computadora no es una herramienta: es una demostración.
+
+Pero no es un callejón sin salida, porque **las dos puertas pueden convivir**:
+
+| | Cómo se instala | Dónde funciona |
+|---|---|---|
+| **Dentro de la hoja** | un clic | sólo computadora |
+| **Desplegada como app web** | ~5 minutos | computadora **y teléfono** |
+
+Y la segunda **no necesita ningún permiso más** que los dos que ya medimos:
+desplegar una app web no añade permisos. O sea que el camino de arriba no
+excluye el de abajo.
+
+### El embudo que sale de esto, y es mejor que el que teníamos
+
+1. **Un clic** → funciona → registra diez movimientos en la computadora → ya vio
+   que sirve.
+2. **«¿Lo quieres en el teléfono de la bodega?»** → cinco minutos guiados de
+   despliegue. Opcional, y sólo lo hace quien ya le encontró el valor.
+3. **«¿Y que lo use tu equipo?»** → eso es Pro.
+
+Dos escalones, y cada uno se sube **después** de haber recibido algo. El error
+sería pedir el despliegue de entrada, que es justo lo que hace hoy la versión de
+pago y por lo que la instalación dura diez minutos.
