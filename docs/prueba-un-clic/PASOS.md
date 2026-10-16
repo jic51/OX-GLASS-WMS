@@ -233,3 +233,92 @@ Para que nadie saque conclusiones de más:
 - **No vale para la versión de pago.** Ésa sube documentos a Drive, y ese permiso
   es restringido — eso ya está medido y revertido en
   `docs/FINDING-drive-file-scope.md`.
+
+---
+
+# RESULTADOS — 16/10/2026
+
+Jose hizo la prueba en su cuenta personal (computadora) y en un iPad.
+
+| | Pregunta | Respuesta |
+|---|---|---|
+| 1 | ¿Sale «Google hasn't verified this app»? | **SÍ** ❌ |
+| 2 | Tamaño real de la ventana | **828 × 755** (pantalla 1920×1080) |
+| 3 | ¿El menú 🧪 sale solo en la copia? | **SÍ** ✅ |
+| 4 | ¿Escribe la fila? | sin respuesta todavía |
+
+## 1 · La pantalla fea SÍ sale — y yo me equivoqué sobre por qué
+
+Dije que con dos permisos no sensibles «debería salir la suave». Salió la fea.
+Las fuentes de terceros en las que me apoyé decían que los `currentonly` no la
+disparan, y **no eran Google**. Lo dije así y aun así apunté en la dirección
+equivocada.
+
+**Pero la causa no son los permisos, y la teníamos escrita desde el 1 de
+octubre.** `PROYECTO-DE-CLOUD.md`, en su propia tabla:
+
+> **Quién pide los permisos** — *«la pantalla de "esta aplicación quiere acceder
+> a tu Drive": el nombre, el logo y el aviso de "Google no la ha verificado"
+> salen de ahí»* (del proyecto de Cloud).
+
+La hoja de prueba usó el **proyecto automático** que Google crea para cada
+script. Ése **siempre está en modo «Testing»**, y la documentación de Google dice
+que en Testing la pantalla sale SIEMPRE, sin importar qué permisos se pidan:
+
+> *Google mostrará un mensaje de advertencia antes de permitir que un usuario de
+> prueba autorice los permisos... advirtiendo sobre los riesgos de dar acceso a
+> sus datos a una aplicación no verificada.*
+
+Así que la prueba midió el proyecto, no los permisos. **Es un resultado válido y
+una conclusión equivocada mía, no un fallo del montaje.**
+
+### La prueba de que los permisos SÍ quedaron bien
+
+La pantalla de consentimiento enseñó exactamente dos cosas, y ninguna es Drive:
+
+- *View and manage spreadsheets that this application has been installed in*
+- *Display and run third-party web content in prompts and sidebars inside Google applications*
+
+Eso es `spreadsheets.currentonly` + `script.container.ui` y nada más. **El
+recorte de once permisos a dos funciona.** Era la mitad de la apuesta y está
+ganada.
+
+### Lo que falta probar, y son otros 20 minutos
+
+Atar el script a un **proyecto de Cloud propio** (uno NUEVO, no el de la app de
+pago, que tiene configurado el permiso de Drive) y darle a **Publish app** para
+sacarlo de Testing.
+
+Google dice, en su propia ayuda: *«si tu app usa sólo permisos no sensibles, no
+es obligatorio pasar por el proceso de verificación»*. Lo que **no** dice en
+ninguna página oficial que yo encontrara es si estos dos permisos cuentan como no
+sensibles. Eso se ve en la consola al añadirlos: Google los separa en «no
+sensibles», «sensibles» y «restringidos». **Mirar en qué cajón caen contesta la
+pregunta sin esperar a nada.**
+
+## 2 · La ventana da 828 × 755
+
+Se pidieron 2000×2000. En una pantalla de 1920×1080 dio **828 de ancho y 755 de
+alto**.
+
+Es trabajable: la app ya funciona desde 375 px, y 828 es más que un teléfono.
+Pero es una caja fija, no pantalla completa, y eso hay que tenerlo en cuenta al
+decidir qué entra en la versión gratis — una tabla de movimientos con ocho
+columnas ahí dentro va apretada.
+
+## 3 · El menú sale solo ✅
+
+Confirmado en la copia. Sin autorizar nada, el menú 🧪 está ahí. El camino de
+entrada existe.
+
+## 4 · El iPad no sirve para instalar — y no es cosa de Safari
+
+Jose lo probó en el iPad con **Chrome**, y también **en incógnito**. Falló las
+dos veces, igual que con Safari.
+
+**Entonces no es el navegador: es el aparato.** Y eso convierte una molestia del
+guion de prueba en un hecho del producto: **la instalación es de computadora.**
+
+Para el embudo de la versión gratis significa que la landing tiene que decirlo
+ANTES del enlace, y que el vídeo se graba en una computadora. Quien llegue desde
+un reel en el teléfono va a chocar con esto.
