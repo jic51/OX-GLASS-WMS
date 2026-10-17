@@ -367,3 +367,129 @@ excluye el de abajo.
 Dos escalones, y cada uno se sube **después** de haber recibido algo. El error
 sería pedir el despliegue de entrada, que es justo lo que hace hoy la versión de
 pago y por lo que la instalación dura diez minutos.
+
+---
+
+# SEGUNDA RONDA — proyecto de Cloud propio · 17/10/2026
+
+Jose creó el proyecto **ACOPIO FREE** (`692774014234`), le configuró la pantalla
+de consentimiento, lo pasó a **In production**, lo ató al script de `PRUEBA 1
+CLIC` e hizo la copia desde `jose@ox-glass.com`.
+
+## 1 · LA PANTALLA FEA DESAPARECIÓ ✅
+
+La pantalla de permisos de la copia es la **suave**: el nombre de la app, los dos
+permisos con casilla, y nada más. **No hay «Google hasn't verified this app», no
+hay «Configuración avanzada → Ir a (no seguro)».**
+
+Lo único que queda es un recuadro informativo azul:
+
+> *Obtén más información sobre el motivo por el que no ves los vínculos a la
+> Política de Privacidad o las Condiciones del Servicio de PRUEBA 1 CLIC*
+
+Eso sale porque el proyecto no tiene política de privacidad configurada. Es una
+línea de texto, no un susto.
+
+**Queda confirmado lo que decía `PROYECTO-DE-CLOUD.md` desde el 1 de octubre: la
+pantalla fea la trae el proyecto automático en modo Testing, no los permisos.**
+
+## 2 · EL CAJÓN DE CADA PERMISO — y aquí está el problema
+
+La consola los separó así:
+
+| Permiso | Cajón |
+|---|---|
+| `spreadsheets.currentonly` | **No sensible** ✅ |
+| `script.container.ui` | **SENSIBLE** ⚠️ |
+| *(restringidos)* | vacío ✅ |
+
+Yo esperaba los dos en «no sensibles». **`script.container.ui` es sensible**, y
+eso enciende el aviso que Google puso en la misma página:
+
+> *Your app requires verification. When you have finished configuring your
+> information, please submit your app for review.*
+
+## 3 · EL MURO NUEVO: el tope de usuarios
+
+De la propia página de *Audience*, palabra por palabra:
+
+> *The user cap limits the number of users that can grant permission to your app
+> when requesting **unapproved sensitive or restricted scopes**. The user cap
+> applies **over the entire lifetime of the project**, and it **cannot be reset
+> or changed**.*
+
+Tenemos un permiso sensible sin aprobar. **Luego el tope aplica.** El número que
+Google documenta es **100 usuarios**, y es de por vida del proyecto.
+
+**Cien instalaciones y se acabó, para siempre, en ese proyecto.** Para una
+versión que se regala en redes para hacerse conocidos, cien es nada.
+
+### No es un callejón: es papeleo, y es gratis
+
+Hay que separar dos cosas que suenan igual y cuestan muy distinto:
+
+| | Qué pide Google | Coste |
+|---|---|---|
+| Permiso **restringido** (el `drive` de la app de pago) | Auditoría de seguridad **CASA** | **500–4.500 $/año** |
+| Permiso **sensible** (nuestro `script.container.ui`) | **Verificación de la app** | **0 $** |
+
+Lo que pide la verificación de un permiso sensible:
+
+1. Ser **dueño verificado del dominio** → `acopio.net` es nuestro ✅
+2. **Página de inicio** de la app en ese dominio → la landing ya existe ✅
+3. **Política de privacidad** y **condiciones del servicio** en ese dominio → *faltan*
+4. **Vídeo en YouTube** enseñando el flujo de permisos y para qué se usa cada uno → *falta*
+5. Nombre y logo de la app → los tenemos ✅
+
+**Tres de cinco están hechos.** Y los dos que faltan hay que hacerlos de todas
+formas para la landing.
+
+> **Esto hay que empezarlo antes que el código de la versión gratis, no después.**
+> La revisión de Google tarda de días a semanas, y mientras tanto el tope corre.
+> Si se lanza primero y se verifica después, se gastan instalaciones del cupo de
+> por vida en gente que probablemente ni vuelva.
+
+## 4 · Las casillas vienen DESMARCADAS
+
+En la pantalla de permisos, los dos permisos salen con la **casilla vacía** y un
+*«Seleccionar todos»* arriba. Si alguien pulsa **Continuar** sin marcar nada, la
+app no recibe permisos y falla.
+
+No es un detalle: es el primer minuto del producto, con alguien que llegó de un
+vídeo y no tiene paciencia. **El vídeo de instalación tiene que enseñar la
+pulsación de «Seleccionar todos»**, y la app tiene que saber decir qué pasó si
+llega sin permisos, en vez de enseñar un error de Google.
+
+## 5 · El tamaño, tercera medida
+
+| Pantalla | Navegador | Ventana que dio Sheets |
+|---|---|---|
+| 1920×1080 | en ventana | 828 × 755 |
+| 1920×1080 | maximizado | 1536 × 756 |
+| 2560×1440 | en ventana | **1135 × 767** |
+
+**El ancho sigue a la ventana del navegador. El alto se queda clavado entre 755 y
+767 pase lo que pase**, incluso con 1440 px de pantalla disponibles.
+
+Para diseñar: **el alto útil son ~750 px y no va a crecer.** El ancho se tiene
+que comportar como ya se comporta la app, de 375 px para arriba.
+
+## 6 · Lo que falta confirmar, y son dos minutos
+
+**¿La copia heredó el proyecto de Cloud, o se creó uno automático?** De esto
+depende todo lo anterior: si cada copia se fabrica su propio proyecto, el de Jose
+no gobierna nada y la pantalla fea volvería para un desconocido.
+
+Las señales dicen que **sí lo heredó**: la pantalla de permisos dijo «PRUEBA 1
+CLIC» y no «Copia de PRUEBA 1 CLIC», y no salió el aviso de app sin verificar que
+sí salía con el proyecto automático.
+
+Se comprueba directo: en **la copia**, Extensiones → Apps Script → ⚙️
+Configuración del proyecto → mirar el número de proyecto.
+
+- `692774014234` → heredado. Plan en pie.
+- otro número → cada copia va por libre, y hay que replantear.
+
+Y una segunda: **la prueba se hizo sin incógnito y con una cuenta de Jose.**
+Conviene que la repita alguien de fuera antes de dar la pantalla limpia por
+buena.

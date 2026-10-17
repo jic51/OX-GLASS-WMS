@@ -9090,3 +9090,44 @@ queda escrito para no perderlo:
   hay equipo. Se explica en una frase y nadie se siente engañado.
 - **Cada quien instala su propia copia** en su Drive. Sin eso, «sin detección de
   usuarios» significa que todos escriben en la misma hoja.
+
+## 🔴 VERIFICAR LA APP ANTE GOOGLE — ANTES DE REGALAR NADA · 17/10
+
+Medido en `docs/prueba-un-clic/PASOS.md`, segunda ronda. Resumen de lo accionable:
+
+`script.container.ui` es un permiso **SENSIBLE** (lo dice la consola de Cloud, no
+una fuente de terceros). Mientras no esté verificado, el proyecto de Cloud tiene
+un **tope de usuarios de por vida que no se puede reiniciar ni cambiar** — el
+número que Google documenta es 100. Cien instalaciones y el proyecto queda
+inservible para siempre.
+
+**La verificación de un permiso sensible es GRATIS** (la que cuesta 500–4.500 $/año
+es la auditoría CASA, y ésa sólo aplica a permisos *restringidos*, que la versión
+gratis no pide). Lo que pide:
+
+| | Estado |
+|---|---|
+| Dominio verificado (`acopio.net`) | ✅ es nuestro |
+| Página de inicio en ese dominio | ✅ la landing |
+| **Política de privacidad** publicada ahí | ❌ **falta** |
+| **Condiciones del servicio** publicadas ahí | ❌ **falta** |
+| **Vídeo de YouTube** con el flujo de permisos | ❌ **falta** |
+| Nombre y logo | ✅ |
+
+**Orden importa:** empezar el trámite ANTES de publicar la versión gratis. La
+revisión tarda de días a semanas y el cupo de por vida corre mientras tanto.
+
+### Y un detalle del primer minuto que puede costar la mitad del embudo
+
+La pantalla de permisos trae las casillas **desmarcadas**. Quien pulse
+*Continuar* sin marcar, instala una app sin permisos y ve un error de Google.
+
+Dos cosas: el vídeo de instalación tiene que enseñar la pulsación de
+**«Seleccionar todos»**, y la app tiene que detectar que llegó sin permisos y
+decirlo con sus propias palabras.
+
+### El techo de la ventana, para cuando se diseñe
+
+Tres medidas en tres pantallas distintas: **el ancho sigue a la ventana del
+navegador; el alto se queda entre 755 y 767 px y no sube** ni con una pantalla de
+1440. Se diseña contra **~750 px de alto fijo**.
