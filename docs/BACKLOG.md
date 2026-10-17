@@ -9114,8 +9114,19 @@ gratis no pide). Lo que pide:
 | **Vídeo de YouTube** con el flujo de permisos | ❌ **falta** |
 | Nombre y logo | ✅ |
 
-**Orden importa:** empezar el trámite ANTES de publicar la versión gratis. La
-revisión tarda de días a semanas y el cupo de por vida corre mientras tanto.
+> **CORREGIDO EL MISMO DÍA — esto NO es urgente, y por una buena razón.**
+> Jose comprobó que **la copia NO hereda el proyecto de Cloud**: se fabrica el
+> suyo («GCP: Predeterminada»). Luego el tope de 100 **no se consume nunca** por
+> el camino de copiar — cada quien es el usuario 1 de su propio proyecto.
+>
+> El precio de eso es el otro lado de la misma moneda: un proyecto automático
+> está siempre en Testing, así que **la pantalla fea sale para todo el que
+> instale**, y verificar ACOPIO FREE no la quita porque las copias no usan ese
+> proyecto.
+>
+> La verificación sigue haciendo falta, pero para **otra cosa**: para convertir
+> esto en un add-on de Marketplace, que es el único camino donde todos los
+> usuarios comparten un proyecto. Ver `docs/prueba-un-clic/PASOS.md`, sección 6.
 
 ### Y un detalle del primer minuto que puede costar la mitad del embudo
 
@@ -9131,3 +9142,32 @@ decirlo con sus propias palabras.
 Tres medidas en tres pantallas distintas: **el ancho sigue a la ventana del
 navegador; el alto se queda entre 755 y 767 px y no sube** ni con una pantalla de
 1440. Se diseña contra **~750 px de alto fijo**.
+
+
+## 🔴 LA PANTALLA FEA EN LA VERSIÓN GRATIS — DECISIÓN PENDIENTE · 17/10
+
+Medido, no supuesto: **las copias no heredan el proyecto de Cloud.** Cada copia
+usa un proyecto automático, los automáticos están siempre en modo Testing, y en
+Testing Google enseña «esta app no está verificada» a todo el mundo.
+
+**No es un fallo de montaje y no se arregla configurando mejor.** Son dos
+caminos, y hay que elegir uno:
+
+| | Pantalla fea | Tope de 100 | Coste |
+|---|---|---|---|
+| **Copiar la hoja** (lo de hoy) | sale siempre | nunca aplica | 0 |
+| **Add-on de Marketplace** | se va al verificar | aplica hasta verificar | verificación (gratis) + rehacer la distribución |
+
+**Desplegar como app web NO es una salida**: la copia desplegada sigue usando su
+proyecto automático.
+
+Lo que inclina la balanza no es técnico: es cuánta gente abandona al ver el
+aviso. Si se elige el camino 1, el vídeo y la landing tienen que **adelantarlo**
+en vez de dejar que sorprenda.
+
+### Pendiente inmediato, con reloj
+
+El branding de ACOPIO FREE está **verificado pero sin publicar**. Google da
+**7 días** desde el 17/10 antes de que caduque y haya que repetir el trámite.
+Botón **Publish branding** en la pantalla de Branding. Es lo que hace que los
+enlaces de política y condiciones salgan en la pantalla de permisos.

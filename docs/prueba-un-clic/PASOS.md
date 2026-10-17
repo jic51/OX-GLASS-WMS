@@ -474,22 +474,66 @@ llega sin permisos, en vez de enseñar un error de Google.
 Para diseñar: **el alto útil son ~750 px y no va a crecer.** El ancho se tiene
 que comportar como ya se comporta la app, de 375 px para arriba.
 
-## 6 · Lo que falta confirmar, y son dos minutos
+## 6 · CONTESTADO, Y AL REVÉS DE LO QUE YO SUPUSE: la copia NO hereda
 
-**¿La copia heredó el proyecto de Cloud, o se creó uno automático?** De esto
-depende todo lo anterior: si cada copia se fabrica su propio proyecto, el de Jose
-no gobierna nada y la pantalla fea volvería para un desconocido.
+Jose lo comprobó el 17/10. En la configuración del proyecto de **`copia PRUEBA 1
+CLIC`**:
 
-Las señales dicen que **sí lo heredó**: la pantalla de permisos dijo «PRUEBA 1
-CLIC» y no «Copia de PRUEBA 1 CLIC», y no salió el aviso de app sin verificar que
-sí salía con el proyecto automático.
+> **GCP: Predeterminada**
 
-Se comprueba directo: en **la copia**, Extensiones → Apps Script → ⚙️
-Configuración del proyecto → mirar el número de proyecto.
+No `692774014234`. **Predeterminada** = el proyecto automático que Google fabrica
+para cada script nuevo. **La copia se hizo el suyo.**
 
-- `692774014234` → heredado. Plan en pie.
-- otro número → cada copia va por libre, y hay que replantear.
+### Yo había deducido lo contrario, y la deducción estaba mal
 
-Y una segunda: **la prueba se hizo sin incógnito y con una cuenta de Jose.**
-Conviene que la repita alguien de fuera antes de dar la pantalla limpia por
-buena.
+Dije que las señales apuntaban a que sí lo heredó, porque la pantalla de permisos
+decía «PRUEBA 1 CLIC» y no «Copia de PRUEBA 1 CLIC». El nombre era el dato
+correcto y lo leí al revés: **esa pantalla era la del ORIGINAL**, que sí tiene
+ACOPIO FREE atado. La de la copia habría dicho «copia PRUEBA 1 CLIC».
+
+### Lo que esto significa de verdad, y son dos cosas opuestas
+
+**LA MALA.** Un proyecto automático **siempre está en Testing**, y en Testing la
+pantalla fea sale siempre. Como cada copia se fabrica el suyo, **la pantalla fea
+sale para todo el que instale, y no hay nada en el proyecto de Jose que lo
+cambie.** Verificar ACOPIO FREE no alcanza a las copias: no lo usan.
+
+**LA BUENA, y no es pequeña.** El tope de usuarios es **por proyecto**. Si cada
+quien tiene el suyo, **cada quien es el usuario número 1 de su propio proyecto**.
+El tope de 100 **no se consume nunca** por este camino. El muro de la sección 3
+no existe mientras se distribuya copiando.
+
+### Las dos no se pueden tener a la vez
+
+| Cómo se distribuye | Pantalla fea | Tope de 100 |
+|---|---|---|
+| **Copiando la hoja** (hoy) | **sale siempre** | **nunca aplica** |
+| **Add-on de Marketplace** (un solo proyecto) | se va al verificar | aplica hasta verificar |
+
+Y de aquí sale la decisión real, que **no se prueba, se decide**:
+
+1. **Asumir la pantalla** y adelantarla en el vídeo y en la landing — «Chrome te
+   va a avisar; es normal en Apps Script; pulsa Configuración avanzada → Ir a».
+   Es lo que hace casi todo lo que se regala hecho en Apps Script.
+2. **Add-on de Google Workspace Marketplace**: un solo script, un solo proyecto,
+   verificado, y el usuario le da a *Instalar* sin copiar nada. Es la solución de
+   verdad y es un cambio de arquitectura, no un ajuste.
+
+**Desplegar como app web no es una tercera salida**: la copia desplegada sigue
+usando su proyecto automático y la pantalla sale igual.
+
+> El trabajo de branding que Jose ya hizo (dominio, política, condiciones)
+> **no se tira**: es exactamente lo que pide el camino 2. Lo que cambia es que
+> deja de ser urgente para lanzar, y pasa a ser requisito de la versión add-on.
+
+### Y una pendiente de la pantalla de Branding
+
+La verificación del branding salió bien pero quedó **sin publicar**:
+
+> *Your branding has been verified, but is not yet being shown to users. Publish
+> it before the verified result expires in **7 days**.*
+
+Por eso los enlaces de política y condiciones no aparecían en la pantalla de
+permisos: están guardados, no publicados. Se arregla con el botón **Publish
+branding**, y hay siete días antes de que la verificación caduque y haya que
+repetirla.
