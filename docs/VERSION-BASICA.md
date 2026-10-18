@@ -163,7 +163,7 @@ vez dos cosas que tienen que coincidir sin que nada lo obligue.
 Por eso `test-gratis-escribe-igual.js` las **cuenta**. El número puede bajar
 cuando se apague una, y **no puede subir** sin que la prueba lo diga.
 
-**Hoy faltan 47.** De ésas, unas quince son funciones `menu*`: en la versión
+**Hoy faltan 46.** De ésas, unas quince son funciones `menu*`: en la versión
 básica no se pueden llamar de ninguna manera, porque el menú lo crea `onOpen` y
 `onOpen` se calla. Se dejan en la cuenta igual — que hoy sean inalcanzables es
 consecuencia de otra decisión, y el día que esa decisión cambie volverían sin
@@ -225,8 +225,9 @@ volvería a una sección cuyo botón ya no existe: **una pantalla sin salida.**
 | ✅ La pantalla esconde pestañas, botones y pestañas de ajustes | `BASIC_FUERA` |
 | ✅ Una pestaña escondida tampoco se abre | `showTab` |
 | ✅ La prueba, 50 comprobaciones y el censo | |
+| ✅ `getSetupState` no pide el asistente — abre directa al inventario | |
 | ⬜ **Nadie ha ARRANCADO todavía Acopio Basic** | ← lo siguiente |
-| ⬜ Las 47 hojas del censo (unas 15 son `menu*`, inalcanzables) | |
+| ⬜ Las 46 hojas del censo (unas 15 son `menu*`, inalcanzables) | |
 | ⬜ La sección de la landing y el vídeo de instalación | |
 
 ### Lo único que queda antes de poder prometer nada

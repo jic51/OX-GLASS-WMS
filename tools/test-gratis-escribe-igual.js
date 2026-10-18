@@ -221,6 +221,17 @@ console.log('\n═══ 6. LAS TRES FORMAS DE APAGAR, Y EL CENSO DE HOJAS ═�
     '\\.getUi\\(\\)':            'container.ui',
   };
 
+  /* CÓMO SE RECORTA CADA FUNCIÓN, Y DÓNDE SE QUEDA CORTO.
+   *
+   * De `function X(` hasta la primera `}` a principio de línea. Con una función
+   * de UNA SOLA LÍNEA —`function f(a) { return a; }`— ese cierre no existe,
+   * así que el recorte se come lo que viene detrás y le atribuye servicios que
+   * no usa.
+   *
+   * Se deja así a sabiendas porque el error va en la dirección segura: infla la
+   * cuenta de pendientes, nunca la baja. Un censo que sobra avisa de más; uno
+   * que falta no avisa. Las que se apagan a mano se comprueban por su nombre
+   * en la lista de arriba, y ésas sí son funciones de varias líneas. */
   const todas = {};
   const reFn = /^function ([A-Za-z_][A-Za-z0-9_]*)\s*\([\s\S]*?\n\}/gm;
   let mm; while ((mm = reFn.exec(src))) todas[mm[1]] = soloCodigo(mm[0]);
@@ -238,7 +249,7 @@ console.log('\n═══ 6. LAS TRES FORMAS DE APAGAR, Y EL CENSO DE HOJAS ═�
 
   /* LAS QUE YA ESTÁN, UNA POR UNA. El censo de abajo vigila que no crezcan las
    * que faltan; esto vigila que no se deshagan las que ya se hicieron. */
-  ['onOpen', 'getUserRole', 'requireOwnerContext_', 'scanGmailForDeliveries',
+  ['onOpen', 'getUserRole', 'requireOwnerContext_', 'getSetupState', 'scanGmailForDeliveries',
    'uploadRackPhoto', 'setAiKey', 'addUser', 'photosToDocPdf_',
    'notifyAdminOfError_', 'ensureBackupTrigger_'].forEach(function (f) {
     check('`' + f + '` sabe que puede estar en la versión básica',
@@ -261,7 +272,7 @@ console.log('\n═══ 6. LAS TRES FORMAS DE APAGAR, Y EL CENSO DE HOJAS ═�
 
   /* EL TECHO. Baja cuando se apaga una hoja; esta prueba falla si sube.
    *
-   * 47, y el número lo puso la medida. Yo había escrito 45 a ojo y el rojo
+   * 46, y el número lo puso la medida. Yo había escrito 45 a ojo y el rojo
    * salió del techo, no del producto — que es exactamente el error que ya se
    * cometió con el tope del vigilante de arranque. Un número inventado no
    * vigila nada: sólo da un susto y enseña a ignorar la prueba.
@@ -273,7 +284,7 @@ console.log('\n═══ 6. LAS TRES FORMAS DE APAGAR, Y EL CENSO DE HOJAS ═�
    * esa decisión cambie, estas volverían sin que nadie se acordara.
    *
    * Lo que falta y en qué orden, en docs/VERSION-BASICA.md. */
-  const TECHO = 47;
+  const TECHO = 46;
   check('las hojas sin apagar no CRECEN (techo ' + TECHO + ') — ' +
         'cuando se apague una, baja este número',
     sinApagar.length <= TECHO, sinApagar.length);

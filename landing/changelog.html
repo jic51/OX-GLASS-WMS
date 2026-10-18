@@ -101,6 +101,27 @@
        movements went from about two and a half minutes to fifty-five seconds
        along the way.</p>
 
+    <div class="entry" id="v12-75">
+      <span class="ver">v12.75</span>
+      <span class="tag new">New</span>
+      <h3>A free edition, built from the same file</h3>
+      <p><b>If you already use Acopio, nothing on your screen changed.</b> Every switch this
+         release adds is off in your copy, and the full test suite says so.</p>
+      <p>What it adds is a <b>free edition</b>: entries, exits, transfers, returns and waste, and
+         nothing else. No users, no QR codes, no reservations. It asks Google for permission to
+         use <i>one spreadsheet</i> and nothing more &mdash; which is why it installs without the
+         &ldquo;Google hasn&rsquo;t verified this app&rdquo; warning, and why it works on a phone.</p>
+      <p>It is the same file with one word changed, <b>not a second copy of the code</b>. That was
+         the whole design argument: freezing features is fine, freezing bugs is not. A fix made
+         for one edition reaches the other on the same day.</p>
+      <p><b>And it writes to the spreadsheet exactly what the paid edition writes</b> &mdash; same
+         columns, same width, same order. Someone who starts on the free edition and later moves
+         up finds their whole history already there, with nothing to convert. A test refuses to
+         let the writing code know which edition it is running in, so the two cannot drift apart.</p>
+      <p>Where the free edition cannot name who made a movement, it records <code>BASIC</code>
+         rather than leaving the column empty. A blank looks like a fault; the word is a fact.</p>
+    </div>
+
     <div class="entry" id="v12-74">
       <span class="ver">v12.74</span>
       <span class="tag new">New</span>

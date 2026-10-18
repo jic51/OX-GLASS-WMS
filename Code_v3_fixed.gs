@@ -128,7 +128,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.74';
+var APP_VERSION = '12.75';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -140,7 +140,7 @@ var APP_VERSION = '12.74';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '8be480c7';
+var APP_BUILD = '98a3b9db';
 
 // ═══ ACOPIO BASIC — EL INTERRUPTOR DE LA VERSIÓN GRATIS ══════════════════════
 //
@@ -682,6 +682,20 @@ function adminNotifyEmail_() {
  * la protege ahora es este tope. No se cambia lo que devuelve.
  */
 function getSetupState() {
+  /* CONTESTAR OTRA COSA en la versión básica, y ésta corre AL ARRANCAR.
+   *
+   * Pregunta quién eres dos veces y compara, para saber si quien mira es el
+   * dueño y enseñarle el asistente de instalación. Las dos lecturas necesitan
+   * `userinfo.email`, que la versión básica no pide.
+   *
+   * Y el asistente sobra entero: lo que hace es crear carpetas en Drive y
+   * registrar usuarios, que son justo las dos cosas que la versión básica no
+   * tiene. La hoja que se regala ya viene con sus pestañas hechas.
+   *
+   * `needsSetup: false` es lo que hace que la app abra directa en el
+   * inventario, que es lo único que queremos que vea quien acaba de instalar
+   * desde un vídeo. */
+  if (basicApagado_()) return { productName: PRODUCT_NAME, needsSetup: false };
   var quien = '';
   try { quien = Session.getActiveUser().getEmail(); } catch (e) {}
   requireQuota_('setup', quien, 120, 300);
