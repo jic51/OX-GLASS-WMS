@@ -76,7 +76,11 @@ function caja(filas, quienLlama) {
     auditLog_: (...a) => { auditoria.push(a); }
   };
   vm.createContext(sandbox);
-  vm.runInContext(fnSrc(GS, 'updateUser'), sandbox);
+  /* La edición y su apagado, de verdad y en `false`: `updateUser` llama a
+   * `basicNiega_` desde la primera línea, porque los usuarios son de Pro. */
+  vm.runInContext('var ACOPIO_BASIC = false;\n' +
+                  fnSrc(GS, 'basicNiega_') + '\n' +
+                  fnSrc(GS, 'updateUser'), sandbox);
   return { sandbox, hoja, auditoria };
 }
 

@@ -150,7 +150,27 @@ function levantar(src, nombres, opciones) {
       '. Si es de Apps Script o del navegador, ponla en el contexto; si la ' +
       'prueba la finge, ponla en `dobles`.');
   }
-  return orden.join('\n');
+  const codigo = orden.join('\n');
+
+  /* LA CONSTANTE DE EDICIÓN VA SOLA, Y ÉSTA ES LA EXCEPCIÓN QUE SE ARGUMENTA.
+   *
+   * `levantar` arrastra las FUNCIONES que hacen falta, no las constantes del
+   * módulo; para ésas está `constantes()`, que cada prueba pide a mano. Con
+   * `ACOPIO_BASIC` eso no sirve, y por una diferencia de fondo: no la usa una
+   * función concreta, la puede usar CUALQUIERA. Es el interruptor de la
+   * edición, y a partir de ahora va apareciendo en hojas por todo el archivo.
+   *
+   * O sea que pedirla a mano sería obligar a cada prueba futura a acordarse de
+   * algo que no tiene nada que ver con lo que esa prueba mide. Cuatro pruebas
+   * se rompieron a la vez el día que se añadió el interruptor, y ninguna de
+   * las cuatro hablaba de ediciones.
+   *
+   * Va en `false` porque las pruebas miden la versión de PAGO. Una prueba que
+   * quiera medir la básica la vuelve a declarar en su contexto. */
+  if (/\bACOPIO_BASIC\b/.test(codigo)) {
+    return 'var ACOPIO_BASIC = false;\n' + codigo;
+  }
+  return codigo;
 }
 
 /**

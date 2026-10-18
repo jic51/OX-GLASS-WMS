@@ -86,7 +86,13 @@ function build(opts) {
   // escribir la suya a mano. Con un doble, esta prueba diría que el texto está
   // bien sin haber mirado el texto que de verdad se enseña — que es justo el
   // fallo que esta versión arregla.
-  vm.runInContext(extractFn('geminiErrorText_') + '\n' +
+  /* `basicNiega_` VA DE VERDAD, no como doble, y con la edición en `false`.
+   * `setAiKey` lo llama desde su primera línea porque el asistente no existe
+   * en la versión básica. Fingirlo con una función vacía dejaría esta prueba
+   * pasando el día que ese apagado se escribiera mal. */
+  vm.runInContext('var ACOPIO_BASIC = false;\n' +
+                  extractFn('basicNiega_') + '\n' +
+                  extractFn('geminiErrorText_') + '\n' +
                   extractFn('getAiStatus') + '\n' + extractFn('setAiKey'), sandbox);
   return { sandbox, props, audit, fetches };
 }

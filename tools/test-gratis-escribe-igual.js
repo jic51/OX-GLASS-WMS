@@ -182,5 +182,107 @@ console.log('\n═══ 5. LOS DOS MANIFIESTOS ═══\n');
     (pro.oauthScopes || []).length > 1, (pro.oauthScopes || []).length);
 }
 
+console.log('\n═══ 6. LAS TRES FORMAS DE APAGAR, Y EL CENSO DE HOJAS ═══\n');
+{
+  check('existe `basicApagado_()` — la forma CALLAR',
+    /function basicApagado_\s*\(/.test(codigo));
+  check('existe `basicNiega_()` — la forma NEGAR',
+    /function basicNiega_\s*\(/.test(codigo));
+  check('el mensaje de `basicNiega_` va en inglés, como el resto de la app',
+    /is not part of Acopio Basic/.test(src));
+
+  /* ── EL CENSO ────────────────────────────────────────────────────────────
+   *
+   * POR QUÉ ESTO SE CUENTA EN VEZ DE APUNTARSE.
+   *
+   * Lo primero que se intentó fue poner la puerta en las 102 funciones
+   * globales que el navegador puede llamar. El recorrido de llamadas dijo que
+   * 60 de esas 102 tocan —directa o indirectamente— un servicio que la versión
+   * básica no tiene permiso para usar, y entre ellas estaban `processMovement`,
+   * `addMultiEntry` y `getInitialData`.
+   *
+   * O sea que los permisos fuertes no viven aparte: están enhebrados por el
+   * centro. Cerrar esas puertas no apagaría funciones de lujo, apagaría el
+   * producto. El apagado tiene que ir en las HOJAS, donde se toca el servicio.
+   *
+   * Y las hojas son muchas y se añaden solas: cualquiera que escriba un
+   * `MailApp.sendEmail` nuevo dentro de seis meses crea una. Una lista escrita
+   * a mano de «las que faltan» volvería a ser dos cosas que tienen que
+   * coincidir sin que nada lo obligue. Por eso se cuentan: el número puede
+   * BAJAR cuando se apague una, y no puede SUBIR sin que esta prueba lo diga. */
+  const SERVICIOS = {
+    'DriveApp':                  'drive',
+    'DocumentApp':               'documents',
+    'MailApp':                   'send_mail',
+    'GmailApp':                  'gmail',
+    'UrlFetchApp':               'external_request',
+    'ScriptApp':                 'scriptapp',
+    'Session\\.get\\w*User':     'userinfo.email',
+    '\\.getUi\\(\\)':            'container.ui',
+  };
+
+  const todas = {};
+  const reFn = /^function ([A-Za-z_][A-Za-z0-9_]*)\s*\([\s\S]*?\n\}/gm;
+  let mm; while ((mm = reFn.exec(src))) todas[mm[1]] = soloCodigo(mm[0]);
+
+  const hojas = Object.keys(todas).filter(function (f) {
+    return Object.keys(SERVICIOS).some(function (sv) { return new RegExp(sv).test(todas[f]); });
+  });
+
+  const apagada = function (f) { return /basicApagado_\s*\(|basicNiega_\s*\(/.test(todas[f]); };
+  const sinApagar = hojas.filter(function (f) { return !apagada(f); });
+
+  check('hay hojas que tocan servicios que la versión básica no puede usar — ' +
+        'si esto diera cero, el censo estaría roto, no el código',
+    hojas.length > 0, hojas.length);
+
+  /* LAS QUE YA ESTÁN, UNA POR UNA. El censo de abajo vigila que no crezcan las
+   * que faltan; esto vigila que no se deshagan las que ya se hicieron. */
+  ['onOpen', 'getUserRole', 'requireOwnerContext_', 'scanGmailForDeliveries',
+   'uploadRackPhoto', 'setAiKey', 'addUser', 'photosToDocPdf_',
+   'notifyAdminOfError_', 'ensureBackupTrigger_'].forEach(function (f) {
+    check('`' + f + '` sabe que puede estar en la versión básica',
+      !!todas[f] && apagada(f));
+  });
+
+  /* `onOpen` TIENE NOMBRE PROPIO AQUÍ, y no es por gusto.
+   *
+   * Es un disparador simple: corre al ABRIR LA HOJA, antes que nada y sin que
+   * nadie lo pida. Llama a `getUi()`, que la versión básica no tiene permiso
+   * para usar. Sin apagarlo, el primer minuto del producto —el de alguien que
+   * acaba de hacer la copia desde un vídeo— sería un cuadro de error de Google.
+   *
+   * La entrada a la app es la pestaña «START HERE», que es una hoja visible y
+   * no necesita ningún permiso. Eso ya existía por el mismo motivo. */
+  check('`onOpen` se calla, NO se niega — un error aquí lo ve el cliente al ' +
+        'abrir la hoja, antes de haber pulsado nada',
+    !!todas['onOpen'] && /basicApagado_/.test(todas['onOpen']) &&
+    !/basicNiega_/.test(todas['onOpen']));
+
+  /* EL TECHO. Baja cuando se apaga una hoja; esta prueba falla si sube.
+   *
+   * 47, y el número lo puso la medida. Yo había escrito 45 a ojo y el rojo
+   * salió del techo, no del producto — que es exactamente el error que ya se
+   * cometió con el tope del vigilante de arranque. Un número inventado no
+   * vigila nada: sólo da un susto y enseña a ignorar la prueba.
+   *
+   * De estas 47, unas quince son funciones `menu*`. En la versión básica no se
+   * pueden llamar de ninguna manera, porque el menú lo crea `onOpen` y `onOpen`
+   * se calla — así que no llegan a existir. Se dejan en la cuenta igual: que
+   * hoy sean inalcanzables es una consecuencia de otra decisión, y el día que
+   * esa decisión cambie, estas volverían sin que nadie se acordara.
+   *
+   * Lo que falta y en qué orden, en docs/VERSION-BASICA.md. */
+  const TECHO = 47;
+  check('las hojas sin apagar no CRECEN (techo ' + TECHO + ') — ' +
+        'cuando se apague una, baja este número',
+    sinApagar.length <= TECHO, sinApagar.length);
+
+  if (sinApagar.length) {
+    console.log('\n  — pendientes de apagar (' + sinApagar.length + '):');
+    console.log('    ' + sinApagar.join(', '));
+  }
+}
+
 console.log('\n' + (fail ? '✗ ' + fail + ' fallos · ' : '✓ todo bien · ') + (ok + fail) + ' comprobaciones\n');
 process.exit(fail ? 1 : 0);
