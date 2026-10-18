@@ -165,19 +165,56 @@ Arriba de la app sale una barra informativa:
 Se cierra con una ✕ y no vuelve. Es un aviso de Google sobre apps de terceros,
 no el muro de «app sin verificar». Sale en computadora y en teléfono.
 
-## Lo que NO se puede dar por confirmado
+## CONTESTADO POR JOSE — no salió
 
-**¿Salió «Google no ha verificado esta aplicación» al autorizar?**
+> *"fue directo a dar permisos"*
 
-**El vídeo no lo puede contestar.** La ventana de permisos de Google **se abre
-como ventana aparte**, y la grabación sigue sólo la ventana de Chrome. Se ve el
-cuadro de *«The Web App requires you to authorize access to your data»* con su
-botón **Authorize access**, y doce segundos después el despliegue ya está hecho —
-lo de en medio ocurrió fuera de cuadro.
+Sin aviso, sin «Configuración avanzada», sin «Ir a (no seguro)». **La pantalla fea
+no existe por este camino.**
 
-**Hay que preguntárselo a Jose y no deducirlo.** Doce segundos dan para los dos
-caminos: el limpio (elegir cuenta → permisos → Permitir) y el feo (elegir cuenta
-→ aviso → Configuración avanzada → Ir a (no seguro) → permisos → Permitir).
+### Y esto es un experimento controlado, no una casualidad
 
-Mientras no se conteste, el punto 2 vale igual: **el teléfono ya está ganado pase
-lo que pase con la pantalla.**
+Las dos rondas se hicieron igual —copia nueva, proyecto de Cloud automático,
+cuenta propia— y **sólo cambió una cosa**:
+
+| Ronda | Permisos | Pantalla fea |
+|---|---|---|
+| 1 · ventana en la hoja | `currentonly` + `container.ui` → **uno sensible** | **sale** |
+| 1b · app web | `currentonly` solo → **ninguno sensible** | **no sale** |
+
+La variable que cambió fue el permiso sensible, y el resultado cambió con ella.
+Coincide además con la regla que Google sí documenta: el aviso de app sin
+verificar aparece cuando se piden permisos **sensibles o restringidos**.
+
+**Por eso generaliza a un desconocido**: cualquiera que copie la hoja será el
+dueño de su propio script, con su propio proyecto automático, pidiendo un único
+permiso no sensible. Las tres cosas que hicieron falta aquí.
+
+Conviene confirmarlo igual con otra persona antes de grabar el vídeo de la
+landing, pero ya no es un riesgo que bloquee nada.
+
+---
+
+# CONCLUSIÓN DE TODA LA INVESTIGACIÓN
+
+**La versión gratis es una APP WEB, no una ventana dentro de la hoja.**
+
+| | Ventana en la hoja | **App web** |
+|---|---|---|
+| Pantalla fea | sale | **no sale** |
+| Teléfono | **no funciona** | **funciona y escribe** |
+| Tamaño | 1135 × 767, con techo | **1920 × 918, pantalla completa** |
+| Tope de 100 usuarios | nunca aplica | **nunca aplica** |
+| Instalación | 1 clic | 1 clic + **1 min 47 s** |
+
+El único precio son esos dos minutos de despliegue, y compran las otras cuatro
+filas.
+
+## Lo que esto significa para construirla, y es la mejor noticia
+
+**La versión gratis tiene la misma arquitectura que la de pago.** Un script
+atado a la hoja, servido por `doGet`, con el mismo `Index`. No hay que inventar
+una forma nueva de entrar ni rehacer la pantalla para una caja de 750 px.
+
+La versión gratis es **la app de hoy, con la constante en `true` y el manifiesto
+recortado a un permiso**. Nada más.

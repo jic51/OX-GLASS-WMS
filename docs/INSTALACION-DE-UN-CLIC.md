@@ -151,3 +151,52 @@ un compañero. Lo que parece una pérdida **encaja exactamente con el modelo**:
 gratis para quien trabaja solo, Pro cuando hay equipo. El límite técnico y el
 límite comercial son el mismo, y eso es raro y bueno: no hay que inventar una
 restricción artificial ni vigilar que nadie se la salte.
+
+---
+
+# CERRADO — 17/10/2026
+
+Las dos cosas que este documento dejó por medir están medidas, y una de las dos
+salió al revés de lo que yo esperaba. El detalle completo, con las fotos y el
+vídeo, en `docs/prueba-un-clic/` y `docs/prueba-un-clic/web/`.
+
+## La respuesta
+
+**La versión gratis es una APP WEB servida por `doGet`, no una ventana dentro de
+la hoja.** Misma arquitectura que la de pago.
+
+| | Ventana en la hoja | **App web** |
+|---|---|---|
+| «Google no ha verificado esta aplicación» | **sale** | **no sale** |
+| Teléfono | **no funciona** | **funciona y escribe** |
+| Tamaño | 1135 × 767, con techo de alto | **1920 × 918, pantalla completa** |
+| Tope de 100 usuarios | nunca aplica | nunca aplica |
+| Instalación | 1 clic | 1 clic + **1 min 47 s** |
+
+## Las tres cosas que este documento daba por supuestas y eran falsas
+
+1. **«Sin app web no hay paso 3 ni paso 4»** (sección 5). Cierto, pero el paso 3
+   resultó costar **1 min 47 s**, no los «muchos» de la tabla de la sección 2. El
+   despliegue nunca fue el problema caro que creíamos.
+
+2. **«Esos dos permisos evitan la pantalla»** (lo que había que medir). **No.**
+   `script.container.ui` es **sensible** —lo dice la consola de Cloud— y un
+   permiso sensible sin verificar enciende la pantalla. Lo que la evita es
+   quedarse con **un solo permiso no sensible**, y eso sólo se puede hacer
+   renunciando a los menús y ventanas dentro de la hoja. O sea: justo la opción
+   que esta investigación había elegido es la que traía el problema.
+
+3. **«La instalación es de computadora»**. Era verdad de la ventana dentro de la
+   hoja, no de la app. Con la app web, **el teléfono escribe en la hoja** —
+   confirmado el 17/10 con una fila escrita desde un Android.
+
+## Y una renuncia que se cae
+
+La sección «Las dos renuncias» decía que sin app web no hay dirección que
+compartir, y que ese límite técnico coincidía con el comercial. **Ya no.** Hay
+dirección, y se puede compartir.
+
+El muro entre gratis y Pro tiene que ser entonces una decisión del producto —una
+sola persona, sin detección de usuarios— y no un accidente de la tecnología.
+Sigue siendo defendible y se explica en una frase, pero hay que sostenerlo
+nosotros en vez de dejar que lo sostenga Google.
