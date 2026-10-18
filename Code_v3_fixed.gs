@@ -141,6 +141,69 @@ var APP_VERSION = '12.74';
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
 var APP_BUILD = '8be480c7';
 
+// ═══ ACOPIO BASIC — EL INTERRUPTOR DE LA VERSIÓN GRATIS ══════════════════════
+//
+// `false` = Acopio Pro, lo de siempre.  `true` = la versión básica y gratuita.
+//
+// Jose, 15/10: *"quiero crear una versión básica y gratuita de la app para
+// regalar en la landing... sé que habías dicho que mantener 2 código no es bueno
+// pero mi idea es crear el archivo base y no cambiarle nada de nada"*.
+//
+// ── POR QUÉ UNA CONSTANTE Y NO UN SEGUNDO ARCHIVO ────────────────────────────
+//
+// La mitad que Jose quería se cumple igual: las FUNCIONES quedan congeladas,
+// nadie le mete cosas de Pro a la gratis. Lo que no conviene congelar son las
+// CORRECCIONES. El agujero del RETURN que está apuntado en docs/BACKLOG.md
+// —devolver material que nunca salió crea existencias de la nada— viviría para
+// siempre dentro de un archivo congelado que usan quinientos desconocidos.
+//
+// Congelar funciones sí. Congelar errores no.
+//
+// Y hay una razón más fuerte, que es de Jose y es la que decide el diseño de
+// abajo. Jose, 18/10: *"aun si el usuario decide usar acopio basico, la app debe
+// guardar en el sheet toda la informacion como la guarda actualmente, con todos
+// los datos, porque si el cliente decide en algun momento pasarse a la version
+// pro, la app debe mostrar todos los datos ya desde el momento que se actualice
+// la app, sino, pasaremos mucho tiempo arreglando todo"*.
+//
+// Tiene razón, y la consecuencia es exacta: si la versión gratis escribiera un
+// formato reducido, pasar a Pro dejaría de ser cambiar el código y pasaría a ser
+// escribir una MIGRACIÓN — que además habría que acordarse de ampliar cada vez
+// que Pro ganara una columna. Otra lista que tiene que coincidir con otra sin
+// que nada lo obligue, de las que este archivo ya lleva doce cazadas.
+//
+// ── LO QUE ESTA CONSTANTE PUEDE Y LO QUE NO ──────────────────────────────────
+//
+//   SÍ:  esconder pestañas y botones; cerrar las puertas del servidor de lo que
+//        se quitó; cambiar lo que se ve.
+//
+//   NO:  tocar `AC` (el mapa de columnas), `AC_WIDTH`, `appendRow`, los
+//        encabezados de las hojas, ni el motor de existencias.
+//
+// Así «la gratis escribe igual que Pro» deja de ser una promesa que hay que
+// recordar y pasa a ser que NO EXISTE otro código que pudiera escribir distinto.
+// Lo vigila tools/test-gratis-escribe-igual.js, que falla si esta constante
+// aparece en el camino de escritura.
+//
+// ── QUIÉN HACE DE PORTERO EN LA VERSIÓN GRATIS ───────────────────────────────
+//
+// Nadie, dentro de la app — y es deliberado. La versión básica no lleva
+// detección de usuarios, porque `userinfo.email` es uno de los permisos que hay
+// que quitar para que no salga la pantalla de «Google no ha verificado esta
+// aplicación» (medido el 17/10, ver docs/prueba-un-clic/web/PASOS.md).
+//
+// El portero es EL DESPLIEGUE: la versión gratis se publica con
+// `"access": "MYSELF"`, así que Google sólo deja entrar al dueño de la copia.
+// Eso no cuesta ningún permiso y no hay sesión que falsificar.
+//
+// Y de paso el límite técnico y el comercial vuelven a ser el mismo, que es lo
+// que hacía elegante este modelo: GRATIS = sólo tú puedes abrirla; PRO = tu
+// equipo puede. No hay que inventar una restricción artificial ni vigilar que
+// nadie se la salte.
+//
+// Ver docs/VERSION-BASICA.md y el manifiesto appsscript.basic.json.
+var ACOPIO_BASIC = false;
+
 // The browser-tab icon every installation gets unless it sets FAVICON_URL.
 // See the note in doGet for why one shared mark rather than each customer's
 // own logo.
@@ -2737,13 +2800,15 @@ function getInitialData(sessionToken) {
     if (auth.role === 'NO_SESSION') {
       var oc = oauthCfg_();
       return { accessStatus: 'NO_SESSION', userEmail: '', userRole: 'NO_SESSION',
-               serverVersion: APP_VERSION, company: publicCompany_(),
+               serverVersion: APP_VERSION, basic: ACOPIO_BASIC,
+               company: publicCompany_(),
                oauthClientId: oc.clientId, oauthRedirectUri: redirectUri_() };
     }
     // Authenticated but not registered in CONFIG
     if (auth.role === 'DENIED') {
       return { accessStatus: 'DENIED', userEmail: auth.email, userRole: 'DENIED',
-               serverVersion: APP_VERSION, company: publicCompany_() };
+               serverVersion: APP_VERSION, basic: ACOPIO_BASIC,
+               company: publicCompany_() };
     }
 
     /* EL SELLO SE LEE AQUÍ, ANTES QUE LOS DATOS. NUNCA DESPUÉS.
@@ -2903,6 +2968,15 @@ function getInitialData(sessionToken) {
     return {
       serverVersion:      APP_VERSION,
       serverBuild:        APP_BUILD,
+      // QUÉ EDICIÓN ES ÉSTA. Va en el mismo viaje que la versión, y por el mismo
+      // motivo: el navegador no la declara por su cuenta.
+      //
+      // Si `Index` tuviera su propia copia de esta constante, serían DOS líneas
+      // que hay que cambiar a la vez para hacer una versión gratis, sin que
+      // nada obligue a cambiar las dos. Cambiar sólo una da una app que esconde
+      // los botones pero deja las puertas abiertas, o al revés — y las dos
+      // mitades fallan en silencio. Una sola fuente, y la otra se entera.
+      basic:              ACOPIO_BASIC,
       // Sent with the first load so the ENTRY form can offer a material's packs
       // the moment its name is filled in, without a round trip per line.
       materialPacks:      (function(){ try { return readPacks_(ss); } catch (e) { return {}; } })(),
