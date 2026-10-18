@@ -105,3 +105,79 @@ La prueba se hace con tu cuenta. Google puede enseñarle algo distinto a un
 desconocido. **Si sale limpia, hay que repetirla con otra persona antes de
 montar el embudo encima** — pero si sale sucia, ya sabemos bastante: con tu
 propia cuenta no va a ser más suave que con la de un extraño.
+
+---
+
+# RESULTADOS — 17/10/2026, 21:03–21:07
+
+Vídeo de 3:31 de la pantalla completa, más dos fotos (computadora y teléfono).
+
+## Lo que queda CONFIRMADO
+
+### 1 · La prueba se hizo bien, y eso había que verificarlo
+
+El vídeo enseña dos proyectos distintos:
+
+| | Proyecto de Apps Script |
+|---|---|
+| Original `PRUEBA 1 CLIC` | `1OAsSlSCYophfk…` |
+| **La copia** `Copy of PRUEBA 1 CLIC` | **`1BlOn3YNKvh72…`** |
+
+Jose cambió el código en el original **y después** hizo la copia, así que la copia
+se llevó el `Codigo.gs` nuevo y el `appsscript.json` de un solo permiso. Y al
+abrir *Manage deployments* en la copia decía **«This project has not been
+deployed yet»**: proyecto limpio, estreno de verdad.
+
+**No se probó sobre el original**, que es justo el error que habría invalidado
+todo.
+
+### 2 · FUNCIONA EN EL TELÉFONO ✅✅
+
+| | Ventana | Escribió |
+|---|---|---|
+| Computadora | **1920 × 918** (pantalla 1920×1080) | ✓ fila 3 |
+| **Teléfono** | **411 × 658** (pantalla 412×892) | **✓ fila 5** |
+
+**Esto es lo que la ventana dentro de la hoja no podía hacer, y ya no es una
+suposición: escribió en la hoja desde el teléfono.**
+
+Y de paso contesta la otra pregunta: la app web **ocupa la pantalla entera**.
+1920×918 contra los 1135×767 de la ventana. Se acabó el techo de 750 px de alto.
+
+### 3 · El despliegue tarda menos de dos minutos
+
+| Momento | Reloj |
+|---|---|
+| Empieza la grabación | 21:03:18 |
+| Se abre *Manage deployments* | ≈21:04:29 |
+| **Despliegue listo, con dirección** | **21:06** |
+
+**≈1 minuto 47 segundos**, y eso incluye leer las opciones por primera vez. Yo
+había dicho «unos 5 minutos». Es menos de la mitad.
+
+### 4 · La franja azul del navegador no es la pantalla fea
+
+Arriba de la app sale una barra informativa:
+
+> ℹ️ *This application was created by a Google Apps Script user* — Report abuse ·
+> Learn more
+
+Se cierra con una ✕ y no vuelve. Es un aviso de Google sobre apps de terceros,
+no el muro de «app sin verificar». Sale en computadora y en teléfono.
+
+## Lo que NO se puede dar por confirmado
+
+**¿Salió «Google no ha verificado esta aplicación» al autorizar?**
+
+**El vídeo no lo puede contestar.** La ventana de permisos de Google **se abre
+como ventana aparte**, y la grabación sigue sólo la ventana de Chrome. Se ve el
+cuadro de *«The Web App requires you to authorize access to your data»* con su
+botón **Authorize access**, y doce segundos después el despliegue ya está hecho —
+lo de en medio ocurrió fuera de cuadro.
+
+**Hay que preguntárselo a Jose y no deducirlo.** Doce segundos dan para los dos
+caminos: el limpio (elegir cuenta → permisos → Permitir) y el feo (elegir cuenta
+→ aviso → Configuración avanzada → Ir a (no seguro) → permisos → Permitir).
+
+Mientras no se conteste, el punto 2 vale igual: **el teléfono ya está ganado pase
+lo que pase con la pantalla.**
