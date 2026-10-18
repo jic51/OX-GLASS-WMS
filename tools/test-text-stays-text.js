@@ -216,6 +216,10 @@ function mundo(){
   vm.runInContext([
     fnSrc(GS, 'textCell_'), fnSrc(GS, 'textSafeRow_'),
     fnSrc(GS, 'padRow_'), fnSrc(GS, 'readWidth_'), fnSrc(GS, 'ensureArchiveWidth_'),
+    // v12.75: quién hizo el movimiento cuando la edición no tiene usuarios.
+    // Lista de dependencias a mano, igual que test-pricing, con el mismo
+    // resultado: se cayó por una función que no tiene que ver con el texto.
+    fnSrc(GS, 'autorDeLaFila_'),
     fnSrc(GS, 'ensureTrashSheet_'), fnSrc(GS, 'findMovementById_'),
     fnSrc(GS, 'findTrashedById_'), fnSrc(GS, 'ensureArchiveHistorySheet_'),
     fnSrc(GS, 'manageMaterialLocked_'),
@@ -675,6 +679,7 @@ console.log('\n═══ lo que se guarda es lo que se escribió, sin comillas �
          dateRec: new Date(1757000000000) }
   });
   vm.runInContext(fnSrc(GS, 'textCell_') + '\n' + fnSrc(GS, 'textSafeRow_') + '\n' +
+                  fnSrc(GS, 'autorDeLaFila_') + '\n' +
                   fnSrc(GS, 'safeStr_'), c);
   vm.runInContext('(function(){' + armar + '})();', c);
   vm.runInContext(escribir, c);
@@ -720,6 +725,7 @@ console.log('\n═══ lo que se guarda es lo que se escribió, sin comillas �
          dateRec: new Date(1757000000000) }
   }));
   vm.runInContext(fnSrc(GS, 'textCell_') + '\n' + fnSrc(GS, 'textSafeRow_') + '\n' +
+                  fnSrc(GS, 'autorDeLaFila_') + '\n' +
                   fnSrc(GS, 'safeStr_'), c2);
   vm.runInContext('(function(){' + armar + '})();', c2);
   vm.runInContext(escribir.replace('archive.', 'archive.'), c2);

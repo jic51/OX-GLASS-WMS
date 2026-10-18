@@ -5502,6 +5502,13 @@ var APP_VERSION = '12.74';
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
 var APP_BUILD = '8be480c7';
 var userRole = 'WAREHOUSE';
+/* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
+ * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
+ * en Code.gs, serían dos líneas que hay que cambiar a la vez para hacer una
+ * versión gratis sin que nada obligue a cambiar las dos — y fallar sólo una da
+ * una app que esconde los botones pero deja las puertas del servidor abiertas,
+ * o al revés. Las dos mitades fallarían en silencio. Ver ACOPIO_BASIC. */
+var APP_BASIC = false;
 // Toggles ADMIN turned on for the WAREHOUSE role — see Code_v3_fixed.gs's
 // DEFAULT_ROLE_PERMS for what each one defaults to and why. Never trusted for
 // anything that matters: every action this gates in the UI is re-checked by
@@ -8130,6 +8137,10 @@ function _activeTab() {
 }
 
 function showTab(tab, btnId){
+  /* UNA PESTAÑA ESCONDIDA TAMPOCO SE ABRE. Ver `_basicPestanaFuera`: la
+   * pestaña activa sobrevive en `sessionStorage`, así que sin esto se puede
+   * llegar a una sección cuyo botón ya no existe y quedarse ahí. */
+  if (_basicPestanaFuera(tab)) { tab = 'movements'; btnId = 'btn-movements'; }
   _clearRowModes();     // Edit / Delete never survive leaving the screen they were armed on
   // Y la selección de movimientos tampoco, por el mismo motivo y con las mismas
   // palabras. Es la línea que faltaba: en la v11.59 las casillas SUSTITUYERON a
@@ -25481,6 +25492,7 @@ function loadDataFromGoogle(skipCache, quiet){
   if (cached && cached.userRole) {
     _applyData(cached);
     userRole  = cached.userRole  || userRole;
+    if (cached.basic === true) APP_BASIC = true;
     userEmail = cached.userEmail || userEmail;
     _setAccountIdentity(cached.userName, userEmail, userRole, true);   // stale: fresh data still on the way
     applyRoleUI();
@@ -25705,6 +25717,9 @@ function _applyData(data) {
   stockData          = data.stock              || {};
   config             = data.config             || config;
   _ordenarCatalogos(config);
+  /* ANTES que el rol, y antes de pintar nada: `applyRoleUI` ya decide qué se ve
+   * y necesita saber en qué edición está cuando llegue. */
+  APP_BASIC          = (data.basic === true);
   userRole           = data.userRole           || 'WAREHOUSE';
   if (data.rolePerms) rolePerms = data.rolePerms;
   if (data.warehouseRoleLabel) warehouseRoleLabel = data.warehouseRoleLabel;
@@ -26830,7 +26845,85 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 
 // ── Role-based UI ─────────────────────────────────────────────────────────────
+/* ── LO QUE NO ESTÁ EN LA VERSIÓN BÁSICA ─────────────────────────────────────
+ *
+ * Esconder, no desactivar. Un botón gris que no hace nada invita a preguntar
+ * qué le pasa; uno que no está no se echa de menos. Quien quiera lo de arriba
+ * ya se lo va a encontrar en la landing, no en un botón apagado.
+ *
+ * ── Y ESTO SOLO NO APAGA NADA ───────────────────────────────────────────────
+ *
+ * Esto es la mitad de la pantalla. La otra mitad está en el servidor
+ * (`basicNiega_`), y hacen falta las dos: esconder un botón no cierra la
+ * puerta que ese botón llamaba. Ver el comentario de ACOPIO_BASIC en Code.gs.
+ */
+var BASIC_FUERA = {
+  /* La pestaña entera de llegadas. Fue una de las cuatro decisiones de
+   * producto —no la impone ningún permiso—, y la tarjeta naranja de
+   * «ARRIVED · ENTRY NOT MADE» sigue sin definir. */
+  pestanas: [['incoming', 'btn-incoming']],
+
+  botones: [
+    // Llegadas y lo que cuelga de ellas
+    'btnAddIncoming', 'btnDeleteIncoming', 'btnWeekSchedule',
+    'btnMonitorSettings', 'btnMonitorSettingsToolbar',
+    // El lector de correos y el asistente: piden salir a internet
+    'btnFromEmail', 'btnReadEmail', 'btnAiExtract',
+    // Usuarios: la versión básica es de una persona, y Google ya lo garantiza
+    // con `access: MYSELF`
+    'btnUsersMgmt',
+    // QR y etiquetas. No cuestan ningún permiso —se dibujan aquí mismo— y aun
+    // así se van: son de las cuatro decisiones de producto
+    'btnMovLabels', 'btnEscanear', 'btnEscanearMov',
+    // Respaldo y mantenimiento: disparadores y Drive
+    'btnBackupNow', 'btnDataCheck', 'btnRebuildStock', 'btnMovIdFill',
+    // Avisar de un problema se hace por correo, y no hay correo
+    'btnReportIssue'
+  ],
+
+  ajustes: ['permissions', 'pmdirectory', 'import', 'errorlog', 'system']
+};
+
+/**
+ * Quita de la pantalla lo que la versión básica no lleva.
+ *
+ * Se llama desde `applyRoleUI` y no desde el arranque, porque la edición llega
+ * con los datos: al arrancar todavía no se sabe.
+ */
+function _basicPintar(){
+  if (!APP_BASIC) return;
+  BASIC_FUERA.botones.forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  BASIC_FUERA.pestanas.forEach(function(par){
+    var b = document.getElementById(par[1]);
+    if (b) b.style.display = 'none';
+  });
+  BASIC_FUERA.ajustes.forEach(function(t){
+    var b = document.querySelector('[data-tab="' + t + '"]');
+    if (b) b.style.display = 'none';
+  });
+}
+
+/**
+ * ¿Está esta pestaña fuera de la versión básica?
+ *
+ * EXISTE POR UN FALLO QUE NO HABRÍA SALIDO HASTA ESTAR INSTALADO. La pestaña
+ * activa se guarda en `sessionStorage` y se restaura al recargar. Alguien que
+ * usara Pro y luego abriera la básica —o que simplemente estuviera en
+ * «Incoming» cuando se apagó— volvería a una pestaña escondida: el botón no
+ * está, pero la sección sí se pinta, y queda una pantalla sin forma de salir.
+ *
+ * Esconder el botón nunca basta. Hay que cerrar también el camino.
+ */
+function _basicPestanaFuera(tab){
+  if (!APP_BASIC) return false;
+  return BASIC_FUERA.pestanas.some(function(par){ return par[0] === tab; });
+}
+
 function applyRoleUI(){
+  _basicPintar();
   var isViewer = (userRole === 'VIEWER');
   var isAdmin  = (userRole === 'ADMIN');
   // Hide write buttons for viewers

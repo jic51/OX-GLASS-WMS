@@ -437,6 +437,40 @@ function newMovId_(seq, when) {
 // short, and writing a short row into a full-width range throws. Every sheet
 // that has ever existed is narrower than the current AC_WIDTH the moment a
 // column is added, so this is the normal case on an upgrade, not the odd one.
+/**
+ * QUIÉN HIZO EL MOVIMIENTO, CUANDO LA EDICIÓN NO TIENE USUARIOS.
+ *
+ * La versión básica no lleva detección de usuarios: `userinfo.email` es uno de
+ * los permisos que hay que quitar para que no salga la pantalla de «Google no
+ * ha verificado esta aplicación». Así que `getUserRole` contesta ADMIN con el
+ * correo vacío, a propósito, y esa fila llegaría aquí sin autor.
+ *
+ * VACÍO ESTÁ MAL, y no por estética. Jose, 18/10: la versión gratis tiene que
+ * escribir lo mismo que Pro para que actualizar sea cambiar el código y no una
+ * migración. El día que ese cliente pase a Pro, su historial enseñaría una
+ * columna de autores con huecos — y un hueco parece un fallo nuestro, no un
+ * dato. `BASIC` dice la verdad: *esto se registró donde no había usuarios*.
+ *
+ * ── POR QUÉ ESTA FUNCIÓN NO SABE QUÉ EDICIÓN ES, Y ES DELIBERADO ────────────
+ *
+ * El primer intento fue poner `ACOPIO_BASIC ? 'BASIC' : auth.email` en el
+ * escritor de filas. `tools/test-gratis-escribe-igual.js` lo rechazó, que es
+ * justo para lo que existe: si el camino de escritura puede preguntar en qué
+ * edición está, puede empezar a escribir distinto.
+ *
+ * Y resulta que no hace falta preguntarlo. La condición de verdad no es «¿es
+ * la versión básica?», es «¿hay autor?» — y eso se ve en el propio dato.
+ *
+ * LO QUE SE DA POR SUPUESTO, dicho para que se pueda comprobar: en la versión
+ * de pago un movimiento NO llega hasta aquí sin autenticar, así que `email`
+ * vacío sólo ocurre en una edición sin usuarios. Si algún día Pro pudiera
+ * guardar sin autor, esa fila se etiquetaría mal — y el arreglo sería que Pro
+ * no lo permita, no que esta función mire la edición.
+ */
+function autorDeLaFila_(email) {
+  return String(email || '').trim() || 'BASIC';
+}
+
 function padRow_(row, width) {
   var out = (row || []).slice(0, width);
   while (out.length < width) out.push('');
@@ -4785,7 +4819,7 @@ function addMovementsBatch_(ss, archive, movements, auth, opciones) {
       row[AC.PROJECT]     = proj;
       row[AC.MAT_ID]      = matId;
       row[AC.DOC_LINKS]   = '';
-      row[AC.USER_EMAIL]  = auth.email;
+      row[AC.USER_EMAIL]  = autorDeLaFila_(auth.email);
       row[AC.DEST_LOC]    = dest;
       row[AC.MOVETYPE]    = mt;
       row[AC.PM]          = String(d.pm || '').trim();

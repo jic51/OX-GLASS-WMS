@@ -178,6 +178,11 @@ function buildSandbox() {
     // Es exactamente lo que el andamio existe para evitar; esta prueba está
     // pendiente de migrar.
     'mapaDeUbicaciones_', 'ubicacionDeLlegada_', 'sugerirUbicacion_', 'distanciaEdicion_',
+    // Y volvió a morder en la v12.75, exactamente como avisa el comentario de
+    // arriba: `autorDeLaFila_` es nueva —escribe `BASIC` en la columna del
+    // autor cuando la edición no tiene usuarios— y esta prueba se cayó con un
+    // "no está definida" que no tiene nada que ver con precios. Segunda vez.
+    'autorDeLaFila_',
     'addMovementsBatch_'
   ].forEach(function (name) { vm.runInContext(extractFn(name), sandbox); });
 

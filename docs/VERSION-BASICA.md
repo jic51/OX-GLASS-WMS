@@ -169,24 +169,74 @@ básica no se pueden llamar de ninguna manera, porque el menú lo crea `onOpen` 
 consecuencia de otra decisión, y el día que esa decisión cambie volverían sin
 que nadie se acordara.
 
-## 9 · Estado
+## 9 · La columna del autor, y una prueba que empujó a un diseño mejor
+
+El primer intento fue `ACOPIO_BASIC ? 'BASIC' : auth.email` dentro del escritor
+de filas. **`test-gratis-escribe-igual.js` lo rechazó**, que es exactamente para
+lo que existe: si el camino de escritura puede preguntar en qué edición está,
+puede empezar a escribir distinto.
+
+Y al buscar otra forma apareció que **la condición de verdad nunca fue «¿es la
+versión básica?» sino «¿hay autor?»** — y eso se ve en el propio dato:
+
+```js
+function autorDeLaFila_(email) {
+  return String(email || '').trim() || 'BASIC';
+}
+```
+
+No sabe qué edición es, y no le hace falta. La prueba empujó a un diseño mejor,
+no a un rodeo.
+
+> Que `getUserRole` devuelva el correo **vacío** en la versión básica no es un
+> descuido pendiente de arreglar: **es lo que hace que esto funcione.** Si
+> devolviera un correo inventado, la fila mentiría.
+
+## 10 · La pantalla, y por qué hacen falta las dos mitades
+
+`BASIC_FUERA` lista lo que se quita, y `applyRoleUI` lo aplica — el mismo sitio
+donde la app ya decide qué se ve según el rol.
+
+**Se esconde, no se desactiva.** Un botón gris que no hace nada invita a
+preguntar qué le pasa; uno que no está no se echa de menos.
+
+Y **esconder un botón no cierra la puerta que ese botón llamaba**. Por eso hay
+dos mitades y hacen falta las dos: `_basicPintar()` en la pantalla y
+`basicNiega_()` en el servidor. Que las dos salgan de **una sola** constante es
+lo que impide que se separen.
+
+### Una pestaña escondida tampoco se puede abrir
+
+La pestaña activa se guarda en `sessionStorage` y se restaura al recargar. Sin
+cerrar también ese camino, alguien que estuviera en «Incoming» cuando se apagó
+volvería a una sección cuyo botón ya no existe: **una pantalla sin salida.**
+`showTab` rebota a Movements.
+
+## 11 · Estado
 
 | | |
 |---|---|
-| ✅ La constante `ACOPIO_BASIC` y su documentación | `Code_v3_fixed.gs` |
-| ✅ Viaja al navegador por los tres caminos de `getInitialData` | `basic:` |
-| ✅ El manifiesto de un permiso, con `access: MYSELF` | `appsscript.basic.json` |
+| ✅ La constante, el manifiesto de un permiso y `access: MYSELF` | |
 | ✅ Las tres formas de apagar | `basicApagado_`, `basicNiega_` |
 | ✅ `onOpen` se calla — el primer minuto del producto | |
 | ✅ `getUserRole` y `requireOwnerContext_` contestan sin preguntar | |
-| ✅ 7 hojas que CALLAN (correos, disparadores, avisos) | |
-| ✅ 10 puertas que NIEGAN (lector de correos, fotos, usuarios, IA, respaldo) | |
-| ✅ La prueba, con 38 comprobaciones y el censo | `tools/test-gratis-escribe-igual.js` |
-| ⬜ Las 47 hojas que faltan | el censo las nombra al correr |
-| ⬜ Esconder las pestañas y botones en `Index` | |
-| ⬜ `BASIC` en `AC.USER_EMAIL` | |
+| ✅ 7 hojas que CALLAN · 10 puertas que NIEGAN | |
+| ✅ `BASIC` en la columna del autor, sin mirar la edición | `autorDeLaFila_` |
+| ✅ La pantalla esconde pestañas, botones y pestañas de ajustes | `BASIC_FUERA` |
+| ✅ Una pestaña escondida tampoco se abre | `showTab` |
+| ✅ La prueba, 50 comprobaciones y el censo | |
+| ⬜ **Nadie ha ARRANCADO todavía Acopio Basic** | ← lo siguiente |
+| ⬜ Las 47 hojas del censo (unas 15 son `menu*`, inalcanzables) | |
 | ⬜ La sección de la landing y el vídeo de instalación | |
 
-Nada de esto cambia la versión de pago: `ACOPIO_BASIC` se publica en `false`,
-así que cada guardia es un `if` que nunca entra. Suite completa en verde, 160
-de 160.
+### Lo único que queda antes de poder prometer nada
+
+**El código está, pero la versión básica no se ha ejecutado nunca.** Todo lo de
+arriba son guardias que, con `ACOPIO_BASIC = false`, nunca entran — así que la
+suite verde dice que **Pro sigue intacto**, no que la básica funcione.
+
+Eso se comprueba de una sola manera: poner la constante en `true`, desplegar la
+copia de prueba y abrirla. Hasta entonces, esto es una versión básica escrita,
+no probada.
+
+Nada de esto cambia la versión de pago. Suite completa: 160 de 160.

@@ -284,5 +284,76 @@ console.log('\n═══ 6. LAS TRES FORMAS DE APAGAR, Y EL CENSO DE HOJAS ═�
   }
 }
 
+console.log('\n═══ 7. LA COLUMNA DEL AUTOR DICE LA VERDAD, NO UN HUECO ═══\n');
+{
+  check('existe `autorDeLaFila_`', /function autorDeLaFila_\s*\(/.test(codigo));
+  check('...y el escritor de filas lo usa, en vez de poner el correo a pelo',
+    /row\[AC\.USER_EMAIL\]\s*=\s*autorDeLaFila_\(/.test(codigo));
+  check('...escribiendo `BASIC` cuando no hay autor, que es un dato y no un hueco',
+    /\|\|\s*'BASIC'/.test(codigo));
+
+  /* Y AQUÍ ESTÁ EL PUNTO: `autorDeLaFila_` NO sabe qué edición es.
+   *
+   * El primer intento fue `ACOPIO_BASIC ? 'BASIC' : auth.email` dentro del
+   * escritor de filas, y la sección 3 de esta misma prueba lo rechazó. Al
+   * buscar otra forma apareció que la condición de verdad nunca fue «¿es la
+   * versión básica?» sino «¿hay autor?» — y eso se ve en el propio dato.
+   *
+   * La prueba empujó a un diseño mejor, no a un rodeo. Esta comprobación
+   * existe para que nadie deshaga ese empujón metiendo la constante aquí. */
+  const m = src.match(/^function autorDeLaFila_\s*\([\s\S]*?\n\}/m);
+  check('`autorDeLaFila_` no mira la edición: la pregunta es si HAY autor, ' +
+        'no en qué versión estamos',
+    !!m && !/ACOPIO_BASIC/.test(soloCodigo(m[0])));
+
+  /* Que `getUserRole` devuelva el correo vacío en la versión básica no es un
+   * descuido pendiente de arreglar: es lo que hace que esto funcione. Si
+   * devolviera un correo inventado, la fila mentiría. */
+  const g = src.match(/^function getUserRole\s*\([\s\S]*?\n\}/m);
+  check('`getUserRole` deja el correo VACÍO en la versión básica — de ahí sale ' +
+        'el `BASIC` de la fila, y por eso no se puede "arreglar" inventando uno',
+    !!g && /basicApagado_\(\)\)\s*return\s*\{\s*role:\s*'ADMIN',\s*email:\s*''/.test(soloCodigo(g[0])));
+}
+
+console.log('\n═══ 8. LA PANTALLA TAMBIÉN SE APAGA, Y NO SOLA ═══\n');
+{
+  const htmlCodigo = soloCodigo(html);
+
+  check('el navegador RECIBE la edición en vez de declararla',
+    /APP_BASIC\s*=\s*\(?\s*data\.basic/.test(htmlCodigo));
+  check('...y también por el camino de la caché, que pinta antes de que ' +
+        'lleguen los datos frescos',
+    /cached\.basic/.test(htmlCodigo));
+  check('existe la lista de lo que se quita', /var BASIC_FUERA\s*=/.test(htmlCodigo));
+  check('...y `applyRoleUI` la aplica, que es el sitio donde ya se decide ' +
+        'qué se ve',
+    /function applyRoleUI\(\)\{\s*_basicPintar\(\)/.test(htmlCodigo));
+
+  /* LAS DOS MITADES, Y ÉSTA ES LA COMPROBACIÓN QUE DE VERDAD IMPORTA.
+   *
+   * Esconder un botón no cierra la puerta que ese botón llamaba. Si sólo
+   * existiera la mitad del navegador, la versión gratis parecería recortada y
+   * no lo estaría: cualquiera con la consola abierta llamaría a la función del
+   * servidor igual. Y al revés, con sólo la mitad del servidor, el producto
+   * enseñaría botones que dan error al pulsarlos.
+   *
+   * Que las dos mitades salgan de UNA sola constante es lo que impide que se
+   * separen; esto comprueba que las dos existen. */
+  check('LAS DOS MITADES: la pantalla esconde y el servidor niega — ' +
+        'esconder un botón no cierra la puerta que llamaba',
+    /_basicPintar/.test(htmlCodigo) && /function basicNiega_/.test(codigo));
+
+  /* Y la puerta trasera de la propia pantalla. */
+  check('una pestaña escondida tampoco se puede ABRIR — la pestaña activa ' +
+        'sobrevive en sessionStorage y volvería a una sección sin salida',
+    /function _basicPestanaFuera/.test(htmlCodigo) &&
+    /_basicPestanaFuera\(tab\)/.test(htmlCodigo));
+
+  /* Esconder, no desactivar: un botón gris invita a preguntar qué le pasa. */
+  check('se esconde (`display = \'none\'`), no se desactiva con `disabled`',
+    /_basicPintar[\s\S]{0,900}style\.display\s*=\s*'none'/.test(htmlCodigo) &&
+    !/_basicPintar[\s\S]{0,900}\.disabled\s*=\s*true/.test(htmlCodigo));
+}
+
 console.log('\n' + (fail ? '✗ ' + fail + ' fallos · ' : '✓ todo bien · ') + (ok + fail) + ' comprobaciones\n');
 process.exit(fail ? 1 : 0);
