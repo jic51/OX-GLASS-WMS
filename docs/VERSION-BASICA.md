@@ -192,25 +192,84 @@ no a un rodeo.
 > descuido pendiente de arreglar: **es lo que hace que esto funcione.** Si
 > devolviera un correo inventado, la fila mentiría.
 
-## 10 · La pantalla, y por qué hacen falta las dos mitades
+## 10 · La pantalla: esconder unas, ofrecer otras
 
-`BASIC_FUERA` lista lo que se quita, y `applyRoleUI` lo aplica — el mismo sitio
-donde la app ya decide qué se ve según el rol.
+**Esto cambió el 19/10 y la idea fue de Jose**, contra lo que yo había decidido:
 
-**Se esconde, no se desactiva.** Un botón gris que no hace nada invita a
-preguntar qué le pasa; uno que no está no se echa de menos.
+> *"¿qué tal si cuando alguien intenta subir una imagen en básico, la app le dice
+> que esa función sólo está disponible en Pro?"*
 
-Y **esconder un botón no cierra la puerta que ese botón llamaba**. Por eso hay
-dos mitades y hacen falta las dos: `_basicPintar()` en la pantalla y
-`basicNiega_()` en el servidor. Que las dos salgan de **una sola** constante es
-lo que impide que se separen.
+Yo había escrito *«esconder, no desactivar: un botón gris invita a preguntar qué
+le pasa»*. Eso valía contra un botón **mudo**. Un botón que **explica** no es lo
+mismo, y mi razón no le aplicaba.
 
-### Una pestaña escondida tampoco se puede abrir
+Lo que sí aplica es para qué existe la versión gratis: **vender Pro.** Si nunca
+ven que se pueden subir fotos, nunca van a querer subir fotos — y esconder deja
+la versión gratis **sin ninguna superficie de venta**. Peor: el momento en que
+alguien pulsa ese botón es el de **máxima intención** que vamos a tener nunca.
 
-La pestaña activa se guarda en `sessionStorage` y se restaura al recargar. Sin
-cerrar también ese camino, alguien que estuviera en «Incoming» cuando se apagó
-volvería a una sección cuyo botón ya no existe: **una pantalla sin salida.**
-`showTab` rebota a Movements.
+### Las tres listas
+
+| | Qué pasa |
+|---|---|
+| `BASIC_FUERA` | se esconde |
+| `BASIC_PRO` | el catálogo de ofertas: título y qué se gana |
+| `BASIC_PRO_BOTONES` | qué botón abre qué oferta |
+
+**Ocho ofertas**: fotos y documentos, etiquetas y QR, escanear, apartar
+material, el equipo, llegadas, respaldo nocturno, y el lector de correos —éste
+con su propio mensaje porque vende demasiado para una frase genérica.
+
+**Y sólo cuatro cosas escondidas**: soporte, comprobación de datos,
+reconstructor de existencias y rellenar identificadores. Nadie sube a Pro por un
+botón de soporte, y **veinte puertas cerradas hacen que una herramienta parezca
+una demostración caducada**.
+
+### Las tres reglas que deciden si vende o molesta
+
+**1 · La frecuencia.** El mensaje entero **una vez** por función; después, una
+línea callada. Un aviso que sale siempre no es un aviso, es acoso, y la gente
+desinstala por eso. El recuerdo vive en `localStorage`, y si falla se cae del
+lado bueno: enseña la oferta. Perder el recuerdo es una molestia; perder la
+oferta es perder la venta.
+
+**2 · Nunca corta un guardado.** Subir fotos no es un botón suelto: está dentro
+del formulario de un movimiento. Si el aviso rompiera el guardado, la versión
+gratis sería **peor en lo único que sabe hacer**. El movimiento se guarda igual,
+sin foto.
+
+**3 · Las palabras son el producto.**
+
+> ❌ *«Not available in Acopio Basic»* — un muro
+> ✅ *«Attach photos, PDFs and delivery notes to any movement»* — una oferta
+
+Mismo trabajo, resultado opuesto. Lo vigila una comprobación.
+
+### Dos detalles que costaron un rato
+
+**El candado reemplaza el `onclick`, no añade un oyente.** Estos botones llevan
+su acción escrita en el HTML (`onclick="openEmailImport()"`). Un oyente añadido
+correría **además** de ella: saldría la oferta **y** se intentaría hacer lo que
+no se puede.
+
+**`_basicPintar()` va al FINAL de `applyRoleUI`, no al principio.** Todo lo de
+arriba decide por rol qué se ve, y varias de esas líneas tocan botones que la
+básica quiere dejar a la vista — `_escPintarBoton` esconde el de escanear cuando
+no hay cámara. Puesto antes, cualquiera de ellas lo deshacía. La edición manda
+sobre el rol porque es una capa más abajo: el rol decide qué puede hacer esta
+persona, la edición decide **qué existe**.
+
+### El enlace va a la raíz, y no a `/pro`
+
+Lo escribí apuntando a `acopio.net/pro`. **Esa página no existe**: habría sido un
+404 justo en el momento de más interés. Un enlace del app a una página del sitio
+son otras dos cosas que tienen que coincidir sin que nada lo obligue, y **la raíz
+es la única ruta que no puede faltar**.
+
+El `?de=<función>` viaja igual, así que las estadísticas del sitio dicen qué
+función empuja gente hacia Pro — **sin rastrear a nadie y sin pedir un permiso
+más**, porque abrir una página no es una petición nuestra. Es el único dato que
+la versión básica puede darnos.
 
 ## 11 · Estado
 
@@ -222,9 +281,9 @@ volvería a una sección cuyo botón ya no existe: **una pantalla sin salida.**
 | ✅ `getUserRole` y `requireOwnerContext_` contestan sin preguntar | |
 | ✅ 7 hojas que CALLAN · 10 puertas que NIEGAN | |
 | ✅ `BASIC` en la columna del autor, sin mirar la edición | `autorDeLaFila_` |
-| ✅ La pantalla esconde pestañas, botones y pestañas de ajustes | `BASIC_FUERA` |
+| ✅ La pantalla esconde cuatro cosas y **ofrece ocho con candado** | `BASIC_FUERA`, `BASIC_PRO` |
 | ✅ Una pestaña escondida tampoco se abre | `showTab` |
-| ✅ La prueba, 50 comprobaciones y el censo | |
+| ✅ La prueba, 62 comprobaciones y el censo | |
 | ✅ `getSetupState` no pide el asistente — abre directa al inventario | |
 | ⬜ **Nadie ha ARRANCADO todavía Acopio Basic** | ← lo siguiente |
 | ⬜ Las 46 hojas del censo (unas 15 son `menu*`, inalcanzables) | |

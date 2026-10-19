@@ -326,7 +326,7 @@ console.log('\n═══ 7. LA COLUMNA DEL AUTOR DICE LA VERDAD, NO UN HUECO ═
     !!g && /basicApagado_\(\)\)\s*return\s*\{\s*role:\s*'ADMIN',\s*email:\s*''/.test(soloCodigo(g[0])));
 }
 
-console.log('\n═══ 8. LA PANTALLA TAMBIÉN SE APAGA, Y NO SOLA ═══\n');
+console.log('\n═══ 8. LA PANTALLA: LO QUE SE ESCONDE Y LO QUE SE OFRECE ═══\n');
 {
   const htmlCodigo = soloCodigo(html);
 
@@ -335,35 +335,108 @@ console.log('\n═══ 8. LA PANTALLA TAMBIÉN SE APAGA, Y NO SOLA ═══\n
   check('...y también por el camino de la caché, que pinta antes de que ' +
         'lleguen los datos frescos',
     /cached\.basic/.test(htmlCodigo));
-  check('existe la lista de lo que se quita', /var BASIC_FUERA\s*=/.test(htmlCodigo));
-  check('...y `applyRoleUI` la aplica, que es el sitio donde ya se decide ' +
-        'qué se ve',
-    /function applyRoleUI\(\)\{\s*_basicPintar\(\)/.test(htmlCodigo));
 
   /* LAS DOS MITADES, Y ÉSTA ES LA COMPROBACIÓN QUE DE VERDAD IMPORTA.
    *
-   * Esconder un botón no cierra la puerta que ese botón llamaba. Si sólo
-   * existiera la mitad del navegador, la versión gratis parecería recortada y
-   * no lo estaría: cualquiera con la consola abierta llamaría a la función del
-   * servidor igual. Y al revés, con sólo la mitad del servidor, el producto
-   * enseñaría botones que dan error al pulsarlos.
-   *
-   * Que las dos mitades salgan de UNA sola constante es lo que impide que se
-   * separen; esto comprueba que las dos existen. */
-  check('LAS DOS MITADES: la pantalla esconde y el servidor niega — ' +
-        'esconder un botón no cierra la puerta que llamaba',
+   * Y manda MÁS desde que los botones se enseñan: ahora se pueden pulsar de
+   * verdad, así que la puerta del servidor se va a tocar. Sin `basicNiega_`,
+   * una oferta mal puesta dejaría pasar la llamada. */
+  check('LAS DOS MITADES: la pantalla ofrece y el servidor niega — ' +
+        'enseñar un botón no cierra la puerta que llamaba',
     /_basicPintar/.test(htmlCodigo) && /function basicNiega_/.test(codigo));
 
-  /* Y la puerta trasera de la propia pantalla. */
-  check('una pestaña escondida tampoco se puede ABRIR — la pestaña activa ' +
-        'sobrevive en sessionStorage y volvería a una sección sin salida',
-    /function _basicPestanaFuera/.test(htmlCodigo) &&
-    /_basicPestanaFuera\(tab\)/.test(htmlCodigo));
+  check('`_basicPintar` se llama AL FINAL de `applyRoleUI` — puesto antes, ' +
+        'cualquier línea de rol (como `_escPintarBoton`) lo deshacía',
+    /_setAccountIdentity\(_lastUserName[\s\S]{0,700}_basicPintar\(\);\s*\n\}/.test(htmlCodigo));
 
-  /* Esconder, no desactivar: un botón gris invita a preguntar qué le pasa. */
-  check('se esconde (`display = \'none\'`), no se desactiva con `disabled`',
-    /_basicPintar[\s\S]{0,900}style\.display\s*=\s*'none'/.test(htmlCodigo) &&
-    !/_basicPintar[\s\S]{0,900}\.disabled\s*=\s*true/.test(htmlCodigo));
+  /* ── LO QUE SE ESCONDE ──────────────────────────────────────────────────── */
+  check('sigue habiendo lista de lo que se ESCONDE — fontanería que no vende, ' +
+        'y veinte candados harían que la app pareciera una demostración',
+    /var BASIC_FUERA\s*=/.test(htmlCodigo) && /btnReportIssue/.test(htmlCodigo));
+
+  /* ── LO QUE SE OFRECE ───────────────────────────────────────────────────── */
+  check('existe el catálogo de ofertas', /var BASIC_PRO\s*=/.test(htmlCodigo));
+
+  const catalogo = (htmlCodigo.match(/var BASIC_PRO\s*=\s*\{[\s\S]*?\n\};/) || [''])[0];
+  const mapa     = (htmlCodigo.match(/var BASIC_PRO_BOTONES\s*=\s*\{[\s\S]*?\n\};/) || [''])[0];
+
+  const claves  = [...catalogo.matchAll(/^\s{2}(\w+):\s*\{/gm)].map(m => m[1]);
+  const usadas  = [...mapa.matchAll(/:\s*'(\w+)'/g)].map(m => m[1]);
+
+  check('las ofertas son las ocho decididas con Jose',
+    claves.length === 8, claves);
+
+  /* DOS LISTAS QUE TIENEN QUE COINCIDIR — Y AQUÍ SÍ HAY QUIEN LO OBLIGUE.
+   *
+   * El mapa de botones nombra ofertas del catálogo. Un botón apuntando a una
+   * oferta que no existe no enseñaría nada al pulsarlo: `_proPitch` se va sin
+   * hacer ruido, y el botón quedaría muerto en silencio. Es exactamente la
+   * forma de fallo de este proyecto, y por eso se comprueba en vez de
+   * confiarse. */
+  const huerfanas = usadas.filter(k => claves.indexOf(k) === -1);
+  check('todo botón con candado apunta a una oferta QUE EXISTE — si no, el ' +
+        'botón quedaría muerto en silencio',
+    huerfanas.length === 0, huerfanas);
+
+  const sinBoton = claves.filter(k => usadas.indexOf(k) === -1);
+  /* Dos ofertas no tienen botón fijo y es correcto: «reservas» se abre desde
+   * una fila de la tabla y se caza en `openLockModal`. */
+  check('toda oferta tiene por dónde salir — por un botón, o por su propio ' +
+        'sitio en el código',
+    sinBoton.every(k => new RegExp("_proPitch\\('" + k + "'\\)").test(htmlCodigo)),
+    sinBoton);
+
+  /* ── LAS PALABRAS SON EL PRODUCTO ───────────────────────────────────────── */
+  check('las ofertas hablan de lo que se GANA, no de lo que falta — ' +
+        '«Not available in Basic» es un muro; «Attach photos…» es una oferta',
+    !/not available|unavailable|you cannot|is locked/i.test(catalogo), catalogo.slice(0, 80));
+
+  /* ── LA FRECUENCIA ──────────────────────────────────────────────────────── */
+  check('la oferta se recuerda: entera la primera vez, callada después',
+    /localStorage\.getItem\('acopio_pro_/.test(htmlCodigo) &&
+    /localStorage\.setItem\('acopio_pro_/.test(htmlCodigo) &&
+    /showToast/.test((htmlCodigo.match(/function _proPitch[\s\S]*?\n\}/) || [''])[0]));
+
+  /* Y SI EL RECUERDO FALLA, SE CAE DEL LADO BUENO. En una ventana privada
+   * `localStorage` puede reventar. Perder el recuerdo es una molestia; perder
+   * la oferta es perder la venta, así que el `catch` deja `visto` en false. */
+  const pitch = (html.match(/function _proPitch[\s\S]*?\n\}\n/) || [''])[0];
+  check('si `localStorage` falla, se enseña la oferta igual (no se traga)',
+    /var visto = false;[\s\S]{0,200}catch \(e\) \{\}/.test(soloCodigo(pitch)));
+
+  /* ── EL DATO QUE NOS LLEVAMOS ───────────────────────────────────────────── */
+  check('el enlace lleva el nombre de la función — es el único dato que la ' +
+        'versión básica puede darnos, porque no tiene permiso para salir a ' +
+        'internet y abrir una página no es una petición nuestra',
+    /acopio\.net\/\?de='\s*\+\s*encodeURIComponent\(clave\)/.test(htmlCodigo));
+
+  /* Y APUNTA A LA RAÍZ, que es la única ruta del sitio que no puede faltar.
+   * La primera versión apuntaba a `/pro`, que no existe: un 404 justo en el
+   * momento de más interés. Un enlace del app a una página del sitio son otras
+   * dos cosas que tienen que coincidir sin que nada lo obligue, y aquí sólo hay
+   * una forma de que no se rompa. */
+  check('...y a una página que EXISTE — la raíz, no una ruta inventada',
+    !/acopio\.net\/[a-z]/.test((htmlCodigo.match(/function _proPitch[\s\S]*?\n\}/) || [''])[0]));
+
+  /* ── CÓMO SE PONE EL CANDADO ────────────────────────────────────────────── */
+  check('el candado REEMPLAZA el `onclick`, no añade un oyente — estos botones ' +
+        'llevan su acción en el HTML, y un oyente correría ADEMÁS de ella',
+    /el\.onclick\s*=\s*function/.test(htmlCodigo) &&
+    !/_basicCandado[\s\S]{0,600}addEventListener/.test(htmlCodigo));
+
+  check('el botón con candado NO se desactiva: se pulsa y contesta',
+    !/_basicCandado[\s\S]{0,600}\.disabled\s*=\s*true/.test(htmlCodigo));
+
+  /* ── Y LA PUERTA TRASERA DE LA PROPIA PANTALLA ──────────────────────────── */
+  check('la pestaña de llegadas enseña la oferta en vez de abrirse — la ' +
+        'pestaña activa sobrevive en sessionStorage y se llegaría a una ' +
+        'sección que no puede funcionar',
+    /_basicPestanaFuera\(tab\)/.test(htmlCodigo) &&
+    /tab === 'incoming'[\s\S]{0,80}_proPitch\('llegadas'\)/.test(htmlCodigo));
+
+  check('apartar material se caza donde se abre la ventana, no en una lista ' +
+        'de identificadores — se llega desde una fila de la tabla',
+    /function openLockModal[\s\S]{0,400}_proPitch\('reservas'\)/.test(htmlCodigo));
 }
 
 console.log('\n' + (fail ? '✗ ' + fail + ' fallos · ' : '✓ todo bien · ') + (ok + fail) + ' comprobaciones\n');

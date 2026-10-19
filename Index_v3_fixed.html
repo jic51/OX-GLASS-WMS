@@ -1069,6 +1069,14 @@
     .field{display:flex;flex-direction:column;gap:.3rem}
     .field label{font-size:.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
     #lockMatOverlay .field label{color:var(--text)}
+    /* EL CANDADO. Un botón normal, no uno apagado: se puede pulsar y contesta.
+       Apagarlo con `disabled` lo dejaría gris y mudo, que es justo lo que no
+       queremos — la gracia es que al pulsarlo cuente qué hace esa función. */
+    .pro-lock{position:relative;opacity:.72}
+    .pro-lock:hover{opacity:1}
+    .pro-lock::after{content:'🔒';font-size:.7em;margin-left:var(--sp-1);opacity:.85}
+    #proOverlay .modal-actions{display:flex;gap:var(--sp-3);justify-content:flex-end;align-items:center}
+    #proOverlay a.btn{text-decoration:none;display:inline-flex;align-items:center}
     .field input,.field select,.field textarea{padding:var(--sp-4) var(--sp-5);border:1px solid var(--border);border-radius:6px;font-family:inherit;transition:.15s}
     .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent);box-shadow:var(--ring-accent)}
     /* `flex-wrap:wrap` no es adorno: es lo que impide que los botones se
@@ -5275,7 +5283,7 @@
       </div>
       <!-- Doc groups rendered here by JS -->
       <div id="docGroupsContainer"></div>
-      <button class="btn btn-ghost btn-sm" onclick="addDocGroup()" style="margin-top:.35rem;font-size:.8rem">+ Add Document</button>
+      <button id="btnAddDoc" class="btn btn-ghost btn-sm" onclick="addDocGroup()" style="margin-top:.35rem;font-size:.8rem">+ Add Document</button>
       <div id="aiExtractStatus" style="display:none;margin-top:.5rem;font-size:.78rem;padding:.4rem .6rem;border-radius:6px;background:var(--purple-bg);color:var(--purple)"></div>
       <!-- Hidden file input (kept for AI extract compatibility) -->
       <input type="file" id="legacyFileInput" class="mFile" accept="image/*,.pdf,video/*" style="display:none">
@@ -5388,6 +5396,27 @@
 <input type="file" id="rackPhotoFileInput" accept="image/*" style="display:none">
 
 <!-- ══ LOCK MATERIAL (ADMIN) ═══════════════════════════════════════════════════ -->
+<!-- ── LA VENTANA DEL CANDADO ─────────────────────────────────────────────────
+     Sólo aparece en la versión básica. No es un muro, es una oferta: dice qué
+     hace la función y dónde está, con palabras de lo que se gana y no de lo que
+     falta. Ver BASIC_PRO. -->
+<div class="overlay" id="proOverlay">
+  <div class="modal modal-sm">
+    <div class="mhdr">
+      <h3 id="proTitulo">Acopio Pro</h3>
+      <button class="modal-x" onclick="closeModal('proOverlay')" title="Close">✕</button>
+    </div>
+    <p id="proTexto" style="font-size:.9rem;color:var(--text);margin:.1rem 0 .6rem;line-height:1.5"></p>
+    <p style="font-size:.8rem;color:var(--muted);margin:0 0 1rem">
+      Everything you have recorded so far stays exactly where it is. Nothing to move, nothing to convert.
+    </p>
+    <div class="modal-actions" style="margin-top:1.25rem">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('proOverlay')">Not now</button>
+      <a id="proEnlace" class="btn btn-primary btn-sm" href="https://www.acopio.net/" target="_blank" rel="noopener">See what Acopio Pro does</a>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="lockMatOverlay">
   <div class="modal modal-sm">
     <div class="mhdr">
@@ -5488,7 +5517,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.75';
+var APP_VERSION = '12.76';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5500,7 +5529,7 @@ var APP_VERSION = '12.75';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '98a3b9db';
+var APP_BUILD = 'e3e54d6d';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -20828,6 +20857,10 @@ function _handleRackPhotoFileChange(){
 
 // ── Material Locks (ADMIN) ───────────────────────────────────────────────────
 function openLockModal(matId, cat, name, rack){
+  /* Apartar material es de Pro. Esto no es un botón fijo —se llega desde una
+   * fila de la tabla de existencias— así que el candado va aquí, donde se abre
+   * la ventana, y no en una lista de identificadores. */
+  if (APP_BASIC) { _proPitch('reservas'); return; }
   document.getElementById('lockMatId').value      = matId;
   document.getElementById('lockMatCat').value     = cat;
   document.getElementById('lockMatName').value    = name;
@@ -26858,34 +26891,158 @@ document.addEventListener('DOMContentLoaded', function(){
  * puerta que ese botón llamaba. Ver el comentario de ACOPIO_BASIC en Code.gs.
  */
 var BASIC_FUERA = {
-  /* La pestaña entera de llegadas. Fue una de las cuatro decisiones de
-   * producto —no la impone ningún permiso—, y la tarjeta naranja de
-   * «ARRIVED · ENTRY NOT MADE» sigue sin definir. */
-  pestanas: [['incoming', 'btn-incoming']],
+  /* Lo que se ESCONDE: fontanería que no vende nada.
+   *
+   * Nadie sube a Pro por un botón de soporte ni por un reconstructor de
+   * existencias. Un candado aquí no es una oferta, es una puerta cerrada más —
+   * y con veinte puertas cerradas la app deja de parecer una herramienta y
+   * parece una demostración caducada. */
+  botones: ['btnReportIssue', 'btnDataCheck', 'btnRebuildStock', 'btnMovIdFill'],
+  ajustes: ['errorlog', 'system', 'import', 'pmdirectory'],
+  pestanas: []
+};
 
-  botones: [
-    // Llegadas y lo que cuelga de ellas
-    'btnAddIncoming', 'btnDeleteIncoming', 'btnWeekSchedule',
-    'btnMonitorSettings', 'btnMonitorSettingsToolbar',
-    // El lector de correos y el asistente: piden salir a internet
-    'btnFromEmail', 'btnReadEmail', 'btnAiExtract',
-    // Usuarios: la versión básica es de una persona, y Google ya lo garantiza
-    // con `access: MYSELF`
-    'btnUsersMgmt',
-    // QR y etiquetas. No cuestan ningún permiso —se dibujan aquí mismo— y aun
-    // así se van: son de las cuatro decisiones de producto
-    'btnMovLabels', 'btnEscanear', 'btnEscanearMov',
-    // Respaldo y mantenimiento: disparadores y Drive
-    'btnBackupNow', 'btnDataCheck', 'btnRebuildStock', 'btnMovIdFill',
-    // Avisar de un problema se hace por correo, y no hay correo
-    'btnReportIssue'
-  ],
+/* ── LO QUE SÍ SE ENSEÑA, CON CANDADO ────────────────────────────────────────
+ *
+ * Jose, 19/10: *"que tal si cuando alguien intenta subir una imagen en básico,
+ * la app le dice que esa función solo está disponible en Pro"*.
+ *
+ * Tiene razón y yo había decidido lo contrario. Mi argumento era «esconder, no
+ * desactivar: un botón gris invita a preguntar qué le pasa», y eso valía contra
+ * un botón MUDO. Un botón que EXPLICA no es lo mismo, y mi razón no le aplica.
+ *
+ * Lo que sí aplica es para qué existe la versión gratis: **vender Pro**. Si
+ * nunca ven que se pueden subir fotos, nunca van a querer subir fotos — y
+ * esconder deja la versión gratis sin ninguna superficie de venta.
+ *
+ * Y el momento en que pulsan uno de estos botones es el de MÁXIMA INTENCIÓN que
+ * vamos a tener nunca: alguien que acaba de descubrir solo que necesita eso.
+ *
+ * `que` es lo que se GANA, no lo que falta. «Not available in Basic» es un
+ * muro; «Attach photos and PDFs to any movement» es una oferta. Mismo trabajo,
+ * resultado opuesto.
+ */
+var BASIC_PRO = {
+  fotos:     { titulo: '📎 Photos and documents',
+               que: 'Attach photos, PDFs and delivery notes to any movement, and find them again from the movement itself.' },
+  etiquetas: { titulo: '🏷️ Labels and QR codes',
+               que: 'Print a label for any material or rack, with a code that opens straight to it.' },
+  escanear:  { titulo: '📷 Scan a label',
+               que: 'Point your phone at a label and the app finds the material and fills the form for you.' },
+  reservas:  { titulo: '🔒 Reserve material',
+               que: 'Hold material for a job so nobody takes it out by mistake, with the reason written down.' },
+  usuarios:  { titulo: '👥 Your team',
+               que: 'Give your crew their own access, decide who can do what, and see who recorded every movement.' },
+  llegadas:  { titulo: '🚚 Expected deliveries',
+               que: 'Record what is coming before it arrives, and see at a glance what landed and what is late.' },
+  respaldo:  { titulo: '🌙 Automatic backup',
+               que: 'A copy of everything, made on its own every night and kept in your own Drive.' },
+  /* El lector de correos va aparte y con su propio mensaje: vende muchísimo y
+   * no cabe en la frase genérica. */
+  correo:    { titulo: '📧 Read it from the email',
+               que: 'Paste a supplier email and the app fills in what is arriving — supplier, items, quantities and dates.' }
+};
 
-  ajustes: ['permissions', 'pmdirectory', 'import', 'errorlog', 'system']
+/* Qué botón abre qué oferta. Un botón puede estar en la lista y no existir en
+ * la pantalla: se comprueba antes de tocarlo. */
+var BASIC_PRO_BOTONES = {
+  btnAddDoc:                 'fotos',
+  btnAiExtract:              'fotos',
+  btnMovLabels:              'etiquetas',
+  btnEscanear:               'escanear',
+  btnEscanearMov:            'escanear',
+  btnUsersMgmt:              'usuarios',
+  btnAddIncoming:            'llegadas',
+  btnDeleteIncoming:         'llegadas',
+  btnWeekSchedule:           'llegadas',
+  btnMonitorSettings:        'llegadas',
+  btnMonitorSettingsToolbar: 'llegadas',
+  btnBackupNow:              'respaldo',
+  btnFromEmail:              'correo',
+  btnReadEmail:              'correo'
 };
 
 /**
- * Quita de la pantalla lo que la versión básica no lleva.
+ * Enseña la oferta — entera la primera vez, callada después.
+ *
+ * LA FRECUENCIA ES LO QUE DECIDE SI ESTO VENDE O MOLESTA. Un mensaje la primera
+ * vez es información; el mismo mensaje la décima vez es acoso, y quien lo sufre
+ * desinstala. Alguien que pulse «adjuntar foto» diez veces al día no puede
+ * recibir diez ventanas.
+ *
+ * El recuerdo vive en `localStorage`, que es del navegador de esa persona y no
+ * sale de ahí. Si falla —ventana privada, datos bloqueados— se cae del lado
+ * bueno: enseña la ventana. Perder el recuerdo es una molestia; perder la
+ * oferta es perder la venta.
+ */
+function _proPitch(clave){
+  var f = BASIC_PRO[clave];
+  if (!f) return;
+
+  var visto = false;
+  try { visto = !!localStorage.getItem('acopio_pro_' + clave); } catch (e) {}
+
+  if (visto) {
+    try { showToast(f.titulo + ' is part of Acopio Pro.', 'info', 4000); } catch (e) {}
+    return;
+  }
+  try { localStorage.setItem('acopio_pro_' + clave, '1'); } catch (e) {}
+
+  var t = document.getElementById('proTitulo');
+  var x = document.getElementById('proTexto');
+  var a = document.getElementById('proEnlace');
+  if (t) t.textContent = f.titulo;
+  if (x) x.textContent = f.que;
+  /* EL NOMBRE DE LA FUNCIÓN VIAJA EN EL ENLACE, y es el único dato que vamos a
+   * tener. La versión básica no puede mandarnos nada —no tiene permiso para
+   * salir a internet, que es justo lo que la hace instalable sin sustos—, pero
+   * ABRIR una página no es una petición nuestra. Así las estadísticas del sitio
+   * dicen qué función empuja gente hacia Pro, sin rastrear a nadie y sin pedir
+   * un permiso más.
+   *
+   * VA A LA RAÍZ, Y NO A `/pro`. La primera versión apuntaba a `/pro`, que NO
+   * EXISTE en el sitio: habría sido un 404 justo en el momento de más interés
+   * que vamos a tener. Un enlace del app a una página del sitio son otras dos
+   * cosas que tienen que coincidir sin que nada lo obligue — y la raíz es la
+   * única ruta que no puede faltar.
+   *
+   * El día que exista una página de Pro, se cambia aquí y el `?de=` sigue
+   * viajando igual. */
+  if (a) a.href = 'https://www.acopio.net/?de=' + encodeURIComponent(clave);
+
+  var ov = document.getElementById('proOverlay');
+  if (ov) ov.classList.add('show');
+}
+
+/**
+ * Pone el candado en los botones que se quedan a la vista.
+ *
+ * SE REEMPLAZA EL `onclick`, no se añade un oyente. Estos botones llevan su
+ * acción escrita en el propio HTML (`onclick="openEmailImport()"`), y un oyente
+ * añadido correría ADEMÁS de ella: saldría la oferta Y se intentaría hacer lo
+ * que no se puede. Asignar la propiedad pisa la del HTML, que es lo que hace
+ * falta.
+ */
+function _basicCandado(){
+  Object.keys(BASIC_PRO_BOTONES).forEach(function(id){
+    var el = document.getElementById(id);
+    if (!el) return;
+    var clave = BASIC_PRO_BOTONES[id];
+    el.style.display = '';
+    if (el.getAttribute('data-pro') === clave) return;   // ya puesto
+    el.setAttribute('data-pro', clave);
+    el.classList.add('pro-lock');
+    el.onclick = function(ev){
+      if (ev && ev.preventDefault) ev.preventDefault();
+      _proPitch(clave);
+      return false;
+    };
+  });
+}
+
+/**
+ * Quita de la pantalla lo que la versión básica no lleva, y pone el candado en
+ * lo que sí se enseña.
  *
  * Se llama desde `applyRoleUI` y no desde el arranque, porque la edición llega
  * con los datos: al arrancar todavía no se sabe.
@@ -26904,26 +27061,27 @@ function _basicPintar(){
     var b = document.querySelector('[data-tab="' + t + '"]');
     if (b) b.style.display = 'none';
   });
+  _basicCandado();
 }
 
 /**
  * ¿Está esta pestaña fuera de la versión básica?
  *
  * EXISTE POR UN FALLO QUE NO HABRÍA SALIDO HASTA ESTAR INSTALADO. La pestaña
- * activa se guarda en `sessionStorage` y se restaura al recargar. Alguien que
- * usara Pro y luego abriera la básica —o que simplemente estuviera en
- * «Incoming» cuando se apagó— volvería a una pestaña escondida: el botón no
- * está, pero la sección sí se pinta, y queda una pantalla sin forma de salir.
+ * activa se guarda en `sessionStorage` y se restaura al recargar, así que se
+ * podría llegar a una sección cuyo botón ya no está y quedarse ahí sin salida.
  *
- * Esconder el botón nunca basta. Hay que cerrar también el camino.
+ * `Incoming` ya no se esconde —es una de las que se enseñan con candado— pero
+ * la sección sigue sin poder funcionar, así que la pestaña tampoco se abre:
+ * se enseña la oferta y se queda donde estaba.
  */
 function _basicPestanaFuera(tab){
   if (!APP_BASIC) return false;
+  if (tab === 'incoming') { _proPitch('llegadas'); return true; }
   return BASIC_FUERA.pestanas.some(function(par){ return par[0] === tab; });
 }
 
 function applyRoleUI(){
-  _basicPintar();
   var isViewer = (userRole === 'VIEWER');
   var isAdmin  = (userRole === 'ADMIN');
   // Hide write buttons for viewers
@@ -26978,6 +27136,15 @@ function applyRoleUI(){
   if (sw) sw.style.display = _sessionToken ? '' : 'none';
 
   _setAccountIdentity(_lastUserName, userEmail, userRole, false);
+
+  /* AL FINAL, Y NO AL PRINCIPIO. Todo lo de arriba decide por ROL qué se ve, y
+   * varias de esas líneas tocan botones que la versión básica quiere dejar a la
+   * vista con candado — `_escPintarBoton`, por ejemplo, esconde el de escanear
+   * cuando no hay cámara. Puesto antes, cualquiera de ellas lo deshacía.
+   *
+   * La edición manda sobre el rol porque es una capa más abajo: el rol decide
+   * qué puede hacer esta persona, la edición decide qué existe. */
+  _basicPintar();
 }
 
 // ── Connection status ─────────────────────────────────────────────────────────
@@ -27367,6 +27534,17 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '12.76',
+    titulo: 'The free edition now shows what it is missing',
+    puntos: [
+      'In <b>Acopio Basic</b>, the Pro features are no longer hidden. The button is there, marked with a \u{1F512}, and pressing it says what that feature does.',
+      'It says what you <i>get</i>, not what you lack \u2014 and it never interrupts what you were doing. A movement still saves, with or without the photo.',
+      'The full message appears <b>once</b>. After that it is a quiet one-line note. A reminder shown every time is not a reminder, it is nagging.',
+      'The paid edition is unaffected: none of this exists in your copy.'
+    ],
+    antes:  'A free edition that quietly lacked things, and never said so',
+    ahora:  'It tells you what else it can do, at the moment you want it' },
+
   { ver: '12.75',
     titulo: 'Nothing on your screen changed — and that is the point',
     puntos: [
@@ -27397,17 +27575,6 @@ var NOVEDADES = [
     ],
     antes:  'A black rectangle asking you to point a camera that was never allowed to turn on',
     ahora:  'It tells you what is in the way, and stops wasting your time' },
-
-  { ver: '12.72',
-    titulo: 'What was left over, from which job, and where it ended up',
-    puntos: [
-      'A <b>Return</b> now asks which project the material is coming back from. That one answer is what lets the app tell you later what was left over from where.',
-      'Leftovers show under the material in the stock table: <b>28 left over from BLACK HOUSE 2</b>. The material stays what it is \u2014 a window screen is still a window screen.',
-      'When you send leftovers out to another job, the app offers them and shows how many are available. The movement then reads both ways: where it went, and which job it was left over from.',
-      'Nothing is counted twice. A return is not a purchase, so your inventory value does not inflate.'
-    ],
-    antes:  'Leftovers filed under a BONEYARD category, with no idea whose they were',
-    ahora:  'The material keeps its name, and the leftovers remember their job' }
 ];
 
 var NV_CLAVE = 'acopio_novedades_vista';
