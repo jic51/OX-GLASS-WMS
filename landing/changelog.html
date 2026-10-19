@@ -101,6 +101,27 @@
        movements went from about two and a half minutes to fifty-five seconds
        along the way.</p>
 
+    <div class="entry" id="v12-77">
+      <span class="ver">v12.77</span>
+      <span class="tag fix">Fix</span>
+      <h3>The free edition opens</h3>
+      <p><b>Nothing here affects the paid edition</b> &mdash; the switch this is about is off in
+         your copy.</p>
+      <p>Acopio Basic did not open. It drew its screen and then died on the first request for
+         data, with <code>Not authenticated. Please sign in and use the app from its own page.</code></p>
+      <p>The cause was two of our own decisions meeting. The free edition has no sign-in, because
+         asking Google who you are needs a permission it deliberately does not request &mdash; so
+         it has no email address to report. And the door read &ldquo;no email&rdquo; as
+         &ldquo;nobody signed in&rdquo;, which is exactly what it means in the paid edition.</p>
+      <p>In the free edition the door is the <b>deployment itself</b>: it is published so that only
+         the owner of that copy can open its address, and Google enforces that before any of our
+         code runs. The email was never the proof of who you are, only the way of getting it.</p>
+      <p>The rest of the door is untouched and was checked: roles, read-only accounts and refused
+         accounts behave exactly as before, in both editions. A test now <i>runs</i> that door in
+         both editions with a user who has no email &mdash; reading the code would not have caught
+         this, because both halves were correctly written on their own.</p>
+    </div>
+
     <div class="entry" id="v12-76">
       <span class="ver">v12.76</span>
       <span class="tag new">New</span>

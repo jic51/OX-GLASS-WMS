@@ -271,6 +271,58 @@ función empuja gente hacia Pro — **sin rastrear a nadie y sin pedir un permis
 más**, porque abrir una página no es una petición nuestra. Es el único dato que
 la versión básica puede darnos.
 
+## 11 · ARRANCADA POR PRIMERA VEZ — 19/10, y no arrancaba
+
+Jose la montó sobre una copia del demo, con el proyecto de Cloud **automático**
+(«Default»), y mandó el vídeo. Dos resultados, y los dos importan.
+
+### Lo que salió bien, y es lo grande
+
+La pantalla de permisos de **la app de verdad**, no de una hoja de prueba:
+
+> *Copy of MY WAREHOUSE DEMO wants access to your Google Account*
+> • **View and manage spreadsheets that this application has been installed in**
+
+**Un permiso. Uno.** Sin «Google no ha verificado esta aplicación», sin
+«Configuración avanzada». El recorte de once permisos a uno funciona en el
+producto entero, no sólo en el ejemplo mínimo.
+
+### Y lo que no: la app abría y se moría
+
+> **Error loading data: Error: getInitialData: Not authenticated. Please sign in
+> and use the app from its own page.**
+
+**Dos decisiones mías chocando, correctas las dos por separado:**
+
+| | |
+|---|---|
+| `getUserRole` devuelve el correo **vacío** en la básica | a propósito: un correo inventado haría que la columna del autor mintiera |
+| `requireAuth_` leía «sin correo» como «sin sesión» | que es exactamente lo que significa en la de pago |
+
+**Se arregla en la puerta, no inventando un correo.** El correo nunca fue la
+prueba de identidad, sólo la forma de conseguirla. En la versión básica la
+prueba la da **el despliegue**: `access: MYSELF` significa que Google ya
+comprobó, antes de que corra una línea nuestra, que quien está es el dueño de la
+copia. No hay sesión que falsificar porque no hay nadie más que pueda abrir la
+dirección.
+
+El resto de la puerta no se tocó: DENIED, sólo lectura y el rol mínimo siguen
+igual en las dos ediciones.
+
+### Por qué las 62 comprobaciones estaban en verde mientras esto no arrancaba
+
+Porque **leían el código**. Las dos piezas estaban bien escritas y cada una
+pasaba lo suyo; lo que fallaba era lo que pasa **cuando se juntan**, y eso sólo
+se ve ejecutándolas.
+
+La comprobación nueva llama a `requireAuth_` de verdad, con las dos ediciones y
+un usuario sin correo. Verificada devolviéndole la línea vieja a una copia:
+reproduce el error de Jose palabra por palabra.
+
+> **La lección, para lo que queda:** una prueba que lee es barata y caza faltas;
+> una que ejecuta es la única que caza choques. El resto del censo de 46 hojas
+> va a tener más de éstos.
+
 ## 11 · Estado
 
 | | |
@@ -283,9 +335,10 @@ la versión básica puede darnos.
 | ✅ `BASIC` en la columna del autor, sin mirar la edición | `autorDeLaFila_` |
 | ✅ La pantalla esconde cuatro cosas y **ofrece ocho con candado** | `BASIC_FUERA`, `BASIC_PRO` |
 | ✅ Una pestaña escondida tampoco se abre | `showTab` |
-| ✅ La prueba, 62 comprobaciones y el censo | |
+| ✅ La prueba, 67 comprobaciones, el censo, y una que EJECUTA la puerta | |
 | ✅ `getSetupState` no pide el asistente — abre directa al inventario | |
-| ⬜ **Nadie ha ARRANCADO todavía Acopio Basic** | ← lo siguiente |
+| ✅ **Arrancada el 19/10** — abría y moría; arreglado en `requireAuth_` | |
+| ⬜ Volver a arrancarla con el arreglo, y mirar la fila en `ARCHIVE` | ← lo siguiente |
 | ⬜ Las 46 hojas del censo (unas 15 son `menu*`, inalcanzables) | |
 | ⬜ La sección de la landing y el vídeo de instalación | |
 

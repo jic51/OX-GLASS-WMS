@@ -36,7 +36,7 @@
 //
 // Uso:  node tools/test-gratis-escribe-igual.js [path/to/Code_v3_fixed.gs]
 
-const fs = require('fs'), path = require('path');
+const fs = require('fs'), path = require('path'), vm = require('vm');
 
 const RAIZ  = path.join(__dirname, '..');
 const GS    = process.argv[2] || path.join(RAIZ, 'Code_v3_fixed.gs');
@@ -437,6 +437,86 @@ console.log('\n═══ 8. LA PANTALLA: LO QUE SE ESCONDE Y LO QUE SE OFRECE �
   check('apartar material se caza donde se abre la ventana, no en una lista ' +
         'de identificadores — se llega desde una fila de la tabla',
     /function openLockModal[\s\S]{0,400}_proPitch\('reservas'\)/.test(htmlCodigo));
+}
+
+console.log('\n═══ 9. LA PUERTA SE ABRE SIN CORREO — EJECUTADA, NO LEÍDA ═══\n');
+{
+  /* EL FALLO QUE JOSE ENCONTRÓ AL ARRANCARLA POR PRIMERA VEZ.
+   *
+   * La app abría y moría en la primera petición de datos:
+   *
+   *     getInitialData: Not authenticated. Please sign in and use the app
+   *     from its own page.
+   *
+   * Eran dos decisiones mías chocando, correctas las dos por separado:
+   * `getUserRole` devuelve el correo VACÍO en la versión básica —para que la
+   * columna del autor no mienta— y `requireAuth_` leía «sin correo» como «no ha
+   * iniciado sesión», que es lo que significa en la versión de pago.
+   *
+   * ── POR QUÉ ESTA COMPROBACIÓN CORRE EL CÓDIGO EN VEZ DE LEERLO ───────────
+   *
+   * Porque leerlo no habría servido. Las dos piezas estaban bien escritas y
+   * cada una pasaba sus propias comprobaciones; lo que fallaba era lo que pasa
+   * cuando se juntan, y eso sólo se ve ejecutándolas. Las 62 comprobaciones de
+   * arriba estaban en verde mientras la versión básica no arrancaba.
+   *
+   * Así que esto llama a `requireAuth_` de verdad, con las dos ediciones y el
+   * mismo usuario sin correo, y mira qué pasa. */
+  const codigoFn = function (nombre) {
+    const m = src.match(new RegExp('^function ' + nombre + '\\s*\\([\\s\\S]*?\\n\\}', 'm'));
+    if (!m) throw new Error('no se encontró ' + nombre);
+    return m[0];
+  };
+
+  function probar(edicion) {
+    const ctx = vm.createContext({
+      console,
+      _verifiedAuth: { role: 'ADMIN', email: '', name: '' },
+      registrarAccesoDenegado_: function () {},
+      ROLES_QUE_ESCRIBEN: ['ADMIN', 'WAREHOUSE']
+    });
+    vm.runInContext('var ACOPIO_BASIC = ' + edicion + ';\n' +
+                    codigoFn('basicApagado_') + '\n' +
+                    codigoFn('requireAuth_'), ctx);
+    try { ctx.__r = vm.runInContext("requireAuth_('WRITE')", ctx); return { ok: true }; }
+    catch (e) { return { ok: false, msg: String(e.message || e) }; }
+  }
+
+  const pro   = probar(false);
+  const basic = probar(true);
+
+  check('en la versión de PAGO, un usuario sin correo sigue siendo «sin ' +
+        'sesión» — esto no se ha aflojado para nadie',
+    !pro.ok && /Not authenticated/.test(pro.msg || ''), pro);
+
+  check('en la versión BÁSICA, un usuario sin correo ENTRA — el portero es el ' +
+        'despliegue (`access: MYSELF`), no el correo',
+    basic.ok === true, basic);
+
+  /* Y lo que NO se aflojó: el resto de la puerta sigue cerrada igual. */
+  function probarRol(edicion, auth, minRole) {
+    const ctx = vm.createContext({
+      console, _verifiedAuth: auth,
+      registrarAccesoDenegado_: function () {},
+      ROLES_QUE_ESCRIBEN: ['ADMIN', 'WAREHOUSE']
+    });
+    vm.runInContext('var ACOPIO_BASIC = ' + edicion + ';\n' +
+                    codigoFn('basicApagado_') + '\n' +
+                    codigoFn('requireAuth_'), ctx);
+    try { vm.runInContext("requireAuth_('" + minRole + "')", ctx); return true; }
+    catch (e) { return false; }
+  }
+
+  check('...y un VIEWER sin correo sigue sin poder escribir en la básica — ' +
+        'se aflojó el correo, no los roles',
+    probarRol(true, { role: 'VIEWER', email: '' }, 'WRITE') === false);
+
+  check('...y un DENIED sigue fuera en la básica',
+    probarRol(true, { role: 'DENIED', email: '' }, 'WRITE') === false);
+
+  check('...y NO_SESSION sigue fuera en la básica — es lo único que de verdad ' +
+        'significa «no hay nadie»',
+    probarRol(true, { role: 'NO_SESSION', email: '' }, 'WRITE') === false);
 }
 
 console.log('\n' + (fail ? '✗ ' + fail + ' fallos · ' : '✓ todo bien · ') + (ok + fail) + ' comprobaciones\n');
