@@ -9294,8 +9294,44 @@ también la corrección del dato.**
 > añadieron el 15/10 con el boneyard. Lo que falta es la consulta —qué salió y
 > cuánto queda sin volver— y la lista flotante.
 
-**Y hay que decidir una cosa:** si se ofrece por MOVIMIENTO (salió el 24/07 a
-Orchard Gate, 2 unidades) o por MATERIAL (de este material hay 2 fuera, en
-total). Lo primero da trazabilidad exacta y una lista más larga; lo segundo es
-más corto y pierde de dónde vuelve cada unidad. Para el boneyard hace falta lo
-primero.
+### DECIDIDO EL 20/10: por MATERIAL **y por LUGAR**, no por movimiento
+
+Jose: *"para RETURN debe ser por material, porque no importa si se hicieron 4
+EXITs de un material a un mismo lugar; importa **cuánto material hay en ese
+lugar** para devolver la cantidad que necesitamos de ese lugar a la bodega"*.
+
+Tiene razón, y el matiz es el que yo no había visto: no es «por material» a
+secas, es **por material Y por sitio donde está**. Lo que se devuelve no es un
+movimiento, es material que está en una obra.
+
+| Lista correcta | Lista equivocada |
+|---|---|
+| `ALDER GROVE REMODEL C — 2 en ORCHARD GATE PHASE 3` | cuatro líneas, una por cada salida |
+| una línea por **material × lugar** | una línea por **movimiento** |
+
+Si el mismo material está en dos obras, son dos líneas — porque son dos
+devoluciones distintas y la cantidad disponible es distinta en cada una.
+
+**Lo que esto implica:** la consulta no es «qué movimientos salieron» sino **el
+saldo por material y lugar**: salidas menos devoluciones, agrupadas. Es la misma
+cuenta que ya hace el motor para `siteQty`, partida por destino.
+
+> El boneyard no se pierde: `ORIGIN_PROJECT` se sigue escribiendo en la
+> devolución, y sale del lugar que se eligió en la lista. Lo que se deja de
+> rastrear es de cuál de las cuatro salidas vino cada unidad — y eso, como dice
+> Jose, no le importa a nadie.
+
+
+## 🔵 UNA ✕ EN CADA CAMPO — HECHO EL 20/10, Y LO QUE QUEDA
+
+Jose: *"es molesto tener que darle clic a los lugares donde se escribe y tener
+que borrar letra por letra"*. Puesta en la v12.81.
+
+**Lo que queda, y es del mismo tipo:** los campos que se pintan dentro de un
+modal que se abre por primera vez después de la pasada inicial no la tienen
+hasta el siguiente repintado. Hoy se cubre llamando al barrido tras cada pintada
+de ajustes; si aparece un modal nuevo que genere sus propios campos, habrá que
+acordarse — o poner un `MutationObserver` y dejar de acordarse.
+
+**El coste del observador:** corre en cada cambio del DOM, y esta app repinta
+tablas de cientos de filas. Habría que medirlo antes, no suponerlo.

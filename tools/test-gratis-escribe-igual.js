@@ -352,7 +352,8 @@ console.log('\n═══ 8. LA PANTALLA: LO QUE SE ESCONDE Y LO QUE SE OFRECE �
 
   check('`_basicPintar` se llama AL FINAL de `applyRoleUI` — puesto antes, ' +
         'cualquier línea de rol (como `_escPintarBoton`) lo deshacía',
-    /_setAccountIdentity\(_lastUserName[\s\S]{0,700}_basicPintar\(\);\s*\n\}/.test(htmlCodigo));
+    /_setAccountIdentity\(_lastUserName[\s\S]{0,700}_basicPintar\(\);/.test(htmlCodigo) &&
+    /_basicPintar\(\);[\s\S]{0,260}_ponerEquis\(document\)[\s\S]{0,120}\n\}/.test(htmlCodigo));
 
   /* ── LO QUE SE ESCONDE ──────────────────────────────────────────────────── */
   check('sigue habiendo lista de lo que se ESCONDE — fontanería que no vende, ' +
