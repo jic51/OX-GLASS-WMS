@@ -287,6 +287,86 @@ window.__DATA=${JSON.stringify(DATA)};
     return page.evaluate(() => window.__leerStock());
   };
 
+  /* ── Y LA CAUSA DE VERDAD: LA BARRA DE DESPLAZAMIENTO ───────────────────
+   *
+   * Jose, 20/10, con vídeo: las columnas se mueven «un poco» al cambiar de
+   * filtro. Esta prueba medía siete filtros y no lo cazaba, y el motivo es que
+   * en los siete había filas de sobra: la barra vertical estaba SIEMPRE, así
+   * que nunca se vio su efecto.
+   *
+   * Lo que mueve las columnas no es el reparto de la tabla, es que la barra
+   * aparezca o desaparezca: se lleva o devuelve sus ~15 px de ancho
+   * disponible. Filtrar cambia cuántas filas hay, luego filtrar mueve las
+   * columnas.
+   *
+   * Aquí se compara a propósito un filtro con MUCHAS filas contra uno con MUY
+   * POCAS, que es lo único que enseña la diferencia. */
+  console.log('  con barra y sin barra — el caso que no se estaba midiendo\n');
+
+  const conBusqueda = async (txt) => {
+    await page.evaluate((t) => {
+      document.getElementById('stockFilter').value = '';
+      document.getElementById('stockStatusFilter').value = '';
+      document.getElementById('stockSearch').value = t;
+      renderStock();
+    }, txt);
+    await page.waitForTimeout(240);
+    return page.evaluate(() => window.__leerStock());
+  };
+
+  /* LA CONDICIÓN QUE IMPORTA NO ES «POCAS FILAS», ES «SIN BARRA».
+   *
+   * El primer intento contaba filas y pedía doce o menos. Salieron dieciséis y
+   * el rojo era del número que me inventé, no del producto — el mismo error del
+   * tope del vigilante de arranque. Y además contar filas es medir un indicio:
+   * lo que mueve las columnas es que la barra ESTÉ o NO ESTÉ, así que eso es lo
+   * que hay que mirar. */
+  const hayBarra = () => page.evaluate(() => {
+    const w = document.getElementById('stockTable').closest('.table-wrapper');
+    return w.scrollHeight > w.clientHeight + 1;
+  });
+
+  const muchas    = await conBusqueda('');
+  const barraAnte = await hayBarra();
+  const pocas     = await conBusqueda(NOMBRES[0] + ' 0');
+  const barraDesp = await hayBarra();
+
+  check('el contraste existe: con todo hay barra vertical y con el filtro ' +
+        'estrecho NO — es justo el cambio que movía las columnas',
+    barraAnte === true && barraDesp === false, { con: barraAnte, sin: barraDesp });
+
+  const movidasB = [];
+  Object.keys(muchas).forEach(k => {
+    if (!pocas[k]) return;
+    if (Math.abs(muchas[k].x - pocas[k].x) > 1 || Math.abs(muchas[k].w - pocas[k].w) > 1) {
+      movidasB.push(k + ' (x ' + muchas[k].x + '→' + pocas[k].x + ')');
+    }
+  });
+  /* ESTA COMPROBACIÓN NO DISCRIMINA EL ARREGLO, Y HAY QUE DECIRLO.
+   *
+   * Se quitó `scrollbar-gutter:stable` a propósito para ver si salía en rojo, y
+   * NO salió. El motivo: en este banco la tabla tiene dieciséis columnas y es
+   * MUCHO más ancha que su caja, así que vive siempre en su `min-width` y los
+   * ~15 px de la barra no le cambian nada — sólo cambian cuánto se ve.
+   *
+   * En la pantalla de Jose la tabla CABE casi justa, y ahí esos 15 px deciden.
+   * Su vídeo lo enseña sin querer: con el filtro SCREENS no hay barra
+   * horizontal abajo y con WINDOW sí, con las mismas columnas. Lo único que
+   * cambió entre los dos fue cuántas filas había — o sea, la barra vertical.
+   *
+   * Así que lo de abajo defiende que no se mueva, no que el arreglo sea el que
+   * lo impide. Para discriminarlo haría falta un ancho de ventana en el que la
+   * tabla quepa por poco, que es el caso de él y no el de aquí. Queda apuntado
+   * en docs/BACKLOG.md. */
+  check('LAS COLUMNAS NO SE MUEVEN entre una tabla llena y una casi vacía — ' +
+        'ésta es la queja de Jose del 20/10, y la causa era la barra de ' +
+        'desplazamiento, no el reparto' +
+        (movidasB.length ? ' — SE MUEVEN: ' + movidasB.join('; ') : ''),
+        movidasB.length === 0);
+
+  await page.evaluate(() => { document.getElementById('stockSearch').value = ''; renderStock(); });
+  await page.waitForTimeout(220);
+
   /* ── DOS GRUPOS, Y NO UNO, PORQUE HAY UN MOVIMIENTO QUE SÍ ES CORRECTO ────
    *
    * Al filtrar por UNA categoría, la columna Category desaparece — idea del

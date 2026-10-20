@@ -101,6 +101,25 @@
        movements went from about two and a half minutes to fifty-five seconds
        along the way.</p>
 
+    <div class="entry" id="v12-80">
+      <span class="ver">v12.80</span>
+      <span class="tag fix">Fix</span>
+      <h3>The columns stop shifting</h3>
+      <p>Columns moved a little every time you changed a filter. It was never the table: the
+         widths were fixed all along. <b>It was the scrollbar.</b> It appears when a filter leaves
+         many rows and goes away when it leaves few, and it takes about fifteen pixels of width
+         with it &mdash; so every column shuffles by that much.</p>
+      <p>The fingerprint was in the recording: with one filter there was no horizontal bar at the
+         bottom of the table, with another there was, with the same columns. The only thing that
+         changed between them was how many rows there were.</p>
+      <p>That space is now reserved whether the bar is there or not, so the width available to
+         the table no longer depends on how many rows a filter happens to leave.</p>
+      <p>And the card pile: a card that leaves takes longer to go, and the one that replaces it is
+         now <b>seen arriving</b> rather than appearing out of nowhere. The two timings that had
+         to agree &mdash; how long the animation runs and how long the code waits for it &mdash;
+         are now one value instead of two that had to match.</p>
+    </div>
+
     <div class="entry" id="v12-79">
       <span class="ver">v12.79</span>
       <span class="tag fix">Fix</span>

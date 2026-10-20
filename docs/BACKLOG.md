@@ -9225,3 +9225,77 @@ protegida por `test-stock-cat-column.js`. Puede ser lo que está viendo.
 
 **Falta de él:** qué par de filtros exactos lo enseña, o un clip corto. Sin eso
 no hay nada que arreglar que no sea deshacer una mejora.
+
+## 🟡 MEDIR EL SALTO DE COLUMNAS EN EL ANCHO JUSTO · 20/10
+
+**Mecanismo identificado, arreglo puesto, y sin medir.** Queda dicho.
+
+Jose, con vídeo de Movements: *"el ligero movimiento en las columnas al cambiar
+de categoría y estado"*. Lo que lo mueve **no es el reparto de la tabla**: es que
+la **barra vertical** aparezca o desaparezca. Se lleva o devuelve sus ~15 px de
+ancho disponible, y filtrar cambia cuántas filas hay.
+
+**La huella está en su propio vídeo:** con el filtro `SCREENS` no hay barra
+horizontal abajo; con `WINDOW`, con las mismas columnas, sí la hay. Lo único que
+cambió entre los dos es el número de filas.
+
+El arreglo es `scrollbar-gutter:stable` en `.table-wrapper`: reserva ese carril
+siempre, haya barra o no.
+
+**Por qué `tools/test-columnas.js` no lo discrimina:** ahí la tabla tiene
+dieciséis columnas y es mucho más ancha que su caja, así que vive siempre en su
+`min-width` y los 15 px no le cambian nada. Se quitó el arreglo a propósito y la
+prueba siguió en verde.
+
+**Lo que haría falta:** un ancho de ventana en el que la tabla quepa **por
+poco** — el caso de Jose. Con las columnas por defecto de Movements y una
+ventana alrededor de 1280 px debería caer en esa banda.
+
+## 🔵 EL RETURN DEBE PARTIR DE LO QUE SALIÓ, NO DE UN NOMBRE · 20/10
+
+Jose, con cuatro capturas: *"al seleccionar RETURN es lógico que voy a devolver
+algo que ya estaba fuera de la bodega, pero la app sólo sugiere 1 material...
+debería dar la lista de TODOS los materiales parecidos y sólo como lista
+flotante, no como tarjetas abajo del nombre"*.
+
+### Lo que hace hoy
+
+Escribes el nombre y sale **una** tarjeta amarilla —*«Similar material exists:
+ALDER GROVE REMODEL A · Use this name»*— debajo del campo. Eliges ésa y entonces
+te sugiere **otra**. Es una lista de uno, servida de a uno, y ocupa sitio en el
+formulario.
+
+Y sugiere por **parecido de nombre**, no por si el material está fuera.
+
+### Lo que pide
+
+1. **Lista flotante** con **todos** los parecidos, no tarjetas debajo del campo.
+2. Sólo los que **están fuera de la bodega** — ya eligió la categoría, así que
+   el filtro es gratis.
+3. Cada uno **con la cantidad que tenía fuera**.
+4. Al elegir uno, **autorrellenar del registro**: lo que ya se sabe de ese
+   material y de su salida.
+5. **Sugerir la cantidad**, como ya hace EXIT.
+6. Él escribe sólo lo que no se puede saber: **a qué estante lo pone ahora**, la
+   cantidad real y el motivo.
+
+### Y esto cierra un agujero que ya estaba en esta lista
+
+Más arriba está apuntado que **devolver material que nunca salió crea
+existencias de la nada** (`siteQty` tiene suelo en 0 mientras `warehouseQty`
+suma igual).
+
+Si el formulario sólo ofrece **lo que de verdad está fuera, con su cantidad
+pendiente**, el agujero no se puede alcanzar desde la pantalla: no hay forma de
+devolver cinco de algo de lo que salieron dos. **La idea de interfaz de Jose es
+también la corrección del dato.**
+
+> **Dónde vive el dato, y ya existe:** `AC.ORIGIN_PROJECT` y `AC.FROM_MOV` se
+> añadieron el 15/10 con el boneyard. Lo que falta es la consulta —qué salió y
+> cuánto queda sin volver— y la lista flotante.
+
+**Y hay que decidir una cosa:** si se ofrece por MOVIMIENTO (salió el 24/07 a
+Orchard Gate, 2 unidades) o por MATERIAL (de este material hay 2 fuera, en
+total). Lo primero da trazabilidad exacta y una lista más larga; lo segundo es
+más corto y pierde de dónde vuelve cada unidad. Para el boneyard hace falta lo
+primero.
