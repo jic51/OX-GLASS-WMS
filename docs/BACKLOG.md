@@ -9335,3 +9335,83 @@ acordarse — o poner un `MutationObserver` y dejar de acordarse.
 
 **El coste del observador:** corre en cada cambio del DOM, y esta app repinta
 tablas de cientos de filas. Habría que medirlo antes, no suponerlo.
+
+# ══ LA SIGUIENTE VERSIÓN: FORMA Y PANTALLA · 20/10 ══
+
+Jose mandó cinco capturas marcadas en rojo y pidió que quedara anotado sin tocar
+nada todavía. Son tres cosas distintas y conviene no mezclarlas.
+
+## 🔵 1 · EL BLOQUE DE LA MARCA
+
+Hoy: un logo cuadrado, debajo `MY WAREHOUSE`, y debajo una pastilla con
+`Acopio`. Tres cosas apiladas en la esquina, y la de abajo es la nuestra.
+
+Lo que pide:
+
+| | |
+|---|---|
+| **El logo de Acopio** —la imagen con el nombre, no el cuadrado— va **en la parte blanca** | y es **un enlace** |
+| **El nombre del almacén** va **a la derecha del logo**, no debajo | |
+| **Debajo queda un sitio** para cuando alguien tenga más de un almacén | nombre o número, misma fuente, **más pequeña y gris** |
+
+**Lo que esto cambia de verdad, y es más que estético:** hoy la pastilla
+`Acopio` es la marca, puesta debajo del cliente. Con el cambio, **la marca es lo
+primero y es la puerta a nuestro sitio** — en una app que se va a regalar, el
+logo que lleva al sitio es el embudo.
+
+> **Y abre una puerta al multi-almacén.** Ese hueco de abajo no es decoración:
+> es dónde iría el selector el día que alguien tenga dos. Reservarlo ahora
+> cuesta nada; reservarlo después cuesta rehacer la cabecera.
+
+## 🔵 2 · LAS PESTAÑAS: CENTRADAS ARRIBA, Y EN EL TELÉFONO NO
+
+**Pantalla grande:** le gustan como están, pero **el menú debe ir centrado** en
+el ancho de la pantalla, no desplazado por el bloque de la marca.
+
+**Pantalla pequeña:** hoy bajan debajo del nombre y el logo (imagen 4) y **no le
+gusta**. Es un apilado, no un diseño: la cabecera ocupa un tercio de la pantalla
+antes de enseñar nada.
+
+## 🔵 3 · EL TELÉFONO EMPIEZA EN UN MENÚ, NO EN UN TABLERO — ídea de Jose
+
+La propuesta, y es la más grande de las tres:
+
+> *"En teléfono usaremos **sólo iconos** en lugar de las pestañas, y **no
+> mostraremos nada más** en la primera pantalla. Así el usuario selecciona qué
+> quiere hacer o ver desde el principio y disminuimos la cantidad de cosas que
+> se muestran en el teléfono."*
+
+Y el motivo concreto: **las gráficas no se ven bien en el teléfono**. El pie
+chart y las barras entran apretados y no se leen. Propone moverlas al menú del
+usuario como una opción aparte.
+
+### Qué pienso
+
+**Estoy de acuerdo, y el argumento es más fuerte de lo que él lo puso.** En el
+escritorio el tablero contesta *«¿cómo va el almacén?»* de un vistazo, y eso
+vale. En el teléfono **nadie llega con esa pregunta**: llega con las manos
+ocupadas a registrar una entrada o a mirar si queda algo. Enseñarle primero una
+gráfica es ponerle un cartel delante de la puerta.
+
+Y encaja con lo que ya sabemos del aparato: la app web en el teléfono da
+**411 × 658**. Un tablero completo ahí es media pantalla de gráficas que no se
+leen y media de tarjetas de resumen.
+
+### Lo que hay que decidir antes de construirlo
+
+1. **Qué iconos, y cuántos.** Cinco pestañas caben; con seis empieza a ser una
+   rejilla. Y un icono sin palabra se adivina mal: hay que decidir si llevan
+   texto debajo o no.
+2. **Cómo se vuelve al menú.** Si la primera pantalla es un menú, hace falta una
+   forma obvia de regresar, o se convierte en un callejón.
+3. **Dónde vive el tablero entonces.** Él dice que en el menú del usuario. Otra
+   opción: como un icono más del menú principal, que es donde la gente lo
+   buscaría.
+4. **Si el escritorio cambia o no.** Él dice que ahí está bien como está. Dos
+   formas distintas para dos tamaños es más trabajo, pero es lo honesto: un
+   teléfono no es una pantalla pequeña, es otra situación.
+
+> **Y una advertencia que vale por las tres cosas:** esto es la cabecera y la
+> navegación, o sea **lo que toca todas las pantallas**. Tiene su propia versión
+> y sus propias medidas antes y después, no se mete de regalo en una versión que
+> vaya de otra cosa.
