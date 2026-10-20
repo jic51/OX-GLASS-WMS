@@ -78,7 +78,12 @@ function newSandbox({ movementCount = 0, userCount = 0, supportEmail = '', now =
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
   vm.runInContext(extractVar('CHECKIN_MILESTONE_DAYS'), sandbox);
-  vm.runInContext(extract('runCheckin_'), sandbox);
+  /* v12.78: `runCheckin_` se calla en la versión básica, así que ahora
+   * depende de `basicApagado_`. Se levanta DE VERDAD, con la edición en
+   * `false`: esta prueba mide la versión de pago. */
+  vm.runInContext('var ACOPIO_BASIC = false;\n' +
+                  extract('basicApagado_') + '\n' +
+                  extract('runCheckin_'), sandbox);
   return { sandbox, props, sentMail };
 }
 

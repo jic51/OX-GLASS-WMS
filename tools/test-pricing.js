@@ -159,6 +159,10 @@ function buildSandbox() {
   };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
+  /* La edición, en `false`: esta prueba mide la versión de pago. Va en el
+   * contexto y no en la lista de funciones porque es una constante, no una
+   * función — misma razón por la que el andamio la pone solo. */
+  vm.runInContext('var ACOPIO_BASIC = false;', sandbox);
 
   [
     extractVar('AC'), extractVar('AC_WIDTH'), extractVar('SHEETS')
@@ -182,7 +186,9 @@ function buildSandbox() {
     // arriba: `autorDeLaFila_` es nueva —escribe `BASIC` en la columna del
     // autor cuando la edición no tiene usuarios— y esta prueba se cayó con un
     // "no está definida" que no tiene nada que ver con precios. Segunda vez.
-    'autorDeLaFila_',
+    // v12.78: el escritor de filas ya no es el unico; sendBatchNotifyEmail_
+    // y los avisos saben de la edicion. Misma lista a mano, misma mordida.
+    'basicApagado_', 'autorDeLaFila_',
     'addMovementsBatch_'
   ].forEach(function (name) { vm.runInContext(extractFn(name), sandbox); });
 

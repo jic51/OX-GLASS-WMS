@@ -1072,11 +1072,35 @@
     /* EL CANDADO. Un botón normal, no uno apagado: se puede pulsar y contesta.
        Apagarlo con `disabled` lo dejaría gris y mudo, que es justo lo que no
        queremos — la gracia es que al pulsarlo cuente qué hace esa función. */
-    .pro-lock{position:relative;opacity:.72}
-    .pro-lock:hover{opacity:1}
+    /* GRIS CLARO Y QUE SE NOTE. Jose, 19/10: *"me gusta que están de color gris
+       pero debes hacerlas MÁS GRISES para que se distinga bien"*. A .72 se
+       distinguía poco de un botón normal; a .4 se lee de un vistazo que no es
+       para ahora. Al pasar el ratón sube sólo un poco: lo justo para que se vea
+       que contesta, sin fingir que está disponible. */
+    .pro-lock{position:relative;opacity:.4;filter:grayscale(1)}
+    .pro-lock:hover{opacity:.62}
     .pro-lock::after{content:'🔒';font-size:.7em;margin-left:var(--sp-1);opacity:.85}
+
+    /* UNA ZONA ENTERA APAGADA. El `pointer-events:none` de los HIJOS es lo que
+       impide empezar: un `<input type="file">` de dentro ya no abre el
+       explorador. La zona sí recibe el clic, y enseña la oferta. */
+    .pro-off{opacity:.4;filter:grayscale(1);cursor:pointer;position:relative}
+    .pro-off *{pointer-events:none!important}
+    .pro-off::after{content:'🔒 Acopio Pro';position:absolute;top:var(--sp-2);right:var(--sp-3);
+      font-size:.7rem;letter-spacing:.04em;color:var(--muted);pointer-events:none}
+
+    /* El enlace de dentro del aviso flotante. Tiene que destacar sobre el
+       fondo de color del aviso, que puede ser cualquiera. */
+    .toast-pro{color:inherit;font-weight:700;text-decoration:underline;cursor:pointer}
     #proOverlay .modal-actions{display:flex;gap:var(--sp-3);justify-content:flex-end;align-items:center}
     #proOverlay a.btn{text-decoration:none;display:inline-flex;align-items:center}
+    /* UN SOLO BOTÓN, Y ES EL AZUL. Jose: *"sólo el azul debe ser un botón... la
+       otra opción debe ser sólo texto con hipervínculo. Así el usuario se fija
+       más en el botón ACOPIO PRO"*. Dos botones compiten; un botón y un enlace
+       no. */
+    .pro-notnow{font-size:.82rem;color:var(--muted);cursor:pointer;text-decoration:underline;
+      margin-right:var(--sp-2)}
+    .pro-notnow:hover{color:var(--text)}
     .field input,.field select,.field textarea{padding:var(--sp-4) var(--sp-5);border:1px solid var(--border);border-radius:6px;font-family:inherit;transition:.15s}
     .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent);box-shadow:var(--ring-accent)}
     /* `flex-wrap:wrap` no es adorno: es lo que impide que los botones se
@@ -5400,19 +5424,48 @@
      Sólo aparece en la versión básica. No es un muro, es una oferta: dice qué
      hace la función y dónde está, con palabras de lo que se gana y no de lo que
      falta. Ver BASIC_PRO. -->
+<!-- ── QUIÉN ERES, PREGUNTADO UNA SOLA VEZ ────────────────────────────────────
+     Sólo en la versión básica, y sólo mientras no haya respuesta. Ver
+     basicIdentidad_ en Code.gs para por qué se pregunta en vez de saberlo. -->
+<div class="overlay" id="quienOverlay">
+  <div class="modal modal-sm">
+    <div class="mhdr">
+      <h3>👋 Before you start</h3>
+    </div>
+    <p style="font-size:.9rem;color:var(--text);margin:.1rem 0 1rem;line-height:1.5">
+      Who is recording movements here? This signs every movement you record, so your
+      history has your name on it from day one.
+    </p>
+    <div class="field">
+      <label>Your name</label>
+      <input type="text" id="quienNombre" placeholder="Jose Castro" maxlength="60">
+    </div>
+    <div class="field">
+      <label>Your email</label>
+      <input type="email" id="quienEmail" placeholder="you@company.com" maxlength="120">
+    </div>
+    <p style="font-size:.78rem;color:var(--muted);margin:.6rem 0 0;line-height:1.45">
+      It is written only into your own spreadsheet. Nothing is sent anywhere, and nobody
+      else can open this app.
+    </p>
+    <div id="quienError" style="display:none;font-size:.8rem;color:var(--danger);margin-top:.5rem"></div>
+    <div class="modal-actions" style="margin-top:1.25rem">
+      <span class="pro-notnow" onclick="_quienSaltar()">Skip for now</span>
+      <button class="btn btn-primary btn-sm" id="quienSave" type="button" onclick="_quienGuardar()">Save</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="proOverlay">
   <div class="modal modal-sm">
     <div class="mhdr">
       <h3 id="proTitulo">Acopio Pro</h3>
       <button class="modal-x" onclick="closeModal('proOverlay')" title="Close">✕</button>
     </div>
-    <p id="proTexto" style="font-size:.9rem;color:var(--text);margin:.1rem 0 .6rem;line-height:1.5"></p>
-    <p style="font-size:.8rem;color:var(--muted);margin:0 0 1rem">
-      Everything you have recorded so far stays exactly where it is. Nothing to move, nothing to convert.
-    </p>
+    <p id="proTexto" style="font-size:.9rem;color:var(--text);margin:.1rem 0 1rem;line-height:1.5"></p>
     <div class="modal-actions" style="margin-top:1.25rem">
-      <button class="btn btn-ghost btn-sm" onclick="closeModal('proOverlay')">Not now</button>
-      <a id="proEnlace" class="btn btn-primary btn-sm" href="https://www.acopio.net/" target="_blank" rel="noopener">See what Acopio Pro does</a>
+      <span class="pro-notnow" onclick="closeModal('proOverlay')">Not now</span>
+      <a id="proEnlace" class="btn btn-primary btn-sm" href="https://www.acopio.net/" target="_blank" rel="noopener">Check Acopio Pro</a>
     </div>
   </div>
 </div>
@@ -5517,7 +5570,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.77';
+var APP_VERSION = '12.78';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5529,7 +5582,7 @@ var APP_VERSION = '12.77';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '89bba426';
+var APP_BUILD = 'c3500714';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -15573,14 +15626,18 @@ function _clearRowModes(){
 function _renderSettingsTab(tab) {
   _syncSettingsTabButtons(tab);
   var content = document.getElementById('settingsTabContent');
-  if (tab === 'materials')   { _renderMaterialsTab(); return; }
-  if (tab === 'errorlog')    { _renderErrorLogTab(); return; }
-  if (tab === 'system')      { _renderSystemTab(); return; }
-  if (tab === 'pmdirectory') { _renderPmDirectoryTab(); return; }
-  if (tab === 'import')      { _renderImportTab(); return; }
-  if (tab === 'locations')   { _renderLocationsTab(); return; }
-  if (tab === 'company')     { _renderCompanyTab(); return; }
-  if (tab === 'permissions') { _renderPermissionsTab(); return; }
+  /* CADA PINTADA REHACE EL CONTENIDO, así que el apagado hay que rehacerlo
+   * también — y DESPUÉS, no antes. Jose encontró la pestaña de sistema con
+   * todas sus opciones pulsables: *"todas están disponibles, si doy clic
+   * muestran un mensaje que parece de error"*. El mensaje llegaba tarde. */
+  if (tab === 'materials')   { _renderMaterialsTab();   _basicApagarAjuste(tab); return; }
+  if (tab === 'errorlog')    { _renderErrorLogTab();    _basicApagarAjuste(tab); return; }
+  if (tab === 'system')      { _renderSystemTab();      _basicApagarAjuste(tab); return; }
+  if (tab === 'pmdirectory') { _renderPmDirectoryTab(); _basicApagarAjuste(tab); return; }
+  if (tab === 'import')      { _renderImportTab();      _basicApagarAjuste(tab); return; }
+  if (tab === 'locations')   { _renderLocationsTab();   _basicApagarAjuste(tab); return; }
+  if (tab === 'company')     { _renderCompanyTab();     _basicApagarAjuste(tab); return; }
+  if (tab === 'permissions') { _renderPermissionsTab(); _basicApagarAjuste(tab); return; }
 
   var items = _settingsData[tab] || [];
   var label = { categories:'Category', projects:'Project', suppliers:'Supplier', locations:'Location' }[tab] || 'Item';
@@ -25753,6 +25810,7 @@ function _applyData(data) {
   /* ANTES que el rol, y antes de pintar nada: `applyRoleUI` ya decide qué se ve
    * y necesita saber en qué edición está cuando llegue. */
   APP_BASIC          = (data.basic === true);
+  if (data.basicPreguntarQuien === true) { try { _quienPreguntar(); } catch (e) {} }
   userRole           = data.userRole           || 'WAREHOUSE';
   if (data.rolePerms) rolePerms = data.rolePerms;
   if (data.warehouseRoleLabel) warehouseRoleLabel = data.warehouseRoleLabel;
@@ -26866,6 +26924,11 @@ document.addEventListener('DOMContentLoaded', function(){
   _safeOn('attachOverlay','click', function(e){ closeIfOutside(e,'attachOverlay'); });
   _safeOn('rackPhotoFileInput','change', _handleRackPhotoFileChange);
   _safeOn('lockMatOverlay','click', function(e){ closeIfOutside(e,'lockMatOverlay'); });
+  /* EL CLIC EN LA OFERTA NO LLEGA AL DOCUMENTO. Jose, 19/10: *"al hacer clic en
+   * el popup (no en los botones) se guarda el menú del avatar"*. El clic subía
+   * hasta el manejador que cierra los menús abiertos, así que leer la oferta
+   * cerraba por detrás el menú desde el que se había llegado a ella. */
+  _safeOn('proOverlay','click', function(e){ e.stopPropagation(); });
   document.addEventListener('keydown', function(e){
     if (e.key === 'Escape') closeMediaPreview();
   });
@@ -26898,9 +26961,63 @@ var BASIC_FUERA = {
    * y con veinte puertas cerradas la app deja de parecer una herramienta y
    * parece una demostración caducada. */
   botones: ['btnReportIssue', 'btnDataCheck', 'btnRebuildStock', 'btnMovIdFill'],
-  ajustes: ['errorlog', 'system', 'import', 'pmdirectory'],
+
+  /* Jose, 19/10, repasando la app entera: *"también se muestra PERMISSIONS,
+   * ¿por qué? eso no tiene sentido"* y *"no debe haber DIRECTORY ¿verdad?"*.
+   * Las dos fuera: sin usuarios no hay permisos que repartir ni directorio de
+   * jefes de obra a quien avisar. `import` necesita Drive.
+   *
+   * `errorlog` SE QUEDA — él mismo dijo que está bien, y es verdad: un registro
+   * de errores no es una función de pago, es cómo se pide ayuda. */
+  ajustes: ['permissions', 'pmdirectory', 'import'],
   pestanas: []
 };
+
+/* ── LO QUE SE VE PERO NO SE PUEDE EMPEZAR ───────────────────────────────────
+ *
+ * Jose, 19/10, y es la frase que corrige el error de diseño:
+ *
+ *   *"se le dice al cliente lo que no se puede hacer ANTES de que lo termine de
+ *   hacer, justo al momento de empezar"*.
+ *
+ * La versión anterior dejaba elegir la imagen, escribir el destinatario del
+ * correo, adjuntar el documento y marcar las etiquetas — y avisaba AL GUARDAR.
+ * Peor: el movimiento se guardaba y el documento no, así que quedaba a medias y
+ * con un error encima. Eso no es un aviso, es una trampa.
+ *
+ * Esto son ZONAS enteras, no botones: la sección de documentos de una entrada,
+ * la de avisos por correo, la pestaña de sistema. Se pintan en gris claro, no
+ * se puede tocar nada de dentro, y el clic en la zona enseña la oferta.
+ */
+var BASIC_PRO_ZONAS = {
+  fileSection:   'fotos',    // adjuntar documentos a una entrada
+  notifySection: 'correo'    // avisar por correo al guardar
+};
+
+/* Las pestañas de ajustes se pintan cada vez que se entra en ellas, así que no
+ * basta con apagarlas una vez: hay que volver a hacerlo después de cada
+ * pintada. Ver la llamada al final de `_renderSettingsTab`. */
+var BASIC_PRO_AJUSTES = { system: 'respaldo' };
+
+/**
+ * Deja una zona entera a la vista pero intocable: gris claro, nada de dentro
+ * recibe el ratón, y el clic en la zona enseña la oferta.
+ *
+ * EL TRUCO ESTÁ EN EL CSS, no aquí: `.pro-off *` apaga el ratón de los hijos y
+ * la propia zona lo conserva. Así un `<input type="file">` dentro deja de
+ * abrir el explorador de archivos —que es justo lo que Jose no quería— sin
+ * tener que ir control por control.
+ */
+function _basicApagarZona(el, clave){
+  if (!el || el.getAttribute('data-pro') === clave) return;
+  el.setAttribute('data-pro', clave);
+  el.classList.add('pro-off');
+  el.addEventListener('click', function(ev){
+    ev.preventDefault();
+    ev.stopPropagation();
+    _proPitch(clave);
+  }, true);   // en captura: llega antes que cualquier manejador de dentro
+}
 
 /* ── LO QUE SÍ SE ENSEÑA, CON CANDADO ────────────────────────────────────────
  *
@@ -26982,36 +27099,124 @@ function _proPitch(clave){
   var visto = false;
   try { visto = !!localStorage.getItem('acopio_pro_' + clave); } catch (e) {}
 
-  if (visto) {
-    try { showToast(f.titulo + ' is part of Acopio Pro.', 'info', 4000); } catch (e) {}
-    return;
-  }
+  if (visto) { _proToast(clave); return; }
   try { localStorage.setItem('acopio_pro_' + clave, '1'); } catch (e) {}
 
   var t = document.getElementById('proTitulo');
   var x = document.getElementById('proTexto');
   var a = document.getElementById('proEnlace');
-  if (t) t.textContent = f.titulo;
-  if (x) x.textContent = f.que;
-  /* EL NOMBRE DE LA FUNCIÓN VIAJA EN EL ENLACE, y es el único dato que vamos a
-   * tener. La versión básica no puede mandarnos nada —no tiene permiso para
-   * salir a internet, que es justo lo que la hace instalable sin sustos—, pero
-   * ABRIR una página no es una petición nuestra. Así las estadísticas del sitio
-   * dicen qué función empuja gente hacia Pro, sin rastrear a nadie y sin pedir
-   * un permiso más.
+  /* EL TÍTULO DICE QUE ES DE PRO, Y ESO FALTABA.
    *
-   * VA A LA RAÍZ, Y NO A `/pro`. La primera versión apuntaba a `/pro`, que NO
-   * EXISTE en el sitio: habría sido un 404 justo en el momento de más interés
-   * que vamos a tener. Un enlace del app a una página del sitio son otras dos
-   * cosas que tienen que coincidir sin que nada lo obligue — y la raíz es la
-   * única ruta que no puede faltar.
-   *
-   * El día que exista una página de Pro, se cambia aquí y el `?de=` sigue
-   * viajando igual. */
-  if (a) a.href = 'https://www.acopio.net/?de=' + encodeURIComponent(clave);
+   * Jose, 19/10: *"sale una descripción del producto pero no se especifica que
+   * eso sólo está disponible en la opción Pro, no dice nada de eso, es
+   * confuso"*. Tenía razón y era el peor fallo de la ventana: explicaba la
+   * función sin decir nunca por qué no la tiene. */
+  if (t) t.textContent = f.titulo + ' is part of Acopio Pro';
+  if (x) x.textContent = f.que + ' Check this and more in Acopio Pro.';
+  if (a) a.href = _proUrl(clave);
 
   var ov = document.getElementById('proOverlay');
   if (ov) ov.classList.add('show');
+}
+
+/**
+ * La dirección, con el nombre de la función detrás.
+ *
+ * Es el único dato que la versión básica puede darnos: no tiene permiso para
+ * salir a internet —que es justo lo que la hace instalable sin sustos— pero
+ * ABRIR una página no es una petición nuestra. Así las estadísticas del sitio
+ * dicen qué función empuja gente hacia Pro, sin rastrear a nadie.
+ *
+ * VA A LA RAÍZ, y no a `/pro`: esa página no existe, y habría sido un 404 justo
+ * en el momento de más interés. El día que exista, se cambia esta línea.
+ */
+function _proUrl(clave){
+  return 'https://www.acopio.net/?de=' + encodeURIComponent(clave);
+}
+
+/**
+ * El recordatorio callado, a partir de la segunda vez.
+ *
+ * NO SE VA MIENTRAS EL RATÓN ESTÉ ENCIMA — idea de Jose, 19/10: *"podemos hacer
+ * que el toast no desaparezca si el usuario hace hover, así podemos resaltar
+ * Acopio Pro y al dar clic lo enviamos"*. Un aviso de cuatro segundos con un
+ * enlace dentro es un enlace que nadie llega a pulsar.
+ *
+ * Y DURA MÁS DE ENTRADA, porque en un teléfono no hay ratón que poner encima.
+ * Sin eso, la mitad de la gente —la que llega desde un vídeo, con el móvil— no
+ * alcanzaría nunca el enlace. El hover es una mejora para quien tiene ratón, no
+ * la única forma de llegar.
+ */
+function _proToast(clave){
+  var f = BASIC_PRO[clave];
+  if (!f) return;
+  var cont = document.getElementById('toastContainer');
+  if (!cont) return;
+
+  var el = document.createElement('div');
+  el.className = 'toast info';
+  el.innerHTML =
+    '<span class="toast-icon">🔒</span>' +
+    '<span class="toast-msg">' + _he(f.titulo) + ' is part of ' +
+      '<a class="toast-pro" href="' + _he(_proUrl(clave)) + '" target="_blank" rel="noopener">Acopio Pro</a>' +
+    '</span>' +
+    '<button class="toast-close" type="button">✕</button>';
+  cont.appendChild(el);
+
+  var reloj = null;
+  function irse(){ try { el.remove(); } catch (e) {} }
+  function contar(ms){ clearTimeout(reloj); reloj = setTimeout(irse, ms); }
+
+  el.querySelector('.toast-close').addEventListener('click', function(){
+    clearTimeout(reloj); irse();
+  });
+  el.addEventListener('mouseenter', function(){ clearTimeout(reloj); });
+  el.addEventListener('mouseleave', function(){ contar(2500); });
+
+  contar(9000);
+}
+
+/**
+ * Pregunta quién es, una sola vez.
+ *
+ * Se llama cuando el servidor dice que no hay respuesta guardada. SE PUEDE
+ * SALTAR: quien no quiera dar su nombre sigue con los movimientos firmados
+ * como `BASIC`, que también es verdad. Obligar aquí sería poner un formulario
+ * delante de un producto que se regala, y es el primer minuto.
+ */
+function _quienPreguntar(){
+  var ov = document.getElementById('quienOverlay');
+  if (ov) ov.classList.add('show');
+}
+
+function _quienSaltar(){
+  try { closeModal('quienOverlay'); } catch (e) {}
+}
+
+function _quienGuardar(){
+  var nom   = (document.getElementById('quienNombre') || {}).value || '';
+  var email = (document.getElementById('quienEmail')  || {}).value || '';
+  var err   = document.getElementById('quienError');
+  var btn   = document.getElementById('quienSave');
+  if (err) { err.style.display = 'none'; err.textContent = ''; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+  google.script.run
+    .withSuccessHandler(function(r){
+      if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
+      userEmail = (r && r.email) || '';
+      try { _setAccountIdentity((r && r.name) || '', userEmail, userRole, false); } catch (e) {}
+      try { closeModal('quienOverlay'); } catch (e) {}
+      try { showToast('Saved. Your movements will be signed with your name.', 'ok'); } catch (e) {}
+    })
+    .withFailureHandler(function(e){
+      if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
+      /* EL MENSAJE ENTERO Y A LA VISTA, no un aviso que se va. Es un formulario
+       * de dos campos: si algo no le gustó, hay que poder leerlo al lado del
+       * campo y corregirlo. */
+      if (err) { err.textContent = (e && e.message) ? e.message : String(e); err.style.display = ''; }
+    })
+    .saveBasicIdentity({ name: nom, email: email });
 }
 
 /**
@@ -27061,7 +27266,21 @@ function _basicPintar(){
     var b = document.querySelector('[data-tab="' + t + '"]');
     if (b) b.style.display = 'none';
   });
+  Object.keys(BASIC_PRO_ZONAS).forEach(function(id){
+    _basicApagarZona(document.getElementById(id), BASIC_PRO_ZONAS[id]);
+  });
   _basicCandado();
+}
+
+/**
+ * Lo mismo para una pestaña de ajustes, que se pinta de nuevo cada vez.
+ * La llama `_renderSettingsTab` al final, una vez por pintada.
+ */
+function _basicApagarAjuste(tab){
+  if (!APP_BASIC) return;
+  var clave = BASIC_PRO_AJUSTES[tab];
+  if (!clave) return;
+  _basicApagarZona(document.getElementById('settingsTabContent'), clave);
 }
 
 /**
@@ -27534,6 +27753,18 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '12.78',
+    titulo: 'Nothing half-done, and no surprises at the end',
+    puntos: [
+      'In the free edition you could pick a photo, write who to email, attach a document \u2014 and only find out <i>on save</i> that none of it would happen. Worse: the movement saved and the document did not.',
+      'Now anything that belongs to Acopio Pro is <b>greyed out and cannot be started</b>. One tap tells you what it does and how to get it, before you have put any work into it.',
+      'Editing a movement no longer fails. It was saving the change and <i>then</i> trying to email about it, which left a red error sitting on top of a change that had already happened.',
+      'And the app asks your name once, so every movement you record carries it \u2014 ready for the day you move up.',
+      'None of this exists in the paid edition.'
+    ],
+    antes:  'You could start anything, and find out at the end that it did not happen',
+    ahora:  'What you cannot finish, you cannot start' },
+
   { ver: '12.77',
     titulo: 'The free edition opens now',
     puntos: [
@@ -27555,18 +27786,6 @@ var NOVEDADES = [
     ],
     antes:  'A free edition that quietly lacked things, and never said so',
     ahora:  'It tells you what else it can do, at the moment you want it' },
-
-  { ver: '12.75',
-    titulo: 'Nothing on your screen changed — and that is the point',
-    puntos: [
-      'There is now a <b>free edition of Acopio</b>, built from this same file. It records entries, exits, transfers, returns and waste, and nothing else.',
-      'It is the same file, with one word changed \u2014 <b>not a second copy of the code</b>. So a fix made for one reaches the other. Freezing features is fine; freezing bugs is not.',
-      'The free edition writes to the spreadsheet <b>exactly</b> what this one writes \u2014 same columns, same width, same order. Someone who starts free and later moves up sees all their history on day one, with nothing to convert.',
-      'For you this changes nothing at all. Every new switch is off here, and the full test suite says so.'
-    ],
-    antes:  'One edition, and a rewrite waiting to happen the day a second one was needed',
-    ahora:  'Two editions, one file, and no history left behind' },
-
   { ver: '12.74',
     titulo: 'Scanning works after all — with a photo',
     puntos: [

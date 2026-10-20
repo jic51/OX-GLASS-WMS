@@ -9171,3 +9171,22 @@ El branding de ACOPIO FREE está **verificado pero sin publicar**. Google da
 **7 días** desde el 17/10 antes de que caduque y haya que repetir el trámite.
 Botón **Publish branding** en la pantalla de Branding. Es lo que hace que los
 enlaces de política y condiciones salgan en la pantalla de permisos.
+
+## 🟡 LO QUE JOSE VIO EL 19/10 Y **NO** ES DE LA VERSIÓN BÁSICA
+
+Repasando Acopio Basic entera encontró tres cosas que pasan **igual en la
+versión de pago**. Se apuntan aparte para no mezclarlas con el trabajo de la
+edición gratis:
+
+1. **Las filas del Dashboard saltan.** *"En 'Movements' no se mueven, pero en el
+   'Dashboard' sí se mueven y saltan algunas según cambio de categorías y
+   estado."* Quiere que sean estándar: que no se muevan aunque cambien
+   categorías o estados. Mismo trabajo que ya se hizo en Movements.
+
+2. **Las tarjetas llevan un movimiento de más.** Al borrar una, todas suben, y
+   menos de un segundo después todas bajan para dejar entrar a la que estaba
+   fuera. *"El primer movimiento se ve bien pero luego parece un error."*
+
+3. **La ventana de stock bajo se abre** aunque no deje editar. En la básica no
+   se puede cambiar desde la app, pero si alguien lo modifica en la hoja sí se
+   mostraría.

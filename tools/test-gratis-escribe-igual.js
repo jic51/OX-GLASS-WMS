@@ -272,7 +272,7 @@ console.log('\n═══ 6. LAS TRES FORMAS DE APAGAR, Y EL CENSO DE HOJAS ═�
 
   /* EL TECHO. Baja cuando se apaga una hoja; esta prueba falla si sube.
    *
-   * 46, y el número lo puso la medida. Yo había escrito 45 a ojo y el rojo
+   * 40, y el número lo puso la medida. Yo había escrito 45 a ojo y el rojo
    * salió del techo, no del producto — que es exactamente el error que ya se
    * cometió con el tope del vigilante de arranque. Un número inventado no
    * vigila nada: sólo da un susto y enseña a ignorar la prueba.
@@ -284,7 +284,7 @@ console.log('\n═══ 6. LAS TRES FORMAS DE APAGAR, Y EL CENSO DE HOJAS ═�
    * esa decisión cambie, estas volverían sin que nadie se acordara.
    *
    * Lo que falta y en qué orden, en docs/VERSION-BASICA.md. */
-  const TECHO = 46;
+  const TECHO = 40;
   check('las hojas sin apagar no CRECEN (techo ' + TECHO + ') — ' +
         'cuando se apague una, baja este número',
     sinApagar.length <= TECHO, sinApagar.length);
@@ -320,10 +320,15 @@ console.log('\n═══ 7. LA COLUMNA DEL AUTOR DICE LA VERDAD, NO UN HUECO ═
   /* Que `getUserRole` devuelva el correo vacío en la versión básica no es un
    * descuido pendiente de arreglar: es lo que hace que esto funcione. Si
    * devolviera un correo inventado, la fila mentiría. */
+  /* `getUserRole` devuelve en la básica la identidad DECLARADA —la que la
+   * persona escribió una vez— y no un correo inventado. Si la dejó en blanco,
+   * sigue vacía, y la fila dirá `BASIC`. Las dos cosas son verdad; ninguna
+   * finge una identidad que nadie comprobó. */
   const g = src.match(/^function getUserRole\s*\([\s\S]*?\n\}/m);
-  check('`getUserRole` deja el correo VACÍO en la versión básica — de ahí sale ' +
-        'el `BASIC` de la fila, y por eso no se puede "arreglar" inventando uno',
-    !!g && /basicApagado_\(\)\)\s*return\s*\{\s*role:\s*'ADMIN',\s*email:\s*''/.test(soloCodigo(g[0])));
+  check('`getUserRole` usa la identidad DECLARADA en la básica, no una inventada',
+    !!g && /basicApagado_\(\)\)\s*\{[\s\S]{0,160}basicIdentidad_\(\)/.test(soloCodigo(g[0])));
+  check('...y si no la declaró, se queda vacía — de ahí sale el `BASIC` de la fila',
+    /BASIC_USER_EMAIL'\)\s*\|\|\s*''/.test(codigo));
 }
 
 console.log('\n═══ 8. LA PANTALLA: LO QUE SE ESCONDE Y LO QUE SE OFRECE ═══\n');
@@ -395,7 +400,7 @@ console.log('\n═══ 8. LA PANTALLA: LO QUE SE ESCONDE Y LO QUE SE OFRECE �
   check('la oferta se recuerda: entera la primera vez, callada después',
     /localStorage\.getItem\('acopio_pro_/.test(htmlCodigo) &&
     /localStorage\.setItem\('acopio_pro_/.test(htmlCodigo) &&
-    /showToast/.test((htmlCodigo.match(/function _proPitch[\s\S]*?\n\}/) || [''])[0]));
+    /_proToast\(clave\)/.test((htmlCodigo.match(/function _proPitch[\s\S]*?\n\}/) || [''])[0]));
 
   /* Y SI EL RECUERDO FALLA, SE CAE DEL LADO BUENO. En una ventana privada
    * `localStorage` puede reventar. Perder el recuerdo es una molestia; perder
@@ -517,6 +522,114 @@ console.log('\n═══ 9. LA PUERTA SE ABRE SIN CORREO — EJECUTADA, NO LEÍD
   check('...y NO_SESSION sigue fuera en la básica — es lo único que de verdad ' +
         'significa «no hay nadie»',
     probarRol(true, { role: 'NO_SESSION', email: '' }, 'WRITE') === false);
+}
+
+console.log('\n═══ 10. NO SE PUEDE EMPEZAR LO QUE NO SE PUEDE TERMINAR ═══\n');
+{
+  const htmlCodigo = soloCodigo(html);
+  const gs = codigo;
+
+  /* LA REGLA QUE CORRIGE EL ERROR DE DISEÑO.
+   *
+   * Jose, 19/10, después de repasar la app entera: *"se le dice al cliente lo
+   * que no se puede hacer ANTES de que lo termine de hacer, justo al momento de
+   * empezar"*.
+   *
+   * La versión anterior dejaba elegir la imagen, escribir el destinatario, y
+   * avisaba AL GUARDAR — y el movimiento se guardaba mientras el documento no.
+   * Eso no es un aviso: es una trampa que deja los datos a medias. */
+  check('las zonas enteras se apagan, no sólo los botones sueltos',
+    /var BASIC_PRO_ZONAS\s*=/.test(htmlCodigo) &&
+    /fileSection/.test(htmlCodigo) && /notifySection/.test(htmlCodigo));
+
+  check('y lo de DENTRO no recibe el ratón — un `input type=file` apagado ya no ' +
+        'abre el explorador de archivos, que es el «empezar» que había que cortar',
+    /\.pro-off \*\{pointer-events:none!important\}/.test(html));
+
+  check('el clic se caza en CAPTURA, antes que cualquier manejador de dentro',
+    /addEventListener\('click'[\s\S]{0,200}\}, true\)/.test(htmlCodigo));
+
+  check('las pestañas de ajustes se vuelven a apagar DESPUÉS de cada pintada — ' +
+        'se repintan enteras y el apagado se perdería',
+    /_renderSystemTab\(\);\s*_basicApagarAjuste\(tab\)/.test(htmlCodigo));
+
+  /* EL EDIT QUE REVENTÓ EN LA CARA DE JOSE. El movimiento ya estaba guardado y
+   * la bitácora puesta; el correo de aviso reventaba después. */
+  const mod = (gs.match(/^function modifyMovementLocked_[\s\S]*?\n\}/m) || [''])[0];
+  check('editar un movimiento NO intenta mandar correo en la básica — ' +
+        'reventaba DESPUÉS de haber guardado, y dejaba un error sobre un ' +
+        'cambio que ya había ocurrido',
+    /basicApagado_\(\)/.test(mod) && /MailApp\.sendEmail/.test(mod));
+
+  /* Reservas: ni apartar ni soltar, porque existir a medias es lo ilógico. */
+  const locks = (gs.match(/^function getActiveLocksMap_[\s\S]*?\n\}/m) || [''])[0];
+  check('en la básica no hay nada apartado — se podía SOLTAR pero no apartar, ' +
+        'y prohibir soltar dejaría colgado para siempre lo que venga en la plantilla',
+    /basicApagado_\(\)\)\s*return \{\};/.test(locks));
+
+  /* Permissions y PM directory fuera; error log dentro. */
+  check('fuera `permissions` y `pmdirectory`; `errorlog` se queda — ' +
+        'un registro de errores no es una función de pago, es cómo se pide ayuda',
+    /ajustes: \['permissions', 'pmdirectory', 'import'\]/.test(htmlCodigo));
+}
+
+console.log('\n═══ 11. LA OFERTA DICE QUE ES DE PRO, Y DEJA LLEGAR ═══\n');
+{
+  const htmlCodigo = soloCodigo(html);
+
+  check('el título dice que es de Acopio Pro — explicar la función sin decir ' +
+        'por qué no la tiene era el peor fallo de la ventana',
+    /titulo \+ ' is part of Acopio Pro'/.test(htmlCodigo));
+
+  check('fuera el párrafo de «todo lo que has guardado sigue donde está» — ' +
+        'quien está explorando no estaba guardando nada',
+    !/Everything you have recorded so far/.test(html));
+
+  check('UN solo botón, y es el azul; lo otro es texto con enlace',
+    /class="pro-notnow"/.test(html) &&
+    /id="proEnlace"[^>]*class="btn btn-primary/.test(html) &&
+    /Check Acopio Pro/.test(html));
+
+  check('el gris es más gris que antes — a .72 no se distinguía de un botón ' +
+        'disponible',
+    /\.pro-lock\{[^}]*opacity:\.4/.test(html));
+
+  check('el clic en la oferta no se escapa al documento — cerraba por detrás ' +
+        'el menú del avatar desde el que se había llegado',
+    /_safeOn\('proOverlay','click'[\s\S]{0,80}stopPropagation/.test(htmlCodigo));
+
+  /* EL AVISO FLOTANTE, Y EL TELÉFONO. */
+  const toast = (htmlCodigo.match(/function _proToast[\s\S]*?\n\}\n/) || [''])[0];
+  check('el aviso flotante lleva enlace a Acopio Pro',
+    /toast-pro/.test(toast) && /_proUrl\(clave\)/.test(toast));
+  check('...y no se va mientras el ratón esté encima',
+    /mouseenter[\s\S]{0,80}clearTimeout/.test(toast) &&
+    /mouseleave[\s\S]{0,80}contar\(/.test(toast));
+  check('...y dura de sobra SIN ratón, porque en un teléfono no hay hover y ' +
+        'ahí está la mitad de la gente que llega desde un vídeo',
+    /contar\(9000\)/.test(toast));
+}
+
+console.log('\n═══ 12. QUIÉN ERES, PREGUNTADO UNA VEZ ═══\n');
+{
+  const htmlCodigo = soloCodigo(html);
+
+  check('la identidad se guarda en la propia hoja', /BASIC_USER_EMAIL/.test(codigo));
+  check('la puerta que la guarda tiene la MISMA guardia que el resto — ' +
+        'escribe en las propiedades de la hoja y es una función global',
+    /function saveBasicIdentity[\s\S]{0,900}requireAuth_\(/.test(codigo));
+  check('...y no existe en la versión de pago, donde el nombre lo da Google y ' +
+        'escribirlo a mano sería poder firmar como otro',
+    /function saveBasicIdentity[\s\S]{0,200}!basicApagado_\(\)\) throw/.test(codigo));
+  check('se puede SALTAR — obligar a dar el nombre en el primer minuto de algo ' +
+        'que se regala es poner un formulario delante del producto',
+    /_quienSaltar/.test(htmlCodigo) && /Skip for now/.test(html));
+  check('el servidor es quien decide si hay que preguntar',
+    /basicPreguntarQuien:\s*ACOPIO_BASIC && !basicIdentidad_\(\)\.email/.test(codigo));
+  check('el error del formulario se queda a la vista, no se va solo — ' +
+        'son dos campos y hay que poder leer qué no gustó',
+    /err\.style\.display = ''/.test(htmlCodigo) &&
+    /getElementById\('quienError'\)/.test(htmlCodigo));
 }
 
 console.log('\n' + (fail ? '✗ ' + fail + ' fallos · ' : '✓ todo bien · ') + (ok + fail) + ' comprobaciones\n');
