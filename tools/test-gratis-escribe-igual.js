@@ -632,5 +632,19 @@ console.log('\n═══ 12. QUIÉN ERES, PREGUNTADO UNA VEZ ═══\n');
     /getElementById\('quienError'\)/.test(htmlCodigo));
 }
 
+console.log('\n═══ 13. LA PANTALLA DICE QUÉ EDICIÓN ES ═══\n');
+{
+  const htmlCodigo = soloCodigo(html);
+  /* El archivo que se manda sale siempre con la constante en `false`, así que
+   * cada versión nueva pegada en una copia básica hay que volver a ponerla en
+   * `true`. Olvidarlo da una app que parece la básica y no lo es. El
+   * interruptor no se puede quitar, pero el despiste sí se puede hacer
+   * visible. */
+  check('el pie de la app dice «Basic» cuando lo es — es lo único que ' +
+        'distingue de un vistazo una copia básica de una a la que se le olvidó ' +
+        'volver a poner el interruptor',
+    /APP_BASIC \? ' Basic' : ''/.test(htmlCodigo));
+}
+
 console.log('\n' + (fail ? '✗ ' + fail + ' fallos · ' : '✓ todo bien · ') + (ok + fail) + ' comprobaciones\n');
 process.exit(fail ? 1 : 0);

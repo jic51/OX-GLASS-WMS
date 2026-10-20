@@ -101,6 +101,26 @@
        movements went from about two and a half minutes to fifty-five seconds
        along the way.</p>
 
+    <div class="entry" id="v12-79">
+      <span class="ver">v12.79</span>
+      <span class="tag fix">Fix</span>
+      <h3>The card pile stops rocking</h3>
+      <p>Dismissing a card made every card below it slide up into the gap &mdash; and then, a
+         moment later, slide back down as the next card came in to take the free slot. One change,
+         two movements, and the second one read as a glitch rather than as an animation.</p>
+      <p>The rule now depends on whether anything is waiting: <b>when another card is queued the
+         pile keeps its height</b>, so the card leaves and the next one is simply there. When
+         nothing is waiting, the rest still rise into the gap, which is the correct thing to do
+         when the pile really did get shorter.</p>
+      <p>The Dashboard table also holds its column widths <b>by rule</b> now rather than by
+         whatever happens to be inside it. Its widths were already written down; what was missing
+         was the line that makes them binding instead of advisory.</p>
+      <p>The footer now names the edition, so a free copy is never mistaken for a paid one.</p>
+      <p>And the column test, which measured seven filters and failed if anything moved, was only
+         ever looking at the Movements table. It measures both now, with content deliberately too
+         long for the space &mdash; a test that covers half the screen certifies half the screen.</p>
+    </div>
+
     <div class="entry" id="v12-78">
       <span class="ver">v12.78</span>
       <span class="tag new">New</span>

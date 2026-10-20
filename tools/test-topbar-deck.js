@@ -225,6 +225,27 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   const vEnd = await p.evaluate(() => getComputedStyle(document.querySelector('[data-card-id="a"]')).visibility);
   check('the back card is hidden once its shrink has finished', vEnd, 'hidden');
 
+  /* ── POR QUÉ AQUÍ NO HAY COMPROBACIÓN DEL RELEVO, Y QUEDA ESCRITO ────────
+   *
+   * La v12.79 arregló el vaivén que describió Jose: al descartar una tarjeta
+   * con otras esperando fuera, la pila subía y volvía a bajar. El arreglo es
+   * `.conserva-hueco`, que no devuelve la altura cuando va a entrar un relevo.
+   *
+   * Se intentó comprobar aquí y NO SE PUDO. Este banco monta tres tarjetas
+   * estáticas en una página de prueba, sin `_sysCards` ni redibujado, y en él
+   * la tarjeta de abajo no se mueve — ni con el arreglo ni sin él. Las tres
+   * medidas dieron el mismo número.
+   *
+   * O sea que la comprobación habría pasado SIN COMPROBAR NADA, que es peor
+   * que no tenerla: daría por defendido algo que no lo está. Se quita y se
+   * dice aquí.
+   *
+   * Lo que haría falta para medirlo de verdad: el mazo real con más de
+   * `_DECK_VISIBLE` tarjetas, llamando a `_dismissSysCard`, y midiendo a mitad
+   * de la animación —al final las dos versiones acaban igual, así que el
+   * resultado no distingue: lo que se ve es el camino—. Queda apuntado en
+   * docs/BACKLOG.md. */
+
   await browser.close();
   if (fails.length){ console.error('\nFAILED:\n  ' + fails.join('\n  ')); process.exit(1); }
   console.log('\ntopbar + deck: ok');

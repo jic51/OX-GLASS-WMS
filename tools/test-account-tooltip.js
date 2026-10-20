@@ -54,6 +54,9 @@ const sandbox = {
   // gets exercised.
   APP_BUILD: '',
   _companyName: '',
+  /* v12.79: el pie dice qué edición es. Esta prueba mide la de pago, así
+   * que `false` — la básica añadiría « Basic» al lado de la versión. */
+  APP_BASIC: false,
   _lastUserName: '',
   _initialsFor: function () { return 'JC'; },
   _avatarColor: function () { return '#123456'; },

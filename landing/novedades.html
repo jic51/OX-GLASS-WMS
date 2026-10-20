@@ -102,6 +102,30 @@
        Borrar trece movimientos pasó de unos dos minutos y medio a cincuenta y
        cinco segundos por el camino.</p>
 
+    <div class="entry" id="v12-79">
+      <span class="ver">v12.79</span>
+      <span class="tag fix">Correcci&oacute;n</span>
+      <h3>El mont&oacute;n de tarjetas deja de balancearse</h3>
+      <p>Al descartar una tarjeta, todas las de abajo sub&iacute;an a ocupar el hueco &mdash; y un
+         momento despu&eacute;s volv&iacute;an a bajar, porque entraba la siguiente a ocupar el
+         sitio libre. Un solo cambio, dos movimientos, y el segundo parec&iacute;a un fallo m&aacute;s
+         que una animaci&oacute;n.</p>
+      <p>Ahora la regla depende de si hay algo esperando: <b>cuando hay otra tarjeta en cola el
+         mont&oacute;n conserva su altura</b>, as&iacute; que la tarjeta se va y la siguiente
+         sencillamente est&aacute; ah&iacute;. Cuando no hay nada esperando, las dem&aacute;s siguen
+         subiendo al hueco, que es lo correcto cuando el mont&oacute;n s&iacute; se qued&oacute;
+         m&aacute;s corto.</p>
+      <p>La tabla del Dashboard tambi&eacute;n mantiene ahora sus anchos <b>por regla</b> y no por
+         lo que haya dentro. Los anchos ya estaban escritos; faltaba la l&iacute;nea que los hace
+         obligatorios en vez de orientativos.</p>
+      <p>El pie de la app dice ahora qu&eacute; edici&oacute;n es, para que una copia gratuita no se
+         confunda nunca con una de pago.</p>
+      <p>Y la prueba de columnas, que med&iacute;a siete filtros y fallaba si algo se mov&iacute;a,
+         s&oacute;lo miraba la tabla de Movimientos. Ahora mide las dos, con contenido
+         deliberadamente m&aacute;s largo que el hueco &mdash; una prueba que cubre media pantalla
+         certifica media pantalla.</p>
+    </div>
+
     <div class="entry" id="v12-78">
       <span class="ver">v12.78</span>
       <span class="tag new">Nuevo</span>

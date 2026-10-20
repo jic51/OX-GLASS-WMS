@@ -9190,3 +9190,38 @@ edición gratis:
 3. **La ventana de stock bajo se abre** aunque no deje editar. En la básica no
    se puede cambiar desde la app, pero si alguien lo modifica en la hoja sí se
    mostraría.
+
+## 🟡 MEDIR EL VAIVÉN DEL MAZO DE TARJETAS · 19/10
+
+La v12.79 arregló lo que Jose describió —*"al eliminar una se borra, todas se
+ruedan para arriba y en menos de 1 segundo después todas se bajan para dejar
+entrar a la que estaba afuera"*— con `.conserva-hueco`: no se devuelve la altura
+cuando hay un relevo esperando.
+
+**El arreglo es por razonamiento y está sin medir.** Se intentó en
+`tools/test-topbar-deck.js` y no se pudo: ese banco monta tres tarjetas
+estáticas, y en él la tarjeta de abajo no se mueve ni con el arreglo ni sin él.
+La comprobación habría pasado sin comprobar nada.
+
+**Lo que haría falta:** el mazo real con más de `_DECK_VISIBLE` tarjetas,
+llamando a `_dismissSysCard`, midiendo **a mitad de la animación** — al final
+las dos versiones acaban igual, así que el resultado no distingue. Lo que se ve
+es el camino, no el destino.
+
+## 🟡 LAS FILAS DEL DASHBOARD: NO REPRODUCIDO · 19/10
+
+Jose: *"en el 'Dashboard' sí se mueven y saltan algunas según cambio de
+categorías y estado"*.
+
+`tools/test-columnas.js` mide ahora **las dos tablas** —antes sólo Movements— con
+siete filtros de categoría y cinco de estado, y con contenido que NO CABE en los
+anchos declarados. **Ninguna columna se mueve, ni con reparto fijo ni sin él.**
+Tampoco se mueve verticalmente: la tabla, la cabecera y las filas miden lo mismo
+bajo todos los filtros.
+
+Lo único que sí cambia la forma es que **al elegir una categoría desaparece la
+columna Category** — y eso es una mejora del propio Jose del 9 de septiembre,
+protegida por `test-stock-cat-column.js`. Puede ser lo que está viendo.
+
+**Falta de él:** qué par de filtros exactos lo enseña, o un clip corto. Sin eso
+no hay nada que arreglar que no sea deshacer una mejora.

@@ -1926,6 +1926,29 @@
        dieciséis columnas no caben en 960px, y una barra horizontal es mejor que
        un texto que no se puede leer. */
     #tableContainer table{table-layout:fixed;width:100%}
+
+    /* ══ Y EL DASHBOARD, QUE SE QUEDÓ FUERA HASTA LA v12.79 ═══════════════════
+       Jose, 19/10, repasando la app entera: *"revisé el salto y movimiento de
+       las filas y columnas, y la mayoría está bien y no se mueven en
+       'Movements', pero en el 'Dashboard' sí se mueven y saltan algunas según
+       cambio de categorías y estado"*.
+
+       Lo raro es que el trabajo ya estaba hecho a medias: `STOCK_COLS` lleva su
+       ancho en cada columna desde siempre, y la v12.22 le puso el mínimo
+       calculado. Lo que faltaba era ESTA LÍNEA. Sin `table-layout:fixed` un
+       ancho declarado es una SUGERENCIA: el navegador la usa de punto de
+       partida y luego reparte por lo que haya dentro. Tres cuartas partes del
+       mecanismo puestas, y la que las ata, no.
+
+       POR QUÉ SOBREVIVIÓ: `tools/test-columnas.js` mide las columnas bajo siete
+       filtros y falla si alguna se mueve... pero sólo medía `#movHeadRow`. La
+       prueba demostraba que Movements estaba quieto, y de la tabla de al lado
+       no decía nada. Ahora mide las dos. Una prueba que cubre media pantalla
+       certifica media pantalla. */
+    #stockTable{table-layout:fixed;width:100%}
+    /* Y lo que no cabe se parte, no se recorta — misma regla que Movements: el
+       final de un nombre es donde están la letra y el número que lo distinguen. */
+    #stockTable td{overflow-wrap:anywhere}
     /* Y lo que no cabe SE PARTE, no se recorta. Es la misma regla que Jose fijó
        para la tira de reservas: el final de un nombre es donde están la letra y
        el número que lo distinguen, así que esconderlo con puntos suspensivos es
@@ -2665,6 +2688,23 @@
     .deck-card.saliendo-descartada{opacity:0;pointer-events:none;
       margin-bottom:calc(-1 * (var(--card-h) + .45rem));transition-delay:0s!important}
     .deck-card.saliendo-aceptada{transform:translateX(-22%) scale(.94)}
+    /* ══ CUANDO HAY RELEVO, EL HUECO NO SE DEVUELVE ═══════════════════════════
+       Jose, 19/10: *"al eliminar una se borra, todas se ruedan para arriba y en
+       menos de 1 segundo después todas se bajan para dejar entrar a la que
+       estaba afuera, y ésta se pone arriba... parece un error"*.
+
+       Y tiene razón: son DOS movimientos donde hay UN cambio. El margen
+       negativo de arriba hace que el resto suba a ocupar el hueco —que es lo
+       correcto cuando la pila se queda más corta— pero si había tarjetas
+       esperando fuera, el redibujado mete la siguiente y la pila vuelve a su
+       altura: todas bajan otra vez.
+
+       Con relevo, la pila NO cambia de altura, así que no tiene por qué
+       moverse. La tarjeta se va y la siguiente aparece en su sitio. Una baraja
+       se comporta así: quitas la de arriba y ves la de abajo, no se mueve el
+       montón entero dos veces. */
+    .deck-card.saliendo-aceptada.conserva-hueco,
+    .deck-card.saliendo-descartada.conserva-hueco{margin-bottom:0}
     /* Leaving. The card slides out to the right and gives its height back over
        the same beat, so everything below rises into the gap instead of jumping.
        margin-bottom is what moves the others: shrinking it by the card's own
@@ -4322,7 +4362,7 @@
         <button class="btn btn-ghost btn-sm" onclick="clearStockSelection()">Clear</button>
       </div>
       <div class="table-wrapper">
-        <table>
+        <table id="stockTable">
           <thead><tr id="stockHeadRow"></tr></thead>
           <tbody id="stockBody"></tbody>
         </table>
@@ -5570,7 +5610,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.78';
+var APP_VERSION = '12.79';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5582,7 +5622,7 @@ var APP_VERSION = '12.78';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'c3500714';
+var APP_BUILD = '27a4011e';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -18819,9 +18859,17 @@ var _DECK_LEAVE_ANIM_MS = 500;
  * El `then` espera a que el movimiento termine. Redibujar antes reconstruiría
  * el mazo y no quedaría nada que animar, que es el fallo que esta función
  * existe para impedir. */
-function _deckCardLeave(el, then, modo){
+/**
+ * `hayRelevo` — si detrás de esta tarjeta hay otra esperando a entrar.
+ *
+ * Decide si la pila se encoge o se queda igual. Con relevo no se encoge, así
+ * que las de abajo no deben moverse: ver `.conserva-hueco` en el CSS. Sin él,
+ * el comportamiento es el de siempre.
+ */
+function _deckCardLeave(el, then, modo, hayRelevo){
   if (!el){ if (then) then(); return; }
   el.classList.add(modo === 'aceptada' ? 'saliendo-aceptada' : 'saliendo-descartada');
+  if (hayRelevo) el.classList.add('conserva-hueco');
   setTimeout(function(){ if (then) then(); }, _DECK_LEAVE_ANIM_MS);
 }
 
@@ -26020,10 +26068,13 @@ function _dismissSysCard(id){
   // like a list rather than a stack of paper.
   var el = document.querySelector('[data-card-id="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"]');
   // La ✕ de una notificación es "ya lo leí", no "esto se guardó": descartada.
+  /* ¿Queda alguna esperando fuera? Si la pila está llena, al quitar ésta entra
+   * la siguiente y la altura no cambia — así que nada debe moverse. */
+  var hayRelevo = _sysCards.length > _DECK_VISIBLE;
   _deckCardLeave(el, function(){
     _sysCards = _sysCards.filter(function(c){ return c.id !== id; });
     _renderSysDeck();
-  }, 'descartada');
+  }, 'descartada', hayRelevo);
 }
 
 // A notification stays until somebody presses its ✕. It used to carry a
@@ -27753,6 +27804,17 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '12.79',
+    titulo: 'The card pile stops rocking',
+    puntos: [
+      'Dismissing a card made the whole pile slide up, and then slide back down a moment later when the next card took the free slot. One change, two movements \u2014 and the second one read as a glitch.',
+      'When another card is waiting, the pile no longer gives the space back: the card leaves and the next one is simply there. When nothing is waiting, the rest still rise into the gap, which is right.',
+      'The Dashboard table now holds its column widths by rule rather than by whatever happens to be in it.',
+      'And the footer says which edition you are running, so a free copy is never mistaken for anything else.'
+    ],
+    antes:  'Dismiss a card and the pile bounces up, then down',
+    ahora:  'The card goes, the pile stays put' },
+
   { ver: '12.78',
     titulo: 'Nothing half-done, and no surprises at the end',
     puntos: [
@@ -27775,17 +27837,6 @@ var NOVEDADES = [
     ],
     antes:  'The free edition drew its screen and then stopped, asking you to sign in to something that has no sign-in',
     ahora:  'It opens' },
-
-  { ver: '12.76',
-    titulo: 'The free edition now shows what it is missing',
-    puntos: [
-      'In <b>Acopio Basic</b>, the Pro features are no longer hidden. The button is there, marked with a \u{1F512}, and pressing it says what that feature does.',
-      'It says what you <i>get</i>, not what you lack \u2014 and it never interrupts what you were doing. A movement still saves, with or without the photo.',
-      'The full message appears <b>once</b>. After that it is a quiet one-line note. A reminder shown every time is not a reminder, it is nagging.',
-      'The paid edition is unaffected: none of this exists in your copy.'
-    ],
-    antes:  'A free edition that quietly lacked things, and never said so',
-    ahora:  'It tells you what else it can do, at the moment you want it' },
   { ver: '12.74',
     titulo: 'Scanning works after all — with a photo',
     puntos: [
@@ -28150,7 +28201,19 @@ function _setAccountIdentity(name, email, role, stale){
   // it is so Jose can ask "what does this line say?" and know exactly which
   // bytes they are running, without asking anyone to open the script editor or
   // send a file. Shown only once it has actually been stamped.
-  if (foot) foot.textContent = (_companyName ? _companyName + ' · ' : '') + PRODUCT + ' v' + APP_VERSION +
+  /* QUÉ EDICIÓN ES, DICHO EN LA PANTALLA.
+   *
+   * El archivo que se manda sale SIEMPRE con `ACOPIO_BASIC = false`, porque la
+   * versión de pago es la que se publica. O sea que cada vez que se pega una
+   * versión nueva en una copia básica hay que volver a poner `true` — y
+   * olvidarlo da una app que parece la básica y no lo es, sin nada que lo diga.
+   *
+   * Es, otra vez, dos cosas que tienen que coincidir sin que nada lo obligue.
+   * No se puede quitar —el interruptor es lo que hace que haya una sola base de
+   * código— pero sí se puede hacer VISIBLE, que es la diferencia entre un
+   * despiste de dos segundos y uno de media hora. */
+  if (foot) foot.textContent = (_companyName ? _companyName + ' · ' : '') + PRODUCT +
+                               (APP_BASIC ? ' Basic' : '') + ' v' + APP_VERSION +
                                (APP_BUILD ? ' · build ' + APP_BUILD : '');
 }
 

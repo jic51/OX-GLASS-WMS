@@ -89,9 +89,57 @@ for (let i = 0; i < 220; i++) {
   });
 }
 
+/* EL DASHBOARD NECESITA EXISTENCIAS, y hasta la v12.79 esta prueba le pasaba
+ * `stock:{}`. Una tabla vacía no reparte nada, así que aunque alguien hubiera
+ * mirado el Dashboard aquí, no habría medido nada.
+ *
+ * La variedad es el punto: nombres de largos muy distintos, categorías que no
+ * se reparten parejo con los estados, y notas que van de vacío a larguísimo.
+ * Si todas las filas midieran lo mismo, una tabla rota pasaría la prueba. */
+function _mat(cat, name, wh, site, resv, nota, loc){
+  return { matId: cat.toLowerCase() + '|||' + name.toLowerCase(), name: name, category: cat,
+           project: '', unit: 'UNIT', warehouseQty: wh, siteQty: site || 0,
+           availableQty: Math.max(0, wh - (resv || 0)), wastedQty: 0, reservedQty: resv || 0,
+           totalQty: wh + (site || 0), warehouseLocs: loc ? { [loc]: wh } : { A1A: wh },
+           status: 'OK', lastNote: nota || '', dateReceived: '2026-09-14' };
+}
+
+/* CONTENIDO QUE NO CABE, Y CONCENTRADO EN UNAS FILAS Y NO EN OTRAS.
+ *
+ * ESTO ES LO QUE HACE QUE LA PRUEBA MIDA ALGO. El primer intento llenó la tabla
+ * con textos que CABÍAN en los anchos declarados, y entonces el reparto
+ * automático los respetaba por casualidad: la prueba pasaba igual con el
+ * reparto fijo y sin él, o sea que no estaba midiendo la regla, estaba midiendo
+ * que los datos eran cortos.
+ *
+ * Con reparto automático un ancho declarado es una SUGERENCIA: el navegador lo
+ * usa de punto de partida y luego lo amplía si el contenido no cabe. Así que
+ * sólo se nota cuando algo no cabe — que es justo lo que pasa en el almacén de
+ * Jose y no pasaba aquí.
+ *
+ * Las filas largas se concentran en las de existencia CERO para que al filtrar
+ * por estado entren y salgan de la tabla. Si estuvieran repartidas por igual,
+ * todos los filtros verían algo largo y la tabla volvería a no moverse. */
+const NOTA_LARGA = 'WHITE WINDOW SCREENS, DIFFERENT SIZES AND COLOURS, CHECK THE BACK RACK BEFORE PULLING ANYTHING';
+const LOC_LARGA  = 'MIRRORS AND SHOWERS WAREHOUSE — BACK ROW, SECOND BAY';
+const NOTAS = ['', 'A-FRAME', 'WHITE WINDOW SCREENS, DIFFERENT SIZES AND COLOURS, CHECK BEFORE PULLING'];
+const EXISTENCIAS = {};
+for (let i = 0; i < 90; i++) {
+  const cat  = CATS[Math.floor(i / 7) % CATS.length];
+  const name = NOMBRES[i % NOMBRES.length] + ' ' + i;
+  /* Uno de cada siete se queda a cero y uno de cada cinco tiene reservas, para
+   * que los cuatro estados del filtro tengan filas y ninguno quede vacío. */
+  const wh   = (i % 7 === 0) ? 0 : ((i % 40) + 1) * 3;
+  const cero = (wh === 0);
+  EXISTENCIAS[cat.toLowerCase() + '|||' + name.toLowerCase()] =
+    _mat(cat, name, wh, (i % 3 === 0) ? 12 : 0, (i % 5 === 0) ? 4 : 0,
+         cero ? NOTA_LARGA : NOTAS[i % NOTAS.length],
+         cero ? LOC_LARGA  : LOCS[i % LOCS.length]);
+}
+
 const DATA = {
   userRole:'ADMIN', userEmail:'jose@ox.com', userName:'Jose Castro', serverVersion:'test',
-  company:{ name:'OX Glass LLC.' }, movements: movs, stock:{}, materialLocks:[],
+  company:{ name:'OX Glass LLC.' }, movements: movs, stock: EXISTENCIAS, materialLocks:[],
   monitoredMaterials:null,
   config:{ categories: CATS, projects: PROY.filter(Boolean), suppliers: PROV.filter(Boolean),
            locations:[{ name:'A1A', type:'RACK' }], units:['UNIT'] },
@@ -197,6 +245,137 @@ window.__DATA=${JSON.stringify(DATA)};
   check('los filtros producen tablas MUY distintas — si no, no se estaría ' +
         'midiendo nada', new Set(Object.values(huellas)).size === 3,
         Object.keys(huellas).map(k => k + ': ' + huellas[k].length + ' car.'));
+
+  /* ══ EL DASHBOARD, QUE ESTUVO FUERA DE ESTA PRUEBA HASTA LA v12.79 ════════
+   *
+   * Jose, 19/10: *"la mayoría está bien y no se mueven en 'Movements', pero en
+   * el 'Dashboard' sí se mueven y saltan algunas según cambio de categorías y
+   * estado"*.
+   *
+   * Y la causa de que sobreviviera está AQUÍ, no en el producto: esta prueba
+   * medía las columnas bajo siete filtros y fallaba si alguna se movía — pero
+   * sólo miraba `#movHeadRow`. Certificaba media pantalla y de la tabla de al
+   * lado no decía nada. Peor: el fixture pasaba `stock:{}`, así que aunque
+   * alguien hubiera mirado, no habría habido filas que medir.
+   *
+   * Lo que faltaba en el producto era UNA LÍNEA —`table-layout:fixed` en la
+   * tabla de existencias—, con el resto del mecanismo ya puesto desde la
+   * v12.22. Tres cuartas partes hechas y la que las ata, no. */
+  console.log('\n═══ 1b. Y el DASHBOARD, con las mismas reglas ═══\n');
+
+  await page.evaluate(() => showTab('dashboard', 'btn-dashboard'));
+  await page.waitForTimeout(500);
+
+  await page.evaluate(`window.__leerStock = function () {
+    const out = {};
+    document.querySelectorAll('#stockHeadRow th').forEach(function (th) {
+      const m = String(th.className).match(/sc-([a-zA-Z]+)/);
+      const k = m ? m[1] : '(casillas)';
+      const r = th.getBoundingClientRect();
+      out[k] = { x: Math.round(r.left), w: Math.round(r.width) };
+    });
+    return out;
+  };`);
+
+  const conFiltroStock = async (cat, est) => {
+    await page.evaluate(([a, b]) => {
+      document.getElementById('stockFilter').value       = a;
+      document.getElementById('stockStatusFilter').value = b;
+      renderStock();
+    }, [cat, est]);
+    await page.waitForTimeout(220);
+    return page.evaluate(() => window.__leerStock());
+  };
+
+  /* ── DOS GRUPOS, Y NO UNO, PORQUE HAY UN MOVIMIENTO QUE SÍ ES CORRECTO ────
+   *
+   * Al filtrar por UNA categoría, la columna Category desaparece — idea del
+   * propio Jose, 2026-09-09: *"si ya sabemos que sólo nos mostrará ese
+   * material… podemos eliminar la columna de category y poner la category
+   * arriba"*. La protege `tools/test-stock-cat-column.js`.
+   *
+   * Así que medir todos los filtros juntos daba un rojo sobre una función que
+   * funciona: la columna elástica crecía 200 px, que son exactamente los de la
+   * columna que se fue. Mezclar los dos casos habría hecho que esta prueba
+   * pidiera deshacer una mejora.
+   *
+   *   GRUPO A — filtros de ESTADO: la tabla es la misma, no se mueve NADA.
+   *   GRUPO B — filtros de CATEGORÍA: la columna Category se va a propósito y
+   *             la elástica se queda su hueco. Todo lo demás, quieto.
+   */
+  console.log('  grupo A — por estado: la tabla no cambia de forma\n');
+
+  const ESTADOS_S = [['', ''], ['', 'in'], ['', 'zero'], ['', 'resv'], ['', 'site']];
+  const tomasE = {};
+  for (const [c, e] of ESTADOS_S) tomasE[(e || 'todos')] = await conFiltroStock(c, e);
+
+  const clavesE = Object.keys(tomasE[Object.keys(tomasE)[0]]);
+  check('se midieron las columnas del Dashboard — con `stock:{}` no habría ' +
+        'nada que medir y esto pasaría en falso',
+    clavesE.length >= 5, clavesE.length);
+
+  const movidasE = [];
+  clavesE.forEach(k => {
+    const xs = [], ws = [];
+    Object.values(tomasE).forEach(t => { if (t[k]) { xs.push(t[k].x); ws.push(t[k].w); } });
+    const dx = Math.max(...xs) - Math.min(...xs);
+    const dw = Math.max(...ws) - Math.min(...ws);
+    if (dx > 1 || dw > 1) movidasE.push(k + ' (x±' + dx + ', ancho±' + dw + ')');
+  });
+  check('NINGUNA COLUMNA DEL DASHBOARD SE MUEVE al cambiar de estado — ' +
+        'ésta es la mitad de la queja de Jose, medida' +
+        (movidasE.length ? ' — SE MUEVEN: ' + movidasE.join('; ') : ''),
+        movidasE.length === 0);
+
+  console.log('\n  grupo B — por categoría: se va Category, y nada más se mueve\n');
+
+  const CATEGS = [['SCREEN', ''], ['MIRROR', ''], ['IGU (ISOLATED GLASS UNIT)', '']];
+  const tomasC = {};
+  for (const [c, e] of CATEGS) tomasC[c] = await conFiltroStock(c, e);
+
+  check('con una categoría elegida, la columna Category NO está — es la mejora ' +
+        'de Jose del 9 de septiembre, y aquí sólo se comprueba que sigue viva',
+    Object.values(tomasC).every(t => !t.category), Object.keys(tomasC[CATEGS[0][0]]));
+
+  /* La elástica se queda el hueco: eso es lo correcto y por eso se excluye. */
+  const movidasC = [];
+  clavesE.filter(k => k !== 'category' && k !== 'name').forEach(k => {
+    const xs = [], ws = [];
+    Object.values(tomasC).forEach(t => { if (t[k]) { xs.push(t[k].x); ws.push(t[k].w); } });
+    if (!xs.length) return;
+    const dx = Math.max(...xs) - Math.min(...xs);
+    const dw = Math.max(...ws) - Math.min(...ws);
+    if (dx > 1 || dw > 1) movidasC.push(k + ' (x±' + dx + ', ancho±' + dw + ')');
+  });
+  check('y entre una categoría y otra no se mueve NADA' +
+        (movidasC.length ? ' — SE MUEVEN: ' + movidasC.join('; ') : ''),
+        movidasC.length === 0);
+
+  /* El mismo contraste: si todos los filtros dieran la misma tabla, lo de
+   * arriba pasaría con la tabla rota. */
+  const huellasS = {};
+  for (const [c, e] of [['', ''], ['MIRROR', ''], ['', 'zero']]) {
+    await page.evaluate(([a, b]) => {
+      document.getElementById('stockFilter').value       = a;
+      document.getElementById('stockStatusFilter').value = b;
+      renderStock();
+    }, [c, e]);
+    await page.waitForTimeout(200);
+    huellasS[(c || 'todas') + '/' + (e || 'todos')] = await page.evaluate(() =>
+      Array.prototype.map.call(document.querySelectorAll('#stockBody tr'),
+        tr => tr.textContent.replace(/\s+/g, ' ').trim()).join('|'));
+  }
+  check('los filtros del Dashboard producen tablas MUY distintas',
+    new Set(Object.values(huellasS)).size === 3,
+    Object.keys(huellasS).map(k => k + ': ' + huellasS[k].length + ' car.'));
+
+  await page.evaluate(() => {
+    document.getElementById('stockFilter').value       = '';
+    document.getElementById('stockStatusFilter').value = '';
+    renderStock();
+    showTab('movements', 'btn-movements');
+  });
+  await page.waitForTimeout(350);
 
   console.log('\n═══ 2. Una sola columna elástica, y es la del material ═══\n');
 
