@@ -9415,3 +9415,21 @@ leen y media de tarjetas de resumen.
 > navegación, o sea **lo que toca todas las pantallas**. Tiene su propia versión
 > y sus propias medidas antes y después, no se mete de regalo en una versión que
 > vaya de otra cosa.
+
+## 🔵 LAS CINCO LEYES, APLICADAS A LO QUE YA DECIDIMOS · 20/10
+
+Jose mandó una lámina de *5 UX Laws*. No se copian: se usan para decidir las
+cuatro cosas que arriba quedaron abiertas.
+
+| Ley | Lo que dice | Lo que decide AQUÍ |
+|---|---|---|
+| **Fitts** | lo importante, fácil de alcanzar | **el menú de iconos del teléfono va ABAJO**, no arriba. Arriba es donde no llega el pulgar. Hoy la navegación está arriba porque viene del escritorio |
+| **Hick** | más opciones, más tiempo de decidir | **es el argumento de Jose, con nombre.** Y pone número a la pregunta «¿cuántos iconos?»: **cinco, y seis ya es una rejilla** |
+| **Jakob** | esperan que funcione como lo que ya usan | la propia lámina lo enseña: Instagram y YouTube ponen la barra **abajo, con iconos**. No hay que inventar nada — hay que parecerse |
+| **Proximidad** | lo que está junto parece relacionado | el bloque de la marca: **logo y nombre del almacén pegados**, y la línea del segundo almacén más cerca del nombre que de las pestañas |
+| **Von Restorff** | lo distinto se nota primero | ya lo usamos sin llamarlo así: **un solo botón azul** en la oferta de Pro y lo demás en texto, y el gris de lo apagado que hace resaltar lo disponible |
+
+**Lo que más cambia:** Fitts y Jakob dicen lo mismo y dicen que **la navegación
+del teléfono va abajo**. Eso no estaba en la propuesta de Jose —él habló de
+iconos, no de dónde— y es la diferencia entre un menú que se usa con el pulgar y
+uno que obliga a cambiar la mano de sitio.
