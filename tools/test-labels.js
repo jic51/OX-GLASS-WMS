@@ -515,61 +515,84 @@ Object.assign(window.google,{script:{run:new Proxy({},{get(t,k){
   // la salida: se marca un movimiento en Movements, se pulsa Labels y se
   // reimprime cualquier cosa. Olvidarse de marcar cuesta dos clics después.
   {
-    const mat = (name, quiere) => ({ name, category:'WINDOW', unit:'UNIT',
-      locations:[{ loc:'A1A', qty:5 }], wantsLabel: quiere });
+    /* ── EL CONTRATO VOLVIÓ A CAMBIAR EL 21/10, Y LO CAMBIÓ ÉL OTRA VEZ ──────
+     *
+     * Jose, repasando la ventana de entrada: *"quiero que todas las cosas que
+     * no se usen no molesten en la pantalla"*, marcando entre otras la casilla
+     * «🏷 Label» de cada línea de material.
+     *
+     * Y el motivo para quitarla de ahí no era sólo el sitio. Imprimir no es un
+     * dato de la recepción: es algo que se hace con el material una vez
+     * guardado. Preguntarlo arriba, en la misma línea que el nombre, es pedir
+     * una decisión sobre el futuro antes de haber escrito el presente.
+     *
+     * LA PREGUNTA NO SE PERDIÓ, SE MOVIÓ al aviso de guardado, que es donde se
+     * puede contestar con los bultos delante. Y lo que Jose exigió en
+     * septiembre —*"eso es pedir información al usuario pero hacer lo que
+     * queremos después"*— se sigue cumpliendo, y de forma más simple: ahora la
+     * respuesta se usa tal cual. Se pulsa y se abre con todo marcado; no se
+     * pulsa y no se abre nada.
+     *
+     * Así que ya NO HAY `marcada` en las filas que salen de una entrada, y eso
+     * no es un descuido: es lo que hace que el cuadro se abra entero cuando
+     * alguien acaba de pedir que se abra. */
+    const mat = (name) => ({ name, category:'WINDOW', unit:'UNIT',
+      locations:[{ loc:'A1A', qty:5 }] });
 
     const elegidos = await page.evaluate(ms => _labelsFromEntry(ms, {}),
-      [mat('UNO', false), mat('DOS', true), mat('TRES', false)]);
-    check('con alguna marcada, sólo ésa viene marcada en el cuadro',
-      elegidos.filter(r => r.marcada).length === 1 &&
-      elegidos.filter(r => r.marcada)[0].name === 'DOS',
+      [mat('UNO'), mat('DOS'), mat('TRES')]);
+    check('una entrada ya NO decide cuáles llevan etiqueta — ninguna fila trae ' +
+          '`marcada`, porque la pregunta se hace después de guardar y la ' +
+          'respuesta es sí o no para todas',
+      elegidos.every(r => r.marcada === undefined),
       elegidos.map(r => r.name + ':' + r.marcada));
-    check('...pero las demás SIGUEN en la lista, por si se cambia de idea',
-      elegidos.length === 3, elegidos.length);
+    check('...y están TODAS las filas de la entrada', elegidos.length === 3, elegidos.length);
 
-    const nadie = await page.evaluate(ms => _labelsFromEntry(ms, {}),
-      [mat('UNO', false), mat('DOS', false)]);
-    check('si no se marcó ninguna, NINGUNA viene marcada — la respuesta del ' +
-          'usuario ya no se ignora cuando la respuesta es "ninguna"',
-      nadie.every(r => !r.marcada), nadie.map(r => r.marcada));
-
-    /* Y LO QUE SE VE, que es la otra mitad de lo que pidió: el cuadro NO SE
-     * ABRE. Se comprueba sobre el DOM y no sobre el valor devuelto, porque "la
-     * fila viene desmarcada" y "la ventana no apareció" son dos cosas distintas
-     * y la segunda es la que se pidió. */
-    /* SE MIRA LA CLASE `show`, que es como se abre de verdad. La primera
+    /* Y LO QUE SE VE: pedir el cuadro desde el aviso lo abre, con todo dentro.
+     * Se mira la clase `show`, que es como se abre de verdad; la primera
      * versión de esta prueba miraba `ov.hidden`, que en este cuadro NO se usa
-     * nunca — así que daba "abierta" siempre y habría pasado en verde sobre el
-     * código sin arreglar. Y se cierra antes de medir, porque el bloque de
-     * arriba deja el cuadro abierto. */
-    const sinMarcar = await page.evaluate(ms => {
+     * nunca, así que daba "abierta" siempre y habría pasado en verde sobre el
+     * código sin arreglar. */
+    const pedido = await page.evaluate(ms => {
+      _labelsClose();
+      _openLabels(_labelsFromEntry(ms, {}), function(){});
+      const ov = document.getElementById('labelsOverlay');
+      return new Promise(r => setTimeout(() => r({
+        abierta: !!(ov && ov.classList.contains('show')),
+        filas:   document.querySelectorAll('#labelsList .lbl-row').length
+      }), 300));
+    }, [mat('UNO'), mat('DOS')]);
+    check('al pedirlo desde el aviso, el cuadro SÍ se abre', pedido.abierta, true);
+    await page.evaluate(() => _labelsClose());
+
+    /* LA REGLA DE «SI NADIE MARCÓ, NO SE ABRE» SIGUE VIVA Y HACE FALTA, aunque
+     * una entrada ya no la dispare: cualquier camino que mande filas con
+     * `marcada:false` —hoy ninguno, mañana quizá— no debe abrir un cuadro con
+     * todo desmarcado, que no ofrece nada y hay que cerrar. La regla vive en
+     * `_openLabels` justamente para que valga para caminos que aún no existen,
+     * así que se comprueba ahí y no en el formulario. */
+    const todasNo = await page.evaluate(() => {
       _labelsClose();
       let siguio = 0;
-      _openLabels(_labelsFromEntry(ms, {}), function(){ siguio++; });
+      _openLabels([{ marcada:false, name:'X', category:'A', qty:1, unit:'U',
+                     loc:'C2A', po:'', supplier:'', project:'', dateRec:'', copies:1 }],
+                  function(){ siguio++; });
       const ov = document.getElementById('labelsOverlay');
       return new Promise(r => setTimeout(() => r({
         abierta: !!(ov && ov.classList.contains('show')), siguio: siguio
       }), 300));
-    }, [mat('UNO', false), mat('DOS', false)]);
-    check('sin ninguna marcada el cuadro NI SE ABRE', !sinMarcar.abierta, sinMarcar);
+    });
+    check('con TODAS desmarcadas el cuadro sigue sin abrirse — la regla vive en ' +
+          '`_openLabels` para que valga también para caminos que aún no existen',
+      !todasNo.abierta, todasNo);
     check('...y lo que venía detrás sigue corriendo — saltarse el cuadro no ' +
-          'puede tragarse la pregunta de las entregas', sinMarcar.siguio === 1,
-      sinMarcar);
-
-    const conUna = await page.evaluate(ms => {
-      _labelsClose();
-      _openLabels(_labelsFromEntry(ms, {}), function(){});
-      const ov = document.getElementById('labelsOverlay');
-      return new Promise(r => setTimeout(() => r(!!(ov && ov.classList.contains('show'))), 300));
-    }, [mat('UNO', false), mat('DOS', true)]);
-    check('con una sola marcada SÍ se abre', conUna, conUna);
-    await page.evaluate(() => _labelsClose());
+          'puede tragarse la pregunta de las entregas', todasNo.siguio === 1,
+      todasNo);
 
     /* LA REIMPRESIÓN NO PUEDE QUEDAR ATRAPADA EN ESTA REGLA. Sus filas vienen
      * de movimientos ya guardados y NO traen `marcada`; sin ella cuentan como
      * marcadas, porque allí se eligió fila por fila antes de abrir el cuadro.
-     * Si esto se rompiera, el botón Labels de Movements dejaría de hacer nada —
-     * y es justo la salida que hace aceptable lo de arriba. */
+     * Si esto se rompiera, el botón Labels de Movements dejaría de hacer nada. */
     const reimpresion = await page.evaluate(() => {
       _labelsClose();
       _openLabels([{ name:'X', category:'A', qty:1, unit:'U', loc:'C2A',

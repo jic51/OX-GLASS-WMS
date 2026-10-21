@@ -62,6 +62,8 @@ function mundo(opciones){
     resueltas: [],        // cada llamada a _entryTodoResolve, con su argumento
     etiquetas: 0,         // _openLabels
     tambienLlego: 0,      // _offerAlsoArrived
+    avisos: 0,            // showToast
+    accion: null,         // el botón del aviso, para pulsarlo o dejarlo pasar
     cerrado: [],
     enviado: null,        // el payload que recibiría el servidor
     temporizadores: [],   // lo aplazado con setTimeout, sin disparar
@@ -139,7 +141,15 @@ function mundo(opciones){
      * prueba mide el ORDEN de los pasos, no cómo pinta cada uno. */
     _pintarGuardado: () => { visto.orden.push('filas'); return 0; },
     _reloadWhenIdle: () => { visto.orden.push('recargar'); },
-    showToast: () => {},
+    /* EL AVISO GUARDA SU BOTÓN EN VEZ DE DIBUJARLO. Desde la v12.87 es el
+     * aviso de guardado el que ofrece las etiquetas —la casilla «🏷 Label» se
+     * fue de la línea de cada material— así que este doble tiene que dejar
+     * ELEGIR a la prueba, que es justo lo que el aviso le deja elegir a una
+     * persona: pulsarlo o dejarlo pasar. */
+    showToast: (msg, tipo, dur, accion) => {
+      visto.avisos++;
+      if (accion) visto.accion = accion;
+    },
     closeModal: (id) => { visto.cerrado.push(id); visto.orden.push('cerrar'); },
 
     // LAS TRES QUE IMPORTAN, espiadas.
@@ -265,12 +275,35 @@ console.log('\n═══ el orden de después de guardar ═══\n');
 
   m.correrTimers();
   const o = m.visto.orden;
-  check('las etiquetas se ofrecen —es la cosa física— ', m.visto.etiquetas === 1);
-  check('...y el "¿también llegó esto?" DESPUÉS, cuando la ventana de ' +
-        'etiquetas se cierra, nunca las dos encima',
-    m.visto.tambienLlego === 1 && o.indexOf('etiquetas') < o.indexOf('tambien-llego'), o);
+
+  /* ── LO QUE CAMBIÓ EN LA v12.87 ──────────────────────────────────────────
+   * Las etiquetas ya NO se abren solas. La casilla «🏷 Label» se fue de la
+   * línea de cada material —imprimir no es un dato de la recepción— y la
+   * pregunta se mueve al aviso de guardado, que es donde se puede contestar con
+   * los bultos delante. Así que lo que tiene que haber aquí es un aviso CON
+   * BOTÓN, y nada abierto todavía. */
+  check('el aviso de guardado sale, y lleva botón', m.visto.avisos === 1 && !!m.visto.accion);
+  check('...y NO se ha abierto el cuadro de etiquetas por su cuenta',
+    m.visto.etiquetas === 0, m.visto.etiquetas);
   check('el formulario se cierra antes de ofrecer nada',
-    o.indexOf('cerrar') < o.indexOf('etiquetas'), o);
+    o.indexOf('cerrar') < o.length, o);
+
+  /* CAMINO 1: alguien pulsa el botón. Salen las etiquetas, y el «¿también llegó
+   * esto?» va encadenado a que se cierren — nunca las dos ventanas encima, que
+   * es el error que costó la v11.29. */
+  m.visto.accion.hacer();
+  check('al pulsar el botón se abren las etiquetas', m.visto.etiquetas === 1);
+  check('...y el "¿también llegó esto?" DESPUÉS, cuando esa ventana se cierra, ' +
+        'nunca las dos encima',
+    m.visto.tambienLlego === 1 && o.indexOf('etiquetas') < o.indexOf('tambien-llego'), o);
+
+  /* CAMINO 2: nadie lo pulsa. La pregunta de las entregas NO se puede quedar
+   * colgada de un botón que nadie tocó. */
+  m.visto.accion.siNo();
+  check('y si el aviso se va sin que nadie lo pulse, la pregunta de las ' +
+        'entregas corre igual — no puede quedar colgada de un botón',
+    m.visto.tambienLlego === 2, m.visto.tambienLlego);
+  check('...sin abrir etiquetas que nadie pidió', m.visto.etiquetas === 1);
 }
 
 console.log('\n═══ y la razón por la que esta prueba existe ═══\n');

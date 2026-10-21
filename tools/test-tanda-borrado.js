@@ -663,7 +663,15 @@ m.seccion('los que se quedan, pero cortos');
   const RAPIDOS = [
     ['guardar una entrada o salida',        "showToast('Saved ✓', 'ok', TOAST_QUICK)"],
     ['salida de varios materiales',         "movement record(s) saved.','ok',TOAST_QUICK)"],
-    ['entrada de varios materiales',        "archive row' + (rows===1?'':'s') + ')', 'ok', TOAST_QUICK)"],
+    /* LA ENTRADA DE VARIOS MATERIALES SE SALIÓ DE ESTA LISTA EN LA v12.87, y es
+     * la excepción que confirma la regla de arriba. Su aviso ya NO es sólo
+     * "guardado": lleva el botón de imprimir etiquetas, porque la casilla
+     * «🏷 Label» se fue de la línea de cada material y la pregunta se mueve
+     * aquí, donde se puede contestar con los bultos delante.
+     *
+     * Un aviso con algo que PULSAR no puede durar dos segundos: ésa es la regla
+     * que esta lista defiende, leída al derecho. Dura doce, y se comprueba más
+     * abajo junto con el botón. */
     ['editar un movimiento',                "field(s) changed. Email sent.', 'ok', TOAST_QUICK)"],
     ['borrar una entrega esperada',         "showToast('Expected delivery deleted.', 'ok', TOAST_QUICK)"],
     /* Los dos del histórico cambiaron de texto en la v12.27, cuando el botón
@@ -679,6 +687,18 @@ m.seccion('los que se quedan, pero cortos');
   ];
   RAPIDOS.forEach(([que, marca]) => {
     m.check(que + ': dura dos segundos', HTML.indexOf(marca) !== -1, marca);
+  });
+
+  /* Y EL CASO CONTRARIO, que es la otra mitad de la misma regla: el aviso que
+   * trae algo que pulsar tiene que durar lo que se tarda en verlo y decidir. */
+  m.check('la entrada de varios materiales avisa con un botón de etiquetas',
+    /texto: '🏷 Print labels'/.test(HTML));
+  m.check('...y ese aviso dura doce segundos, no dos — un aviso con algo que ' +
+          'pulsar no se puede ir antes de que a uno le dé tiempo a pulsarlo',
+    /'ok', 12000, \{/.test(HTML));
+  m.check('...y lo que venía detrás corre igual si nadie lo pulsa',
+    /siNo:\s*luego/.test(HTML));
+  (function(){
   });
 
   m.check('y el número lleva nombre, para que se lea lo que significa',
