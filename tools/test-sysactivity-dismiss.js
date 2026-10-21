@@ -18,6 +18,7 @@
 // Usage:  node tools/test-sysactivity-dismiss.js
 
 const fs = require('fs'), path = require('path'), vm = require('vm');
+const A    = require(require('path').join(__dirname, 'andamio.js'));
 
 const GS  = fs.readFileSync(path.join(__dirname, '..', 'Code_v3_fixed.gs'), 'utf8');
 const HTML = fs.readFileSync(path.join(__dirname, '..', 'Index_v3_fixed.html'), 'utf8');
@@ -116,7 +117,22 @@ check('all six come back, none flagged', fresh.length === 6 && fresh.every(funct
 // ── Frontend: the two consumers must disagree about `dismissed` ─────────────
 console.log('\nScenario: the deck hides dismissed notices, Settings → System keeps showing them');
 
-const announce = extractFn(HTML, '_announceSystemActivity');
+/* MIGRADA AL ANDAMIO EN LA v12.85, y fue la novena mordida del mismo patrón.
+ * `_announceSystemActivity` ganó una llamada a `_sysRutina` —la regla nueva de
+ * qué merece tarjeta y qué es sólo registro— y esta prueba murió con un
+ * «_sysRutina is not defined» que no tiene nada que ver con descartar avisos.
+ *
+ * Y se colaba por un hueco MÁS del guardia: no era una lista entre corchetes ni
+ * un `${...}` dentro de una plantilla, era un `extractFn` suelto guardado en una
+ * variable y corrido después. Esa tercera forma ya está vigilada en
+ * `test-andamio`.
+ *
+ * `SYS_RUTINA` va aparte porque es una constante y el andamio sólo arrastra
+ * funciones — eso está dicho en su cabecera y es a propósito. */
+const announce = A.constantes(HTML, ['SYS_RUTINA']) + '\n' +
+  A.levantar(HTML, ['_announceSystemActivity'], {
+    dobles: ['_renderSysDeck', '_renderTodoDeck']
+  });
 const fe = vm.createContext({
   systemActivity: out,
   _sysDismissedNow: {},
@@ -128,9 +144,29 @@ const fe = vm.createContext({
   _renderTodoDeck: function () {},
   console: console,
 });
+/* DOS REGLAS SOBRE LA MISMA LISTA, y desde la v12.85 son dos. La de siempre:
+ * una tarjeta descartada no vuelve. La nueva: el respaldo de cada noche NO es
+ * una tarjeta, es registro — Jose mandó un vídeo pulsando la ✕ doce veces
+ * contra una cola de respaldos y archivados que no paraba de entrar.
+ *
+ * Así que a esta caja se le dan las dos clases de aviso a la vez. Con sólo
+ * respaldos el mazo sale vacío y «vacío» pasaría por el motivo equivocado. */
+fe.systemActivity = out.concat([
+  { at: '2026-08-07T10:04:00Z', action: 'AUTO_REPAIR_MATID',
+    label: 'Movements re-linked to the right material', detail: '3 movements',
+    extra: '', dismissed: false },
+  { at: '2026-08-08T10:04:00Z', action: 'AUTO_REPAIR_TOTAL_COST',
+    label: 'Totals recalculated (Qty × Unit Cost)', detail: '2 rows',
+    extra: '', dismissed: true }
+]);
 vm.runInContext('var _sysCards;' + announce, fe);
 vm.runInContext('_announceSystemActivity()', fe);
-check('deck shows only the two undismissed backups (got ' + fe._sysCards.length + ')', fe._sysCards.length === 2);
+const accionesEnMazo = fe._sysCards.map(function (c) { return c.id.split('|')[1]; });
+check('los seis respaldos NO llegan al mazo — son registro, no noticia (mazo: ' +
+      accionesEnMazo.join(', ') + ')',
+  accionesEnMazo.indexOf('BACKUP_CREATED') === -1);
+check('...pero lo que la app cambió sola SÍ, y sin descartar sólo queda uno',
+  fe._sysCards.length === 1 && accionesEnMazo[0] === 'AUTO_REPAIR_MATID');
 
 // The Settings tab builds its list with no dismissed filter — asserted in the
 // source, since _renderSystemTab writes a large innerHTML blob that is not

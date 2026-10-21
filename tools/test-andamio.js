@@ -217,11 +217,33 @@ m.seccion('NINGUNA prueba mantiene ya una lista de dependencias a mano');
      es lo que tiene dependencias. */
   const INTERPOLA = /\$\{\s*(?:fnSrc|extractFn)\s*\(/;
 
+  /* LA TERCERA FORMA, encontrada el mismo dia que se cerro la segunda.
+     test-sysactivity-dismiss guardaba UNA funcion en una variable y la corria
+     despues — `const announce = extractFn(HTML, '_announceSystemActivity')`,
+     y mas abajo un `runInContext(... announce ...)`. Ni lista ni plantilla, asi
+     que los dos patrones de arriba no la veian; murio con un «_sysRutina is not
+     defined» en cuanto esa funcion gano una llamada. Novena mordida.
+
+     SE MIRA QUE PASA CON EL RESULTADO, no la llamada: `const x = fnSrc('f')`
+     es tambien la forma legitima de leer una funcion para buscarle algo con una
+     expresion regular, y esa costumbre hay que dejarla en paz. Lo que delata es
+     que esa misma variable acabe DENTRO de un `runInContext`, porque entonces
+     es codigo que se va a ejecutar — y lo que se ejecuta tiene dependencias. */
+  function guardaYEjecuta(src){
+    const re = /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:fnSrc|extractFn)\s*\(/g;
+    let m;
+    while ((m = re.exec(src))) {
+      const corre = new RegExp('runInContext\\([^)]*\\b' + m[1] + '\\b');
+      if (corre.test(src)) return true;
+    }
+    return false;
+  }
+
   const culpables = fs.readdirSync(__dirname)
     .filter(f => /^test-.*\.js$/.test(f) && f !== 'test-andamio.js')
     .filter(f => {
       const src = A.sinComentarios(fs.readFileSync(path.join(__dirname, f), 'utf8'));
-      return PATRON.test(src) || INTERPOLA.test(src);
+      return PATRON.test(src) || INTERPOLA.test(src) || guardaYEjecuta(src);
     });
 
   m.check('ninguna prueba mete en la caja una lista de nombres escrita a mano — ' +
@@ -246,9 +268,18 @@ m.seccion('NINGUNA prueba mantiene ya una lista de dependencias a mano');
   /* Y NO MUERDE lo legítimo: leer una función para buscarle algo con un regex,
      sin ejecutarla, es una costumbre buena de esta suite y tiene que seguir
      pasando. */
+  // Y la tercera, tal como la tenía test-sysactivity-dismiss.
+  m.check('...y la tercera: guardar una función en una variable y correrla',
+    guardaYEjecuta("const announce = extractFn(HTML, '_announceSystemActivity');\n" +
+                   "vm.runInContext('var x;' + announce, fe);"));
+
+  /* Y NO MUERDE lo legítimo: leer una función para buscarle algo con un regex,
+     sin ejecutarla, es una costumbre buena de esta suite y tiene que seguir
+     pasando. Las tres reglas se prueban contra ella. */
+  const soloLee = "const REN = fnSrc('renderStock');\n" +
+                  "check('…', /x/.test(fnSrc('_showConfirm')));";
   m.check('...y deja en paz un `fnSrc` que sólo lee para buscar',
-    !PATRON.test("check('…', /x/.test(fnSrc('_showConfirm')));") &&
-    !INTERPOLA.test("const REN = fnSrc('renderStock');"));
+    !PATRON.test(soloLee) && !INTERPOLA.test(soloLee) && !guardaYEjecuta(soloLee));
 }
 
 m.seccion('la hoja falsa se porta como Sheets');

@@ -209,3 +209,245 @@ como mucho**, a **800px de ancho**, y aun así va a pesar más que el vídeo.
 landing se queda vacío y con su cartel hasta que haya clientes de verdad que
 hayan dicho algo de verdad. Está decidido así desde que se escribió la página y
 no cambia.
+
+---
+
+# LOS CUATRO VÍDEOS QUE PIDIÓ JOSE — 21/10
+
+Jose, 21/10, sobre cuatro ideas que quedaron apuntadas en la lista: *"dame una
+guía sencilla para esto"*, *"¿cómo se graba esto?"*, *"también dame una
+descripción"*, *"¿cómo harías tú esto?"*.
+
+**Los cuatro valen más que el vídeo principal de arriba**, y conviene decir por
+qué antes de las guías: el vídeo principal enseña **qué hace** la app, y eso lo
+enseña cualquier competidor. Éstos cuatro enseñan **lo que nadie más puede
+enseñar** — que se instala sola, que funciona con una mano, que los datos son
+del cliente, y que el Excel de verdad de una bodega de verdad se puede dejar
+atrás. Son los cuatro argumentos que no se pueden copiar.
+
+> **Regla 0, otra vez:** nada de esto sale del almacén real de OX. Ver el aviso
+> del principio de este documento. Los cuatro se graban contra la copia de demo.
+
+---
+
+## V1 · «Instalado desde cero» — el cronómetro
+
+**Duración:** 3–4 minutos sin cortes. **Sin música, sin voz, sin edición.**
+
+### Por qué sin cortes y por qué con cronómetro
+
+Porque la objeción que mata esta venta no es el precio: es *"¿cuánto me va a
+costar tener esto funcionando?"*. Todo el mundo ha sufrido una instalación de
+software que iba a tomar una tarde y tomó tres semanas.
+
+Un vídeo editado no contesta esa pregunta — contesta la pregunta de si sabes
+editar vídeo. **Un plano único con el reloj a la vista es la única forma de
+probar una duración.** El corte es justo lo que haría sospechar.
+
+### Antes de empezar
+
+| | |
+|---|---|
+| Navegador | Ventana de **incógnito**, pantalla completa |
+| Cuenta | Una cuenta de Google **nueva**, que no haya visto Acopio nunca |
+| Cronómetro | `clock.zone/stopwatch` o el del teléfono apoyado al lado, **arriba a la izquierda, visible todo el rato** |
+| Qué NO debe verse | Marcadores, otras pestañas, el nombre de la cuenta real, notificaciones |
+| Grabación | OBS o la grabadora de pantalla, 1080p, **sin recortar después** |
+
+### El guion, que es simplemente hacerlo
+
+1. **Arrancas el cronómetro** y lo primero que se ve es `www.acopio.net`.
+2. Clic en el botón de la versión gratis.
+3. Se abre la copia de la hoja → **Hacer una copia**.
+4. Extensiones → Apps Script → pegar los dos archivos → Guardar.
+5. Desplegar → Nueva implementación → Aplicación web → Autorizar.
+6. La pantalla de Google que da miedo → **Configuración avanzada → Ir a (no seguro)**.
+7. Se abre la app vacía → el asistente de instalación.
+8. **Se registra un movimiento de verdad**, y se ve aparecer en la tabla.
+9. **Paras el cronómetro.**
+
+### Las tres reglas que lo hacen creíble
+
+1. **La pantalla de aviso de Google NO se corta.** Es la parte fea y es la parte
+   que más confianza da: si la escondes y luego le sale al cliente, piensa que
+   algo se le ocultó. Si la enseñas y le dices «esto va a salir y esto es lo que
+   se pulsa», ya no asusta.
+2. **Si te equivocas, no repitas la toma.** Un error pequeño y su arreglo dentro
+   del mismo plano valen más que una toma perfecta: prueban que es un vídeo real.
+3. **El último paso es un movimiento guardado**, no la pantalla de bienvenida.
+   «Instalado» no es que abra; «instalado» es que ya sirve.
+
+### Lo que se publica
+
+El vídeo entero en la página (nadie lo verá completo, y da igual: existe), y un
+recorte de **20 segundos** —del minuto 0 al 0:20— como bucle en la cabecera, con
+el reloj corriendo. El número final va escrito en texto al lado:
+**«De cero a funcionando: 3 min 41 s. Vídeo completo, sin cortes.»**
+
+---
+
+## V2 · «El teléfono en la bodega» — una salida con una mano
+
+**Duración:** 20–30 segundos. **Vertical.** Sin voz.
+
+### Cómo se graba, que era la pregunta
+
+**No se graba la pantalla sola, y no se graba a una persona sola. Se graban las
+dos cosas a la vez**, y por eso hace falta una segunda persona:
+
+| | |
+|---|---|
+| Teléfono A | **En la mano de quien trabaja.** Grabando SU PROPIA pantalla (Android: Grabar pantalla; iPhone: Grabación de pantalla desde el Centro de control) |
+| Teléfono B | **En la mano de otra persona**, grabando al primero: la mano, el teléfono y el estante detrás |
+| Montaje | Los dos vídeos uno encima del otro, o el de la pantalla en una esquina del otro |
+
+Eso es todo el truco. Sin trípode, sin luz, sin micro.
+
+### Qué tiene que verse, en este orden
+
+1. **Primer segundo: el almacén de verdad.** Un estante con material, en foco.
+   No la app. El que mira tiene que ubicarse antes de que empiece nada.
+2. La mano saca el teléfono del bolsillo. **Una sola mano, todo el vídeo.** Si
+   en algún momento aparece la segunda mano, se repite la toma — ése es el
+   argumento entero.
+3. En la pantalla: Exit → el material → la cantidad → guardar.
+4. **El número de la bodega cambia en la pantalla**, a la vista.
+5. El teléfono vuelve al bolsillo.
+
+### Las tres reglas
+
+1. **Una mano. Siempre.** Es lo único que este vídeo demuestra.
+2. **Con guantes de trabajo puestos**, si en esa bodega se usan. Es el detalle
+   que le dice a un jefe de almacén que esto lo hizo alguien que ha estado ahí,
+   y no se puede fingir.
+3. **El cronómetro va en texto encima, no en pantalla.** Aquí sí se puede
+   sobreimprimir «18 segundos» porque el vídeo dura lo que dura y se ve.
+
+### El texto que lo acompaña en la página
+
+> **Una salida, con una mano, sin quitarse los guantes.**
+> No hay que volver a la oficina. No hay que apuntarlo en un papel para pasarlo
+> luego. Se registra donde pasa, cuando pasa.
+
+---
+
+## V3 · «Tus datos son tuyos» — la hoja al lado de la app
+
+**Duración:** 25–40 segundos. **Horizontal, pantalla partida.** Sin voz.
+
+### La descripción, que era lo que pedías
+
+Este vídeo tiene **un solo plano** y es el plano entero: la pantalla dividida en
+dos. **A la izquierda, Acopio. A la derecha, la hoja de cálculo de Google con
+las mismas filas.** Se registra un movimiento en la app, y la fila **aparece
+sola en la hoja**, a la derecha, sin tocar nada.
+
+Y después se hace lo contrario, que es la mitad que de verdad convence:
+**se cierra Acopio** y la hoja se queda ahí, con todo dentro, legible, ordenada,
+descargable.
+
+### Por qué esto no lo puede enseñar ningún competidor
+
+Porque no es una función: es **dónde vive el dato**. En Sortly, en inFlow, en
+Zoho, el inventario está en la base de datos de ellos y se ve a través de su
+aplicación. Si dejas de pagar, se acabó. **Aquí el dato está en el Drive del
+cliente desde el primer día**, y la app es una ventana a algo que ya era suyo.
+
+Ningún SaaS puede grabar este vídeo. No es que no quieran: es que su arquitectura
+no se lo permite.
+
+### El guion
+
+1. Pantalla partida. Acopio a la izquierda, la hoja a la derecha, ya abiertas.
+2. En Acopio: una salida de 4 unidades de un material. Guardar.
+3. **La fila aparece en la hoja de la derecha.** Un segundo de pausa ahí.
+4. Se cierra la pestaña de Acopio. Queda sólo la hoja.
+5. Archivo → Descargar → Excel. Se ve el archivo bajando.
+6. Fin.
+
+### El texto que lo acompaña
+
+> **Tus datos no están en nuestro servidor. Están en tu Google Drive.**
+> Acopio escribe en una hoja de cálculo tuya, en tu cuenta. Puedes abrirla,
+> leerla, descargarla o llevártela cuando quieras — y si un día dejas de pagar,
+> **tu inventario sigue ahí**. Eso no es una promesa: es dónde está el archivo.
+
+### La regla
+
+**No se dice «nunca te quedas encerrado» — se enseña.** La frase la escribe
+cualquiera; el vídeo no.
+
+---
+
+## V4 · El antes/después del Excel
+
+**Duración:** 40–60 segundos. **Es el más difícil de los cuatro y el que más vale.**
+
+### Cómo lo haría yo, que era la pregunta
+
+Con **el Excel de verdad de OX, y con una condición**: antes de grabar, se abre
+una copia y se **reemplazan los nombres** de clientes, obras, proveedores y
+empleados por los inventados de la copia de demo. **La estructura se deja
+exactamente como está** — las columnas de más, las filas en blanco, las celdas
+de colores, las pestañas por mes, las fórmulas rotas, todo.
+
+Y eso es justo lo que lo hace funcionar. La estructura ES el argumento; los
+nombres no aportan nada y sólo pueden hacer daño.
+
+> **No se inventa un Excel feo.** Un Excel desordenado de mentira se nota a la
+> primera —está desordenado de una manera demasiado ordenada— y si se nota,
+> quema la credibilidad de toda la página. O es el real con los nombres
+> cambiados, o no se hace este vídeo.
+
+### El guion
+
+**Primera mitad — el antes (25 s).** Sin voz, sin texto, sin música.
+
+Sólo el ratón recorriendo el Excel. Y hay que resistir la tentación de
+exagerar: no hace falta. Se baja por la hoja despacio, se abren dos o tres
+pestañas de meses distintos, se enseña una columna que alguien añadió a mano y
+que no está en las otras pestañas, se hace clic en una celda y se ve la fórmula
+en la barra. **Veinticinco segundos de silencio recorriendo eso dicen más que
+cualquier frase.**
+
+Un solo texto al final de esta mitad, sobre fondo negro:
+
+> **¿Cuánto es lo que hay en el estante A1A ahora mismo?**
+
+Y se deja tres segundos. El que mira va a intentar contestarlo con lo que acaba
+de ver, y no va a poder. **Ésa es toda la venta.**
+
+**Segunda mitad — el después (20 s).**
+
+La misma pregunta, en Acopio: se escribe `A1A` en la búsqueda y sale. Un
+segundo. Después, tres cosas que el Excel no puede hacer, rápidas:
+
+1. El mismo material, su historia completa.
+2. El mapa de la bodega, con el estante señalado.
+3. El teléfono, enseñando lo mismo.
+
+### El texto final
+
+> **No tiramos tu Excel. Lo dejamos de usar para contar.**
+> Todo lo que está en esa hoja se puede traer. Lo que cambia es que la pregunta
+> *«¿cuánto hay?»* deja de tomar diez minutos y una llamada.
+
+### La regla que importa
+
+**Es el caso de OX, y se dice que lo es.** «Así tenía su inventario el almacén
+donde nació Acopio» es una frase que sólo Jose puede escribir, y vale diez veces
+más que cualquier ejemplo genérico. La credibilidad de este vídeo viene de que
+es verdad, no de que sea bonito.
+
+---
+
+## El orden en que yo los grabaría
+
+| Orden | Cuál | Por qué ése |
+|---|---|---|
+| 1º | **V1, el cronómetro** | Contesta la objeción que mata la venta, y se graba en una mañana con una cuenta nueva |
+| 2º | **V3, los datos tuyos** | Es el más fácil de todos —dos ventanas y un movimiento— y es el argumento que nadie puede copiar |
+| 3º | **V2, el teléfono** | Necesita una segunda persona y estar en la bodega, así que se agenda |
+| 4º | **V4, el Excel** | El más valioso y el que más preparación necesita. No se apura |
+
+**Si sólo se graba uno este mes, que sea V1.**

@@ -3406,6 +3406,14 @@
     .toast.fade-out{animation:toastOut .3s ease forwards}
     @keyframes toastIn {from{opacity:0;transform:translateY(-18px) scale(.96)} to{opacity:1;transform:translateY(0) scale(1)}}
     @keyframes toastOut{from{opacity:1;transform:translateY(0) scale(1)} to{opacity:0;transform:translateY(-12px) scale(.95)}}
+    /* EL GOLPECITO DE «YA TE OÍ». El aviso de Pro es uno solo, así que al
+       volver a pulsar el mismo candado no aparece nada nuevo — y sin esto
+       parecería que el clic no hizo nada, que es lo que lleva a seguir
+       pulsando. Es un empujón de 6px, no una sacudida: el que pulsa no se ha
+       equivocado, sólo ha insistido. */
+    @keyframes pro-reavisa{0%{transform:translateX(0)}30%{transform:translateX(6px)}60%{transform:translateX(-4px)}100%{transform:translateX(0)}}
+    .toast.pro-reavisa{animation:pro-reavisa .26s ease}
+    @media (prefers-reduced-motion:reduce){ .toast.pro-reavisa{animation:none} }
     /* ── LA LÍNEA DE PROGRESO ───────────────────────────────────────────────
        Jose, 2026-09-15: "en lugar de mostrar los toasts de cada eliminación,
        ¿no sería mejor usar lo que Google usa en el Drive al cargar un archivo
@@ -5701,7 +5709,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.83';
+var APP_VERSION = '12.85';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5713,7 +5721,7 @@ var APP_VERSION = '12.83';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'ac97b3e7';
+var APP_BUILD = '834d581b';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -26535,6 +26543,40 @@ function _fmtWhen(iso){
 
 var _sysCards = [];
 
+/* ── QUÉ MERECE UNA TARJETA Y QUÉ NO ────────────────────────────────────────
+ *
+ * Jose, 21/10, con un vídeo de 33 segundos: pulsa la ✕ del mazo una y otra vez
+ * y siguen saliendo tarjetas — «archive start» del 8/10, «Backup created» del
+ * 9/10, «archive start» del 9/10, «Old movements archived» del 10/10, del
+ * 14/10, del 15/10… Doce clics y seguían entrando desde el fondo de la cola.
+ *
+ * Lo que vacía el mazo no es más paciencia, es una LÍNEA:
+ *
+ *     Una tarjeta es para «la app cambió algo que tú no pediste».
+ *     Un registro es para «la app hizo su trabajo».
+ *
+ * El respaldo de cada noche y el archivado de lo viejo son la segunda cosa.
+ * Pasan todas las noches, salen bien todas las noches, y no hay nada que
+ * decidir con ellas. Tres por noche, por los días que uno no entre, es un muro
+ * — y un muro no avisa de nada: entierra lo que sí importaba.
+ *
+ * `ARCHIVE_START` es peor todavía: es la MITAD de un evento, el «voy a
+ * empezar» de un trabajo que ya tiene su propio «terminé». Nunca debió ser una
+ * tarjeta; se colaba porque el servidor convierte en tarjeta cualquier fila del
+ * registro hecha por el sistema, tenga nombre bonito o no.
+ *
+ * NO SE PIERDE NADA, y es la condición para poder hacer esto sin preguntar:
+ * las tres siguen enteras en Settings → System, que a propósito enseña también
+ * lo descartado (ver `_renderSystemTab`). Lo que cambia es dónde se leen, no si
+ * existen.
+ *
+ * LO QUE SÍ SIGUE SIENDO TARJETA, y es lo que el muro tapaba: los movimientos
+ * re-enlazados a su material, los totales recalculados, las cabeceras
+ * reparadas, el stock reconstruido. Todas ésas son la app tocando datos por su
+ * cuenta, y eso hay que decirlo a la cara. */
+var SYS_RUTINA = { BACKUP_CREATED: 1, ARCHIVE_START: 1, ARCHIVE_RECONCILE: 1 };
+function _sysRutina(accion){ return SYS_RUTINA[String(accion || '').toUpperCase()] === 1; }
+
 // Dismissals are the SERVER's memory now, not this browser's.
 //
 // They lived in localStorage, and every backup notice since August came back on
@@ -26590,7 +26632,8 @@ function _announceSystemActivity(){
   // shows both (see _renderSystemTab): a notice is something you dismiss,
   // a maintenance record is not.
   _sysCards = (systemActivity || []).filter(function(a){
-    return a.at && !a.dismissed && !_sysDismissedNow[a.at + '|' + a.action];
+    return a.at && !_sysRutina(a.action) &&
+           !a.dismissed && !_sysDismissedNow[a.at + '|' + a.action];
   }).map(function(a){
     return { id: a.at + '|' + a.action, label: a.label, at: a.at, detail: a.detail, extra: a.extra };
   });
@@ -27708,13 +27751,34 @@ function _proUrl(clave){
  * alcanzaría nunca el enlace. El hover es una mejora para quien tiene ratón, no
  * la única forma de llegar.
  */
+/* EL AVISO DE PRO ES UNO SOLO, SIEMPRE.
+ *
+ * Jose, 21/10, con un vídeo de quince segundos: pulsa el candado de «Incoming»
+ * cuatro veces y se apilan cuatro avisos idénticos, uno sobre otro, tapando la
+ * barra de pestañas. Es mío, de la v12.78: cada llamada hacía `appendChild` y
+ * nadie quitaba el anterior.
+ *
+ * Y es peor que un fallo de dibujo. Lo que una persona hace cuando pulsa algo y
+ * no pasa lo que esperaba es VOLVER A PULSAR, así que el caso de las cuatro
+ * copias no es el raro: es el normal. Un aviso que se multiplica al insistir
+ * castiga justo a quien no lo entendió a la primera, y además le tapa la
+ * navegación con la que se iría a otro sitio.
+ *
+ * Así que el aviso se REUSA: si ya hay uno, se le cambia el texto —puede ser
+ * otra función— y se le reinicia el reloj, con un golpecito para que se vea que
+ * contestó. Uno en pantalla, pase lo que pase. */
+var _proToastEl = null;
+
 function _proToast(clave){
   var f = BASIC_PRO[clave];
   if (!f) return;
   var cont = document.getElementById('toastContainer');
   if (!cont) return;
 
-  var el = document.createElement('div');
+  /* ¿Sigue puesto el de antes? No basta con que la variable no sea nula: el
+   * aviso pudo irse solo por su reloj, o porque alguien pulsó su ✕. */
+  var previo = (_proToastEl && _proToastEl.parentNode === cont) ? _proToastEl : null;
+  var el = previo || document.createElement('div');
   el.className = 'toast info';
   el.innerHTML =
     '<span class="toast-icon">🔒</span>' +
@@ -27722,12 +27786,32 @@ function _proToast(clave){
       '<a class="toast-pro" href="' + _he(_proUrl(clave)) + '" target="_blank" rel="noopener">Acopio Pro</a>' +
     '</span>' +
     '<button class="toast-close" type="button">✕</button>';
-  cont.appendChild(el);
+  if (!previo) cont.appendChild(el);
+  _proToastEl = el;
+
+  if (previo) {
+    /* EL GOLPECITO, Y POR QUÉ HAY QUE QUITAR LA CLASE ANTES DE PONERLA. Si sólo
+     * se añade, el navegador ve que ya estaba y no vuelve a lanzar la
+     * animación — o sea que del segundo clic en adelante no se vería nada, que
+     * es exactamente cuando hace falta que se vea. El `offsetWidth` de en medio
+     * es lo que le obliga a darse cuenta del cambio. */
+    el.classList.remove('pro-reavisa');
+    void el.offsetWidth;
+    el.classList.add('pro-reavisa');
+  }
 
   var reloj = null;
-  function irse(){ try { el.remove(); } catch (e) {} }
+  function irse(){
+    try { el.remove(); } catch (e) {}
+    if (_proToastEl === el) _proToastEl = null;
+  }
   function contar(ms){ clearTimeout(reloj); reloj = setTimeout(irse, ms); }
 
+  /* Los oyentes se ponen CADA VEZ sobre el mismo elemento cuando se reusa, y no
+   * se acumulan por una razón concreta: `innerHTML` de arriba destruye el ✕
+   * viejo y crea uno nuevo, así que su oyente anterior se fue con él. Los del
+   * ratón sí quedarían repetidos — y no importa, porque los dos hacen lo mismo
+   * sobre el reloj de ESTA llamada, que es el único que queda armado. */
   el.querySelector('.toast-close').addEventListener('click', function(){
     clearTimeout(reloj); irse();
   });
@@ -28406,6 +28490,26 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '12.85',
+    titulo: 'Two notices that piled up',
+    puntos: [
+      'Clicking a Pro feature you do not have four times used to stack four identical notices, covering the tabs. Now there is <b>one</b>, always: clicking again rewrites it and nudges it.',
+      'Clicking twice is not the odd case \u2014 it is what anyone does when a click does not do what they expected. The notice was multiplying for exactly the person who had not understood it.',
+      'And the corner cards stopped filling with maintenance. A card is now for <b>something the app changed that you did not ask for</b>; nightly backups and archiving are still there in full under Settings \u2192 System.'
+    ],
+    antes:  'Four clicks, four notices, and a week away meant a wall of backup cards',
+    ahora:  'One notice, and cards only for what needs a look' },
+
+  { ver: '12.84',
+    titulo: 'Returning more than went out now says so',
+    puntos: [
+      'If you return more of a material than is recorded as out at that site, the app asks before saving: how much is out there, how much you are returning, and how much is about to be added to the warehouse that never left it.',
+      'It <b>asks</b> \u2014 it does not refuse. Someone standing there with material in hand has to be able to record it, and you never have to open the spreadsheet to fix it.',
+      'And it stays quiet in the case that matters: a material with <b>no recorded dispatch at all</b> saves with no warning. Warehouse history starts partway through, and something that left before Acopio existed is a real return no record can know about.'
+    ],
+    antes:  'Return five of something that never left, and the warehouse silently gained five',
+    ahora:  'The app asks first, and says exactly how many were never out' },
+
   { ver: '12.83',
     titulo: 'The project-manager list can no longer break a screen',
     puntos: [
@@ -28427,25 +28531,7 @@ var NOVEDADES = [
     antes:  'Type the name of something you cannot see, and fill eight boxes by hand',
     ahora:  'Pick it off the list and fill in three' },
 
-  { ver: '12.81',
-    titulo: 'An \u2715 to empty any field',
-    puntos: [
-      'Every box you can type into now has a small <b>\u2715</b> inside it. One tap empties it \u2014 no selecting with the mouse, no holding backspace.',
-      'It only shows when there is something to clear, and it is not on the dropdowns: those are lists you pick from, not boxes you write in.',
-      'Clearing a search box also re-runs the search, so the table never stays filtered by text that is no longer written anywhere.'
-    ],
-    antes:  'Select it with the mouse, or hold backspace',
-    ahora:  'One tap and the box is empty' },
 
-  { ver: '12.80',
-    titulo: 'The columns stop shifting, and the cards move like paper',
-    puntos: [
-      'Columns moved a little whenever you changed a filter. It was never the table \u2014 it was the <b>scrollbar</b>: it appears when there are many rows and goes when there are few, taking its width with it. That space is now reserved whether the bar is there or not.',
-      'A card that leaves takes longer, and the one that replaces it is now <b>seen arriving</b> instead of appearing out of nowhere.',
-      'The two timings that had to agree \u2014 how long the animation lasts and how long the code waits for it \u2014 are now one. They were two numbers that had to match with nothing making them.'
-    ],
-    antes:  'Change a filter and everything shuffles a few pixels sideways',
-    ahora:  'The columns stay where you left them' },
 
 ];
 

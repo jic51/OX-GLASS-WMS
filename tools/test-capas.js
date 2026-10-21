@@ -48,9 +48,17 @@ function check(label, cond, extra) {
   else { fail++; console.log('  FAIL ', label, extra === undefined ? '' : '→ ' + JSON.stringify(extra)); }
 }
 
+/* La acción es lo de menos aquí —lo que se mide es que las tarjetas y el menú
+ * no se pisen— pero no puede ser cualquiera: desde la v12.85 el respaldo de
+ * cada noche y el archivado NO son tarjetas, son registro (ver `SYS_RUTINA`).
+ * Con `BACKUP_CREATED` esta prueba se quedó sin tarjetas con las que pisarse y
+ * pasó a medir nada, que es justo lo que su propia comprobación de «SE PISAN»
+ * existe para impedir. Se usa una que sí es noticia: la app re-enlazó
+ * movimientos por su cuenta. */
 function acto(n){
-  return { at: '2026-09-' + (14 + n) + 'T02:19:00Z', action: 'BACKUP_CREATED',
-           label: 'Backup created', detail: 'MY WAREHOUSE — Backup 2026-09-' + (14 + n),
+  return { at: '2026-09-' + (14 + n) + 'T02:19:00Z', action: 'AUTO_REPAIR_MATID',
+           label: 'Movements re-linked to the right material',
+           detail: (n + 1) + ' movements re-linked',
            extra: '', dismissed: false };
 }
 
