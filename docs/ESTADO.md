@@ -7,7 +7,7 @@
 > **Este documento se actualiza en cada versión.** Si la fecha de abajo tiene más
 > de una semana, está viejo y hay que decirlo.
 
-**Última actualización:** 21/10/2026 · **versión v12.84** · build `502c1a66`
+**Última actualización:** 21/10/2026 · **versión v12.86** · build `549fa456`
 
 ---
 
@@ -102,7 +102,20 @@ copia de la hoja.
 **Lo primero que hay que mirar:** que la hoja esté compartida como *Cualquiera
 con el enlace → Lector*.
 
-### 3. La landing — lo que falta para que venda
+### 3. Limpiar la ventana de movimiento — **planeado, sin construir**
+
+Decidido el 21/10 con Jose. Hoy hay **dieciséis controles** en pantalla para
+registrar «llegaron 20 ventanas, están en A1A». El plan completo está en
+`BACKLOG.md`; el orden es: plegar Documentos y Correo a una línea (fácil, y es
+casi todo el efecto), sacar 🏷 Label de la línea de material, y que la app
+**aprenda** qué campos esta bodega nunca llena y los pliegue sola.
+
+**Y los camiones ya están construidos enteros** —servidor, hoja, búsqueda,
+exportación, ajustes— y **nadie puede verlos**: el campo está en el HTML con
+`display:none` y nada lo enciende. Falta una línea: mostrarlo sólo si la bodega
+tiene camiones registrados.
+
+### 4. La landing — lo que falta para que venda
 
 | | Estado |
 |---|---|
@@ -158,13 +171,14 @@ Para no perder de vista el tamaño de lo que ya hay.
 
 1. **Verificar la v12.82–84** (10 min, tú)
 2. **Terminar la tarjeta de ajuste** (yo, ~1 versión)
-3. **Precios y sección de Pro en la página** (medio día, yo; la decisión, tú)
-4. **Agendar llamadas** (20 min, tú)
-5. **Grabar V1, el cronómetro** (una mañana, tú)
-6. **Que alguien de fuera instale la Básica** (20 min, tú y otra persona)
-7. Las mejoras visuales de la siguiente versión: bloque de marca, pestañas
+3. **Limpiar la ventana de movimiento** (yo — los dos primeros pasos son medio día)
+4. **Precios y sección de Pro en la página** (medio día, yo; la decisión, tú)
+5. **Agendar llamadas** (20 min, tú)
+6. **Grabar V1, el cronómetro** (una mañana, tú)
+7. **Que alguien de fuera instale la Básica** (20 min, tú y otra persona)
+8. Las mejoras visuales de la siguiente versión: bloque de marca, pestañas
    centradas, **menú de iconos abajo en el teléfono**
-8. Migrar un Excel real — el primero
+9. Migrar un Excel real — el primero
 
 ---
 

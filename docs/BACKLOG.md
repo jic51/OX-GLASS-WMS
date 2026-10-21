@@ -9251,6 +9251,176 @@ prueba siguió en verde.
 poco** — el caso de Jose. Con las columnas por defecto de Movements y una
 ventana alrededor de 1280 px debería caer en esa banda.
 
+## 🔵 LA VENTANA DE MOVIMIENTO, LIMPIA — Y LAS TRES COSAS QUE SON LA MISMA · 21/10
+
+Jose, 21/10, con tres capturas marcando el checkbox de Label, COST PER UNIT,
+DOCUMENTS y *Send notification email*:
+
+> *"Quiero que todas las cosas que no se usen no molesten en la pantalla o
+> ventana... analiza qué cosas puedes esconder detrás de un checkbox y deja la
+> ventana mucho más limpia. Haz una lista y dime qué harías tú."*
+
+### Primero: cuánto hay que atravesar hoy
+
+Para registrar *"llegaron 20 ventanas, están en A1A"* —el caso corriente— hay
+**dieciséis controles** en pantalla:
+
+| Dónde | Qué |
+|---|---|
+| Arriba | Fecha, «todos comparten proveedor/GC/proyecto/PM/recibido por/comentarios» |
+| Por material | Categoría, Nombre, Unidad, **Costo por unidad**, **🏷 Label**, y N× (Estante, Cantidad) |
+| Compartidos | Proveedor, GC, PO#, Proyecto/Cliente, Recibido por, PM, Comentarios |
+| Secciones | **📎 Documentos** (Cámara/Archivos/Drive + AI Extract), **✉ Enviar correo** |
+
+Dos de ellos —nombre y cantidad— son el movimiento. Los otros catorce son
+contexto que **algunas bodegas llenan siempre y otras nunca**.
+
+### Mi propuesta: no es un checkbox, son CUATRO tratos distintos
+
+El mecanismo que propone Jose —esconder detrás de un checkbox— es correcto para
+una parte y es el equivocado para otra. Lo que hay en esa ventana no es una sola
+clase de cosa:
+
+#### A · Lo que ESTA bodega nunca usa → **que la app lo aprenda, sin preguntar**
+
+`GC`, `PO#`, `PM`, `Costo por unidad`, `Camión`. Hay bodegas que llenan los cinco
+y bodegas que no llenan ninguno. **Y la app ya sabe cuáles**: tiene todos los
+movimientos que esa instalación ha guardado.
+
+> **Un campo que lleva 30 movimientos vacío es ruido PARA ESA BODEGA.**
+
+Se pliegan solos en una línea «**+ 4 campos más**». Un clic los trae todos, y en
+cuanto se usa uno, ese se queda a la vista para siempre.
+
+**Por qué esto es mejor que un checkbox**, y es la parte que añado a la idea de
+Jose: un checkbox es **una decisión más** que tomar — la ley de Hick de su propia
+lámina— y además hay que acordarse de ir a marcarlo. Esto acierta de entrada,
+sin configurar nada, y se adapta solo el día que la bodega empiece a usar PO.
+
+**El riesgo, dicho antes de construirlo:** alguien nuevo no encuentra un campo
+que sí necesita. Por eso la línea «+ N campos más» **está siempre**, nunca
+desaparece del todo, y dice cuántos esconde. Esconder sin dejar la puerta a la
+vista sería cambiar un problema por otro peor.
+
+#### B · Lo que es de OTRO momento → **una línea que se despliega** (aquí sí)
+
+`📎 Documentos` y `✉ Enviar correo` no son datos del movimiento: son **cosas que
+se hacen después**. Hoy ocupan dos bloques enteros debajo de los campos, con
+botones de Cámara, Archivos y Drive siempre desplegados.
+
+Se colapsan a una línea cada uno: `📎 Añadir documentos` y `✉ Avisar a alguien`.
+**Aquí el checkbox de Jose es exactamente lo correcto**, porque son acciones
+opcionales y no información que falte.
+
+#### C · Lo que depende de quién mira → **ya funciona, y conviene saberlo**
+
+`Costo por unidad` **ya está cerrado** para quien no tiene permiso de ver costos
+(`_canSeeCosts()`). A un bodeguero no se le enseña. Jose lo ve porque es ADMIN,
+y eso es correcto. **No hay nada que arreglar aquí** — queda en el grupo A: si
+esta bodega nunca pone precios en la entrada, se pliega como los demás.
+
+#### D · Lo que no debería estar en ese sitio → **🏷 Label**
+
+Imprimir una etiqueta **no es un dato de la recepción**, es algo que se hace con
+el material una vez guardado. Está en la línea de cada material, arriba a la
+derecha, compitiendo por el sitio con el nombre — y en la edición gratis además
+lleva candado, o sea que es **una puerta cerrada en el formulario más usado de
+la app**.
+
+Se va de ahí. Después de guardar, el aviso de «guardado» puede ofrecer
+«imprimir etiquetas» — que es cuando de verdad se quiere.
+
+### El orden, y cuánto pesa cada uno
+
+| | Qué | Quita de la ventana | Dificultad |
+|---|---|---|---|
+| 1º | **B** — plegar Documentos y Correo | dos bloques enteros | fácil, y es casi todo el efecto visual |
+| 2º | **D** — sacar 🏷 Label de la línea | un control por material | fácil |
+| 3º | **A** — que la app aprenda qué no se usa | hasta cinco campos | medio; pide una pasada sobre el historial |
+
+**Si sólo se hace el 1º y el 2º, la ventana ya cabe sin desplazarse.**
+
+---
+
+## 🔵 CAMIONES — YA ESTÁN CONSTRUIDOS Y NADIE PUEDE VERLOS · 21/10
+
+Jose, 21/10: *"si alguna bodega maneja camiones, ¿deberíamos poner una forma de
+que el usuario ingrese su número o nombre, o le diga cuáles desde una lista,
+pero que no moleste si no los tiene?"*.
+
+**Ya está hecho. Todo.** Y está invisible:
+
+| Pieza | Estado |
+|---|---|
+| Campo en el formulario | `#mTruckField` existe — **`display:none` en el HTML y NADIE lo enciende nunca** |
+| Desplegable | se llena solo desde `config.trucks`, saltando los inactivos |
+| Guardado | `truck:` viaja en el movimiento y se escribe |
+| Búsqueda | la tabla ya busca por camión (`m.truck` está en los campos buscados) |
+| Gestión | `updateTruck_` en el servidor, con nombre, persona asignada y estado |
+| Columnas | `Truck`, `Truck Person`, `Truck Status` ya existen en CONFIG |
+
+O sea que la respuesta a su pregunta es **sí, y la forma que propone es
+exactamente la que está construida**: una lista, no texto libre.
+
+**Lo que falta es una línea**, y además resuelve sola el «que no moleste si no
+los tiene»: enseñar `#mTruckField` **sólo si `config.trucks` tiene algo**. Sin
+camiones registrados, el campo no existe para esa bodega; con uno registrado,
+aparece. Es el mismo trato del grupo A de arriba, pero sin necesidad de aprender
+nada del historial: la lista de camiones ya ES la respuesta.
+
+> **Y es una señal de algo más grande:** una función entera —servidor, hoja,
+> búsqueda, exportación, ajustes— construida y que **nunca se puede alcanzar**.
+> Vale la pena un repaso buscando otras: es el mismo patrón de «una protección
+> escrita y nunca ejecutada» que este archivo ya tiene contado cinco veces, en
+> su versión de producto.
+
+---
+
+## 🔵 LA RESPUESTA DE JOSE SOBRE ENTREGAS PARCIALES — ES MEJOR QUE MI PREGUNTA · 21/10
+
+Yo había escrito que juntar «marcar llegada» y «hacer la entrada» obligaba a
+inventar un estado de «parcialmente recibida». Jose:
+
+> *"Lo que yo propongo es que, al crear incomings, se creen POR SEPARADO. El
+> crearlos unidos no significa que vinieron juntos. Entonces sólo se hace un
+> check-in de los materiales o proyectos que llegan y no de una lista
+> específica. No necesitamos hacer grupo; por separado, todo queda igual."*
+
+**Tiene razón, y mi pregunta era mala porque daba por supuesto el grupo.** Si
+cada cosa esperada es su propia fila, «parcialmente recibida» **deja de existir
+como estado**: tres filas de cinco se reciben, dos siguen pendientes. El estado
+ya existía — sólo que por fila y no por grupo.
+
+Y eso convierte «crear varios a la vez» en lo que debería ser: **comodidad de
+formulario**, N filas independientes de una sola pasada, sin estructura nueva
+detrás. Mucho más barato y más robusto.
+
+> **Es la misma decisión que ya tomó con el RETURN** —*"por material y por
+> lugar, no por movimiento"*— aplicada a las entregas. No se modela el camión ni
+> el pedido: se modela **la cosa**. Dos veces seguidas acertando por el mismo
+> motivo no es casualidad, es un principio.
+
+**Lo que sí hay que resolver**, y son sus palabras: *"necesitamos una forma de
+notar que se planificó una cantidad y llegó otra"*.
+
+### Y aquí está lo importante: son TRES cosas y son LA MISMA
+
+| Caso | Lo que dice el registro | Lo que pasó |
+|---|---|---|
+| Devolver más de lo que salió (v12.84) | salieron 7 | vuelven 10 |
+| Recibir menos de lo esperado | se esperaban 20 | llegaron 18 |
+| La tarjeta de ajuste que diseñó Jose | nunca salió | volvieron 5 |
+
+Las tres son **«un saldo por fila, y sigue abierto mientras no llegue a cero»**.
+Es exactamente lo que ya hace `getOutstandingBySite` para el RETURN.
+
+**No se construyen tres mecanismos.** Una entrega esperada lleva una cantidad;
+recibir la descuenta; pendiente es «queda más de cero»; y la diferencia entre lo
+planificado y lo llegado se escribe en la fila cuando se cierra. La misma forma
+tres veces, y si se construyen por separado serán tres cosas que hay que
+acordarse de mantener iguales — que es la falta que este archivo lleva
+dieciséis veces contando.
+
 ## 🔵 INCOMING: CREAR VARIOS A LA VEZ, Y QUE ACEPTAR UNO **SEA** LA ENTRADA · 21/10
 
 Jose, 21/10, dos ideas en el mismo mensaje y la segunda es estructural:
