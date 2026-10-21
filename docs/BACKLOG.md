@@ -9251,7 +9251,7 @@ prueba siguió en verde.
 poco** — el caso de Jose. Con las columnas por defecto de Movements y una
 ventana alrededor de 1280 px debería caer en esa banda.
 
-## 🔵 EL RETURN DEBE PARTIR DE LO QUE SALIÓ, NO DE UN NOMBRE · 20/10
+## ✅ EL RETURN DEBE PARTIR DE LO QUE SALIÓ, NO DE UN NOMBRE · 20/10 — HECHO EN LA v12.82
 
 Jose, con cuatro capturas: *"al seleccionar RETURN es lógico que voy a devolver
 algo que ya estaba fuera de la bodega, pero la app sólo sugiere 1 material...
@@ -9320,6 +9320,80 @@ cuenta que ya hace el motor para `siteQty`, partida por destino.
 > devolución, y sale del lugar que se eligió en la lista. Lo que se deja de
 > rastrear es de cuál de las cuatro salidas vino cada unidad — y eso, como dice
 > Jose, no le importa a nadie.
+
+### CONSTRUIDO EN LA v12.82 — las dos mitades, y qué se decidió en cada una
+
+**El servidor:** `getOutstandingBySite(sessionToken, categoria)`. Lee el archivo
+UNA vez —como `getCurrentStockForItem`— y devuelve el saldo agrupado por
+`material × sitio`: las salidas suman, las devoluciones restan, y lo que llega a
+cero o a negativo **no se devuelve**. No lee las hojas derivadas a propósito:
+ahí `siteQty` está guardado como UN total sin separar por sitio, que es justo el
+dato que hacía falta, y añadirlo obligaría a reconstruir las derivadas en cada
+instalación que ya existe.
+
+El sitio **se lee de una columna distinta según la dirección**: una salida apunta
+al sitio en `DEST_LOC`, una devolución en `SRC_LOC`. Es la misma columna leída al
+revés, y es el detalle que haría que el saldo no cerrara nunca si se leyera la
+misma en los dos casos.
+
+Los datos que se autorrellenan salen de la **última** salida, no de la primera
+—si cambió el jefe de obra por el camino, vale lo último que se supo— y un campo
+vacío de una salida reciente **no borra** lo que dijo la anterior.
+
+**El navegador:** la lista cuelga del mismo cuadro que la de bodega. Dos cuadros
+habría sido la decimoséptima vez de *dos cosas que tienen que coincidir sin que
+nada lo obligue*: cada uno con su mostrar y su esconder, y el día que uno se
+abriera sin que el otro se cerrara se verían las dos listas a la vez. Es **un
+cuadro y una función**, que decide la lista por el tipo de movimiento; la
+diferencia de ancho es una clase que esa misma función pone y quita.
+
+Y **sale al ENTRAR en el campo**, no tras teclear dos letras como la de bodega.
+Es la diferencia entre el rasgo que pidió Jose y un rasgo escondido: al sacar
+material se sabe el nombre, al devolverlo no — por eso pidió la lista.
+
+**Dos campos que a propósito NO se rellenan**, y las dos decisiones son del mismo
+tipo que la de no reusar `mProj` para el proyecto de origen:
+
+- **«Returned By»** se queda vacío. Esa columna cambia de significado con la
+  dirección: en la salida es quien lo entregó, en la devolución quien lo trae.
+  Suele ser el mismo, pero «suele» escrito en una casilla que nadie revisa es un
+  nombre inventado en el registro de otra persona.
+- **La unidad**, si lo que dice el registro no está entre las opciones del
+  desplegable. Asignar a un `<select>` un valor que no tiene lo deja en blanco, y
+  un blanco ahí es el dato perdido sin que nadie se entere.
+
+**Lo que encontró la prueba del navegador**, y es el motivo de abrir un navegador
+en vez de leer el archivo:
+
+1. Cambiar de pestaña dejaba la lista **flotando encima del formulario nuevo**
+   hasta que alguien escribiera algo. Ahora `setModalType` la cierra en el acto.
+2. `mPM` estaba **escondido en RETURN mientras `_doSubmit` lo lee SIEMPRE**, sin
+   mirar el tipo. Así que quien escribía un jefe de obra en una entrada y cambiaba
+   a RETURN sin cerrar la ventana guardaba ese nombre sin verlo nunca — el reset
+   sólo corre al ABRIR, no al cambiar de pestaña. Ahora el campo se ve en RETURN,
+   que además le da sitio visible a lo que la lista rellena: un dato que la app
+   escribe sola tiene que poder verse y corregirse.
+3. `filas || []` donde hacía falta `Array.isArray(filas)`. Lo cazó
+   `test-form-symmetry`, cuyo doble del servidor contesta `{}` a todo lo que no
+   conoce: un `{}` pasa el `||` tan contento y revienta tres líneas después en el
+   `.filter`.
+
+**Lo que NO cierra**, y hay que decirlo: el agujero de *devolver material que
+nunca salió* sigue ahí **en el motor**. La lista lo hace inalcanzable desde la
+pantalla —no se ofrece devolver algo que no está fuera— pero el campo del nombre
+sigue siendo texto libre, y tiene que seguir siéndolo: la historia de cualquier
+bodega empieza a mitad, y un material que salió antes de instalar Acopio es una
+devolución legítima que ninguna lista puede conocer. La guardia del motor es un
+trabajo aparte y sigue abierta más arriba en esta lista.
+
+### Y una falta hermana, sin arreglar
+
+`_refreshPmDatalist` hace `_pmDirectoryData = list || []` y luego `.map`. Es
+exactamente la falta del punto 3 de arriba, en otro sitio, y se ve en la misma
+prueba: con un doble que contesta `{}`, `setModalType('ENTRY')` revienta con
+*«\_pmDirectoryData.map is not a function»*. En producción el servidor devuelve
+un array, así que no se ha visto nunca — pero «no se ha visto nunca» no es lo
+mismo que «no pasa», y es una línea. Sin hacer para no mezclarlo con esto.
 
 
 ## 🔵 UNA ✕ EN CADA CAMPO — HECHO EL 20/10, Y LO QUE QUEDA
@@ -9433,3 +9507,36 @@ cuatro cosas que arriba quedaron abiertas.
 del teléfono va abajo**. Eso no estaba en la propuesta de Jose —él habló de
 iconos, no de dónde— y es la diferencia entre un menú que se usa con el pulgar y
 uno que obliga a cambiar la mano de sitio.
+
+## 🔴 LAS LISTAS DE DEPENDENCIAS A MANO — SEXTA MORDIDA · 21/10
+
+Seis pruebas mantienen a mano la lista de funciones que levantan en su caja de
+pruebas, porque son **anteriores a `tools/andamio.js`**, que existe justamente
+para que no haga falta.
+
+**Lleva seis veces mordiendo este mes**, y el fallo siempre tiene la misma
+forma: se añade una función al producto, seis pruebas se caen con un *«no está
+definida»* que **no tiene nada que ver con lo que esa prueba mide**, y hay que
+ir una por una.
+
+| Fecha | Función nueva | Pruebas caídas |
+|---|---|---|
+| v12.75 | `autorDeLaFila_` | `test-pricing`, `test-text-stays-text` |
+| v12.78 | `basicApagado_` | `test-checkin`, `test-pricing` |
+| v12.82 | `tipoDeMovimiento_` | **cinco**, más `test-pricing` otra vez |
+
+`test-pricing` ya lo avisa en un comentario propio: *«cada función nueva que
+`addMovementsBatch_` llame hay que apuntarla aquí… esta prueba está pendiente de
+migrar»*. Escrito hace semanas, y sigue pendiente.
+
+**Las seis:** `test-pricing`, `test-text-stays-text`, `test-checkin`,
+`test-cinco-sin-riesgo`, `test-derived-refresh`, `test-transfer-project`,
+`test-adjust`, `test-data-quality`.
+
+**Qué haría falta:** migrarlas a `andamio.levantar()`, que recorre las llamadas
+y arrastra lo que hace falta. No es difícil — es que cada una tiene su propia
+caja con sus propios dobles, y hay que mirarlas una a una para no convertir un
+doble en la función de verdad por accidente. Medio día, y deja de pasar.
+
+**El coste de no hacerlo** no es el rato de arreglarlas: es que un rojo que no
+habla de lo que la prueba mide **enseña a ignorar los rojos**.

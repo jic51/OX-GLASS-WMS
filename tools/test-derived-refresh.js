@@ -185,7 +185,7 @@ function mundo(filasArchivo, filasHistoria){
 
   vm.runInContext(constSrc('SHEETS'), ctx);
   vm.runInContext(constSrc('AC'), ctx);
-  ['normalizeString', 'getMaterialId', 'parseArchiveRow', 'textCell_', 'textSafeRow_',
+  ['normalizeString', 'getMaterialId', 'tipoDeMovimiento_', 'parseArchiveRow', 'textCell_', 'textSafeRow_',
    'refreshDerivedSheets_'].forEach(n => vm.runInContext(fnSrc(n), ctx));
 
   vm.runInContext('refreshDerivedSheets_(__ss)', ctx);

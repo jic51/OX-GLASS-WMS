@@ -78,6 +78,7 @@ const sandbox = {
 vm.createContext(sandbox);
 vm.runInContext([
   extractVar('AC'),
+  extractFn('tipoDeMovimiento_'),
   extractFn('adjustDirection_'),
   extractFn('statusForMoveType_'),
   extractFn('applyMovementToSnapshot_'),

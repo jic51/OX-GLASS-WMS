@@ -188,7 +188,7 @@ function buildSandbox() {
     // "no está definida" que no tiene nada que ver con precios. Segunda vez.
     // v12.78: el escritor de filas ya no es el unico; sendBatchNotifyEmail_
     // y los avisos saben de la edicion. Misma lista a mano, misma mordida.
-    'basicApagado_', 'autorDeLaFila_',
+    'basicApagado_', 'tipoDeMovimiento_', 'autorDeLaFila_',
     'addMovementsBatch_'
   ].forEach(function (name) { vm.runInContext(extractFn(name), sandbox); });
 

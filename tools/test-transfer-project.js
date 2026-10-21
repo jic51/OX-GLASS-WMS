@@ -64,6 +64,7 @@ const sandbox = {
 vm.createContext(sandbox);
 vm.runInContext([
   extractVar('AC'),
+  extractFn('tipoDeMovimiento_'),
   extractFn('applyMovementToSnapshot_'),
   extractFn('buildStockSnapshot_')
 ].join('\n'), sandbox);

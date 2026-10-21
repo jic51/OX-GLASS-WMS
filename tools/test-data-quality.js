@@ -85,6 +85,7 @@ vm.runInContext([
   extractVar('AC'),
   extractVar('DQ_MAX_FINDINGS'),
   extractVar('DQ_SIMILAR_CAP'),
+  extractFn('tipoDeMovimiento_'),
   extractFn('squashKey_'),
   extractFn('dqId_'),
   extractFn('dqDigitsOf_'),
@@ -550,6 +551,51 @@ console.log('\n═══ un material que tiene menos que nada ═══\n');
   check('...y dice qué hacer, sin ofrecer un botón que decida por nadie',
     /More of this has left than ever arrived/.test(HTML) &&
     /Every stock figure for this material is wrong/.test(HTML));
+}
+
+/* ══ LA REGLA DE «QUÉ MOVIMIENTO ES» ES UNA, Y AQUÍ SE HABÍA SEPARADO ═══════
+ *
+ * Hasta la v12.82 esta normalización estaba copiada CUATRO veces en Code.gs, y
+ * la copia de este informe era la que se había quedado atrás: comparaba el
+ * estado con `indexOf('DISPATCH') === 0` en vez de con los valores exactos, y
+ * **le faltaba el caso `DEL`**.
+ *
+ * O sea que una fila antigua escrita como `DEL` —de cuando el tipo se guardaba
+ * así— contaba como ENTRADA en este informe y como SALIDA en todo lo demás. El
+ * informe de calidad de datos decía que los datos estaban bien usando una regla
+ * distinta a la que calcula las existencias.
+ *
+ * Nadie lo escribió mal a propósito: se copió tres veces bien, y cuando alguien
+ * añadió `DEL` a las otras tres, ésta se quedó. Es la forma de fallo que este
+ * proyecto lleva un mes cazando, decidiendo aquí si una fila suma o resta.
+ *
+ * Se ejecuta la función de verdad, con las cuatro formas que tiene el archivo
+ * de decir «esto salió». */
+{
+  const vmq = require('vm');
+  const ctx = vmq.createContext({});
+  vmq.runInContext(extractFn('tipoDeMovimiento_'), ctx);
+  const tipo = (mt, qty, st) => {
+    ctx.__a = mt; ctx.__b = qty; ctx.__c = st;
+    return vmq.runInContext('tipoDeMovimiento_(__a, __b, __c)', ctx);
+  };
+
+  check('`DEL` es una SALIDA — era el caso que a este informe le faltaba',
+    tipo('DEL', 5, '') === 'EXIT');
+  check('`DISPATCHED` y `DISPATCH` también',
+    tipo('DISPATCHED', 5, '') === 'EXIT' && tipo('DISPATCH', 5, '') === 'EXIT');
+  check('sin tipo escrito, una cantidad negativa es salida',
+    tipo('', -5, '') === 'EXIT');
+  check('sin tipo escrito, el estado «DISPATCHED» es salida',
+    tipo('IN STOCK', 5, 'DISPATCHED') === 'EXIT');
+  check('sin tipo escrito y sin señales, es una ENTRADA',
+    tipo('', 5, '') === 'ENTRY');
+  check('un tipo normal se devuelve tal cual, sin tocarlo',
+    tipo('RETURN', 5, '') === 'RETURN' && tipo('waste', 5, '') === 'WASTE');
+  /* Y lo que la copia vieja hacía mal: `DISPATCH-ALGO` empezaba por DISPATCH y
+   * colaba como salida. Un tipo que no conocemos no se adivina. */
+  check('un tipo desconocido NO se convierte en salida por empezar parecido',
+    tipo('DISPATCHX', 5, '') === 'DISPATCHX');
 }
 
 console.log('\ndata quality: ' + (fail === 0 ? 'ok (' + ok + ' checks)' : fail + ' FAILED'));
