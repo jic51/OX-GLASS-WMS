@@ -31,6 +31,7 @@
 // Uso:  node tools/test-lock-visible.js
 
 const fs = require('fs'), path = require('path'), vm = require('vm');
+const A    = require(path.join(__dirname, 'andamio.js'));
 const RAIZ = path.join(__dirname, '..');
 const HTML = fs.readFileSync(path.join(RAIZ, 'Index_v3_fixed.html'), 'utf8');
 const GS   = fs.readFileSync(path.join(RAIZ, 'Code_v3_fixed.gs'), 'utf8');
@@ -58,8 +59,17 @@ function fnSrc(name){
 // ── El código de verdad, en una caja ────────────────────────────────────────
 const caja = { console };
 vm.createContext(caja);
-['_normKey', '_he', '_escAttr', 'locSummary', '_rebuildLocksIndex', '_findLock',
- '_stockLocks', '_lockLines'].forEach(n => vm.runInContext(fnSrc(n), caja));
+/* Se piden las cuatro que esta prueba ejercita y el andamio baja por sus
+ * ayudantes; eran ocho nombres a mano. */
+vm.runInContext(A.levantar(HTML,
+  ['locSummary', '_rebuildLocksIndex', '_stockLocks', '_lockLines']), caja);
+/* Y LO QUE NECESITA EL FRAGMENTO, que es distinto. Más abajo esta prueba saca
+ * de `renderStock` la plantilla de la celda de Location con una expresión
+ * regular y la evalúa —a propósito: copiarla aquí dejaría la prueba en verde con
+ * la plantilla del producto rota—. Ese fragmento llama a `_he` y a `_escAttr`, y
+ * eso no se puede deducir de ningún nombre de función porque el fragmento no es
+ * una función. `levantarPara` lo lee y levanta lo que nombra. */
+vm.runInContext(A.levantarPara(HTML, fnSrc('renderStock')), caja);
 vm.runInContext('var materialLocks = []; var _locksByKey = {};', caja);
 
 // Y la celda de Location EXTRAÍDA DE renderStock, no reescrita aquí. Copiarla
@@ -229,8 +239,7 @@ console.log('\n═══ y la ventana de salida NO se abre para decir que no ═
      y enseñarlo cuando la respuesta ya es no cuesta el tiempo dos veces. */
   const c = vm.createContext({ console });
   vm.createContext(c);
-  ['_normKey', '_rebuildLocksIndex', '_findLock', '_exitBloqueado'].forEach(
-    n => vm.runInContext(fnSrc(n), c));
+  vm.runInContext(A.levantar(HTML, ['_rebuildLocksIndex', '_exitBloqueado']), c);
   vm.runInContext('var materialLocks = []; var _locksByKey = {};', c);
 
   const material = (locs) => ({ matId: 'SCREEN|||44 NORTH', name: '44 NORTH',

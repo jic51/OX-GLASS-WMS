@@ -21,6 +21,7 @@
 // Usage:  node tools/test-transfer-project.js
 
 const fs = require('fs'), path = require('path'), vm = require('vm');
+const A  = require(path.join(__dirname, 'andamio.js'));
 const GS = fs.readFileSync(path.join(__dirname, '..', 'Code_v3_fixed.gs'), 'utf8');
 
 let ok = 0, fail = 0;
@@ -62,11 +63,17 @@ const sandbox = {
   getMaterialId: (c, n) => String(c).trim().toUpperCase() + '|||' + String(n).trim().toUpperCase()
 };
 vm.createContext(sandbox);
+/* THE SCAFFOLD FINDS THE HELPERS ITSELF. This was a hand-written list of three
+ * functions, and hand-written lists have now gone red seven times for a change
+ * inside the product that had nothing to do with what the test measures — most
+ * recently when `tipoDeMovimiento_` was extracted in v12.82 and six tests broke
+ * at once. `normalizeString` and `getMaterialId` stay as doubles because this
+ * file deliberately fakes them, which is also where the search stops. */
 vm.runInContext([
   extractVar('AC'),
-  extractFn('tipoDeMovimiento_'),
-  extractFn('applyMovementToSnapshot_'),
-  extractFn('buildStockSnapshot_')
+  A.levantar(GS, ['buildStockSnapshot_'], {
+    dobles: ['normalizeString', 'getMaterialId']
+  })
 ].join('\n'), sandbox);
 
 // One archive, shaped like Jose's: two entries for a real job, into two racks.

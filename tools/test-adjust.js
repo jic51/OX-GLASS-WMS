@@ -22,6 +22,7 @@
 // Usage:  node tools/test-adjust.js
 
 const fs = require('fs'), path = require('path'), vm = require('vm');
+const A  = require(path.join(__dirname, 'andamio.js'));
 const ROOT = path.join(__dirname, '..');
 const GS   = fs.readFileSync(path.join(ROOT, 'Code_v3_fixed.gs'), 'utf8');
 const HTML = fs.readFileSync(path.join(ROOT, 'Index_v3_fixed.html'), 'utf8');
@@ -76,13 +77,20 @@ const sandbox = {
   }
 };
 vm.createContext(sandbox);
+/* THE SCAFFOLD FINDS THE HELPERS ITSELF. Five names were listed here by hand.
+ * Hand-written lists have gone red seven times for a change inside the product
+ * that had nothing to do with what the test measures; the last one was
+ * extracting `tipoDeMovimiento_` in v12.82, which broke six tests at once.
+ *
+ * `adjustDirection_` and `statusForMoveType_` are still named explicitly, and
+ * that is not redundancy: this file exercises both DIRECTLY, so they are the
+ * subject here, not dependencies of the snapshot builder. The three doubles
+ * above are what this test deliberately fakes. */
 vm.runInContext([
   extractVar('AC'),
-  extractFn('tipoDeMovimiento_'),
-  extractFn('adjustDirection_'),
-  extractFn('statusForMoveType_'),
-  extractFn('applyMovementToSnapshot_'),
-  extractFn('buildStockSnapshot_')
+  A.levantar(GS, ['adjustDirection_', 'statusForMoveType_', 'buildStockSnapshot_'], {
+    dobles: ['normalizeString', 'getMaterialId', 'findFirstWarehouseLoc']
+  })
 ].join('\n'), sandbox);
 
 console.log('\n═══ direction lives in WHICH rack column is filled ═══\n');

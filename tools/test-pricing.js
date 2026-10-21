@@ -14,6 +14,7 @@
 // Usage:  node tools/test-pricing.js [path/to/Code_v3_fixed.gs]
 
 const fs = require('fs'), path = require('path'), vm = require('vm');
+const A   = require(path.join(__dirname, 'andamio.js'));
 const SRC = process.argv[2] || path.join(__dirname, '..', 'Code_v3_fixed.gs');
 const src = fs.readFileSync(SRC, 'utf8');
 
@@ -159,38 +160,35 @@ function buildSandbox() {
   };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
-  /* La edición, en `false`: esta prueba mide la versión de pago. Va en el
-   * contexto y no en la lista de funciones porque es una constante, no una
-   * función — misma razón por la que el andamio la pone solo. */
-  vm.runInContext('var ACOPIO_BASIC = false;', sandbox);
-
+  /* Las constantes se siguen pidiendo por su nombre: el andamio arrastra las
+   * FUNCIONES que hacen falta, no los `var` del módulo. La única excepción es
+   * `ACOPIO_BASIC`, que la pone él porque la puede usar cualquiera. */
   [
     extractVar('AC'), extractVar('AC_WIDTH'), extractVar('SHEETS')
   ].forEach(function (code) { vm.runInContext(code, sandbox); });
 
-  [
-    'round2_', 'normalizeString', 'cleanDisplay_', 'textCell_', 'textSafeRow_', 'getMaterialId',
-    'statusForMoveType_', 'buildStockSnapshot_', 'applyMovementToSnapshot_',
-    'getActiveLocksMap_', 'enforceMaterialLock_', 'reservedQtyFromRacks_',
-    'loadConfig', 'saveAvgCostUpdates_',
-    'ensureArchiveWidth_', 'newMovId_', 'uniqueMovId_', 'dedupeMovementIds_',
-    'writeMovIdColumn_',
-    // Añadidas en la v12.43 con la comprobación de ubicaciones. Esta prueba
-    // mantiene su lista de dependencias A MANO —es anterior al andamio— así que
-    // cada función nueva que addMovementsBatch_ llame hay que apuntarla aquí, y
-    // el fallo es un "no está definida" que parece del producto y es de la caja.
-    // Es exactamente lo que el andamio existe para evitar; esta prueba está
-    // pendiente de migrar.
-    'mapaDeUbicaciones_', 'ubicacionDeLlegada_', 'sugerirUbicacion_', 'distanciaEdicion_',
-    // Y volvió a morder en la v12.75, exactamente como avisa el comentario de
-    // arriba: `autorDeLaFila_` es nueva —escribe `BASIC` en la columna del
-    // autor cuando la edición no tiene usuarios— y esta prueba se cayó con un
-    // "no está definida" que no tiene nada que ver con precios. Segunda vez.
-    // v12.78: el escritor de filas ya no es el unico; sendBatchNotifyEmail_
-    // y los avisos saben de la edicion. Misma lista a mano, misma mordida.
-    'basicApagado_', 'tipoDeMovimiento_', 'autorDeLaFila_',
-    'addMovementsBatch_'
-  ].forEach(function (name) { vm.runInContext(extractFn(name), sandbox); });
+  /* MIGRADA AL ANDAMIO EN LA v12.82, y era la última de las seis.
+   *
+   * Aquí vivía una lista de VEINTIÚN nombres escrita a mano, con tres
+   * comentarios encima contando las tres veces que había mordido: la v12.43 con
+   * la comprobación de ubicaciones, la v12.75 con `autorDeLaFila_`, la v12.78
+   * con los avisos que saben de la edición. Y una cuarta sin comentario, la
+   * v12.82 con `tipoDeMovimiento_`. Cuatro veces el mismo fallo —un «no está
+   * definida» que parece del producto y es de la caja— y cuatro veces el mismo
+   * arreglo: añadir el nombre que faltaba a mano.
+   *
+   * Ahora se pide UNA función y el andamio se busca el resto, incluida la
+   * constante de edición: la pone él en `false`, así que la línea que la
+   * declaraba a mano aquí también se va.
+   *
+   * Los dobles son los de siempre y están arriba, en el contexto. No son sólo
+   * para fingir: son también dónde se corta la búsqueda, y sin ellos
+   * `requireAuth_` arrastraría un cuarto del archivo. */
+  vm.runInContext(A.levantar(src, ['addMovementsBatch_'], {
+    dobles: ['requireAuth_', 'auditLog_', 'refreshDerivedSheets_',
+             'sendBatchNotifyEmail_', 'checkNotifications_', 'newRequestId_',
+             'logError_']
+  }), sandbox);
 
   return { sandbox: sandbox, ss: ss, archive: archive, cfg: cfg };
 }

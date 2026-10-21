@@ -23,6 +23,7 @@
 // Uso:  node tools/test-settings-reopen.js
 
 const fs = require('fs'), path = require('path'), os = require('os');
+const A      = require(path.join(__dirname, 'andamio.js'));
 const HTML   = path.join(__dirname, '..', 'Index_v3_fixed.html');
 const CHROME = process.env.CHROME_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const SRC    = fs.readFileSync(HTML, 'utf8');
@@ -90,10 +91,23 @@ const page = `<!doctype html><html><head><meta charset="utf-8"></head><body>
     };
     return api;
   })() } };
-${fnSrc('openSettingsModal')}
-${fnSrc('_settingsFocusInPanel')}
-${fnSrc('_redrawSettingsWhenFree')}
-${fnSrc('_loadSettings')}
+${A.levantar(SRC,
+  ['openSettingsModal', '_settingsFocusInPanel', '_redrawSettingsWhenFree',
+   '_loadSettings'],
+  /* Todo lo que la página de arriba finge va aquí, y por dos motivos a la vez:
+     el andamio no lo levanta (así que la declaración de verdad no pisa al doble
+     en silencio) y además corta la búsqueda ahí.
+
+     ANTES ESTO ERAN CUATRO `fnSrc` SUELTOS, y se rompió en la v12.83: a
+     `_loadSettings` se le añadió una llamada a `_pmDirPoner` —tres líneas que
+     deciden la forma del directorio de jefes de obra— y esta prueba se cayó con
+     un «_pmDirPoner is not defined» que no tiene nada que ver con reabrir
+     Ajustes. Es la octava vez de ese patrón en esta suite, y la que se colaba
+     por el hueco del guardia: con `${...}` suelto no había ninguna lista que
+     mirar. */
+  { dobles: ['_clearRowModes', '_filterSettingsSidebar', '_settingMsg',
+             '_filterMatList', '_drawErrorLog', '_drawPmDirectory',
+             '_refreshPmDatalist', '_h', '_renderSettingsTab'] })}
   var _settingsRedrawPending = false;
 </script></body></html>`;
 

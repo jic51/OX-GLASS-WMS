@@ -23,6 +23,7 @@
 // Uso:  node tools/test-settings-system-tab.js
 
 const fs = require('fs'), path = require('path'), os = require('os');
+const A      = require(path.join(__dirname, 'andamio.js'));
 const HTML   = path.join(__dirname, '..', 'Index_v3_fixed.html');
 const CHROME = process.env.CHROME_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const SRC    = fs.readFileSync(HTML, 'utf8');
@@ -110,12 +111,15 @@ const page = `<!doctype html><html><head><meta charset="utf-8"><style>
     return api;
   }});
 
-${fnSrc('_sysRemember')}
-${fnSrc('_sysLoad')}
-${fnSrc('_loadBackupStatus')}
-${fnSrc('_loadDailyReport')}
-${fnSrc('_loadSpaceUsage')}
-${fnSrc('_loadAiStatus')}
+${A.levantar(SRC,
+  ['_sysRemember', '_sysLoad', '_loadBackupStatus', '_loadDailyReport',
+   '_loadSpaceUsage', '_loadAiStatus'],
+  /* Los nombres de arriba son los que esta prueba ejercita; el andamio añade lo
+     que necesiten. Antes eran seis `${...}` sueltos — la misma lista a mano con
+     otra forma, y la forma que se colaba por el hueco del guardia hasta la
+     v12.83. Abajo, todo lo que esta página finge. */
+  { dobles: ['_he', '_h', '_infoIc', '_drawBackupBox', '_drawDailyReport',
+             '_drawSpaceBox', '_drawAiBox'] })}
   var _sysBox = {};
 
   // El trozo de _renderSystemTab que importa: reescribe el panel con los cuatro

@@ -33,6 +33,7 @@
 // Usage:  node tools/test-fractional-qty.js
 
 const fs = require('fs'), path = require('path'), vm = require('vm');
+const A    = require(require('path').join(__dirname, 'andamio.js'));
 const HTML = fs.readFileSync(path.join(__dirname, '..', 'Index_v3_fixed.html'), 'utf8');
 const GS   = fs.readFileSync(path.join(__dirname, '..', 'Code_v3_fixed.gs'), 'utf8');
 
@@ -62,7 +63,11 @@ function codeOnly(src) {
 }
 
 const ctx = vm.createContext({ console: console });
-['_qty', '_qtyText'].forEach(n => vm.runInContext(extractFn(HTML, n), ctx));
+/* Los nombres que se piden son los que esta prueba ejercita DIRECTAMENTE —son
+ * el sujeto, no dependencias— y el andamio añade lo que necesiten. Antes la
+ * lista era también la de dependencias, y una lista así se rompe el día que
+ * alguien añade una llamada dentro del producto. */
+vm.runInContext(A.levantar(HTML, ['_qty', '_qtyText']), ctx);
 const _qty     = vm.runInContext('_qty', ctx);
 const _qtyText = vm.runInContext('_qtyText', ctx);
 

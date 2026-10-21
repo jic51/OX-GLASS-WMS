@@ -52,7 +52,19 @@ function cuerpoDe(nombre){
     let d = 0;
     for (let j = src.indexOf('{', ini); j < src.length; j++) {
       if (src[j] === '{') d++;
-      else if (src[j] === '}') { d--; if (d === 0) return src.slice(ini, j + 1); }
+      /* SIN SUS COMENTARIOS, y esto me lo cazó la propia suite en la v12.83.
+       *
+       * La regla de abajo —«los comentarios NO cuentan»— estaba aplicada a las
+       * PRUEBAS y no al producto, y la mitad que faltaba es la que muerde: a
+       * `refreshDerivedSheets_` le quitaron su `new Date()` y dejaron escrito
+       * «aquí vivía `var now = new Date()`» explicando por qué. Este guardia
+       * leyó esa frase y acusó a test-derived-refresh de ejecutar un reloj que
+       * ya no existe.
+       *
+       * Es la tercera vez en este proyecto que una búsqueda encuentra la prosa
+       * que explica lo que se quitó y la toma por el código. Las otras dos están
+       * contadas en `andamio.js` y en test-cinco-sin-riesgo. */
+      else if (src[j] === '}') { d--; if (d === 0) return sinComentarios(src.slice(ini, j + 1)); }
     }
   }
   return '';
@@ -120,6 +132,14 @@ const REVISADAS = {
     'de la hoja de mentira, que nadie compara con nada — está ahí para que la ' +
     'fila tenga la forma de una fila de verdad. Misma forma que test-andamio: ' +
     'la fecha existe, el reloj no.',
+  'test-local-dates.js':
+    'Levanta `_todayIso` pero NO LA LLAMA: lo único que hace con ella es buscar ' +
+    'en el archivo los sitios donde la app la usa —la casilla de fecha del ' +
+    'formulario y los dos nombres de descarga—. El reloj está en la caja y nunca ' +
+    'se lee, así que no hay nada que pueda desalinearse de las fechas fijas, que ' +
+    'son todas argumentos de `_isoDate`. Esta prueba se volvió visible para este ' +
+    'guardia en la v12.83, al migrarla al andamio: antes pedía sus funciones con ' +
+    '`fnSrc(n)` y una variable, y el detector sólo entiende nombres literales.',
   'test-config-snapshot.js':
     'La fecha es el VALOR de LAST_BACKUP_AT, y lo que la prueba comprueba es ' +
     'que ese valor NO salga en el volcado. El new Date() de writeConfigSnapshot_ ' +

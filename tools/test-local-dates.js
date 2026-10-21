@@ -31,6 +31,7 @@
 process.env.TZ = 'America/Denver';
 
 const fs = require('fs'), path = require('path'), vm = require('vm');
+const A    = require(require('path').join(__dirname, 'andamio.js'));
 const HTML = fs.readFileSync(path.join(__dirname, '..', 'Index_v3_fixed.html'), 'utf8');
 
 let ok = 0, fail = 0;
@@ -51,7 +52,11 @@ function extractFn(src, name) {
 
 // ── The real functions, lifted out of the shipping file ─────────────────────
 const ctx = vm.createContext({ console: console });
-['_isoDate', '_todayIso', '_mdyToIso'].forEach(n => vm.runInContext(extractFn(HTML, n), ctx));
+/* Los nombres que se piden son los que esta prueba ejercita DIRECTAMENTE —son
+ * el sujeto, no dependencias— y el andamio añade lo que necesiten. Antes la
+ * lista era también la de dependencias, y una lista así se rompe el día que
+ * alguien añade una llamada dentro del producto. */
+vm.runInContext(A.levantar(HTML, ['_isoDate', '_todayIso', '_mdyToIso']), ctx);
 
 // REAL Date objects, at a known instant. With TZ pinned above, their local
 // getters answer as a browser in Utah would — which is what _isoDate reads —

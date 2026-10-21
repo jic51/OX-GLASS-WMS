@@ -30,6 +30,7 @@
 // Uso:  node tools/test-bell-count.js
 
 const fs = require('fs'), path = require('path'), vm = require('vm');
+const A    = require(path.join(__dirname, 'andamio.js'));
 const HTML = fs.readFileSync(path.join(__dirname, '..', 'Index_v3_fixed.html'), 'utf8');
 
 let ok = 0, fail = 0;
@@ -102,10 +103,15 @@ function campana(opts){
     localStorage: { getItem: () => JSON.stringify(opts.todo || []), setItem: () => {} },
     document: { getElementById: (id) => nodos[id] || null }
   });
-  ['_he', '_qtyText', '_cfgKey', '_todoLoad', '_syncCfgBell']
-    .forEach(n => vm.runInContext(fnSrc(n), ctx));
-  // _fmtWhen formatea una hora y no decide nada de lo que se mide aquí.
+  // _fmtWhen formatea una hora y no decide nada de lo que se mide aquí. Va
+  // ANTES del andamio y en `dobles`, porque si se levantara la de verdad su
+  // declaración pisaría este doble sin decir nada.
   vm.runInContext('function _fmtWhen(){ return "just now"; }', ctx);
+  /* Se pide la función que esta prueba ejercita y el andamio baja por sus
+   * ayudantes; eran cinco nombres a mano. */
+  vm.runInContext(A.levantar(HTML, ['_syncCfgBell'], {
+    dobles: ['_fmtWhen']
+  }), ctx);
   vm.runInContext('_syncCfgBell()', ctx);
 
   return {

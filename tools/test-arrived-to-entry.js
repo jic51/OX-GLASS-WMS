@@ -21,6 +21,7 @@
 // Uso:  node tools/test-arrived-to-entry.js
 
 const fs = require('fs'), path = require('path'), os = require('os');
+const A      = require(path.join(__dirname, 'andamio.js'));
 const HTML   = path.join(__dirname, '..', 'Index_v3_fixed.html');
 const CHROME = process.env.CHROME_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const SRC    = fs.readFileSync(HTML, 'utf8');
@@ -87,15 +88,21 @@ const page = `<!doctype html><html><head><meta charset="utf-8"></head><body>
     var d = document.getElementById('cornerDeck');
     d.innerHTML = _sysDeckHtml + _cfgDeckHtml + _todoDeckHtml;
   }
-${fnSrc('_syncEntryOffer')}
-${fnSrc('_entryFromIncoming')}
-${fnSrc('_todoLoad')}
-${fnSrc('_todoSave')}
-${fnSrc('_todoAdd')}
-${fnSrc('_todoDrop')}
-${fnSrc('_todoDo')}
-${fnSrc('_entryTodoResolve')}
-${fnSrc('_renderTodoDeck')}
+${A.levantar(SRC,
+  ['_syncEntryOffer', '_entryFromIncoming', '_todoLoad', '_todoSave', '_todoAdd',
+   '_todoDrop', '_todoDo', '_entryTodoResolve', '_renderTodoDeck'],
+  /* Los nombres de arriba son los que esta prueba EJERCITA; el andamio añade lo
+     que necesiten. Antes eran nueve `${...}` sueltos, que es la misma lista a
+     mano escrita de otra forma — y la forma que se colaba por el hueco del
+     guardia hasta la v12.83, porque no había ningún corchete que mirar.
+
+     Abajo va todo lo que esta página finge: el andamio no lo levanta (así la
+     declaración de verdad no pisa al doble en silencio) y además corta la
+     búsqueda ahí. */
+  { dobles: ['_he', 'nt', '_qtyText', '_fmtWhen', 'showTab', 'openMoveModal',
+             'showToast', 'updateMatLineNameList', 'syncMatLineQty',
+             'updateMultiMatTotal', '_updateMoveSubmitState', '_syncCfgBell',
+             '_cfgWake', '_cfgScheduleDim', '_paintDeck'] })}
   var _TODO_KEY = 'acopio_pending_entries';
   var _todoItems = [];
   var _entryTodoId = null;

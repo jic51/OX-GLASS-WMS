@@ -101,6 +101,21 @@
        movements went from about two and a half minutes to fifty-five seconds
        along the way.</p>
 
+    <div class="entry" id="v12-83">
+      <span class="ver">v12.83</span>
+      <span class="tag fix">Fix</span>
+      <h3>The project-manager list can no longer break a screen</h3>
+      <p>The list of registered project managers is fetched from your sheet and used in three
+         places. If that fetch ever came back in an unexpected shape, the Receive screen would
+         stop opening &mdash; and the error would point at the list, not at the fetch.</p>
+      <p>There is now <b>one place</b> that decides what that list is, instead of three that each
+         had to get it right. Same for the new &ldquo;out on site&rdquo; list added in v12.82.</p>
+      <p>Behind this release: fifteen of our own checks stopped keeping hand-written lists of what
+         they need from the app, which is what made six of them fail at once last week over a change
+         that had nothing to do with what they test. They now work it out from the code. And a new
+         check fails if anyone writes one of those lists again.</p>
+    </div>
+
     <div class="entry" id="v12-82">
       <span class="ver">v12.82</span>
       <span class="tag new">New</span>

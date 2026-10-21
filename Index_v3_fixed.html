@@ -5701,7 +5701,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.82';
+var APP_VERSION = '12.83';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5713,7 +5713,7 @@ var APP_VERSION = '12.82';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'd885af1f';
+var APP_BUILD = '6d7dc434';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -12842,7 +12842,7 @@ function _initMultiMatSection(){
     _refreshPmDatalist();
   } else {
     google.script.run
-      .withSuccessHandler(function(list) { _pmDirectoryData = list || []; _refreshPmDatalist(); })
+      .withSuccessHandler(function(list) { _pmDirPoner(list); _refreshPmDatalist(); })
       .withFailureHandler(function(){})
       .processMovement('getPmDirectory', _h({}));
   }
@@ -13466,9 +13466,9 @@ function _fueraPedir(cat, cuandoLlegue){
        * objeto pasa el `||` tan contento y luego revienta en el `.filter` de
        * `_fueraSugerir`. Lo encontró `test-form-symmetry`, cuyo doble del
        * servidor contesta `{}` a todo lo que no conoce —y un doble que contesta
-       * algo raro es justo el ensayo que hace falta—. En este archivo ya hay un
-       * sitio con la misma falta sin arreglar: `_pmDirectoryData = list || []`
-       * seguido de un `.map`. Ver docs/BACKLOG.md. */
+       * algo raro es justo el ensayo que hace falta—. La misma falta estaba en
+       * el directorio de jefes de obra, en tres sitios a la vez; ahora toda
+       * respuesta de ésa pasa por `_pmDirPoner`. */
       _fueraCache = { cat: cat, filas: Array.isArray(filas) ? filas : [], pidiendo: false };
       cuandoLlegue && cuandoLlegue();
     })
@@ -14213,7 +14213,7 @@ function _loadSettings(opts) {
   if (!quiet) _pmDirectoryData = null;
   google.script.run
     .withSuccessHandler(function(list) {
-      _pmDirectoryData = list || [];
+      _pmDirPoner(list);
       if (_settingsTab === 'pmdirectory') _drawPmDirectory();
       _refreshPmDatalist();
     })
@@ -17062,13 +17062,28 @@ function _clearErrorLog(mode) {
   });
 }
 
-var _pmDirectoryData = null;
+var _pmDirectoryData = null;   // null = sin cargar todavía, que no es lo mismo que cargado y vacío
+
+/* EL DIRECTORIO SE GUARDA SIEMPRE COMO LISTA, y las tres respuestas del servidor
+ * pasan por aquí. Antes cada sitio hacía `list || []`, que es lo mismo salvo
+ * justo en el caso que importa: un `{}` pasa el `||` tan contento y revienta
+ * después en el `.map` de `_refreshPmDatalist` o de `_drawPmDirectory`, lejos de
+ * donde está la causa y sin decir de dónde vino.
+ *
+ * No es hipotético: la misma falta en la lista de «lo que está fuera» la cazó
+ * `test-form-symmetry` en la v12.82, cuyo doble del servidor contesta `{}` a
+ * todo lo que no conoce. Ésta es la hermana, y eran tres sitios que tenían que
+ * acordarse de hacer lo mismo — ahora es uno. */
+function _pmDirPoner(list) {
+  _pmDirectoryData = Array.isArray(list) ? list : [];
+}
+
 function _renderPmDirectoryTab() {
   var content = document.getElementById('settingsTabContent');
   if (_pmDirectoryData) { _drawPmDirectory(); return; }
   content.innerHTML = '<p style="padding:1rem;color:var(--muted);font-size:.85rem">Loading…</p>';
   google.script.run
-    .withSuccessHandler(function(list) { _pmDirectoryData = list || []; _drawPmDirectory(); })
+    .withSuccessHandler(function(list) { _pmDirPoner(list); _drawPmDirectory(); })
     .withFailureHandler(function(e) { content.innerHTML = '<p style="padding:1rem;color:#c0392b;font-size:.85rem">Error: '+_he(e.message||e)+'</p>'; })
     .processMovement('getPmDirectory', _h({}));
 }
@@ -28318,6 +28333,16 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '12.83',
+    titulo: 'The project-manager list can no longer break a screen',
+    puntos: [
+      'The list of registered project managers is fetched from your sheet and used in three places. If that fetch came back in an unexpected shape, the Receive screen stopped opening — and the error pointed at the list, not at the fetch.',
+      'There is now <b>one place</b> that decides what that list is, instead of three that each had to get it right. Same for the "out on site" list added in v12.82.',
+      'Behind this release: fifteen of our own checks stopped keeping hand-written lists of what they need from the app, and a new check fails if anyone writes one of those lists again.'
+    ],
+    antes:  'Three places that each had to get the same thing right',
+    ahora:  'One place that decides it' },
+
   { ver: '12.82',
     titulo: 'Returns know what is still out there',
     puntos: [
@@ -28349,16 +28374,6 @@ var NOVEDADES = [
     antes:  'Change a filter and everything shuffles a few pixels sideways',
     ahora:  'The columns stay where you left them' },
 
-  { ver: '12.79',
-    titulo: 'The card pile stops rocking',
-    puntos: [
-      'Dismissing a card made the whole pile slide up, and then slide back down a moment later when the next card took the free slot. One change, two movements \u2014 and the second one read as a glitch.',
-      'When another card is waiting, the pile no longer gives the space back: the card leaves and the next one is simply there. When nothing is waiting, the rest still rise into the gap, which is right.',
-      'The Dashboard table now holds its column widths by rule rather than by whatever happens to be in it.',
-      'And the footer says which edition you are running, so a free copy is never mistaken for anything else.'
-    ],
-    antes:  'Dismiss a card and the pile bounces up, then down',
-    ahora:  'The card goes, the pile stays put' },
 ];
 
 var NV_CLAVE = 'acopio_novedades_vista';

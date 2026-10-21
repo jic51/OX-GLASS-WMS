@@ -207,6 +207,31 @@ function montar(contexto, src, nombres, opciones) {
   return ctx;
 }
 
+/**
+ * LO QUE NECESITA UN TROZO DE CÓDIGO QUE NO ES UNA FUNCIÓN.
+ *
+ * `levantar` arranca de nombres de función, y eso deja fuera un caso real: hay
+ * pruebas que sacan del archivo un FRAGMENTO con una expresión regular —la
+ * plantilla de una celda de dentro de `renderStock`, un trozo de un `switch`— y
+ * lo evalúan. Es una buena costumbre y hay que defenderla: copiar la plantilla a
+ * la prueba la dejaría en verde con la plantilla del producto rota, que es justo
+ * el fallo que esas pruebas persiguen.
+ *
+ * Pero ese fragmento tiene dependencias que no se pueden deducir de ningún
+ * nombre de función, porque el fragmento NO es una función. En
+ * `test-lock-visible` eran `_he` y `_escAttr`, y vivían en una lista a mano —o
+ * sea, el problema que este archivo existe para quitar, colándose por la puerta
+ * de al lado.
+ *
+ * Así que esto hace lo mismo que `levantar` pero empezando por el TEXTO: mira
+ * qué funciones del archivo nombra el fragmento y las levanta con todas sus
+ * dependencias. Mismas opciones, y mismo trato a `ACOPIO_BASIC`.
+ */
+function levantarPara(src, fragmento, opciones) {
+  const raices = [..._llamadasEn(String(fragmento), nombresDe(src))];
+  return levantar(src, raices, opciones);
+}
+
 /** Constantes del archivo, por su nombre. Se leen DEL ARCHIVO, nunca se copian
  *  a mano: una copia se queda vieja sin avisar y la prueba mide otra cosa. */
 function constantes(src, nombres) {
@@ -413,6 +438,6 @@ function sinComentariosMismasLineas(src) {
     .join('\n');
 }
 
-module.exports = { fuente, fnSrc, nombresDe, levantar, montar, constantes,
+module.exports = { fuente, fnSrc, nombresDe, levantar, levantarPara, montar, constantes,
                    sinComentarios, sinComentariosMismasLineas,
                    Hoja, comoSheets, marcador };

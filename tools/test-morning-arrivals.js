@@ -37,6 +37,7 @@
 // Uso:  node tools/test-morning-arrivals.js
 
 const fs = require('fs'), path = require('path'), vm = require('vm');
+const A    = require(path.join(__dirname, 'andamio.js'));
 const ROOT = path.join(__dirname, '..');
 const HTML = fs.readFileSync(path.join(ROOT, 'Index_v3_fixed.html'), 'utf8');
 
@@ -120,16 +121,19 @@ function mundo(){
       }
     }
   });
-  [ 'nt', '_he', '_escAttr', '_isoDate', '_incOnDay', '_incQtyText',
-    '_incDateLabel', '_incFirstDocUrl', '_incStillPending', '_incItemHtml',
-    '_weekBounds', '_incInWeek', '_weekArrivals', '_overdueThisWeek',
-    '_incMatchesMove', '_incEntryWhere', '_thisWeeksDeliveries',
-    '_timeOfDayGreeting', '_applyMorningGreeting', 'showMorningPopup',
-    'openWeekSchedule', '_refreshMorningPopup'
-  ].forEach(n => vm.runInContext(fnSrc(n), ctx));
   // catBadge arrastra media hoja de estilos y colores por categoría; aquí sólo
-  // hace falta que devuelva algo. Es lo ÚNICO que se dobla, y no decide nada.
+  // hace falta que devuelva algo. Va ANTES del andamio y en `dobles`: si se
+  // levantara la de verdad, su declaración pisaría este doble sin decir nada.
   vm.runInContext('function catBadge(c){ return "<span>" + String(c||"") + "</span>"; }', ctx);
+  /* Se piden las cuatro que esta prueba ejercita y el andamio baja por sus
+   * ayudantes. Aquí había VEINTIDÓS nombres a mano, y una lista así se rompe el
+   * día que alguien añade una llamada dentro del producto: el fallo es un «no
+   * está definida» que parece del producto y es de la caja. */
+  vm.runInContext(A.levantar(HTML,
+    ['showMorningPopup', 'openWeekSchedule', '_refreshMorningPopup',
+     '_applyMorningGreeting'], {
+      dobles: ['catBadge', 'showToast']
+    }), ctx);
   return {
     pantalla,
     poner: (inc, mov) => { ctx.incoming = inc || []; ctx.movements = mov || []; },

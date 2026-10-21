@@ -46,6 +46,7 @@
 // Uso:  node tools/test-locations.js
 
 const fs = require('fs'), path = require('path'), vm = require('vm');
+const A    = require(require('path').join(__dirname, 'andamio.js'));
 const ROOT = path.join(__dirname, '..');
 const GS   = fs.readFileSync(path.join(ROOT, 'Code_v3_fixed.gs'), 'utf8');
 const HTML = fs.readFileSync(path.join(ROOT, 'Index_v3_fixed.html'), 'utf8');
@@ -186,11 +187,15 @@ function mundo(opts){
    * en la caja, guardar locaciones lanza "no está definida" y DOCE
    * comprobaciones de este archivo fallan por un motivo que no tiene nada que
    * ver con lo que miden. */
-  ['textCell_', 'writeConfigColumn_', 'writeConfigColumns_',
-   'saveLocationLayout', 'removedLocations_',
-   'locationUsage_', 'locationBlockReason_', 'forgetRackPhotos_'].forEach(n => {
-    vm.runInContext(fnSrc(GS, n), c);
-  });
+  /* MIGRADA AL ANDAMIO EN LA v12.82. El comentario de arriba cuenta la mordida
+   * de la v12.35 —doce comprobaciones de este archivo en rojo por una función
+   * que faltaba en la caja— y lo que pasó fue añadir ese nombre a mano. Ahora se
+   * piden las cuatro que esta prueba ejercita y el andamio baja por el resto. */
+  vm.runInContext(A.levantar(GS,
+    ['saveLocationLayout', 'locationUsage_', 'locationBlockReason_',
+     'forgetRackPhotos_'], {
+      dobles: ['requireAuth_', 'auditLog_', 'sheetSafe_', 'trashFileQuietly_']
+    }), c);
 
   return { c, hojas, auditadas, basura, cacheBorrado,
            run: (expr) => vm.runInContext(expr, c) };
@@ -368,9 +373,12 @@ function pantalla(opts){
         : { style: {}, focus(){} })
     }
   });
-  ['_locUsage', '_locWhyKept', '_locCreate', '_locDelete'].forEach(n => {
-    vm.runInContext(fnSrc(HTML, n), c);
-  });
+  /* Las cuatro que esta prueba ejercita; el andamio baja por sus ayudantes. */
+  vm.runInContext(A.levantar(HTML,
+    ['_locUsage', '_locWhyKept', '_locCreate', '_locDelete'], {
+      dobles: ['showToast', '_showConfirm', '_redrawLocGroups', '_rowLeaveAll',
+               '_itemsBy', '_locMarkDirty', '_locTypesInOrder']
+    }), c);
   return { c, avisos, confirmadas, run: (e) => vm.runInContext(e, c) };
 }
 

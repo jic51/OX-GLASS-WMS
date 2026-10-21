@@ -158,6 +158,99 @@ m.seccion('se queja fuerte cuando algo no está');
     /^var AC_WIDTH\s*=\s*\d+;/.test(c.trim()), c.trim());
 }
 
+m.seccion('un fragmento que no es una función también tiene dependencias');
+{
+  /* EL AGUJERO QUE QUEDABA, y por donde el problema se estaba colando otra vez.
+     `levantar` arranca de nombres de función, y hay pruebas que sacan del
+     archivo un TROZO con una expresión regular —la plantilla de una celda de
+     dentro de renderStock— y lo evalúan. Eso es una buena costumbre y hay que
+     defenderla: copiar la plantilla a la prueba la dejaría en verde con la
+     plantilla del producto rota.
+
+     Pero ese trozo llama a `_he` y a `_escAttr`, y eso no sale de ningún nombre
+     de función, porque el trozo no es una función. En test-lock-visible estaban
+     en una lista a mano — o sea, exactamente lo que este andamio existe para
+     quitar, entrando por la puerta de al lado. */
+  const trozo = '"<td title=\\"" + _escAttr(t) + "\\">" + _he(v) + "</td>"';
+  const traidas = nombresEn(A.levantarPara(HTML, trozo));
+  m.check('levantarPara lee el TEXTO y trae lo que nombra',
+    traidas.indexOf('_he') !== -1 && traidas.indexOf('_escAttr') !== -1, traidas);
+
+  // Y no se inventa nada: un trozo que no nombra funciones del archivo no trae
+  // ninguna. Sin esto, un resolvedor que devolviera medio archivo pasaría.
+  m.check('...y un trozo que no nombra nada del archivo no trae nada',
+    A.levantarPara(HTML, 'var x = 1 + 2;').trim() === '');
+}
+
+m.seccion('NINGUNA prueba mantiene ya una lista de dependencias a mano');
+{
+  /* EL GUARDIA QUE CIERRA EL CICLO, y es la mitad que faltaba. Todo lo de
+     arriba comprueba que el andamio FUNCIONA; esto comprueba que SE USA.
+
+     Trece pruebas mantenían su propia lista de nombres de función para meter en
+     la caja. Esas listas amanecieron rojas siete veces —la última al extraer
+     `tipoDeMovimiento_` en la v12.82, que rompió seis de golpe sin que ninguna
+     de las seis hablara de tipos de movimiento— y cada vez el arreglo fue
+     añadir a mano el nombre que faltaba. Migradas todas en la v12.82.
+
+     Sin este guardia, la decimocuarta se escribe la semana que viene: la forma
+     a mano es la que uno teclea sin pensar. Con él, el día que alguien la
+     escriba sale en rojo, con el nombre del archivo y qué poner en su lugar.
+
+     LO QUE BUSCA ES LA FORMA, no la intención: una lista de nombres entre
+     corchetes que acaba metiéndose en la caja con `fnSrc` o `extractFn`. Si
+     mañana aparece otra manera de escribir lo mismo, este guardia no la verá —
+     y no por eso vale menos: la que ya ha mordido siete veces es ésta. */
+  const fs = require('fs'), path = require('path');
+  const PATRON = /\[[^\]\n]*['"][^\]]*\]\s*(?:\r?\n\s*)?\.?\s*forEach\s*\([^)]*\b(?:fnSrc|extractFn)\s*\(/;
+
+  /* LA SEGUNDA FORMA, y es la que se colaba. test-settings-reopen no tenía
+     ninguna lista: metía cuatro `${fnSrc('…')}` sueltos dentro de la plantilla
+     con la que arma su página. El guardia de arriba no veía nada que mirar, y
+     en la v12.83 esa prueba se cayó con un «_pmDirPoner is not defined» por una
+     función nueva de tres líneas. Octava vez del mismo patrón.
+
+     Se busca la INTERPOLACIÓN y no la llamada a secas, porque `fnSrc('x')`
+     suelto tiene un uso legítimo que hay que dejar en paz: leer una función
+     para buscarle algo con una expresión regular, sin ejecutarla. Lo que mete
+     el resultado en una plantilla siempre es código que se va a correr, y eso
+     es lo que tiene dependencias. */
+  const INTERPOLA = /\$\{\s*(?:fnSrc|extractFn)\s*\(/;
+
+  const culpables = fs.readdirSync(__dirname)
+    .filter(f => /^test-.*\.js$/.test(f) && f !== 'test-andamio.js')
+    .filter(f => {
+      const src = A.sinComentarios(fs.readFileSync(path.join(__dirname, f), 'utf8'));
+      return PATRON.test(src) || INTERPOLA.test(src);
+    });
+
+  m.check('ninguna prueba mete en la caja una lista de nombres escrita a mano — ' +
+          'se pide la función que se mide y `levantar` baja por sus ayudantes, o ' +
+          '`levantarPara` si lo que se evalúa es un fragmento' +
+          (culpables.length ? ' — A MANO TODAVÍA: ' + culpables.join(', ') : ''),
+    culpables.length === 0);
+
+  /* Y EL GUARDIA TIENE QUE MORDER: si el patrón no reconociera la forma, el
+     verde de arriba sería un verde que no mira nada — que es peor que no
+     tenerlo. Éste es el texto exacto que tenía test-derived-refresh antes de
+     migrarla. */
+  const comoEra = "  ['normalizeString', 'getMaterialId', 'parseArchiveRow', 'textCell_',\n" +
+                  "   'refreshDerivedSheets_'].forEach(n => vm.runInContext(fnSrc(n), ctx));";
+  m.check('...y reconoce la forma de la lista, así que ese verde significa algo',
+    PATRON.test(comoEra));
+
+  // Y la otra, tal como la tenía test-settings-reopen.
+  m.check('...y también la de la plantilla, que es la que se colaba',
+    INTERPOLA.test("const page = `<script>\n${fnSrc('_loadSettings')}\n</script>`;"));
+
+  /* Y NO MUERDE lo legítimo: leer una función para buscarle algo con un regex,
+     sin ejecutarla, es una costumbre buena de esta suite y tiene que seguir
+     pasando. */
+  m.check('...y deja en paz un `fnSrc` que sólo lee para buscar',
+    !PATRON.test("check('…', /x/.test(fnSrc('_showConfirm')));") &&
+    !INTERPOLA.test("const REN = fnSrc('renderStock');"));
+}
+
 m.seccion('la hoja falsa se porta como Sheets');
 {
   // Las dos cosas que tiene que imitar son las dos que rompieron datos de Jose.

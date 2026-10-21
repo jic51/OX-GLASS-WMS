@@ -32,6 +32,7 @@
 // Uso:  node tools/test-also-arrived.js
 
 const fs = require('fs'), path = require('path'), vm = require('vm');
+const A    = require(path.join(__dirname, 'andamio.js'));
 const HTML = fs.readFileSync(path.join(__dirname, '..', 'Index_v3_fixed.html'), 'utf8');
 
 let ok = 0, fail = 0;
@@ -100,10 +101,16 @@ function mundo(entregas){
     _acWrite: (o) => { pantalla.escritos.push(o); if (o.ok) o.ok(); },
     document: { getElementById: (id) => nodos[id] || null }
   });
-  ['nt', '_he', '_escAttr', '_qtyText', '_incDateLabel', '_incOnDay',
-   '_incStillPending', '_incMatchesMove', '_alsoArrivedCandidates',
-   '_offerAlsoArrived', '_alsoArrivedClose', '_alsoArrivedSave']
-    .forEach(n => vm.runInContext(fnSrc(n), ctx));
+  /* Se piden las TRES funciones que esta prueba ejercita y el andamio baja por
+   * sus ayudantes. Aquí había doce nombres a mano, y una lista así se rompe el
+   * día que alguien añada una llamada dentro del producto: el fallo es un «no
+   * está definida» que parece del producto y es de la caja. Los dobles son los
+   * de arriba, en el contexto, y además cortan la búsqueda. */
+  vm.runInContext(A.levantar(HTML,
+    ['_offerAlsoArrived', '_alsoArrivedClose', '_alsoArrivedSave'], {
+      dobles: ['showToast', '_progStart', '_progFinLlegadas', 'renderAll',
+               '_reloadWhenIdle', '_h', '_acWrite']
+    }), ctx);
 
   return {
     pantalla,

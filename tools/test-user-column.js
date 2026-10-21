@@ -38,6 +38,7 @@
 // Uso:  node tools/test-user-column.js
 
 const fs = require('fs'), path = require('path'), os = require('os'), vm = require('vm');
+const A    = require(path.join(__dirname, 'andamio.js'));
 const ROOT = path.join(__dirname, '..');
 const HTML = fs.readFileSync(path.join(ROOT, 'Index_v3_fixed.html'), 'utf8');
 const GS   = fs.readFileSync(path.join(ROOT, 'Code_v3_fixed.gs'), 'utf8');
@@ -166,8 +167,9 @@ console.log('\n═══ la celda: nombre arriba, correo en gris debajo ══�
 
 function celda(dir){
   const ctx = vm.createContext({ String, Object, console, userNames: dir || {} });
-  ['_he', '_escAttr', '_personName', '_personLabel', '_userCellHtml']
-    .forEach(n => vm.runInContext(fnSrc(HTML, n), ctx));
+  /* Se piden las dos que esta prueba ejercita y el andamio baja por sus
+   * ayudantes; eran cinco nombres a mano. */
+  vm.runInContext(A.levantar(HTML, ['_userCellHtml', '_personLabel']), ctx);
   return {
     html: (mail) => { ctx.__m = mail; return vm.runInContext('_userCellHtml(__m)', ctx); },
     label: (mail) => { ctx.__m = mail; return vm.runInContext('_personLabel(__m)', ctx); }

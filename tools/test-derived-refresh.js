@@ -36,6 +36,7 @@
 // Uso:  node tools/test-derived-refresh.js
 
 const fs = require('fs'), path = require('path'), vm = require('vm');
+const A  = require(path.join(__dirname, 'andamio.js'));
 const GS = fs.readFileSync(path.join(__dirname, '..', 'Code_v3_fixed.gs'), 'utf8');
 
 let ok = 0, fail = 0;
@@ -185,8 +186,14 @@ function mundo(filasArchivo, filasHistoria){
 
   vm.runInContext(constSrc('SHEETS'), ctx);
   vm.runInContext(constSrc('AC'), ctx);
-  ['normalizeString', 'getMaterialId', 'tipoDeMovimiento_', 'parseArchiveRow', 'textCell_', 'textSafeRow_',
-   'refreshDerivedSheets_'].forEach(n => vm.runInContext(fnSrc(n), ctx));
+  /* Se pide la función y el andamio se busca sus dependencias. Aquí había una
+   * lista de siete nombres a mano, y las listas a mano llevan siete veces
+   * amaneciendo rojas por un cambio del producto que no tenía nada que ver con
+   * lo que mide la prueba. Los dobles están arriba, en el contexto. */
+  vm.runInContext(A.levantar(GS, ['refreshDerivedSheets_'], {
+    dobles: ['auditLog_', 'describeMatIdFixes_', 'ensureWasteSheet_',
+             'ensureArchiveHistorySheet_']
+  }), ctx);
 
   vm.runInContext('refreshDerivedSheets_(__ss)', ctx);
 

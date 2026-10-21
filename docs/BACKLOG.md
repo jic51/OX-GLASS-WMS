@@ -9386,14 +9386,19 @@ bodega empieza a mitad, y un material que salió antes de instalar Acopio es una
 devolución legítima que ninguna lista puede conocer. La guardia del motor es un
 trabajo aparte y sigue abierta más arriba en esta lista.
 
-### Y una falta hermana, sin arreglar
+### Y una falta hermana — ✅ arreglada también en la v12.82
 
-`_refreshPmDatalist` hace `_pmDirectoryData = list || []` y luego `.map`. Es
-exactamente la falta del punto 3 de arriba, en otro sitio, y se ve en la misma
-prueba: con un doble que contesta `{}`, `setModalType('ENTRY')` revienta con
-*«\_pmDirectoryData.map is not a function»*. En producción el servidor devuelve
-un array, así que no se ha visto nunca — pero «no se ha visto nunca» no es lo
-mismo que «no pasa», y es una línea. Sin hacer para no mezclarlo con esto.
+`_pmDirectoryData = list || []` seguido de un `.map`, exactamente la falta del
+punto 3 de arriba en otro sitio. Se veía en la misma prueba: con un doble que
+contesta `{}`, `setModalType('ENTRY')` reventaba con *«\_pmDirectoryData.map is
+not a function»*.
+
+Y era peor de lo que parecía: **tres sitios** asignaban la respuesta del servidor
+a esa variable, cada uno con su `|| []`, y los dos que la leen (`.map` en
+`_refreshPmDatalist` y en `_drawPmDirectory`) confiaban en que los tres hubieran
+acertado. Ahora toda respuesta pasa por `_pmDirPoner`, que es el único sitio que
+decide la forma. `null` sigue significando «sin cargar», que no es lo mismo que
+«cargado y vacío».
 
 
 ## 🔵 UNA ✕ EN CADA CAMPO — HECHO EL 20/10, Y LO QUE QUEDA
@@ -9508,7 +9513,7 @@ del teléfono va abajo**. Eso no estaba en la propuesta de Jose —él habló de
 iconos, no de dónde— y es la diferencia entre un menú que se usa con el pulgar y
 uno que obliga a cambiar la mano de sitio.
 
-## 🔴 LAS LISTAS DE DEPENDENCIAS A MANO — SEXTA MORDIDA · 21/10
+## ✅ LAS LISTAS DE DEPENDENCIAS A MANO — CERRADO EN LA v12.83 · 21/10
 
 Seis pruebas mantienen a mano la lista de funciones que levantan en su caja de
 pruebas, porque son **anteriores a `tools/andamio.js`**, que existe justamente
@@ -9540,3 +9545,66 @@ doble en la función de verdad por accidente. Medio día, y deja de pasar.
 
 **El coste de no hacerlo** no es el rato de arreglarlas: es que un rojo que no
 habla de lo que la prueba mide **enseña a ignorar los rojos**.
+
+### HECHO EN LA v12.83 — y no eran seis, eran quince
+
+Esta nota decía «seis» porque seis fueron las que se cayeron con
+`tipoDeMovimiento_`. Al ir a migrarlas aparecieron **nueve más**, y tres de ellas
+escondidas en una forma que no se parecía a una lista:
+
+| Forma | Pruebas | Cómo se veía |
+|---|---|---|
+| `['a','b'].forEach(n => runInContext(fnSrc(n)))` | 12 | una lista, se busca sola |
+| `${fnSrc('a')}` dentro de una plantilla | 3 | **ninguna lista que mirar** |
+
+La segunda forma es la que importa, porque es la que se colaba: `test-settings-reopen`
+metía cuatro `${fnSrc('…')}` en la plantilla con la que arma su página, y se cayó
+en esta misma versión con un *«\_pmDirPoner is not defined»* por una función nueva
+de **tres líneas** que no tiene nada que ver con reabrir Ajustes. Octava mordida.
+
+**Las quince, migradas:** `test-pricing`, `test-cinco-sin-riesgo` (dos listas),
+`test-derived-refresh`, `test-transfer-project`, `test-adjust`,
+`test-data-quality`, `test-locations` (dos listas), `test-also-arrived`,
+`test-bell-count`, `test-lock-visible`, `test-morning-arrivals`,
+`test-user-column`, `test-fractional-qty`, `test-local-dates`,
+`test-settings-reopen`, `test-arrived-to-entry`, `test-settings-system-tab`.
+
+### Lo que hizo falta añadirle al andamio
+
+**`levantarPara(src, fragmento)`**, porque quedaba un agujero de fondo:
+`levantar` arranca de nombres de función, y hay pruebas que sacan del archivo un
+**fragmento** con una expresión regular —la plantilla de la celda de Location de
+dentro de `renderStock`— y lo evalúan. Esa costumbre es buena y hay que
+defenderla: copiar la plantilla a la prueba la dejaría en verde con la plantilla
+del producto rota, que es justo el fallo que esa prueba persigue. Pero el
+fragmento llama a `_he` y a `_escAttr`, y eso no sale de ningún nombre de función
+porque el fragmento **no es** una función. Estaban en una lista a mano, o sea el
+problema entrando por la puerta de al lado. Ahora se lee el texto y se levanta lo
+que nombre.
+
+### Y el guardia, que es la mitad que faltaba
+
+`test-andamio` comprobaba que el andamio **funciona**. Ahora comprueba que **se
+usa**: recorre las pruebas y falla si alguna vuelve a escribir una de las dos
+formas, con el nombre del archivo y qué poner en su lugar. Sin él la
+decimosexta se escribe la semana que viene, porque la forma a mano es la que uno
+teclea sin pensar.
+
+El guardia encontró cuatro pruebas que yo había pasado por alto buscando a ojo —
+dos con `grep` y dos más tras cerrarle el hueco de la plantilla. Vale la pena
+decirlo: **buscar a ojo falló otra vez**, y lo que lo arregló no fue buscar mejor
+sino escribir la regla.
+
+### Dos cosas más que salieron al tirar del hilo
+
+1. **`test-no-caduca` acusaba a `test-derived-refresh` de leer el reloj** — por un
+   COMENTARIO del producto que dice «aquí vivía `var now = new Date()`»,
+   explicando que se lo quitaron. Ese guardia quitaba los comentarios de las
+   PRUEBAS y no del producto, y la mitad que faltaba es la que muerde. Tercera vez
+   en este proyecto que una búsqueda encuentra la prosa que explica lo que se
+   quitó y la toma por el código.
+2. **`test-local-dates` tiene ahora su excepción escrita** en ese mismo guardia:
+   levanta `_todayIso` pero no la llama —sólo busca en el archivo dónde la usa la
+   app—, así que el reloj está en la caja y nunca se lee. Se volvió visible al
+   migrarla, porque el detector sólo entiende nombres literales y antes los pedía
+   con una variable.

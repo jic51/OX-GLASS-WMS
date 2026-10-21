@@ -37,6 +37,7 @@
 // Uso:  node tools/test-cinco-sin-riesgo.js
 
 const fs = require('fs'), path = require('path'), vm = require('vm');
+const A    = require(path.join(__dirname, 'andamio.js'));
 const ROOT = path.join(__dirname, '..');
 const GS   = fs.readFileSync(path.join(ROOT, 'Code_v3_fixed.gs'), 'utf8');
 
@@ -197,8 +198,18 @@ function correrRefresco(filasArchivo, filasHistoria){
   ctx.__ss = ss;
   vm.runInContext(constSrc('SHEETS'), ctx);
   vm.runInContext(constSrc('AC'), ctx);
-  ['normalizeString', 'getMaterialId', 'tipoDeMovimiento_', 'parseArchiveRow', 'textCell_', 'textSafeRow_',
-   'round2_', 'refreshDerivedSheets_'].forEach(n => vm.runInContext(fnSrc(n), ctx));
+  /* SE PIDE UNA FUNCIÓN Y EL ANDAMIO SE BUSCA EL RESTO. Aquí había una lista de
+   * ocho nombres escrita a mano, y es la séptima vez que una lista así amanece
+   * roja porque alguien añadió una llamada dentro del producto: la última, al
+   * extraer `tipoDeMovimiento_` en la v12.82, rompió SEIS pruebas de golpe sin
+   * que ninguna de las seis hablara de tipos de movimiento.
+   *
+   * Los dobles son los mismos de siempre y están arriba, en el contexto: el
+   * andamio no los levanta, y además corta la búsqueda ahí. */
+  vm.runInContext(A.levantar(GS, ['refreshDerivedSheets_'], {
+    dobles: ['auditLog_', 'describeMatIdFixes_', 'ensureWasteSheet_',
+             'ensureArchiveHistorySheet_']
+  }), ctx);
   vm.runInContext('refreshDerivedSheets_(__ss)', ctx);
 
   return { archive, history, live, site, waste, auditoria };
@@ -532,8 +543,9 @@ console.log('\n═══ 4 · la pestaña vacía cuya nota mentía sobre por qu�
     TERMS_SHEET: 'TERMS', PRIVACY_SHEET: 'PRIVACY',
     FORMATO_CABECERA_ALTO: 28 });
   vm.runInContext(constSrc('SHEETS'), ctx);
-  ['gruposDeFormato_', 'notasPorHoja_', 'anchosDelArchivo_', 'hojaVacia_',
-   'protegerConAviso_', 'aplicarFormatoEstandar_'].forEach(n => vm.runInContext(fnSrc(n), ctx));
+  /* Igual que arriba: se pide la función de entrada y el andamio baja por sus
+   * ayudantes. Era la segunda lista a mano de este archivo. */
+  vm.runInContext(A.levantar(GS, ['aplicarFormatoEstandar_']), ctx);
   vm.runInContext(constSrc('AC'), ctx);
   ctx.__ss = ss;
   vm.runInContext('aplicarFormatoEstandar_(__ss, { completo: false })', ctx);

@@ -23,6 +23,7 @@
 // Usage:  node tools/test-data-quality.js
 
 const fs = require('fs'), path = require('path'), vm = require('vm');
+const A  = require(path.join(__dirname, 'andamio.js'));
 const ROOT = path.join(__dirname, '..');
 const GS   = fs.readFileSync(path.join(ROOT, 'Code_v3_fixed.gs'), 'utf8');
 const HTML = fs.readFileSync(path.join(ROOT, 'Index_v3_fixed.html'), 'utf8');
@@ -81,16 +82,22 @@ const sandbox = {
   SpreadsheetApp: { getActiveSpreadsheet: () => ({ getSheetByName: () => null }) }
 };
 vm.createContext(sandbox);
+/* EL ANDAMIO SE BUSCA LAS AYUDANTES. Aquí había seis nombres a mano, y las
+ * listas a mano llevan siete veces amaneciendo rojas por un cambio del producto
+ * que no tenía nada que ver con lo que mide la prueba — la última, al extraer
+ * `tipoDeMovimiento_` en la v12.82, rompió seis pruebas de golpe.
+ *
+ * `tipoDeMovimiento_` se sigue nombrando aparte MÁS ABAJO, en su propia caja, y
+ * eso no es repetirse: allí es el SUJETO de la prueba y se ejercita directo;
+ * aquí es una dependencia del barrido. */
 vm.runInContext([
   extractVar('AC'),
   extractVar('DQ_MAX_FINDINGS'),
   extractVar('DQ_SIMILAR_CAP'),
-  extractFn('tipoDeMovimiento_'),
-  extractFn('squashKey_'),
-  extractFn('dqId_'),
-  extractFn('dqDigitsOf_'),
-  extractFn('dqEditDistance_'),
-  extractFn('runDataQualityScan')
+  A.levantar(GS, ['runDataQualityScan'], {
+    dobles: ['requireAuth_', 'requireQuota_', 'auditLog_', 'normalizeString',
+             'getMaterialId', 'parseArchiveRow']
+  })
 ].join('\n'), sandbox);
 
 // Rows in the archive's real shape. Only the columns the sweep reads matter.
@@ -574,7 +581,7 @@ console.log('\n═══ un material que tiene menos que nada ═══\n');
 {
   const vmq = require('vm');
   const ctx = vmq.createContext({});
-  vmq.runInContext(extractFn('tipoDeMovimiento_'), ctx);
+  vmq.runInContext(A.levantar(GS, ['tipoDeMovimiento_']), ctx);
   const tipo = (mt, qty, st) => {
     ctx.__a = mt; ctx.__b = qty; ctx.__c = st;
     return vmq.runInContext('tipoDeMovimiento_(__a, __b, __c)', ctx);
