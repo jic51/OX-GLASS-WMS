@@ -140,7 +140,7 @@ var APP_VERSION = '12.83';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '6d7dc434';
+var APP_BUILD = 'ac97b3e7';
 
 // ═══ ACOPIO BASIC — EL INTERRUPTOR DE LA VERSIÓN GRATIS ══════════════════════
 //

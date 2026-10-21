@@ -5713,7 +5713,7 @@ var APP_VERSION = '12.83';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '6d7dc434';
+var APP_BUILD = 'ac97b3e7';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -12124,6 +12124,44 @@ async function submitMovement(){
     comments = adjust.reason + (adjust.note ? ' — ' + adjust.note : '');
   }
 
+  /* ── DEVOLVER MÁS DE LO QUE SALIÓ ──────────────────────────────────────────
+   *
+   * Jose, 21/10, eligiendo entre cuatro salidas: *"avisar y dejar pasar, y
+   * anotarlo"*. Y es la correcta: rechazar la devolución deja a alguien con el
+   * material en la mano y sin forma de registrarlo, y como el cliente no entra
+   * nunca a la hoja, se queda sin salida ninguna.
+   *
+   * LAS DOS MITADES DE SU REGLA, y la primera importa tanto como la segunda:
+   *
+   *   · Si el material NO tiene ninguna salida registrada, se guarda SIN DECIR
+   *     NADA. La historia de cualquier bodega empieza a mitad, y algo que salió
+   *     antes de instalar Acopio es una devolución legítima de la que ningún
+   *     registro puede saber. Avisar ahí sería avisar de lo normal, y un aviso
+   *     que salta en lo normal se aprende a cerrar sin leer.
+   *   · Si SÍ tiene salidas y la cantidad se pasa, se pregunta antes.
+   *
+   * ES UN AVISO, NO UN GUARDIA. El saldo sale del caché que la lista de «lo que
+   * está fuera» cargó al abrir la pantalla, así que puede estar viejo si otro
+   * devolvió algo hace un minuto. Por eso no bloquea — y por eso la cuenta de
+   * verdad, la que acaba escrita, tiene que hacerla el servidor. Eso es la otra
+   * mitad y está en el backlog: la tarjeta de ajuste que Jose diseñó. */
+  if (currentMoveType === 'RETURN'){
+    var sobra = _fueraSobrante(cat, name, srcVal, qty);
+    if (sobra){
+      _showConfirm({
+        icon: '⚠️',
+        title: 'More than went out',
+        message: 'Only ' + _fueraNum(sobra.fuera) + ' of this material is recorded as out ' +
+                 'at ' + sobra.site + ',\nand you are returning ' + _fueraNum(qty) + '.\n\n' +
+                 _fueraNum(sobra.extra) + ' more will be added to the warehouse than ever ' +
+                 'left it.\n\nSave anyway?',
+        confirmText: 'Save anyway',
+        onConfirm: function(){ _doSubmit(false); }
+      });
+      return;
+    }
+  }
+
   // Advisory total-stock check for WASTE (TRANSFER is already validated per-row above)
   if (currentMoveType === 'WASTE'){
     var key2 = _normKey(cat) + '|||' + _normKey(name);
@@ -13547,6 +13585,41 @@ function _fueraSugerir(box, inputEl){
     }).join('');
   box.style.display = 'block';
   _positionSuggestBox(box, inputEl, 360);
+}
+
+/* ¿SE ESTÁ DEVOLVIENDO MÁS DE LO QUE SALIÓ DE ESE SITIO?
+ *
+ * Devuelve `null` cuando no hay nada que decir, y eso incluye el caso que más
+ * importa: **que el material no tenga ninguna salida registrada**. Jose,
+ * 21/10: *"si el material no tiene ninguna salida registrada, se guarda sin
+ * decir nada"*. Un almacén que empieza a usar Acopio tiene material fuera que
+ * salió antes, y avisar de cada una de esas devoluciones es avisar de lo normal.
+ *
+ * TAMBIÉN DEVUELVE `null` CUANDO NO SABE, y hay que decirlo porque es la mitad
+ * silenciosa: si el caché es de otra categoría —porque alguien cambió el
+ * desplegable y no volvió a tocar el nombre— o si no se llegó a cargar, aquí no
+ * hay dato con el que afirmar nada. Inventarse un aviso con un saldo de otra
+ * categoría sería peor que callarse.
+ */
+function _fueraSobrante(cat, nombre, sitio, qty) {
+  if (_fueraCache.filas === null) return null;            // no cargó
+  if (nt(_fueraCache.cat) !== nt(cat)) return null;       // es de otra categoría
+  var sit = nt(sitio);
+  if (!sit) return null;                                  // sin sitio no hay con qué comparar
+
+  var nom = nt(nombre);
+  var f = null;
+  for (var i = 0; i < _fueraCache.filas.length; i++) {
+    var r = _fueraCache.filas[i];
+    if (nt(r.name) === nom && nt(r.site) === sit) { f = r; break; }
+  }
+  /* SIN FILA NO HAY AVISO, y es la regla de Jose: puede ser que ese material
+   * nunca saliera de aquí, o que saliera antes de que existiera el registro. */
+  if (!f) return null;
+
+  var n = Number(qty) || 0;
+  if (!(n > f.qty)) return null;
+  return { fuera: f.qty, extra: Math.round((n - f.qty) * 100) / 100, site: f.site };
 }
 
 /* ── LO QUE SE RELLENA, Y LOS DOS CAMPOS QUE NO ─────────────────────────────

@@ -374,6 +374,76 @@ const leerCaja = () => ({
   check('y lo que venía de otra pantalla ya no viaja escondido: está a la vista',
     pm.valor, 'ALGUIEN DE OTRA PANTALLA');
 
+  console.log('\n═══ 10. Devolver MÁS de lo que salió ═══\n');
+
+  /* Jose, 21/10, eligiendo entre cuatro salidas: *"avisar y dejar pasar, y
+   * anotarlo"*. Las dos mitades de su regla se miden aquí, y la que calla
+   * importa tanto como la que avisa: un almacén que empieza a usar Acopio tiene
+   * material fuera que salió ANTES, y avisar de cada una de esas devoluciones es
+   * avisar de lo normal — que es cómo se aprende a cerrar un aviso sin leerlo.
+   *
+   * Se mide la función de la decisión y no el diálogo: lo que puede estar mal
+   * aquí es la cuenta y los casos en que se calla, no el dibujo del cuadro. */
+  const sobra = await p.evaluate(async () => {
+    setModalType('RETURN');
+    const s = document.getElementById('mType');
+    s.value = 'WINDOW';
+    s.dispatchEvent(new Event('change'));
+    _fueraOlvidar();
+    /* SE LLAMA A LA PUERTA DE CARGA DIRECTAMENTE y no se simula el foco: en esta
+     * altura del recorrido la ventana puede estar cerrada, y `.focus()` sobre un
+     * campo escondido no dispara nada — tres comprobaciones se quedaron en null
+     * por eso. Que el foco abra la lista ya lo mide la sección 1; el sujeto de
+     * aquí es la CUENTA, no el cableado. */
+    _checkStockSuggest(document.getElementById('mName'));
+    await new Promise(r => setTimeout(r, 250));      // que cargue el saldo
+    const f = (nombre, sitio, qty) => _fueraSobrante('WINDOW', nombre, sitio, qty);
+    return {
+      /* EL SALDO, PARA PODER CREER A LOS `null` DE ABAJO. Media sección
+       * comprueba que la función se CALLA, y un `null` por «no cargó» es
+       * indistinguible de un `null` por «no hay nada que decir»: sin esto, la
+       * primera vez que el andamio de la prueba se rompiera, tres
+       * comprobaciones seguirían en verde midiendo nada. Ya pasó en este mismo
+       * archivo. */
+      cargado: (_fueraCache.filas || []).length,
+      // 7 están fuera en LEHI HOUSE 12
+      justo:   f('VINYL WINDOW 36X48', 'LEHI HOUSE 12', 7),
+      pasa:    f('VINYL WINDOW 36X48', 'LEHI HOUSE 12', 10),
+      menos:   f('VINYL WINDOW 36X48', 'LEHI HOUSE 12', 3),
+      // mismo material, OTRO sitio: allí sólo hay 3
+      otroSit: f('VINYL WINDOW 36X48', 'OREM DUPLEX', 5),
+      // un material que nunca salió de aquí
+      nuevo:   f('MATERIAL QUE NUNCA SALIO', 'LEHI HOUSE 12', 99),
+      // sin sitio escrito no hay con qué comparar
+      sinSit:  f('VINYL WINDOW 36X48', '', 99),
+      // y el caché de OTRA categoría no sirve para afirmar nada
+      otraCat: _fueraSobrante('DOOR', 'VINYL WINDOW 36X48', 'LEHI HOUSE 12', 99)
+    };
+  });
+
+  check('el saldo se cargó, así que los `null` de abajo significan «no hay nada ' +
+        'que decir» y no «no se pudo mirar»', sobra.cargado, 3);
+  check('devolver exactamente lo que salió no avisa', sobra.justo, null);
+  check('devolver menos tampoco', sobra.menos, null);
+  check('pasarse SÍ avisa, y dice cuánto sobra',
+    sobra.pasa && sobra.pasa.extra, 3);
+  check('...con el saldo de ESE sitio, no el del material',
+    sobra.pasa && sobra.pasa.fuera, 7);
+  check('el mismo material en otro sitio se mide contra el saldo de ese otro ' +
+        'sitio — es la regla de Jose: importa cuánto hay en ESE LUGAR',
+    sobra.otroSit && sobra.otroSit.extra, 2);
+
+  /* LA MITAD QUE CALLA, y es la que convierte esto en algo que se puede usar. */
+  check('un material SIN NINGUNA salida registrada no avisa, por mucho que se ' +
+        'devuelva — la historia de una bodega empieza a mitad y eso es una ' +
+        'devolución legítima de la que ningún registro puede saber',
+    sobra.nuevo, null);
+  check('sin sitio escrito no hay nada con lo que comparar, así que se calla',
+    sobra.sinSit, null);
+  check('y con el saldo de OTRA categoría se calla también — inventar un aviso ' +
+        'con un dato que no es de este material sería peor que no avisar',
+    sobra.otraCat, null);
+
   check('ningún error de JavaScript en toda la página', errores, []);
 
   await browser.close();
