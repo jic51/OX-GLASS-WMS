@@ -5709,7 +5709,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.85';
+var APP_VERSION = '12.86';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5721,7 +5721,7 @@ var APP_VERSION = '12.85';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '834d581b';
+var APP_BUILD = '549fa456';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -27661,14 +27661,43 @@ var BASIC_PRO = {
   /* El lector de correos va aparte y con su propio mensaje: vende muchísimo y
    * no cabe en la frase genérica. */
   correo:    { titulo: '📧 Read it from the email',
-               que: 'Paste a supplier email and the app fills in what is arriving — supplier, items, quantities and dates.' }
+               que: 'Paste a supplier email and the app fills in what is arriving — supplier, items, quantities and dates.' },
+  /* LEER UNA FACTURA NO ES LO MISMO QUE ADJUNTARLA, y hasta la v12.86 el botón
+   * «📷 Take a photo of the invoice» contestaba con el mensaje de adjuntar
+   * documentos. Parecido no basta: quien pulsa «léemela» y recibe «puedes
+   * guardarla» no entiende que le acaban de ofrecer otra cosa, entiende que la
+   * app no le entendió. */
+  lectura:   { titulo: '🤖 Let the app read the invoice',
+               que: 'Take a photo of a delivery note or an invoice and the app fills in the supplier, the items and the quantities for you.' }
 };
 
 /* Qué botón abre qué oferta. Un botón puede estar en la lista y no existir en
  * la pantalla: se comprueba antes de tocarlo. */
+/* ── CADA CANDADO CONTESTA DE LO QUE SE PULSÓ ───────────────────────────────
+ *
+ * Jose, 21/10: *"al dar clic en la ventana de low stock aparece un mensaje que
+ * dice algo sobre los incomings. Eso está mal... analiza todos los candados y el
+ * mensaje que muestra, deben hablar de lo mismo"*.
+ *
+ * Tenía razón y el repaso encontró tres, de dos clases distintas:
+ *
+ *   1. `btnMonitorSettings` y su gemelo de la barra contestaban «Expected
+ *      deliveries». Eran el ⚙ Monitor —elegir qué materiales se vigilan y con
+ *      qué mínimo—, y acabaron en 'llegadas' por estar cerca en el archivo.
+ *      **Pero el arreglo no era cambiarles el mensaje: era quitarles el
+ *      candado.** Ver la nota de abajo.
+ *   2. `btnAiExtract` contestaba «Photos and documents». Es «hazme la foto de
+ *      la factura y relléname los campos», que no es adjuntar un archivo: es
+ *      que te lo LEAN. Ahora tiene su propia oferta.
+ *
+ * CÓMO SE COLARON, que importa más que las tres: nada obligaba al mensaje a
+ * hablar del botón. Son dos cosas que tienen que coincidir sin que nada lo
+ * obligue — la misma falta que llevamos dieciséis veces pagando, esta vez en el
+ * texto en vez de en el código. Ahora lo vigila
+ * `test-candados-hablan-de-lo-mismo.js`. */
 var BASIC_PRO_BOTONES = {
   btnAddDoc:                 'fotos',
-  btnAiExtract:              'fotos',
+  btnAiExtract:              'lectura',
   btnMovLabels:              'etiquetas',
   btnEscanear:               'escanear',
   btnEscanearMov:            'escanear',
@@ -27676,8 +27705,22 @@ var BASIC_PRO_BOTONES = {
   btnAddIncoming:            'llegadas',
   btnDeleteIncoming:         'llegadas',
   btnWeekSchedule:           'llegadas',
-  btnMonitorSettings:        'llegadas',
-  btnMonitorSettingsToolbar: 'llegadas',
+  /* ── EL ⚙ MONITOR SE QUEDA ABIERTO EN LA GRATIS ──────────────────────────
+   *
+   * Estaba aquí, y era un descuido con consecuencias. La franja de «⚠ Zero
+   * Stock (1) · ⚠ Below Minimum (5)» **se ve en la Básica** —sale en el propio
+   * vídeo de Jose— y el botón que decide qué es «mínimo» estaba cerrado. O sea:
+   * la app le enseña a alguien un problema y le esconde el control con el que
+   * se define. Es el peor de los dos mundos, peor que no tener ninguna de las
+   * dos cosas.
+   *
+   * Y no había nada que lo justificara. La lista de materiales vigilados vive
+   * en las Script Properties del propio archivo del cliente: no pide ni un
+   * permiso más, que es el único portero que tiene la edición gratis. Lo que
+   * sí es de Pro es que ese aviso **llegue por correo**, porque eso necesita
+   * `MailApp` — y eso ya está cerrado por su lado.
+   *
+   * Nota deliberada: no se le pone candado NI se le esconde. Se deja funcionar. */
   btnBackupNow:              'respaldo',
   btnFromEmail:              'correo',
   btnReadEmail:              'correo'
@@ -28490,6 +28533,16 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '12.86',
+    titulo: 'Every padlock now answers about what you clicked',
+    puntos: [
+      'In the free edition, clicking the low-stock settings used to answer with a message about <i>expected deliveries</i>. Three of them pointed at the wrong explanation.',
+      'And the low-stock settings should never have been closed. The free edition already shows the "below minimum" banner, so closing the button that decides what "minimum" means showed you a problem and hid the control that defines it. <b>It is open now.</b>',
+      'What is still Pro is getting that alert <b>by email</b>, which needs a permission the free edition does not ask for.'
+    ],
+    antes:  'Click the low-stock settings, get told about expected deliveries',
+    ahora:  'Each one explains the thing you actually clicked' },
+
   { ver: '12.85',
     titulo: 'Two notices that piled up',
     puntos: [
@@ -28520,16 +28573,6 @@ var NOVEDADES = [
     antes:  'Three places that each had to get the same thing right',
     ahora:  'One place that decides it' },
 
-  { ver: '12.82',
-    titulo: 'Returns know what is still out there',
-    puntos: [
-      'Click into the material name on a <b>Return</b> and a list drops down of everything from that category that is <b>out on a site right now</b> — with how much is out, and where.',
-      'It is grouped by <b>material and place</b>. Four dispatches of the same material to the same job are one line with the total, because what you need standing there is how much of it is at <i>that</i> address.',
-      'Pick one and the form fills itself: name, the site it comes back from, the unit, the project, the project manager, and the quantity as a suggestion. You are left with the rack, the real quantity and the reason.',
-      '<b>Returned By</b> is left empty on purpose: the record knows who took the material out, not who is bringing it back.'
-    ],
-    antes:  'Type the name of something you cannot see, and fill eight boxes by hand',
-    ahora:  'Pick it off the list and fill in three' },
 
 
 

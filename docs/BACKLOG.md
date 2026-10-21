@@ -9251,6 +9251,70 @@ prueba siguió en verde.
 poco** — el caso de Jose. Con las columnas por defecto de Movements y una
 ventana alrededor de 1280 px debería caer en esa banda.
 
+## 🔵 INCOMING: CREAR VARIOS A LA VEZ, Y QUE ACEPTAR UNO **SEA** LA ENTRADA · 21/10
+
+Jose, 21/10, dos ideas en el mismo mensaje y la segunda es estructural:
+
+> *"Debemos dar la opción al usuario de hacer nuevos incomings (crear nuevos
+> eventos futuros) y hacer varios a la vez, así como hacemos los entry. Y
+> también se vino a mi mente que aceptar un incoming que ya llegó y hacer un
+> entry son la misma cosa aplicada de 2 formas diferentes... si lo ves de cierto
+> modo, a un incoming recibido sólo le falta el proyecto, el PO y la locación
+> para ser un entry básico."*
+
+### La primera, y es la fácil: varios a la vez
+
+Hoy `openIncomingModal()` crea UNA entrega esperada. La ENTRADA ya sabe hacer
+varios materiales en una pasada (`multiMatSection`, `addMatLine`), y una entrega
+de un proveedor casi nunca trae un solo material — trae la lista del albarán.
+
+**No hay que inventar nada:** es el mismo armazón de líneas que ya usa ENTRY,
+apuntado a la hoja de entregas esperadas. Lo que hay que cuidar es que la
+cabecera compartida (proveedor, PO, fecha estimada) se escriba UNA vez y las
+líneas sólo lleven material y cantidad, igual que en ENTRY.
+
+### La segunda, y tiene razón: son el mismo movimiento
+
+**Y es más cierto de lo que la frase sugiere.** Hoy la app ya tiene las dos
+mitades y las trata como dos cosas:
+
+| | Qué sabe | Qué le falta |
+|---|---|---|
+| Entrega esperada | proveedor, material, cantidad, PO, fecha, PM | dónde se guardó, qué obra, quién la recibió |
+| ENTRY | todo eso — y hay que volver a escribirlo | — |
+
+Y lo que hace hoy `_entryFromIncoming` es exactamente eso: abre el formulario de
+ENTRY **rellenado desde la tarjeta**. O sea que el camino ya existe; lo que no
+existe es que sea **el mismo acto**. Hoy son dos: «marcar llegada» y «registrar
+entrada», y de ahí sale la tarjeta naranja de *ARRIVED · ENTRY NOT MADE* que
+también está en esta lista — **una tarjeta que sólo existe porque el acto está
+partido en dos**.
+
+> **La prueba de que Jose tiene razón está en el backlog:** si hubiera que
+> inventar una señal para avisar de que alguien hizo la mitad de un acto, la
+> respuesta correcta casi nunca es la señal — es juntar las dos mitades.
+
+### Cómo lo haría
+
+Pulsar **«Llegó»** en una entrega abre el formulario de ENTRADA con todo lo que
+la entrega ya sabe puesto y **en gris**, pidiendo sólo las tres cosas que
+faltan: **estante, obra y PO** (el PO suele venir ya). Al guardar:
+
+1. se escribe la ENTRADA, con `FROM_MOV` apuntando a la entrega;
+2. la entrega se marca recibida **en el mismo guardado**, no en otro;
+3. no queda ningún estado intermedio donde una exista sin la otra.
+
+**Lo delicado, y es lo que hay que decidir antes de construir:** qué pasa cuando
+llega **menos** de lo esperado, o llega en dos camiones. Hoy eso se resuelve
+marcando la llegada y haciendo una entrada distinta. Si se juntan los dos actos,
+la entrega tiene que poder quedarse **parcialmente recibida** — y eso es un
+estado nuevo que hoy no existe.
+
+**Mi recomendación:** construir primero lo de «varios a la vez», que no tiene
+decisiones pendientes, y juntar los dos actos después — porque juntarlos obliga
+a contestar lo de las llegadas parciales, y esa respuesta la tiene que dar Jose
+con un caso real delante.
+
 ## ✅ EL RETURN DEBE PARTIR DE LO QUE SALIÓ, NO DE UN NOMBRE · 20/10 — HECHO EN LA v12.82
 
 Jose, con cuatro capturas: *"al seleccionar RETURN es lógico que voy a devolver

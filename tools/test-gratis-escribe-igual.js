@@ -369,8 +369,17 @@ console.log('\n═══ 8. LA PANTALLA: LO QUE SE ESCONDE Y LO QUE SE OFRECE �
   const claves  = [...catalogo.matchAll(/^\s{2}(\w+):\s*\{/gm)].map(m => m[1]);
   const usadas  = [...mapa.matchAll(/:\s*'(\w+)'/g)].map(m => m[1]);
 
-  check('las ofertas son las ocho decididas con Jose',
-    claves.length === 8, claves);
+  /* NUEVE DESDE LA v12.86, y el número se fija a mano a propósito: añadir una
+   * oferta es una decisión de producto, no un refactor, y tiene que costar
+   * tocar una prueba y escribir por qué.
+   *
+   * La novena, `lectura`, la forzó el repaso que pidió Jose el 21/10: el botón
+   * «📷 toma una foto de la factura y te relleno los campos» contestaba con el
+   * mensaje de ADJUNTAR documentos. Parecido no basta — quien pulsa «léemela»
+   * y recibe «puedes guardarla» no entiende que le ofrecen otra cosa, entiende
+   * que la app no le entendió. Ver `test-candados-hablan-de-lo-mismo.js`. */
+  check('las ofertas son las NUEVE decididas con Jose',
+    claves.length === 9, claves);
 
   /* DOS LISTAS QUE TIENEN QUE COINCIDIR — Y AQUÍ SÍ HAY QUIEN LO OBLIGUE.
    *
