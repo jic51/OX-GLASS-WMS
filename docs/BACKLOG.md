@@ -22,6 +22,357 @@ que un ✅ optimista.
 
 ---
 
+## BARRIDO DEL 2026-10-22 — OCHO COSAS, POR ORDEN DE DAÑO
+
+Jose, 22/10, con tres capturas y tres vídeos: *"TODO LO QUE HAY QUE ARREGLAR
+CAMBIAR Y CORREGIR ANÓTALO, Y PONLE JERARQUÍA O PRIORIDAD, LUEGO DIME CON QUÉ
+EMPEZAMOS. Y DEJA QUE YO DECIDA."*
+
+Las ocho están **investigadas en el código**, no de oído. Donde la causa está
+localizada va el número de línea; donde no, lo dice.
+
+El orden no es el orden en que él las contó: es el orden del **daño**. Primero
+lo que le dice al cliente algo falso o le deja datos sin dueño; después lo que
+molesta; al final lo que a lo mejor ya está bien.
+
+| # | Qué | Por qué ahí | Tamaño |
+|---|---|---|---|
+| 1 | Borrar un movimiento en la gratis manda a un sitio cerrado | promesa incumplida en el minuto uno | pequeño |
+| 2 | Permissions (y Directory, e Import) vuelven en la gratis | la gratis enseña lo que no lleva | pequeño |
+| 3 | Fusionar nombres falla justo en el caso más común | la función no se puede usar | pequeño |
+| 4 | El registro de errores es una foto, no una ventana | se diagnostica con datos viejos | pequeño |
+| 5 | Importar sin ubicación deja material en un cajón sin nombre | datos reales sin dueño | mediano |
+| 6 | Materials (Ajustes) como las alertas de stock bajo | pedido de Jose | mediano |
+| 7 | Directory (Ajustes) como la pantalla de usuarios | pedido de Jose | mediano |
+| 8 | La casilla «todos» de Movements | **puede que no haya nada que arreglar** | nada / mirar |
+
+---
+
+### 1. 🔴 LA GRATIS DEJA BORRAR MOVIMIENTOS Y MANDA A UN SITIO QUE NO PUEDE ABRIR
+
+Jose, vídeo 3: *"la app básica me permite borrar movimientos pero no me permite
+devolverlos."*
+
+Y tiene razón entera. El aviso de borrado dice, palabra por palabra
+(`Index_v3_fixed.html:10043`):
+
+> *They go to the trash, so you can put them back from Settings → System.*
+
+La papelera **está** en Settings → System. Y en la gratis esa pestaña entera
+está detrás del candado de Pro: `BASIC_PRO_AJUSTES = { system: 'respaldo' }`
+(`Index_v3_fixed.html:28209`). Así que la frase manda a un sitio al que esa
+edición no puede entrar.
+
+**Es exactamente el fallo del menú Acopio, otra vez.** Dos cosas que tenían que
+coincidir sin que nada lo obligara: el texto de un aviso y la lista de lo que
+una edición lleva. La diferencia es que esta vez lo que se pierde no es un paso
+de instalación — es **deshacer un borrado**, que es la red de seguridad entera.
+
+Y hay que decidir cuál de las dos mitades se arregla, porque son productos
+distintos:
+
+- **(a) abrir la papelera en la gratis.** Es lo que yo haría. Deshacer un
+  borrado no es una función de pago, es lo que hace que borrar no dé miedo. El
+  candado de `system` se puso por el respaldo nocturno, que sí es de Pro; la
+  papelera está en la misma pestaña por casualidad de maquetación, no por
+  diseño. Se separa: papelera abierta, respaldo con candado.
+- **(b) dejarlo cerrado y que el aviso diga la verdad** — *"this cannot be
+  undone in this edition"*. Honesto, y convierte un borrado en algo definitivo
+  en la edición que más se usa para probar. No me gusta.
+
+Mi recomendación: **(a)**. Lo pequeño es (a); lo que vende es (a); y (b) hace la
+gratis más peligrosa que la de pago para la operación más frecuente.
+
+Hay una **tercera mitad del mismo asunto, y es nueva**: en la gratis la pestaña
+`system` está con candado, y la papelera, el reconstructor y el registro de
+errores **se dibujan igual por debajo**. Lo que falta no es sólo el candado:
+hace falta una prueba que recorra **cada frase de la app que nombra un sitio**
+(«Settings → X», «the Acopio menu», «Set Up») y compruebe que ese sitio existe
+en la edición que va a leer la frase. Es la única forma de que esto no vuelva
+una cuarta vez.
+
+---
+
+### 2. 🔴 PERMISSIONS VUELVE EN LA GRATIS — Y LA CAUSA ES UN DUELO POR `display`
+
+Jose, imagen 1: *"creo que ya te hice esta pregunta y no recuerdo tu respuesta,
+¿por qué aún hay Permissions en la copia básica?"*
+
+Me la hizo el 19/10, la arreglé, y **volvió**. Esta vez con la causa en la mano:
+
+- `BASIC_FUERA.ajustes = ['permissions', 'pmdirectory', 'import']`
+  (`Index_v3_fixed.html:28181`) — la lista es correcta.
+- `_basicPintar()` (`:28655`) pone `display='none'` a esas tres. Correcto.
+- **Pero `_basicPintar()` corre UNA vez**, al aplicar el rol (`:28773`).
+- Y `openSettingsModal()` llama a `_filterSettingsSidebar()` **en cada apertura**
+  (`:14532`), que hace esto (`:14574`):
+
+```js
+btn.style.display = (isAdmin || SETTINGS_CATALOG_TABS[tab]) ? '' : 'none';
+```
+
+Para un ADMIN eso escribe `''` en **todas** las pestañas. Incluidas las tres que
+la gratis había escondido. La primera vez que Jose abre Ajustes, vuelven las
+tres — no sólo Permissions: **también Directory e Import**, que él no ha
+mencionado porque seguramente no llegó a mirarlas.
+
+**Décimo-octavo caso del patrón.** Y la tercera vez que aparece como «dos
+funciones mandan sobre el mismo `display` y gana la última»: `_escPintarBoton`
+contra `_basicPintar` el 19/10, la ✕ contra el ancho del campo el 21/10, y ésta.
+
+El arreglo barato es llamar a `_basicPintar()` al final de
+`_filterSettingsSidebar()`. **No lo haría así**, porque deja el duelo en pie y
+el que gane dependerá del orden de las llamadas para siempre. Lo correcto es que
+haya **un solo dueño** de la visibilidad de una pestaña de ajustes: una función
+que conteste `¿se ve esta pestaña?` mirando las tres reglas a la vez (rol,
+permiso, edición), y que las dos de ahora la llamen en vez de decidir por su
+cuenta. Es la misma forma que arregló `tipoDeMovimiento_` cuando había cuatro
+copias que se habían ido separando.
+
+---
+
+### 3. 🔴 FUSIONAR NOMBRES FALLA EN EL CASO MÁS COMÚN DE TODOS
+
+Jose, vídeo 2 e imagen: *"error al intentar hacer merge de proyectos y
+suppliers: Pick at least one other name to merge in."*
+
+**Causa localizada.** El servidor, `Code_v3_fixed.gs:13705`:
+
+```js
+var from = (data.from || []).map(function (v) { return String(v || '').trim(); })
+                            .filter(function (v) { return v && v.toUpperCase() !== into.toUpperCase(); });
+if (!from.length) throw new Error('Pick at least one other name to merge in.');
+```
+
+Y el detector de parecidos, `Index_v3_fixed.html:17243`:
+
+```js
+function _cfgSimilar(a, b){
+  var na = _cfgNorm(a), nb = _cfgNorm(b);   // _cfgNorm pone MAYÚSCULAS y quita puntuación
+  if (na === nb) return true;
+```
+
+Los dos están bien por separado y **se contradicen**: el navegador propone como
+duplicados dos nombres que se diferencian **sólo en mayúsculas o en espacios de
+los extremos** — `"Acme Glass"` y `"ACME GLASS"`, `"PAT BME2 "` y `"PAT BME2"` —
+y el servidor, al compararlos en mayúsculas y recortados, los ve iguales, vacía
+`from` y se niega.
+
+**Y ésas son las dos formas más comunes que tiene un duplicado.** La función que
+existe para unir nombres mal escritos se niega justo en el error de escritura
+más frecuente. Pasa en los dos caminos: en la lista de sugerencias
+(`:17345`) y en la selección a mano (`:17186`).
+
+**Diecinueve. Y es la peor forma del patrón**, porque las dos definiciones de
+«el mismo nombre» están escritas en archivos distintos y ninguna sabe de la
+otra.
+
+El arreglo es cambiar qué significa esa negativa. Hoy el servidor dice *«no me
+has dado otro nombre»*; la verdad es *«los nombres que me diste son el mismo
+texto con otras mayúsculas»*, y ante eso lo correcto **no es negarse: es hacer
+el cambio de grafía**, que es literalmente el trabajo de esta función. La lista
+de CONFIG tiene dos filas, se quedan en una, y el historial se reescribe con la
+grafía que Jose eligió. Sólo cuando `from` llega vacío **de verdad** (una sola
+cosa seleccionada) tiene sentido el aviso — y entonces el botón no debería estar
+pulsable, que es donde se avisa de verdad.
+
+Lo comprobado y lo no comprobado, para no prometer de más: la causa está leída
+en el código y es coherente con los dos vídeos. **Lo que no he hecho es
+reproducirlo** con los nombres exactos de Jose — necesitaría los dos nombres que
+seleccionó. Si resultara que no se diferencian sólo en mayúsculas, la causa es
+otra y hay que volver aquí.
+
+---
+
+### 4. 🔴 EL REGISTRO DE ERRORES ES UNA FOTO, NO UNA VENTANA
+
+Jose, vídeo 2: *"al intentar hacer merge de suppliers y de proyectos y salir el
+error, esos errores no se guardan en Error Log, no sé por qué."*
+
+**Se guardan.** Sus propias líneas pegadas lo demuestran: hay filas
+`backend/mergeConfigValues` con sus identificadores. `processMovement` registra
+**todo** lo que falla, en el único sitio por el que pasan todas las acciones
+(`Code_v3_fixed.gs:3766-3772`), y el mensaje de la fusión no coincide con
+ninguno de los patrones de «esto es la app negándose bien»
+(`VALIDATION_MESSAGE_PATTERNS`, `:10161`), así que se archiva como ERROR.
+
+Lo que no funciona es **la pantalla**. `_renderErrorLogTab()`
+(`Index_v3_fixed.html:17428`):
+
+```js
+if (_errorLogData) { _drawErrorLog(); return; }
+```
+
+`_errorLogData` se trae **una sola vez**, cuando se abre Ajustes
+(`:14680`). Después, entrar en la pestaña nunca vuelve a preguntar. Y es
+justo la secuencia de Jose: abre Ajustes → fusiona → falla → se va a Error Log
+**sin cerrar Ajustes** → ve la lista de antes del error.
+
+Y hay una segunda mitad: `var _errorLogData = [];` nace **lista vacía, que es
+verdadera**, así que ese `if` nunca pide nada por sí mismo. Lo único que lo
+pone a `null` es el `if (!quiet)` del precargado. Un registro de errores que
+sólo se refresca cerrando y abriendo la ventana es un registro en el que no se
+puede confiar — y es la herramienta con la que se diagnostica todo lo demás, así
+que su fallo multiplica el de los otros siete puntos.
+
+Arreglo: la pestaña pide la lista **cada vez que se entra**, enseñando lo que ya
+tiene mientras llega lo nuevo (igual que el refresco silencioso de Ajustes, para
+que no parpadee). Y un botón de recargar visible, porque ésta es la pantalla en
+la que alguien está esperando a que aparezca una fila.
+
+---
+
+### 5. 🔴 IMPORTAR SIN UBICACIÓN DEJA EL MATERIAL EN UN CAJÓN QUE NADIE PUSO
+
+Jose, vídeo 1: *"al importar un archivo a la app, no se le da una ubicación, y
+no hay una forma de manejar la falta de ubicaciones para todos los datos sin
+ubicación. ¿Cómo lo hacemos fácil pero efectivo y controlado para nosotros y
+para el usuario?"*
+
+**Lo que pasa hoy, comprobado:**
+
+1. `location` es una columna **opcional** del fichero
+   (`Code_v3_fixed.gs:9546`); sólo `category`, `name` y `qty` son obligatorias.
+2. `commitImport` escribe `destLoc: r.location || ''` (`:9688`).
+3. El motor de existencias archiva lo que llega sin sitio bajo la clave
+   `'UNASSIGNED'` — en seis puntos distintos del código
+   (`:3481`, `:5234`, `:5686`, `:8013`…).
+4. `UNASSIGNED` **no aparece ni una vez en el navegador**. No es una ubicación
+   configurada: es una palabra del motor.
+5. Y el mapa dibuja «cualquier sitio visto en el stock», así que aparece una
+   tarjeta llamada **UNASSIGNED** que no está en Settings → Locations, no se
+   puede renombrar, no se puede agrupar, y nada en la app dice qué es.
+6. La pantalla de importar **no pregunta nada** sobre esto: ni al previsualizar,
+   ni al confirmar. El resumen final cuenta las ubicaciones que creó
+   (`newLocations`) y **no cuenta las filas que se quedaron sin ninguna**.
+
+Así que el primer minuto de un cliente que importa su Excel —que es el minuto
+que decide si compra— puede acabar con la mitad de su almacén en un cajón con
+nombre de variable interna.
+
+**Lo que yo haría, y es tres cosas pequeñas en vez de una grande:**
+
+- **(a) Contarlo antes, no después.** La previsualización ya dice cuántas filas
+  son válidas; que diga también **«N filas no traen ubicación»**, con el mismo
+  rango que los demás avisos. Nada que decidir: es información que ya tenemos y
+  no estamos dando.
+- **(b) Una sola pregunta al confirmar, con tres respuestas.** *«¿Dónde van las
+  N filas sin ubicación?»* → **elegir un sitio para todas** (desplegable de las
+  ubicaciones que ya existen, más «crear una nueva»), **repartirlas después**, o
+  **dejarlas sin sitio**. Una pregunta, tres botones, y la respuesta se aplica a
+  todas: eso es lo «fácil» que pide Jose, y el control está en que la pregunta
+  existe en vez de decidirse en silencio.
+- **(c) Si elige «repartir después», que el sitio donde esperan tenga nombre y
+  salida.** No `UNASSIGNED`: una ubicación de verdad, creada por la app, con un
+  nombre que se entiende —**`RECEIVING`** es mi propuesta, porque es lo que de
+  verdad es: material recibido y todavía sin colocar— y desde la que se puede
+  mover con el traslado que ya existe. Y una tarjeta en la baraja que diga
+  cuántas filas están ahí esperando, que es el mecanismo que ya usamos para «la
+  app tiene algo pendiente contigo».
+
+Lo que **no** haría: obligar a poner ubicación en el fichero. Un cliente que
+está migrando su Excel a menudo **no la tiene**, y rechazarle la importación por
+eso es perderlo en el primer minuto. Recibir sin saber todavía el estante es un
+caso real y el motor lleva soportándolo desde siempre (`:4472`) — el fallo no es
+que se permita, es que después no hay salida.
+
+**Decisión de Jose:** si (c) va con `RECEIVING` como ubicación de verdad o si
+`UNASSIGNED` se queda y lo que cambia es sólo que la app lo explique. Yo voto
+`RECEIVING`: una palabra que el almacenero reconoce, contra una que es del
+programa.
+
+---
+
+### 6. 🔴 MATERIALS (AJUSTES) COMO LAS ALERTAS DE STOCK BAJO
+
+Jose, imagen 3: *"hay que mejorar esta parte también, debemos hacerla como lo
+hicimos en las alertas de stock bajo."*
+
+Anotado tal cual. Lo que hicimos en las alertas de stock bajo y hay que repetir
+aquí: una tabla que se puede ordenar y filtrar de verdad, selección múltiple con
+una barra de acciones que dice cuántos hay marcados, y los cambios en tanda en
+vez de uno por uno con una recarga en medio.
+
+**Sin empezar, y a propósito:** es la pantalla que puede renombrar un material
+en **todo** el historial, así que antes de tocarla hay que decidir qué acciones
+van en la tanda. No es una tarde.
+
+---
+
+### 7. 🔴 DIRECTORY (AJUSTES) COMO LA PANTALLA DE USUARIOS
+
+Jose, imagen 2: *"hay que mejorar esta parte, así como mejoramos la de ingresar
+nuevos usuarios, anótalo."*
+
+Anotado. Lo que ganó la pantalla de usuarios y le falta al directorio: el
+formulario de alta a la vista en vez de escondido, validación mientras se
+escribe, la lista y el formulario en la misma pantalla sin saltos, y el aviso de
+qué va a pasar antes de guardar.
+
+Y una cosa que es de esta pantalla y no de aquélla: el directorio de jefes de
+obra es **lo que hace que el correo agrupado llegue a quien tiene que llegar**,
+así que un nombre mal escrito aquí rompe un envío en silencio. El parecido con
+los nombres que ya hay —lo mismo que hace `_cfgSimilar` con proyectos— vale aquí
+más que en ningún otro sitio.
+
+---
+
+### 8. 🔵 LA CASILLA «TODOS» DE MOVEMENTS — PROBABLEMENTE YA ESTÁ BIEN
+
+Jose, vídeo 3: *"también muestra un error al seleccionar movimientos con el
+checkbox, selecciona todos los movimientos que hay en la lista. ¿Eso está bien?
+¿No debería seleccionar sólo los que se ven? ¿O así habíamos establecido eso? No
+lo recuerdo."*
+
+**Así lo establecimos, sí, y está escrito en el código**
+(`Index_v3_fixed.html:9911`):
+
+> *"Todo" es LO QUE SE ESTÁ VIENDO, no las 604 filas del archivo. Marcar en un
+> filtro y borrar sin él sería exactamente el accidente que esta pantalla tiene
+> que hacer imposible.*
+
+`toggleMovSelectAll` (`:9914`) recorre sólo las casillas **pintadas**, y después
+de cada repintado se tira la marca de las filas que dejaron de estar en pantalla
+(`:9723-9730`). Así que no marca las 604: marca las que la tabla tiene cargadas.
+
+**Dónde puede estar lo que él vio:** la tabla trae los movimientos **por
+tandas** («load more»). Después de pulsar «cargar más» dos veces, la tabla tiene
+cargadas más filas de las que caben en el alto de la pantalla — y «todas las
+cargadas» no es lo mismo que «todas las que estoy mirando ahora». Las dos
+lecturas de *«los que se ven»* son razonables y dan comportamientos distintos.
+
+**Esto es tuyo, Jose, no mío.** Lo que hay hoy es *«todas las cargadas»*. La
+alternativa es *«sólo las que caben en la pantalla ahora mismo»*, que yo **no**
+recomiendo: depende del tamaño de la ventana, cambia al girar el teléfono, y
+convierte una casilla en algo que no se puede predecir.
+
+Y lo del **«error»**: no he encontrado ninguno. Marcar una casilla llama a
+`toggleMovSelect` → `_syncMovSelectAll` → `_updateMovActionBar`, y ninguna de
+las tres puede fallar por sí sola. Lo más parecido a un error en esa barra es
+que en la gratis el botón **🏷 Labels** lleva candado de Pro
+(`BASIC_PRO_BOTONES.btnMovLabels = 'etiquetas'`), así que marcar filas y pulsarlo
+saca el aviso de Pro — que es correcto, pero **parece** un error justo después de
+marcar. **Me hace falta el segundo del vídeo, o el texto exacto**, antes de
+afirmar nada.
+
+---
+
+### Con qué empezar — mi recomendación, una sola
+
+**Del 1 al 4, en ese orden, en una sola versión.** Las cuatro son pequeñas, las
+cuatro son «la app dice o enseña algo que no es verdad», y la 4 va dentro porque
+es la herramienta con la que se comprueban las otras tres.
+
+Y **antes de las cuatro, la 2 bien hecha**: un solo dueño de la visibilidad de
+las pestañas de ajustes. Si la hago barata (una llamada más al final), el punto 2
+volverá por tercera vez.
+
+La 5 es la siguiente, sola, porque tiene una decisión de producto dentro
+(`RECEIVING` o no). La 6 y la 7 son trabajo de pantalla y van después. La 8 no
+se toca hasta que Jose diga cuál de las dos lecturas quiere.
+
+---
+
 ## LO VIVO, POR ORDEN
 
 ### 🔶 Lo empezado y sin terminar
