@@ -366,8 +366,24 @@ console.log('\n═══ 8. LA PANTALLA: LO QUE SE ESCONDE Y LO QUE SE OFRECE �
   const catalogo = (htmlCodigo.match(/var BASIC_PRO\s*=\s*\{[\s\S]*?\n\};/) || [''])[0];
   const mapa     = (htmlCodigo.match(/var BASIC_PRO_BOTONES\s*=\s*\{[\s\S]*?\n\};/) || [''])[0];
 
+  /* LAS ZONAS CUENTAN COMO LOS BOTONES, y hasta la v12.91 no contaban aquí.
+   *
+   * Una oferta se puede enseñar de tres maneras: desde un botón
+   * (`BASIC_PRO_BOTONES`), desde una ZONA entera apagada (`BASIC_PRO_ZONAS`) o
+   * desde una llamada suelta a `_proPitch`. Esta prueba miraba la primera y la
+   * tercera, así que una oferta que sólo se alcanza por una zona —como
+   * `avisarcorreo`— salía como «sin botón» y ponía la prueba roja sin estar
+   * nada roto.
+   *
+   * Es el MISMO punto ciego que causó el fallo que Jose vio el 22/10: pulsar
+   * «Send notification email» contestaba con la oferta de LEER un correo,
+   * porque mi repaso de los candados recorrió los botones y no las zonas. El
+   * agujero estaba en el mapa, en mi auditoría y en dos pruebas. Aquí también
+   * se tapa. */
+  const zonas   = (htmlCodigo.match(/var BASIC_PRO_ZONAS\s*=\s*\{[\s\S]*?\n\};/) || [''])[0];
   const claves  = [...catalogo.matchAll(/^\s{2}(\w+):\s*\{/gm)].map(m => m[1]);
-  const usadas  = [...mapa.matchAll(/:\s*'(\w+)'/g)].map(m => m[1]);
+  const usadas  = [...mapa.matchAll(/:\s*'(\w+)'/g)].map(m => m[1])
+            .concat([...zonas.matchAll(/:\s*'(\w+)'/g)].map(m => m[1]));
 
   /* NUEVE DESDE LA v12.86, y el número se fija a mano a propósito: añadir una
    * oferta es una decisión de producto, no un refactor, y tiene que costar
@@ -383,8 +399,19 @@ console.log('\n═══ 8. LA PANTALLA: LO QUE SE ESCONDE Y LO QUE SE OFRECE �
    * poder abrirse y sólo debe mostrar el toast igual que los demás de Pro"*.
    * Yo lo había abierto en la v12.86 por mi cuenta; su producto, su decisión.
    * Lo que no vuelve es el mensaje equivocado que él mismo encontró. */
-  check('las ofertas son las DIEZ decididas con Jose',
-    claves.length === 10, claves);
+  /* ONCE DESDE LA v12.91, y la undécima no es una función nueva: es una que
+   * estaba MAL CONTADA. `correo` era una sola oferta colgando de tres sitios —
+   * dos de leer un correo de proveedor y uno de MANDAR un aviso al guardar—, y
+   * su texto sólo valía para los dos primeros. Jose, 22/10, con dos capturas:
+   * *"al tocar lo de enviar notificación sale un mensaje sobre leer desde el
+   * email, lo cual no tiene nada que ver"*. Leer y mandar son direcciones
+   * opuestas. Ahora son `leercorreo` y `avisarcorreo`, con un verbo cada una.
+   *
+   * Que el número suba sin que el producto gane una función es raro, y por eso
+   * queda escrito: lo que ha cambiado no es cuánto ofrece la gratis, es que
+   * ahora cada cosa que se pulsa contesta de lo suyo. */
+  check('las ofertas son las ONCE decididas con Jose',
+    claves.length === 11, claves);
 
   /* DOS LISTAS QUE TIENEN QUE COINCIDIR — Y AQUÍ SÍ HAY QUIEN LO OBLIGUE.
    *

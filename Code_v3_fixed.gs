@@ -128,7 +128,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.90';
+var APP_VERSION = '12.91';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -140,7 +140,7 @@ var APP_VERSION = '12.90';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '32359892';
+var APP_BUILD = '73be76c8';
 
 // ═══ ACOPIO BASIC — EL INTERRUPTOR DE LA VERSIÓN GRATIS ══════════════════════
 //
@@ -3980,6 +3980,8 @@ function processMovementInner_(ss, action, data, auth) {
   if (action === 'updateMinStockBulk')    return updateMinStockBulk(data, auth);
   if (action === 'parseImportFile')       return parseImportFile(data);
   if (action === 'commitImport')          return commitImport(data, auth);
+  if (action === 'listImports')           return listImports(auth);
+  if (action === 'undoImport')            return undoImport(data, auth);
   // ── User management (ADMIN only) ─────────────────────────────────────────
   if (action === 'getUsers')       return getUsers(auth);
   if (action === 'addUser')        return addUser(data, auth);
@@ -4392,6 +4394,11 @@ var DATA_STAMP_ACTIONS = {
   manageMaterial:      true,
   applyDataQualityFix: true,
   commitImport:        true,
+  // Deshacer una importación saca mil filas del almacén de golpe. Si esto no
+  // estuviera aquí, la persona de al lado seguiría viendo un inventario que ya
+  // no existe hasta su siguiente recarga — que es la versión más grande posible
+  // de lo que este sello existe para evitar.
+  undoImport:          true,
   // Las tres de las entregas esperadas. updateIncoming es la que Jose vio
   // fallar —es la que marca una entrega como llegada— pero las tres cambian lo
   // mismo: lo que otra persona tiene delante en la pestaña de Incoming y en la
@@ -9545,8 +9552,16 @@ var MAX_ATTACH_BYTES = 25 * 1024 * 1024;   // 25 MB
 var IMPORT_REQUIRED_HEADERS = ['category', 'name', 'qty'];
 var IMPORT_ALL_HEADERS      = ['category', 'name', 'qty', 'unit', 'location', 'project', 'supplier', 'po', 'comments'];
 
-function parseImportFile(data) {
-  requireAuth_('ADMIN');
+/* LEER EL FICHERO ENTERO. UNA SOLA VEZ, UN SOLO SITIO.
+ *
+ * Antes esto vivía dentro de `parseImportFile`, que devolvía una MUESTRA de las
+ * filas, y `commitImport` guardaba esa muestra creyendo que eran los datos —
+ * 1.052 filas prometidas, 500 guardadas. Separarlo es lo que hace imposible esa
+ * confusión: la previsualización y el guardado llaman los dos AQUÍ, y aquí no
+ * hay ningún recorte. El recorte se hace después, sólo para la pantalla, y con
+ * un nombre que lo dice.
+ */
+function leerFilasDelFichero_(data) {
   var fileName = String(data.fileName || '');
   var isExcel  = /\.xlsx?$/i.test(fileName);
   if (!isExcel && !/\.csv$/i.test(fileName)) {
@@ -9650,7 +9665,21 @@ function parseImportFile(data) {
 
   if (!parsed.length) throw new Error('No data rows found below the header row.');
 
+  return { parsed: parsed, col: col, rawLineCount: rawLineCount,
+           sheetNames: sheetNames, usedSheet: usedSheet };
+}
+
+function parseImportFile(data) {
+  requireAuth_('ADMIN');
+  var leido      = leerFilasDelFichero_(data);
+  var parsed     = leido.parsed;
+  var col        = leido.col;
+  var sheetNames = leido.sheetNames;
+  var usedSheet  = leido.usedSheet;
+  var rawLineCount = leido.rawLineCount;
+
   var validCount = parsed.filter(function (p) { return p.valid; }).length;
+  var resumen    = resumenDeImportacion_(parsed);
   return {
     status:       'success',
     totalRows:    parsed.length,
@@ -9659,16 +9688,204 @@ function parseImportFile(data) {
     rawLineCount: rawLineCount,
     sheetNames:   sheetNames,            // tabs found (Excel only) — lets the UI offer a picker
     usedSheet:    usedSheet,
-    rows:         parsed.slice(0, 500)   // a preview, not a data dump
+
+    /* UNA MUESTRA, Y AHORA EL QUE LLAMA NO PUEDE CONFUNDIRLA CON LOS DATOS.
+     *
+     * Jose, 22/10, con la captura delante: el botón decía «Import 1052 Valid
+     * Rows» e importaba 500. Esta línea mandaba 500 filas con el comentario «a
+     * preview, not a data dump», el navegador las guardaba y las devolvía al
+     * confirmar, y 552 filas de su almacén se quedaban fuera sin que nada lo
+     * dijera.
+     *
+     * El arreglo no es subir el número —cualquier número vuelve a fallar con un
+     * fichero más grande—: es que `commitImport` ya NO reciba filas. Recibe el
+     * fichero y lo vuelve a leer aquí. Así sólo hay un sitio que cuenta cuántas
+     * son, y no hay dos cosas que tengan que coincidir.
+     *
+     * `previewRows` viaja para que la pantalla pueda decir «las primeras 200 de
+     * 1052» en vez de inventarse un número a partir de lo que recibió. */
+    rows:         parsed.slice(0, IMPORT_PREVIEW_ROWS),
+    previewRows:  IMPORT_PREVIEW_ROWS,
+
+    // Qué columnas traía EL FICHERO. La pantalla sólo dibuja éstas: hasta hoy
+    // enseñaba cinco de las nueve que se importan, así que unidad, obra,
+    // proveedor, PO y comentarios entraban a la hoja sin que nadie los mirara.
+    columns:      IMPORT_ALL_HEADERS.filter(function (h) { return col[h] !== -1; }),
+
+    // La huella, para reconocer el mismo fichero subido dos veces, y la suma
+    // de unidades, que es la mitad de «la prueba del ácido»: lo que entró tiene
+    // que ser lo que había.
+    fingerprint:  resumen.huella,
+    unitsTotal:   resumen.unidades,
+
+    // Lo que esta importación va a CREAR además de los movimientos. Se contaba
+    // al terminar, que es cuando ya no se puede hacer nada con el dato.
+    willCreate:   loQueCrearia_(parsed),
+
+    // Y si este mismo fichero ya entró antes: cuándo, quién y cuánto.
+    alreadyImported: importacionConHuella_(resumen.huella)
   };
 }
 
-// Commits a previously-previewed set of rows as real ENTRY movements. Only
-// ever called with rows the admin has already seen in the preview table.
+// Cuántas filas de la muestra viajan. Es una MUESTRA para mirar, nunca la
+// carga: desde la v12.91 confirmar manda el fichero, no estas filas.
+var IMPORT_PREVIEW_ROWS = 200;
+
+/* LA HUELLA DE UN FICHERO, Y POR QUÉ ESTAS TRES COSAS ─────────────────────────
+ *
+ * Jose, 22/10: *"¿cómo maneja la app que alguien suba el mismo archivo de
+ * inventario 2 veces? No podemos dejar que eso pase, porque si bien eso es
+ * culpa del usuario, lo más fácil para él será culpar a la app"*.
+ *
+ * Hoy no pasa nada: se importa otra vez, entero, y el almacén queda doblado sin
+ * un aviso. `commitImport` manda `forceSubmit: true` en cada fila —con motivo,
+ * porque un fichero de verdad lleva filas que se parecen y son distintas— y eso
+ * apaga la guardia de duplicados para todo, así que tampoco queda nada mirando
+ * ENTRE importaciones.
+ *
+ * La huella es: cuántas filas, cuántas unidades en total, y un resumen del
+ * contenido. Las tres juntas y no una sola, porque cada una sin las otras se
+ * equivoca:
+ *
+ *   · sólo el número de filas → dos ficheros distintos de 1.052 filas chocan
+ *   · sólo la suma → un fichero reordenado o con dos cantidades intercambiadas
+ *     da la misma suma y NO es el mismo fichero
+ *   · sólo el contenido → un fichero al que le añadieron una fila ya no se
+ *     parece en nada, cuando es casi el mismo
+ *
+ * El resumen del contenido se hace sobre el texto NORMALIZADO de cada fila
+ * (categoría, nombre, cantidad, ubicación), no sobre los bytes del archivo:
+ * guardar el mismo Excel otra vez cambia los bytes y no cambia los datos, y lo
+ * que se quiere reconocer son los DATOS.
+ */
+function resumenDeImportacion_(parsed) {
+  var unidades = 0;
+  var trozos = [];
+  for (var i = 0; i < parsed.length; i++) {
+    var p = parsed[i];
+    if (!p.valid) continue;
+    unidades += Number(p.qty) || 0;
+    trozos.push(normalizeString(p.category) + '|' + normalizeString(p.name) + '|' +
+                p.qty + '|' + normalizeString(p.location || ''));
+  }
+  /* Las filas se ORDENAN antes de resumir: el mismo inventario exportado dos
+   * veces puede salir en otro orden, y sigue siendo el mismo inventario. */
+  trozos.sort();
+  return {
+    unidades: unidades,
+    huella: parsed.length + '-' + Math.round(unidades * 100) + '-' +
+            hash32_(trozos.join('\n'))
+  };
+}
+
+/* Un resumen corto y estable de un texto. No es criptografía y no pretende
+ * serlo: su trabajo es contestar «¿es este mismo fichero?», y para eso un
+ * choque entre dos ficheros que ADEMÁS tienen el mismo número de filas y la
+ * misma suma de unidades es lo bastante improbable. Y si chocara, lo que pasa
+ * es que sale un aviso de más — no que se pierda nada. */
+function hash32_(texto) {
+  var h = 5381;
+  for (var i = 0; i < texto.length; i++) {
+    h = ((h * 33) ^ texto.charCodeAt(i)) >>> 0;
+  }
+  return h.toString(36);
+}
+
+/* Lo que esta importación va a crear ADEMÁS de los movimientos. Se enseña antes
+ * de confirmar, no después: una importación que da de alta quince estanterías
+ * en silencio deja a alguien con quince sitios que no sabe que tiene, y hasta
+ * hoy eso se contaba en el mensaje final, cuando ya estaba hecho. */
+function loQueCrearia_(parsed) {
+  var cfg      = loadConfig();
+  var ubicYa   = {}; (cfg.locations   || []).forEach(function (l) { ubicYa[normalizeString(l.name)] = 1; });
+  var catYa    = {}; (cfg.categories  || []).forEach(function (c) { catYa[normalizeString(c)]       = 1; });
+  var projYa   = {}; (cfg.projects    || []).forEach(function (p) { projYa[normalizeString(p)]      = 1; });
+  var supYa    = {}; (cfg.suppliers   || []).forEach(function (s) { supYa[normalizeString(s)]       = 1; });
+
+  var ubic = {}, cat = {}, proj = {}, sup = {};
+  parsed.forEach(function (p) {
+    if (!p.valid) return;
+    var u = String(p.location || '').trim();
+    if (u && !ubicYa[normalizeString(u)]) ubic[u] = 1;
+    var c = String(p.category || '').trim();
+    if (c && !catYa[normalizeString(c)]) cat[c] = 1;
+    var j = String(p.project || '').trim();
+    if (j && !projYa[normalizeString(j)]) proj[j] = 1;
+    var s = String(p.supplier || '').trim();
+    if (s && !supYa[normalizeString(s)]) sup[s] = 1;
+  });
+  // Ordenadas y con tope: la pantalla las enseña, y una lista de doscientos
+  // nombres deja de informar y pasa a ser una pared.
+  function lista(o) { return Object.keys(o).sort().slice(0, 40); }
+  return {
+    locations:  lista(ubic),  locationsTotal:  Object.keys(ubic).length,
+    categories: lista(cat),   categoriesTotal: Object.keys(cat).length,
+    projects:   lista(proj),  projectsTotal:   Object.keys(proj).length,
+    suppliers:  lista(sup),   suppliersTotal:  Object.keys(sup).length
+  };
+}
+
+/* ─── IMPORTAR: EL FICHERO, NO LA MUESTRA ───────────────────────────────────
+ *
+ * Hasta la v12.90 esta función recibía `data.rows` — las filas que el navegador
+ * tenía en la mano. Y el navegador tenía 500, porque es lo que `parseImportFile`
+ * le había mandado como MUESTRA. Así que el botón que decía «Import 1052 Valid
+ * Rows» importaba 500, y 552 filas se quedaban fuera sin que nada lo dijera.
+ *
+ * Dos cosas que tenían que coincidir —cuántas filas se mandan y cuántas se
+ * guardan— sin que nada lo obligara. Subir el 500 no arregla nada: el siguiente
+ * fichero más grande vuelve a fallar igual, y en silencio.
+ *
+ * Ahora recibe el FICHERO y lo vuelve a leer aquí, con el mismo `parseImportFile`
+ * que hizo la muestra. Sólo hay un sitio que cuenta cuántas filas hay, así que
+ * no queda nada que pueda descuadrar. Cuesta subir el fichero una segunda vez
+ * —ya estaba en el navegador, no se le vuelve a pedir nada a nadie— y a cambio
+ * el número del botón y el número que se guarda son el mismo por construcción.
+ *
+ * `skipRowNums` viene vacío hoy. Está porque la pantalla de la v12.94 deja
+ * destildar filas, y el sitio correcto para decidir qué entra es el servidor,
+ * no un array de filas que viaja de vuelta.
+ */
 function commitImport(data, auth) {
   auth = requireAuth_('ADMIN');   // ignores any caller-supplied `auth` — see requireAuth_
-  var rows = Array.isArray(data.rows) ? data.rows : [];
+
+  if (!data || !data.fileData) {
+    throw new Error('No file to import. Pick the file again on this screen.');
+  }
+
+  var saltar = {};
+  (Array.isArray(data.skipRowNums) ? data.skipRowNums : []).forEach(function (n) {
+    saltar[Number(n)] = 1;
+  });
+
+  var todas = leerFilasDelFichero_(data).parsed;
+  var rows  = todas.filter(function (r) { return r.valid && !saltar[r.rowNum]; });
   if (!rows.length) throw new Error('No rows to import.');
+
+  // LO QUE DEBERÍA ENTRAR, contado ANTES de escribir nada. Es la mitad de «la
+  // prueba del ácido» de la nota de Jose: al terminar se cuenta lo que entró de
+  // verdad y se comparan los dos. Sin este número de antes, el de después no
+  // significa nada.
+  var unidadesEsperadas = rows.reduce(function (a, r) { return a + (Number(r.qty) || 0); }, 0);
+
+  /* LA HUELLA DE ESTA TANDA, Y POR QUÉ VA EN LOS COMENTARIOS ────────────────
+   *
+   * Jose, 22/10: si alguien sube el mismo fichero dos veces hay que avisarle
+   * ANTES —eso lo hace `alreadyImported` en la previsualización— y hay que
+   * poder DESHACERLO después, porque un aviso sólo protege a quien lo lee.
+   *
+   * Para deshacer una tanda hay que poder reconocer sus filas. El sitio
+   * correcto sería una columna nueva en el archivo, y no se hace: añadir una
+   * columna mueve `AC_WIDTH` y toca todas las lecturas de fila entera, las
+   * hojas derivadas y la papelera, en instalaciones que ya tienen datos. Es un
+   * riesgo enorme para una etiqueta.
+   *
+   * Va en COMMENTS, que es una columna que esta importación ya escribía
+   * («Imported from file»). Se le añade el número de la tanda. No es un truco
+   * escondido: es exactamente lo que se escribiría a mano en un albarán, se lee
+   * en la propia fila, viaja con ella al archivarse, y vuelve con ella si se
+   * restaura de la papelera. */
+  var importId = 'IMP-' + Utilities.getUuid().substring(0, 8).toUpperCase();
 
   var ss      = SpreadsheetApp.getActiveSpreadsheet();
   var archive = ss.getSheetByName(SHEETS.ARCHIVE);
@@ -9688,13 +9905,19 @@ function commitImport(data, auth) {
       destLoc:     r.location || '',
       supplier:    r.supplier || '',
       po:          r.po || '',
-      comments:    ('Imported from file' + (r.comments ? ' — ' + r.comments : '')).trim(),
+      comments:    ('Imported from file ' + importId +
+                    (r.comments ? ' — ' + r.comments : '')).trim(),
       // Blank, not auth.email — a bulk import says nothing about who received
       // the goods. The importing user is recorded in USER_EMAIL.
       responsible: '',
       // A bulk import legitimately contains similar-looking rows (same
       // category, same rack, different SKUs entered close together); the
       // duplicate guard exists to catch an accidental double-click, not this.
+      //
+      // Y ésa es justo la razón por la que hace falta `alreadyImported`: esto
+      // apaga la guardia dentro del fichero, con motivo, pero deja la puerta
+      // abierta a subir el mismo fichero dos veces. Lo de dentro lo arregla
+      // esta línea; lo de fuera, la huella.
       forceSubmit: true
     };
   });
@@ -9740,9 +9963,194 @@ function commitImport(data, auth) {
         'Could not record the imported locations: ' + (eLoc && eLoc.message), null, '');
     }
   }
-  auditLog_(ss, 'BULK_IMPORT', auth.email, rows.length + ' row(s) imported', '', '');
+  /* ── LA PRUEBA DEL ÁCIDO ──────────────────────────────────────────────────
+   *
+   * De la nota de Jose sobre migraciones, 22/10: *"suma el stock total de la
+   * base original y compáralo con el total dentro de tu software. Si los
+   * números coinciden, garantizas que no se perdió nada en el intento."*
+   *
+   * Tenía toda la razón, y además es exactamente la comprobación que habría
+   * cazado el fallo de las 500 filas el primer día en lugar del día 40.
+   *
+   * Se comparan DOS cosas, no una: cuántas filas y cuántas unidades. Sólo las
+   * filas no bastaría —se podrían escribir 1.052 filas con una cantidad mal— y
+   * sólo las unidades tampoco. Y el resultado viaja a la pantalla SIEMPRE,
+   * cuadre o no: un número que sólo aparece cuando algo va mal no se mira
+   * nunca, y entonces no se aprende a confiar en él. */
+  var unidadesEscritas = 0;
+  movements.forEach(function (m) { unidadesEscritas += Number(m.qty) || 0; });
+  var cuadra = (res.rowCount === rows.length) &&
+               (Math.abs(unidadesEscritas - unidadesEsperadas) < 0.005);
+
+  if (!cuadra) {
+    logError_(ss, 'ERROR', 'backend', 'commitImport', auth.email,
+      'An import did not balance: expected ' + rows.length + ' row(s) / ' +
+      unidadesEsperadas + ' unit(s), wrote ' + res.rowCount + ' row(s) / ' +
+      unidadesEscritas + ' unit(s). Import ' + importId + '.',
+      { importId: importId }, newRequestId_());
+  }
+
+  /* El registro de la tanda. `Detail 2` es el número de la importación y
+   * `Detail 3` su huella: son las dos cosas que hacen falta después — una para
+   * poder deshacerla, la otra para reconocer el mismo fichero si alguien lo
+   * vuelve a subir. Van en columnas propias y no dentro de la frase, porque
+   * leerlas de una frase sería adivinar. */
+  auditLog_(ss, 'BULK_IMPORT', auth.email,
+    res.rowCount + ' row(s) imported · ' + unidadesEscritas + ' unit(s)' +
+    (data.fileName ? ' · ' + String(data.fileName) : ''),
+    importId, String(data.fingerprint || resumenDeImportacion_(todas).huella));
+
   return { status: 'success', rowCount: res.rowCount, newLocations: creadas,
-           newCategories: catCreadas };
+           newCategories: catCreadas,
+           importId: importId,
+           balanced: cuadra,
+           rowsExpected: rows.length, unitsExpected: unidadesEsperadas,
+           unitsWritten: unidadesEscritas };
+}
+
+/* ─── LAS IMPORTACIONES QUE YA SE HICIERON ──────────────────────────────────
+ *
+ * Se leen de AUDIT_LOG, que es donde ya estaban escritas, en vez de llevar un
+ * registro aparte. Mismo motivo que la actividad del sistema: esas filas ya se
+ * escriben, ya se recortan con el resto de la hoja y ya traen la fecha. Un
+ * segundo registro sería una segunda verdad que mantener de acuerdo con la
+ * primera, que es la falta que este proyecto lleva encontrando veinte veces.
+ */
+var IMPORTS_A_MIRAR = 400;   // filas de audit hacia atrás; de sobra para meses
+
+function importacionesRecientes_(ss, cuantas) {
+  var sheet = ss.getSheetByName(SHEETS.AUDIT);
+  if (!sheet) return [];
+  var last = sheet.getLastRow();
+  if (last < 2) return [];
+  var n     = Math.min(last - 1, IMPORTS_A_MIRAR);
+  var desde = last - n + 1;
+  var filas = sheet.getRange(desde, 1, n, 6).getValues();
+  var out = [];
+  for (var i = filas.length - 1; i >= 0; i--) {
+    if (String(filas[i][1] || '') !== 'BULK_IMPORT') continue;
+    out.push({
+      when:        filas[i][0] instanceof Date ? filas[i][0].toISOString() : String(filas[i][0]),
+      who:         String(filas[i][2] || ''),
+      details:     String(filas[i][3] || ''),
+      importId:    String(filas[i][4] || ''),
+      fingerprint: String(filas[i][5] || '')
+    });
+    if (cuantas && out.length >= cuantas) break;
+  }
+  return out;
+}
+
+/* ¿Este mismo fichero ya entró? Devuelve la importación que lo trajo, o null.
+ *
+ * Se comparan HUELLAS, no nombres de fichero: «inventario.csv» puede ser otra
+ * cosa la semana que viene, y el mismo inventario puede llegar con otro nombre.
+ * Una importación vieja sin huella (anteriores a la v12.91) no puede contestar
+ * y por eso no cuenta — pero tampoco estorba. */
+function importacionConHuella_(huella) {
+  if (!huella) return null;
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ya = importacionesRecientes_(ss, 0);
+    for (var i = 0; i < ya.length; i++) {
+      if (ya[i].fingerprint && ya[i].fingerprint === huella) return ya[i];
+    }
+  } catch (e) {
+    // Nunca revienta la previsualización: no poder contestar «¿ya lo subiste?»
+    // es una pena, pero impedir la importación por eso sería peor.
+    Logger.log('importacionConHuella_: ' + e.message);
+  }
+  return null;
+}
+
+function listImports(auth) {
+  requireAuth_('ADMIN');
+  return importacionesRecientes_(SpreadsheetApp.getActiveSpreadsheet(), 12);
+}
+
+/* ─── DESHACER UNA IMPORTACIÓN ──────────────────────────────────────────────
+ *
+ * Jose, 22/10: *"no podemos dejar que eso pase, porque… lo más fácil para él
+ * será culpar a la app"*. Avisar antes protege a quien lee el aviso. Esto
+ * protege a quien no lo leyó — y es además lo que vuelve segura la importación
+ * desde cualquier aparato, incluido el teléfono: una importación mal hecha deja
+ * de ser un desastre y pasa a ser un botón.
+ *
+ * ── POR QUÉ NO SE BORRA FILA A FILA ───────────────────────────────────────
+ *
+ * `deleteRow` hace una reconstrucción del almacén por movimiento. Mil filas
+ * serían mil reconstrucciones y el trabajo se comería los seis minutos de Apps
+ * Script antes de la fila ciento y pico. Esto lee la hoja UNA vez, aparta las
+ * filas de la tanda, las escribe en la papelera de una tacada y reescribe la
+ * hoja sin ellas. Un viaje de lectura, dos de escritura.
+ *
+ * ── Y VAN A LA PAPELERA, COMO CUALQUIER BORRADO ───────────────────────────
+ *
+ * Deshacer una importación no es más definitivo que borrar un movimiento. Si
+ * alguien deshace la importación equivocada, sus filas siguen ahí para
+ * devolverlas. Lo único irreversible de esta app sigue siendo vaciar la
+ * papelera.
+ */
+function undoImport(data, auth) {
+  auth = requireAuth_('ADMIN');
+  var importId = String((data && data.importId) || '').trim();
+  if (!importId) throw new Error('Which import?');
+
+  return withStockLock_(function () {
+    var ss    = SpreadsheetApp.getActiveSpreadsheet();
+    var trash = ensureTrashSheet_(ss);
+    var marca = 'Imported from file ' + importId;
+    var movidas = 0;
+
+    [{ sh: ss.getSheetByName(SHEETS.ARCHIVE),        nombre: SHEETS.ARCHIVE },
+     { sh: ensureArchiveHistorySheet_(ss),           nombre: SHEETS.ARCHIVE_HISTORY }]
+    .forEach(function (par) {
+      var sheet = par.sh;
+      if (!sheet || sheet.getLastRow() < 2) return;
+
+      var filas = sheet.getRange(2, 1, sheet.getLastRow() - 1, AC_WIDTH).getValues();
+      var quedan = [], aPapelera = [];
+      var ahora = new Date();
+      filas.forEach(function (f) {
+        // Una fila vacía no es una fila. Misma regla que `contarConDatos_`.
+        if (!f[AC.CATEGORY] && !f[AC.NAME]) return;
+        if (String(f[AC.COMMENTS] || '').indexOf(marca) === 0) {
+          var guardada = f.slice();
+          guardada[TR.DELETED_AT] = ahora;
+          guardada[TR.DELETED_BY] = auth.email;
+          guardada[TR.FROM_SHEET] = par.nombre;
+          aPapelera.push(guardada);
+        } else {
+          quedan.push(f);
+        }
+      });
+
+      if (!aPapelera.length) return;
+
+      /* PAPELERA PRIMERO, HOJA DESPUÉS. Mismo orden que el archivador de las
+       * 3am y por el mismo motivo: si la escritura en la papelera falla, no se
+       * ha quitado nada de la hoja y el trabajo se puede repetir. Al revés se
+       * perderían las filas. */
+      trash.getRange(trash.getLastRow() + 1, 1, aPapelera.length, TRASH_WIDTH)
+           .setValues(aPapelera.map(textSafeRow_));
+      escribirHojaCompleta_(sheet, quedan, AC_WIDTH);
+      movidas += aPapelera.length;
+    });
+
+    if (!movidas) {
+      throw new Error('Nothing left from that import — it may have been undone already.');
+    }
+
+    // El sello de datos NO se toca aquí: lo pone `processMovement` al salir
+    // bien, desde `DATA_STAMP_ACTIONS`, que es el único sitio por el que pasan
+    // todas las acciones. Ponerlo también aquí sería un segundo dueño del
+    // mismo sello.
+    refreshDerivedSheets_(ss);
+    auditLog_(ss, 'IMPORT_UNDONE', auth.email,
+      movidas + ' row(s) from import ' + importId + ' moved to the trash', importId, '');
+
+    return { status: 'success', removed: movidas, importId: importId };
+  });
 }
 
 function runReconciliation_(ss) {

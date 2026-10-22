@@ -133,6 +133,78 @@ check('ninguno apunta a una oferta que no existe — ésa no enseñaría NADA al
 const zonasRotas = Object.keys(ZONAS).filter(z => !OFERTAS[ZONAS[z]]);
 check('lo mismo para las zonas apagadas enteras', zonasRotas.length === 0, zonasRotas);
 
+/* ── LAS ZONAS SE MIRAN CON EL MISMO RASERO QUE LOS BOTONES ────────────────
+ *
+ * Y hasta la v12.91 no era así. Esta prueba cargaba las dos listas, pero sobre
+ * las zonas sólo comprobaba la línea de arriba: que apuntaran a una oferta que
+ * EXISTE. Nunca comprobó que la oferta HABLARA DE LO MISMO — que es el nombre
+ * de esta prueba.
+ *
+ * Jose, 22/10, con dos capturas: pulsar «Send notification email» en la gratis
+ * contestaba «📧 Read it from the email». Son direcciones opuestas —una lee lo
+ * que llega, la otra manda lo que sale— y había UNA oferta, `correo`, colgando
+ * de las dos.
+ *
+ * Lo que de verdad enseña: el 21/10 repasé los candados y di el asunto por
+ * cerrado. Mi repaso recorrió los BOTONES. Esta prueba, escrita para que eso no
+ * volviera a pasar, también recorría los BOTONES. Tres niveles del mismo
+ * descuido —el mapa, la auditoría del mapa y la prueba que vigila el mapa— y
+ * los tres ignoraban las zonas.
+ *
+ * El texto de una zona no sale de un `<button>`: sale de las etiquetas y
+ * párrafos de dentro, así que se saca con su propio ayudante. */
+function etiquetaDeZona(id) {
+  const re = new RegExp('<div[^>]*id="' + id + '"[^>]*>([\\s\\S]*?)</div>');
+  const m = re.exec(HTML);
+  if (!m) return null;
+  return m[1].replace(/<[^>]*>/g, ' ')
+             .replace(/&[a-z]+;/gi, ' ')
+             .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+             .replace(/\s+/g, ' ').trim();
+}
+
+const zonasSinEtiqueta = [], zonasDesalineadas = [];
+Object.keys(ZONAS).forEach(function (id) {
+  const of = OFERTAS[ZONAS[id]];
+  if (!of) return;                      // ya salió arriba
+  const et = etiquetaDeZona(id);
+  if (!et) { zonasSinEtiqueta.push(id); return; }
+  if (comparten(et, of.titulo) || comparten(et, of.que)) return;
+  zonasDesalineadas.push(id + ': se lee «' + et.slice(0, 50) + '» y contesta «' + of.titulo + '»');
+});
+check('cada ZONA apagada se encuentra en el texto de su oferta, igual que los ' +
+      'botones — es la comprobación que faltaba, y por la que «Send notification ' +
+      'email» contestaba sobre LEER el correo' +
+      (zonasDesalineadas.length ? ' — ' + zonasDesalineadas.join(' · ') : ''),
+  zonasDesalineadas.length === 0);
+check('...y de todas se pudo sacar el texto que la persona lee (si no, lo de ' +
+      'arriba no estaría midiendo nada)',
+  zonasSinEtiqueta.length === 0, zonasSinEtiqueta);
+
+/* Y LA COMPROBACIÓN QUE DE VERDAD CIERRA ESTE CASO.
+ *
+ * El cotejo de palabras NO habría cazado el fallo de Jose: «Send notification
+ * email» y «Read it from the email» comparten «email», así que habría dado
+ * verde. Lo que los separa es el VERBO, y ninguna comparación de palabras
+ * sueltas distingue mandar de leer.
+ *
+ * Por eso el arreglo no fue afinar el cotejo: fue partir la oferta en dos. Y lo
+ * que hay que vigilar es que sigan siendo dos. */
+check('el cotejo de palabras, por sí solo, NO habría cazado este caso — dejarlo ' +
+      'dicho es lo que impide que alguien lo dé por cubierto',
+  comparten('Send notification email', 'Read it from the email'));
+check('hay DOS ofertas de correo, con verbos distintos: una de leer y otra de avisar',
+  !!OFERTAS.leercorreo && !!OFERTAS.avisarcorreo &&
+  /read/i.test(OFERTAS.leercorreo.titulo) &&
+  !/read/i.test(OFERTAS.avisarcorreo.titulo),
+  { leer:   OFERTAS.leercorreo   && OFERTAS.leercorreo.titulo,
+    avisar: OFERTAS.avisarcorreo && OFERTAS.avisarcorreo.titulo });
+check('...y la zona de avisos apunta a la de AVISAR, que es la que Jose vio mal',
+  ZONAS.notifySection === 'avisarcorreo', ZONAS.notifySection);
+check('...y los dos botones de leer siguen apuntando a la de LEER',
+  BOTONES.btnFromEmail === 'leercorreo' && BOTONES.btnReadEmail === 'leercorreo',
+  { btnFromEmail: BOTONES.btnFromEmail, btnReadEmail: BOTONES.btnReadEmail });
+
 console.log('\n═══ 2. El mensaje habla de lo que se pulsó ═══\n');
 
 const sinEtiqueta = [], desalineados = [];

@@ -130,14 +130,44 @@ console.log('\n═══ qué mueve el sello, y sobre todo qué no ═══\n')
      Así que el gemelo en plural de algo que ya está dentro no gasta techo.
      Lo que sí lo gasta, y debe, es una acción que hoy no avisa y mañana sí. */
   const PLURAL_DE = a => /s$/.test(a) && dentro.indexOf(a.replace(/s$/, '')) !== -1;
-  const clases = dentro.filter(a => !PLURAL_DE(a));
-  const gemelos = dentro.filter(PLURAL_DE);
+
+  /* Y LO MISMO PARA EL REVERSO DE ALGO QUE YA ESTÁ DENTRO. 2026-10-22.
+   *
+   * `undoImport` deshace una importación: saca del almacén las filas que
+   * `commitImport` metió. La conversación que esta prueba existe para forzar,
+   * tenida:
+   *
+   *   · ¿Es un aviso NUEVO? No. Es el mismo —«una importación cambió el
+   *     almacén»— en la otra dirección. Quien tenga otra pestaña abierta
+   *     necesita enterarse exactamente igual que al importar, y por el mismo
+   *     motivo: está mirando existencias que ya no existen. Aquí además en la
+   *     versión más grande posible: no una fila, mil de golpe.
+   *   · ¿Sube el tráfico? No. Deshacer una importación es menos frecuente que
+   *     hacerla, y no puede pasar sin que antes haya pasado la otra. El techo
+   *     protege de lo que se repite; ésta es la acción que menos se repite de
+   *     toda la lista.
+   *
+   * Es el mismo razonamiento que dejó pasar `unlockMaterials` el 21/09: el
+   * gemelo de algo que ya está dentro no gasta techo. Va como una PAREJA
+   * ESCRITA y no como una regla de nombres, para que meter la siguiente siga
+   * costando una decisión en vez de encajar en un patrón. */
+  const REVERSO_DE = { undoImport: 'commitImport' };
+  const esReverso = a => !!REVERSO_DE[a] && dentro.indexOf(REVERSO_DE[a]) !== -1;
+
+  const clases  = dentro.filter(a => !PLURAL_DE(a) && !esReverso(a));
+  const gemelos = dentro.filter(a =>  PLURAL_DE(a) ||  esReverso(a));
   if (gemelos.length) console.log('       (' + gemelos.join(', ') +
-    ': mismo aviso que su singular, no gastan techo)');
+    ': mismo aviso que su singular o que su reverso, no gastan techo)');
   check('la lista sigue siendo CORTA (' + clases.length + ' clases de aviso) — ' +
         'cada una cuesta una carga entera en cada sesión abierta, así que crecer ' +
         'sin medir convierte el latido en una recarga continua',
     clases.length <= 12, clases);
+  check('...y todo reverso tiene su pareja DENTRO de la lista — el reverso de ' +
+        'algo que no avisa no sería un reverso, sería una entrada nueva colada ' +
+        'por la puerta de atrás',
+    Object.keys(REVERSO_DE).every(a => dentro.indexOf(a) === -1 ||
+                                       dentro.indexOf(REVERSO_DE[a]) !== -1),
+    REVERSO_DE);
 
   // El sello se pone en UN sitio. Repartirlo por las funciones que escriben
   // habría significado cuatro funciones con varios `return` cada una, que es

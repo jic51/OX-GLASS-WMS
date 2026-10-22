@@ -3276,6 +3276,20 @@
     .loc-savebar{display:none;gap:var(--sp-3);align-items:center;flex-wrap:wrap;position:sticky;bottom:0;background:var(--navy);color:#fff;border-radius:8px;padding:.55rem var(--sp-5);margin-top:var(--sp-5);font-size:.8rem}
     .loc-savebar.show{display:flex}
     /* Possible-duplicate groups in Settings → Projects / Suppliers */
+    /* El aviso de «este fichero ya entró». Rojo y arriba del todo: es lo único
+       de esa pantalla que puede duplicar un almacén entero. */
+    .import-dupe{background:var(--red-bg,#FEE2E2);border:1px solid #FCA5A5;border-radius:10px;
+                 padding:var(--sp-5);margin-bottom:var(--sp-5)}
+    [data-theme="dark"] .import-dupe{background:#4C1D1D;border-color:#7F1D1D}
+    .import-dupe-hd{font-size:.86rem;font-weight:700;color:var(--red);margin-bottom:var(--sp-1)}
+    .import-dupe-tx{font-size:.78rem;line-height:1.45}
+    /* Y lo que se va a crear además de los movimientos. Informativo, no una
+       alarma: por eso azul y no rojo. */
+    .import-will{background:var(--blue-bg,#EFF6FF);border:1px solid #BFDBFE;border-radius:10px;
+                 padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-5)}
+    [data-theme="dark"] .import-will{background:#17314F;border-color:#1E4976}
+    .import-will-hd{font-size:.78rem;font-weight:700;color:var(--accent2);margin-bottom:var(--sp-1)}
+    .import-will-ul{margin:0;padding-left:var(--sp-6);font-size:.78rem;line-height:1.5}
     .sim-box{background:var(--yellow-bg,#FEF9C3);border:1px solid #FDE68A;border-radius:10px;padding:var(--sp-5) .85rem;margin-bottom:var(--sp-6)}
     [data-theme="dark"] .sim-box{background:#3B2F0B;border-color:#6B5B16}
     .sim-hdr{font-size:.82rem;font-weight:800;color:var(--text);margin-bottom:var(--sp-1)}
@@ -5801,7 +5815,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.90';
+var APP_VERSION = '12.91';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5813,7 +5827,7 @@ var APP_VERSION = '12.90';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '32359892';
+var APP_BUILD = '73be76c8';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -16286,7 +16300,13 @@ function _backupNow(){
 // (WASTE requires a reason, deleting a movement asks first, etc.). Every
 // imported row becomes a real ENTRY movement through the same engine a normal
 // save uses, so it gets the same lock/validation/write-verify, not a shortcut.
-var _importParsedRows = [];
+/* Las filas de la MUESTRA (para dibujar la tabla y nada más), cuántas filas
+ * válidas hay DE VERDAD, y la huella del fichero. Los tres separados a
+ * propósito: confundir la muestra con el total es exactamente el fallo que
+ * perdía 552 filas de Jose. */
+var _importParsedRows  = [];
+var _importValidTotal  = 0;
+var _importFingerprint = '';
 
 function _renderImportTab() {
   var content = document.getElementById('settingsTabContent');
@@ -16308,9 +16328,18 @@ function _renderImportTab() {
     '<div class="field">' +
       '<label>What will be saved</label>' +
       '<div id="importPreviewBox"></div>' +
+    '</div>' +
+    '<div class="field">' +
+      '<label>Imports you have already done</label>' +
+      '<p style="font-size:.78rem;color:var(--muted);margin:0 0 .6rem">' +
+        'If the same file went in twice, undo one of them here. Undoing sends ' +
+        'those movements to the trash, so nothing is lost for good.' +
+      '</p>' +
+      '<div id="importHistBox"></div>' +
     '</div>';
   document.getElementById('importFileInput').addEventListener('change', _onImportFileChange);
-  _importParsedRows = [];
+  _importParsedRows = []; _importValidTotal = 0; _importFingerprint = '';
+  _drawImportHistory();
 }
 
 function _downloadImportTemplate() {
@@ -16344,7 +16373,16 @@ function _parseImportSheet(sheetName){
   box.innerHTML = '<p style="color:var(--muted);font-size:.85rem"><span class="spin-hg">⏳</span> Reading' +
     (sheetName ? ' sheet “' + _he(sheetName) + '”' : ' file') + '…</p>';
   google.script.run
-    .withSuccessHandler(function(res){ _importParsedRows = res.rows || []; _renderImportPreview(res); })
+    .withSuccessHandler(function(res){
+      /* `res.rows` ES UNA MUESTRA, y desde la v12.91 nada la confunde con los
+       * datos: lo que se guarda aquí sólo se usa para dibujar la tabla. El
+       * total de verdad viaja aparte (`validRows`), y al confirmar se manda el
+       * FICHERO — ver `_commitImport`. */
+      _importParsedRows   = res.rows || [];
+      _importValidTotal   = res.validRows || 0;
+      _importFingerprint  = res.fingerprint || '';
+      _renderImportPreview(res);
+    })
     .withFailureHandler(function(err){
       box.innerHTML = '<p style="color:var(--red);font-size:.85rem">' +
         _he((err.message || err).replace(/^Error:\s*/i,'')) + '</p>' + _importSheetPickerHtml();
@@ -16393,67 +16431,267 @@ function _renderImportPreview(res){
     '<span class="badge badge-blue">' + res.totalRows + ' row(s) found</span>' +
     '<span class="badge badge-green">' + res.validRows + ' ready to import</span>' +
     (res.invalidRows ? '<span class="badge badge-red">' + res.invalidRows + ' need fixing in the file</span>' : '') +
+    (res.unitsTotal ? '<span class="badge badge-blue">' + _numMiles(res.unitsTotal) + ' units in total</span>' : '') +
   '</div>';
+
+  /* ── EL AVISO DE «ESTO YA LO SUBISTE» ───────────────────────────────────
+   * Va ARRIBA DEL TODO y antes de cualquier botón, porque es lo único de esta
+   * pantalla que puede duplicar un almacén. Avisa y deja pasar —hay un caso
+   * legítimo: importé, borré todo, lo quiero rehacer— que es la misma regla
+   * que Jose eligió para la devolución con sobrante. */
+  var yaVino = res.alreadyImported;
+  var avisoRepe = !yaVino ? '' :
+    '<div class="import-dupe">' +
+      '<div class="import-dupe-hd">⚠ You already imported this exact file</div>' +
+      '<div class="import-dupe-tx">' +
+        _he(_fmtWhen(yaVino.when)) + (yaVino.who ? ' · by ' + _he(yaVino.who) : '') +
+        (yaVino.details ? ' · ' + _he(yaVino.details) : '') +
+        '<br>Importing it again <b>adds all of it a second time</b> — it does not ' +
+        'replace what is already there. If that is not what you want, pick a ' +
+        'different file, or undo that import below.' +
+      '</div>' +
+    '</div>';
+
+  /* ── LO QUE SE VA A CREAR, ANTES DE CREARLO ─────────────────────────────
+   * Se contaba al terminar, que es cuando ya no se puede hacer nada con el
+   * dato. Una importación que da de alta quince estanterías en silencio deja a
+   * alguien con quince sitios que no sabe que tiene. */
+  var wc = res.willCreate || {};
+  function trozoCrea(lista, total, que){
+    if (!total) return '';
+    var muestra = (lista || []).slice(0, 6).map(_he).join(', ');
+    return '<li><b>' + total + '</b> ' + que + (total === 1 ? '' : 's') +
+           (muestra ? ': <span style="color:var(--muted)">' + muestra +
+             (total > (lista || []).length ? ', …' : '') + '</span>' : '') + '</li>';
+  }
+  var creaHtml = trozoCrea(wc.locations,  wc.locationsTotal,  'location') +
+                 trozoCrea(wc.categories, wc.categoriesTotal, 'category').replace('categorys','categories') +
+                 trozoCrea(wc.projects,   wc.projectsTotal,   'project') +
+                 trozoCrea(wc.suppliers,  wc.suppliersTotal,  'supplier');
+  var avisoCrea = !creaHtml ? '' :
+    '<div class="import-will">' +
+      '<div class="import-will-hd">This import will also create:</div>' +
+      '<ul class="import-will-ul">' + creaHtml + '</ul>' +
+    '</div>';
+
+  /* ── LAS COLUMNAS SON LAS QUE EL FICHERO TRAÍA ──────────────────────────
+   * Jose, 22/10: *"la información que me deja ver el visor no es ni la cuarta
+   * parte de los datos que ya maneja la app"*. Y lo que importaba no era que
+   * faltaran: es que unidad, obra, proveedor, PO y comentarios SE IMPORTABAN
+   * SIN VERSE. Si la columna «Supplier» del fichero estaba mal asignada, se
+   * descubría con mil filas dentro.
+   *
+   * Se dibujan sólo las que el fichero tiene. Así la tabla no enseña seis
+   * columnas vacías, y además DICE QUÉ ENTENDIÓ del fichero. */
+  var COLS = [
+    { k:'category', t:'Category' }, { k:'name',    t:'Name' },
+    { k:'qty',      t:'Qty'      }, { k:'unit',    t:'Unit' },
+    { k:'location', t:'Location' }, { k:'project', t:'Project' },
+    { k:'supplier', t:'Supplier' }, { k:'po',      t:'PO#' },
+    { k:'comments', t:'Comments' }
+  ];
+  var trajo = {};
+  (res.columns || ['category','name','qty','location']).forEach(function(c){ trajo[c] = 1; });
+  var cols = COLS.filter(function(c){ return trajo[c.k]; });
 
   var tableRows = rows.slice(0, 100).map(function(r){
     var rowBg = r.valid ? '' : 'background:var(--red-bg)';
     return '<tr style="'+rowBg+'">' +
       '<td style="padding:.3rem .5rem;color:var(--muted)">' + r.rowNum + '</td>' +
-      '<td style="padding:.3rem .5rem">' + _he(r.category) + '</td>' +
-      '<td style="padding:.3rem .5rem">' + _he(r.name) + '</td>' +
-      '<td style="padding:.3rem .5rem">' + (isNaN(r.qty) ? '' : r.qty) + '</td>' +
-      '<td style="padding:.3rem .5rem">' + _he(r.location || '—') + '</td>' +
+      cols.map(function(c){
+        var v = r[c.k];
+        if (c.k === 'qty') v = isNaN(r.qty) ? '' : r.qty;
+        return '<td style="padding:.3rem .5rem">' + _he(v === '' || v == null ? '—' : String(v)) + '</td>';
+      }).join('') +
       '<td style="padding:.3rem .5rem;color:var(--red);font-size:.75rem">' + (r.errors.length ? _he(r.errors.join('; ')) : '') + '</td>' +
     '</tr>';
   }).join('');
 
-  box.innerHTML = summary +
+  /* UN SOLO NÚMERO, Y ES EL DEL FICHERO. Antes decía «the first 100 of 500»
+   * porque contaba lo que había RECIBIDO —la muestra—, no lo que hay. Tres
+   * números distintos en la misma pantalla y ninguno era el bueno. */
+  var mostradas = Math.min(100, rows.length);
+  var notaMuestra = res.totalRows > mostradas
+    ? '<p style="font-size:.72rem;color:var(--muted);margin-bottom:.6rem">Showing the first ' +
+      mostradas + ' of ' + res.totalRows + ' rows — <b>all ' + res.validRows +
+      ' valid rows are imported</b>, not just the ones shown.</p>'
+    : '';
+
+  box.innerHTML = avisoRepe + summary + avisoCrea +
     '<div style="max-height:280px;overflow:auto;border:1px solid var(--border);border-radius:6px;margin-bottom:.75rem">' +
       '<table style="width:100%;border-collapse:collapse;font-size:.8rem">' +
         '<thead><tr style="position:sticky;top:0;background:var(--bg)">' +
-          '<th style="padding:.3rem .5rem;text-align:left">Row</th><th style="padding:.3rem .5rem;text-align:left">Category</th>' +
-          '<th style="padding:.3rem .5rem;text-align:left">Name</th><th style="padding:.3rem .5rem;text-align:left">Qty</th>' +
-          '<th style="padding:.3rem .5rem;text-align:left">Location</th><th style="padding:.3rem .5rem;text-align:left">Issue</th>' +
+          '<th style="padding:.3rem .5rem;text-align:left">Row</th>' +
+          cols.map(function(c){ return '<th style="padding:.3rem .5rem;text-align:left">' + c.t + '</th>'; }).join('') +
+          '<th style="padding:.3rem .5rem;text-align:left">Issue</th>' +
         '</tr></thead>' +
         '<tbody>' + tableRows + '</tbody>' +
       '</table>' +
     '</div>' +
-    (rows.length > 100 ? '<p style="font-size:.72rem;color:var(--muted);margin-bottom:.6rem">Showing the first 100 of ' + rows.length + ' rows.</p>' : '') +
+    notaMuestra +
     '<button class="btn btn-primary" id="btnCommitImport" ' + (res.validRows ? '' : 'disabled') + ' onclick="_commitImport()">' +
       '✓ Import ' + res.validRows + ' Valid Row(s)' +
     '</button>';
   _wireImportSheetPicker();
 }
 
+// Mil cincuenta y dos unidades se leen de un vistazo; 1052 no tanto, y 48310
+// menos todavía. Sólo para los números que se enseñan.
+function _numMiles(n){
+  return String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+/* SE MANDA EL FICHERO, NO LAS FILAS. Y ÉSE ES EL ARREGLO ENTERO.
+ *
+ * Jose, 22/10, con la captura: el botón decía «Import 1052 Valid Rows» y se
+ * guardaban 500. La causa no estaba aquí a la vista — estaba en que
+ * `_importParsedRows` guardaba lo que el servidor había mandado como MUESTRA
+ * (`parsed.slice(0, 500)`) y esta función se lo devolvía como si fueran los
+ * datos. Dos cosas que tenían que coincidir sin que nada lo obligara.
+ *
+ * Mandar el fichero cuesta una subida más —ya está en memoria, a nadie se le
+ * vuelve a pedir nada— y a cambio no queda nada que pueda descuadrar: el
+ * servidor lo lee con la misma función que hizo la muestra, cuenta él, y
+ * guarda todo lo que haya. El número del botón y el número que se guarda son
+ * el mismo por construcción, no por acuerdo.
+ */
 function _commitImport(){
-  var validRows = _importParsedRows.filter(function(r){ return r.valid; });
-  if (!validRows.length) return;
+  if (!_importFileB64) {
+    showToast('Pick the file again on this screen before importing.', 'warn');
+    return;
+  }
+  var prometidas = _importValidTotal;
   var btn = document.getElementById('btnCommitImport');
   _btnBusy(btn, 'Importing…');
-  // Importar doscientas filas tarda, y hasta ahora la pantalla se quedaba
+  // Importar mil filas tarda, y hasta ahora la pantalla se quedaba
   // quieta hasta el final. La línea gira mientras tanto y termina con el
   // número que dé el servidor.
   _progStart(1, 'Importing rows');
   google.script.run
     .withSuccessHandler(function(res){
+      /* LA PRUEBA DEL ÁCIDO, A LA VISTA. De la nota de Jose: suma antes = suma
+       * después. Sale CUADRE O NO: un número que sólo aparece cuando algo va
+       * mal no se mira nunca, y entonces no sirve para confiar. */
+      var cuadra = res.balanced !== false;
       _progEnd('Imported ' + res.rowCount + ' row' + (res.rowCount === 1 ? '' : 's') +
-               ' as new ENTRY movements.');
-      _importParsedRows = [];
+               ' · ' + _numMiles(res.unitsWritten) + ' units' +
+               (cuadra ? ' — matches the file.' : ' — DOES NOT match the file.'),
+               !cuadra);
+      if (!cuadra) {
+        showToast('The import did not balance: the file had ' + res.rowsExpected +
+                  ' row(s) and ' + _numMiles(res.unitsExpected) + ' units, and ' +
+                  res.rowCount + ' row(s) / ' + _numMiles(res.unitsWritten) +
+                  ' units were written. It is recorded in the Error Log — send me a ' +
+                  'screenshot before importing again.', 'err', 14000);
+      }
+      _importParsedRows = []; _importValidTotal = 0;
+      _importFileB64 = ''; _importFileName = ''; _importFileMime = '';
       var box = document.getElementById('importPreviewBox'); if (box) box.innerHTML = '';
       var fi  = document.getElementById('importFileInput');  if (fi)  fi.value = '';
+      // La lista de importaciones hechas se queda vieja en cuanto acaba ésta —
+      // y es justo donde está el botón de deshacerla.
+      _importsData = null;
+      _drawImportHistory();
       // Silencioso aunque una importación cambie mucho: sigue siendo el
       // resultado de algo que se acaba de pulsar, y la línea dice cuántas filas
       // entraron.
       loadDataFromGoogle(true, true);
     })
     .withFailureHandler(function(err){
-      _btnLabel(btn, '✓ Import ' + validRows.length + ' Valid Row(s)');
+      _btnLabel(btn, '✓ Import ' + prometidas + ' Valid Row(s)');
       _progEnd('Nothing was imported.', true);
       // El porqué sigue siendo un aviso: una importación que falla suele
       // fallar por algo del archivo, y eso hay que leerlo.
       showToast('Import failed: ' + (err.message || err).replace(/^Error:\s*/i,''), 'err', 8000);
     })
-    .processMovement('commitImport', _h({ rows: validRows }));
+    .processMovement('commitImport', _h({
+      fileData:    _importFileB64,
+      fileName:    _importFileName,
+      sheetName:   _importUsedSheet || '',
+      fingerprint: _importFingerprint
+    }));
+}
+
+/* ─── LAS IMPORTACIONES HECHAS, Y EL BOTÓN DE DESHACERLAS ───────────────────
+ *
+ * Jose, 22/10: *"¿y si alguien se olvida y lo hace 2 veces? No podemos dejar
+ * que eso pase, porque… lo más fácil para él será culpar a la app"*.
+ *
+ * El aviso de arriba protege a quien lo lee. Esto protege a quien no lo leyó.
+ * Y va EN ESTA PANTALLA, no en Ajustes → Sistema, por tres motivos: es donde
+ * mira quien acaba de importar dos veces, se llega a ella en las dos ediciones,
+ * y deja la función entera —subir, revisar, deshacer— en un solo sitio.
+ */
+var _importsData = null;
+
+function _loadImportHistory(){
+  if (_importsData) { _drawImportHistory(); return; }
+  google.script.run
+    .withSuccessHandler(function(list){ _importsData = list || []; _drawImportHistory(); })
+    .withFailureHandler(function(){ _importsData = []; _drawImportHistory(); })
+    .processMovement('listImports', _h({}));
+}
+
+function _drawImportHistory(){
+  var box = document.getElementById('importHistBox');
+  if (!box) return;
+  if (!_importsData) { _loadImportHistory(); return; }
+  var items = _importsData.filter(function(i){ return i.importId; });
+  if (!items.length){
+    box.innerHTML = '<span style="font-size:.78rem;color:var(--muted)">No imports yet. ' +
+      'Once you import a file it appears here, and you can undo it.</span>';
+    return;
+  }
+  box.innerHTML =
+    '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">' +
+    items.map(function(it){
+      return '<div data-imp="' + _escAttr(it.importId) + '" ' +
+        'style="display:flex;align-items:center;gap:.6rem;padding:.5rem .65rem;border-bottom:1px solid var(--border)">' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:.82rem;font-weight:600">' + _he(it.details || it.importId) + '</div>' +
+          '<div style="font-size:.72rem;color:var(--muted)">' +
+            _he(_fmtWhen(it.when)) + (it.who ? ' · ' + _he(it.who) : '') +
+            ' · <span style="font-family:ui-monospace,Menlo,Consolas,monospace">' +
+            _he(it.importId) + '</span></div>' +
+        '</div>' +
+        '<button class="btn btn-ghost btn-sm" data-impid="' + _escAttr(it.importId) + '" ' +
+          'onclick="_undoImport(this)">↩ Undo this import</button>' +
+      '</div>';
+    }).join('') + '</div>';
+}
+
+function _undoImport(btn){
+  var id = btn ? (btn.getAttribute('data-impid') || '') : '';
+  if (!id) return;
+  var fila = _importsData && _importsData.filter(function(i){ return i.importId === id; })[0];
+  _showConfirm({
+    icon: '↩', danger: true,
+    title: 'Undo this import?',
+    message: (fila && fila.details ? fila.details + '\n\n' : '') +
+      'Every movement that came in with this file is removed from your stock.\n\n' +
+      'They go to the trash, exactly like deleting a movement — nothing here is ' +
+      'final, and anything you take out can be put back.',
+    confirmText: 'Undo it',
+    onConfirm: function(){
+      _btnBusy(btn, 'Undoing…');
+      _progStart(1, 'Undoing the import');
+      google.script.run
+        .withSuccessHandler(function(res){
+          _progEnd((res.removed || 0) + ' movement' + (res.removed === 1 ? '' : 's') +
+                   ' from that import moved to the trash.');
+          _importsData = null; _drawImportHistory();
+          _sysCacheDrop('trash');
+          loadDataFromGoogle(true, true);
+        })
+        .withFailureHandler(function(err){
+          _btnReset(btn);
+          _progEnd('Nothing was undone.', true);
+          showToast('Could not undo that import: ' +
+            (err.message || err).replace(/^Error:\s*/i,''), 'err', 8000);
+        })
+        .processMovement('undoImport', _h({ importId: id }));
+    }
+  });
 }
 
 // Marcar la pestaña activa vivía SOLO dentro de switchSettingsTab, así que
@@ -28200,7 +28438,7 @@ var BASIC_FUERA = {
  */
 var BASIC_PRO_ZONAS = {
   fileSection:   'fotos',    // adjuntar documentos a una entrada
-  notifySection: 'correo'    // avisar por correo al guardar
+  notifySection: 'avisarcorreo'   // avisar por correo al guardar — MANDAR, no leer
 };
 
 /* Las pestañas de ajustes se pintan cada vez que se entra en ellas, así que no
@@ -28265,8 +28503,28 @@ var BASIC_PRO = {
                que: 'A copy of everything, made on its own every night and kept in your own Drive.' },
   /* El lector de correos va aparte y con su propio mensaje: vende muchísimo y
    * no cabe en la frase genérica. */
-  correo:    { titulo: '📧 Read it from the email',
-               que: 'Paste a supplier email and the app fills in what is arriving — supplier, items, quantities and dates.' },
+  /* ── UNA OFERTA POR COSA, Y «CORREO» ERAN DOS ─────────────────────────────
+   *
+   * Jose, 22/10, con dos capturas: *"al tocar lo de enviar notificación sale un
+   * mensaje sobre leer desde el email, lo cual no tiene nada que ver, porque
+   * leer desde el email es sobre usar IA y enviar una notificación es usar el
+   * email"*.
+   *
+   * Tenía razón y son direcciones opuestas: una lee lo que llega, la otra manda
+   * lo que sale. Había UNA oferta, `correo`, colgando de tres sitios — dos de
+   * leer y uno de mandar — y su texto sólo valía para los dos primeros.
+   *
+   * Y lo que de verdad enseña este fallo: es justo lo que repasé el 21/10 y di
+   * por cerrado. Mi repaso recorrió `BASIC_PRO_BOTONES` y no tocó
+   * `BASIC_PRO_ZONAS`. Hice que una lista concordara y dejé la otra sin mirar —
+   * y la prueba que vigila esto tenía el mismo agujero: sobre las zonas sólo
+   * comprobaba que apuntaran a una oferta que EXISTE, no que hablara de lo
+   * mismo. Las dos cosas arregladas a la vez; si sólo arreglara los nombres,
+   * esto volvería con la siguiente oferta que alguien reutilizara. */
+  leercorreo: { titulo: '📧 Read it from the email',
+                que: 'Paste a supplier email and the app fills in what is arriving — supplier, items, quantities and dates.' },
+  avisarcorreo: { titulo: '📨 Email the people who need to know',
+                  que: 'When you save a movement, the app emails the project manager and whoever else you pick — no screenshots, no copying numbers by hand.' },
   /* LEER UNA FACTURA NO ES LO MISMO QUE ADJUNTARLA, y hasta la v12.86 el botón
    * «📷 Take a photo of the invoice» contestaba con el mensaje de adjuntar
    * documentos. Parecido no basta: quien pulsa «léemela» y recibe «puedes
@@ -28332,8 +28590,8 @@ var BASIC_PRO_BOTONES = {
   btnMonitorSettings:        'minimos',
   btnMonitorSettingsToolbar: 'minimos',
   btnBackupNow:              'respaldo',
-  btnFromEmail:              'correo',
-  btnReadEmail:              'correo'
+  btnFromEmail:              'leercorreo',
+  btnReadEmail:              'leercorreo'
 };
 
 /**
@@ -29164,6 +29422,18 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '12.91',
+    titulo: 'Importing a file no longer stops at row 500',
+    puntos: [
+      '<b>If your file had more than 500 rows, only the first 500 went in</b> — while the button said it was importing all of them. A 1,052-row inventory lost 552 rows with nothing on screen to say so.',
+      'Confirming now reads the file in full, so the number on the button and the number saved are the same thing. Every import <b>counts rows and units before and after</b> and tells you whether they match — whether they do or not.',
+      '<b>The same file twice no longer doubles your stock in silence.</b> The app recognises an inventory it already took in, even if the rows come back in a different order, and says so before you press anything. It still lets you through.',
+      '<b>And an import can be undone.</b> Those movements go to the trash, exactly like deleting one — nothing is final.',
+      'The preview shows <b>every column your file brought</b>, not five. Unit, project, supplier, PO and comments were being imported without anyone ever seeing them.'
+    ],
+    antes:  'A button promising 1,052 rows and saving 500',
+    ahora:  'Every row in, counted before and after, and undoable' },
+
   { ver: '12.90',
     titulo: 'A return stops asking what the record already knows',
     puntos: [
@@ -29194,24 +29464,6 @@ var NOVEDADES = [
     ],
     antes:  'The \u2715 half a screen away from the box it clears',
     ahora:  'Inside the box, where you are typing' },
-
-  { ver: '12.87',
-    titulo: 'A much quieter Receive window',
-    puntos: [
-      'There were sixteen controls on screen to record "20 windows arrived, they are in A1A". Two of them are the movement; the rest is context some warehouses fill every time and others never.',
-      '<b>The form now learns which ones yours uses.</b> A field left empty across your last sixty movements folds behind one <b>+ 3 more fields</b> line \u2014 no setting to find, no box to tick. Save one movement with it filled and it comes back on its own.',
-      'It never hides a field that already has something in it, and the line that brings them back is always there and says how many it holds.',
-      '<b>Documents</b> is one line that opens when you need it. The <b>\ud83c\udff7 Label</b> tickbox left the material line \u2014 after saving, the confirmation offers <b>Print labels</b>, which is when you can answer that.'
-    ],
-    antes:  'Sixteen controls to write down twenty windows',
-    ahora:  'The ones your warehouse actually uses' },
-
-
-
-
-
-
-
 
 ];
 
