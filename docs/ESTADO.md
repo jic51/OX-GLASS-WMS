@@ -10,7 +10,7 @@
 > **«El estado de Acopio» y `ESTADO.md` son lo mismo**: este fichero. Es el
 > único sitio donde mirar cómo vamos.
 
-**Última actualización:** 22/10/2026 · **versión v12.90** · build `32359892`
+**Última actualización:** 22/10/2026 · **versión v12.91** · build `73be76c8`
 
 ---
 
@@ -109,26 +109,28 @@ Las dos correcciones de hoy salieron de eso.
 
 ---
 
-## 🧭 LO QUE ESTAMOS MIRANDO AHORA — barrido del 22/10, ocho cosas
+## 🧭 LO QUE ESTAMOS MIRANDO AHORA — el plan del 22/10
 
-Las ocho de tus tres capturas y tres vídeos del 22/10. **Investigadas, no
-arregladas**: tú dijiste *"aún no hagas nada"*, y así está. El detalle completo,
-con números de línea, está en `docs/BACKLOG.md`, al principio.
+El detalle completo, con números de línea, está en `docs/BACKLOG.md`, al
+principio.
 
 | # | Qué | Estado |
 |---|---|---|
-| 1 | [B] Borrar un movimiento manda a Settings → System, que en la gratis está cerrada | ✅ **decidido**: la papelera se abre en la gratis, el respaldo sigue de pago |
-| 2 | [B] Permissions, Directory e Import vuelven al abrir Ajustes | ✅ **decidido**: Import **abierto, sólo CSV**; Permissions y Directory fuera (no por precio — en una edición de una persona no significan nada) |
-| 3 | Fusionar proyectos/suppliers falla | ✅ **confirmado con tu vídeo, y es peor**: fallan **las 28**, y la causa de fondo es que la lista tiene 14 filas idénticas |
-| 4 | El Error Log no enseña lo que acaba de pasar | ✅ **decidido**: se inserta **sólo la fila nueva**, sin repintar la ventana |
-| 5 | Importar sin ubicación | ✅ **tu rediseño se adopta** — elegir ubicación en la previsualización, una a una o por grupos |
-| 6 | Materials (Ajustes), como las alertas de stock bajo | anotado, sin empezar |
-| 7 | Directory (Ajustes), como la pantalla de usuarios | anotado, sin empezar |
-| 8 | La casilla «todos» de Movements | 🔵 **tu decisión** · ni malo ni absurdo, pero el remedio que propongo es otro |
+| 1 | **Importar perdía las filas pasada la 500** | ✅ **HECHO — v12.91** |
+| 2 | **El mismo fichero dos veces**: aviso + **deshacer** | ✅ **HECHO — v12.91** |
+| 3 | **La pantalla de importar dice la verdad** (un número, todas las columnas, qué va a crear antes) | ✅ **HECHO — v12.91** |
+| 4 | **«Send notification email» contestaba sobre LEER el correo** | ✅ **HECHO — v12.91** |
+| 5 | **Fusionar nombres**, las dos mitades | 🔜 **v12.92** · causa confirmada con tu vídeo: fallan **las 28** |
+| 6 | **El Error Log en vivo**, sin repintar | 🔜 **v12.92** |
+| 7 | **Dueño único de las pestañas** + papelera abierta + Import abierto (CSV) | 🔜 **v12.93** |
+| 8 | **Importar de verdad**: ventana propia, ubicación por fila y por grupos, destildar, prueba de 20 | 🔜 **v12.94+** |
+| 9 | Materials (Ajustes), como las alertas de stock bajo | anotado |
+| 10 | Directory (Ajustes), como la pantalla de usuarios | anotado |
+| — | La casilla «todos» de Movements | 🔵 **la revisaste y se queda como está** |
+| — | Importar el **historial** (fechas, tipos, quién) | 🔵 **tu decisión** · es otra función, no una columna más |
 
-**Mi recomendación: del 1 al 4, en una sola versión.** Son las cuatro pequeñas,
-las cuatro son «la app dice algo que no es verdad», y la 4 va dentro porque es
-la herramienta con la que se comprueban las otras tres.
+**Los cuatro primeros ya están en la v12.91.** Lo siguiente es la fusión de
+nombres y el Error Log en vivo, que van juntos en la v12.92.
 
 ### ✅ La página recortada — HECHO el 22/10
 
@@ -155,6 +157,33 @@ misma línea** que en el repositorio.
 ---
 
 ## ✅ LO QUE ACABAMOS DE HACER — y qué hay que mirar de cada cosa
+
+### v12.91 · Importar deja de perder filas · **SIN VERIFICAR — Y ES LA MÁS IMPORTANTE**
+
+Los cuatro puntos que aprobaste. **Esto arregla una pérdida de datos**, así que
+si sólo compruebas una versión este mes, que sea ésta.
+
+**Qué probar, en orden:**
+
+1. **La prueba grande.** Coge tu fichero de 1.052 filas e impórtalo en una copia
+   **vacía**. Mira que el botón diga **1.052**, y que al terminar la línea diga
+   **1.052 filas** y las unidades, con **«matches the file»**. Antes entraban
+   500.
+2. **Las columnas.** Al cargar el fichero, la tabla tiene que enseñar
+   **Unit, Project, Supplier, PO# y Comments** además de las cinco de siempre.
+   Si tu fichero no trae alguna, esa columna no sale — eso también está bien.
+3. **Lo que va a crear.** Encima del botón, un recuadro azul: *«This import will
+   also create: 7 locations…»*. Antes eso se contaba **al terminar**.
+4. **Sube el MISMO fichero otra vez.** Tiene que salir un recuadro rojo arriba
+   del todo: *«You already imported this exact file»*, con cuándo y quién. **Y
+   el botón sigue ahí** — avisa y deja pasar, como en las devoluciones.
+5. **Deshacer.** Abajo de esa pantalla está **«Imports you have already done»**.
+   Pulsa **↩ Undo this import** en una: tiene que decir cuántos movimientos
+   quitó, y el almacén volver a lo de antes. Luego mira **Ajustes → Sistema →
+   papelera**: ahí están, para devolverlos.
+6. **[B] El candado del correo.** En la gratis, pulsa **«Send notification
+   email»**: el mensaje tiene que hablar de **avisar por correo**, no de *leer*
+   un correo.
 
 ### v12.90 · La devolución no pregunta lo que ya sabe, y el aviso dura 7s · **SIN VERIFICAR**
 
