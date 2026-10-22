@@ -7,7 +7,7 @@
 > **Este documento se actualiza en cada versión.** Si la fecha de abajo tiene más
 > de una semana, está viejo y hay que decirlo.
 
-**Última actualización:** 21/10/2026 · **versión v12.87** · build `c6eeee05`
+**Última actualización:** 22/10/2026 · **versión v12.88** · build `6d4d1bd3`
 
 ---
 
@@ -18,7 +18,7 @@ contexto.
 
 | # | Qué | Por qué está parado | Cuánto cuesta |
 |---|---|---|---|
-| 1 | **Verificar la v12.82–87 en la app de verdad** | Seis versiones publicadas y ninguna abierta | 20 min |
+| 1 | **Verificar la v12.82–88 en la app de verdad** | Siete versiones publicadas y ninguna abierta | 20 min |
 | 2 | **Que alguien de fuera instale la Básica** | El enlace `/copy` le falló a la única persona que lo intentó | 20 min, con otra persona |
 | 3 | **Grabar V1, el vídeo del cronómetro** | Es el hueco más caro de la landing | una mañana |
 | 4 | **Decidir el precio de la Básica en la página** | El precio de Pro ya está decidido; la columna de la gratis no | 10 min de decisión |
@@ -27,6 +27,21 @@ contexto.
 ---
 
 ## ✅ LO QUE ACABAMOS DE HACER — y qué hay que mirar de cada cosa
+
+### v12.88 · La ✕ dentro de la caja, y la gratis sin menú fantasma · **SIN VERIFICAR**
+
+Tus dos capturas del 21/10. En Movements la ✕ se dibujaba al final de la fila, a
+cientos de píxeles de la caja — y por eso la caja se quedaba sola arriba. Y en
+la versión gratis la hoja mandaba a un menú «Acopio» que **no puede existir
+ahí**: necesita un permiso sensible que esa edición no pide a propósito.
+
+**Qué probar:**
+1. Movements → escribe algo en la búsqueda: la ✕ tiene que salir **dentro** de
+   la caja, y la caja ya no debe ocupar la fila entera.
+2. Lo mismo en cualquier otra caja de escritura de la app.
+3. En la copia gratis, destilda y vuelve a tildar la casilla de términos: el
+   texto ya no debe hablar de ningún menú, y tiene que decirte que el nombre de
+   la empresa se pone en **Settings → Name & Logo**.
 
 ### v12.87 · La ventana de entrada, limpia · **SIN VERIFICAR**
 
@@ -191,7 +206,7 @@ Para no perder de vista el tamaño de lo que ya hay.
 
 ## 📋 LO SIGUIENTE, EN ORDEN
 
-1. **Verificar la v12.82–87** (20 min, tú) — son seis versiones sin abrir
+1. **Verificar la v12.82–88** (20 min, tú) — son siete versiones sin abrir
 2. **Terminar la tarjeta de ajuste** (yo, ~1 versión)
 3. **Precios y sección de Pro en la página** (medio día, yo; la decisión, tú)
 4. **Agendar llamadas** (20 min, tú)
