@@ -101,6 +101,26 @@
        movements went from about two and a half minutes to fifty-five seconds
        along the way.</p>
 
+    <div class="entry" id="v12-88">
+      <span class="ver">v12.88</span>
+      <span class="tag fix">Fix</span>
+      <h3>The &#10005; sits inside the box, and the free edition stops pointing at a menu it cannot have</h3>
+      <p>In Movements the &#10005; was drawing at the <b>far right of the row</b>, hundreds of pixels
+         from the search box &mdash; and the box was pushed onto a line of its own. Both came from
+         the same thing: the wrapper was being stretched to the full row. It asked &ldquo;is this
+         field as wide as its slot?&rdquo; while the tab was still hidden, which is 0 &ge; -4:
+         <b>true, always</b>. A comparison that answers yes when nothing can be measured is not
+         measuring.</p>
+      <p>It now checks the thing that actually matters, once the field can be seen: <b>does the
+         field fill its wrapper?</b> If not, the wrapper is not stretched. That holds for every box
+         you can type in, including the ones added later.</p>
+      <p>And in the <b>free edition</b>, the welcome sheet told you to open an &ldquo;Acopio&rdquo;
+         menu that <b>cannot exist there</b>: a sheet menu needs a sensitive permission the free
+         edition deliberately does not ask for &mdash; asking for it is what triggers Google&rsquo;s
+         scary warning screen. The sheet now says so plainly, points at the real next step, and
+         tells you where to set your company name, since that edition has no setup wizard.</p>
+    </div>
+
     <div class="entry" id="v12-87">
       <span class="ver">v12.87</span>
       <span class="tag new">New</span>

@@ -143,7 +143,50 @@ window.__DATA=${JSON.stringify(DATA)};
         'filtros el otro', tras.avisos.sort(), ['change', 'input']);
   check('y la ✕ se esconde sola al quedar vacío', tras.visible, 'none');
 
-  console.log('\n═══ 4. Lo que envolver estuvo a punto de romper ═══\n');
+  console.log('\n═══ 4. La ✕ va DENTRO de la caja, no al final de la fila ═══\n');
+
+  /* Jose, 21/10, con una captura de Movements: la ✕ salía **al final de la
+   * fila**, a setecientos píxeles de la caja de búsqueda, y la caja se quedaba
+   * sola en su línea. Las dos cosas eran el mismo fallo.
+   *
+   * MEDIDO: el envoltorio valía 1004px y el campo 230px. La ✕ se coloca a la
+   * derecha DEL ENVOLTORIO, así que acababa lejísimos de donde se escribe; y un
+   * envoltorio de 1004px dentro de una barra flexible se lleva la fila entera.
+   *
+   * LA CAUSA era una comparación que contestaba «sí» cuando no se podía medir
+   * nada: `el.offsetWidth >= padre.clientWidth - 4` es `0 >= -4` con la pestaña
+   * escondida — que es justo cuando corre, al arrancar.
+   *
+   * LA INVARIANTE QUE LO CAZA TODO, y es una sola: **el campo tiene que llenar
+   * su envoltorio**. Si no lo llena, la ✕ está lejos del sitio donde se
+   * escribe, da igual por qué. Vale para la caja de búsqueda, para los campos
+   * de una ventana y para los que se añadan mañana. */
+  await p.evaluate(() => { showTab('movements', 'btn-movements'); openMoveModal('ENTRY'); });
+  await p.waitForTimeout(300);
+
+  const sueltos = await p.evaluate(() =>
+    [...document.querySelectorAll('.tiene-x')]
+      .filter(c => c.offsetWidth > 0)                       // sólo lo que se ve
+      .map(c => ({ caja: c.offsetWidth,
+                   campo: (c.querySelector('input, textarea') || {}).offsetWidth || 0,
+                   id: (c.querySelector('input, textarea') || {}).id || '(sin id)' }))
+      .filter(m => m.campo < m.caja - 4)
+      .map(m => m.id + ' (envoltorio ' + Math.round(m.caja) + ', campo ' + Math.round(m.campo) + ')'));
+
+  check('TODO campo visible llena su envoltorio — si no, la ✕ se dibuja a la ' +
+        'derecha de un envoltorio más ancho que la caja y acaba lejos de donde ' +
+        'se escribe' + (sueltos.length ? ': ' + sueltos.join(', ') : ''),
+    sueltos, []);
+
+  const busca = await p.evaluate(() => {
+    const c = document.getElementById('movSearch').parentElement;
+    return { ancho: c.classList.contains('ancho'), caja: c.offsetWidth };
+  });
+  check('y la caja de búsqueda de Movements no se lleva la fila entera — por ' +
+        'eso se quedaba sola arriba (mide ' + Math.round(busca.caja) + 'px)',
+    busca.caja > 0 && busca.caja < 400, true);
+
+  console.log('\n═══ 5. Lo que envolver estuvo a punto de romper ═══\n');
 
   /* ENVOLVER UN CAMPO LE CAMBIA EL HERMANO. Dos avisos de la app colgaban del
    * campo con `input.nextElementSibling`, y tras envolverlo ese hermano pasa a

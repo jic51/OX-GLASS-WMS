@@ -283,13 +283,32 @@ function romperElBloqueGrande(fuente) {
        * Por eso esto no es un adorno: es la diferencia entre un diagnóstico y
        * una adivinanza. */
       check('...Y DICE EN QUÉ LÍNEA SE PARTIÓ — el dato que convierte esto en ' +
-            'un diagnóstico en vez de una adivinanza',
-        /line \d+/i.test(d.todo || ''), d.todo && d.todo.slice(0, 260));
-      check('...y también la columna y el mensaje del navegador, que es lo que ' +
-            'distingue una avería de otra',
-        /column \d+/i.test(d.todo || '') &&
-        /unexpected|invalid|token|syntax/i.test(d.todo || ''),
+            'un diagnóstico en vez de una adivinanza (o dice que el navegador ' +
+            'no lo contó, ver abajo)',
+        /line [1-9]\d*/i.test(d.todo || '') || /did not say where/i.test(d.todo || ''),
         d.todo && d.todo.slice(0, 260));
+      /* ── CUANDO EL NAVEGADOR NO CUENTA NADA ────────────────────────────
+       * Esta comprobación iba y venía, y la causa no estaba en el producto:
+       * un navegador puede entregar el suceso de error SIN detalles —línea 0,
+       * columna 0, mensaje «error»—, que es lo que hace con un script que
+       * considera de otro origen. Unas veces los da y otras no.
+       *
+       * Un rojo que va y viene es el peor de todos, porque se aprende a
+       * reejecutarlo hasta que sale verde. Así que lo que se exige ya no es
+       * «siempre hay línea», que no depende de nosotros, sino lo que SÍ
+       * depende: que la pantalla **no prometa un diagnóstico que no tiene**.
+       * O da la línea de verdad, o dice que el navegador no la contó — pero
+       * nunca «línea 0, columna 0» rematado con «mándalo a soporte, el número
+       * de línea es lo que identifica el problema». */
+      const conDetalle = /column \d+/i.test(d.todo || '') &&
+                         /unexpected|invalid|token|syntax/i.test(d.todo || '');
+      const sinDetalle = /did not say where/i.test(d.todo || '');
+      check('...o da la columna y el mensaje del navegador, O dice que el ' +
+            'navegador no lo contó — lo que NO puede es enseñar «línea 0, ' +
+            'columna 0» y pedir que se mande a soporte',
+        conDetalle || sinDetalle, d.todo && d.todo.slice(0, 260));
+      check('...y nunca enseña una línea 0 como si fuera un dato',
+        !/line 0, column 0/.test(d.todo || ''), d.todo && d.todo.slice(0, 200));
       /* Y NO manda a repetir un pegado que puede no ser la causa. El primer
        * texto lo decía SIEMPRE, con error cazado o sin él. */
       check('...y con un error cazado NO manda a repegar a ciegas: eso sólo ' +

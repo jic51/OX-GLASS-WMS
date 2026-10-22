@@ -19,6 +19,7 @@
 // Usage:  node tools/test-terms-checkbox.js
 
 const fs = require('fs'), path = require('path'), vm = require('vm');
+const A  = require(require('path').join(__dirname, 'andamio.js'));
 const GS = fs.readFileSync(path.join(__dirname, '..', 'Code_v3_fixed.gs'), 'utf8');
 
 let ok = 0, fail = 0;
@@ -42,7 +43,7 @@ function pick(re) { const m = re.exec(GS); return m ? m[0] : ''; }
 
 // A sheet that remembers what each cell holds and what was done to it, so the
 // test can assert the stamp is GONE rather than merely overwritten.
-function build() {
+function build(basica) {
   const cells = {};
   function cell(a1) {
     if (!cells[a1]) cells[a1] = { value: '', weight: null, color: null, cleared: 0 };
@@ -74,7 +75,22 @@ function build() {
     pick(/var TERMS_NEXT_CELL\s*= '[^']*';/),
     pick(/var TERMS_PROMPT = '[^']*';/),
     pick(/var SH_NAVY = [^\n]*;/),
-    extractFn('onEdit')
+    /* MIGRADO AL ANDAMIO EN LA v12.88, y fue la DECIMA mordida del mismo
+     * patron. `onEdit` gano una rama para la edicion gratis —la hoja mandaba a
+     * un menu que esa edicion no puede tener— y con ella una llamada a
+     * `basicApagado_`. Esta caja no la tenia, asi que el `try/catch` que impide
+     * que un disparador simple le ensene un error al cliente se trago la
+     * excepcion: la prueba no dio «no esta definida», dio una celda vacia.
+     *
+     * Y se colaba por una CUARTA forma que el guardia no veia: ni lista con
+     * forEach, ni `${...}` en plantilla, ni variable corrida despues, sino un
+     * `extractFn` suelto DENTRO del propio `runInContext`. Ya esta vigilada en
+     * test-andamio. */
+    A.levantar(GS, ['onEdit']),
+    /* Y LA EDICION, DESPUES del codigo levantado: el andamio declara
+     * `ACOPIO_BASIC = false` delante, y una asignacion posterior la pisa. Es
+     * como se mide la gratis sin tocar el producto. */
+    basica ? 'ACOPIO_BASIC = true;' : ''
   ].join('\n'), sandbox);
   return sandbox;
 }
@@ -145,6 +161,42 @@ console.log('\n═══ it must ignore everything else on the sheet ═══\n
   try { T.onEdit(null); T.onEdit({}); T.onEdit({ range: null }); } catch (e) { threw = e.message; }
   check('a malformed event never throws — a simple trigger must not surface an error onto the sheet',
     threw === null);
+}
+
+console.log('\n\u2550\u2550\u2550 la gratis no puede mandar a un menu que no tiene \u2550\u2550\u2550\n');
+
+/* Jose, 21/10, con una captura de la hoja de la version gratis: *"sale que debo
+ * ir al menu Acopio pero el menu Acopio no aparece"*.
+ *
+ * Y no es que no aparezca: NO PUEDE aparecer. Un menu en la hoja necesita
+ * `script.container.ui`, un permiso SENSIBLE que esa edicion no pide a
+ * proposito, porque pedirlo trae justo la pantalla de aviso de Google que la
+ * gratis existe para evitar. `onOpen` ya se callaba por eso; esta frase no. */
+{
+  const B = build(true);
+  edit(B, B.TERMS_CHECKBOX_CELL, true);
+  const texto = String(B._cells[B.TERMS_NEXT_CELL].value || '');
+
+  check('en la gratis tambien se sella la aceptacion \u2014 los terminos se aceptan ' +
+        'igual en las dos ediciones',
+    /^Accepted /.test(String(B._cells[B.TERMS_STAMP_CELL].value || '')));
+  check('pero el paso siguiente NO manda al menu', !/menu at the top/.test(texto));
+  check('...ni a un "Set Up" que en esa edicion no existe \u2014 el asistente crea ' +
+        'carpetas en Drive y registra usuarios, las dos cosas que no tiene',
+    !/Set Up/.test(texto));
+  check('dice EN VOZ ALTA que aqui no hay menu, que es la frase que le faltaba ' +
+        'a Jose delante', /no menu/i.test(texto));
+  check('...manda a desplegar la app, que es el paso siguiente de verdad',
+    /[Dd]eploy/.test(texto));
+  check('...y dice donde se pone el nombre de la empresa, porque ahi no hay ' +
+        'asistente que lo pregunte', texto.indexOf('Name & Logo') !== -1);
+
+  /* Y LA DE PAGO NO SE TOCA. Media seccion comprueba que la gratis NO dice algo;
+   * sin esto, borrar la frase de las dos ediciones pasaria igual de verde. */
+  const P = build(false);
+  edit(P, P.TERMS_CHECKBOX_CELL, true);
+  check('y la de pago sigue mandando a su menu, que ahi SI existe',
+    /menu at the top/.test(String(P._cells[P.TERMS_NEXT_CELL].value || '')));
 }
 
 console.log('\nterms-checkbox: ' + (fail === 0 ? 'ok' : (fail + ' FAILED')));

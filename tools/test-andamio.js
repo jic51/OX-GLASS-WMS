@@ -239,12 +239,42 @@ m.seccion('NINGUNA prueba mantiene ya una lista de dependencias a mano');
     return false;
   }
 
-  const culpables = fs.readdirSync(__dirname)
+  /* LA CUARTA FORMA, encontrada el dia siguiente a la tercera.
+     test-terms-checkbox metia `extractFn('onEdit')` DENTRO del propio
+     `runInContext`, en un array que se unia con join: ni lista con forEach, ni
+     `${...}` en plantilla, ni variable corrida despues. `onEdit` gano una
+     llamada a `basicApagado_` y la caja no la tenia — y como `onEdit` es un
+     disparador simple envuelto en try/catch, la prueba NO dijo «no esta
+     definida»: dijo que una celda estaba vacia. Decima mordida, y la mas
+     callada de todas.
+
+     ESTA REGLA SE COME A LAS OTRAS DOS de paso, y se queda igual: mira dentro
+     de cada `runInContext(...)` —hasta su parentesis de cierre— y se queja si
+     ahi dentro se nombra `fnSrc` o `extractFn`. Lo que se mete en un
+     `runInContext` es codigo que se va a EJECUTAR, y lo que se ejecuta tiene
+     dependencias. */
+  function dentroDeRunInContext(src){
+    let i = 0;
+    for (;;) {
+      i = src.indexOf('runInContext(', i);
+      if (i === -1) return false;
+      let d = 0, j = i + 'runInContext'.length;
+      for (; j < src.length; j++) {
+        if (src[j] === '(') d++;
+        else if (src[j] === ')') { d--; if (d === 0) break; }
+      }
+      if (/\b(?:fnSrc|extractFn)\s*\(/.test(src.slice(i, j))) return true;
+      i = j;
+    }
+  }
+
+  const pruebas = fs.readdirSync(__dirname)
     .filter(f => /^test-.*\.js$/.test(f) && f !== 'test-andamio.js')
-    .filter(f => {
-      const src = A.sinComentarios(fs.readFileSync(path.join(__dirname, f), 'utf8'));
-      return PATRON.test(src) || INTERPOLA.test(src) || guardaYEjecuta(src);
-    });
+    .map(f => ({ f: f, src: A.sinComentarios(fs.readFileSync(path.join(__dirname, f), 'utf8')) }));
+
+  const culpables = pruebas
+    .filter(x => PATRON.test(x.src) || INTERPOLA.test(x.src) || guardaYEjecuta(x.src))
+    .map(x => x.f);
 
   m.check('ninguna prueba mete en la caja una lista de nombres escrita a mano — ' +
           'se pide la función que se mide y `levantar` baja por sus ayudantes, o ' +
@@ -276,10 +306,44 @@ m.seccion('NINGUNA prueba mantiene ya una lista de dependencias a mano');
   /* Y NO MUERDE lo legítimo: leer una función para buscarle algo con un regex,
      sin ejecutarla, es una costumbre buena de esta suite y tiene que seguir
      pasando. Las tres reglas se prueban contra ella. */
+  /* ── LA CUARTA FORMA VA POR TRINQUETE, Y HAY QUE DECIR POR QUÉ ───────────
+   *
+   * Las tres de arriba están a cero y tienen que seguir a cero. Ésta no: la
+   * forma «un `extractFn` suelto dentro del propio `runInContext`» la usan
+   * CUARENTA Y CUATRO pruebas, muchas anteriores al andamio. Exigir cero hoy
+   * sería dejar la suite en rojo por una deuda que ya existía, y una suite en
+   * rojo deja de leerse — que es justo lo que este archivo entero existe para
+   * impedir.
+   *
+   * Así que se cuenta y se fija el techo en lo que hay. Puede BAJAR cuando se
+   * migre alguna; no puede subir. Es el mismo trinquete que usa
+   * `test-espaciado.js` con las longitudes a pelo, y por el mismo motivo:
+   * frenar lo nuevo sin fingir que lo viejo no está.
+   *
+   * LO QUE CUESTA ESTA DEUDA, medido el 22/10: `test-terms-checkbox` se cayó
+   * porque `onEdit` ganó una llamada a `basicApagado_`. Y como `onEdit` es un
+   * disparador simple envuelto en try/catch, NO dijo «no está definida»: dijo
+   * que una celda estaba vacía. Décima mordida, y la más callada. */
+  const TECHO_RUNINCONTEXT = 44;
+  const porDentro = pruebas.filter(x => dentroDeRunInContext(x.src)).map(x => x.f);
+  m.check('la forma «extractFn dentro de runInContext» no crece (hay ' +
+          porDentro.length + ', el techo es ' + TECHO_RUNINCONTEXT + ') — es ' +
+          'deuda anterior al andamio: el techo puede bajar al migrarlas, nunca subir',
+    porDentro.length <= TECHO_RUNINCONTEXT, porDentro.length);
+
+  // Y la cuarta, tal como la tenía test-terms-checkbox.
+  m.check('...y la cuarta: un `extractFn` suelto dentro del propio runInContext',
+    dentroDeRunInContext("vm.runInContext([ pick(/x/), extractFn('onEdit') ].join('\\n'), s);"));
+
+  /* Y NO MUERDE lo legítimo: leer una función para buscarle algo con un regex,
+     sin ejecutarla, es una costumbre buena de esta suite y tiene que seguir
+     pasando. Las cuatro reglas se prueban contra ella. */
   const soloLee = "const REN = fnSrc('renderStock');\n" +
-                  "check('…', /x/.test(fnSrc('_showConfirm')));";
+                  "check('…', /x/.test(fnSrc('_showConfirm')));\n" +
+                  "vm.runInContext('arranca()', ctx);";
   m.check('...y deja en paz un `fnSrc` que sólo lee para buscar',
-    !PATRON.test(soloLee) && !INTERPOLA.test(soloLee) && !guardaYEjecuta(soloLee));
+    !PATRON.test(soloLee) && !INTERPOLA.test(soloLee) &&
+    !guardaYEjecuta(soloLee) && !dentroDeRunInContext(soloLee));
 }
 
 m.seccion('la hoja falsa se porta como Sheets');
