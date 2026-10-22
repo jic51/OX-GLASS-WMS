@@ -60,6 +60,203 @@ molesta; al final lo que a lo mejor ya está bien.
 > | 8 | 🔵 Quiere probar «sólo las que se ven». Mi respuesta abajo |
 > | — | ✅ **La página recortada: aprobada y hecha el 22/10.** 527 KB → 225 KB por la red, cero cambios en el producto |
 
+---
+
+## 🥇 EL ORDEN EN QUE YO LO HARÍA — todo lo de la sesión del 22/10
+
+Pedido por Jose: *"dame la lista de lo que arreglarías en el orden que lo
+harías, desde el 1 hasta el último que hemos hablado en esta sesión."*
+
+El criterio no es el tamaño ni el orden en que se contaron: es **qué pasa si no
+se arregla**. Primero lo que pierde datos, luego lo que impide limpiar los
+datos, luego el instrumento con el que se comprueba todo lo demás, luego lo que
+le miente al cliente, y al final lo que molesta.
+
+| Orden | Qué | Por qué ahí | Versión |
+|---|---|---|---|
+| **1** | **Importar pierde las filas pasada la 500** y el botón promete todas | Pérdida de datos silenciosa, hoy, en la captura de Jose. Nada más de esta lista destruye información | v12.91 |
+| **2** | **La pantalla de importar dice la verdad**: un solo número, todas las columnas que el fichero traía, qué va a crear ANTES de confirmar, y la suma antes/después | Es la otra mitad del 1: sin esto, el 1 se arregla y nadie puede comprobarlo | v12.91 |
+| **3** | **Fusionar nombres, las dos mitades**: que acepte el cambio de grafía, y que la lista no pueda tener dos veces lo mismo | Los 28 grupos de Jose fallan **todos**, y la causa de fondo sigue rellenando la lista mientras no se tape | v12.92 |
+| **4** | **El Error Log, en vivo y sin repintar** | Es el instrumento con el que se diagnostica lo demás. Va aquí y no antes porque el 1 y el 3 ya tienen su causa encontrada | v12.92 |
+| **5** | **Un solo dueño de la visibilidad de las pestañas de ajustes** + **papelera abierta en la gratis** + **Import abierto (CSV)** | Las tres son el mismo mecanismo. Hacerlas por separado es garantizar que el duelo por `display` vuelva una cuarta vez | v12.93 |
+| **6** | **El tope de 20 en «todos»**, con *+20 more* y el filtro como la vía precisa | Pequeño, cerrado, y quita un miedo real de Jose | v12.93 |
+| **7** | **Importar, de verdad**: ubicación por fila y por grupos en la previsualización, destildar filas, las ubicaciones nuevas con tarjeta, y el «importa 20 de prueba» | Es la grande. Va después del 1 y el 2 porque sobre una pantalla que miente no se construye nada | v12.94+ |
+| **8** | **Materials (Ajustes)**, como las alertas de stock bajo | Trabajo de pantalla, sin nada roto debajo | — |
+| **9** | **Directory (Ajustes)**, como la pantalla de usuarios | Igual, y además un nombre mal escrito aquí rompe un envío en silencio | — |
+| — | ~~La página recortada~~ | ✅ **HECHA el 22/10** · 527 KB → 225 KB por la red | v12.90 |
+| — | **Importar el HISTORIAL** (fechas, tipos de movimiento, quién) | 🔵 **Decisión de Jose.** No es una columna más, es otra función. Mi voto: sólo con un cliente real delante | — |
+
+**Dos cosas que NO están en esta lista, y conviene decir por qué:** la tarjeta
+de ajuste que no se puede borrar y los incomings por separado siguen anotados
+más abajo — no se han caído, pero las nueve de arriba son todas de «la app
+pierde algo o dice algo que no es verdad», y eso va antes que una función
+nueva.
+
+---
+
+## 🚨 SEGUNDA RONDA DEL 22/10 — Y SALE UNA PÉRDIDA DE DATOS REAL
+
+### 0. 🔴 **IMPORTAR PIERDE LAS FILAS A PARTIR DE LA 500, Y EL BOTÓN PROMETE TODAS**
+
+**Esto no es un diseño que discutir. Es una pérdida de datos, hoy, y está en la
+captura que Jose mandó esta tarde.** Pasa a ser lo primero de toda la lista.
+
+En su pantalla se leen, a la vez, **cuatro números y ninguno es el mismo**:
+
+> The file itself has **1053** non-empty line(s) · **1052 row(s) found** ·
+> **1052 ready to import** · *Showing the first 100 of **500** rows.* ·
+> **✓ Import 1052 Valid Row(s)**
+
+Y el que manda es el que no se ve. El servidor
+(`Code_v3_fixed.gs:9662`):
+
+```js
+rows: parsed.slice(0, 500)   // a preview, not a data dump
+```
+
+El navegador (`Index_v3_fixed.html:16347`):
+
+```js
+.withSuccessHandler(function(res){ _importParsedRows = res.rows || []; … })
+```
+
+Y al confirmar (`:16429`):
+
+```js
+var validRows = _importParsedRows.filter(function(r){ return r.valid; });
+```
+
+**El servidor creyó que mandaba una muestra. El navegador creyó que recibía los
+datos.** Así que el botón que dice «Import 1052 Valid Rows» importa **500**, y
+**552 filas de Jose se quedan fuera sin que nada lo diga**. El aviso final
+dirá «Imported 500 rows» — contradiciendo al botón que se acaba de pulsar, un
+segundo después, y para entonces el fichero ya se limpió de la pantalla.
+
+**Vigésimo caso del patrón**, y el más caro de todos: dos cosas que tenían que
+coincidir —cuántas filas se mandan y cuántas se van a guardar— sin que nada lo
+obligara. El comentario del servidor **dice la verdad** («a preview, not a data
+dump»); lo que falta es que el navegador lo supiera.
+
+Y es justo lo que la nota de Jose sobre ETL llama *la prueba del ácido*:
+**suma antes = suma después**. Hoy no hay ninguna comprobación de esas, y por
+eso esto lleva ahí sin que nadie lo viera.
+
+**El arreglo, en tres piezas y ninguna grande:**
+
+1. **La previsualización deja de ser la carga.** Confirmar vuelve a mandar al
+   servidor **el fichero**, no las filas; el servidor ya lo tiene parseado y
+   sabe cuántas son. La muestra de 500 sigue siendo una muestra y nadie la
+   confunde con los datos.
+2. **Un número, no cuatro.** Si la muestra enseña 100 de 1052, que lo diga así:
+   *«Showing the first 100 of 1052 rows»*. Hoy dice 500 porque cuenta lo que
+   recibió, no lo que hay.
+3. **La prueba del ácido, automática.** Después de importar, el servidor suma
+   las cantidades que escribió y las compara con las del fichero. Si no cuadra,
+   lo dice con los dos números — *«1052 rows, 48.310 units expected · 1052 rows,
+   48.310 units written»*. Es una línea de cuenta y es lo único que convierte
+   «confío en que fue bien» en «lo comprobé».
+
+### 0-bis. 🔴 LA PANTALLA ENSEÑA MENOS DE LA MITAD DE LO QUE IMPORTA
+
+Jose: *"la información actual que me deja ver el visor de datos no es ni la
+cuarta parte de los datos que ya maneja la app… faltan id, PM/encargado, PO,
+supplier, etc."*
+
+Tiene razón, y la parte que importa no es que falten: es que **se importan sin
+verse**.
+
+| | |
+|---|---|
+| El fichero **puede traer** (`IMPORT_ALL_HEADERS`, `:9546`) | category, name, qty, **unit**, location, **project**, **supplier**, **po**, **comments** — 9 |
+| La previsualización **enseña** (`:16414`) | Row, Category, Name, Qty, Location, Issue — **5** |
+
+Así que **unidad, obra, proveedor, PO y comentarios entran a la hoja sin que
+nadie los haya mirado nunca**. Si la columna «Supplier» del fichero estaba mal
+asignada, se descubre con 1.052 filas dentro.
+
+Arreglo: la tabla enseña **todas las columnas que el fichero traía**, y sólo
+ésas. Las que el fichero no tiene, no se dibujan — la tabla dice qué entendió.
+
+### 0-ter. 🔵 ¿ESTÁ ACOPIO PREPARADO PARA MIGRAR UNA BODEGA ENTERA?
+
+Jose, y es la pregunta correcta: *"¿qué pasa si el cliente quiere mover todos
+los movimientos, materiales y demás información que ya tiene en su computadora
+a Acopio? ¿Qué respondemos si nos pide eso, sin decirle que no sabemos nada?"*
+
+**La respuesta honesta, medida en el código y no supuesta:**
+
+| Lo que el cliente trae | ¿Entra hoy? |
+|---|---|
+| Qué hay, cuánto y dónde (**una foto del inventario**) | ✅ Sí |
+| Categoría, unidad, obra, proveedor, PO, comentarios | ✅ Sí (pero no se ven — 0-bis) |
+| **La fecha de cada movimiento** | ❌ No. `commitImport` pone **la de hoy** en todas (`:9675, 9686`) |
+| **Qué fue cada movimiento** (entrada, salida, traslado, merma) | ❌ No. **Todo se guarda como ENTRY** (`:9679`) |
+| **Quién lo recibió / el PM** | ❌ No. Se guarda **vacío**, a propósito (`:9694`) |
+| **GC, estado, coste, documentos, fotos** | ❌ No se leen |
+| **El historial** (lo que pasó, en orden) | ❌ **No.** Y es la consecuencia de las tres de arriba |
+
+O sea: **Acopio sabe recibir una FOTO del almacén. No sabe recibir su
+HISTORIA.** Y esas son dos cosas distintas, no una a medias.
+
+**Lo que yo le contestaría a un cliente, sin mentir y sin decir «no sabemos»:**
+
+> *"Acopio importa tu inventario actual: qué tienes, cuánto, de qué tipo, en qué
+> estante, de qué obra y de qué proveedor. Eso queda cargado y listo para
+> trabajar el mismo día. Lo que no traemos es el historial de los años
+> anteriores — las entradas y salidas viejas se quedan en tu Excel, que sigue
+> siendo tuyo. Acopio empieza a construir el historial desde el día que
+> arrancas. Si necesitas que el histórico también entre, eso es un trabajo
+> aparte y lo hablamos."*
+
+Eso es verdad, se puede decir con la cara alta, y **convierte una carencia en
+una línea de corte clara** — que es justo lo que un cliente necesita oír.
+
+**Y lo que hay que decidir, Jose, porque es un producto distinto:**
+
+- **(A) Importar una foto, bien hecho.** Es lo de los puntos 0, 0-bis y 5. Es
+  lo que el 95% de los clientes necesita de verdad, y es lo que cierra una
+  venta: trabajas desde el primer día.
+- **(B) Importar el historial.** Significa leer `date`, `movetype`,
+  `responsible`, `src`/`dest` y los movimientos de salida, y entonces aparecen
+  preguntas que hoy no existen: ¿qué pasa si el historial deja un material en
+  negativo? ¿Se recalculan las existencias desde los movimientos o se respeta
+  la foto? ¿Se reconstruye en orden o de golpe? **Eso no es una columna más, es
+  otra función.**
+
+**Mi recomendación: (A) ahora, (B) sólo cuando un cliente lo pida y pague por
+ello.** Porque (B) sin un cliente real delante es construir a ciegas sobre un
+formato que nos inventaríamos nosotros — y la nota de Jose sobre ETL dice
+exactamente eso en su punto 2: el mapeo se hace **contra el fichero del
+cliente**, no contra uno imaginario.
+
+### 0-quater. ✅ LO QUE ME LLEVO DE LA NOTA DE ETL DE JOSE
+
+La guía que mandó es correcta en general, pero **tres de sus cinco pasos ya no
+nos tocan**, y conviene decir cuáles para no construir algo que ya existe:
+
+- **«Nunca trabajes sobre la base original; guarda un ORIGINAL_NO_TOCAR»** → ya
+  pasa solo. Acopio **no toca el fichero del cliente**: lo lee del navegador,
+  lo parsea y escribe en la hoja. El Excel del cliente sigue intacto en su
+  disco. Y los datos de Acopio viven en **la hoja de Google del propio
+  cliente**, que ya tiene el historial de versiones de Google detrás.
+- **«Asigna un ID temporal para rastrear»** → ya existe y es mejor: cada
+  movimiento nace con su **`MOV_ID`** propio (`AC.MOV_ID`), y la importación
+  además escribe *"Imported from file"* en comentarios. Se puede rastrear
+  cualquier fila hasta su origen.
+- **«Carga de prueba con 20 productos antes de la masiva»** → **esto SÍ nos
+  falta y es barato**: un botón *«Import the first 20 as a test»* junto al
+  grande. El cliente ve 20 filas en su app de verdad, comprueba que se ven como
+  espera, y entonces pulsa el de 1.052. Lo anoto.
+- **«La prueba del ácido: suma antes = suma después»** → **ésta es la que
+  importa y es la que ya está en el punto 0.3.** Es la que habría cazado el
+  fallo de las 500 el primer día.
+- **«Estandarizar texto, quitar espacios, unificar mayúsculas»** → es
+  **exactamente el punto 3** de este barrido, llegando por el otro lado: la
+  lista de CONFIG con catorce copias del mismo nombre. Confirma que ese arreglo
+  no es un parche, es la pieza de limpieza que falta.
+
+---
+
 ### 1. 🔴 LA GRATIS DEJA BORRAR MOVIMIENTOS Y MANDA A UN SITIO QUE NO PUEDE ABRIR
 
 Jose, vídeo 3: *"la app básica me permite borrar movimientos pero no me permite
@@ -479,8 +676,28 @@ en el fichero se convierte en un estante fantasma permanente.
 1. **«Subir los datos uno por uno»** — eso ya existe y se llama **Entry**, y es
    mejor que un importador fila a fila. Lo que sí hace falta, y da el mismo
    control sin una pantalla nueva: **poder destildar filas** en la
-   previsualización para dejarlas fuera de esta importación. Propongo eso en su
-   lugar — decisión suya.
+   previsualización para dejarlas fuera de esta importación.
+
+   > **Jose, 22/10: *"explícame más sobre esto, no entiendo bien."***
+   >
+   > La previsualización de hoy es **todo o nada**: enseña las 1.052 filas y el
+   > único botón es «importar las 1.052». Si tres de ellas están mal —un
+   > material que ya no existe, una obra terminada, una cantidad que sabes que
+   > está mal contada— **no hay forma de dejarlas fuera** salvo abrir el Excel,
+   > borrarlas allí, guardarlo y volver a subirlo.
+   >
+   > «Destildar» es poner **una casilla al principio de cada fila**, marcadas
+   > todas de entrada. Quitas la marca de esas tres, y el botón pasa a decir
+   > **«Import 1.049 rows»**. Las tres se quedan en el fichero, intactas, para
+   > otro día.
+   >
+   > Por qué lo propongo en lugar de «subir uno por uno»: **es la misma idea
+   > tuya —decidir fila a fila qué entra— pero al revés**, y al revés es mucho
+   > menos trabajo. «Uno por uno» son 1.052 decisiones; destildar son 3. Y es
+   > la misma casilla que Movements ya tiene, así que no hay nada nuevo que
+   > aprender ni que construir.
+   >
+   > Decisión tuya: esto, o un importador fila a fila de verdad.
 2. **«Las que no existen se ponen en una lista para agregarlas luego»** —
    cuidado: eso sería una segunda lista de pendientes, y la app ya tiene una (la
    baraja de tarjetas). Pero sobre todo, **una fila cuya ubicación no existe no
@@ -600,6 +817,31 @@ y que yo sí construiría: que «todos» tome **sólo la primera tanda** (las 56
 salen antes de «cargar más»), no todo lo cargado. Predecible, explicable en una
 frase, y genuinamente más estrecho. Ésa es la alternativa de verdad; la de los
 píxeles es la que desaconsejo.
+
+> ✅ **JOSE, 22/10: *"para mí 56 sigue siendo un número muy grande, pongámosle
+> un número fijo nosotros mismos, 20… y si el usuario quiere seleccionar más,
+> luego baja, carga más y selecciona más."***
+>
+> **Mejor que lo mío, y se adopta — con una precisión.** Tal como está escrito
+> hay una contradicción pequeña: si «todos» toma *todo lo cargado*, con la
+> primera tanda tomaría 56, no 20. Lo que su idea pide de verdad **no es una
+> tanda: es un TOPE**.
+>
+> Así que: **«todos» marca como mucho 20, siempre**, y la barra dice lo que
+> hizo y ofrece seguir:
+>
+> > *20 of 1052 selected · **+ 20 more***
+>
+> Una sola regla que no cambia nunca: no depende del tamaño de la ventana, ni
+> del scroll, ni de cuántas tandas se hayan cargado. Y marcar más es un acto
+> deliberado cada vez, que es justo lo que él quiere.
+>
+> Y la pieza que lo hace cómodo en vez de pesado: **la forma correcta de marcar
+> «todas las de algo» no es la casilla, es el FILTRO**. Con el filtro puesto en
+> una obra quedan 15 filas en la tabla, el tope de 20 ni se nota, y lo marcado
+> es exactamente lo que se está mirando. La casilla es la herramienta tosca; el
+> filtro es la precisa. El aviso de confirmación debería decirlo cuando hay
+> filtro puesto: *«20 movements of project BIRCH POINT»*.
 
 ---
 
