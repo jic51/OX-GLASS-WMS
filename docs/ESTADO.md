@@ -26,10 +26,9 @@ contexto.
 | 3 | **Grabar V1, el vídeo del cronómetro** | Es el hueco más caro de la landing | una mañana |
 | 4 | **Decidir el precio de la Básica en la página** | El precio de Pro ya está decidido; la columna de la gratis no | 10 min de decisión |
 | 5 | **Una forma de agendar una llamada** | Hoy el camino muere en un correo | 20 min de configuración |
-| 6 | **¿La papelera se abre en la gratis?** | Hoy borras y no puedes deshacer: el aviso manda a una pestaña cerrada | 1 min de decisión |
-| 7 | **¿Qué dos nombres intentaste fusionar?** | Tengo la causa, pero no la puedo confirmar sin ellos | 1 min |
-| 8 | **¿Las filas importadas sin ubicación van a `RECEIVING`?** | Hoy caen en `UNASSIGNED`, que es una palabra del programa | 2 min de decisión |
-| 9 | **¿La página comprimida?** | 1.59 MB → 874 KB, 516 KB → 216 KB por la red. Cero cambios en el producto | 1 min de decisión |
+| 6 | **¿Las filas importadas sin ubicación van a `RECEIVING`?** | Hoy caen en `UNASSIGNED`, que es una palabra del programa | 2 min de decisión |
+| 7 | **La casilla «todos» de Movements** | Tres opciones, y la que tú propusiste no es la que yo construiría | 2 min de decisión |
+| 8 | **¿Destildar filas al importar, en vez de «subir uno por uno»?** | Da el mismo control sin una pantalla nueva | 1 min de decisión |
 
 ---
 
@@ -118,18 +117,40 @@ con números de línea, está en `docs/BACKLOG.md`, al principio.
 
 | # | Qué | Estado |
 |---|---|---|
-| 1 | [B] Borrar un movimiento manda a Settings → System, que en la gratis está cerrada | **causa encontrada** · hay que decidir si la papelera se abre en la gratis |
-| 2 | [B] Permissions, Directory e Import vuelven al abrir Ajustes | **causa encontrada** · `_filterSettingsSidebar` deshace lo que esconde la gratis |
-| 3 | Fusionar proyectos/suppliers falla si sólo cambian las mayúsculas | **causa encontrada** · me falta saber qué dos nombres elegiste |
-| 4 | El Error Log no enseña lo que acaba de pasar | **causa encontrada** · sí se guarda; la pantalla no vuelve a preguntar |
-| 5 | Importar sin ubicación deja material en `UNASSIGNED` | **medido** · tengo tres arreglos pequeños y una decisión para ti |
+| 1 | [B] Borrar un movimiento manda a Settings → System, que en la gratis está cerrada | ✅ **decidido**: la papelera se abre en la gratis, el respaldo sigue de pago |
+| 2 | [B] Permissions, Directory e Import vuelven al abrir Ajustes | ✅ **decidido**: Import **abierto, sólo CSV**; Permissions y Directory fuera (no por precio — en una edición de una persona no significan nada) |
+| 3 | Fusionar proyectos/suppliers falla | ✅ **confirmado con tu vídeo, y es peor**: fallan **las 28**, y la causa de fondo es que la lista tiene 14 filas idénticas |
+| 4 | El Error Log no enseña lo que acaba de pasar | ✅ **decidido**: se inserta **sólo la fila nueva**, sin repintar la ventana |
+| 5 | Importar sin ubicación | ✅ **tu rediseño se adopta** — elegir ubicación en la previsualización, una a una o por grupos |
 | 6 | Materials (Ajustes), como las alertas de stock bajo | anotado, sin empezar |
 | 7 | Directory (Ajustes), como la pantalla de usuarios | anotado, sin empezar |
-| 8 | La casilla «todos» de Movements | **así lo establecimos** · decisión tuya si cambia |
+| 8 | La casilla «todos» de Movements | 🔵 **tu decisión** · ni malo ni absurdo, pero el remedio que propongo es otro |
 
 **Mi recomendación: del 1 al 4, en una sola versión.** Son las cuatro pequeñas,
 las cuatro son «la app dice algo que no es verdad», y la 4 va dentro porque es
 la herramienta con la que se comprueban las otras tres.
+
+### ✅ La página recortada — HECHO el 22/10
+
+Aprobado por ti y ya está. **No cambia ni una línea del producto**: misma
+versión, mismo sello, mismo código. Lo único que cambia es que lo que se pega
+en Apps Script ya no lleva los comentarios.
+
+| | Antes | Ahora |
+|---|---|---|
+| `Index_v3_fixed.html` | 1.590 KB | **897 KB** |
+| `Code_v3_fixed.gs` | 813 KB | **400 KB** |
+| **Por la red (lo que esperas en 3G)** | **527 KB** | **225 KB** |
+
+Y lo que hacía falta arreglar antes de recomendártelo: la herramienta borraba
+también las líneas vacías, y el archivo pasaba de 30.246 líneas a 17.858. Eso
+rompe lo único que usamos para encontrar un fallo — tú mandas la captura de tu
+consola, yo leo «línea 19174» y voy ahí. **Ahora las líneas son las mismas**, y
+hay una prueba que comprueba que **cada una de las 1.181 funciones cae en la
+misma línea** que en el repositorio.
+
+**Lo que cambia para ti:** a partir de ahora pegas los archivos de la carpeta
+`pegar/` (te los mando aparte), no los del repositorio. Son el mismo producto.
 
 ---
 

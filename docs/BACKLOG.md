@@ -48,6 +48,18 @@ molesta; al final lo que a lo mejor ya está bien.
 
 ---
 
+> **DECISIONES DE JOSE, 22/10 — leídas después de este barrido:**
+>
+> | # | Qué decidió |
+> |---|---|
+> | 1 | ✅ **Sí: la papelera se abre en la gratis.** *"que sí se pueda devolver un borrado."* |
+> | 2 | 🔵 Pregunta devuelta a mí: ¿abrimos Import en la gratis? **Mi respuesta: sí, CSV; .xlsx no puede** (ver abajo) |
+> | 3 | ✅ Vídeo aportado — **causa confirmada y mayor de lo que creíamos** (ver abajo) |
+> | 4 | ✅ **Arreglar, y sin repintar la ventana entera: sólo la fila que falta.** |
+> | 5 | 🔵 Su rediseño mejora el mío — se adopta (ver abajo) |
+> | 8 | 🔵 Quiere probar «sólo las que se ven». Mi respuesta abajo |
+> | — | ✅ **La página recortada: aprobada y hecha el 22/10.** 527 KB → 225 KB por la red, cero cambios en el producto |
+
 ### 1. 🔴 LA GRATIS DEJA BORRAR MOVIMIENTOS Y MANDA A UN SITIO QUE NO PUEDE ABRIR
 
 Jose, vídeo 3: *"la app básica me permite borrar movimientos pero no me permite
@@ -82,6 +94,11 @@ distintos:
 
 Mi recomendación: **(a)**. Lo pequeño es (a); lo que vende es (a); y (b) hace la
 gratis más peligrosa que la de pago para la operación más frecuente.
+
+> ✅ **JOSE, 22/10: *"sí hazlo así, que sí se pueda devolver un borrado."*** →
+> Se separa la pestaña `system`: la **papelera** se abre en la gratis, el
+> **respaldo** sigue con candado. Y el candado de `system` deja de ser de la
+> pestaña entera para ser de la sección que de verdad es de pago.
 
 Hay una **tercera mitad del mismo asunto, y es nueva**: en la gratis la pestaña
 `system` está con candado, y la papelera, el reconstructor y el registro de
@@ -119,6 +136,82 @@ mencionado porque seguramente no llegó a mirarlas.
 **Décimo-octavo caso del patrón.** Y la tercera vez que aparece como «dos
 funciones mandan sobre el mismo `display` y gana la última»: `_escPintarBoton`
 contra `_basicPintar` el 19/10, la ✕ contra el ancho del campo el 21/10, y ésta.
+
+#### 2-bis. 🔵 ¿Y CUÁL DE LAS TRES SE ABRE? — pregunta de Jose, contestada
+
+Jose, 22/10: *"¿dejamos Import abierto para la básica y lo demás cerrado sólo
+para Pro, o lo dejamos todo sólo para Pro? Pienso que poder usar tus propios
+datos de tu bodega es una cosa muy buena y no sé si es demasiado buena como
+para cobrar por ella, o buena como para que el usuario la pueda usar desde el
+principio. Analiza los pros y contras."*
+
+**Primero, el hecho técnico, porque cambia la pregunta:**
+
+| | CSV | Excel (.xlsx) |
+|---|---|---|
+| Lo que usa | `Utilities.parseCsv` — **núcleo de Apps Script, cero permisos** | `UrlFetchApp` → Drive v3 + `DriveApp` |
+| Permisos que pide | ninguno | `drive` + `script.external_request` |
+| ¿Funciona en la gratis? | **Sí, hoy, tal cual** | **No, y no puede** |
+
+El manifiesto de la gratis pide **un solo permiso**:
+`spreadsheets.currentonly`. Añadir `drive` para que entre el Excel traería
+exactamente la pantalla de aviso de Google que la edición gratis existe para
+evitar. Así que «Excel sólo en Pro» no es una decisión de precio que nos
+inventemos: **es una consecuencia del modelo de permisos de Google**. Eso lo
+convierte en la mejor clase de límite que existe — uno que es verdad.
+
+**A favor de abrir el CSV en la gratis:**
+
+1. **Es el momento en que alguien adopta el producto.** Una app vacía es una
+   demostración; una app con SUS 600 materiales dentro es SU bodega. El salto
+   de «estoy probando esto» a «éste es mi sistema» ocurre en la importación, no
+   antes.
+2. **El coste de irse que crea juega a nuestro favor.** Una vez dentro sus
+   datos, marcharse es volver a teclear. Es la retención más fuerte que puede
+   comprar una edición gratis, y no nos cuesta nada por cliente.
+3. **Nadie compra un sistema de bodega que no pudo cargar.** Pedirle que teclee
+   600 filas a mano antes de poder juzgarlo es pedirle el trabajo más duro a
+   cambio de nada.
+4. **No nos cuesta dinero.** Y ésa es la línea que separa lo de pago de lo
+   gratis mejor que ninguna otra: respaldo (Drive), correo (cuota), lectura de
+   facturas (nuestra clave de IA) y usuarios **nos cuestan**. El CSV corre en
+   la cuota de Apps Script del propio cliente, en su propia hoja. **Coste
+   marginal cero.**
+5. **Desbloquea lo que llevamos un año sin hacer: migrar un Excel de verdad.**
+   Si importar es de pago, toda prueba de la gratis empieza vacía y nunca
+   aprendemos qué le hace un fichero real a la app.
+
+**En contra, y es real:**
+
+1. Alguien podría importar, usar la gratis para siempre y no pagar nunca. Pero
+   ¿qué NO tiene? Usuarios, permisos, respaldo, etiquetas, fotos, correo, IA,
+   llegadas, mínimos, escáner. **Una bodega de una persona que sólo necesita
+   una lista no era un cliente que fuéramos a tener**: habría usado una hoja de
+   cálculo.
+2. **El riesgo de soporte es el argumento serio.** Importar es lo que más
+   fácilmente sale mal con los datos desordenados de otro, y la gratis no tiene
+   correo para avisarnos. Pero eso no dice «ciérralo»: dice **«arregla el punto
+   5 antes de abrirlo»**.
+3. **Media importación es peor que ninguna.** Si la pantalla se abre y el
+   selector acepta un `.xlsx` que después revienta con un error de permisos,
+   eso es peor que un candado.
+
+**Mi recomendación, en tres líneas:**
+
+- **`import` → abierto en la gratis, sólo CSV.** El selector acepta `.csv` y
+  dice en una línea por qué el Excel no: *"Excel files need the Pro edition —
+  save your file as CSV and this works."* Verdad, corta, y vende sola.
+- **`permissions` y `pmdirectory` → siguen fuera, pero NO como candado de Pro.**
+  Y esto es lo que me parece que faltaba en la pregunta de Jose: **esas dos no
+  están escondidas por precio, están escondidas porque en una edición de una
+  sola persona no significan nada**. No hay usuarios a quien repartir permisos
+  ni jefes de obra a quien avisar. Ponerles un candado anunciaría algo que, aun
+  desbloqueado, no haría nada — y eso enseña a desconfiar de todos los demás
+  candados.
+- O sea: **las tres pestañas están fuera por dos motivos distintos, y sólo uno
+  de los dos es un precio.**
+
+---
 
 El arreglo barato es llamar a `_basicPintar()` al final de
 `_filterSettingsSidebar()`. **No lo haría así**, porque deja el duelo en pie y
@@ -176,11 +269,59 @@ grafía que Jose eligió. Sólo cuando `from` llega vacío **de verdad** (una so
 cosa seleccionada) tiene sentido el aviso — y entonces el botón no debería estar
 pulsable, que es donde se avisa de verdad.
 
-Lo comprobado y lo no comprobado, para no prometer de más: la causa está leída
-en el código y es coherente con los dos vídeos. **Lo que no he hecho es
-reproducirlo** con los nombres exactos de Jose — necesitaría los dos nombres que
-seleccionó. Si resultara que no se diferencian sólo en mayúsculas, la causa es
-otra y hay que volver aquí.
+#### 3-bis. ✅ EL VÍDEO DEL 22/10 CONFIRMA LA CAUSA — Y ENSEÑA UNA SEGUNDA, PEOR
+
+Jose mandó el vídeo. Lo que se ve, fotograma a fotograma:
+
+- Ajustes → **Projects**: *«20 possible duplicate projects found»*. El primer
+  grupo es **«ASPEN HOLLOW LOT 14» catorce veces**. El segundo, «BIRCH POINT
+  DUPLEX» trece veces.
+- Ajustes → **Suppliers**: *«8 possible duplicate suppliers found»*. «BLUE MESA
+  DISTRIBUTION» ×3, «CASCADE GLASSWORKS» ×3, «IRONWOOD WINDOWS» ×3, «NORTHGATE
+  SUPPLY» ×3, «FOUR PEAKS MILLWORK» ×2, «REDROCK BUILDING PRODUCTS» ×2…
+- Pulsa Merge en uno. Sale: **«Merge failed: Pick at least one other name to
+  merge in.»** Pulsa en otro. Lo mismo.
+
+**Los nombres de cada grupo se ven IDÉNTICOS en pantalla.** No hay
+`text-transform` en `.sim-opt`, así que se muestran tal como están guardados. Y
+`loadConfig` los recorta al leerlos (`Code_v3_fixed.gs:2802`), así que para
+cuando llegan al navegador son **la misma cadena, carácter por carácter**.
+
+Eso confirma la causa y la agranda: no es que fallen *algunas* fusiones. Son
+**las 28, todas**, porque los 28 grupos son duplicados exactos. La única
+herramienta que hay para limpiar esto se niega en el 100% de los casos que
+tiene delante.
+
+**Y aparece la segunda causa, que es la de verdad:** ¿quién metió catorce filas
+idénticas en CONFIG? **Nada en el camino de escritura comprueba duplicados**:
+
+- `loadConfig` (`:2802`) empuja cada fila sin mirar si ya está.
+- `writeConfigColumns_` (`:1432`) escribe lo que le den, tal cual.
+- El asistente de instalación (`:1297-1299`) vuelca los arrays del navegador
+  sin filtrar.
+- El **único** sitio que sí lo comprueba es el botón «añadir» de Ajustes
+  (`updateConfig`, `:13924`), que rechaza duplicados sin distinguir mayúsculas.
+
+O sea: la puerta de delante está cerrada con llave y las tres de atrás están
+abiertas. Es el mismo patrón otra vez — una protección escrita una vez y no
+aplicada en los demás caminos. Van **cinco** casos de esta forma concreta.
+
+**Así que el punto 3 son dos arreglos, no uno:**
+
+1. **Que la fusión acepte el caso.** Cuando `from` se queda vacío porque los
+   nombres son el mismo texto con otras mayúsculas o espacios, lo correcto no
+   es negarse: es **hacer el cambio de grafía**, que es literalmente el trabajo
+   de esta función. Sólo cuando se eligió una sola cosa tiene sentido avisar —
+   y entonces el botón no debería estar pulsable.
+2. **Que la lista no pueda tener dos veces lo mismo.** Un solo sitio por el que
+   pase toda escritura a CONFIG y que quite los repetidos sin distinguir
+   mayúsculas. Con eso, los 28 grupos de Jose desaparecen solos y no vuelven.
+
+Y una tercera, pequeña, que el vídeo deja ver: **un grupo de catorce nombres
+idénticos pide elegir «cuál conservar» entre catorce opciones que se ven
+iguales.** Es una pregunta imposible de contestar. Si son el mismo texto, no
+hay nada que elegir: el botón debería decir *«Son el mismo nombre escrito 14
+veces — dejar uno»* y ya está.
 
 ---
 
@@ -219,6 +360,21 @@ Arreglo: la pestaña pide la lista **cada vez que se entra**, enseñando lo que 
 tiene mientras llega lo nuevo (igual que el refresco silencioso de Ajustes, para
 que no parpadee). Y un botón de recargar visible, porque ésta es la pantalla en
 la que alguien está esperando a que aparezca una fila.
+
+> ✅ **JOSE, 22/10: *"tienes razón, debemos arreglar eso. Los errores deben
+> actualizarse de inmediato sin repintar toda la pantalla o ventana, sólo la
+> fila que falta."*** → Y añade una condición que yo no había puesto: **no se
+> repinta la tabla**. Se compara lo que llega con lo que hay —el `requestId` es
+> único por fila, así que sirve de identidad— y se **inserta arriba sólo lo
+> nuevo**, con la misma animación de entrada que usan la papelera y la baraja.
+> Es el mismo mecanismo que ya arregló «Restoring…» en la papelera: la pantalla
+> se dibuja desde una lista, no desde cero, así que un cambio no borra lo que
+> estabas mirando.
+>
+> Y hay un motivo técnico que lo hace aún más necesario de lo que parece: el
+> error **sale en la misma ventana de Ajustes en la que estás trabajando**. Un
+> repintado te sacaría de la pestaña, te movería el scroll, y perderías de vista
+> justo el grupo de duplicados que acabas de intentar fusionar.
 
 ---
 
@@ -280,6 +436,65 @@ que se permita, es que después no hay salida.
 `UNASSIGNED` se queda y lo que cambia es sólo que la app lo explique. Yo voto
 `RECEIVING`: una palabra que el almacenero reconoce, contra una que es del
 programa.
+
+#### 5-bis. ✅ EL REDISEÑO DE JOSE, 22/10 — ES MEJOR QUE EL MÍO, SE ADOPTA
+
+Jose: *"¿qué tal si al seleccionar un documento y subirlo para leerlo, la app
+hace lo mismo pero le da la opción al usuario de elegir la ubicación nueva o
+actual de cada uno de los materiales que está por subir? Al fin y al cabo es su
+bodega, y lo único nuevo es el programa, no las ubicaciones. Entonces elige las
+ubicaciones una por una o por grupos, y también le permitimos subir los datos
+uno por uno. ¿Y qué pasa si los datos del usuario ya vienen con ubicaciones
+establecidas pero no están en la lista de ubicaciones de la app?"*
+
+**Tiene razón y mi versión era peor.** Yo proponía UNA pregunta al final
+(«¿dónde van las N huérfanas?»). Él convierte la previsualización en **el sitio
+donde colocas tu bodega**, que es lo que esa pantalla tenía que haber sido
+siempre. La tabla ya existe, ya enseña todas las filas, ya tiene columna de
+validez: añadirle **una columna de Ubicación con desplegable** es el cambio más
+pequeño posible sobre el problema más grande.
+
+Y la frase que lo decide es suya: **«es su bodega, lo único nuevo es el
+programa, no las ubicaciones»**. Yo había escrito que crear ubicaciones desde
+el fichero era peligroso. Al revés: si el fichero dice `A1`, `RACK 3`, **ésas
+son sus estanterías**. Crearlas es lo correcto. Lo que faltaba es que las
+**vea antes** de que pase, para poder corregir una errata — porque una errata
+en el fichero se convierte en un estante fantasma permanente.
+
+**Lo que se adopta tal cual:**
+
+- Columna **Location** editable en la previsualización.
+- **Por grupos, y eso no es un extra: es lo que lo hace usable.** 600 filas de
+  una en una no es migrar, es teclear — exactamente de lo que les estamos
+  salvando. Y los grupos no hay que inventarlos: son **los que el fichero ya
+  trae** — por categoría («todas las WINDOW a A1»), por obra, por proveedor, o
+  por la ubicación que el fichero ya lleva. Seleccionar filas → *«Put these
+  in…»* → un desplegable. Es **la misma barra de marcar‑y‑actuar que
+  Movements ya tiene**; no hay nada nuevo que inventar.
+- Las ubicaciones del fichero **que no existen se crean**, con los nombres del
+  fichero.
+
+**Donde discrepo, y es poco:**
+
+1. **«Subir los datos uno por uno»** — eso ya existe y se llama **Entry**, y es
+   mejor que un importador fila a fila. Lo que sí hace falta, y da el mismo
+   control sin una pantalla nueva: **poder destildar filas** en la
+   previsualización para dejarlas fuera de esta importación. Propongo eso en su
+   lugar — decisión suya.
+2. **«Las que no existen se ponen en una lista para agregarlas luego»** —
+   cuidado: eso sería una segunda lista de pendientes, y la app ya tiene una (la
+   baraja de tarjetas). Pero sobre todo, **una fila cuya ubicación no existe no
+   puede esperar**: tiene que ir a algún sitio en el momento en que se importa,
+   o la cantidad queda mal. Así que el «luego» no puede ser sobre *si* existen.
+   Lo que sí puede ser —y es lo que construiría— es **«luego» sobre su nombre y
+   su grupo**: se crean con el nombre del fichero, y una tarjeta dice *«esta
+   importación creó 7 ubicaciones nuevas — revisa los nombres y ponlas en un
+   grupo»*. Es su idea, en la forma que la app ya usa, y sin dejar nada sin
+   sitio.
+3. **Y lo que no dijo ninguno de los dos:** la previsualización tiene que decir
+   **qué va a crear ANTES de confirmar**, no después. Una línea encima del
+   botón: *«This will also create: 7 locations, 3 categories»*. Hoy eso se
+   cuenta al terminar, que es cuando ya no se puede hacer nada.
 
 ---
 
@@ -346,14 +561,45 @@ alternativa es *«sólo las que caben en la pantalla ahora mismo»*, que yo **no
 recomiendo: depende del tamaño de la ventana, cambia al girar el teléfono, y
 convierte una casilla en algo que no se puede predecir.
 
-Y lo del **«error»**: no he encontrado ninguno. Marcar una casilla llama a
-`toggleMovSelect` → `_syncMovSelectAll` → `_updateMovActionBar`, y ninguna de
-las tres puede fallar por sí sola. Lo más parecido a un error en esa barra es
-que en la gratis el botón **🏷 Labels** lleva candado de Pro
-(`BASIC_PRO_BOTONES.btnMovLabels = 'etiquetas'`), así que marcar filas y pulsarlo
-saca el aviso de Pro — que es correcto, pero **parece** un error justo después de
-marcar. **Me hace falta el segundo del vídeo, o el texto exacto**, antes de
-afirmar nada.
+Y lo del **«error»**: ✅ **resuelto — no había ninguno.** Jose, 22/10: *"no me
+dio ningún error al hacerlo, sólo me pareció riesgoso poder elegir todas las
+que están en la lista."* Era preocupación, no fallo.
+
+#### 8-bis. 🔵 «SÓLO LAS QUE SE VEN» — ¿ES UN CAMBIO MALO O ABSURDO?
+
+Jose: *"¿qué tal si sólo se eligen las que están a la vista, y no todas? ¿Crees
+que es un cambio malo o un cambio absurdo?"*
+
+**Ni malo ni absurdo. El miedo es correcto; el remedio es el que yo cambiaría.**
+
+El problema es qué quiere decir *«a la vista»*, porque hay dos y sólo una se
+puede construir:
+
+- **«Las filas que la tabla tiene cargadas»** = lo que hace hoy. Es estable: no
+  cambia si giras el teléfono ni si haces zoom.
+- **«Las filas cuyos píxeles están dentro de la ventana ahora mismo»** = depende
+  del tamaño de la ventana, cambia al rodar la rueda, cambia al girar el
+  teléfono, cambia si el navegador tiene el zoom al 110%. **Una casilla cuyo
+  significado cambia al hacer scroll es una casilla que nadie puede predecir** —
+  y lo impredecible es más peligroso que lo excesivo, porque con lo excesivo al
+  menos ves el número.
+
+Así que la pregunta no es «¿menos filas?» sino **«¿cómo hago imposible marcar
+sin darme cuenta de cuántas?»**. Tres cosas pequeñas, las tres baratas:
+
+1. El botón dice **«Delete 47 movements»**, no «Delete». El número en el botón
+   que lo hace, no en una esquina.
+2. El aviso de confirmación nombra también lo que **no se ve**: *«47 movements —
+   everything loaded right now, including 20 you would have to scroll to see»*.
+3. Y la protección que ya existe y nadie sabe que existe: **borrar va a la
+   papelera**. Con el punto 1 de este barrido hecho, eso es verdad también en
+   la gratis.
+
+**Y si aun así quiere una red más estrecha**, hay una versión que sí es estable
+y que yo sí construiría: que «todos» tome **sólo la primera tanda** (las 56 que
+salen antes de «cargar más»), no todo lo cargado. Predecible, explicable en una
+frase, y genuinamente más estrecho. Ésa es la alternativa de verdad; la de los
+píxeles es la que desaconsejo.
 
 ---
 
