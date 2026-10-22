@@ -62,6 +62,87 @@ molesta; al final lo que a lo mejor ya está bien.
 
 ---
 
+## 🔴 TERCERA RONDA DEL 22/10 — EL CANDADO QUE AUDITÉ Y SE ME ESCAPÓ
+
+### 0-quinquies. **«SEND NOTIFICATION EMAIL» CONTESTA «READ IT FROM THE EMAIL»**
+
+Jose, con dos capturas: *"otra vez, al tocar lo de enviar notificación sale un
+mensaje sobre leer desde el email, lo cual no tiene nada que ver, porque leer
+desde el email es sobre usar IA y enviar una notificación es usar el email."*
+
+Tiene razón, y son **direcciones opuestas**: una lee lo que llega, la otra
+manda lo que sale.
+
+**La causa: una sola oferta haciendo dos trabajos.**
+
+```js
+correo: { titulo: '📧 Read it from the email',
+          que: 'Paste a supplier email and the app fills in what is arriving…' }
+```
+
+y está enganchada a tres sitios (`:28335, :28336, :28203`):
+
+| Qué se pulsa | Qué hace de verdad | ¿El mensaje habla de eso? |
+|---|---|---|
+| `btnFromEmail` «📧 From an email» | **leer** un correo | ✅ sí |
+| `btnReadEmail` «Read it» | **leer** un correo | ✅ sí |
+| `notifySection` «Send notification email» | **mandar** un correo | ❌ **no** |
+
+**Y lo peor no es el fallo: es que esto es justo lo que audité el 21/10 y di
+por cerrado.** Mi repaso recorrió `BASIC_PRO_BOTONES` —la lista de
+botones— y **no tocó `BASIC_PRO_ZONAS`**, que es la lista de zonas. Hice que
+una lista concordara y dejé la otra sin mirar.
+
+**Y la prueba que existe para impedir exactamente esto tiene el mismo agujero.**
+`test-candados-hablan-de-lo-mismo.js` carga las dos listas, pero sobre las
+zonas sólo comprueba una cosa (`:133`):
+
+```js
+const zonasRotas = Object.keys(ZONAS).filter(z => !OFERTAS[ZONAS[z]]);
+```
+
+o sea: **que la zona apunte a una oferta que existe**. No comprueba que la
+oferta *hable de lo mismo* — que es literalmente el nombre de la prueba. El
+cotejo de palabras, que es lo que caza este fallo, sólo corre sobre los
+botones.
+
+Así que van **tres niveles del mismo descuido**: el mapa, mi auditoría del mapa,
+y la prueba que vigila el mapa. Los tres miraban los botones y los tres
+ignoraban las zonas.
+
+**El arreglo son dos cosas y la segunda importa más:**
+
+1. **Separar la oferta en dos.** `correo` deja de significar «correo» y pasa a
+   ser **`leercorreo`** (leer un correo de proveedor) y **`avisarcorreo`**
+   (avisar al guardar un movimiento). Dos cosas distintas, dos mensajes.
+2. **Que la prueba mire las zonas con el mismo rasero que los botones**: sacar
+   el texto que la persona LEE en esa zona (`Send notification email`) y exigir
+   que comparta palabra con la oferta. Sin esto, el arreglo 1 dura hasta la
+   próxima oferta que alguien reutilice.
+
+Tamaño: pequeño. **Entra en la v12.91 con el 1 y el 2**, porque es del mismo
+tipo —la app contesta algo que no es verdad— y porque dejarlo esperando a la
+v12.93 significa que Jose lo seguirá viendo cada vez que abra la gratis.
+
+### 0-sexies. 🔵 LA CASILLA «TODOS»: REVISADA POR JOSE, **NO ES UN PROBLEMA HOY**
+
+Jose, 22/10, después de mirarlo en la app: *"estoy revisando lo que hace la app
+al marcar todas en este momento y me parece que debemos dejarlo así… arriba
+tiene en texto «x selected» y abajo dice «x of xx records», entonces creo que
+por ahora no es un gran problema. Anota en la lista que vamos a revisarlo para
+hacerlo mejor, pero que por ahora no es un problema."*
+
+**Se queda como está. Sale de la lista de arreglos y pasa a «revisar más
+adelante».** Y su razón es la correcta: los dos contadores que ya existen
+—«x selected» arriba y «x of xx records» abajo— son justo la protección que yo
+proponía añadir. Ya estaban puestos; lo que faltaba era mirarlos.
+
+Lo que queda anotado para cuando se retome: el tope de 20 con «+20 more», y que
+**el filtro es la vía precisa** para marcar «todas las de algo» — con un filtro
+puesto, lo marcado es exactamente lo que se está mirando.
+
+---
+
 ## 🥇 EL ORDEN EN QUE YO LO HARÍA — todo lo de la sesión del 22/10
 
 Pedido por Jose: *"dame la lista de lo que arreglarías en el orden que lo
@@ -75,16 +156,19 @@ le miente al cliente, y al final lo que molesta.
 | Orden | Qué | Por qué ahí | Versión |
 |---|---|---|---|
 | **1** | **Importar pierde las filas pasada la 500** y el botón promete todas | Pérdida de datos silenciosa, hoy, en la captura de Jose. Nada más de esta lista destruye información | v12.91 |
-| **2** | **La pantalla de importar dice la verdad**: un solo número, todas las columnas que el fichero traía, qué va a crear ANTES de confirmar, y la suma antes/después | Es la otra mitad del 1: sin esto, el 1 se arregla y nadie puede comprobarlo | v12.91 |
-| **3** | **Fusionar nombres, las dos mitades**: que acepte el cambio de grafía, y que la lista no pueda tener dos veces lo mismo | Los 28 grupos de Jose fallan **todos**, y la causa de fondo sigue rellenando la lista mientras no se tape | v12.92 |
-| **4** | **El Error Log, en vivo y sin repintar** | Es el instrumento con el que se diagnostica lo demás. Va aquí y no antes porque el 1 y el 3 ya tienen su causa encontrada | v12.92 |
-| **5** | **Un solo dueño de la visibilidad de las pestañas de ajustes** + **papelera abierta en la gratis** + **Import abierto (CSV)** | Las tres son el mismo mecanismo. Hacerlas por separado es garantizar que el duelo por `display` vuelva una cuarta vez | v12.93 |
-| **6** | **El tope de 20 en «todos»**, con *+20 more* y el filtro como la vía precisa | Pequeño, cerrado, y quita un miedo real de Jose | v12.93 |
-| **7** | **Importar, de verdad**: ubicación por fila y por grupos en la previsualización, destildar filas, las ubicaciones nuevas con tarjeta, y el «importa 20 de prueba» | Es la grande. Va después del 1 y el 2 porque sobre una pantalla que miente no se construye nada | v12.94+ |
-| **8** | **Materials (Ajustes)**, como las alertas de stock bajo | Trabajo de pantalla, sin nada roto debajo | — |
-| **9** | **Directory (Ajustes)**, como la pantalla de usuarios | Igual, y además un nombre mal escrito aquí rompe un envío en silencio | — |
+| **2** | **El mismo fichero dos veces duplica el almacén**: avisar antes (huella) + **poder deshacer una importación** | Pregunta de Jose, y el agujero es real. El «Undo» es además lo que vuelve segura toda la función | v12.91 |
+| **3** | **La pantalla de importar dice la verdad**: un solo número, todas las columnas que el fichero traía, qué va a crear ANTES de confirmar, y la suma antes/después | Es la otra mitad del 1: sin esto, el 1 se arregla y nadie puede comprobarlo | v12.91 |
+| **4** | **«Send notification email» contesta sobre LEER el correo** — partir la oferta en dos, **y que la prueba mire las zonas igual que los botones** | Jose lo ve cada vez que abre la gratis, y es lo que yo di por auditado el 21/10 | v12.91 |
+| **5** | **Fusionar nombres, las dos mitades**: que acepte el cambio de grafía, y que la lista no pueda tener dos veces lo mismo | Los 28 grupos de Jose fallan **todos**, y la causa de fondo sigue rellenando la lista mientras no se tape | v12.92 |
+| **6** | **El Error Log, en vivo y sin repintar** | Es el instrumento con el que se diagnostica lo demás. Va aquí y no antes porque el 1 y el 5 ya tienen su causa encontrada | v12.92 |
+| **7** | **Un solo dueño de la visibilidad de las pestañas de ajustes** + **papelera abierta en la gratis** + **Import abierto (CSV)** | Las tres son el mismo mecanismo. Hacerlas por separado es garantizar que el duelo por `display` vuelva una cuarta vez | v12.93 |
+| **8** | **Importar, de verdad**: ventana propia, ubicación por fila y por grupos, destildar filas, tarjeta de ubicaciones nuevas, «importa 20 de prueba» | Es la grande. Va después del 1-3 porque sobre una pantalla que miente no se construye nada | v12.94+ |
+| **9** | **Materials (Ajustes)**, como las alertas de stock bajo | Trabajo de pantalla, sin nada roto debajo | — |
+| **10** | **Directory (Ajustes)**, como la pantalla de usuarios | Igual, y además un nombre mal escrito aquí rompe un envío en silencio | — |
 | — | ~~La página recortada~~ | ✅ **HECHA el 22/10** · 527 KB → 225 KB por la red | v12.90 |
+| — | ~~El tope de 20 en «todos»~~ | 🔵 **Jose lo revisó el 22/10 y lo deja como está.** Pasa a «revisar más adelante»: los contadores que ya hay («x selected», «x of xx records») son la protección que yo iba a añadir | — |
 | — | **Importar el HISTORIAL** (fechas, tipos de movimiento, quién) | 🔵 **Decisión de Jose.** No es una columna más, es otra función. Mi voto: sólo con un cliente real delante | — |
+| — | **¿Se bloquea importar en el teléfono?** | 🔵 **Decisión de Jose.** Mi voto: no bloquear, avisar fuerte — y si se bloquea, que sea **después** del «Undo», no en lugar de él | — |
 
 **Dos cosas que NO están en esta lista, y conviene decir por qué:** la tarjeta
 de ajuste que no se puede borrar y los incomings por separado siguen anotados
@@ -155,6 +239,77 @@ eso esto lleva ahí sin que nadie lo viera.
    lo dice con los dos números — *«1052 rows, 48.310 units expected · 1052 rows,
    48.310 units written»*. Es una línea de cuenta y es lo único que convierte
    «confío en que fue bien» en «lo comprobé».
+
+### 0-ante. 🔴 **EL MISMO FICHERO SUBIDO DOS VECES DUPLICA EL ALMACÉN, EN SILENCIO**
+
+Jose, 22/10, antes de dejarme empezar: *"¿cómo maneja la app que alguien suba el
+mismo archivo de inventario 2 veces? ¿Y si alguien se olvida y lo hace 2 veces?
+No podemos dejar que eso pase, porque si bien eso es culpa del usuario, lo más
+fácil para él será culpar a la app y hablar mal de ella y dejar de usarla."*
+
+**Pregunta certera, y la respuesta es la mala.** Hoy no pasa nada: se importa
+otra vez, entero. 1.052 filas más, existencias dobladas, y **ni un aviso**.
+
+La causa está escrita y además está argumentada — `commitImport`, `:9695-9698`:
+
+```js
+// A bulk import legitimately contains similar-looking rows (same
+// category, same rack, different SKUs entered close together); the
+// duplicate guard exists to catch an accidental double-click, not this.
+forceSubmit: true
+```
+
+Ese razonamiento es **correcto dentro de un fichero** y hay que conservarlo: en
+un Excel real hay filas que se parecen y son distintas. Pero **apaga la guardia
+para todo**, así que tampoco queda nada mirando *entre* importaciones. La
+protección contra el doble clic se quitó, con motivo, y no se puso ninguna en
+su lugar.
+
+Y Jose pone el dedo en lo que de verdad cuesta: **da igual de quién sea la
+culpa.** Quien ve su almacén con el doble de todo no piensa «subí el fichero
+dos veces», piensa «esta app cuenta mal». Y de ahí no se vuelve.
+
+**El arreglo son DOS mitades, y hacen falta las dos.**
+
+**(a) Avisar antes — reconocer el fichero.**
+Al importar se guarda una **huella** del fichero: número de filas, suma total
+de cantidades y un resumen del contenido. Va donde ya se escribe el hecho,
+en la entrada `BULK_IMPORT` del registro de auditoría — no hace falta almacén
+nuevo. Al previsualizar, si esa huella ya está, la pantalla lo dice antes de
+cualquier botón:
+
+> ⚠ **You already imported this exact file 12 minutes ago** — 1.052 rows,
+> 48.310 units, by jose@ox-glass.com.
+> Importing it again **adds all of it a second time**; it does not replace
+> anything.
+> *[Cancel] [Import it again anyway]*
+
+Y es la misma regla que Jose eligió para la devolución con sobrante el 21/10:
+**avisar, dejar pasar y anotarlo.** No se bloquea, porque hay un caso legítimo
+—importé, borré todo, lo quiero rehacer— y bloquearlo sería decirle a alguien
+que no puede hacer con sus datos lo que quiere.
+
+**(b) Poder deshacerlo después — y ésta es la que de verdad cierra el agujero.**
+Un aviso sólo protege a quien lo lee. Quien pulse «anyway» sin pensar, o quien
+lo haga desde otra cuenta, se queda hoy con **1.052 movimientos que habría que
+borrar uno a uno**.
+
+Cada fila importada ya lleva *"Imported from file"* en comentarios, pero eso no
+distingue una importación de otra. Con **la huella escrita también en cada fila
+de esa tanda**, aparece la operación que falta:
+
+> Settings → System → **Last imports**
+> · 22 Oct, 14:03 — 1.052 rows, 48.310 units — jose@ox-glass.com — **[Undo]**
+
+«Undo» borra esa tanda, y **va a la papelera como cualquier otro borrado**, así
+que ni siquiera deshacer es definitivo.
+
+**Y (b) hace algo más, que es por qué la pongo en la misma versión que (a):**
+es lo que vuelve **segura toda la función de importar**, en cualquier aparato y
+con cualquier descuido. Con deshacer, una importación mal hecha desde el móvil
+se arregla en un botón. Sin deshacer, ni una importación cuidadosa desde el
+ordenador está a salvo — y ésa es también la respuesta a si bloqueamos el móvil
+(ver 0-ter-bis).
 
 ### 0-bis. 🔴 LA PANTALLA ENSEÑA MENOS DE LA MITAD DE LO QUE IMPORTA
 
@@ -228,6 +383,54 @@ ello.** Porque (B) sin un cliente real delante es construir a ciegas sobre un
 formato que nos inventaríamos nosotros — y la nota de Jose sobre ETL dice
 exactamente eso en su punto 2: el mapeo se hace **contra el fichero del
 cliente**, no contra uno imaginario.
+
+### 0-ter-bis. ✅ IMPORTAR EN SU PROPIA VENTANA — idea de Jose, aceptada
+
+Jose: *"tal vez sea mejor abrir una nueva ventana sobre la de Settings cuando
+se lea el inventario del usuario, para poder manejar todo mejor y con más
+espacio… así podemos darle más libertad en computadora para hacer el arreglo.
+En teléfono no creo que sea bueno dejar esa opción, porque tal vez se cree
+algún inconveniente al no ver bien y no arreglar todo bien."*
+
+**La ventana: sí, y es necesaria, no cómoda.** Haz la cuenta de lo que esa
+pantalla tiene que tener después del punto 7: una fila por material, **un
+desplegable de ubicación en cada fila**, una casilla en cada fila, la barra de
+«pon estas N en…», las nueve columnas del fichero, y el resumen de lo que va a
+crear. Eso no cabe en el panel de Ajustes, que tiene la barra lateral comiéndose
+la izquierda y deja unos 600 px. La app ya tiene ventanas a pantalla completa
+—la de movimiento— y ése es el sitio.
+
+**Lo del teléfono: su preocupación es correcta, pero yo no lo bloquearía.** Y
+tengo un motivo concreto, no una preferencia:
+
+- Bloquear deja un **callejón sin salida en el primer minuto**, en el aparato
+  que la mayoría tiene en la mano. Es exactamente el argumento con el que
+  decidimos abrir Import en la gratis: nadie compra un sistema que no pudo
+  cargar. Cerrarlo en el teléfono se contradice con eso.
+- Un fichero de 20 filas se importa perfectamente desde un teléfono. La regla
+  «en teléfono no» castigaría ese caso por culpa del de 1.052.
+- **Y sobre todo: lo que hace peligroso el teléfono no es la pantalla, es que
+  no se pueda deshacer.** Con el «Undo» del punto 0-ante, una importación mal
+  hecha desde el móvil se arregla en un botón. **La red de seguridad resuelve
+  el miedo mejor que la prohibición**, y además resuelve el caso que la
+  prohibición no toca: la importación mal hecha desde el ordenador.
+
+**Lo que sí haría en pantalla estrecha**, que es su idea bien dirigida:
+
+1. Una línea honesta arriba: *"Checking 1.052 rows is much easier on a computer
+   — open Acopio there and come back to this screen."* Informa sin cerrar la
+   puerta.
+2. **La herramienta principal en el teléfono es el grupo, no la fila.** Con el
+   pulgar no se eligen 1.052 ubicaciones una a una, pero sí se dice «todas las
+   WINDOW a A1». La barra de grupos arriba, la tabla debajo para revisar.
+3. Y si el fichero pasa de un tamaño razonable (pongamos 200 filas) en pantalla
+   estrecha, el aviso sube de tono: deja de ser una línea gris y pasa a ser un
+   cartel que hay que aceptar. **Avisar fuerte ≠ prohibir** — y es la misma
+   regla que ya usamos en todo lo demás.
+
+**Decisión pendiente de Jose:** si aun así prefiere bloquearlo en el teléfono.
+Es su producto. Lo que pido es que, si se bloquea, sea **después** de que exista
+el «Undo», no en lugar de él.
 
 ### 0-quater. ✅ LO QUE ME LLEVO DE LA NOTA DE ETL DE JOSE
 
@@ -407,6 +610,36 @@ convierte en la mejor clase de límite que existe — uno que es verdad.
   candados.
 - O sea: **las tres pestañas están fuera por dos motivos distintos, y sólo uno
   de los dos es un precio.**
+
+---
+
+> **Jose, 22/10: *"no entiendo esto, explícame."*** (sobre por qué el dueño
+> único, la papelera y el Import van juntos y no por separado)
+>
+> **No son tres cosas: son una regla y tres decisiones que dependen de ella.**
+>
+> El fallo de este punto es que **dos funciones escriben `display` sobre los
+> mismos botones** y gana la que corra última. `_basicPintar` esconde tres
+> pestañas; `_filterSettingsSidebar` las vuelve a enseñar todas para un ADMIN.
+> Ninguna de las dos sabe que la otra existe.
+>
+> Ahora mira lo que decidimos hoy: **abrir la papelera en la gratis** es cambiar
+> esa misma regla. **Abrir Import en la gratis** es cambiar esa misma regla
+> otra vez. Son tres cambios a lo mismo.
+>
+> Si los hago por separado, cada uno añade **otro sitio que escribe `display`**
+> sobre esos botones: pasaría de dos dueños a cuatro. Y con cuatro, quién gana
+> depende del orden en que se llamen — que es exactamente cómo esto ya volvió
+> dos veces.
+>
+> Si primero hago **el dueño único** —una función que conteste «¿se ve esta
+> pestaña?» mirando las tres reglas a la vez: rol, permiso y edición— entonces
+> abrir la papelera es **una línea** en esa función, y abrir Import es **otra
+> línea**. Las dos decisiones quedan escritas en un sitio donde nadie puede
+> contradecirlas por accidente.
+>
+> Dicho en corto: **hacer primero la regla cuesta lo mismo y hace imposible la
+> cuarta vez.** Hacer las tres sueltas es barato hoy y garantiza volver aquí.
 
 ---
 
