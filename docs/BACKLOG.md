@@ -143,6 +143,152 @@ puesto, lo marcado es exactamente lo que se está mirando.
 
 ---
 
+## 🚨 CUARTA RONDA DEL 22/10 — BORRAR 490 SON 490 PETICIONES, Y NO SE PUEDEN PARAR
+
+### 0-pre. 🔴 **BORRAR EN TANDA ES UNA PETICIÓN POR FILA, SIN FRENO Y SIN FORMA DE PARARLO**
+
+Dos vídeos de Jose, 22/10, después de importar 1.052 filas en una versión que
+todavía no tenía el «Undo». Hizo lo único que había: marcar todo y Delete.
+
+**Lo que se ve, cronometrado sobre sus propios vídeos:**
+
+| Momento | Lo que dice la pantalla |
+|---|---|
+| al pulsar | `490 selected` → Delete |
+| 3 min 37 s después | **`Deleting movements... 4 of 490`** |
+| ~6 min | `474 of 490` |
+| al final | **`450 moved to the trash · 40 could not be deleted`** |
+| y encima | **dos avisos apilados**: *«Too many requests — please wait a moment and try again. — the row is back where it was.»* |
+
+Jose: *"no hay forma de pararlos ni borrar lo que la app ya está haciendo"*. Y
+no la hay: **nada en toda la app vacía `_delQueue`**. Una vez pulsado, se mira.
+
+(Él mismo apunta que tenía la red a 3G en el inspector. Eso explica la
+lentitud; **no explica las otras tres faltas**, que están ahí a cualquier
+velocidad.)
+
+**LAS CUATRO FALTAS, CADA UNA CON SU LÍNEA:**
+
+**1. Una petición por fila, y cada una reconstruye el almacén.**
+`_delEnqueue` → `_delPump` (`Index:10149-10159`) procesa de una en una, y cada
+`deleteRow` del servidor recalcula las hojas derivadas. 490 filas son 490
+viajes. En banda ancha son minutos; en la 3G de su vídeo, **4 filas en 3
+minutos y medio** — a ese ritmo, 490 serían **siete horas**.
+
+Y la ironía: la cola de uno en uno se construyó **a propósito** en la v11.58,
+porque pedir veinte reconstrucciones de golpe daba «System busy». Era la
+respuesta correcta para veinte. **Para 490 es la respuesta equivocada**, y
+nadie volvió a mirarla cuando apareció «marcar todas».
+
+**2. La app se salta su propio límite de peticiones, y luego culpa al usuario.**
+`processMovement` tiene `requireQuota_('pm', auth.email, 240, 60)`
+(`Code:3751`) — **240 llamadas por minuto**. 490 borrados en ráfaga lo
+atraviesan, y el servidor contesta *«Too many requests — please wait a moment
+and try again»* (`Code:2184`).
+
+Esa frase está escrita para una persona que insiste. **Aquí quien insistió fue
+la app**, y le dice a Jose que espere un momento por algo que él no hizo y no
+puede evitar. Un límite contra inundaciones disparado por nuestra propia
+inundación.
+
+**3. «Too many requests» NO se reintenta, y debería.**
+`_isBusyError` (`Index:11585`) sólo reconoce `SYSTEM_BUSY|`. El mensaje de
+cuota no lleva esa marca, así que cae por la rama de fallo definitivo: la fila
+vuelve, sale un aviso y se cuenta como no hecha. Hay un reintento con espera
+creciente —ocho intentos, hasta 8 s— **y este caso no lo usa**, cuando es el
+que más lo merece: «demasiadas peticiones» se arregla solo esperando.
+
+**4. Los avisos idénticos se apilan.**
+En la captura hay **dos** iguales a la vez, encima de la barra superior. Si
+hubieran fallado 40 filas de golpe serían 40 avisos. La v12.85 arregló esto
+para el candado de Pro con `_proToast`; los avisos de error siguen sin
+agruparse.
+
+**Y el resultado que queda:** 450 fuera, 40 dentro, mezcladas entre las demás
+y sin ninguna forma de saber cuáles son. El trabajo termina a medias y la
+pantalla no dice cómo acabarlo.
+
+---
+
+### 0-pre-bis. ✅ LA MITAD DE ESTO SE ARREGLÓ AYER — Y LA OTRA MITAD NO
+
+**Para su caso exacto —deshacer una importación— la v12.91 ya lo resuelve.**
+`undoImport` hace **una** llamada: lee la hoja una vez, escribe las filas en la
+papelera de una tacada y reescribe la hoja sin ellas. Lo que le costó seis
+minutos y 40 fallos, ahora es un botón y una petición.
+
+**Pero borrar 490 movimientos elegidos a mano sigue siendo 490 peticiones.** Y
+ése es el agujero de verdad, porque no depende de que vengan de una
+importación.
+
+**EL ARREGLO, Y YA ESTÁ ESCRITO MEDIO:**
+
+**(a) Borrar en tanda, de verdad.** Un `deleteMovements(movIds)` con la misma
+forma que `undoImport`: una lectura, una escritura a la papelera, una
+reescritura de la hoja. 490 filas pasan de 490 viajes a **uno**. Desaparecen
+las cuatro faltas de arriba a la vez — la lentitud, la cuota, los avisos
+apilados y el resultado a medias.
+
+**(b) Por trozos, porque el techo de Apps Script es real.** Seis minutos por
+ejecución. Una tanda de 200 filas va holgada; 5.000 de una no. Así que la
+tanda se parte en trozos de 200 y la línea de progreso cuenta trozos en vez de
+filas. Son 3 peticiones para 490, no 490.
+
+**(c) Un botón de PARAR en la línea de progreso.** Vacía la cola y se detiene
+al acabar el trozo que esté en el aire. Y dice la verdad al parar: *«Stopped —
+200 of 490 deleted. The other 290 are untouched.»* Con trozos esto es honesto;
+con 490 peticiones sueltas, «parar» siempre dejaba un número impredecible.
+
+**(d) Que «Too many requests» cuente como ocupado.** Una línea en
+`_isBusyError`. Con (a) deja de pasar casi siempre, pero sigue siendo la
+respuesta correcta: lo que se arregla esperando, se espera.
+
+**(e) Agrupar los avisos idénticos.** Mismo mecanismo que `_proToast`: uno
+solo, con un contador, en vez de cuarenta.
+
+**Y UNA COSA QUE ME TOCA DECIR DE LO QUE ENVIÉ AYER:** `undoImport` hace su
+trabajo en una sola ejecución **sin partir en trozos**. Para las tandas que
+tenemos delante (1.052 filas) va sobrado — es una lectura y dos escrituras—,
+pero **no está medido para 10.000**. El trozo de (b) tiene que aplicarse
+también ahí, y lo anoto como parte del mismo trabajo en vez de esperar a que
+alguien se lo encuentre.
+
+---
+
+### 0-pre-ter. 🔵 QUÉ PASA SI TE VAS A OTRA PESTAÑA — medido, no supuesto
+
+Jose: *"¿se pone offline la app y se para lo que está haciendo? ¿No se para
+nunca hasta terminar? Si se para, ¿se reanuda cuando se regresa?"*
+
+Las tres respuestas, leídas en el código:
+
+**¿Lo paramos nosotros? No.** Lo único de la app que mira si la pestaña está
+escondida es el latido (`_pulseOnce`, `Index:30312`: `if (document.hidden)
+return;`), y eso sólo deja de preguntar si otra persona cambió algo. **La cola
+de borrados no mira nada**: sigue igual.
+
+**¿Lo para el navegador? A medias, y sin decirlo.** Chrome frena los
+temporizadores de las pestañas de fondo —los `setTimeout` del reintento
+(`_busyDelay`, hasta 8 s) se alargan— y una pestaña escondida el tiempo
+suficiente puede **congelarse entera**. La petición que ya salió termina; la
+siguiente puede tardar mucho más de lo que tardaría delante.
+
+**¿Se reanuda al volver? Sí, pero por accidente.** Como nada se detuvo a
+propósito, nada tiene que reanudarse: si Chrome congeló la pestaña, al volver
+sigue por donde iba. **No hay ningún estado que diga «esto quedó a medias»**.
+
+**Y la respuesta que importa, que Jose no preguntó pero es la peor: si cierras
+la pestaña, la cola se muere con ella.** 200 borradas, 290 no, y **nada en
+ningún sitio recuerda que había un trabajo sin terminar**. Al volver a abrir,
+la app no sabe que pasó nada.
+
+Con el arreglo (a)+(b) esto deja de ser un problema grande por construcción:
+tres peticiones en vez de 490, cada una atómica en el servidor. Cerrar la
+pestaña a mitad deja un trozo hecho y los demás sin tocar — y eso **sí** se
+puede contar, porque son trozos y no 490 resultados sueltos.
+
+---
+
 ## 🥇 EL ORDEN EN QUE YO LO HARÍA — todo lo de la sesión del 22/10
 
 Pedido por Jose: *"dame la lista de lo que arreglarías en el orden que lo
@@ -159,7 +305,8 @@ le miente al cliente, y al final lo que molesta.
 | **2** | **El mismo fichero dos veces duplica el almacén**: avisar antes (huella) + **poder deshacer una importación** | Pregunta de Jose, y el agujero es real. El «Undo» es además lo que vuelve segura toda la función | v12.91 |
 | **3** | **La pantalla de importar dice la verdad**: un solo número, todas las columnas que el fichero traía, qué va a crear ANTES de confirmar, y la suma antes/después | Es la otra mitad del 1: sin esto, el 1 se arregla y nadie puede comprobarlo | v12.91 |
 | **4** | **«Send notification email» contesta sobre LEER el correo** — partir la oferta en dos, **y que la prueba mire las zonas igual que los botones** | Jose lo ve cada vez que abre la gratis, y es lo que yo di por auditado el 21/10 | v12.91 |
-| **5** | **Fusionar nombres, las dos mitades**: que acepte el cambio de grafía, y que la lista no pueda tener dos veces lo mismo | Los 28 grupos de Jose fallan **todos**, y la causa de fondo sigue rellenando la lista mientras no se tape | v12.92 |
+| **4-bis** | **Borrar en tanda: una petición, no 490** · por trozos · con **botón de parar** · «too many requests» como ocupado · avisos agrupados | Vídeos del 22/10: 490 borrados son 490 peticiones, 4 filas en 3½ minutos, 40 perdidas por nuestra propia cuota, y **no hay forma de pararlo**. Se cuela por delante de la fusión | **v12.92** |
+| **5** | **Fusionar nombres, las dos mitades**: que acepte el cambio de grafía, y que la lista no pueda tener dos veces lo mismo | Los 28 grupos de Jose fallan **todos**, y la causa de fondo sigue rellenando la lista mientras no se tape | v12.93 |
 | **6** | **El Error Log, en vivo y sin repintar** | Es el instrumento con el que se diagnostica lo demás. Va aquí y no antes porque el 1 y el 5 ya tienen su causa encontrada | v12.92 |
 | **7** | **Un solo dueño de la visibilidad de las pestañas de ajustes** + **papelera abierta en la gratis** + **Import abierto (CSV)** | Las tres son el mismo mecanismo. Hacerlas por separado es garantizar que el duelo por `display` vuelva una cuarta vez | v12.93 |
 | **8** | **Importar, de verdad**: ventana propia, ubicación por fila y por grupos, destildar filas, tarjeta de ubicaciones nuevas, «importa 20 de prueba» | Es la grande. Va después del 1-3 porque sobre una pantalla que miente no se construye nada | v12.94+ |
