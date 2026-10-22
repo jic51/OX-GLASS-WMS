@@ -114,7 +114,42 @@ check('y `getSetupState` sigue contestando que no hace falta instalar nada — '
       'es lo que hace que la app abra directa en el inventario',
   /basicApagado_\(\)[\s\S]{0,120}needsSetup:\s*false/.test(setupState));
 
-console.log('\n═══ 5. La prueba muerde ═══\n');
+console.log('\n═══ 5. Y la hoja no describe un asistente que no existe ═══\n');
+
+/* Jose, 22/10, mirando la hoja ya corregida: *"ahora el texto no habla del menú
+ * Acopio porque no lo hay, PERO en el texto escrito dentro del sheet sí habla
+ * sobre los materiales y las locaciones dentro del instalador"*.
+ *
+ * Es la misma falta una línea más abajo. «Lo que pasa después» describía los
+ * tres pasos del ASISTENTE —nombre y logo, qué guardas y dónde, quién trabaja
+ * aquí— y en la gratis no hay asistente. Y el pie prometía que esta hoja
+ * «desaparece sola cuando termine la instalación», que es algo que hace el
+ * asistente: sin él se queda ahí para siempre.
+ *
+ * Son detalles pequeños, y por eso importan: una promesa que no se cumple en el
+ * primer minuto hace dudar de todo lo demás. */
+const plantilla = A.sinComentarios(A.fnSrc(GS, 'buildStartHereSheet_') ||
+                                   A.fnSrc(GS, 'writeStartHere_') || codigo);
+
+check('los tres pasos de «lo que pasa después» tienen rama para la gratis',
+  /basicApagado_\(\)[\s\S]{0,300}deploy the app/i.test(plantilla));
+check('...y en esa rama NO se habla de lo que guardas ni de dónde, que es lo ' +
+      'que pregunta el asistente',
+  !/basicApagado_\(\)[\s\S]{0,300}what you store/i.test(plantilla));
+check('...ni de registrar a la gente que trabaja aquí, que es la otra mitad ' +
+      'del asistente',
+  !/basicApagado_\(\)[\s\S]{0,300}people who work/i.test(plantilla));
+check('y dice dónde se pone el nombre, que es lo único de los tres pasos que ' +
+      'sí se puede hacer en la gratis',
+  /basicApagado_\(\)[\s\S]{0,400}Name & Logo/.test(plantilla));
+
+check('la hoja ya no promete desaparecer sola en la gratis — eso lo hace el ' +
+      'asistente, y ahí no hay',
+  /basicApagado_\(\)[\s\S]{0,160}hide this tab/i.test(plantilla));
+check('...pero en la de pago lo sigue diciendo, porque ahí sí pasa',
+  /disappears by itself/.test(plantilla));
+
+console.log('\n═══ 6. La prueba muerde ═══\n');
 
 /* Si el buscador de frases no reconociera la que había, el verde de arriba no
  * miraría nada. Éste es el texto exacto que Jose tenía delante. */

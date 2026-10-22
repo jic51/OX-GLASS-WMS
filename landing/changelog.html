@@ -101,6 +101,26 @@
        movements went from about two and a half minutes to fifty-five seconds
        along the way.</p>
 
+    <div class="entry" id="v12-89">
+      <span class="ver">v12.89</span>
+      <span class="tag fix">Fix</span>
+      <h3>One list instead of two, search that keeps up, and a much lighter first load</h3>
+      <p>On a Return, two dropdowns used to open on top of each other: ours &mdash; with how much is
+         out and where &mdash; and the browser&rsquo;s own, with the same names and none of that.
+         <b>Ours wins now</b>, and the browser&rsquo;s comes back on the screens where we have
+         nothing better to offer.</p>
+      <p>The search boxes used to lag behind what you typed. They waited for you to <b>stop</b>
+         typing &mdash; so if you typed without pausing, nothing moved at all. They now filter from
+         the first letter and keep up while you type.</p>
+      <p><b>And the app starts much faster on a bad connection.</b> It was downloading Google&rsquo;s
+         charting library on every load &mdash; most of 2 MB &mdash; to draw two pie charts that
+         only exist on one of the five screens. On a 3G connection that was 27 seconds before the
+         page finished. The charts are now fetched when the dashboard actually needs them, so
+         everyone else gets in without paying for them.</p>
+      <p>Low-stock settings are part of Pro again, and the welcome sheet in the free edition no
+         longer describes a setup wizard that edition does not have.</p>
+    </div>
+
     <div class="entry" id="v12-88">
       <span class="ver">v12.88</span>
       <span class="tag fix">Fix</span>

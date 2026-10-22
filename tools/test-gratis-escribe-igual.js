@@ -378,8 +378,13 @@ console.log('\n═══ 8. LA PANTALLA: LO QUE SE ESCONDE Y LO QUE SE OFRECE �
    * mensaje de ADJUNTAR documentos. Parecido no basta — quien pulsa «léemela»
    * y recibe «puedes guardarla» no entiende que le ofrecen otra cosa, entiende
    * que la app no le entendió. Ver `test-candados-hablan-de-lo-mismo.js`. */
-  check('las ofertas son las NUEVE decididas con Jose',
-    claves.length === 9, claves);
+  /* DIEZ DESDE LA v12.89. La décima, `minimos`, la pidió Jose el 22/10 al ver
+   * que podía abrir los ajustes de stock mínimo en la gratis: *"no debería
+   * poder abrirse y sólo debe mostrar el toast igual que los demás de Pro"*.
+   * Yo lo había abierto en la v12.86 por mi cuenta; su producto, su decisión.
+   * Lo que no vuelve es el mensaje equivocado que él mismo encontró. */
+  check('las ofertas son las DIEZ decididas con Jose',
+    claves.length === 10, claves);
 
   /* DOS LISTAS QUE TIENEN QUE COINCIDIR — Y AQUÍ SÍ HAY QUIEN LO OBLIGUE.
    *

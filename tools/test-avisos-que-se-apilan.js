@@ -216,6 +216,24 @@ window.__DATA=${JSON.stringify(DATA)};
   check('la regla tiene nombre y vive en un solo sitio', unaRegla.hay, true);
   check('...con las tres rutinas dentro', unaRegla.tres, 3);
 
+  console.log('\n═══ 4. Sin nada que dibujar, las gráficas ni se piden ═══\n');
+
+  /* Jose, 22/10, con la consola abierta en 3G: 2,0 MB de recursos y 27 s para
+   * abrir. La mayor parte eran los módulos de gráficas de gstatic.com, y los
+   * pagaba TODO EL MUNDO EN CADA CARGA — incluido quien entra desde el teléfono
+   * en la bodega a registrar una salida y no va a mirar una gráfica.
+   *
+   * Esta página abre SIN existencias, así que no hay nada que dibujar. Es el
+   * caso que prueba que la librería se pide cuando hace falta y no antes. */
+  const sinGraficas = await p.evaluate(() => ({
+    pedido: _chartsPedido,
+    enElDom: [...document.querySelectorAll('script[src]')]
+               .filter(x => /gstatic\.com\/charts/.test(x.src)).length
+  }));
+  check('sin existencias que dibujar, la librería no se ha pedido',
+    sinGraficas.pedido, false);
+  check('...y no hay ni un <script> de gráficas en la página', sinGraficas.enElDom, 0);
+
   check('ningún error de JavaScript en toda la página', errores, []);
 
   await browser.close();

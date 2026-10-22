@@ -175,24 +175,35 @@ check('«Take a photo of the invoice» contra «Photos and documents» tampoco: 
 check('y un par que sí habla de lo mismo pasa',
   comparten('Labels', '🏷️ Labels and QR codes'));
 
-console.log('\n═══ 4. El ⚙ Monitor NO lleva candado en la gratis ═══\n');
+console.log('\n═══ 4. El ⚙ Monitor es de Pro, y lo DICE ═══\n');
 
-/* LA PARTE QUE NO ES DE TEXTO, y es la que de verdad arregló el fallo de Jose.
- * La franja de «⚠ Below Minimum (5)» SE VE en la Básica. Si el botón que define
- * qué es «mínimo» estuviera cerrado, la app enseñaría un problema y escondería
- * el control con el que se define — peor que no tener ninguna de las dos cosas.
+/* ── ESTA SECCIÓN DECÍA LO CONTRARIO HASTA LA v12.89, Y CONVIENE DEJARLO
+ *    ESCRITO EN VEZ DE BORRARLO ─────────────────────────────────────────────
  *
- * Y no hay nada que lo justifique: la lista de materiales vigilados vive en las
- * Script Properties del archivo del cliente y no pide ni un permiso más, que es
- * el único portero que tiene la edición gratis. */
-check('`btnMonitorSettings` no está entre los candados',
-  !BOTONES.btnMonitorSettings, BOTONES.btnMonitorSettings);
-check('ni el de la barra de herramientas',
-  !BOTONES.btnMonitorSettingsToolbar, BOTONES.btnMonitorSettingsToolbar);
+ * En la v12.86 yo abrí este botón en la gratis por mi cuenta, razonando que la
+ * franja de «⚠ Below Minimum» se ve ahí y que cerrar el control que define
+ * «mínimo» era enseñar un problema escondiendo su definición. Jose, 22/10:
+ * *"no recuerdo que cambiáramos eso... no debería poder abrirse y sólo debe
+ * mostrar el toast igual que los demás de Pro"*.
+ *
+ * Su producto, su decisión, y la prueba cambia con ella. Lo que NO vuelve —y
+ * es lo único que de verdad estaba roto— es que contestara «Expected
+ * deliveries»: eso era el fallo que él encontró, y la sección 2 de este
+ * archivo lo vigila para los catorce candados por igual. */
+check('`btnMonitorSettings` está entre los candados otra vez',
+  BOTONES.btnMonitorSettings === 'minimos', BOTONES.btnMonitorSettings);
+check('...y el de la barra de herramientas también',
+  BOTONES.btnMonitorSettingsToolbar === 'minimos', BOTONES.btnMonitorSettingsToolbar);
+check('la oferta que enseñan habla de MÍNIMOS, no de entregas esperadas — que ' +
+      'era el fallo que vio Jose',
+  /minimum/i.test((OFERTAS.minimos || {}).que || '') &&
+  !/deliver/i.test((OFERTAS.minimos || {}).titulo || ''));
 
+/* Y NO SE ESCONDE, se ofrece. «Deja de ofrecerlo» y «quítalo de la vista» son
+ * cosas distintas: un candado vende, una puerta tapiada no. */
 const sinCode = A.sinComentarios(HTML);
-check('ni está escondido por otro camino — «deja de ofrecerlo» y «quítalo de la ' +
-      'vista» son cosas distintas y aquí no queremos ninguna de las dos',
+check('pero NO está escondido — un candado que se ve es una oferta; esconderlo ' +
+      'sería una función menos sin nada a cambio',
   !/BASIC_FUERA[\s\S]{0,400}btnMonitorSettings/.test(sinCode));
 
 console.log('\n═══ 5. Ninguna oferta se queda sin usar ═══\n');

@@ -19,6 +19,7 @@
 // Usage:  node tools/test-start-here.js
 
 const fs = require('fs'), path = require('path'), vm = require('vm');
+const A  = require(require('path').join(__dirname, 'andamio.js'));
 const GS = fs.readFileSync(path.join(__dirname, '..', 'Code_v3_fixed.gs'), 'utf8');
 
 let ok = 0, fail = 0;
@@ -135,9 +136,16 @@ function build() {
     pick(/var SH_NAVY = .*?;/),
     pick(/var PRODUCT_NAME\s*=.*?;/),
     GS.slice(GS.indexOf('var LEGAL_SHEET_TEXT'), GS.indexOf('// ─── END GENERATED LEGAL TEXT')),
-    extractFn('createLegalSheets_'),
-    extractFn('sheetLink_'),
-    extractFn('createStartHereSheet_')
+    /* MIGRADO AL ANDAMIO EN LA v12.89, y fue la UNDECIMA mordida del mismo
+     * patron. `createStartHereSheet_` gano una rama para la edicion gratis
+     * —la hoja describia los tres pasos del asistente, que ahi no existe— y
+     * con ella una llamada a `basicApagado_` que esta caja no tenia.
+     *
+     * Esta al menos se quejo fuerte: «basicApagado_ is not defined». La de
+     * ayer, en `onEdit`, se la trago un try/catch y solo dijo que una celda
+     * estaba vacia. */
+    A.levantar(GS, ['createLegalSheets_', 'sheetLink_', 'createStartHereSheet_'],
+               { dobles: ['put', 'SpreadsheetApp'] })
   ].join('\n'), sandbox);
   return sandbox;
 }

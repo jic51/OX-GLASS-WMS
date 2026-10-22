@@ -9251,6 +9251,55 @@ prueba siguió en verde.
 poco** — el caso de Jose. Con las columnas por defecto de Movements y una
 ventana alrededor de 1280 px debería caer en esa banda.
 
+## 🔵 LAS LOCACIONES VAN POR DETRÁS DEL RESTO DE LA APP · 22/10
+
+Jose, 22/10, con un vídeo de dos minutos en Ajustes → Locations:
+
+> *"Debemos mejorar la forma de eliminar locaciones. Ya lo hemos mejorado en
+> otros lados, como los movimientos y otros lugares. También, cuando se mueve
+> una locación, aun si se la deja en el mismo lugar y se da clic en discard,
+> toda la ventana se rehace de nuevo. Eso no es lo que hemos estado corrigiendo
+> en el resto de la app."*
+
+### Las dos cosas, y son distintas
+
+**1 · Borrar pide confirmación con una ventana encima.** En Movements eso ya no
+pasa: la fila se va al pulsar, con su animación, y el trabajo ocurre detrás. En
+Locations sigue saliendo un cuadro de *«¿Borrar la locación X?»* que hay que
+leer y contestar — y en el vídeo se ve borrando **doce locaciones de una
+vez**, o sea doce cuadros.
+
+> **OJO, Y ES LA PARTE QUE NO SE PUEDE COPIAR TAL CUAL:** borrar un movimiento
+> es reversible —hay papelera y restaurar— y borrar una locación no lo es
+> hoy. Quitar el cuadro sin dar marcha atrás cambiaría una molestia por una
+> pérdida. Lo que hay que copiar de Movements **no es quitar la pregunta: es
+> poder deshacer**. Primero el deshacer, después se quita el cuadro.
+
+**2 · `Discard` repinta la ventana entera.** La barra de *«Layout changed — not
+saved yet»* trae `Save layout` y `Discard`, y `Discard` reconstruye todo el
+panel: se ve el parpadeo, se pierde el sitio donde estabas y el desplazamiento
+vuelve arriba. Y pasa **aunque la locación se haya dejado donde estaba**, que es
+el caso más común de todos — agarras una, lo piensas, la sueltas en el mismo
+sitio.
+
+**Dos arreglos, y el primero es casi gratis:**
+
+- **Si nada se movió de verdad, `Discard` no tiene nada que descartar.** Hoy la
+  barra aparece por el gesto, no por el cambio. Comparar el orden de antes con
+  el de ahora y no enseñar la barra cuando son iguales quita el caso más común
+  sin tocar nada más.
+- **Y cuando sí cambió**, `Discard` tiene que devolver las fichas a su sitio,
+  no reconstruir el panel. Es el mismo principio que ya se aplicó al mazo de
+  tarjetas y a la tabla: **mover lo que cambió, no repintarlo todo**.
+
+### Por qué va aparte y no se hizo ya
+
+Porque el deshacer de una locación borrada es una pieza de servidor —dónde se
+guarda, cuánto dura, qué pasa si entretanto alguien la usó— y meterla a
+última hora junto a seis correcciones de pantalla es cómo se rompen las cosas.
+Queda con su plan escrito y con el orden claro: **deshacer primero, cuadro
+después**.
+
 ## 🔵 LA VENTANA DE MOVIMIENTO, LIMPIA — Y LAS TRES COSAS QUE SON LA MISMA · 21/10
 
 Jose, 21/10, con tres capturas marcando el checkbox de Label, COST PER UNIT,

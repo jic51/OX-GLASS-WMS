@@ -444,6 +444,98 @@ const leerCaja = () => ({
         'con un dato que no es de este material sería peor que no avisar',
     sobra.otraCat, null);
 
+  console.log('\n═══ 11. UNA lista, no dos ═══\n');
+
+  /* Jose, 22/10, con una captura: *"¿por qué se muestran 2 listas? Eso lo veo
+   * SIEMPRE en la app"*. Las dos eran reales y una no es nuestra: `#mName`
+   * lleva `list="matList"`, y eso hace que el NAVEGADOR dibuje su propio
+   * desplegable encima, con los mismos nombres y sin nada de lo que la nuestra
+   * añade — cuánto hay fuera y en qué sitio. */
+  const listas = await p.evaluate(async () => {
+    setModalType('RETURN');
+    const s = document.getElementById('mType');
+    s.value = 'WINDOW'; s.dispatchEvent(new Event('change'));
+    _fueraOlvidar();
+    const inp = document.getElementById('mName');
+    inp.value = '';
+    _checkStockSuggest(inp);
+    await new Promise(r => setTimeout(r, 250));
+    return {
+      nuestra: getComputedStyle(document.getElementById('stockSuggestBox')).display !== 'none',
+      delNavegador: inp.getAttribute('list'),
+      guardada: inp.dataset.listaOrig || null
+    };
+  });
+  check('nuestra lista está puesta', listas.nuestra, true);
+  check('y la del navegador está apagada — manda la nuestra, que es la que dice ' +
+        'cuánto hay fuera y dónde', listas.delNavegador, null);
+  check('...pero su nombre queda guardado, no tirado: en las pantallas donde no ' +
+        'ofrecemos nada esa lista es la única ayuda que hay',
+    !!listas.guardada, true);
+
+  const devuelta = await p.evaluate(() => {
+    const inp = document.getElementById('mName');
+    setModalType('WASTE');                      // una pantalla sin lista nuestra
+    return inp.getAttribute('list');
+  });
+  check('al irse de RETURN se le devuelve al campo su lista del navegador',
+    devuelta, 'matList');
+
+  console.log('\n═══ 12. Filtrar mientras se escribe, no al parar ═══\n');
+
+  /* Jose, 22/10, con un vídeo: *"al escribir en la caja de búsqueda no se
+   * actualiza enseguida el texto de abajo"*. Eran cuatro cajas con
+   * `_debounce(…, 220)`, y un debounce **sólo dispara cuando dejas de
+   * escribir**: tecleando seguido no pasaba nada en todo ese rato. */
+  const filtrando = await p.evaluate(async () => {
+    let veces = 0;
+    const f = _filtrarAlEscribir(function(){ veces++; }, 90);
+    f();                                  // la primera tecla
+    const alaPrimera = veces;
+    for (let i = 0; i < 25; i++) { f(); await new Promise(r => setTimeout(r, 12)); }
+    const tecleando = veces;
+    await new Promise(r => setTimeout(r, 200));
+    return { alaPrimera: alaPrimera, tecleando: tecleando, final: veces };
+  });
+  check('dispara A LA PRIMERA tecla — un debounce no lo hacía, y por eso se veía ' +
+        'el desfase', filtrando.alaPrimera, 1);
+  check('y sigue disparando MIENTRAS se escribe, sin esperar a que pares ' +
+        '(' + filtrando.tecleando + ' veces en 300ms de tecleo seguido)',
+    filtrando.tecleando > 1, true);
+  check('...pero acotado: no una por tecla', filtrando.tecleando < 25, true);
+  check('y la última siempre se hace, para no quedarse mostrando la penúltima letra',
+    filtrando.final >= filtrando.tecleando, true);
+
+  console.log('\n═══ 13. Las gráficas no se bajan hasta que hacen falta ═══\n');
+
+  /* Jose, 22/10, con la consola abierta en 3G: 2,0 MB de recursos y 27 s. La
+   * mayor parte eran los módulos de gráficas de gstatic.com — y los pagaba todo
+   * el mundo en cada carga, para dos tartas que sólo existen en una de las
+   * cinco pantallas. */
+  /* SE MIRA EL ARCHIVO, no el DOM: en esta página el panel ya dibujó, así que
+   * la librería SÍ está puesta — y eso es lo correcto. Lo que no puede estar es
+   * en el HTML que se sirve, porque eso la bajaría antes de saber si hace falta.
+   * Que no se pida al arrancar se mide en `test-avisos-que-se-apilan`, cuya
+   * página abre sin existencias y por tanto sin nada que dibujar. */
+  const cabecera = html.slice(0, html.indexOf('</head>'));
+  check('la librería de gráficas NO viene en la cabecera del archivo — ahí la ' +
+        'bajaría todo el mundo en cada carga, para dos tartas que sólo existen ' +
+        'en una de las cinco pantallas',
+    /<script[^>]+gstatic\.com\/charts/.test(cabecera), false);
+
+  const charts = await p.evaluate(() => {
+    const cuantos = () => [...document.querySelectorAll('script[src]')]
+      .filter(x => /gstatic\.com\/charts/.test(x.src)).length;
+    const antes = cuantos();
+    _cargarCharts(); _cargarCharts(); _cargarCharts();
+    return { hayCargador: typeof _cargarCharts === 'function',
+             antes: antes, despues: cuantos() };
+  });
+  check('hay quien sepa pedirla cuando haga falta', charts.hayCargador, true);
+  check('y pedirla tres veces no la baja tres veces — el panel se repinta en ' +
+        'cada recarga de datos, así que esto pasa de verdad',
+    charts.despues, charts.antes);
+
   check('ningún error de JavaScript en toda la página', errores, []);
 
   await browser.close();
