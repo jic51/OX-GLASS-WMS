@@ -536,6 +536,126 @@ const leerCaja = () => ({
         'cada recarga de datos, así que esto pasa de verdad',
     charts.despues, charts.antes);
 
+  console.log('\n═══ 14. No preguntar lo que el registro ya contesta ═══\n');
+
+  /* Jose, 22/10: *"si el material salió y está regresando, ¿por qué me pregunta
+   * 2 veces de dónde vino?... no debe preguntar a menos que el material esté en
+   * 2 o más lugares diferentes; entonces debe darte la lista de esos 2 lugares
+   * para que elijas. Si sólo un material salió a un solo lugar, ¿por qué
+   * pregunta si ya tiene ese dato?"*.
+   *
+   * Son TRES casos y hasta ahora se trataban todos igual, como dos cajas
+   * vacías. El de arriba —SCREEN FRAME, fuera sólo en LEHI HOUSE 12— es el
+   * primero. */
+  const unoSolo = await p.evaluate(async () => {
+    openMoveModal('RETURN');
+    const s = document.getElementById('mType');
+    s.value = 'WINDOW'; s.dispatchEvent(new Event('change'));
+    _fueraOlvidar();
+    const inp = document.getElementById('mName');
+    _checkStockSuggest(inp);
+    await new Promise(r => setTimeout(r, 250));
+    inp.value = 'SCREEN FRAME';
+    inp.dispatchEvent(new Event('change'));
+    const v = id => (document.getElementById(id) || {}).value;
+    return { src: v('mSrc'), proj: v('mOrigProj'), qty: v('mQty'),
+             caja: getComputedStyle(document.getElementById('stockSuggestBox')).display };
+  });
+  check('fuera en UN solo sitio: el sitio se rellena solo — preguntarlo es ' +
+        'pedir que teclees un dato que la app tiene delante', unoSolo.src, 'LEHI HOUSE 12');
+  check('...y la cantidad se sugiere', unoSolo.qty, '2.5');
+  check('...y no se abre ninguna lista, porque no hay nada que elegir',
+    unoSolo.caja, 'none');
+
+  const dosSitios = await p.evaluate(async () => {
+    openMoveModal('RETURN');
+    const s = document.getElementById('mType');
+    s.value = 'WINDOW'; s.dispatchEvent(new Event('change'));
+    _fueraOlvidar();
+    const inp = document.getElementById('mName');
+    _checkStockSuggest(inp);
+    await new Promise(r => setTimeout(r, 250));
+    inp.value = 'VINYL WINDOW 36X48';          // está en LEHI y en OREM
+    inp.dispatchEvent(new Event('change'));
+    return {
+      src: (document.getElementById('mSrc') || {}).value,
+      caja: getComputedStyle(document.getElementById('stockSuggestBox')).display,
+      filas: document.querySelectorAll('#stockSuggestBox [data-action="fuera-pick"]').length
+    };
+  });
+  check('fuera en DOS sitios: NO se elige por ti — ahí sí hay una pregunta de ' +
+        'verdad, y es cuál de los dos', dosSitios.src, '');
+  check('...y se abre la lista con esos sitios', dosSitios.caja !== 'none', true);
+  check('...con las dos filas y sólo ésas', dosSitios.filas, 2);
+
+  const sinRegistro = await p.evaluate(async () => {
+    openMoveModal('RETURN');
+    const s = document.getElementById('mType');
+    s.value = 'WINDOW'; s.dispatchEvent(new Event('change'));
+    _fueraOlvidar();
+    const inp = document.getElementById('mName');
+    _checkStockSuggest(inp);
+    await new Promise(r => setTimeout(r, 250));
+    inp.value = 'MATERIAL QUE NUNCA SALIO';
+    inp.dispatchEvent(new Event('change'));
+    return { src: (document.getElementById('mSrc') || {}).value,
+             proj: (document.getElementById('mOrigProj') || {}).value };
+  });
+  check('sin ningún registro de haber salido, las cajas se quedan VACÍAS para ' +
+        'contestarlas — es lo único que no se puede deducir',
+    sinRegistro.src === '' && sinRegistro.proj === '', true);
+
+  /* Y LO QUE NUNCA SE PISA: si alguien ya escribió algo, manda él. */
+  const escrito = await p.evaluate(async () => {
+    openMoveModal('RETURN');
+    const s = document.getElementById('mType');
+    s.value = 'WINDOW'; s.dispatchEvent(new Event('change'));
+    _fueraOlvidar();
+    const inp = document.getElementById('mName');
+    _checkStockSuggest(inp);
+    await new Promise(r => setTimeout(r, 250));
+    document.getElementById('mSrc').value = 'DONDE YO DIGO';
+    inp.value = 'SCREEN FRAME';
+    inp.dispatchEvent(new Event('change'));
+    return (document.getElementById('mSrc') || {}).value;
+  });
+  check('y lo que una persona ya escribió NO se pisa con el historial',
+    escrito, 'DONDE YO DIGO');
+
+  console.log('\n═══ 15. El aviso de Pro dura lo que Jose midió ═══\n');
+
+  /* Jose, 22/10, con un cronómetro: *"el toast demora 14 segundos... si dura 7
+   * es suficiente, y si se hace hover sí se puede quedar, y al quitar el hover
+   * dejémoslo unos 2 o 3 segundos más"*.
+   *
+   * Los 14 segundos eran un fallo mío de la v12.85: al reusar el aviso, cada
+   * llamada dejaba SU PROPIO reloj y SUS PROPIOS oyentes sobre el mismo
+   * elemento. Escribí que daba igual «porque los dos hacen lo mismo sobre el
+   * reloj de esta llamada». Era falso: cada cierre tiene el suyo. */
+  const reloj = await p.evaluate(() => ({
+    dura: typeof PRO_TOAST_MS !== 'undefined' ? PRO_TOAST_MS : null,
+    trasHover: typeof PRO_TOAST_IRSE !== 'undefined' ? PRO_TOAST_IRSE : null
+  }));
+  check('dura 7 segundos, no 9 ni 14', reloj.dura, 7000);
+  check('y al quitarle el ratón de encima le quedan 2,5', reloj.trasHover, 2500);
+
+  const oyentes = await p.evaluate(async () => {
+    _proToastIrse();
+    const cont = document.getElementById('toastContainer');
+    _proToast('fotos'); _proToast('etiquetas'); _proToast('escanear');
+    const el = cont.querySelector('.toast');
+    /* El ratón encima y fuera UNA vez. Con los oyentes acumulados había tres
+     * cuentas atrás corriendo a destiempo sobre un solo aviso. */
+    el.dispatchEvent(new MouseEvent('mouseenter'));
+    el.dispatchEvent(new MouseEvent('mouseleave'));
+    await new Promise(r => setTimeout(r, 1200));
+    return { sigue: !!cont.querySelector('.toast'), cuantos: cont.querySelectorAll('.toast').length };
+  });
+  check('tres clics seguidos siguen siendo UN aviso', oyentes.cuantos, 1);
+  check('...y a los 1,2 s de quitarle el ratón sigue ahí — con los relojes ' +
+        'acumulados, el de una llamada vieja se lo llevaba a destiempo',
+    oyentes.sigue, true);
+
   check('ningún error de JavaScript en toda la página', errores, []);
 
   await browser.close();

@@ -5801,7 +5801,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.89';
+var APP_VERSION = '12.90';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5813,7 +5813,7 @@ var APP_VERSION = '12.89';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '6ca3a928';
+var APP_BUILD = '32359892';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -13921,6 +13921,93 @@ function _fueraSobrante(cat, nombre, sitio, qty) {
   var n = Number(qty) || 0;
   if (!(n > f.qty)) return null;
   return { fuera: f.qty, extra: Math.round((n - f.qty) * 100) / 100, site: f.site };
+}
+
+/* ══ NO PREGUNTAR LO QUE EL REGISTRO YA CONTESTA ════════════════════════════
+ *
+ * Jose, 22/10, mirando una devolución: *"si el material salió y está
+ * regresando, ¿por qué me pregunta 2 veces de dónde vino? From site or address
+ * / From project... no debe preguntar de dónde vino ese material a menos que el
+ * material esté en 2 o más lugares diferentes ya; entonces debe darte la lista
+ * de esos 2 lugares para que elijas. Si sólo un material salió de bodega a un
+ * solo lugar, ¿por qué pregunta de dónde vino si ya tiene ese dato?"*.
+ *
+ * Tiene razón, y la regla que describe es mejor que lo que había. Son TRES
+ * casos y hasta ahora se trataban todos igual, como dos cajas vacías:
+ *
+ *   · FUERA EN UN SOLO SITIO → el registro ya sabe cuál. Se rellena y no se
+ *     pregunta nada. Preguntar aquí es pedirle a alguien que teclee un dato que
+ *     la app tiene delante.
+ *   · FUERA EN DOS O MÁS → ahí sí hay una pregunta de verdad, y es *cuál de
+ *     ellos*. Se abre la lista con esos sitios para elegir.
+ *   · SIN NINGÚN REGISTRO DE HABER SALIDO → las cajas se quedan vacías para
+ *     contestarlas, que es lo único que no se puede deducir.
+ *
+ * POR QUÉ SIGUEN SIENDO DOS CAMPOS y no se funden en uno: el sitio es un LUGAR
+ * (`SRC_LOC`) y la obra es un TRABAJO (`ORIGIN_PROJECT`). Una misma obra tiene
+ * varias direcciones y una misma dirección aloja dos obras con los años, así
+ * que juntarlos perdería la mitad de la respuesta a «qué sobró de qué obra»,
+ * que es para lo que Jose pidió el campo de obra el 15/10. Lo que estaba mal no
+ * era que fueran dos: era preguntarlos.
+ */
+function _fueraDelMaterial(cat, nombre){
+  if (_fueraCache.filas === null) return null;          // no cargó: no se sabe
+  if (nt(_fueraCache.cat) !== nt(cat)) return null;     // es de otra categoría
+  var nom = nt(nombre);
+  if (!nom) return [];
+  return _fueraCache.filas.filter(function(r){ return nt(r.name) === nom; });
+}
+
+/** Rellena el origen cuando no hay nada que preguntar.
+ *
+ *  SE LLAMA AL TERMINAR DE ESCRIBIR, no en cada tecla: a media palabra el
+ *  nombre puede coincidir con un material por accidente, y rellenar dos campos
+ *  por accidente mientras alguien teclea es pelearse con él. */
+function _fueraOrigenAuto(){
+  if (currentMoveType !== 'RETURN') return;
+  var inp = document.getElementById('mName');
+  if (!inp) return;
+
+  var filas = _fueraDelMaterial(_fueraCat(), inp.value);
+  if (filas === null || !filas.length) return;   // sin registro: se pregunta
+
+  if (filas.length > 1) {
+    /* DOS O MÁS SITIOS: aquí SÍ hay una pregunta, y es cuál. Se abre la lista
+     * ya filtrada por este nombre — son exactamente esas filas. */
+    var caja = document.getElementById('stockSuggestBox');
+    if (caja) _fueraSugerir(caja, inp);
+    return;
+  }
+
+  /* UNO SOLO: el registro ya lo contestó. Y si no hay nada que elegir, tampoco
+   * hay nada que enseñar — la lista se cierra. Dejarla abierta con una sola
+   * fila es pedir que se elija lo único que hay, que es la misma pregunta de
+   * más que Jose vino a quitar. */
+  var cajaUno = document.getElementById('stockSuggestBox');
+  if (cajaUno) cajaUno.style.display = 'none';
+  _listaNavegador(inp, true);
+
+  var f = filas[0];
+  var pon = function(id, val){
+    var el = document.getElementById(id);
+    /* NUNCA SE PISA LO QUE ALGUIEN ESCRIBIÓ. Si hay algo puesto es porque lo
+     * puso una persona o una fila elegida a mano, y eso manda sobre el
+     * historial. */
+    if (el && val && !String(el.value || '').trim()) el.value = val;
+  };
+  pon('mSrc',      f.site);
+  pon('mOrigProj', f.project);
+  pon('mPM',       f.pm);
+
+  var unidad = document.getElementById('mUnit');
+  if (unidad && f.unit) {
+    for (var u = 0; u < unidad.options.length; u++) {
+      if (nt(unidad.options[u].value) === nt(f.unit)) { unidad.value = unidad.options[u].value; break; }
+    }
+  }
+  var qty = document.getElementById('mQty');
+  if (qty && !String(qty.value || '').trim()) qty.value = f.qty;
+  if (typeof _syncMoveMatTotal === 'function') _syncMoveMatTotal();
 }
 
 /* ── LO QUE SE RELLENA, Y LOS DOS CAMPOS QUE NO ─────────────────────────────
@@ -28015,6 +28102,12 @@ document.addEventListener('DOMContentLoaded', function(){
   // Modal fields
   _safeOn('mType','change', function(){ updateMatList(); checkStock(); });
   _safeOn('mName','input',  function(){ checkStock(); updateNotifyPreview(); validateExitRows(); autoFillExitRows(); renderTransferLocPicker(); validateTransferRows(); triggerSimilarCheck(); _boneyardSync(); });
+  /* `change` Y NO `input`: salta al salir del campo o al elegir de la lista del
+   * navegador, o sea cuando el nombre está TERMINADO. En cada tecla, un nombre
+   * a medias coincide con materiales por accidente, y rellenar el origen por
+   * accidente mientras alguien escribe es pelearse con él. Ver
+   * `_fueraOrigenAuto`. */
+  _safeOn('mName','change', function(){ try { _fueraOrigenAuto(); } catch (e) { console.warn('_fueraOrigenAuto:', e && e.message); } });
   _safeOn('mType','change', function(){ validateExitRows(); autoFillExitRows(); renderTransferLocPicker(); validateTransferRows(); _boneyardSync(); });
   _safeOn('mQty','input',   updateNotifyPreview);
   _safeOn('mUnit','change', updateNotifyPreview);
@@ -28327,7 +28420,41 @@ function _proUrl(clave){
  * Así que el aviso se REUSA: si ya hay uno, se le cambia el texto —puede ser
  * otra función— y se le reinicia el reloj, con un golpecito para que se vea que
  * contestó. Uno en pantalla, pase lo que pase. */
-var _proToastEl = null;
+var _proToastEl    = null;
+var _proToastReloj = null;
+
+/* CUÁNTO DURA, Y POR QUÉ ESOS DOS NÚMEROS.
+ *
+ * Jose, 22/10, midiéndolo con un cronómetro: *"el toast demora 14 segundos en
+ * desaparecer, creo que es mucho... si dura 7 segundos es suficiente, y si se
+ * hace hover sí se puede quedar mostrándose, y al quitar el hover dejémoslo
+ * unos 2 o 3 segundos más"*.
+ *
+ * Y los 14 segundos no eran los 9 que decía el código: eran un fallo mío de la
+ * v12.85. Al reusar el aviso —para que pulsar cuatro veces no apilara cuatro—
+ * cada llamada dejaba SU PROPIO reloj y SUS PROPIOS oyentes de ratón sobre el
+ * mismo elemento. Escribí en un comentario que eso daba igual «porque los dos
+ * hacen lo mismo sobre el reloj de esta llamada». Era falso: cada cierre tiene
+ * su `reloj`, y el de la llamada vieja sigue armado. Dos clics seguidos dejaban
+ * dos cuentas atrás corriendo a destiempo sobre un solo aviso.
+ *
+ * Ahora el reloj y los oyentes viven FUERA de la llamada, con el elemento: uno
+ * solo, pase lo que pase. Es la misma corrección que la del aviso apilado, una
+ * capa más adentro. */
+var PRO_TOAST_MS   = 7000;   // lo que dura si nadie lo toca
+var PRO_TOAST_IRSE = 2500;   // lo que queda tras quitarle el ratón de encima
+
+function _proToastIrse(){
+  clearTimeout(_proToastReloj);
+  _proToastReloj = null;
+  if (_proToastEl) { try { _proToastEl.remove(); } catch (e) {} }
+  _proToastEl = null;
+}
+
+function _proToastContar(ms){
+  clearTimeout(_proToastReloj);
+  _proToastReloj = setTimeout(_proToastIrse, ms);
+}
 
 function _proToast(clave){
   var f = BASIC_PRO[clave];
@@ -28346,7 +28473,19 @@ function _proToast(clave){
       '<a class="toast-pro" href="' + _he(_proUrl(clave)) + '" target="_blank" rel="noopener">Acopio Pro</a>' +
     '</span>' +
     '<button class="toast-close" type="button">✕</button>';
-  if (!previo) cont.appendChild(el);
+
+  if (!previo) {
+    /* LOS OYENTES SE PONEN UNA VEZ, con el elemento, y nunca más. El de la ✕ va
+     * delegado sobre el propio aviso porque el `innerHTML` de arriba destruye
+     * ese botón y crea otro en cada reuso: un oyente colgado del botón se iría
+     * con él, y volver a ponerlo en cada llamada es justo cómo se acumulaban. */
+    el.addEventListener('click', function(e){
+      if (e.target && e.target.closest && e.target.closest('.toast-close')) _proToastIrse();
+    });
+    el.addEventListener('mouseenter', function(){ clearTimeout(_proToastReloj); });
+    el.addEventListener('mouseleave', function(){ _proToastContar(PRO_TOAST_IRSE); });
+    cont.appendChild(el);
+  }
   _proToastEl = el;
 
   if (previo) {
@@ -28360,25 +28499,7 @@ function _proToast(clave){
     el.classList.add('pro-reavisa');
   }
 
-  var reloj = null;
-  function irse(){
-    try { el.remove(); } catch (e) {}
-    if (_proToastEl === el) _proToastEl = null;
-  }
-  function contar(ms){ clearTimeout(reloj); reloj = setTimeout(irse, ms); }
-
-  /* Los oyentes se ponen CADA VEZ sobre el mismo elemento cuando se reusa, y no
-   * se acumulan por una razón concreta: `innerHTML` de arriba destruye el ✕
-   * viejo y crea uno nuevo, así que su oyente anterior se fue con él. Los del
-   * ratón sí quedarían repetidos — y no importa, porque los dos hacen lo mismo
-   * sobre el reloj de ESTA llamada, que es el único que queda armado. */
-  el.querySelector('.toast-close').addEventListener('click', function(){
-    clearTimeout(reloj); irse();
-  });
-  el.addEventListener('mouseenter', function(){ clearTimeout(reloj); });
-  el.addEventListener('mouseleave', function(){ contar(2500); });
-
-  contar(9000);
+  _proToastContar(PRO_TOAST_MS);
 }
 
 /* ══ UNA ✕ EN CADA CAMPO DONDE SE ESCRIBE ═══════════════════════════════════
@@ -29043,6 +29164,17 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '12.90',
+    titulo: 'A return stops asking what the record already knows',
+    puntos: [
+      'Returning material asked you twice where it came from \u2014 the site and the project \u2014 even when there was only one possible answer.',
+      '<b>Out in exactly one place?</b> Both are filled in for you, with the unit, the project manager and a suggested quantity. Nothing to answer, so nothing is asked.',
+      '<b>Out in two or more?</b> That is a real question: you get the list of those places to pick from. <b>No record of it leaving?</b> The boxes stay empty for you. And anything you typed is never overwritten.',
+      'The Pro notice now lasts <b>7 seconds</b>. Hovering keeps it; moving away leaves it 2.5 more.'
+    ],
+    antes:  'Two boxes asking where it came from, with one possible answer',
+    ahora:  'Filled in, unless there is really something to choose' },
+
   { ver: '12.89',
     titulo: 'One list, search that keeps up, a lighter first load',
     puntos: [
@@ -29074,15 +29206,6 @@ var NOVEDADES = [
     antes:  'Sixteen controls to write down twenty windows',
     ahora:  'The ones your warehouse actually uses' },
 
-  { ver: '12.86',
-    titulo: 'Every padlock now answers about what you clicked',
-    puntos: [
-      'In the free edition, clicking the low-stock settings used to answer with a message about <i>expected deliveries</i>. Three of them pointed at the wrong explanation.',
-      'And the low-stock settings should never have been closed. The free edition already shows the "below minimum" banner, so closing the button that decides what "minimum" means showed you a problem and hid the control that defines it. <b>It is open now.</b>',
-      'What is still Pro is getting that alert <b>by email</b>, which needs a permission the free edition does not ask for.'
-    ],
-    antes:  'Click the low-stock settings, get told about expected deliveries',
-    ahora:  'Each one explains the thing you actually clicked' },
 
 
 

@@ -613,16 +613,40 @@ console.log('\n═══ 11. LA OFERTA DICE QUE ES DE PRO, Y DEJA LLEGAR ══�
         'el menú del avatar desde el que se había llegado',
     /_safeOn\('proOverlay','click'[\s\S]{0,80}stopPropagation/.test(htmlCodigo));
 
-  /* EL AVISO FLOTANTE, Y EL TELÉFONO. */
-  const toast = (htmlCodigo.match(/function _proToast[\s\S]*?\n\}\n/) || [''])[0];
+  /* EL AVISO FLOTANTE, Y EL TELÉFONO.
+   *
+   * SE MIRA EL ARCHIVO ENTERO Y NO SÓLO LA FUNCIÓN, y es por el arreglo de la
+   * v12.90: el reloj y los oyentes del ratón salieron de dentro de `_proToast`
+   * a propósito. Cada llamada dejaba los suyos sobre el mismo elemento —y
+   * escribí en un comentario que eso daba igual, que era falso: cada cierre
+   * tenía su reloj, y dos clics seguidos dejaban dos cuentas atrás corriendo a
+   * destiempo. Eso es lo que Jose midió como «14 segundos». */
+  /* `_proToast\(` CON EL PARÉNTESIS, y hace falta desde la v12.90: ahora hay
+   * `_proToastIrse` y `_proToastContar`, y sin el paréntesis esto cazaba la
+   * primera de las tres —cuatro líneas sin nada que mirar— y daba por ausente
+   * lo que estaba al lado. Un buscador que encuentra lo que no era es peor que
+   * uno que no encuentra nada: el rojo señala al sitio equivocado. */
+  const toast = (htmlCodigo.match(/function _proToast\([\s\S]*?\n\}\n/) || [''])[0];
   check('el aviso flotante lleva enlace a Acopio Pro',
     /toast-pro/.test(toast) && /_proUrl\(clave\)/.test(toast));
   check('...y no se va mientras el ratón esté encima',
-    /mouseenter[\s\S]{0,80}clearTimeout/.test(toast) &&
-    /mouseleave[\s\S]{0,80}contar\(/.test(toast));
-  check('...y dura de sobra SIN ratón, porque en un teléfono no hay hover y ' +
-        'ahí está la mitad de la gente que llega desde un vídeo',
-    /contar\(9000\)/.test(toast));
+    /mouseenter[\s\S]{0,120}clearTimeout/.test(htmlCodigo) &&
+    /mouseleave[\s\S]{0,120}_proToastContar/.test(htmlCodigo));
+  /* SIETE SEGUNDOS, Y LOS MIDIÓ JOSE: *"el toast demora 14 segundos, creo que
+   * es mucho... si dura 7 segundos es suficiente"*. Él mismo había pedido lo
+   * contrario días antes —que durara más— y al verlo decidió al revés. Lo que
+   * no cambia es el motivo de que no sea un parpadeo: en un teléfono no hay
+   * hover, y ahí está la mitad de la gente que llega desde un vídeo. */
+  check('...y dura siete segundos sin ratón: ni un parpadeo ni una eternidad',
+    /PRO_TOAST_MS\s*=\s*7000/.test(htmlCodigo));
+  check('...con 2,5 más al quitarle el ratón de encima',
+    /PRO_TOAST_IRSE\s*=\s*2500/.test(htmlCodigo));
+  /* UN SOLO RELOJ, FUERA DE LA LLAMADA. Es lo que impide que vuelvan a
+   * acumularse: si el `setTimeout` viviera dentro de `_proToast`, cada reuso
+   * crearía otro. */
+  check('y el reloj vive FUERA de la llamada, uno solo — dentro, cada reuso ' +
+        'creaba otro y por eso se quedaba tanto rato',
+    /var _proToastReloj/.test(htmlCodigo) && !/\bvar reloj\b/.test(toast));
 }
 
 console.log('\n═══ 12. QUIÉN ERES, PREGUNTADO UNA VEZ ═══\n');
