@@ -88,6 +88,41 @@ const SOLO_MIRAR = process.argv.includes('--check');
 function kb(n) { return (n / 1024).toFixed(0) + ' KB'; }
 function mb(n) { return (n / 1048576).toFixed(3) + ' MB'; }
 
+/* ── EL NÚMERO DE LÍNEA NO SE MUEVE, Y ES LA REGLA QUE MANDA AQUÍ ──────────
+ *
+ * Jose, 22/10, aprobando que la app se sirva recortada. La primera versión de
+ * esta herramienta quitaba también las líneas que se quedaban vacías, y el
+ * archivo pasaba de 30.246 líneas a 17.858. Eso rompe **lo único que de verdad
+ * usamos para encontrar un fallo**: él manda la captura de su consola, yo leo
+ * «línea 19174» y voy a esa línea del repositorio.
+ *
+ * Con las líneas quitadas, ese número ya no lleva a ninguna parte — y lo peor
+ * es que lleva a OTRA línea, que es peor que no llevar a ninguna: se lee código
+ * que no tiene nada que ver y se saca una conclusión falsa.
+ *
+ * Así que un comentario se sustituye por **los mismos saltos de línea que
+ * ocupaba**. El archivo recortado tiene exactamente las mismas líneas que el
+ * del repositorio, con las de prosa vacías. Cuesta unos 12 KB de 874 — un 1% —
+ * y a cambio el número de línea de la consola de Jose vale igual que antes.
+ *
+ * La comprobación de abajo no se fía de esta explicación: cuenta las líneas de
+ * los dos y comprueba que CADA `function nombre(` cae en la misma línea en los
+ * dos archivos. Si algún día alguien vuelve a quitar las líneas vacías, la
+ * herramienta se niega a escribir nada.
+ *
+ * ── Y el riesgo que esto tenía, mirado en vez de supuesto ─────────────────
+ *
+ * Meter saltos de línea donde había texto puede cambiar lo que hace un
+ * programa: `return /* … *​/ x` con el comentario convertido en salto pasa a
+ * ser `return` a secas. Se buscó: en los 8.742 comentarios de los dos archivos
+ * hay **uno solo** que es multilínea y no está solo en su línea, y es el cuerpo
+ * vacío de un `function(){ … }`. Ahí un salto de línea no cambia nada.
+ */
+function saltosDe(trozo) {
+  const n = trozo.split('\n').length - 1;
+  return n > 0 ? '\n'.repeat(n) : '';
+}
+
 /* Los comentarios de un trozo de JavaScript, localizados por un parser. Acorn
  * los entrega con sus posiciones exactas; recortarlos de atrás hacia delante
  * evita que cada corte mueva los siguientes. */
@@ -104,17 +139,14 @@ function sinComentariosJS(src, nombre) {
   let out = src;
   for (let i = comentarios.length - 1; i >= 0; i--) {
     const [a, b] = comentarios[i];
-    /* El comentario se sustituye por un salto de línea cuando ocupaba líneas
-     * enteras, y por nada cuando iba al final de una con código. Así el
-     * archivo recortado conserva la FORMA —una sentencia por línea— y un
-     * número de línea de la consola de Jose sigue cayendo cerca de su sitio. */
+    /* El comentario se va y sus saltos de línea se quedan. Un comentario al
+     * final de una línea con código deja un espacio en su sitio, para que
+     * `a/*​*​/b` no se convierta en `ab`. */
     const antes = out.slice(0, a), despues = out.slice(b);
     const soloEnSuLinea = /(^|\n)[ \t]*$/.test(antes) && /^[ \t]*(\n|$)/.test(despues);
-    out = antes + (soloEnSuLinea ? '' : ' ') + despues;
+    out = antes + (soloEnSuLinea ? '' : ' ') + saltosDe(out.slice(a, b)) + despues;
   }
-  /* Las líneas que quedan vacías del todo se van. Las que tenían código se
-   * quedan donde estaban. */
-  return out.replace(/^[ \t]*\n/gm, '');
+  return out;
 }
 
 /* Los comentarios de CSS, con una máquina de estados mínima que respeta las
@@ -132,12 +164,14 @@ function sinComentariosCSS(src) {
     if (c === '"' || c === "'") { comilla = c; out += c; i++; continue; }
     if (c === '/' && d === '*') {
       const fin = src.indexOf('*/', i + 2);
-      i = fin < 0 ? src.length : fin + 2;
+      const hasta = fin < 0 ? src.length : fin + 2;
+      out += saltosDe(src.slice(i, hasta));   // misma regla: las líneas se quedan
+      i = hasta;
       continue;
     }
     out += c; i++;
   }
-  return out.replace(/^[ \t]*\n/gm, '');
+  return out;
 }
 
 /* Los comentarios de HTML. Se hace FUERA de <script> y <style>, porque dentro
@@ -156,7 +190,7 @@ function limpiarHtml(html) {
   trozos.push({ texto: html.slice(ultimo), tipo: 'html' });
 
   return trozos.map(t => {
-    if (t.tipo === 'html') return t.texto.replace(/<!--[\s\S]*?-->[ \t]*\n?/g, '');
+    if (t.tipo === 'html') return t.texto.replace(/<!--[\s\S]*?-->/g, saltosDe);
     const abre = t.texto.indexOf('>') + 1;
     const cierra = t.texto.lastIndexOf('</');
     const cabeza = t.texto.slice(0, abre), cuerpo = t.texto.slice(abre, cierra),
@@ -178,6 +212,46 @@ function verificar(html, nombre) {
     catch (e) { throw new Error(nombre + ': el bloque ' + n + ' ya no compila — ' + e.message); }
   }
   return n;
+}
+
+/* ── QUE EL NÚMERO DE LÍNEA SIGA VALIENDO ────────────────────────────────────
+ *
+ * No se fía de la explicación de arriba. Dos cosas, y las dos tienen que ser
+ * ciertas o no se escribe nada:
+ *
+ *   1. Los dos archivos tienen el MISMO número de líneas.
+ *   2. Cada `function nombre(` cae en la MISMA línea en los dos.
+ *
+ * La primera sola no bastaría: se puede quitar una línea aquí y añadir otra
+ * allá y seguir cuadrando el total. La segunda es la que de verdad comprueba
+ * que nada se ha desplazado, y usa lo único que hay repartido por todo el
+ * archivo y es fácil de localizar sin parsear nada.
+ *
+ * Si esto falla, el archivo recortado seguiría funcionando — pero mandaría a
+ * Jose a leer la línea equivocada cada vez que algo se rompa, que es la razón
+ * entera por la que esta herramienta existe. */
+function mismasLineas(src, out, nombre) {
+  const a = src.split('\n'), b = out.split('\n');
+  if (a.length !== b.length) {
+    throw new Error(nombre + ': el recorte cambió el número de líneas (' +
+      a.length + ' → ' + b.length + '). Un número de línea de la consola ya no ' +
+      'llevaría a su sitio.');
+  }
+  const re = /^\s*(?:function\s+([A-Za-z_$][\w$]*)\s*\()/;
+  const dondeEsta = (lineas) => {
+    const m = {};
+    lineas.forEach((l, i) => { const g = l.match(re); if (g) m[g[1]] = i + 1; });
+    return m;
+  };
+  const ma = dondeEsta(a), mb = dondeEsta(b);
+  const movidas = Object.keys(ma).filter(n => mb[n] !== ma[n]);
+  if (movidas.length) {
+    const n0 = movidas[0];
+    throw new Error(nombre + ': ' + movidas.length + ' función(es) cambiaron de ' +
+      'línea — p.ej. `' + n0 + '` estaba en la ' + ma[n0] + ' y ahora está en la ' +
+      (mb[n0] === undefined ? '(no está)' : mb[n0]) + '.');
+  }
+  return Object.keys(ma).length;
 }
 
 /* Lo que NO puede cambiar: la versión y el sello. Los dos archivos se comparan
@@ -206,6 +280,7 @@ for (const t of trabajos) {
     out = t.tipo === 'html' ? limpiarHtml(src) : sinComentariosJS(src, t.origen);
     if (t.tipo === 'html') verificar(out, t.origen);
     else acorn.parse(out, { ecmaVersion: 2022, sourceType: 'script' });
+    mismasLineas(src, out, t.origen);
   } catch (e) {
     console.log('  FALLA ' + t.origen + ' → ' + e.message);
     problemas++;

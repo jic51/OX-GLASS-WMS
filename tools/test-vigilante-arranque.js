@@ -178,9 +178,17 @@ window.__DATA={ userRole:'ADMIN', userEmail:'jose@ox-glass.com', userName:'Jose 
  * de una función que nadie llama: no cambia ninguna lógica, pero el navegador
  * no puede compilar el bloque, y por tanto no corre NADA de él. Es la forma
  * limpia de reproducir un pegado a medias sin tener que cortar el archivo. */
+/* EL ANCLA ES CÓDIGO, NO UN COMENTARIO — arreglo del 22/10.
+ *
+ * Se anclaba en `// Start\nloadDataFromGoogle();`, que es un COMENTARIO. Desde
+ * que la app se pega recortada (`pegar/`, sin prosa) ese ancla no existe ahí:
+ * el sabotaje no se podía montar y la prueba daba tres rojos sobre su propio
+ * andamio mientras el producto estaba perfectamente.
+ *
+ * La misma falta de siempre en su versión más tonta: una prueba que se agarra
+ * a algo que sólo está en una de las dos copias del archivo. */
 function romperElBloqueGrande(fuente) {
-  const marca = '// Start\nloadDataFromGoogle();';
-  const i = fuente.lastIndexOf(marca);
+  const i = fuente.lastIndexOf('loadDataFromGoogle();');
   if (i < 0) return null;
   return fuente.slice(0, i) + 'function __rota(){ ) }\n' + fuente.slice(i);
 }
@@ -340,9 +348,16 @@ function romperElBloqueGrande(fuente) {
   // `google.script`, el vigilante no tiene más remedio que razonar, y ahí es
   // donde tiene que acertar.
   {
-    const roto = html.replace(
-      /(<script>\n\/\/ ── Global State)[\s\S]*?(<\/script>\n<\/body>)/,
-      '$1\n$2');
+    /* También anclado en estructura, no en prosa (ver romperElBloqueGrande):
+     * el bloque grande es el ÚLTIMO <script> antes de </body>, y eso es verdad
+     * tanto en el archivo del repositorio como en el recortado que Jose pega. */
+    const roto = (function () {
+      const fin = html.lastIndexOf('</script>');
+      if (fin < 0) return html;
+      const ini = html.lastIndexOf('<script>', fin);
+      if (ini < 0) return html;
+      return html.slice(0, ini + '<script>'.length) + '\n' + html.slice(fin);
+    })();
     check('se pudo preparar el archivo sin bloque grande', roto !== html);
     const f = path.join(os.tmpdir(), 'acopio-vig-singoogle.html');
     fs.writeFileSync(f, roto);
