@@ -10,7 +10,7 @@
 > **«El estado de Acopio» y `ESTADO.md` son lo mismo**: este fichero. Es el
 > único sitio donde mirar cómo vamos.
 
-**Última actualización:** 22/10/2026 · **versión v12.91** · build `73be76c8`
+**Última actualización:** 23/10/2026 · **versión v12.92** · build `dcc7d0c4`
 
 ---
 
@@ -117,12 +117,13 @@ principio.
 | # | Qué | Estado |
 |---|---|---|
 | 1 | **Importar perdía las filas pasada la 500** | ✅ **HECHO — v12.91** |
+| 1-bis | **Borrar 490 tardaba media hora y no se podía parar** | ✅ **HECHO — v12.92** |
 | 2 | **El mismo fichero dos veces**: aviso + **deshacer** | ✅ **HECHO — v12.91** |
 | 3 | **La pantalla de importar dice la verdad** (un número, todas las columnas, qué va a crear antes) | ✅ **HECHO — v12.91** |
 | 4 | **«Send notification email» contestaba sobre LEER el correo** | ✅ **HECHO — v12.91** |
-| 5 | **Fusionar nombres**, las dos mitades | 🔜 **v12.92** · causa confirmada con tu vídeo: fallan **las 28** |
-| 6 | **El Error Log en vivo**, sin repintar | 🔜 **v12.92** |
-| 7 | **Dueño único de las pestañas** + papelera abierta + Import abierto (CSV) | 🔜 **v12.93** |
+| 5 | **Fusionar nombres**, las dos mitades | 🔜 **v12.93** · causa confirmada con tu vídeo: fallan **las 28** |
+| 6 | **El Error Log en vivo**, sin repintar | 🔜 **v12.93** |
+| 7 | **Dueño único de las pestañas** + papelera abierta + Import abierto (CSV) | 🔜 **v12.94** |
 | 8 | **Importar de verdad**: ventana propia, ubicación por fila y por grupos, destildar, prueba de 20 | 🔜 **v12.94+** |
 | 9 | Materials (Ajustes), como las alertas de stock bajo | anotado |
 | 10 | Directory (Ajustes), como la pantalla de usuarios | anotado |
@@ -157,6 +158,28 @@ misma línea** que en el repositorio.
 ---
 
 ## ✅ LO QUE ACABAMOS DE HACER — y qué hay que mirar de cada cosa
+
+### v12.92 · Borrar muchos tarda segundos, y se puede parar · **SIN VERIFICAR**
+
+De tus dos vídeos del 22/10: 490 movimientos, **casi media hora**, 40 perdidas,
+y sin forma de pararlo.
+
+**Qué probar:**
+
+1. **La prueba grande.** Marca unos cuantos cientos de movimientos y pulsa
+   Delete. Tiene que tardar **segundos**, no minutos. Y ya no debe salir ningún
+   *«Too many requests»*.
+2. **El botón de Parar.** Mientras trabaja, la línea de abajo a la izquierda
+   tiene un botón **Stop**. Púlsalo a mitad: tiene que decir algo como
+   *«Stopped — 300 of 490 deleted. The other 190 are untouched»*, y esos 190
+   tienen que seguir en la lista.
+3. **Borrar UNO solo** sigue igual que siempre: la fila se va al pulsar y las
+   cifras del almacén se actualizan con la respuesta. Eso no cambió.
+4. **Los avisos repetidos.** Si algo falla varias veces, **no se apilan**: al
+   que está en pantalla le sale un **× 4** pequeño.
+5. **Deshacer una importación grande** (más de 300 filas) tiene que terminar
+   del todo, no pararse a medias diciendo que ya está.
+6. Y lo borrado sigue en **Ajustes → Sistema → papelera**, para devolverlo.
 
 ### v12.91 · Importar deja de perder filas · **SIN VERIFICAR — Y ES LA MÁS IMPORTANTE**
 
