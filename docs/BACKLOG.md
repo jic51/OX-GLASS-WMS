@@ -150,30 +150,53 @@ puesto, lo marcado es exactamente lo que se está mirando.
 Dos vídeos de Jose, 22/10, después de importar 1.052 filas en una versión que
 todavía no tenía el «Undo». Hizo lo único que había: marcar todo y Delete.
 
-**Lo que se ve, cronometrado sobre sus propios vídeos:**
+**LA CIFRA ES MEDIA HORA, Y LA PRIMERA VEZ LA ESCRIBÍ MAL.**
+
+Jose, corrigiéndome: *"no, estás equivocado, muy equivocado. Envié 2 videos
+(uno al principio y uno del final) porque si grababa todo el video iba a ser
+muy largo y pesado. En total la app se demoró casi media hora en hacer todos
+los borrados (con los 40 menos)."*
+
+Yo había leído los dos vídeos como un solo tramo continuo y escrito «~6 min» al
+llegar a `474 of 490`. **Son el principio y el final de media hora**, con el
+medio sin grabar porque no cabía. El error es mío y del tipo que más importa
+evitar aquí: **inventarme el tramo que no vi** en lugar de decir que no lo
+tenía. La cifra real, de Jose, que estaba delante:
 
 | Momento | Lo que dice la pantalla |
 |---|---|
 | al pulsar | `490 selected` → Delete |
-| 3 min 37 s después | **`Deleting movements... 4 of 490`** |
-| ~6 min | `474 of 490` |
-| al final | **`450 moved to the trash · 40 could not be deleted`** |
+| 3 min 37 s después *(final del vídeo 1)* | **`Deleting movements... 4 of 490`** |
+| *(sin grabar: el grueso de la media hora)* | |
+| *(vídeo 2, cerca del final)* | `474 of 490` |
+| **≈ 30 minutos en total** | **`450 moved to the trash · 40 could not be deleted`** |
 | y encima | **dos avisos apilados**: *«Too many requests — please wait a moment and try again. — the row is back where it was.»* |
 
-Jose: *"no hay forma de pararlos ni borrar lo que la app ya está haciendo"*. Y
-no la hay: **nada en toda la app vacía `_delQueue`**. Una vez pulsado, se mira.
+**Media hora para borrar 490 filas, y 40 perdidas por el camino.**
 
-(Él mismo apunta que tenía la red a 3G en el inspector. Eso explica la
+Y el primer tramo sigue diciendo lo suyo: **4 filas en los primeros 3 min 37
+s**. Si ese ritmo se hubiera mantenido serían siete horas; que acabara en media
+hora quiere decir que el resto fue bastante más rápido — lo cual no mejora
+nada, porque **media hora de pantalla bloqueada sin poder pararla sigue siendo
+inaceptable**, y es la cifra que hay que poner al lado del arreglo.
+
+Jose: *"no hay forma de pararlos ni borrar lo que la app ya está haciendo"*. Y
+no la hay: **nada en toda la app vacía `_delQueue`**. Una vez pulsado, se mira
+durante media hora.
+
+(Él mismo apunta que tenía la red a 3G en el inspector. Eso explica parte de la
 lentitud; **no explica las otras tres faltas**, que están ahí a cualquier
-velocidad.)
+velocidad, ni que no se pueda parar.)
 
 **LAS CUATRO FALTAS, CADA UNA CON SU LÍNEA:**
 
 **1. Una petición por fila, y cada una reconstruye el almacén.**
 `_delEnqueue` → `_delPump` (`Index:10149-10159`) procesa de una en una, y cada
 `deleteRow` del servidor recalcula las hojas derivadas. 490 filas son 490
-viajes. En banda ancha son minutos; en la 3G de su vídeo, **4 filas en 3
-minutos y medio** — a ese ritmo, 490 serían **siete horas**.
+viajes. En la 3G del vídeo de Jose eso fueron **casi treinta minutos**, con los
+primeros 3 min 37 s gastados en **cuatro filas**. La cifra que hay que tener en
+la cabeza al arreglarlo es **media hora de pantalla ocupada, sin botón de
+parar**.
 
 Y la ironía: la cola de uno en uno se construyó **a propósito** en la v11.58,
 porque pedir veinte reconstrucciones de golpe daba «System busy». Era la
@@ -305,7 +328,7 @@ le miente al cliente, y al final lo que molesta.
 | **2** | **El mismo fichero dos veces duplica el almacén**: avisar antes (huella) + **poder deshacer una importación** | Pregunta de Jose, y el agujero es real. El «Undo» es además lo que vuelve segura toda la función | v12.91 |
 | **3** | **La pantalla de importar dice la verdad**: un solo número, todas las columnas que el fichero traía, qué va a crear ANTES de confirmar, y la suma antes/después | Es la otra mitad del 1: sin esto, el 1 se arregla y nadie puede comprobarlo | v12.91 |
 | **4** | **«Send notification email» contesta sobre LEER el correo** — partir la oferta en dos, **y que la prueba mire las zonas igual que los botones** | Jose lo ve cada vez que abre la gratis, y es lo que yo di por auditado el 21/10 | v12.91 |
-| **4-bis** | **Borrar en tanda: una petición, no 490** · por trozos · con **botón de parar** · «too many requests» como ocupado · avisos agrupados | Vídeos del 22/10: 490 borrados son 490 peticiones, 4 filas en 3½ minutos, 40 perdidas por nuestra propia cuota, y **no hay forma de pararlo**. Se cuela por delante de la fusión | **v12.92** |
+| **4-bis** | **Borrar en tanda: una petición, no 490** · por trozos · con **botón de parar** · «too many requests» como ocupado · avisos agrupados | Vídeos del 22/10: 490 borrados son 490 peticiones, **casi media hora**, 40 perdidas por nuestra propia cuota, y **no hay forma de pararlo**. Se cuela por delante de la fusión | **v12.92** |
 | **5** | **Fusionar nombres, las dos mitades**: que acepte el cambio de grafía, y que la lista no pueda tener dos veces lo mismo | Los 28 grupos de Jose fallan **todos**, y la causa de fondo sigue rellenando la lista mientras no se tape | v12.93 |
 | **6** | **El Error Log, en vivo y sin repintar** | Es el instrumento con el que se diagnostica lo demás. Va aquí y no antes porque el 1 y el 5 ya tienen su causa encontrada | v12.92 |
 | **7** | **Un solo dueño de la visibilidad de las pestañas de ajustes** + **papelera abierta en la gratis** + **Import abierto (CSV)** | Las tres son el mismo mecanismo. Hacerlas por separado es garantizar que el duelo por `display` vuelva una cuarta vez | v12.93 |
