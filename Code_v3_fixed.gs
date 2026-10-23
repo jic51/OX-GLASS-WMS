@@ -128,7 +128,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.92';
+var APP_VERSION = '12.93';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -140,7 +140,7 @@ var APP_VERSION = '12.92';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'dcc7d0c4';
+var APP_BUILD = '688c6196';
 
 // ═══ ACOPIO BASIC — EL INTERRUPTOR DE LA VERSIÓN GRATIS ══════════════════════
 //
@@ -1434,6 +1434,30 @@ function writeConfigColumns_(cfg, colIdx, columnas) {
   var ancho = columnas.length;
   if (!ancho) return;
 
+  /* ── NADA ENTRA DOS VECES, Y ES LA PUERTA QUE FALTABA ─────────────────────
+   *
+   * Jose, 22/10: su lista tenía **veinte grupos de proyectos duplicados**, con
+   * «ASPEN HOLLOW LOT 14» catorce veces seguidas. Al mirar de dónde salían,
+   * la respuesta fue que **nada en el camino de escritura miraba**:
+   *
+   *   · `loadConfig` empujaba cada fila sin comprobar nada
+   *   · esta función escribía lo que le dieran, tal cual
+   *   · el asistente de instalación volcaba los arrays del navegador sin filtrar
+   *   · y el ÚNICO sitio que sí lo comprobaba era el botón «añadir» de Ajustes
+   *
+   * La puerta de delante cerrada con llave y las tres de atrás abiertas. Es el
+   * quinto caso en este proyecto de una protección escrita una vez y no
+   * aplicada en los demás caminos — y la forma correcta de taparlo no es
+   * repetir la comprobación en los cuatro sitios, es ponerla **donde pasan
+   * todos**, que es aquí.
+   *
+   * Sin distinguir mayúsculas, porque «Acme» y «ACME» son el mismo proveedor
+   * para cualquiera que mire la pantalla. Se conserva la PRIMERA grafía: es la
+   * que ya estaba, y cambiarla por la segunda sería renombrar algo que nadie
+   * pidió renombrar. */
+  var vistos = {};
+  var repetidas = 0;
+
   // Se arma por FILAS, no por columnas: es lo que hace imposible descolocarlas.
   var filas = [];
   var alto  = 0;
@@ -1441,6 +1465,9 @@ function writeConfigColumns_(cfg, colIdx, columnas) {
   for (var r = 0; r < alto; r++) {
     var primera = String(((columnas[0] || [])[r]) || '').trim();
     if (!primera) continue;            // sin nombre no hay fila, y se cae entera
+    var clave = primera.toUpperCase();
+    if (vistos[clave]) { repetidas++; continue; }
+    vistos[clave] = 1;
     var fila = [];
     for (var c2 = 0; c2 < ancho; c2++) {
       // textCell_, not sheetSafe_: every value in these columns is a LABEL — a
@@ -1472,6 +1499,20 @@ function writeConfigColumns_(cfg, colIdx, columnas) {
           'them from the 2am backup.', { column: colIdx + 1, had: habia }, newRequestId_());
       }
     } catch (e) { Logger.log('writeConfigColumns_ warn: ' + e.message); }
+  }
+
+  /* Y SE DICE EN VOZ ALTA. Quitar filas en silencio es lo que convierte un
+   * arreglo en un misterio tres meses después — «¿dónde se fue mi proveedor?».
+   * Como WARN y no como ERROR: esto es la app haciendo lo correcto, no la app
+   * rompiéndose, y un ERROR aquí le mandaría un correo al admin por cada
+   * limpieza. */
+  if (repetidas) {
+    try {
+      logError_(cfg.getParent(), 'WARN', 'backend', 'writeConfigColumns_', 'system',
+        repetidas + ' duplicate name(s) were dropped from CONFIG column ' + (colIdx + 1) +
+        '. Only the first spelling of each is kept.', { column: colIdx + 1, dropped: repetidas },
+        newRequestId_());
+    } catch (e) { Logger.log('writeConfigColumns_ dup: ' + e.message); }
   }
 
   var needed = filas.length + 1;
@@ -2831,6 +2872,29 @@ function loadConfig() {
   }
   
   if (!c.archiveCutoffMonths) c.archiveCutoffMonths = 12;
+
+  /* AQUI NO SE QUITAN LOS REPETIDOS, Y ES UNA DECISION ----------------------
+   *
+   * Lo intente aqui primero y esta mal. `updateConfig` escribe CELDA A CELDA,
+   * asi que la hoja no se reescribe con el uso normal: si esta lectura los
+   * escondiera, las catorce filas de «ASPEN HOLLOW LOT 14» de Jose seguirian
+   * en su hoja PARA SIEMPRE y el no podria ni verlas ni arreglarlas. Una
+   * pantalla limpia encima de una hoja sucia es peor que las dos sucias: quita
+   * el sintoma y deja el problema sin dueno.
+   *
+   * Asi que lo que entrega esta funcion es LO QUE HAY, y el reparto es:
+   *
+   *   - `writeConfigColumns_` impide que entren nuevos            -> la puerta
+   *   - la pantalla de duplicados ofrece «Keep one» para los que
+   *     ya estan, y eso SI reescribe la columna entera            -> la limpieza
+   *   - los desplegables ya los colapsan al pintarlos (`new Set`
+   *     en refreshDropdowns), asi que nadie ve catorce veces lo
+   *     mismo al escribir un movimiento                           -> la comodidad
+   *
+   * Donde SI se ven, y donde deben verse, es en Ajustes: esa pantalla es el
+   * catalogo, y un catalogo que esconde lo que tiene guardado no se puede
+   * arreglar desde ahi.
+   */
   return c;
 }
 
@@ -14241,8 +14305,32 @@ function mergeConfigValues(data, auth) {
 
   var into = String(data.into || '').trim();
   if (!into) throw new Error('Pick the name to keep.');
+
+  /* ── EL CASO QUE ESTA FUNCIÓN EXISTE PARA ARREGLAR, Y SE NEGABA A HACER ────
+   *
+   * Jose, 22/10, con un vídeo: *"error al intentar hacer merge de proyectos y
+   * suppliers: Pick at least one other name to merge in"*. En su pantalla hay
+   * **20 grupos de proyectos duplicados y 8 de proveedores**, y **fallan los
+   * 28**: «ASPEN HOLLOW LOT 14» catorce veces, «BLUE MESA DISTRIBUTION» tres…
+   *
+   * La causa eran estas dos líneas. El filtro quitaba de `from` todo lo que en
+   * MAYÚSCULAS coincidía con `into`, así que un grupo de nombres que sólo se
+   * diferencian en mayúsculas o en espacios de los extremos dejaba `from`
+   * vacío y se negaba.
+   *
+   * Y ésas son las dos formas más comunes que tiene un duplicado. **La
+   * herramienta para unir nombres mal escritos se negaba justo en el error de
+   * escritura más frecuente que hay.**
+   *
+   * Lo que pedía arreglo no era el filtro: era qué significa esa negativa.
+   * «Los nombres que me diste son el mismo texto con otra grafía» no es un
+   * motivo para no hacer nada — es, literalmente, el trabajo: la lista se queda
+   * con una fila y el historial se reescribe con la grafía elegida.
+   *
+   * La única negativa que queda es la que sí tiene sentido: que no venga
+   * ningún otro nombre. Y para eso el botón ya no debería estar pulsable. */
   var from = (data.from || []).map(function (v) { return String(v || '').trim(); })
-                              .filter(function (v) { return v && v.toUpperCase() !== into.toUpperCase(); });
+                              .filter(function (v) { return !!v; });
   if (!from.length) throw new Error('Pick at least one other name to merge in.');
   return withStockLock_(function () { return mergeConfigValuesLocked_(data, auth, type, into, from); });
 }
@@ -14251,8 +14339,14 @@ function mergeConfigValuesLocked_(data, auth, type, into, from) {
   var ss  = SpreadsheetApp.getActiveSpreadsheet();
   var col = (type === 'projects') ? AC.PROJECT : AC.SUPPLIER;
 
+  /* `into` ENTRA EN EL CONJUNTO, y es lo que hace que una fusión de grafías
+   * funcione. Si sólo estuvieran los de `from`, las filas escritas «acme» se
+   * quedarían así mientras la lista pasa a decir «ACME» — y entonces el
+   * historial y el catálogo dirían cosas distintas, que es de donde sale este
+   * problema. */
   var wanted = {};
   from.forEach(function (v) { wanted[v.toUpperCase()] = true; });
+  wanted[into.toUpperCase()] = true;
 
   // 1. Rewrite both archives so history reads as one project.
   // Crudo: la comilla la pone rewriteArchiveColumn_. Ver mergeLocationsLocked_.
@@ -14261,7 +14355,11 @@ function mergeConfigValuesLocked_(data, auth, type, into, from) {
   [ss.getSheetByName(SHEETS.ARCHIVE), ensureArchiveHistorySheet_(ss)].forEach(function (sheet) {
     rowsChanged += rewriteArchiveColumn_(sheet, col, function (row) {
       var cur = String(row[col] || '').trim();
-      return (cur && wanted[cur.toUpperCase()]) ? storedInto : null;
+      if (!cur || !wanted[cur.toUpperCase()]) return null;
+      // Ya escrito exactamente así: no se toca. `rewriteArchiveColumn_` cuenta
+      // lo que cambia, y una fila reescrita consigo misma inflaría el número
+      // que después se le enseña a la persona.
+      return (cur === storedInto) ? null : storedInto;
     });
   });
 
@@ -14272,15 +14370,18 @@ function mergeConfigValuesLocked_(data, auth, type, into, from) {
   if (cfg) {
     var cfgCol  = (type === 'projects') ? 0 : 2;
     var cfgVals = cfg.getDataRange().getValues();
-    var keep = [], sawInto = false;
+    var keep = [];
     for (var r = 1; r < cfgVals.length; r++) {
       var v = String(cfgVals[r][cfgCol] || '').trim();
       if (!v) continue;
+      /* TODAS LAS GRAFÍAS FUERA, INCLUIDA LA DE `into` — y se vuelve a poner
+       * UNA sola abajo. Así catorce filas idénticas se quedan en una, que es
+       * exactamente lo que Jose tenía delante y no podía arreglar. */
       if (wanted[v.toUpperCase()]) { removed++; continue; }
-      if (v.toUpperCase() === into.toUpperCase()) sawInto = true;
       keep.push(v);
     }
-    if (!sawInto) keep.push(into);
+    // Siempre: `into` se quitó arriba con las demás grafías y vuelve una vez.
+    keep.push(into);
     keep.sort();
     writeConfigColumn_(cfg, cfgCol, keep);
   }
@@ -14289,7 +14390,11 @@ function mergeConfigValuesLocked_(data, auth, type, into, from) {
   auditLog_(ss, 'MERGE_CONFIG', auth.email,
     type + ': ' + from.join(' + ') + ' → ' + into, String(rowsChanged) + ' rows', '');
 
-  return { status: 'success', rowsChanged: rowsChanged, removed: removed, into: into };
+  // `removed` cuenta las filas de CONFIG que se quitaron, y `into` vuelve a
+  // entrar una vez: lo que de verdad desapareció es una menos. Sin esto, unir
+  // dos nombres diría que quitó dos.
+  return { status: 'success', rowsChanged: rowsChanged,
+           removed: Math.max(0, removed - 1), into: into };
 }
 
 // Rewrites the Category column of one archive-shaped sheet in ONE round trip.

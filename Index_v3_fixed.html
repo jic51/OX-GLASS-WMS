@@ -3290,6 +3290,15 @@
     [data-theme="dark"] .import-will{background:#17314F;border-color:#1E4976}
     .import-will-hd{font-size:.78rem;font-weight:700;color:var(--accent2);margin-bottom:var(--sp-1)}
     .import-will-ul{margin:0;padding-left:var(--sp-6);font-size:.78rem;line-height:1.5}
+    /* La fila que entra sola cuando llega un error nuevo. Corta y suave: su
+       trabajo es que no pase desapercibida en una lista de trescientas, no
+       llamar la atención. Y se respeta a quien pidió menos movimiento, igual
+       que las filas que se van. */
+    @keyframes errRowIn{from{background:var(--blue-bg,#EFF6FF)} to{background:transparent}}
+    tr.row-enter{animation:errRowIn 1.6s ease}
+    @media(prefers-reduced-motion:reduce){ tr.row-enter{animation:none} }
+    .sim-dupe-exacto{font-size:.84rem;font-weight:600;padding:var(--sp-1) 0}
+    .sim-dupe-exacto span{font-weight:400;color:var(--muted);font-size:.78rem}
     .sim-box{background:var(--yellow-bg,#FEF9C3);border:1px solid #FDE68A;border-radius:10px;padding:var(--sp-5) .85rem;margin-bottom:var(--sp-6)}
     [data-theme="dark"] .sim-box{background:#3B2F0B;border-color:#6B5B16}
     .sim-hdr{font-size:.82rem;font-weight:800;color:var(--text);margin-bottom:var(--sp-1)}
@@ -5827,7 +5836,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.92';
+var APP_VERSION = '12.93';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5839,7 +5848,7 @@ var APP_VERSION = '12.92';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'dcc7d0c4';
+var APP_BUILD = '688c6196';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -14868,7 +14877,12 @@ function _loadSettings(opts) {
 
   if (!quiet) _errorLogData = null;
   google.script.run
-    .withSuccessHandler(function(rows) { _errorLogData = rows || []; if (_settingsTab === 'errorlog') _drawErrorLog(); })
+    .withSuccessHandler(function(rows) {
+      _errorLogData = rows || [];
+      // Con el filtro que haya escrito ahora mismo: redibujar sin él dejaría
+      // la tabla entera debajo de una caja de búsqueda con texto dentro.
+      if (_settingsTab === 'errorlog') _drawErrorLog(_errLogFiltroActual());
+    })
     .withFailureHandler(function(){})
     .processMovement('getErrorLog', _h({}));
 
@@ -17615,7 +17629,13 @@ function _wireManualMerge(tab, label){
 
     document.getElementById('cfgPickMerge').addEventListener('click', function(){
       var into = document.getElementById('cfgPickKeep').value;
-      var from = sel.filter(function(v){ return v !== into; });
+      // Misma razón que en los grupos de parecidos: se quita UNA aparición de
+      // la elegida, no todas las que se escriban igual.
+      var quitada = false;
+      var from = sel.filter(function(v){
+        if (!quitada && v === into){ quitada = true; return false; }
+        return true;
+      });
       var btn  = document.getElementById('cfgPickMerge');
       _showConfirm({
         icon: '🔀', title: 'Merge into "' + into + '"?',
@@ -17743,6 +17763,31 @@ function _renderSimilarGroups(tab, items, label){
       ' spelled differently. Merging rewrites every movement so history reads as one. ' +
       'Check each group first — similar names are not always the same thing.</p>' +
     _similarGroups.map(function(g, gi){
+      /* ── CATORCE NOMBRES IDÉNTICOS NO SON UNA ELECCIÓN ────────────────────
+       *
+       * Jose, 22/10: en su pantalla había un grupo con «ASPEN HOLLOW LOT 14»
+       * **catorce veces**, y debajo *«¿cuál conservar?»* con catorce botones
+       * que se leían exactamente igual. Eso no es una pregunta: es una
+       * pantalla pidiendo que elijas entre cosas indistinguibles.
+       *
+       * Cuando el grupo entero es el mismo texto —sin distinguir mayúsculas ni
+       * espacios de los extremos— no hay nada que elegir: lo que hay que hacer
+       * es dejar uno. Se dice así, y el botón dice lo que hace. */
+      var mismo = g.every(function(v){
+        return String(v).trim().toUpperCase() === String(g[0]).trim().toUpperCase();
+      });
+      if (mismo){
+        return '<div class="sim-group" data-g="' + gi + '">' +
+          '<div class="sim-dupe-exacto">' + _he(g[0]) +
+            ' <span>· listed ' + g.length + ' times</span></div>' +
+          '<p class="sim-sub" style="margin:.2rem 0 .5rem">' +
+            'These are the same name, not similar ones. Nothing to choose — ' +
+            'keeping one leaves your history exactly as it is.</p>' +
+          '<div class="sim-acts">' +
+            '<button class="btn btn-primary btn-sm" data-sim-merge="' + gi + '">Keep one</button>' +
+            '<button class="btn btn-ghost btn-sm" data-sim-skip="' + gi + '">Leave them</button>' +
+          '</div></div>';
+      }
       return '<div class="sim-group" data-g="' + gi + '">' +
         g.map(function(v, vi){
           return '<label class="sim-opt">' +
@@ -17778,7 +17823,17 @@ function _wireSimilarGroups(tab){
       var group = _similarGroups[gi]; if (!group) return;
       var picked = document.querySelector('input[name="simKeep' + gi + '"]:checked');
       var into = picked ? picked.value : group[0];
-      var from = group.filter(function(v){ return v !== into; });
+      /* POR POSICIÓN, NO POR VALOR, y es lo que hace que «Keep one» funcione.
+       *
+       * `group.filter(v => v !== into)` deja `from` VACÍO cuando el grupo son
+       * catorce copias del mismo texto — que es justo el caso de Jose, y justo
+       * el que esta pantalla ahora ofrece arreglar con un botón. Se quita UNA
+       * aparición, la elegida, y el resto va como `from`. */
+      var yaQuitado = false;
+      var from = group.filter(function(v){
+        if (!yaQuitado && v === into){ yaQuitado = true; return false; }
+        return true;
+      });
       _showConfirm({
         icon: '🔀', title: 'Merge into "' + into + '"?',
         message: from.join('\n') + '\n\nwill become "' + into + '" on every movement. ' +
@@ -17855,19 +17910,159 @@ function _applyMergeLocally(tab, from, into){
 }
 
 var _errorLogData = [];
+
+/* ═══ EL REGISTRO DE ERRORES ERA UNA FOTO, NO UNA VENTANA ═══════════════
+ *
+ * Jose, 22/10: *"al intentar hacer merge de suppliers y de proyectos y salir el
+ * error, esos errores no se guardan en Error Log, no sé por qué"*.
+ *
+ * Sí se guardaban. `processMovement` registra TODO lo que falla, en el único
+ * sitio por el que pasan todas las acciones, y sus propias líneas pegadas lo
+ * demostraban. Lo que no funcionaba era esta pantalla:
+ *
+ *   · `_errorLogData` se traía UNA vez, al abrir Ajustes
+ *   · entrar en la pestaña no volvía a preguntar nunca
+ *   · y `var _errorLogData = []` nace lista VACÍA, que en JavaScript es
+ *     VERDADERA, así que el `if` de abajo nunca pedía nada por su cuenta
+ *
+ * Y es justo la secuencia de Jose: abre Ajustes → fusiona → falla → va a Error
+ * Log **sin cerrar Ajustes** → ve la lista de antes del error.
+ *
+ * Un registro de errores que sólo se refresca cerrando y abriendo la ventana no
+ * sirve para diagnosticar nada — y es la herramienta con la que se comprueba
+ * todo lo demás, así que su fallo multiplica el de los otros.
+ *
+ * ── Y LA CONDICIÓN QUE PUSO JOSE, QUE ES MEJOR QUE MI PLAN ─────────────
+ *
+ *   *"Los errores deben actualizarse de inmediato sin repintar toda la pantalla
+ *   o ventana, sólo la fila que falta."*
+ *
+ * Yo iba a volver a pedir la lista y redibujar la tabla. Eso te saca de donde
+ * estás: se pierde el scroll, se vacía lo que tenías escrito en el buscador, y
+ * el error sale **en la misma ventana de Ajustes en la que estás trabajando**,
+ * así que perderías de vista justo el grupo que acabas de intentar fusionar.
+ *
+ * Ahora las filas nuevas se meten arriba, una a una, con la misma entrada
+ * animada que usan la papelera y la baraja. El `requestId` es único por fila y
+ * sirve de identidad, así que saber cuáles son nuevas es exacto y no una
+ * suposición por fecha. */
 function _renderErrorLogTab() {
   var content = document.getElementById('settingsTabContent');
-  // Already prefetched in _loadSettings() — render immediately if it's there.
-  if (_errorLogData) { _drawErrorLog(); return; }
-  content.innerHTML = '<p style="padding:1rem;color:var(--muted);font-size:.85rem">Loading…</p>';
+  // «Nuevas desde que miras» cuenta desde AHORA: entrar en la pestaña es el
+  // momento en que empiezas a mirar.
+  _errLogNuevas = 0;
+  /* SE PINTA LO QUE HAY Y SE PREGUNTA IGUAL. Las dos cosas, no una:
+   * sin lo primero parpadearía un «Loading…» cada vez que entras; sin lo
+   * segundo seguiría enseñando la foto de cuando abriste Ajustes. */
+  if (_errorLogData && _errorLogData.length) _drawErrorLog();
+  else content.innerHTML = '<p style="padding:1rem;color:var(--muted);font-size:.85rem">Loading…</p>';
+  _refrescarErrorLog(content);
+}
+
+// Cuántas filas han entrado desde que se mira esta pestaña. Se enseña para que
+// una fila nueva no pase desapercibida en una lista de trescientas.
+var _errLogNuevas = 0;
+
+function _refrescarErrorLog(content){
   google.script.run
-    .withSuccessHandler(function(rows) { _errorLogData = rows || []; _drawErrorLog(); })
-    .withFailureHandler(function(e) { content.innerHTML = '<p style="padding:1rem;color:#c0392b;font-size:.85rem">Error: '+_he(e.message||e)+'</p>'; })
+    .withSuccessHandler(function(rows) {
+      var nuevas = _errorLogFilasNuevas(rows || []);
+      var habia  = _errorLogData && _errorLogData.length;
+      _errorLogData = rows || [];
+      if (_settingsTab !== 'errorlog') return;
+      // Primera pintada, o la lista cambió por abajo (se limpió, se purgó):
+      // ahí sí hay que redibujar, porque no es «una fila más».
+      if (!habia || !nuevas.length) { _drawErrorLog(_errLogFiltroActual()); return; }
+      _errLogNuevas += nuevas.length;
+      _errorLogMeterArriba(nuevas);
+    })
+    .withFailureHandler(function(e) {
+      if (content && !(_errorLogData && _errorLogData.length)) {
+        content.innerHTML = '<p style="padding:1rem;color:#c0392b;font-size:.85rem">Error: '+_he(e.message||e)+'</p>';
+      }
+    })
     .processMovement('getErrorLog', _h({}));
+}
+
+// Lo que el buscador tiene escrito ahora mismo. Un redibujado que lo olvidara
+// borraría el filtro sin tocar la caja: la tabla diría una cosa y el texto de
+// arriba otra.
+function _errLogFiltroActual(){
+  var inp = document.getElementById('errLogSearch');
+  return inp ? inp.value : '';
+}
+
+/* Las filas que no estaban. Por `requestId`, que es único por fila — comparar
+ * por fecha fallaría con dos errores en el mismo segundo, que es exactamente
+ * lo que pasa en una ráfaga. Las que no traen id (muy viejas) se reconocen por
+ * su contenido, que no es perfecto pero sólo afecta a filas que ya estaban. */
+function _errorLogFilasNuevas(rows){
+  var ya = {};
+  (_errorLogData || []).forEach(function(r){ ya[_errLogClave(r)] = 1; });
+  return rows.filter(function(r){ return !ya[_errLogClave(r)]; });
+}
+function _errLogClave(r){
+  return r.requestId ? ('id:' + r.requestId)
+                     : (String(r.timestamp) + '|' + String(r.action) + '|' + String(r.message));
+}
+
+/* Mete las filas nuevas ARRIBA, sin tocar el resto de la tabla. Esto es lo que
+ * pidió Jose: «sólo la fila que falta». El scroll no se mueve, el buscador
+ * conserva lo escrito, y lo que estabas mirando sigue donde estaba. */
+function _errorLogMeterArriba(nuevas){
+  var tbody = document.querySelector('#settingsTabContent tbody');
+  if (!tbody) { _drawErrorLog(_errLogFiltroActual()); return; }
+  var q = String(_errLogFiltroActual() || '').toLowerCase();
+  // La fila de «No errors logged» no es una fila: si está, se va.
+  var vacio = tbody.querySelector('td[colspan]');
+  if (vacio && vacio.parentNode) tbody.removeChild(vacio.parentNode);
+
+  var metidas = 0;
+  // Al revés, para que la más reciente acabe la primera.
+  for (var i = nuevas.length - 1; i >= 0; i--) {
+    var r = nuevas[i];
+    if (q && (r.message+' '+r.action+' '+r.user+' '+r.requestId).toLowerCase().indexOf(q) === -1) continue;
+    var tr = document.createElement('tr');
+    tr.innerHTML = _errLogFilaHtml(r);
+    tr.className = 'row-enter';
+    tbody.insertBefore(tr, tbody.firstChild);
+    metidas++;
+  }
+  _errLogPintarContador();
+  if (!metidas) return;
+}
+
+// El aviso de «han entrado N desde que miras». Encima de la tabla y discreto:
+// la información es la fila, no el cartel.
+function _errLogPintarContador(){
+  var marca = document.getElementById('errLogNuevasMarca');
+  if (!marca) return;
+  marca.textContent = _errLogNuevas
+    ? ('• ' + _errLogNuevas + ' new since you opened this') : '';
+}
+
+/* LAS CELDAS DE UNA FILA, EN UN SOLO SITIO.
+ *
+ * Las dibujan dos caminos: la tabla entera (`_drawErrorLog`) y la fila que
+ * entra sola cuando llega un error nuevo (`_errorLogMeterArriba`). Dos copias
+ * pareciéndose es exactamente como una tabla acaba con dos formatos distintos
+ * según por dónde se haya pintado cada fila. */
+function _errLogFilaHtml(r) {
+  var color = r.severity === 'ERROR' ? '#c0392b' : '#b8860b';
+  var ts = r.timestamp ? new Date(r.timestamp).toLocaleString() : '';
+  return '<td style="white-space:nowrap;font-size:.72rem;color:var(--muted)">'+_he(ts)+'</td>' +
+    '<td><span style="color:'+color+';font-weight:700;font-size:.7rem">'+_he(r.severity)+'</span></td>' +
+    '<td style="font-size:.72rem">'+_he(r.user)+'</td>' +
+    '<td style="font-size:.72rem">'+_he(r.source)+'/'+_he(r.action)+'</td>' +
+    '<td style="font-size:.75rem">'+_he(r.message)+'</td>' +
+    '<td style="font-size:.68rem;color:var(--muted)">'+_he(r.requestId)+'</td>';
 }
 
 function _drawErrorLog(filterText) {
   var content = document.getElementById('settingsTabContent');
+  // `_loadSettings` pone esto a `null` para que la pestaña diga «Loading…» en
+  // una recarga ruidosa. Dibujar con `null` reventaría en el `filter` de abajo.
+  if (!_errorLogData) return;
   var q = String(filterText || '').toLowerCase();
   var rows = _errorLogData.filter(function(r) {
     if (!q) return true;
@@ -17875,16 +18070,7 @@ function _drawErrorLog(filterText) {
   });
 
   var trs = rows.map(function(r) {
-    var color = r.severity === 'ERROR' ? '#c0392b' : '#b8860b';
-    var ts = r.timestamp ? new Date(r.timestamp).toLocaleString() : '';
-    return '<tr>' +
-      '<td style="white-space:nowrap;font-size:.72rem;color:var(--muted)">'+_he(ts)+'</td>' +
-      '<td><span style="color:'+color+';font-weight:700;font-size:.7rem">'+_he(r.severity)+'</span></td>' +
-      '<td style="font-size:.72rem">'+_he(r.user)+'</td>' +
-      '<td style="font-size:.72rem">'+_he(r.source)+'/'+_he(r.action)+'</td>' +
-      '<td style="font-size:.75rem">'+_he(r.message)+'</td>' +
-      '<td style="font-size:.68rem;color:var(--muted)">'+_he(r.requestId)+'</td>' +
-    '</tr>';
+    return '<tr>' + _errLogFilaHtml(r) + '</tr>';
   }).join('');
 
   // Counted, not just listed. "3 errors" and "3 errors among 240 warnings" are
@@ -17897,8 +18083,14 @@ function _drawErrorLog(filterText) {
     '<p style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem">' +
       '<b>'+errCount+'</b> error'+(errCount===1?'':'s')+' and <b>'+warnCount+'</b> warning'+(warnCount===1?'':'s')+' ' +
       '(backend + frontend). ERROR = unexpected bug, WARN = the app correctly refusing something. ' +
-      'Entries older than 30 days are removed on their own.</p>' +
+      'Entries older than 30 days are removed on their own. ' +
+      '<span id="errLogNuevasMarca" style="color:var(--accent2);font-weight:700"></span></p>' +
     '<div style="display:flex;gap:.4rem;margin-bottom:.6rem;flex-wrap:wrap">' +
+      /* UN BOTÓN DE RECARGAR, A LA VISTA. Esta pantalla es la única en la que
+       * alguien está ESPERANDO a que aparezca una fila — provoca el fallo en
+       * otra pestaña y viene a ver qué dijo. Que refresque sola al entrar está
+       * bien; poder pedirlo sin salir y volver a entrar está mejor. */
+      '<button class="btn btn-sm" id="btnErrLogRefrescar" onclick="_refrescarErrorLog()">↻ Refresh</button>' +
       '<button class="btn btn-sm" onclick="_clearErrorLog(\'warnings\')"' + (warnCount ? '' : ' disabled') + '>' +
         '🧹 Clear '+warnCount+' warning'+(warnCount===1?'':'s')+'</button>' +
       '<button class="btn btn-sm btn-danger" onclick="_clearErrorLog(\'all\')"' + (_errorLogData.length ? '' : ' disabled') + '>' +
@@ -17920,6 +18112,7 @@ function _drawErrorLog(filterText) {
         '<tbody>'+(trs || '<tr><td colspan="6" style="padding:1rem;text-align:center;color:var(--muted);font-size:.8rem">No errors logged.</td></tr>')+'</tbody>' +
       '</table>' +
     '</div>';
+  _errLogPintarContador();
   var inp = document.getElementById('errLogSearch');
   if (inp) { inp.focus(); var v = inp.value; inp.value=''; inp.value=v; }
 }
@@ -29731,6 +29924,18 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '12.93',
+    titulo: 'Merging duplicate names works, and the error log keeps up',
+    puntos: [
+      '<b>Every merge was failing.</b> Twenty groups of duplicate projects and eight of suppliers, and all twenty-eight answered \u201cpick at least one other name to merge in\u201d.',
+      'The screen offered to merge names that are the same once you ignore capitals and spacing, and the server refused exactly those \u2014 <b>the tool for joining misspelled names refused the commonest misspelling there is</b>. It does the job now.',
+      'When a group is <b>the same name listed fourteen times</b>, it no longer asks which to keep \u2014 fourteen options that read identically is not a choice. It says how many and offers <b>Keep one</b>.',
+      '<b>The duplicates had a way in, and it is closed.</b> Only the \u201cadd\u201d button checked for a name already there, so anything arriving another way piled up. That check now sits where every write passes.',
+      '<b>And the error log was a photograph, not a window</b> \u2014 it loaded once when you opened Settings and never asked again. It refreshes when you open the tab, and new entries slide in at the top instead of redrawing the table.'
+    ],
+    antes:  'Twenty-eight merges, twenty-eight refusals',
+    ahora:  'One button, and the error log tells you what just happened' },
+
   { ver: '12.92',
     titulo: 'Deleting a lot of movements takes seconds, and can be stopped',
     puntos: [
@@ -29765,16 +29970,6 @@ var NOVEDADES = [
     ],
     antes:  'Two boxes asking where it came from, with one possible answer',
     ahora:  'Filled in, unless there is really something to choose' },
-
-  { ver: '12.89',
-    titulo: 'One list, search that keeps up, a lighter first load',
-    puntos: [
-      'On a Return, two dropdowns used to open on top of each other: ours \u2014 with how much is out and where \u2014 and the browser\u2019s own. <b>Ours wins now.</b>',
-      'The search boxes waited for you to <b>stop</b> typing, so typing without pausing moved nothing. They now filter from the first letter.',
-      '<b>And the app starts much faster on a bad connection.</b> It was downloading Google\u2019s charting library on every load \u2014 most of 2 MB \u2014 for two pie charts on one of five screens. On 3G that was 27 seconds. Now it is fetched when the dashboard needs it.'
-    ],
-    antes:  'Two lists fighting, and 27 seconds before the page was ready',
-    ahora:  'One list, and everyone else gets in without paying for the charts' },
 
 ];
 

@@ -101,6 +101,36 @@
        movements went from about two and a half minutes to fifty-five seconds
        along the way.</p>
 
+    <div class="entry" id="v12-93">
+      <span class="ver">v12.93</span>
+      <span class="tag fix">Fix</span>
+      <h3>Merging duplicate names works, and the error log keeps up</h3>
+      <p><b>Every merge was failing.</b> Twenty groups of duplicate projects and eight of
+         suppliers, and all twenty-eight answered <i>&ldquo;pick at least one other name to merge
+         in&rdquo;</i>. Two halves of the app disagreed without knowing it: the screen offered to
+         merge names that are the same once you ignore capitals and spacing, and the server then
+         refused exactly those &mdash; <b>the tool for joining misspelled names refused the
+         commonest misspelling there is</b>.</p>
+      <p>It does the job now. Picking a spelling rewrites your history to match it and leaves one
+         row in the list, which is what merging always meant.</p>
+      <p>And when a group is <b>the same name listed fourteen times</b>, it no longer asks which
+         one to keep &mdash; fourteen options that read identically is not a choice. It says how
+         many there are and offers <b>Keep one</b>.</p>
+      <p><b>The duplicates had a way in, and it is closed.</b> Nothing on the way into your
+         catalogue checked for a name already there &mdash; only the &ldquo;add&rdquo; button in
+         Settings did, so anything arriving another way piled up. That check now sits where every
+         write passes, and it says what it dropped.</p>
+      <p>Your existing duplicates are <b>not hidden</b>: they stay visible in Settings, where you
+         can clear them with one button. A clean screen over a messy list would remove the symptom
+         and leave the problem with nobody to fix it.</p>
+      <p>Separately: <b>the error log was a photograph, not a window</b>. It loaded once when you
+         opened Settings and never asked again &mdash; so an error that happened while Settings was
+         open never appeared, which is exactly when you are looking for it. It refreshes when you
+         open the tab, and new entries <b>slide in at the top</b> instead of redrawing the table:
+         your scroll stays put, your search text stays, and you are not thrown off whatever you
+         were in the middle of.</p>
+    </div>
+
     <div class="entry" id="v12-92">
       <span class="ver">v12.92</span>
       <span class="tag fix">Fix</span>
