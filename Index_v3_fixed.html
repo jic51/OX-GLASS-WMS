@@ -3420,6 +3420,10 @@
     .toast.info{border-top-color:var(--accent)}
     .toast-icon{font-size:1rem;flex-shrink:0;margin-top:.05rem}
     .toast-msg{flex:1;line-height:1.4}
+    /* «× 4» cuando el mismo aviso vuelve a pasar. Discreto a propósito: lo que
+       importa es el mensaje; el número sólo dice que no es el eco de antes. */
+    .toast-veces{flex-shrink:0;align-self:center;font-size:.72rem;font-weight:700;
+                 color:var(--muted);font-variant-numeric:tabular-nums;padding:0 var(--sp-1)}
     .toast-close{background:none;border:none;cursor:pointer;color:var(--muted);font-size:.9rem;padding:0 0 0 .35rem;line-height:1;flex-shrink:0;align-self:flex-start}
     .toast-close:hover{color:var(--text)}
     /* EL BOTÓN DEL AVISO. Se ve como un botón y no como un enlace a propósito:
@@ -3507,6 +3511,10 @@
     #progMsg{flex:1;line-height:1.35}
     #progCount{color:var(--muted);font-size:.78rem;flex-shrink:0;
                font-variant-numeric:tabular-nums}
+    .prog-stop{flex-shrink:0;border:1px solid var(--border);background:var(--card);
+               color:var(--text);border-radius:6px;padding:var(--sp-1) var(--sp-4);
+               font-size:.75rem;font-weight:600;font-family:inherit;cursor:pointer}
+    .prog-stop:hover{border-color:var(--red);color:var(--red)}
     @keyframes progIn {from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)}}
     @keyframes progOut{from{opacity:1;transform:translateY(0)} to{opacity:0;transform:translateY(8px)}}
     @media(max-width:640px){ #progWrap{left:1rem;right:1rem;min-width:0;max-width:none} }
@@ -4356,6 +4364,10 @@
   <span id="progIcon" class="spin-hg">⏳</span>
   <span id="progMsg"></span>
   <span id="progCount"></span>
+  <!-- Sólo aparece en los trabajos que SE PUEDEN parar de verdad. Un botón de
+       parar que no para nada es peor que no tenerlo: la siguiente vez que algo
+       vaya mal, nadie lo pulsa. Ver _progPararOfrecer. -->
+  <button type="button" id="progStop" class="prog-stop" style="display:none">Stop</button>
 </div>
 
 <!-- ══ USERS MANAGEMENT MODAL ════════════════════════════════════════════════ -->
@@ -5815,7 +5827,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.91';
+var APP_VERSION = '12.92';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5827,7 +5839,7 @@ var APP_VERSION = '12.91';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '73be76c8';
+var APP_BUILD = 'dcc7d0c4';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -10057,26 +10069,169 @@ function deleteSelectedMovements(){
       'They go to the trash, so you can put them back from Settings → System.',
     confirmText: n === 1 ? 'Yes, Delete' : 'Yes, delete ' + n,
     onConfirm: function(){
-      // De uno en uno por la misma cola de la v11.58 — pedirle al servidor
-      // veinte reconstrucciones del almacén de golpe es justo lo que daba
-      // "System busy". La selección se suelta ya: las filas se ven esperando
-      // por su cuenta, y dejarlas marcadas invitaría a pulsar otra vez.
-      //
-      // Se cuenta lo que DE VERDAD se encoló, no lo que se seleccionó: una fila
-      // que ya tenía su borrado en el aire no encola otro, y contarla dejaría la
-      // línea de progreso esperando para siempre a una respuesta que no viene.
-      var pedidos = 0;
+      // La selección se suelta ya: las filas se ven irse por su cuenta, y
+      // dejarlas marcadas invitaría a pulsar otra vez.
+      var ids = [];
       sel.forEach(function(m){
         delete _movSelection[m.movId];
-        if (_doDeleteMovementRow(m.rowIdx)) pedidos++;
+        if (m.movId) ids.push(m.movId);
       });
-      // Después del bucle, no dentro: las respuestas del servidor no pueden
-      // llegar hasta que este código suelte el hilo, así que el total ya está
-      // completo cuando cuente el primer ✓.
-      _progStart(pedidos, pedidos === 1 ? 'Deleting movement' : 'Deleting movements');
       _updateMovActionBar();
+      /* UNA FILA SUELTA SIGUE YENDO POR EL CAMINO DE SIEMPRE.
+       *
+       * No por nostalgia: ese camino quita la fila al pulsar, la devuelve a SU
+       * SITIO si el servidor dice que no, distingue «ya lo borró otro» de «no
+       * se pudo», y trae las cifras del almacén de vuelta. Todo eso importa
+       * cuando borras UNA mirándola. En una tanda de 490 no importa ninguna de
+       * las cuatro: lo que importa es acabar. */
+      if (ids.length <= 1){
+        var pedidos = 0;
+        sel.forEach(function(m){ if (_doDeleteMovementRow(m.rowIdx)) pedidos++; });
+        _progStart(pedidos, pedidos === 1 ? 'Deleting movement' : 'Deleting movements');
+        return;
+      }
+      _borrarEnTanda(ids);
     }
   });
+}
+
+/* ═══ BORRAR MUCHOS: POR TROZOS, Y SE PUEDE PARAR ═══════════════════════════
+ *
+ * Jose, 22/10, con dos vídeos: marcó 490 y pulsó Delete. **Casi media hora**,
+ * 40 perdidas con «Too many requests», y —lo que de verdad le molestó— *"no
+ * hay forma de pararlos ni borrar lo que la app ya está haciendo"*.
+ *
+ * Eran 490 peticiones, una por fila, cada una reconstruyendo el almacén. La
+ * cola de una en una se escribió a propósito en la v11.58, cuando veinte de
+ * golpe daban «System busy»; era la respuesta correcta para veinte y nadie
+ * volvió a mirarla cuando apareció «marcar todas».
+ *
+ * Ahora son **dos peticiones** para 490. Y eso arregla de una vez las cuatro
+ * cosas que fallaban:
+ *
+ *   · la media hora        → segundos
+ *   · la cuota de 240/min  → dos llamadas no la rozan
+ *   · 40 avisos apilados   → una respuesta
+ *   · el resultado a medias→ cada trozo entra entero o no entra
+ *
+ * ── POR QUÉ TROZOS Y NO UNA LLAMADA ────────────────────────────────────────
+ *
+ * Una sola sería más rápida. Pero Apps Script corta a los seis minutos, y
+ * sobre todo: con una llamada no hay dónde parar. Los trozos son lo que hace
+ * que «Stop» pueda decir la verdad —*«200 de 490; las otras 290 intactas»*— y
+ * que cerrar la pestaña a mitad deje un número entero de trozos hechos en vez
+ * de un estado que nadie puede contar.
+ */
+var _tandaBorrado = null;   // { ids, hechas, total, parar }
+
+function _borrarEnTanda(ids){
+  // `esperas` es por TANDA y no por trozo a propósito: si el almacén está
+  // ocupado ocho veces seguidas, el problema no es este trozo, es que hay que
+  // dejar de insistir.
+  _tandaBorrado = { ids: ids.slice(), hechas: 0, total: ids.length,
+                    parar: false, esperas: 0 };
+  _progStart(ids.length, 'Deleting movements', _progFinBorrado);
+  _progPararOfrecer(function(){
+    // No se corta la petición que ya salió: el servidor la va a terminar y sus
+    // filas van a la papelera igual. Lo que se para es la SIGUIENTE, y eso es
+    // lo que se le dice a la persona.
+    if (_tandaBorrado) _tandaBorrado.parar = true;
+  });
+  _tandaPaso();
+}
+
+function _tandaPaso(){
+  var t = _tandaBorrado;
+  if (!t) return;
+
+  if (t.parar){
+    _progPararQuitar();
+    _progEnd('Stopped — ' + t.hechas + ' of ' + t.total + ' deleted. The other ' +
+             (t.total - t.hechas) + ' are untouched.', true);
+    _tandaBorrado = null;
+    loadDataFromGoogle(true, true);
+    return;
+  }
+  if (!t.ids.length){
+    _progPararQuitar();
+    _tandaBorrado = null;
+    loadDataFromGoogle(true, true);
+    return;
+  }
+
+  /* EL TROZO QUE SE PIDE ES MÁS GRANDE QUE EL QUE EL SERVIDOR SE LLEVA, y es a
+   * propósito: el servidor tiene su propio tope (MAX_BORRADO_POR_TANDA) y es
+   * él quien manda, porque es quien sabe cuánto le cabe en seis minutos. Aquí
+   * se le dan todos los ids que quedan y él contesta cuántos se llevó. Dos
+   * topes que tuvieran que coincidir serían exactamente la falta que este
+   * proyecto lleva veinte veces encontrando. */
+  var trozo = t.ids.slice();
+
+  google.script.run
+    .withSuccessHandler(function(res){
+      var idsFuera = (res && res.removedIds) || [];
+      var hechas   = (res && res.removed) || 0;
+      t.hechas += hechas;
+      /* SE QUITAN LAS QUE EL SERVIDOR DICE, no las que esta pantalla supone.
+       * Él recorre la hoja en orden de fila; aquí los ids están en el orden en
+       * que se marcaron. Quitar «las primeras N que pedí» habría borrado de la
+       * pantalla filas que siguen en la hoja. */
+      _quitarMovimientosPorId(idsFuera);
+      var yaNo = {}; idsFuera.forEach(function(id){ yaNo[id] = 1; });
+      t.ids = t.ids.filter(function(id){ return !yaNo[id]; });
+      t.esperas = 0;   // un trozo que entró limpia la cuenta de esperas
+      _progStepN(hechas);
+      _sysCacheDrop('trash');
+      /* SI EL SERVIDOR SE LLEVÓ CERO Y QUEDABAN, NO SE INSISTE.
+       * Insistir sería un bucle infinito pidiendo lo mismo. Pasa cuando las
+       * filas ya no están —otra persona las borró— y la respuesta correcta es
+       * terminar diciendo cuántas se hicieron. */
+      if (hechas === 0 && t.ids.length){
+        _progPararQuitar();
+        _progEnd(t.hechas + ' deleted. The other ' + t.ids.length +
+                 ' were already gone.', t.hechas === 0);
+        _tandaBorrado = null;
+        loadDataFromGoogle(true, true);
+        return;
+      }
+      _tandaPaso();
+    })
+    .withFailureHandler(function(err){
+      /* OCUPADO ES UN TURNO, TAMBIÉN AQUÍ. Lo cazó `test-write-queue`, que
+       * cuenta las funciones del servidor que toman el candado del almacén y se
+       * pone roja cuando aparece una nueva — justo para que nadie se olvide de
+       * esto.
+       *
+       * Sin el reintento, que otra persona estuviera guardando algo en el
+       * momento del segundo trozo terminaba la tanda entera con «200 de 490» y
+       * 290 filas sin borrar, por una espera de dos segundos. Con él, la tanda
+       * espera su turno y acaba. */
+      if (_isBusyError(err) && t.esperas < BUSY_MAX_RETRIES){
+        t.esperas++;
+        setTimeout(_tandaPaso, _busyDelay(t.esperas));
+        return;
+      }
+      _progPararQuitar();
+      _progEnd(t.hechas + ' of ' + t.total + ' deleted — the rest were not.', true);
+      showToast('Could not finish deleting: ' +
+        _stripTags(err) + ' Nothing else was touched.', 'err', 8000);
+      _tandaBorrado = null;
+      loadDataFromGoogle(true, true);
+    })
+    .processMovement('deleteMovements', _h({ movIds: trozo }));
+}
+
+// Quita de la lista local los movimientos que el servidor ya se llevó, sin
+// volver a pedir nada. Por id: los números de fila se mueven en cuanto se borra
+// algo por encima.
+function _quitarMovimientosPorId(ids){
+  if (!ids || !ids.length) return;
+  var fuera = {};
+  ids.forEach(function(id){ fuera[id] = 1; });
+  for (var i = movements.length - 1; i >= 0; i--){
+    if (movements[i].movId && fuera[movements[i].movId]) movements.splice(i, 1);
+  }
+  renderAll();
 }
 
 function _movByRowIdx(rowIdx){
@@ -11582,9 +11737,29 @@ var BUSY_BASE_MS     = 900;
 var BUSY_MAX_MS      = 8000;
 var BUSY_JITTER_MS   = 700;
 
+/* «OCUPADO» SON DOS COSAS, Y LA SEGUNDA FALTABA.
+ *
+ * `SYSTEM_BUSY|` es «otra persona tiene el candado del almacén». Pero el
+ * servidor tiene un SEGUNDO freno —240 llamadas por minuto, `requireQuota_`—
+ * que contesta «Too many requests, please wait a moment and try again», y eso
+ * no llevaba la marca: caía por la rama de fallo definitivo, la fila volvía,
+ * salía un aviso rojo y se contaba como no hecha.
+ *
+ * Jose, 22/10, borrando 490: cuarenta se perdieron exactamente así. Y lo peor
+ * era lo que decía el mensaje —«espera un momento y vuelve a intentarlo»— a
+ * alguien que no había insistido en nada. Quien inundó al servidor fue LA APP,
+ * con 490 peticiones en ráfaga.
+ *
+ * Es un turno, no un fallo, igual que el otro. Lo que se arregla esperando se
+ * espera — y el reintento con espera creciente ya existía; sólo que este caso
+ * no llegaba a usarlo.
+ *
+ * (Con el borrado en tanda esto deja de pasar casi siempre: 490 filas son dos
+ * peticiones. Sigue aquí porque el freno vale para TODO, no sólo para borrar,
+ * y la respuesta correcta no depende de quién lo dispare.) */
 function _isBusyError(err){
   var msg = (err && err.message) ? err.message : String(err || '');
-  return msg.indexOf('SYSTEM_BUSY|') !== -1;
+  return msg.indexOf('SYSTEM_BUSY|') !== -1 || /too many requests/i.test(msg);
 }
 
 /* ¿El servidor dice que eso YA NO ESTÁ?
@@ -16675,21 +16850,38 @@ function _undoImport(btn){
     onConfirm: function(){
       _btnBusy(btn, 'Undoing…');
       _progStart(1, 'Undoing the import');
-      google.script.run
-        .withSuccessHandler(function(res){
-          _progEnd((res.removed || 0) + ' movement' + (res.removed === 1 ? '' : 's') +
-                   ' from that import moved to the trash.');
-          _importsData = null; _drawImportHistory();
-          _sysCacheDrop('trash');
-          loadDataFromGoogle(true, true);
-        })
-        .withFailureHandler(function(err){
-          _btnReset(btn);
-          _progEnd('Nothing was undone.', true);
-          showToast('Could not undo that import: ' +
-            (err.message || err).replace(/^Error:\s*/i,''), 'err', 8000);
-        })
-        .processMovement('undoImport', _h({ importId: id }));
+      /* POR TROZOS, IGUAL QUE EL BORRADO EN TANDA.
+       *
+       * El servidor se lleva como mucho `MAX_BORRADO_POR_TANDA` filas por
+       * llamada —porque Apps Script corta a los seis minutos— y contesta
+       * `more:true` si quedaron. Sin este bucle, deshacer una importación de
+       * 1.200 filas se habría quedado a medias DICIENDO QUE YA ESTABA, que es
+       * la peor forma de fallar: un número en pantalla que no es verdad. */
+      var total = 0;
+      function vuelta(){
+        google.script.run
+          .withSuccessHandler(function(res){
+            total += (res && res.removed) || 0;
+            _importsData = null;
+            _sysCacheDrop('trash');
+            if (res && res.more){ vuelta(); return; }
+            _progEnd(total + ' movement' + (total === 1 ? '' : 's') +
+                     ' from that import moved to the trash.');
+            _drawImportHistory();
+            loadDataFromGoogle(true, true);
+          })
+          .withFailureHandler(function(err){
+            _btnReset(btn);
+            _progEnd(total ? (total + ' moved to the trash — the rest were not.')
+                           : 'Nothing was undone.', true);
+            showToast('Could not undo that import: ' +
+              (err.message || err).replace(/^Error:\s*/i,''), 'err', 8000);
+            _drawImportHistory();
+            if (total) loadDataFromGoogle(true, true);
+          })
+          .processMovement('undoImport', _h({ importId: id }));
+      }
+      vuelta();
     }
   });
 }
@@ -27950,6 +28142,10 @@ function _progHide(){
   var w = document.getElementById('progWrap');
   if (!w) return;
   if (_progHideT){ clearTimeout(_progHideT); _progHideT = null; }
+  // El boton de parar se va con la linea. Si no, quedaria escondido pero
+  // enganchado a una tanda que ya no existe, y la siguiente linea de progreso
+  // lo heredaria.
+  _progPararQuitar();
   w.className = '';
   _prog = null;
 }
@@ -27959,6 +28155,59 @@ function _progStep(ok){
   if (ok) _prog.done++; else _prog.failed++;
   if ((_prog.done + _prog.failed) >= _prog.total) _progFinish();
   else _progPaint();
+}
+
+/* VARIAS DE GOLPE. `_progStep` cuenta de una en una porque nació para una
+ * llamada por cosa; una tanda trae trescientas en una respuesta, y llamarlo
+ * trescientas veces repintaría trescientas veces para enseñar un solo número.
+ *
+ * No termina solo aunque llegue al total: quien manda la tanda decide cuándo
+ * se acabó, porque puede quedar otro trozo en camino. */
+function _progStepN(n){
+  if (!_prog || !n) return;
+  _prog.done += n;
+  _progPaint();
+}
+
+/* ── EL BOTÓN DE PARAR, Y CUÁNDO TIENE DERECHO A EXISTIR ────────────────────
+ *
+ * Jose, 22/10: *"no hay forma de pararlos ni borrar lo que la app ya está
+ * haciendo"*. Tenía razón y era peor de lo que parece: nada en toda la app
+ * vaciaba la cola de borrados, así que media hora de trabajo no se podía
+ * detener ni cerrando el aviso.
+ *
+ * Sólo se ofrece en los trabajos que de verdad se pueden parar — los que van
+ * por trozos. En uno que es una sola llamada larga, el botón sería mentira:
+ * la petición ya salió y el servidor la va a terminar. Un botón que no para
+ * nada enseña a no pulsar el que sí.
+ *
+ * Y lo que se para es el trozo SIGUIENTE, no el que está en el aire. Por eso
+ * el final dice un número exacto en vez de «se paró»: las filas del trozo en
+ * curso sí se van, y decir lo contrario sería dejar a alguien buscando filas
+ * que ya no están.
+ */
+function _progPararOfrecer(alParar){
+  var b = document.getElementById('progStop');
+  if (!b) return;
+  b.style.display = '';
+  b.textContent = 'Stop';
+  b.disabled = false;
+  b.onclick = function(ev){
+    // Sin esto el clic sube al contenedor, que lo esconde entero: parecería
+    // que parar y cerrar el aviso son la misma cosa, y no lo son.
+    if (ev && ev.stopPropagation) ev.stopPropagation();
+    b.disabled = true;
+    b.textContent = 'Stopping…';
+    try { alParar(); } catch (e) {}
+  };
+}
+
+function _progPararQuitar(){
+  var b = document.getElementById('progStop');
+  if (!b) return;
+  b.style.display = 'none';
+  b.onclick = null;
+  b.disabled = false;
 }
 
 function _progPaint(){
@@ -27996,6 +28245,7 @@ function _progFinish(){
      resultado de un trabajo que tardó medio minuto, y la persona puede estar
      mirando otra cosa cuando termina. Seis segundos, y diez si hubo fallos,
      que ahí sí hay algo que leer. Un clic la cierra antes. */
+  _progPararQuitar();
   _progHideT = setTimeout(function(){
     w.className += ' fade-out';
     setTimeout(function(){ w.className = ''; _prog = null; _progHideT = null; }, 320);
@@ -28033,14 +28283,69 @@ var TOAST_QUICK = 2000;
  * pulsa —y entonces el cuadro de etiquetas encadena lo que venga después— o el
  * aviso caduca y eso de después corre solo. Nunca las dos cosas, nunca a la vez.
  */
+/* ── EL MISMO AVISO VEINTE VECES ES UN AVISO, NO VEINTE ─────────────────────
+ *
+ * Jose, 22/10, borrando 490 movimientos: en la captura hay DOS avisos idénticos
+ * apilados encima de la barra superior — *«Too many requests…»*— y podían
+ * haber sido cuarenta, uno por fila que falló.
+ *
+ * Cuarenta avisos no dicen cuarenta cosas: dicen una, cuarenta veces, y tapan
+ * la pantalla mientras lo dicen. La v12.85 arregló esto para el candado de Pro
+ * con `_proToast`, y los errores se quedaron sin arreglar — que es donde más
+ * pasa, porque un fallo en una tanda falla en ráfaga.
+ *
+ * Si el mismo texto ya está en pantalla, no nace otro: el que hay se queda y
+ * le sale un contador («× 4»), y su reloj se reinicia para que la última vez
+ * que pasó cuente desde ahora. Se compara el TEXTO y el TIPO: el mismo texto
+ * como aviso y como error son dos cosas distintas.
+ *
+ * Los que llevan botón quedan fuera a propósito: cada uno tiene su propia
+ * acción y su propio `siNo`, y agruparlos perdería una de las dos. */
+function _toastIgual(msg, type){
+  var c = document.getElementById('toastContainer');
+  if (!c) return null;
+  var todos = c.querySelectorAll('.toast');
+  for (var i = 0; i < todos.length; i++){
+    var t = todos[i];
+    if (t.classList.contains('fade-out')) continue;
+    if (t.getAttribute('data-tipo') !== type) continue;
+    if (t.getAttribute('data-msg')  !== msg)  continue;
+    return t;
+  }
+  return null;
+}
+
 function showToast(msg, type, duration, accion) {
   type     = type     || 'ok';
   duration = duration || 3500;
   var icons = { ok:'✅', err:'❌', warn:'⚠️', info:'ℹ️' };
+
+  if (!(accion && accion.texto)) {
+    var ya = _toastIgual(String(msg), type);
+    if (ya) {
+      var n = (parseInt(ya.getAttribute('data-veces'), 10) || 1) + 1;
+      ya.setAttribute('data-veces', String(n));
+      var marca = ya.querySelector('.toast-veces');
+      if (!marca) {
+        marca = document.createElement('span');
+        marca.className = 'toast-veces';
+        ya.insertBefore(marca, ya.querySelector('.toast-close'));
+      }
+      marca.textContent = '× ' + n;
+      // El reloj se reinicia: la cuenta atrás tiene que correr desde la última
+      // vez que pasó, no desde la primera.
+      if (ya._reloj) clearTimeout(ya._reloj);
+      ya._reloj = setTimeout(function(){ dismissToast(ya.id); }, duration);
+      return ya.id;
+    }
+  }
+
   var id    = 'toast-' + (++_toastIdSeq);
   var el    = document.createElement('div');
   el.className = 'toast ' + type;
   el.id        = id;
+  el.setAttribute('data-tipo', type);
+  el.setAttribute('data-msg', String(msg));
   el.innerHTML =
     '<span class="toast-icon">' + (icons[type] || 'ℹ️') + '</span>' +
     '<span class="toast-msg">'  + _he(msg) + '</span>' +
@@ -28068,7 +28373,11 @@ function showToast(msg, type, duration, accion) {
     }, duration);
   }
 
-  setTimeout(function(){ dismissToast(id); }, duration);
+  // Guardado en el elemento, no en una variable suelta: si este mismo aviso
+  // vuelve a salir hay que PODER CANCELARLO para reiniciar la cuenta. Es el
+  // mismo fallo que tuvo `_proToast` en la v12.85 — cada llamada con su propio
+  // reloj, y catorce segundos de aviso donde debía haber siete.
+  el._reloj = setTimeout(function(){ dismissToast(id); }, duration);
   return id;
 }
 function dismissToast(id) {
@@ -29422,6 +29731,18 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '12.92',
+    titulo: 'Deleting a lot of movements takes seconds, and can be stopped',
+    puntos: [
+      'Deleting 490 movements took <b>almost half an hour</b>, lost 40 of them to a \u201ctoo many requests\u201d error, and <b>could not be stopped</b>. All of it was one cause: 490 rows were <b>490 separate requests</b>, each rebuilding your whole stock.',
+      '<b>It is two requests now.</b> The half hour becomes seconds, the rate limit is nowhere near reached, forty error notices become one answer, and nothing ends up half done.',
+      'The \u201ctoo many requests\u201d was <b>the app flooding the server</b> with its own burst and then asking you to wait. That answer now counts as \u201cwait your turn\u201d and retries by itself.',
+      '<b>And there is a Stop button.</b> It stops before the next batch and says exactly where it got to \u2014 <i>\u201c200 of 490 deleted. The other 290 are untouched.\u201d</i>',
+      'The same notice no longer stacks: it gets a small <b>\u00d7 4</b> instead of piling up. And undoing a large import keeps going until it is finished.'
+    ],
+    antes:  'Half an hour, 40 lost, and no way to stop it',
+    ahora:  'Seconds, nothing lost, and a Stop button' },
+
   { ver: '12.91',
     titulo: 'Importing a file no longer stops at row 500',
     puntos: [
@@ -29454,16 +29775,6 @@ var NOVEDADES = [
     ],
     antes:  'Two lists fighting, and 27 seconds before the page was ready',
     ahora:  'One list, and everyone else gets in without paying for the charts' },
-
-  { ver: '12.88',
-    titulo: 'The \u2715 sits inside the box',
-    puntos: [
-      'In Movements the \u2715 was drawing at the <b>far right of the row</b>, hundreds of pixels from the search box \u2014 and the box was pushed onto a line of its own. Both were the same thing.',
-      'It asked "is this field as wide as its slot?" while the tab was still hidden, which is <code>0 \u2265 -4</code>: <b>true, always</b>. A comparison that answers yes when nothing can be measured is not measuring.',
-      'It now checks what actually matters, once the field can be seen: <b>does the field fill its wrapper?</b> That holds for every box you can type in, including ones added later.'
-    ],
-    antes:  'The \u2715 half a screen away from the box it clears',
-    ahora:  'Inside the box, where you are typing' },
 
 ];
 

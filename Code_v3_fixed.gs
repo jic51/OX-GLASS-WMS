@@ -128,7 +128,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.91';
+var APP_VERSION = '12.92';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -140,7 +140,7 @@ var APP_VERSION = '12.91';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '73be76c8';
+var APP_BUILD = 'dcc7d0c4';
 
 // ═══ ACOPIO BASIC — EL INTERRUPTOR DE LA VERSIÓN GRATIS ══════════════════════
 //
@@ -3982,6 +3982,7 @@ function processMovementInner_(ss, action, data, auth) {
   if (action === 'commitImport')          return commitImport(data, auth);
   if (action === 'listImports')           return listImports(auth);
   if (action === 'undoImport')            return undoImport(data, auth);
+  if (action === 'deleteMovements')       return deleteMovements(data, auth);
   // ── User management (ADMIN only) ─────────────────────────────────────────
   if (action === 'getUsers')       return getUsers(auth);
   if (action === 'addUser')        return addUser(data, auth);
@@ -4399,6 +4400,9 @@ var DATA_STAMP_ACTIONS = {
   // no existe hasta su siguiente recarga — que es la versión más grande posible
   // de lo que este sello existe para evitar.
   undoImport:          true,
+  // Y borrar en tanda, por el mismo motivo que su hermano de arriba: saca
+  // cientos de filas del almacen de golpe.
+  deleteMovements:     true,
   // Las tres de las entregas esperadas. updateIncoming es la que Jose vio
   // fallar —es la que marca una entrega como llegada— pero las tres cambian lo
   // mismo: lo que otra persona tiene delante en la pestaña de Incoming y en la
@@ -10091,6 +10095,109 @@ function listImports(auth) {
  * devolverlas. Lo único irreversible de esta app sigue siendo vaciar la
  * papelera.
  */
+/* ═══ BORRAR MUCHAS FILAS DE UNA VEZ — EL MOTOR, UNO SOLO ════════════════════
+ *
+ * Jose, 22/10, con dos vídeos: marcó 490 movimientos y pulsó Delete. **Tardó
+ * casi media hora**, perdió 40 por el camino con «Too many requests», y no
+ * había forma de pararlo.
+ *
+ * La causa no era la red: era que borrar 490 filas eran **490 peticiones**, y
+ * cada una reconstruía el almacén entero. La cola de una en una se escribió a
+ * propósito en la v11.58, cuando veinte de golpe daban «System busy» — era la
+ * respuesta correcta para veinte y nadie volvió a mirarla cuando apareció
+ * «marcar todas».
+ *
+ * Esto es lo que hacen las dos operaciones de borrado masivo —deshacer una
+ * importación y borrar los movimientos marcados— y por eso es UNA función y no
+ * dos parecidas. Lo único que cambia entre ellas es **qué filas se llevan**, y
+ * eso entra como una pregunta (`seLleva`).
+ *
+ * ── EL ORDEN, QUE ES LO QUE LO HACE SEGURO ────────────────────────────────
+ *
+ * Papelera primero, hoja después. Mismo orden que el archivador de las 3am y
+ * por el mismo motivo: si la escritura en la papelera falla, no se ha quitado
+ * nada de la hoja y el trabajo se puede repetir. Al revés se perderían las
+ * filas.
+ *
+ * ── Y POR QUÉ DEVUELVE `quedanPor` ────────────────────────────────────────
+ *
+ * Porque el que llama trabaja POR TROZOS (ver `MAX_BORRADO_POR_TANDA`), y
+ * necesita saber si queda faena sin tener que volver a leer la hoja. Un
+ * `removed` a secas obligaría a adivinar si ya está.
+ */
+function borrarFilasEnTanda_(ss, auth, seLleva, tope) {
+  var trash = ensureTrashSheet_(ss);
+  var ahora = new Date();
+  var movidas = 0, quedanPor = 0;
+  /* QUE IDS SE LLEVO, UNO A UNO, Y NO SOLO CUANTOS.
+   *
+   * La primera version de esto devolvia el numero, y el navegador quitaba de
+   * su lista «los primeros N que pedi». Eso da por hecho que el servidor
+   * recorre la hoja en el mismo orden en que el navegador puso los ids, y no
+   * tiene por que: la hoja esta en orden de fila, la seleccion en el orden en
+   * que se marco. Habria quitado de la pantalla filas que siguen en la hoja y
+   * dejado otras que ya no estan.
+   *
+   * Es exactamente la falta que este proyecto lleva veinte veces encontrando:
+   * dos cosas que tienen que coincidir sin que nada lo obligue. Aqui lo que
+   * obliga es no suponerlo: el que lo sabe, lo dice. */
+  var idsMovidos = [];
+
+  [{ sh: ss.getSheetByName(SHEETS.ARCHIVE),  nombre: SHEETS.ARCHIVE },
+   { sh: ensureArchiveHistorySheet_(ss),     nombre: SHEETS.ARCHIVE_HISTORY }]
+  .forEach(function (par) {
+    var sheet = par.sh;
+    if (!sheet || sheet.getLastRow() < 2) return;
+
+    var filas = sheet.getRange(2, 1, sheet.getLastRow() - 1, AC_WIDTH).getValues();
+    var quedan = [], aPapelera = [];
+    filas.forEach(function (f) {
+      // Una fila vacía no es una fila. Misma regla que `contarConDatos_`.
+      if (!f[AC.CATEGORY] && !f[AC.NAME]) return;
+      if (!seLleva(f)) { quedan.push(f); return; }
+      /* EL TOPE SE RESPETA AQUÍ Y NO ANTES. Una fila que toca llevarse pero no
+       * cabe en este trozo **se queda en la hoja**, y se cuenta. Descartarla
+       * sería perderla; contarla es lo que deja al navegador pedir otro trozo
+       * sabiendo cuántos faltan. */
+      if (tope && movidas + aPapelera.length >= tope) { quedan.push(f); quedanPor++; return; }
+      var guardada = f.slice();
+      guardada[TR.DELETED_AT] = ahora;
+      guardada[TR.DELETED_BY] = auth.email;
+      guardada[TR.FROM_SHEET] = par.nombre;
+      aPapelera.push(guardada);
+      var idf = String(f[AC.MOV_ID] || '').trim();
+      if (idf) idsMovidos.push(idf);
+    });
+
+    if (!aPapelera.length) return;
+
+    trash.getRange(trash.getLastRow() + 1, 1, aPapelera.length, TRASH_WIDTH)
+         .setValues(aPapelera.map(textSafeRow_));
+    escribirHojaCompleta_(sheet, quedan, AC_WIDTH);
+    movidas += aPapelera.length;
+  });
+
+  return { movidas: movidas, quedanPor: quedanPor, ids: idsMovidos };
+}
+
+/* CUÁNTAS FILAS CABEN EN UNA LLAMADA.
+ *
+ * Apps Script corta a los seis minutos. Una tanda son dos lecturas de hoja y
+ * dos escrituras, así que el coste apenas crece con el número de filas que se
+ * llevan — pero la reconstrucción de las hojas derivadas al final SÍ crece con
+ * el tamaño del archivo, y ésa es la parte que puede acercarse al techo.
+ *
+ * 300 es conservador a propósito: son dos llamadas para las 490 de Jose, tres
+ * para mil. Lo que se gana no es velocidad —una sola llamada sería más rápida—
+ * sino **poder parar entre trozo y trozo**, y que cerrar la pestaña a mitad
+ * deje un número entero de trozos hechos en vez de un estado que nadie puede
+ * contar.
+ *
+ * NO está calibrado contra una instalación de verdad, igual que
+ * `LLAMADAS_POR_SEGUNDO` en test-limite-6min.js. Lo que sí está medido es que
+ * el camino viejo —una llamada por fila— tardó media hora con 490. */
+var MAX_BORRADO_POR_TANDA = 300;
+
 function undoImport(data, auth) {
   auth = requireAuth_('ADMIN');
   var importId = String((data && data.importId) || '').trim();
@@ -10098,46 +10205,13 @@ function undoImport(data, auth) {
 
   return withStockLock_(function () {
     var ss    = SpreadsheetApp.getActiveSpreadsheet();
-    var trash = ensureTrashSheet_(ss);
     var marca = 'Imported from file ' + importId;
-    var movidas = 0;
 
-    [{ sh: ss.getSheetByName(SHEETS.ARCHIVE),        nombre: SHEETS.ARCHIVE },
-     { sh: ensureArchiveHistorySheet_(ss),           nombre: SHEETS.ARCHIVE_HISTORY }]
-    .forEach(function (par) {
-      var sheet = par.sh;
-      if (!sheet || sheet.getLastRow() < 2) return;
+    var res = borrarFilasEnTanda_(ss, auth, function (f) {
+      return String(f[AC.COMMENTS] || '').indexOf(marca) === 0;
+    }, MAX_BORRADO_POR_TANDA);
 
-      var filas = sheet.getRange(2, 1, sheet.getLastRow() - 1, AC_WIDTH).getValues();
-      var quedan = [], aPapelera = [];
-      var ahora = new Date();
-      filas.forEach(function (f) {
-        // Una fila vacía no es una fila. Misma regla que `contarConDatos_`.
-        if (!f[AC.CATEGORY] && !f[AC.NAME]) return;
-        if (String(f[AC.COMMENTS] || '').indexOf(marca) === 0) {
-          var guardada = f.slice();
-          guardada[TR.DELETED_AT] = ahora;
-          guardada[TR.DELETED_BY] = auth.email;
-          guardada[TR.FROM_SHEET] = par.nombre;
-          aPapelera.push(guardada);
-        } else {
-          quedan.push(f);
-        }
-      });
-
-      if (!aPapelera.length) return;
-
-      /* PAPELERA PRIMERO, HOJA DESPUÉS. Mismo orden que el archivador de las
-       * 3am y por el mismo motivo: si la escritura en la papelera falla, no se
-       * ha quitado nada de la hoja y el trabajo se puede repetir. Al revés se
-       * perderían las filas. */
-      trash.getRange(trash.getLastRow() + 1, 1, aPapelera.length, TRASH_WIDTH)
-           .setValues(aPapelera.map(textSafeRow_));
-      escribirHojaCompleta_(sheet, quedan, AC_WIDTH);
-      movidas += aPapelera.length;
-    });
-
-    if (!movidas) {
+    if (!res.movidas) {
       throw new Error('Nothing left from that import — it may have been undone already.');
     }
 
@@ -10147,9 +10221,66 @@ function undoImport(data, auth) {
     // mismo sello.
     refreshDerivedSheets_(ss);
     auditLog_(ss, 'IMPORT_UNDONE', auth.email,
-      movidas + ' row(s) from import ' + importId + ' moved to the trash', importId, '');
+      res.movidas + ' row(s) from import ' + importId + ' moved to the trash', importId, '');
 
-    return { status: 'success', removed: movidas, importId: importId };
+    return { status: 'success', removed: res.movidas, importId: importId,
+             // Si la importación era mayor que un trozo, el navegador vuelve a
+             // llamar. Sin esto, una importación de 1.200 filas se deshacía «a
+             // medias» y la pantalla decía que ya estaba.
+             more: res.quedanPor > 0 };
+  });
+}
+
+/* ─── BORRAR LOS MOVIMIENTOS MARCADOS, EN UNA LLAMADA ───────────────────────
+ *
+ * Lo que había: `manageMaterial/deleteRow`, una fila por petición. Lo que Jose
+ * midió con 490: casi media hora, 40 perdidas por nuestra propia cuota de 240
+ * llamadas por minuto, y ninguna forma de parar.
+ *
+ * Aquí la cuota deja de ser un problema por construcción: 490 filas son **dos
+ * peticiones**, no 490. Y la que sobraba —«Too many requests»— era la app
+ * inundándose a sí misma y echándole la culpa a quien pulsó el botón.
+ *
+ * SE BORRA POR `movId` Y NO POR NÚMERO DE FILA. Los números de fila se mueven
+ * en cuanto se borra algo por encima; el id es del movimiento. Esto ya era
+ * cierto en el borrado de uno en uno y aquí importa más, porque dentro de una
+ * tanda las filas se desplazan mientras se trabaja.
+ */
+function deleteMovements(data, auth) {
+  auth = requireAuth_('WRITE');
+  requirePerm_(auth, 'canEditMovements');
+
+  var ids = (Array.isArray(data && data.movIds) ? data.movIds : [])
+              .map(function (v) { return String(v || '').trim(); })
+              .filter(function (v) { return v; });
+  if (!ids.length) throw new Error('No movements to delete.');
+
+  var quiero = {};
+  ids.forEach(function (id) { quiero[id] = 1; });
+
+  return withStockLock_(function () {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    var res = borrarFilasEnTanda_(ss, auth, function (f) {
+      var id = String(f[AC.MOV_ID] || '').trim();
+      return !!id && !!quiero[id];
+    }, MAX_BORRADO_POR_TANDA);
+
+    /* CERO NO ES UN ERROR AQUÍ, y ésa es la diferencia con `undoImport`.
+     *
+     * Deshacer una importación que ya no está es una equivocación que merece
+     * decirse. Pero en una tanda de 490, que el último trozo encuentre cero
+     * filas es lo NORMAL —otra persona pudo borrar las que quedaban— y lanzar
+     * un error ahí convertiría un final limpio en un aviso rojo. Se contesta
+     * cuántas se llevaron, que puede ser ninguna. */
+    if (res.movidas) {
+      refreshDerivedSheets_(ss);
+      auditLog_(ss, 'DELETE_BATCH', auth.email,
+        res.movidas + ' movement(s) moved to the trash', String(ids.length) + ' asked', '');
+    }
+
+    return { status: 'success', removed: res.movidas, removedIds: res.ids,
+             asked: ids.length, more: res.quedanPor > 0 };
   });
 }
 

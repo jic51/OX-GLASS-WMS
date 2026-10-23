@@ -101,6 +101,34 @@
        movements went from about two and a half minutes to fifty-five seconds
        along the way.</p>
 
+    <div class="entry" id="v12-92">
+      <span class="ver">v12.92</span>
+      <span class="tag fix">Fix</span>
+      <h3>Deleting a lot of movements takes seconds, and can be stopped</h3>
+      <p>Deleting 490 movements took <b>almost half an hour</b>, lost 40 of them along the way to
+         a &ldquo;too many requests&rdquo; error, and <b>could not be stopped</b> once it had
+         started. Every one of those was the same cause: deleting 490 rows was <b>490 separate
+         requests</b>, each one rebuilding your whole stock.</p>
+      <p>It is <b>two requests</b> now, and all four problems go with it: the half hour becomes
+         seconds, the rate limit is nowhere near being reached, forty error notices become one
+         answer, and nothing ends up half done &mdash; each batch either goes in whole or not at
+         all.</p>
+      <p>The &ldquo;too many requests&rdquo; was the app flooding the server with its own burst and
+         then asking <i>you</i> to wait a moment. That answer now counts as &ldquo;wait your
+         turn&rdquo; and retries by itself, like every other busy reply.</p>
+      <p>And there is a <b>Stop</b> button while it works. It stops before the next batch and tells
+         you exactly where it got to &mdash; <i>&ldquo;200 of 490 deleted. The other 290 are
+         untouched.&rdquo;</i> The batch already in flight finishes, so the number you are told is
+         the number that is true.</p>
+      <p>Two more things from the same report: the <b>same notice no longer stacks</b> &mdash; if it
+         happens again the one on screen gets a small <b>&times; 4</b> instead of a new notice
+         piling on top; and <b>undoing a large import</b> now keeps going until it is finished
+         instead of stopping partway and saying it was done.</p>
+      <p>Deleting one movement is unchanged. That path is better for one: the row leaves as you
+         click, comes back to its own place if the server says no, and your stock figures come back
+         with the answer.</p>
+    </div>
+
     <div class="entry" id="v12-91">
       <span class="ver">v12.91</span>
       <span class="tag fix">Fix</span>

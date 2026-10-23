@@ -249,18 +249,30 @@ check('cada fila importada lleva el número de su tanda, que es lo que permite '
 check('...y el número se genera por importación, no por fila',
   /var importId = 'IMP-'/.test(srcCommit));
 
-check('deshacer manda las filas a la PAPELERA, no las borra — deshacer una ' +
+/* LO DE LA PAPELERA SE MIRA EN EL MOTOR, QUE ES DONDE VIVE DESDE LA v12.92.
+ *
+ * Hasta entonces `undoImport` llevaba su propia copia del trabajo. Al llegar el
+ * borrado en tanda —mismo trabajo, otras filas— se extrajo a
+ * `borrarFilasEnTanda_` en vez de dejar dos copias pareciéndose, que es como
+ * empiezan a separarse. Esta prueba sigue al código: comprueba el motor, y
+ * comprueba que `undoImport` lo USA en lugar de haberse quedado con el suyo. */
+const srcMotor = A.sinComentarios(A.fnSrc(GS, 'borrarFilasEnTanda_') || '');
+check('existe UN motor de borrado en tanda, no una copia por operación',
+  !!srcMotor);
+check('deshacer usa ese motor, no una copia suya',
+  /borrarFilasEnTanda_/.test(srcUndo));
+check('el motor manda las filas a la PAPELERA, no las borra — deshacer una ' +
       'importación no puede ser más definitivo que borrar un movimiento',
-  /TR\.DELETED_AT/.test(srcUndo) && /TR\.FROM_SHEET/.test(srcUndo));
+  /TR\.DELETED_AT/.test(srcMotor) && /TR\.FROM_SHEET/.test(srcMotor));
 check('...y escribe en la papelera ANTES de quitarlas de la hoja: al revés, un ' +
       'fallo a mitad las perdería',
-  srcUndo.indexOf('trash.getRange') < srcUndo.indexOf('escribirHojaCompleta_'));
+  srcMotor.indexOf('trash.getRange') < srcMotor.indexOf('escribirHojaCompleta_'));
 check('...reescribiendo la hoja de una vez, no fila a fila — mil `deleteRow` se ' +
       'comerían los seis minutos de Apps Script antes de la fila ciento y pico',
-  /escribirHojaCompleta_/.test(srcUndo) && !/deleteRow\(/.test(srcUndo));
+  /escribirHojaCompleta_/.test(srcMotor) && !/deleteRow\(/.test(srcMotor));
 check('...y mira también el archivo histórico, porque una importación vieja ' +
       'puede haberse archivado ya',
-  /ensureArchiveHistorySheet_/.test(srcUndo));
+  /ensureArchiveHistorySheet_/.test(srcMotor));
 check('...bajo el candado del almacén, como todo lo que mueve existencias',
   /withStockLock_/.test(srcUndo));
 check('...y si no queda nada de esa tanda lo DICE, en vez de contestar que ' +

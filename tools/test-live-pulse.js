@@ -154,20 +154,42 @@ console.log('\n═══ qué mueve el sello, y sobre todo qué no ═══\n')
   const REVERSO_DE = { undoImport: 'commitImport' };
   const esReverso = a => !!REVERSO_DE[a] && dentro.indexOf(REVERSO_DE[a]) !== -1;
 
-  const clases  = dentro.filter(a => !PLURAL_DE(a) && !esReverso(a));
-  const gemelos = dentro.filter(a =>  PLURAL_DE(a) ||  esReverso(a));
+  /* Y UNA PUERTA NUEVA A UN AVISO QUE YA EXISTE. 2026-10-23.
+   *
+   * `deleteMovements` borra movimientos en tanda. Eso ya avisaba: borrar uno va
+   * por `manageMaterial`, que lleva en la lista desde siempre. Lo que cambia no
+   * es QUÉ se avisa, es por dónde entra — una tanda en vez de 490 llamadas.
+   *
+   * La conversación que el techo existe para forzar, tenida:
+   *
+   *   · ¿Es un aviso NUEVO? No. Quien tenga otra pestaña abierta se enteraba
+   *     igual cuando esas mismas filas se borraban de una en una.
+   *   · ¿Sube el tráfico? BAJA, y mucho: antes eran 490 sellos para una tanda
+   *     de 490 — 490 recargas en cada sesión abierta. Ahora son dos. Es el mismo
+   *     razonamiento exacto que dejó pasar `unlockMaterials` el 21/09.
+   *
+   * Lo que NO cabe aquí es una acción que hoy no avisa y mañana sí. Por eso es
+   * una pareja escrita y no una regla de nombres. */
+  const MISMA_PUERTA_QUE = { deleteMovements: 'manageMaterial' };
+  const esOtraPuerta = a => !!MISMA_PUERTA_QUE[a] &&
+                            dentro.indexOf(MISMA_PUERTA_QUE[a]) !== -1;
+
+  const clases  = dentro.filter(a => !PLURAL_DE(a) && !esReverso(a) && !esOtraPuerta(a));
+  const gemelos = dentro.filter(a =>  PLURAL_DE(a) ||  esReverso(a) ||  esOtraPuerta(a));
   if (gemelos.length) console.log('       (' + gemelos.join(', ') +
     ': mismo aviso que su singular o que su reverso, no gastan techo)');
   check('la lista sigue siendo CORTA (' + clases.length + ' clases de aviso) — ' +
         'cada una cuesta una carga entera en cada sesión abierta, así que crecer ' +
         'sin medir convierte el latido en una recarga continua',
     clases.length <= 12, clases);
-  check('...y todo reverso tiene su pareja DENTRO de la lista — el reverso de ' +
-        'algo que no avisa no sería un reverso, sería una entrada nueva colada ' +
-        'por la puerta de atrás',
+  check('...y todo reverso o puerta nueva tiene su pareja DENTRO de la lista — ' +
+        'el reverso de algo que no avisa no sería un reverso, sería una entrada ' +
+        'nueva colada por la puerta de atrás',
     Object.keys(REVERSO_DE).every(a => dentro.indexOf(a) === -1 ||
-                                       dentro.indexOf(REVERSO_DE[a]) !== -1),
-    REVERSO_DE);
+                                       dentro.indexOf(REVERSO_DE[a]) !== -1) &&
+    Object.keys(MISMA_PUERTA_QUE).every(a => dentro.indexOf(a) === -1 ||
+                                       dentro.indexOf(MISMA_PUERTA_QUE[a]) !== -1),
+    { REVERSO_DE: REVERSO_DE, MISMA_PUERTA_QUE: MISMA_PUERTA_QUE });
 
   // El sello se pone en UN sitio. Repartirlo por las funciones que escriben
   // habría significado cuatro funciones con varios `return` cada una, que es

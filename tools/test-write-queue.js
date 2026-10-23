@@ -310,11 +310,25 @@ console.log('\n═══ los caminos con candado ═══\n');
      SUBIÓ A ONCE EL 2026-09-14, y funcionó como debía: al meter las tres
      acciones de entregas esperadas dentro del candado, esta cuenta se cayó y
      obligó a comprobar que las dos pantallas que las llaman reintentan. Lo
-     hacen — ver test-carrera-incoming.js, que lo ejecuta. */
+     hacen — ver test-carrera-incoming.js, que lo ejecuta.
+
+     Y A TRECE EL 2026-10-23, por `undoImport` y `deleteMovements`. Volvió a
+     funcionar: al escribir el borrado en tanda, `_tandaPaso` terminaba la
+     tanda entera con «200 de 490» si otra persona tenía el candado en el
+     momento del segundo trozo — 290 filas sin borrar por una espera de dos
+     segundos. Esta cuenta se puso roja, se miró, y el reintento con espera
+     creciente se añadió ahí. Que una prueba te obligue a mirar es justo para
+     lo que está. */
   const conCandado = (GS.match(/withStockLock_\(/g) || []).length - 1;  // -1: la definición
   check('la cuenta de funciones que pueden decir "ocupado" es la esperada (' +
         conCandado + ') — si sube, la nueva necesita reintento en su pantalla',
-        conCandado >= 10 && conCandado <= 11, conCandado);
+        conCandado >= 10 && conCandado <= 13, conCandado);
+  check('y las dos nuevas del borrado en tanda esperan turno de verdad: ' +
+        '`_tandaPaso` reintenta con espera creciente, y deshacer una ' +
+        'importación va por el mismo camino',
+    /_isBusyError\(err\)[\s\S]{0,160}setTimeout\(_tandaPaso/.test(HTML),
+    'si esto falla, una tanda de 490 se corta en seco porque otro guardó algo');
+
   check('las tres entregas esperadas están entre ellas, y sus dos pantallas ' +
         'reintentan — el candado sin reintento cambia una carrera silenciosa ' +
         'por un error visible, que no es un arreglo',
