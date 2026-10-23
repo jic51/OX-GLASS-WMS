@@ -10,7 +10,7 @@
 > **«El estado de Acopio» y `ESTADO.md` son lo mismo**: este fichero. Es el
 > único sitio donde mirar cómo vamos.
 
-**Última actualización:** 23/10/2026 · **versión v12.92** · build `dcc7d0c4`
+**Última actualización:** 23/10/2026 · **versión v12.93** · build `688c6196`
 
 ---
 
@@ -121,8 +121,8 @@ principio.
 | 2 | **El mismo fichero dos veces**: aviso + **deshacer** | ✅ **HECHO — v12.91** |
 | 3 | **La pantalla de importar dice la verdad** (un número, todas las columnas, qué va a crear antes) | ✅ **HECHO — v12.91** |
 | 4 | **«Send notification email» contestaba sobre LEER el correo** | ✅ **HECHO — v12.91** |
-| 5 | **Fusionar nombres**, las dos mitades | 🔜 **v12.93** · causa confirmada con tu vídeo: fallan **las 28** |
-| 6 | **El Error Log en vivo**, sin repintar | 🔜 **v12.93** |
+| 5 | **Fusionar nombres**, las dos mitades | ✅ **HECHO — v12.93** · causa confirmada con tu vídeo: fallan **las 28** |
+| 6 | **El Error Log en vivo**, sin repintar | ✅ **HECHO — v12.93** |
 | 7 | **Dueño único de las pestañas** + papelera abierta + Import abierto (CSV) | 🔜 **v12.94** |
 | 8 | **Importar de verdad**: ventana propia, ubicación por fila y por grupos, destildar, prueba de 20 | 🔜 **v12.94+** |
 | 9 | Materials (Ajustes), como las alertas de stock bajo | anotado |
@@ -158,6 +158,25 @@ misma línea** que en el repositorio.
 ---
 
 ## ✅ LO QUE ACABAMOS DE HACER — y qué hay que mirar de cada cosa
+
+### v12.93 · Unir nombres funciona, y el Error Log se entera · **SIN VERIFICAR**
+
+**Qué probar:**
+
+1. **Ajustes → Projects.** El grupo de «ASPEN HOLLOW LOT 14» ya no te pide
+   elegir entre catorce botones iguales: dice **«listed 14 times»** y ofrece
+   **Keep one**. Púlsalo — tiene que quedar **una** fila.
+2. **Lo mismo en Suppliers**, con los ocho grupos.
+3. **Un grupo de verdad parecido** (dos grafías distintas) sigue pidiendo cuál
+   conservar, que es lo correcto. Elige una: el historial se reescribe con ella.
+4. **El Error Log en vivo.** Abre Ajustes, provoca un error, y **sin cerrar
+   Ajustes** ve a Error Log: la fila nueva tiene que estar **arriba**, con un
+   destello azul, y **sin que se repinte la tabla**. Arriba sale
+   *«• 1 new since you opened this»*.
+5. **Escribe algo en el buscador del Error Log** y deja que llegue otro error:
+   el texto que escribiste **no se borra**, y la fila nueva sólo entra si
+   coincide con lo buscado.
+6. Y hay un botón **↻ Refresh** por si quieres pedirlo tú.
 
 ### v12.92 · Borrar muchos tarda segundos, y se puede parar · **SIN VERIFICAR**
 
