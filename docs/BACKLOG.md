@@ -312,6 +312,135 @@ puede contar, porque son trozos y no 490 resultados sueltos.
 
 ---
 
+## 🔴 23/10, NOCHE — LA APP TIENE DOS REGLAS CONTRARIAS SOBRE CUÁNDO SE VA UNA FILA
+
+Jose, con un vídeo borrando usuarios de uno en uno:
+
+> *"en TODA LA APP la app no maneja bien el feedback visual. Cuando algo se
+> elimina (cambia, modifica, mueve) debe desaparecer en el momento en que se da
+> clic en 'delete', así el usuario puede continuar haciendo otras cosas. Y si
+> hay algún problema y la acción no se completa, se devuelve la fila a donde
+> estaba y se dice qué falló y cómo proceder… No puedo eliminar al siguiente
+> rápido porque debo esperar a que la app reaccione y elimine la fila."*
+
+**Tiene razón, y lo que encontré al verificarlo es peor que «falta hacerlo»:
+la regla que él pide YA EXISTE, escrita y argumentada, y se aplica en UNA sola
+pantalla.**
+
+### Las dos reglas, las dos escritas como si fueran «la regla»
+
+`Index_v3_fixed.html:10341`, borrar un movimiento:
+
+> *LA FILA SE VA AL PULSAR, NO CUANDO EL SERVIDOR CONTESTA.*
+> Jose: «cuando elimino lo que sea que elimine, debe moverse y desaparecer con
+> la animación en el mismo segundo que el toast». Y medido el 2026-09-11 en su
+> hoja, ese segundo son CUATRO… **eso no se arregla animando — se arregla no
+> haciendo esperar mirando.**
+
+`Index_v3_fixed.html:26974`, borrar un usuario:
+
+> *La lista se arregla aquí mismo, sin volver a preguntar: es la misma regla que
+> el resto de la app desde la v12.49 — **lo que el servidor confirma se ve en el
+> acto**.*
+
+**Las dos dicen «ésta es la regla» y dicen cosas contrarias.** Una es «se va al
+pulsar»; la otra es «se va cuando el servidor dice que sí». Y la segunda está
+escrita dentro de un `withSuccessHandler`, así que en una conexión lenta la fila
+se queda ahí mientras el botón dice «Deleting…».
+
+### El recuento, verificado uno por uno
+
+| Qué se borra | ¿Cuándo se va de la pantalla? | ¿Te deja seguir? |
+|---|---|---|
+| **Un movimiento** | **al pulsar** ✅ | sí |
+| Un usuario | cuando contesta el servidor | el botón queda `Deleting…` |
+| Una categoría / obra / proveedor | cuando contesta | **`_cfgBusy` apaga la pestaña ENTERA** |
+| Una entrega esperada | cuando contesta | `btn.disabled` |
+| Restaurar de la papelera | cuando contesta | botón `Restoring…` |
+| Deshacer una importación | cuando contesta | botón ocupado |
+| Fusionar nombres | cuando contesta | botón ocupado |
+
+**Una de siete.**
+
+### Y el matiz que hay que acertar — porque esos frenos se pusieron a propósito
+
+Los guardianes no son descuidos: están argumentados en el código (`_cfgBusy`
+existe para que no se encolen dos cambios de catálogo; el `btn.disabled` de las
+entregas existe porque *«el reintento envía DE NUEVO, no vuelve a entrar por
+aquí»*, y sin él un borrado se perdía en silencio).
+
+**Lo que Jose pide no es quitarlos. Es cambiar de qué protegen:**
+
+- **Un freno por FILA** — no puedes borrar dos veces el mismo usuario. **Se
+  queda.** Es lo que impide el doble clic.
+- **Un freno por PANTALLA** — no puedes borrar nada mientras hay algo en el
+  aire. **Ése es el que está mal**, y es exactamente lo que él tenía delante.
+
+Hoy `_cfgBusy` es por pantalla, y apaga todos los botones de la pestaña
+(`_cfgSetBusy`, `:18491`). Los otros son por botón, que con un botón único de
+«Delete» acaba siendo lo mismo.
+
+### Lo que haría, y por qué es una sola pieza y no siete parches
+
+La parte difícil de «la fila se va al pulsar» **no es quitarla**: es
+**devolverla bien si el servidor dice que no**. El borrado de movimientos ya lo
+resolvió entero y está medido:
+
+- guarda **dónde** estaba, no sólo que estaba (*«volver al final sería decirle a
+  alguien que su movimiento es el más reciente cuando es de hace un mes»*)
+- distingue «el servidor dijo que no» de «ya no existe» — en el segundo caso la
+  fila **no** vuelve
+- y la devuelve con su animación, no de golpe
+
+Repetir eso siete veces es garantizar que seis se queden a medias. Lo correcto
+es **un solo ayudante** —«quita esto ya, y devuélvemelo a su sitio si falla»—
+que las siete usen, con la cola de peticiones del punto C por debajo.
+
+**Va junto con el punto C (las tandas):** son la misma idea por los dos lados.
+C es *no hagas esperar al servidor*; esto es *no hagas esperar al ojo*. Hacer
+una sin la otra deja la mitad del problema.
+
+---
+
+### 🔵 LA PAPELERA PARA MÁS COSAS — idea de Jose
+
+> *"¿qué tal si en la papelera mandamos no sólo los movimientos borrados, sino
+> también otras cosas borradas, usuarios?"*
+
+**Sí, y hay una frase en la app que lo pide a gritos.** El aviso de borrar un
+usuario dice hoy, textualmente:
+
+> *«Deleting is for a row that should never have existed — a typo, a duplicate —
+> and **it cannot be undone from the app**.»*
+
+Esa última parte existe **sólo porque no hay papelera para usuarios**. Con ella,
+la frase cambia y el borrado deja de dar miedo.
+
+**Lo que hay que resolver antes, y es de verdad:** la papelera de hoy guarda
+**filas de movimiento**. Su ancho es `AC_WIDTH + 3` y sus columnas son las del
+archivo. Una fila de usuario no tiene esa forma. Así que o la papelera se
+vuelve **genérica** —una columna que diga de qué es, y la fila guardada tal
+cual— o cada cosa tiene su propia papelera.
+
+**Genérica**, sin dudarlo: una papelera por tipo son cinco pantallas que
+mantener de acuerdo, y ya sabemos cómo acaba eso en este proyecto.
+
+**Qué metería, y en qué orden:**
+
+1. **Usuarios** — es el que tiene la frase que se puede borrar del aviso
+2. **Ubicaciones** — Jose ya pidió el 22/10 mejorar cómo se borran
+3. **Categorías, obras, proveedores** — borrar una obra por error hoy no se
+   deshace
+4. **Entregas esperadas** y **materiales**
+
+**Y lo que NO metería:** nada que ya sea reversible por otro camino.
+**Desactivar** un usuario ya es la respuesta correcta para «esta persona se
+fue»; la papelera es para «esta fila no debió existir nunca», que es justo lo
+que el aviso dice. Meter las dos cosas en el mismo sitio volvería a mezclar dos
+conceptos, que es el error que acabamos de arreglar con dentro/fuera.
+
+---
+
 ## 📝 PEDIDO EL 23/10 — PARA DESPUÉS DE LO IMPORTANTE
 
 Jose: *"anota esto para hacerlo luego de corregir las cosas más importantes de
