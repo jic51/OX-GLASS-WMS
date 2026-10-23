@@ -10,7 +10,7 @@
 > **«El estado de Acopio» y `ESTADO.md` son lo mismo**: este fichero. Es el
 > único sitio donde mirar cómo vamos.
 
-**Última actualización:** 23/10/2026 · **versión v12.94** · build `b18721b3`
+**Última actualización:** 23/10/2026 · **versión v12.95** · build `ac9fd6eb`
 
 ---
 
@@ -149,6 +149,26 @@ misma línea** que en el repositorio.
 ---
 
 ## ✅ LO QUE ACABAMOS DE HACER — y qué hay que mirar de cada cosa
+
+### v12.95 · Una obra no es una estantería · **SIN VERIFICAR**
+
+Tu hallazgo de concepto. **Qué probar:**
+
+1. **Return → escribe una obra** en «Came back from»: **no** debe salir
+   *«is not a location in your warehouse»* ni el botón de crearla.
+2. **Hay un solo campo**, no dos: «From» y «Came back from» eran la misma
+   pregunta.
+3. **La lista que ofrece** son los sitios a donde ha salido material y tus
+   obras — **ningún estante**.
+4. **El estante de vuelta (Return to Rack) SÍ sigue avisando** si no existe.
+5. **Entry / Exit / Transfer**: «Source Rack» sigue ofreciendo estantes y
+   avisando. Eso no cambió.
+6. **El Error Log**: los «System busy» ya salen en amarillo (WARN), no en rojo.
+
+### v12.94 · Decir «sí» en un aviso ahora guarda · **SIN VERIFICAR**
+
+7. **Return → devuelve más de lo que salió → Save anyway**: tiene que
+   **guardar**. Era el error que encontraste.
 
 ### v12.93 · Unir nombres funciona, y el Error Log se entera · **SIN VERIFICAR**
 

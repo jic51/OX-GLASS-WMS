@@ -312,6 +312,99 @@ puede contar, porque son trozos y no 490 resultados sueltos.
 
 ---
 
+## 📝 PEDIDO EL 23/10 — PARA DESPUÉS DE LO IMPORTANTE
+
+Jose: *"anota esto para hacerlo luego de corregir las cosas más importantes de
+la app"*. Las dos van aquí, fuera de la lista de arreglos, porque **ninguna es
+un fallo**: son mejoras.
+
+### P1. 🔵 LA CANTIDAD AL LADO DE CADA PROVEEDOR, Y EL PROVEEDOR QUE SE OLVIDA
+
+> *"ya tenemos los suppliers por material, pero quiero que pongamos la cantidad
+> por supplier justo al lado de cada uno. También debemos dejar el supplier aun
+> cuando ya no tenemos nada en la bodega, y eso se reinicia si no tenemos nada y
+> llega más — entonces sólo se muestra el supplier del que SÍ tenemos."*
+
+Son dos cosas y la segunda es la interesante:
+
+**(a) La cantidad por proveedor.** Hoy la lista dice de quién vino el material;
+no dice cuánto queda de cada uno. Con la cantidad al lado, «me quedan 40, 30 de
+Acme y 10 de Redrock» se lee de un vistazo, y eso es lo que decide a quién
+llamar.
+
+**(b) La regla del reinicio, que es la que hay que entender bien.** Lo que Jose
+describe no es «guardar el histórico de proveedores»: es que **la lista diga de
+quién es lo que TIENES**, no de quién fue todo lo que pasó por ahí.
+
+- Llegan 100 de Acme → la lista dice **Acme 100**
+- Salen 100 → no queda nada. El proveedor **no se borra del historial**, pero
+  deja de contar: ese material está a cero
+- Llegan 50 de Redrock → la lista dice **Redrock 50**, y **no** «Acme 0 ·
+  Redrock 50»
+
+Es FIFO aplicado a la pregunta «¿de quién es esto?». Y tiene una consecuencia
+que conviene ver antes de construirlo: **con dos proveedores a la vez hay que
+decidir cuál sale primero.** Si hay 30 de Acme y 20 de Redrock y salen 40,
+¿quedan 10 de Redrock, o 10 repartidos? Lo normal en una bodega es lo primero
+—lo que llegó antes sale antes— y eso es exactamente lo que los **lotes** del
+backlog resuelven. **Esta entrada y la de lotes son la misma cosa vista desde
+dos sitios**, y conviene hacerlas juntas o la primera se queda a medias.
+
+Tamaño: mediano, y depende de los lotes. Decisión de Jose si se hace la versión
+simple (último proveedor que trajo algo, mientras quede stock) o la de verdad
+(por lotes).
+
+### P2. 🔵 EL PARPADEO DEL DASHBOARD AL PASAR POR ENCIMA DE LA TARTA
+
+> *"también hay que corregir el parpadeo del dashboard al hacer hover sobre el
+> piechart."*
+
+Anotado, sin tocar nada. Lo que sospecho sin haberlo medido: la gráfica de
+Google redibuja en cada `mouseover` y arrastra consigo un recálculo de la
+tarjeta que la contiene, así que el bloque entero parpadea en vez de sólo el
+trozo resaltado. Hay que medirlo antes de arreglarlo.
+
+---
+
+## 🎥 LO QUE SE VE EN LOS VÍDEOS DEL 23/10
+
+**Vídeo del formulario** — confirma el punto I: la ventana de movimiento cambia
+de alto al pasar de Entry a Transfer, y los botones de abajo saltan.
+
+**Vídeo con DevTools (el de la última versión)** — tres datos medidos, no
+supuestos:
+
+| Dónde | Qué dice |
+|---|---|
+| Dashboard | **23 peticiones · 697 kB · DOMContentLoaded 9,2 s · Load 17 s** (con 3G puesto). Google Charts se descarga **aquí**, que es lo correcto desde la v12.89: es la única pantalla que lo necesita |
+| Ajustes → Materials | **34 peticiones · 998 kB · finish 1,8 min** |
+| Ajustes → System | **58 peticiones · 1,1 MB · finish 2,9 min** |
+| Error Log | **70 peticiones** |
+
+**Las peticiones crecen al andar por la app**, y casi todas son
+`callback?nocache_id=…`, o sea `google.script.run`. Eso es exactamente lo que
+alimenta el punto C: no es que cada pantalla sea cara, es que **nadie lleva la
+cuenta de cuántas llamadas se hacen en total**.
+
+**Y el Error Log del propio vídeo** fue la mejor fuente de la sesión. En él se
+leen, con fecha:
+
+- ✅ `WARN writeConfigColumns_: 257 duplicate name(s) were dropped from CONFIG
+  column 1` y otro de 13 en la columna 3 — **la limpieza de la v12.93
+  funcionando**, y sobre datos reales: 257 duplicados en proyectos.
+- 🔴 **Seis** `SYSTEM_BUSY` seguidos como ERROR → **arreglado en la v12.95**.
+- 🔴 Dos `Cannot set properties of undefined (setting 'forceSubmit')` →
+  **arreglado en la v12.94**.
+
+**Lo de Ajustes → Sistema en la gratis**, que Jose dijo que mandaría en vídeo:
+**se ve en este**. La pestaña entera está en gris con la etiqueta «Acopio Pro»
+— y ahí dentro está **la papelera**, que es donde el aviso de borrado te manda.
+Es el punto 1 del barrido del 22/10, decidido y todavía sin hacer: **abrir la
+papelera en la gratis, dejar el respaldo con candado**. Deja de estar pendiente
+de un vídeo.
+
+---
+
 ## 🔴 RONDA DEL 23/10 — LO QUE SALIÓ AL PROBAR LA v12.93
 
 ### A. ✅ **ARREGLADO EN LA v12.94** — decir «sí» en un aviso reventaba, y eran cinco
