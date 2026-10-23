@@ -128,7 +128,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.94';
+var APP_VERSION = '12.95';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -140,7 +140,7 @@ var APP_VERSION = '12.94';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'b18721b3';
+var APP_BUILD = 'ac9fd6eb';
 
 // ═══ ACOPIO BASIC — EL INTERRUPTOR DE LA VERSIÓN GRATIS ══════════════════════
 //
@@ -10750,7 +10750,28 @@ var _KNOWN_VALIDATION_PREFIXES = [
   // sistema en el registro. Lo cazó test-reservas al contar las palabras
   // visibles, no al revisarlo a ojo.
   'RESERVED', 'No reservations exist',
-  'WASTE movements require'
+  'WASTE movements require',
+  /* SYSTEM_BUSY| — «otra persona está guardando ahora mismo».
+   *
+   * Jose, 23/10. En su propio registro de errores había **seis** de estos
+   * seguidos, en un minuto, todos como ERROR:
+   *
+   *   ERROR  backend/mergeConfigValues
+   *   SYSTEM_BUSY|System busy — someone else is saving right now.
+   *
+   * Eso NO es la app rompiéndose: es la app esperando turno, que es justo lo
+   * que tiene que hacer. Guardarlo como ERROR tiene dos costes y los dos
+   * importan: llena el registro de líneas rojas que no son fallos —el sitio
+   * donde se buscan los fallos de verdad— y, desde que ERROR avisa por correo,
+   * **le manda un correo al admin cada vez que dos personas guardan a la vez**.
+   *
+   * Es exactamente lo que dice la nota de `VALIDATION_MESSAGE_PATTERNS` unas
+   * líneas más abajo: los avisos que gritan sin motivo se aprenden a ignorar, y
+   * entonces los de verdad dejan de servir.
+   *
+   * Sigue registrándose, como WARN: saber cuántas veces se pisan dos personas
+   * es un dato útil. Lo que deja de hacer es parecer una avería. */
+  'SYSTEM_BUSY'
 ];
 // Messages that are the app CORRECTLY refusing something, rather than the app
 // breaking. Matched anywhere in the text, not just as a prefix, because many of

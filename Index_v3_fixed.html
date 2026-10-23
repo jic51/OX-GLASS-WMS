@@ -5329,6 +5329,10 @@
       <div class="field" id="mSrcField" style="display:none">
         <label id="mSrcLabel">Source Rack</label>
         <input type="text" id="mSrc" list="rackList" placeholder="e.g. A1A">
+        <!-- LOS SITIOS DE FUERA DE LA BODEGA. Obras y direcciones a donde ha
+             salido material — nunca estanterías. `#mSrc` cambia a esta lista
+             en una devolución; ver `_marcarSitioDeFuera`. -->
+        <datalist id="fueraSitioList"></datalist>
         <datalist id="rackList"></datalist>
         <!-- Only the racks the material being transferred is ACTUALLY in.
              Rebuilt per material by renderTransferLocPicker; falls back to the
@@ -5836,7 +5840,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.94';
+var APP_VERSION = '12.95';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5848,7 +5852,7 @@ var APP_VERSION = '12.94';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'b18721b3';
+var APP_BUILD = 'ac9fd6eb';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -11293,20 +11297,36 @@ function setModalType(type){
 
   } else if (type === 'RETURN'){
     srcField.style.display  = 'flex';
-    /* La etiqueta deja de decir «Project» porque el proyecto ya tiene su
-     * propio campo debajo. Pedir lo mismo en dos sitios con nombres parecidos
-     * es cómo se consigue que la mitad de las devoluciones lo escriban en el
-     * campo que no agrupa — que es exactamente lo que llevaba pasando. */
-    srcLabel.textContent    = 'From (site or address)';
+    /* ══ UNA SOLA PREGUNTA, UNA SOLA LISTA ════════════════════════
+     *
+     * Jose, 22 y 23/10, dos veces: *"¿por qué hay un FROM y un CAME BACK FROM?
+     * Esas son la misma pregunta que espera dos datos diferentes, ya que la una
+     * muestra una lista diferente a la otra… Sólo debe haber UNA lista de
+     * lugares fuera de la bodega donde se envió ese material."*
+     *
+     * Tenía razón, y su captura lo demuestra: los dos campos llevaban EL MISMO
+     * TEXTO escrito, y cada uno ofrecía una cosa distinta — uno «crea esto como
+     * estantería» y el otro «añade esta obra a tu lista».
+     *
+     * Ahora se pregunta UNA vez. El proyecto no desaparece del dato: se deduce
+     * de la respuesta —si lo que se contestó es una obra conocida, se guarda
+     * también como «de qué obra volvió», que es lo que hace posible el boneyard
+     * que Jose pidió el 15/10—. Ver `_origProjDeducido`.
+     *
+     * Lo que se gana no es un campo menos: es que las dos respuestas ya no
+     * pueden contradecirse. */
+    srcLabel.textContent    = 'Came back from (site or project)';
+    _marcarSitioDeFuera(document.getElementById('mSrc'), true);
     destField.style.display = 'flex';
     destLabel.textContent   = 'Return to Rack';
     supField.style.display  = 'none';
     gcField.style.display   = 'none';
     poField.style.display   = 'none';
     projField.style.display = 'none';
-    /* Y EL QUE SÍ AGRUPA. Es lo único que esta versión añade al RETURN, y es
-     * todo lo que hacía falta para contestar «qué sobró de qué obra». */
-    _origProjMostrar(true, 'Came back from (project)');
+    // El campo de «de qué obra» se va de la devolución: su respuesta sale de la
+    // de arriba. En la SALIDA sigue estando, porque ahí son dos preguntas de
+    // verdad — a dónde va, y de dónde salió el material.
+    _origProjMostrar(false);
     /* EL JEFE DE OBRA SE VE AQUÍ, y hasta ahora no. No es un capricho de la
      * lista nueva: el campo estaba escondido en esta pantalla pero `_doSubmit`
      * lo lee SIEMPRE, sin mirar el tipo. Así que quien escribía un PM en una
@@ -11325,6 +11345,7 @@ function setModalType(type){
   } else if (type === 'WASTE'){
     srcField.style.display = 'flex';
     srcLabel.textContent = 'Source Rack (pull from)';
+    _marcarSitioDeFuera(document.getElementById('mSrc'), false);
     supField.style.display  = 'none';
     gcField.style.display   = 'none';
     poField.style.display   = 'none';
@@ -12387,6 +12408,46 @@ function _busyRetry(err, opts){
 }
 
 // ── Modal: Submit ─────────────────────────────────────────────────────────────
+/* ═══ DE QUÉ OBRA VOLVIÓ, DEDUCIDO DE UNA SOLA RESPUESTA ══════════════
+ *
+ * Hasta la v12.94 la devolución preguntaba DOS VECES de dónde venía: una en
+ * «From (site or address)» y otra en «Came back from (project)». Jose lo dijo
+ * dos veces: *"esas son la misma pregunta que espera dos datos diferentes"*, y
+ * su captura lo prueba — los dos campos con el mismo texto escrito.
+ *
+ * Ahora se pregunta una vez. Pero la COLUMNA de la obra no desaparece: es la
+ * que hace posible contestar «qué sobró de qué obra», que es lo que Jose pidió
+ * el 15/10 y lo que sostiene el boneyard. Así que se deduce:
+ *
+ *   · si lo contestado es una obra CONOCIDA → se guarda también como obra
+ *   · si es una dirección suelta → se guarda sólo como sitio, y la columna de
+ *     obra queda vacía, que es la verdad: no vino de una obra registrada
+ *
+ * Se compara sin distinguir mayúsculas y con el nombre tal como está en la
+ * lista, no como se escribió: así «aspen hollow» se guarda como
+ * «ASPEN HOLLOW» y agrupa con las demás. Escribir la versión tecleada sería
+ * sembrar los duplicados que la v12.93 acaba de limpiar.
+ *
+ * En la SALIDA el campo sigue existiendo y manda él: ahí son dos preguntas de
+ * verdad —a dónde va el material, y de qué obra salió— y no se pueden deducir
+ * la una de la otra. */
+function _origProjDeducido(){
+  var campo = document.getElementById('mOrigProj');
+  // Visible (la salida) → manda lo que diga el campo.
+  var wrap = document.getElementById('mOrigProjField');
+  if (campo && wrap && wrap.style.display !== 'none') return campo.value || '';
+
+  if (currentMoveType !== 'RETURN') return '';
+  var dicho = String((document.getElementById('mSrc') || {}).value || '').trim();
+  if (!dicho) return '';
+  var clave = dicho.toUpperCase();
+  var obras = config.projects || [];
+  for (var i = 0; i < obras.length; i++){
+    if (String(obras[i] || '').trim().toUpperCase() === clave) return obras[i];
+  }
+  return '';
+}
+
 async function submitMovement(){
  try {
   if (currentMoveType === 'ENTRY') { submitMultiEntry(); return; }
@@ -12445,13 +12506,23 @@ async function submitMovement(){
    * bien — el importador de historia vieja entra por ahí y sus filas no tienen
    * origen que poner. Bloquearlo en el servidor rompería la importación para
    * defender una estadística. */
+  /* LA PREGUNTA SIGUE SIENDO OBLIGATORIA — PERO ES OTRA CASILLA.
+   *
+   * Desde la v12.95 la devolución pregunta UNA vez, en `#mSrc`, y la obra se
+   * deduce de esa respuesta. Esta comprobación seguía mirando `#mOrigProj`, que
+   * ahora está escondido y vacío — así que habría bloqueado **todas** las
+   * devoluciones con un aviso sobre un campo que ya no se ve. Un campo
+   * obligatorio invisible es la peor versión posible de esto.
+   *
+   * Lo que se exige no ha cambiado: hay que decir de dónde vuelve. Lo que
+   * cambia es dónde se contesta. */
   if (currentMoveType === 'RETURN'){
-    var _op = ((document.getElementById('mOrigProj') || {}).value || '').trim();
+    var _op = ((document.getElementById('mSrc') || {}).value || '').trim();
     if (!_op){
-      alert('Which project is this coming back from?\n\n' +
+      alert('Where is this coming back from?\n\n' +
             'This is what lets the app tell you later what was left over from ' +
             'where, and where it ended up being used.');
-      var _opEl = document.getElementById('mOrigProj');
+      var _opEl = document.getElementById('mSrc');
       if (_opEl) _opEl.focus();
       return;
     }
@@ -12735,7 +12806,7 @@ async function submitMovement(){
      * sólo lo guarda en RETURN y EXIT. Filtrar aquí ADEMÁS de allí serían dos
      * sitios que tienen que decidir lo mismo, y el que se quedara viejo lo
      * haría en silencio. */
-    originProject:    (document.getElementById('mOrigProj') || {}).value || '',
+    originProject:    _origProjDeducido(),
     fromMov:          _boneyardOrigenMov || '',
     supplier:         document.getElementById('mSup').value,
     comments:         comments,
@@ -14279,9 +14350,11 @@ function _fueraAplicar(i){
     }
   }
 
-  ponTexto('mSrc',      f.site);          // «From (site or address)»
-  ponTexto('mOrigProj', f.project);       // «Came back from (project)»
-  ponTexto('mPM',       f.pm);
+  /* UN SOLO CAMPO. Antes se escribía el sitio arriba y la obra abajo, en dos
+   * recuadros que preguntaban lo mismo. Ahora se contesta una vez; la obra se
+   * deduce al guardar (ver `_origProjDeducido`). */
+  ponTexto('mSrc', f.site);
+  ponTexto('mPM',  f.pm);
 
   /* LA UNIDAD ES UNA LISTA CERRADA, así que no se le escribe encima: si lo que
    * dice el registro no está entre las opciones, se deja la que hay. Asignar un
@@ -21249,9 +21322,68 @@ function _ubicacionParecida(txt, conocidas){
   return mejorD <= 1 ? mejor : '';
 }
 
+/* ═══ DENTRO DE LA BODEGA Y FUERA SON DOS COSAS ═══════════════════════
+ *
+ * Jose, 23/10, con una captura del formulario de devolución, y es el hallazgo
+ * de concepto más importante de toda la semana:
+ *
+ *   *"está mezclando dos categorías de locación distintas, y eso es un problema
+ *   que no habíamos tratado: locaciones DENTRO de la bodega y FUERA. Cuando los
+ *   materiales están en job-site están fuera de la bodega, no dentro. No debe
+ *   sugerir ingresar ese nombre como una locación dentro de la bodega."*
+ *
+ * En su pantalla, el campo de «de dónde vuelve» llevaba una OBRA
+ * —`GHH SCENIC MOUNTAIN 4PLEX PHASE2`— y debajo salía:
+ *
+ *     📍 GHH SCENIC MOUNTAIN 4PLEX PHASE2 is not a location in your warehouse yet.
+ *     [+ Create GHH SCENIC MOUNTAIN 4PLEX PHASE2]
+ *
+ * Pulsarlo le añade al mapa de su almacén un estante que no existe.
+ *
+ * ── LA CAUSA: UN SOLO ELEMENTO CON DOS SIGNIFICADOS ──────────────────
+ *
+ * `#mSrc` es «Source Rack» en una entrada, una salida y un traslado —un sitio
+ * DE DENTRO— y pasa a ser «de qué obra vuelve» en una devolución —un sitio
+ * DE FUERA—. Lo único que cambiaba era la etiqueta; su `list` seguía siendo la
+ * de estantes, así que todo lo que mira «¿es esto un campo de ubicación?» decía
+ * que sí.
+ *
+ * Ahora el elemento LO DICE: `data-fuera` puesto significa «aquí se escribe un
+ * sitio de fuera», y con eso el aviso de «no existe en tu almacén» no le
+ * aplica. Va en el DOM y no en una variable global a propósito: se ve
+ * inspeccionando la página, y lo lee cualquiera que tenga el elemento delante
+ * sin tener que saber en qué pestaña estamos. */
+function _esSitioDeFuera(el){
+  return !!(el && el.getAttribute && el.getAttribute('data-fuera') === '1');
+}
+
+/* Pone o quita la marca, Y CON ELLA LA LISTA QUE SE OFRECE.
+ *
+ * Las dos cosas juntas y no por separado: un campo que dice «soy de fuera»
+ * pero sigue ofreciendo la lista de estantes es la misma contradicción de
+ * antes con otra cara. Aquí no se pueden separar porque es una sola función
+ * la que las toca. */
+function _marcarSitioDeFuera(el, esDeFuera){
+  if (!el) return;
+  if (esDeFuera){
+    el.setAttribute('data-fuera', '1');
+    el.setAttribute('list', 'fueraSitioList');
+    // Un aviso de «no existe en tu almacén» que se quedó pegado de antes de
+    // cambiar de pestaña no tiene sentido aquí, y era justo lo que Jose tenía
+    // delante.
+    try { _quitarAvisoUbic(el); } catch (e) {}
+  } else {
+    el.removeAttribute('data-fuera');
+    el.setAttribute('list', 'rackList');
+  }
+}
+
 function _esCampoDeUbicacion(el){
   if (!el || el.tagName !== 'INPUT') return false;
   if (el.id === 'lockAllowedDest') return false;   // lleva varias separadas por comas
+  // Un sitio de FUERA de la bodega nunca es una ubicación del almacén, aunque
+  // se escriba en el mismo recuadro.
+  if (_esSitioDeFuera(el)) return false;
   var lista = el.getAttribute('list') || '';
   if (lista === 'rackList' || lista === 'rackListDest') return true;
   return !!(el.classList && (el.classList.contains('loc-rack') ||
@@ -21429,6 +21561,46 @@ function refreshDropdowns(){
   var destinoSet = Array.from(new Set(rackNames)).sort();
   origenSet.forEach(function(r){ var o = document.createElement('option'); o.value = r; rd1.appendChild(o); });
   destinoSet.forEach(function(r){ var o = document.createElement('option'); o.value = r; rd2.appendChild(o); });
+
+  /* ═══ LOS SITIOS DE FUERA DE LA BODEGA ═════════════════════════
+   *
+   * Obras y direcciones a donde ha salido material. **Nunca estanterías**: una
+   * estantería es un sitio de dentro, y mezclarlas es el fallo que Jose
+   * encontró el 23/10.
+   *
+   * De dónde salen: del destino de las SALIDAS y del origen de las
+   * DEVOLUCIONES — los dos movimientos que cruzan la puerta. Y se quita
+   * cualquier nombre que ADEMÁS sea una ubicación configurada: si está en
+   * Settings → Locations es de dentro, pase lo que pase en los movimientos.
+   *
+   * Un traslado no cuenta: va de un estante a otro, los dos de dentro. */
+  var fd = document.getElementById('fueraSitioList');
+  if (fd){
+    fd.innerHTML = '';
+    var deDentro = {};
+    (config.locations || []).forEach(function(l){
+      deDentro[String(l.name || '').toUpperCase().trim()] = 1;
+    });
+    var fuera = {};
+    movements.forEach(function(m){
+      var mt = String(m.moveType || '').toUpperCase();
+      var v = (mt === 'EXIT')   ? m.destLoc
+            : (mt === 'RETURN') ? m.sourceLoc : '';
+      v = String(v || '').trim();
+      if (!v) return;
+      if (deDentro[v.toUpperCase()]) return;      // eso es un estante
+      fuera[v] = 1;
+    });
+    // Las obras también son sitios de fuera, aunque todavía no haya salido nada
+    // hacia ellas: se puede devolver de una obra recién dada de alta.
+    (config.projects || []).forEach(function(pj){
+      var v = String(pj || '').trim();
+      if (v && !deDentro[v.toUpperCase()]) fuera[v] = 1;
+    });
+    Object.keys(fuera).sort().forEach(function(v){
+      var o = document.createElement('option'); o.value = v; fd.appendChild(o);
+    });
+  }
 
   var sd = document.getElementById('supplierList'); sd.innerHTML = '';
   var supSet = Array.from(new Set(config.suppliers.concat(movements.map(function(m){ return m.supplier; }).filter(Boolean)))).sort();
@@ -29961,6 +30133,18 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '12.95',
+    titulo: 'A job site is not a shelf',
+    puntos: [
+      'Returning material from a site offered to <b>create that site as a shelf in your warehouse</b>. Pressing it added a rack to your map that does not exist.',
+      'The app had <b>one idea of \u201cplace\u201d and needed two</b>: inside are your racks, which you create on purpose; outside are the job sites, which come into being on their own when material leaves.',
+      'On a return the box now offers <b>the places your material has actually gone to</b>, and never offers to turn one into a shelf. The rack you return <i>to</i> still warns if it does not exist.',
+      '<b>And it asks once.</b> \u201cFrom\u201d and \u201cCame back from\u201d were the same question with two different lists. One question now; the project is worked out from your answer.',
+      'Separately: <b>\u201csystem busy\u201d is no longer filed as a breakage</b> \u2014 it was emailing the admin every time two people saved at once.'
+    ],
+    antes:  'Offering to turn a job site into a shelf',
+    ahora:  'Inside and outside are two different things' },
+
   { ver: '12.94',
     titulo: 'Saying \u201cyes\u201d to a warning now saves',
     puntos: [
@@ -29995,18 +30179,6 @@ var NOVEDADES = [
     ],
     antes:  'Half an hour, 40 lost, and no way to stop it',
     ahora:  'Seconds, nothing lost, and a Stop button' },
-
-  { ver: '12.91',
-    titulo: 'Importing a file no longer stops at row 500',
-    puntos: [
-      '<b>If your file had more than 500 rows, only the first 500 went in</b> — while the button said it was importing all of them. A 1,052-row inventory lost 552 rows with nothing on screen to say so.',
-      'Confirming now reads the file in full, so the number on the button and the number saved are the same thing. Every import <b>counts rows and units before and after</b> and tells you whether they match — whether they do or not.',
-      '<b>The same file twice no longer doubles your stock in silence.</b> The app recognises an inventory it already took in, even if the rows come back in a different order, and says so before you press anything. It still lets you through.',
-      '<b>And an import can be undone.</b> Those movements go to the trash, exactly like deleting one — nothing is final.',
-      'The preview shows <b>every column your file brought</b>, not five. Unit, project, supplier, PO and comments were being imported without anyone ever seeing them.'
-    ],
-    antes:  'A button promising 1,052 rows and saving 500',
-    ahora:  'Every row in, counted before and after, and undoable' },
 
 ];
 

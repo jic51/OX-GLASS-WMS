@@ -239,10 +239,32 @@ console.log('\n═══ 7. EL FORMULARIO: EL ORIGEN TIENE SU PROPIO CAMPO ═�
   check('...y NO reutiliza `mProj`: son dos preguntas distintas y la de la ' +
         'salida necesita las dos a la vez',
     /id="mOrigProjField"/.test(html) && /id="mProjField"/.test(html));
-  check('la DEVOLUCIÓN lo enciende', /_origProjMostrar\(true, 'Came back from/.test(html));
-  check('...y es obligatorio: dejarlo opcional llenaría la mitad de las ' +
-        'devoluciones de blancos y el dato no serviría para nada',
-    /currentMoveType === 'RETURN'[\s\S]{0,400}Which project is this coming back from/.test(html));
+  /* LA DEVOLUCIÓN YA NO LO ENSEÑA, Y ES UN ARREGLO — v12.95.
+   *
+   * Jose, 22 y 23/10, dos veces: *"¿por qué hay un FROM y un CAME BACK FROM?
+   * Esas son la misma pregunta que espera dos datos diferentes"*. Su captura lo
+   * prueba: los dos recuadros con EL MISMO TEXTO escrito, y cada uno ofreciendo
+   * una cosa distinta — uno «crea esto como estantería» y el otro «añade esta
+   * obra a tu lista».
+   *
+   * Lo que esta prueba defiende NO ha cambiado: el dato del boneyard tiene que
+   * seguir escribiéndose. Lo que cambia es de dónde sale — de la única
+   * respuesta, en vez de una segunda pregunta que podía contradecir a la
+   * primera. En la SALIDA el campo sigue ahí, porque ahí son dos preguntas de
+   * verdad: a dónde va, y de dónde salió. */
+  check('la DEVOLUCIÓN ya no enseña un segundo campo para lo mismo',
+    /_origProjMostrar\(false\)/.test(html));
+  check('...pero el dato se sigue exigiendo, en la casilla que SÍ se ve — un ' +
+        'campo obligatorio invisible habría bloqueado todas las devoluciones',
+    /currentMoveType === 'RETURN'[\s\S]{0,600}getElementById\('mSrc'\)[\s\S]{0,400}Where is this coming back from/.test(html));
+  check('...y la obra se DEDUCE de esa respuesta, así que la columna del ' +
+        'boneyard se sigue llenando',
+    /function _origProjDeducido\(\)/.test(html));
+  check('...con el nombre tal como está en la lista de obras, no como se ' +
+        'teclee: lo segundo sembraría duplicados',
+    /_origProjDeducido[\s\S]{0,900}config\.projects/.test(html));
+  check('la SALIDA SÍ lo sigue enseñando: ahí son dos preguntas de verdad',
+    /_origProjMostrar\(true/.test(html));
   check('el campo se apaga en CADA cambio de tipo, para que una pantalla no ' +
         'herede el de la anterior', /_origProjMostrar\(false\);/.test(html));
   check('...y al apagarse se VACÍA: un campo invisible con contenido escribe ' +
@@ -254,7 +276,7 @@ console.log('\n═══ 7. EL FORMULARIO: EL ORIGEN TIENE SU PROPIO CAMPO ═�
         'poder elegir antes de escribir y no después de guardar',
     /available<\/option>/.test(html));
   check('el envío lleva `originProject` y `fromMov`',
-    /originProject:\s+\(document\.getElementById\('mOrigProj'\)/.test(html) &&
+    /originProject:\s+_origProjDeducido\(\)/.test(html) &&
     /fromMov:\s+_boneyardOrigenMov/.test(html));
   check('y el puntero se limpia al abrir el modal: uno que sobrevive a su ' +
         'ventana acaba colgado del movimiento siguiente',

@@ -243,7 +243,18 @@ const leerCaja = () => ({
   check('el sitio del que vuelve',         form.src,  'LEHI HOUSE 12');
   check('la cantidad SUGERIDA, como en una salida', form.qty, '7');
   check('la unidad',                       form.unit, 'UNIT');
-  check('la obra de la que vuelve',        form.proj, 'LEHI 12');
+  /* LA OBRA YA NO SE RELLENA APARTE — v12.95, y es lo correcto.
+   *
+   * Había dos recuadros preguntando lo mismo: «From (site or address)» y
+   * «Came back from (project)». Jose: *"esas son la misma pregunta que espera
+   * dos datos diferentes"*, y en su captura los dos llevaban el mismo texto.
+   *
+   * Ahora se contesta UNA vez, en el sitio de arriba, y la obra se deduce al
+   * guardar. Rellenar dos campos desde una sola fila era crear dos verdades que
+   * podían separarse en cuanto alguien tocara una. */
+  check('la obra YA NO se rellena en un segundo campo: era la misma pregunta ' +
+        'dos veces, y ahora se deduce de la de arriba',
+    form.proj, '');
   check('el jefe de obra',                 form.pm,   'MARIA');
   check('la categoría, por si la lista venía de otra', form.cat, 'WINDOW');
 
