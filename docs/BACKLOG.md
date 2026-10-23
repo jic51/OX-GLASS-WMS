@@ -312,6 +312,258 @@ puede contar, porque son trozos y no 490 resultados sueltos.
 
 ---
 
+## 🔴 RONDA DEL 23/10 — LO QUE SALIÓ AL PROBAR LA v12.93
+
+### A. ✅ **ARREGLADO EN LA v12.94** — decir «sí» en un aviso reventaba, y eran cinco
+
+Jose devolvió 60 de algo que salió 49, pulsó «Save anyway» y la app reventó con
+`Cannot set properties of undefined (setting 'forceSubmit')`. Las **cinco**
+preguntas de «¿seguro?» de `submitMovement` llamaban a `_doSubmit` antes de que
+`payload` existiera. Detalle en el commit de la v12.94 y en
+`tools/test-seguro-que-si.js`.
+
+---
+
+### B. 🔴 **LA DEVOLUCIÓN MEZCLA DOS CLASES DE SITIO, Y ESO NO LO HABÍAMOS TRATADO**
+
+Jose, 23/10, con una captura del formulario de RETURN, y es el hallazgo
+conceptual más importante de la sesión:
+
+> *"está mezclando dos categorías de locación distintas, y eso es un problema
+> que no habíamos tratado: locaciones DENTRO de la bodega y FUERA. Cuando los
+> materiales están en job-site están fuera de la bodega, no dentro. No debe
+> sugerir ingresar ese nombre como una locación dentro de la bodega."*
+
+En su pantalla, el campo **FROM (SITE OR ADDRESS)** lleva
+`GHH SCENIC MOUNTAIN 4PLEX PHASE2` — una obra — y debajo sale:
+
+> 📍 *GHH SCENIC MOUNTAIN 4PLEX PHASE2 is not a location in your warehouse yet.*
+> **[+ Create GHH SCENIC MOUNTAIN 4PLEX PHASE2]**
+
+**Y eso es ofrecerle crear una obra como si fuera una estantería.** Si lo pulsa,
+su mapa de almacén gana un estante que no existe.
+
+**La app tiene UN solo concepto de «sitio» y necesita DOS:**
+
+| | Dónde vive | Ejemplos | Quién lo crea |
+|---|---|---|---|
+| **Dentro de la bodega** | Settings → Locations, sale en el mapa | `A1A`, `RACK 3`, `YARD` | el almacenero, a propósito |
+| **Fuera de la bodega** | es una obra o una dirección | `GHH SCENIC MOUNTAIN 4PLEX PHASE2` | **nace sola** cuando sale material hacia allí |
+
+Hoy el aviso de «esta ubicación no existe» no distingue, así que salta en un
+campo donde **nunca** debería saltar.
+
+### B-bis. 🔴 **«FROM» Y «CAME BACK FROM» SON LA MISMA PREGUNTA, DOS VECES**
+
+Jose, y ya lo había dicho el 22/10:
+
+> *"¿por qué hay un FROM y un CAME BACK FROM? Esas son la misma pregunta que
+> espera dos datos diferentes, ya que la una muestra una lista diferente a la
+> otra… Sólo debe haber UNA lista de lugares fuera de la bodega donde se envió
+> ese material."*
+
+Tiene razón entera. En su captura los dos campos llevan **el mismo texto**
+escrito, y cada uno ofrece una cosa distinta:
+
+- **FROM (SITE OR ADDRESS)** → ofrece crearlo como **ubicación de bodega**
+- **CAME BACK FROM (PROJECT)** → *«New project — not on your list yet. + Add it»*
+
+Y lo segundo también está mal por otro motivo que él señala: **si el material
+salió hacia esa obra, la obra ya existe.** Ofrecer darla de alta es la prueba de
+que la salida no la registró — o de que la lista de obras y el historial no se
+hablan.
+
+**Lo que yo haría, y es un rediseño pequeño de un campo:**
+
+1. **Un solo campo**, el de dónde vuelve, con **una sola lista**: los sitios
+   FUERA de la bodega donde ese material tiene cantidad pendiente — que es
+   exactamente lo que `getOutstandingBySite` ya devuelve y lo que la lista
+   flotante de la v12.82 ya enseña.
+2. **Ningún «créalo como ubicación»** en ese campo. Nunca.
+3. **La obra se da de alta sola al salir**, no al volver. Si al devolver sale
+   «+ Add it», es un síntoma: hay que arreglar la salida, no ofrecer el parche
+   en la devolución.
+4. **RETURN TO RACK** se queda como está: ése sí es un sitio de dentro, y ahí el
+   aviso de «no existe» es correcto y útil.
+
+Tamaño: mediano. Toca el formulario de RETURN, el aviso de ubicación
+desconocida, y la lista de obras. **No es sólo mover un campo**: es separar dos
+conceptos que la app nunca separó, y por eso va con su propia entrada.
+
+### B-ter. 🔵 «NAME / DESCRIPTION» debería decir sólo «Name»
+
+Jose: *"primero debe decir sólo nombre, no nombre / descripción"*. De acuerdo:
+lo que va ahí es el nombre del material; la descripción tiene su campo
+(Comments). Cambio de una palabra, va con el B.
+
+---
+
+### C. 🔵 **«SYSTEM BUSY» NO DEBERÍA EXISTIR — la idea de Jose**
+
+> *"¿hay forma de manejar mejor el System Busy? Mi idea es que la app nunca
+> muestre ese mensaje, y para eso la app debe dividir el trabajo y hacer que
+> cada cosa tenga un turno (ya la app lo hace en muchos lugares), pero no debe
+> esperar a que el servidor le dé ese turno: la app calcula cuántos puede
+> enviar al servidor para que no pase lo de System Busy y los envía en tandas.
+> ¿No debe ser difícil, o sí?"*
+
+**Es la dirección correcta, y la mitad ya está hecha.** La v12.92 hizo
+exactamente eso para borrar: 490 peticiones pasaron a dos tandas, y el «Too many
+requests» desapareció porque dejó de provocarse. Lo que pide ahora es
+**generalizarlo**.
+
+**Lo que es más fácil de lo que parece:**
+
+- La app ya tiene las piezas: `_wq` (la cola de escrituras), `_delQueue`, el
+  reintento con espera creciente, y ahora el troceado de `borrarFilasEnTanda_`.
+- El límite del servidor **lo conocemos**: 240 llamadas por minuto
+  (`requireQuota_`). No hay que adivinarlo.
+
+**Lo que NO es tan fácil, y hay que decirlo:**
+
+- `SYSTEM_BUSY` **no es lo mismo** que «demasiadas peticiones». Sale cuando
+  **otra persona** tiene el candado del almacén. Ninguna cuenta que haga este
+  navegador puede evitar eso: no sabe cuántas pestañas hay abiertas ni qué está
+  guardando el de al lado. **Esa mitad no se puede eliminar, sólo esconder
+  bien** — esperando turno y reintentando sin decir nada, que es lo que ya hace
+  en los caminos que lo tienen cableado.
+- Lo que **sí** se puede eliminar del todo es la parte que nos provocamos
+  nosotros: las ráfagas. Y eso es contar antes de enviar.
+
+**Así que el trabajo son tres piezas, y la tercera es la que pide Jose:**
+
+1. **Un solo regulador para TODAS las escrituras**, no una cola por operación.
+   Hoy hay `_wq` por un lado y `_delQueue` por otro, y el borrado en tanda por
+   un tercero. Tres cosas que cuentan por separado no pueden respetar un límite
+   común.
+2. **Que ese regulador conozca el límite** y nunca lo pase: como mucho N
+   llamadas por minuto, con la cuenta en el navegador. Si se llena, espera —
+   **sin decir nada**, porque esperar no es fallar.
+3. **Y que todo lo masivo vaya en tandas**, como ya va el borrado. Fusionar
+   veinte nombres debería ser una llamada o dos, no veinte.
+
+### C-bis. 🔵 **QUE NO SE NOTE LA DEMORA DEL SERVIDOR**
+
+> *"visualmente el sistema debe ser más rápido y que no se note la demora del
+> servidor. Si el servidor no hace algo, se le informa con una notificación.
+> Pero primero debemos manejar las tandas."*
+
+De acuerdo, y con su orden: primero las tandas, después lo visual. La app ya
+hace esto en algunos sitios (la fila se va al pulsar, no al contestar el
+servidor) y en otros no. **Lo que falta es hacerlo la regla y no la excepción**,
+y eso es un repaso pantalla por pantalla, no un cambio.
+
+---
+
+### D. 🔴 **LO QUE FALLA EN LA GRATIS, DE SU REPASO**
+
+1. **🏷 Labels sale a todo color después de una entrada.** Debe salir **gris** y,
+   al pulsarlo, el mismo aviso de Pro que los demás. El candado está en
+   `btnMovLabels`, pero el botón del aviso de guardado (**Print labels**) es
+   otro y se quedó sin candado — **la misma falta de las zonas contra los
+   botones**, una vez más.
+2. **La pregunta de «¿también llegó esto?»** (entregas esperadas) **no debe
+   salir en la gratis**: esa edición no tiene entregas esperadas.
+3. **No sale ni una tarjeta en el mazo.** Jose: *"en la versión básica no
+   aparece ninguna y eso me preocupa"*. Hay que mirar si es correcto (las de
+   respaldo y archivado se filtraron a propósito en la v12.85) o si se cayó
+   algo más con ellas.
+4. **Ajustes → Sistema tiene un problema** — Jose dice que manda un vídeo.
+   **Pendiente de ese vídeo**, anotado para no perderlo.
+
+---
+
+### E. 🔵 **LOS CAMPOS PLEGADOS, AL REVÉS**
+
+> *"no puedo ver esa línea porque uso esos campos muy seguido. Debemos hacer que
+> al comenzar esos campos estén detrás de ese botón y, si se los utiliza, se
+> queden afuera; si no, se esconden otra vez."*
+
+Hoy es al revés: nacen fuera y se pliegan cuando la bodega demuestra que no los
+usa. Su versión es mejor para **una instalación nueva** —empieza con el
+formulario corto— pero hay que tener cuidado con una cosa: con poca historia la
+app no sabe nada, y esconder por defecto significa que alguien que SÍ los
+necesita tiene que descubrir el botón el primer día.
+
+**Propuesta:** plegados de entrada, y **basta con usar un campo UNA vez** para
+que se quede fuera (hoy hace falta que aparezca en la historia reciente). Así la
+primera entrada lo saca y ya no vuelve a esconderse. Decisión suya.
+
+---
+
+### F. 🔵 **UNA CAJA DE BÚSQUEDA EN EL MENÚ PRINCIPAL**
+
+> *"había pensado que debemos poner una caja de búsqueda en el menú principal
+> también, así si alguien quiere buscar algo puede escribir y aparece la opción
+> rápido."*
+
+Anotado. Es una búsqueda global: material, obra, proveedor, PO, movimiento,
+ubicación — y al elegir, te lleva a la pantalla que lo enseña. Buena idea y
+**grande**: no es una caja, es decidir qué se puede encontrar y a dónde lleva
+cada cosa.
+
+---
+
+### G. 🔵 **EL TEXTO DE LOS TÉRMINOS, QUE DEBE CAMBIAR ENTRE EDICIONES**
+
+> *"aún habla sobre las personas que trabajan aquí. Si es Acopio Básico, sólo
+> una persona trabaja aquí y no se puede hacer nada con eso. Pero recuerda que
+> entre Básico y Pro ese texto debe cambiar, no quedarse igual. El texto que
+> teníamos antes me gustaba para Acopio Pro."*
+
+Confirmado: queda una frase de la gratis que habla de «la gente que trabaja
+aquí», que en una edición de una sola persona no significa nada. Y la regla
+general que él pone es la importante: **ese texto es DOS textos**, no uno con
+una rama olvidada. Va con el repaso de «ninguna frase nombra algo que su edición
+no tiene».
+
+---
+
+### H. 🔵 **LAS TARJETAS DEL MAZO, CON SU ANIMACIÓN — diseño de Jose**
+
+> *"si la que desaparece está arriba, desaparece, deja un hueco y la otra entra
+> sin mover todas las tarjetas de abajo; si está en medio, deja un espacio, las
+> de arriba bajan y la que entra entra arriba en el espacio; si está abajo,
+> todas bajan y la que entra entra en el espacio. Las animaciones deben ser
+> sutiles y pausadas (pero no lentas) para que el usuario las aprecie."*
+
+Su diseño, anotado tal cual. La regla que lo resume: **el hueco que deja la que
+se va es el hueco por el que entra la siguiente**, y nada que no tenga que
+moverse se mueve.
+
+---
+
+### I. 🔵 **ESTANDARIZAR LAS VENTANAS DE MOVIMIENTO** (vídeo 2)
+
+> *"vamos a estandarizar todas las ventanas de movimiento para que no salten o
+> se muevan al cambiar entre ellas."*
+
+Anotado. Hoy cada tipo (Entry, Exit, Transfer, Return, Waste, Adjust) enseña y
+esconde campos distintos, así que la ventana cambia de alto al cambiar de
+pestaña y los botones saltan. Es el mismo problema que ya arreglamos en las
+columnas de las tablas, en otra pantalla.
+
+---
+
+### J. 🔴 **LA APP SIGUE TARDANDO EN ABRIR, Y EL MENÚ SE APAGA** (vídeo 3)
+
+Jose: *"al iniciar se tarda mucho, casi igual que antes de que quitaras los
+comentarios, y también el menú se apaga a los pocos minutos o luego de tocar
+algo que es de la versión Pro."*
+
+**Dos cosas distintas y las dos hay que mirarlas:**
+
+- **La tardanza.** Ya medimos que la mayor parte del arranque es el sandbox de
+  Apps Script, no nuestro archivo — pero «casi igual que antes» merece una
+  medición nueva con la v12.94 pegada, no una explicación vieja.
+- **«El menú se apaga».** Eso suena a algo nuestro y no lo tenemos
+  identificado. *«Luego de tocar algo que es de la versión Pro»* es la pista
+  fuerte: apunta a que algo de `_basicPintar` / `_proPitch` deja la barra en un
+  estado del que no vuelve. **Hace falta saber qué menú** — el de arriba, el de
+  la cuenta, o el de la hoja.
+
+---
+
 ## 🥇 EL ORDEN EN QUE YO LO HARÍA — todo lo de la sesión del 22/10
 
 Pedido por Jose: *"dame la lista de lo que arreglarías en el orden que lo
