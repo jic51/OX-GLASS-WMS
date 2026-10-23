@@ -101,6 +101,23 @@
        movements went from about two and a half minutes to fifty-five seconds
        along the way.</p>
 
+    <div class="entry" id="v12-94">
+      <span class="ver">v12.94</span>
+      <span class="tag fix">Fix</span>
+      <h3>Saying &ldquo;yes&rdquo; to a warning now saves</h3>
+      <p>Returning more of something than ever went out warned you correctly &mdash; and then
+         <b>pressing &ldquo;Save anyway&rdquo; crashed</b>, so the movement could not be saved at
+         all.</p>
+      <p>It was not one warning, it was <b>five</b>: too much stock on a multi-location entry, a
+         transfer row over stock, a return with no rack, a return of more than went out, and waste
+         with not enough stock. All five asked the question before the movement was ready to be
+         sent, so answering yes had nothing to send.</p>
+      <p>They now <b>note</b> the question instead of asking it, and one place decides between
+         asking and saving once everything is ready. That also fixes something nobody had noticed:
+         a soft &ldquo;are you sure?&rdquo; used to cut the path short, so the real checks below it
+         never ran. A genuine error beats a warning now, which is the right order.</p>
+    </div>
+
     <div class="entry" id="v12-93">
       <span class="ver">v12.93</span>
       <span class="tag fix">Fix</span>
