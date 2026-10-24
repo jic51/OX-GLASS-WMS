@@ -33,14 +33,30 @@
 const fs = require('fs'), path = require('path');
 const RAIZ = path.join(__dirname, '..');
 
-// EL MARGEN. Tres versiones, no cero.
+// EL MARGEN. UNA versión, y bajó de tres el 24/10 por algo que pasó.
 //
 // Cero significaría que cada commit que sube APP_VERSION deja la suite roja
 // hasta que alguien publique, y un guardia que está rojo la mitad del tiempo es
 // un guardia que se deja de leer — el mismo razonamiento por el que
-// check-changelog permite cinco y no exige una entrada por versión. Tres es
-// "un día de trabajo sin publicar, vale; dos semanas, no".
-const MARGEN = 3;
+// check-changelog permite cinco y no exige una entrada por versión.
+//
+// ── POR QUÉ TRES ERA DEMASIADO ───────────────────────────────────
+//
+// El 23 y el 24 de octubre se dieron por publicadas la v12.94 y la v12.95, y
+// ninguna llegó al sitio: `publish-site.js` se paró en un guardia de privacidad
+// —una frase mía del propio changelog que el patrón de «qué contestar» cazaba
+// por casualidad— y su salida se había mandado a `/dev/null`. La suite siguió
+// verde las dos veces, **porque tres versiones de margen daban justo para dos
+// fallos seguidos sin avisar**.
+//
+// Jose lo encontró mirando la página a la que le lleva el aviso de la app:
+// *"¿por qué no está actualizado?"*. Lo encontró ÉL, que es justo lo que este
+// guardia existe para evitar.
+//
+// Con UNA de margen, "acabo de subir la versión y aún no he publicado" sigue
+// estando verde, y "publiqué y no se enteró nadie" se pone rojo a la primera en
+// vez de a la cuarta.
+const MARGEN = 1;
 
 const version = (/^var APP_VERSION = '([^']+)'/m
   .exec(fs.readFileSync(path.join(RAIZ, 'Code_v3_fixed.gs'), 'utf8')) || [])[1];

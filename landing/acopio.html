@@ -168,6 +168,23 @@
   .checklist { margin: 0; padding: 0; display: grid; gap: .7rem; }
   .checklist li { list-style: none; display: grid; grid-template-columns: 1.1rem 1fr; gap: .55rem; align-items: baseline; }
   .checklist li::before { content: "—"; color: var(--good); font-weight: 600; }
+  /* ── QUÉ TRAE CADA EDICIÓN ────────────────────────────────────────────
+     Jose, 24/10: *"en la landing y en todos los documentos sólo se habla de
+     Acopio, no hay Acopio Básico ni Pro"*. La lista se leía como «Acopio hace
+     todo esto», y quien instala la gratis no encuentra la mitad.
+
+     Van en DOS GRUPOS con su encabezado, no en una sola lista con una
+     insignia por línea. Once insignias pequeñas se leen como decoración y no
+     contestan la pregunta que trae el visitante —«¿qué me llevo gratis?»—,
+     que un encabezado contesta de un vistazo. La etiqueta de cada línea de
+     Pro sigue en el HTML como `data-pro`, y es lo que ata esta lista al mapa
+     de candados de la app: ver `tools/test-ediciones-coinciden.js`. */
+  .edi-hd { font: 500 var(--step--1)/1 "IBM Plex Mono", monospace;
+            letter-spacing: .13em; text-transform: uppercase; color: var(--steel);
+            margin: 2rem 0 .9rem; }
+  .edi-hd:first-of-type { margin-top: 2rem; }
+  .edi-hd .edi-note { display: block; margin-top: .4rem; letter-spacing: 0;
+                      text-transform: none; font-family: Inter, "DM Sans", sans-serif; }
   .notyet { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--amber); border-radius: var(--radius); padding: 1.6rem 1.7rem; }
   .notyet h3 { font-size: var(--step-1); font-weight: 600; margin-bottom: .8rem; }
   .notyet ul { margin: 0; padding-left: 1.1rem; color: var(--steel); display: grid; gap: .45rem; }
@@ -325,12 +342,12 @@
 <header class="wrap hero">
   <div>
     <h1 data-i18n="t5">Know what's on the shelf <em>without going to look.</em></h1>
-    <p class="lede" data-i18n="t6">Acopio turns your Google Sheet into a real warehouse system — in, out, locations, costs and low-stock alerts. We install and set it up for you.</p>
+    <p class="lede" data-i18n="t6">Acopio turns your Google Sheet into a real warehouse system — in, out, locations and costs. Install the free edition yourself in ten minutes, or have us set Pro up on your own racks and your own team.</p>
     <div class="cta-row">
       <a class="btn" href="#contact" data-i18n="t7">Book a 20-minute demo</a>
       <a class="btn btn-ghost" href="#what" data-i18n="t8">See what it does</a>
     </div>
-    <p class="hero-note" data-i18n="t9">Your data stays in your own Google Drive. No per-user fees.</p>
+    <p class="hero-note" data-i18n="t9">Two editions: <strong>Basic</strong> is free and yours to keep, <strong>Pro</strong> adds your team, photos, labels and the nightly backup. Your data stays in your own Google Drive either way, and neither charges per user.</p>
   </div>
 
   <div class="elevation rise" aria-label="Example of stock by rack location" data-i18n-attr="aria-label:a10">
@@ -392,12 +409,12 @@
     <div class="col rise">
       <span class="tag" data-i18n="t31">Pricing</span>
       <h3 data-i18n="t32">No charge per user</h3>
-      <p data-i18n="t33">Ten people in the warehouse cost the same as one. Everyone gets their own login and their own permissions. Most inventory software bills per seat, and that's where the real money goes.</p>
+      <p data-i18n="t33">Ten people in the warehouse cost the same as one. In Pro everyone gets their own login and their own permissions, and the price does not move. Most inventory software bills per seat, and that's where the real money goes.</p>
     </div>
     <div class="col rise">
       <span class="tag" data-i18n="t34">Setup</span>
       <h3 data-i18n="t35">We set it up, on your data</h3>
-      <p data-i18n="t36">Your categories, your rack names, your team, your suppliers — configured with you on a call, not left as homework. You get a working system, not a login and good luck.</p>
+      <p data-i18n="t36">Your categories, your rack names, your team, your suppliers — configured with you on a call, not left as homework. That is what the Pro setup fee buys. Basic you install yourself, in about ten minutes, and nobody has to call you back.</p>
     </div>
   </div>
 </section>
@@ -410,26 +427,38 @@
     <div>
       <h2 class="h2" data-i18n="t38">Built by someone who runs a warehouse.</h2>
       <p class="sub" data-i18n="t39">Acopio started as the system for a window-installation shop's own floor, and it is still in use every day. Everything here exists because a real shift needed it.</p>
-      <ul class="checklist" style="margin-top:2rem">
+      <!-- ── LAS DOS EDICIONES, LÍNEA POR LÍNEA ───────────────────────────
+           Cada línea de abajo del encabezado de Pro lleva `data-pro` con la
+           clave del candado que la cierra en la gratis — la misma clave que
+           `BASIC_PRO` (o el botón de `BASIC_FUERA`) dentro de la app.
+           `tools/test-ediciones-coinciden.js` exige que toda clave exista
+           allí y que ninguna oferta de la app se quede sin su línea aquí.
+           Antes esto era UNA lista y las dos cosas no tenían por qué
+           coincidir: la página prometía fotos, equipo, respaldo y etiquetas
+           a quien instalaba la gratis, donde las cuatro están cerradas. -->
+      <h3 class="edi-hd" data-i18n="t215">Acopio Basic — free, and this is all of it</h3>
+      <ul class="checklist">
         <li data-i18n="t40"><div><strong>In, out, transfers, returns and waste</strong> — every movement tied to a person, a job and a rack.</div></li>
         <li data-i18n="t41"><div><strong>Stock by rack location</strong>, so "where is it" has an answer before anyone walks.</div></li>
-        <li data-i18n="t42"><div><strong>Low-stock alerts</strong> on the materials you choose, at the level you set.</div></li>
         <li data-i18n="t43"><div><strong>Cost per job</strong> — weighted average cost, stamped on each movement so last year's numbers stay last year's.</div></li>
-        <li data-i18n="t44"><div><strong>Incoming deliveries</strong>, with a morning summary of what's arriving today.</div></li>
-        <li data-i18n="t45"><div><strong>Photos and PDFs</strong> attached to any movement, filed privately in your Drive.</div></li>
-        <li data-i18n="t46"><div><strong>Roles and permissions</strong> — decide who sees costs, who can edit history, who's read-only.</div></li>
-        <li data-i18n="t47"><div><strong>Nightly backups</strong> to your own Drive, kept 30 days.</div></li>
-        <!-- Everything from here down shipped after this page was first written.
-             Each one is a feature a customer can open today, not a plan: the
-             changelog entry that shipped it is named in the comment so that
-             "does Acopio really do this?" has an answer without a demo. -->
-        <li data-i18n="t205"><div><strong>Labels printed as you receive</strong> — 4×6 thermal, with the material, the quantity, the rack and the PO.</div></li><!-- v11.79 -->
-        <li data-i18n="t206"><div><strong>A warehouse map you can tap</strong>, racks laid out the way they stand on your floor — and a material can be locked to one, with the reason and who locked it.</div></li><!-- v9.82, v11.60 -->
-        <li data-i18n="t207"><div><strong>Paste a supplier's email</strong>, or a photo of an invoice, and the expected delivery comes out filled in.</div></li><!-- v9.61, v10.8 -->
-        <li data-i18n="t208"><div><strong>Check my data</strong> — the same material written two ways, found and corrected with one press.</div></li><!-- v11.23 -->
+        <li data-i18n="t206"><div><strong>A warehouse map you can tap</strong>, racks laid out the way they stand on your floor.</div></li><!-- v9.82 -->
         <li data-i18n="t209"><div><strong>Deleting can be undone</strong>. Movements go to a trash for 30 days, not away.</div></li><!-- v11.55 -->
         <li data-i18n="t210"><div><strong>An evening report</strong>, emailed on its own, of everything that moved that day.</div></li>
         <li data-i18n="t211"><div><strong>Every edit keeps its reason</strong> — who changed what, from what to what, and the change goes out by email.</div></li><!-- v11.17 -->
+      </ul>
+      <h3 class="edi-hd" data-i18n="t216">Acopio Pro adds<span class="edi-note">Nothing above is taken away. These are the ones the free edition shows but will not open.</span></h3>
+      <ul class="checklist">
+        <li data-i18n="t46" data-pro="usuarios"><div><strong>Your whole team</strong>, each with their own sign-in — decide who sees costs, who can edit history, who's read-only.</div></li>
+        <li data-i18n="t45" data-pro="fotos"><div><strong>Photos and PDFs</strong> attached to any movement, filed privately in your Drive.</div></li>
+        <li data-i18n="t205" data-pro="etiquetas"><div><strong>Labels printed as you receive</strong> — 4×6 thermal, with the material, the quantity, the rack and the PO.</div></li><!-- v11.79 -->
+        <li data-i18n="t217" data-pro="escanear"><div><strong>Scan a label with your phone</strong> and the app finds the material and fills the form in.</div></li><!-- v12.70 -->
+        <li data-i18n="t44" data-pro="llegadas"><div><strong>Incoming deliveries</strong>, with a morning summary of what's arriving today.</div></li>
+        <li data-i18n="t207" data-pro="leercorreo lectura"><div><strong>Paste a supplier's email</strong>, or a photo of an invoice, and the expected delivery comes out filled in.</div></li><!-- v9.61, v10.8 -->
+        <li data-i18n="t42" data-pro="minimos"><div><strong>Low-stock alerts</strong> on the materials you choose, at the level you set.</div></li>
+        <li data-i18n="t218" data-pro="avisarcorreo"><div><strong>The people who need to know get an email</strong> the moment you save the movement — the project manager, and whoever else you pick.</div></li>
+        <li data-i18n="t219" data-pro="reservas"><div><strong>Hold material for a job</strong> so nobody takes it out by mistake, with the reason and who held it.</div></li><!-- v11.60 -->
+        <li data-i18n="t47" data-pro="respaldo"><div><strong>Nightly backups</strong> to your own Drive, kept 30 days.</div></li>
+        <li data-i18n="t208" data-pro="btnDataCheck"><div><strong>Check my data</strong> — the same material written two ways, found and corrected with one press.</div></li><!-- v11.23 -->
       </ul>
     </div>
     <div class="notyet rise">
@@ -532,14 +561,42 @@
   <div class="wrap">
     <span class="eyebrow" data-i18n="t71">Price</span>
     <h2 data-i18n="t72">Plain, and the whole of it.</h2>
+    <!-- ── LAS DOS EDICIONES, Y POR QUÉ LA GRATIS VA PRIMERA ──────────────
+         Jose, 24/10: *"me puse a ver que en la landing y en todos los
+         documentos sólo se habla de Acopio, no hay Acopio Básico ni Pro"*.
+         Tenía razón: la página vendía UNA cosa y el producto son dos
+         ediciones desde hace semanas.
+
+         La gratis va arriba y a lo ancho porque es por donde se entra: se
+         instala en tu propia hoja, sin tarjeta y sin llamada. Las dos de
+         pago son lo que cuesta Pro, y ahora lo dicen en su propio título
+         en vez de dejar que el lector suponga a qué se refiere el $500.
+
+         Las claves nuevas empiezan en t212, no en t82: t82–t85 ya estaban
+         ocupadas por «Palabras del fundador» y los párrafos que le siguen.
+         Las reusé sin mirar y la página salió con el texto del fundador
+         dentro del precio — dos cosas que tienen que coincidir sin que nada
+         lo obligue, la misma de siempre. Antes de añadir una clave:
+           grep -o 'data-i18n="t[0-9]*"' landing/acopio.html | grep -o '[0-9]*' | sort -n | tail -1
+      -->
     <div class="price-grid">
+      <div class="card rise card-wide">
+        <div class="k" data-i18n="t212">Acopio Basic &mdash; free</div>
+        <!-- Sin clave de traducción, igual que el $500 de abajo: un precio no
+             se traduce. `test-landing-i18n` exige que TODO elemento marcado
+             cambie al cambiar de idioma, así que un «$0» marcado lo pone
+             rojo — y con razón: una clave cuyo español es idéntico al inglés
+             no es una traducción, es ruido en el diccionario. -->
+        <div class="v-sm">$0</div>
+        <p class="d" data-i18n="t213">The whole warehouse in your own Google spreadsheet: what you have, where it is, what came in and what went out. One person, no card, no call &mdash; you install it yourself in about ten minutes. It is not a trial and it does not expire. <a href="#contact">Ask for the link.</a></p>
+      </div>
       <div class="card rise">
-        <div class="k" data-i18n="t73">Setup — once</div>
+        <div class="k" data-i18n="t73">Acopio Pro &mdash; setup, once</div>
         <div class="v">$500</div>
         <p class="d" data-i18n="t74">Installation, configuration on your own categories and racks, your team loaded, and training. Done with you on a call.</p>
       </div>
       <div class="card rise">
-        <div class="k" data-i18n="t75">Support &amp; updates</div>
+        <div class="k" data-i18n="t75">Acopio Pro &mdash; support &amp; updates</div>
         <div class="v" data-i18n="t76">$49 <small>/ month</small></div>
         <p class="d" data-i18n="t77">Or $490 a year — two months free. Every improvement and fix is included; there's no upgrade to buy later.</p>
       </div>
@@ -549,6 +606,12 @@
         <p class="d" data-i18n="t80">If you run two or more warehouses or locations, get in touch before you sign up: there is a rate for each additional warehouse, and we can usually do better on the whole. <a href="#contact">Tell us how many.</a></p>
       </div>
     </div>
+    <!-- UNA SOLA LISTA DE LO QUE AÑADE PRO, y está arriba. Aquí tenía su
+         propia copia escrita a mano y le faltaban tres de las once ofertas
+         —escanear, apartar material y avisar por correo al guardar— porque la
+         escribí de memoria. Dos listas de lo mismo que tienen que coincidir
+         sin que nada lo obligue; la segunda se borra en vez de vigilarse. -->
+    <p class="price-note" data-i18n="t214"><strong>What Pro adds</strong> is listed feature by feature <a href="#what">further up this page</a>, and everything in Basic stays in Pro &mdash; nothing is taken away.</p>
     <p class="price-note" data-i18n="t81"><strong>No charge per user, ever.</strong> A crew of two and a crew of twenty pay the same. Comparable systems bill $30–$150 per person per month, which is where the cost quietly stops being small.</p>
   </div>
 </section>
@@ -703,10 +766,10 @@ var ACOPIO_ES = {
   "t2": "Precio",
   "t3": "Hablemos",
   "t5": "Conoce qué hay en el rack <em>sin ir a mirar.</em>",
-  "t6": "Acopio convierte tu Google Sheets en un sistema de bodega de verdad: entradas, salidas, ubicaciones, costos y alertas de stock bajo. Lo instalamos y configuramos contigo.",
+  "t6": "Acopio convierte tu Google Sheets en un sistema de bodega de verdad: entradas, salidas, ubicaciones y costos. La versión gratis la instalas tú en diez minutos, o te montamos Pro sobre tus propios racks y tu propio equipo.",
   "t7": "Agenda una demo de 20 minutos",
   "t8": "Mira qué hace",
-  "t9": "Tus datos se quedan en tu propio Google Drive. Sin cobro por usuario.",
+  "t9": "Dos ediciones: <strong>Básico</strong> es gratis y es tuya, <strong>Pro</strong> añade tu equipo, las fotos, las etiquetas y el respaldo de cada noche. En las dos tus datos se quedan en tu propio Google Drive, y ninguna cobra por usuario.",
   "t11": "Rack A · Nivel 1",
   "t12": "<i class=\"dot\"></i> En vivo",
   "t13": "Tempered 1/4\"<small>Vidrio ventana</small>",
@@ -729,10 +792,10 @@ var ACOPIO_ES = {
   "t30": "Acopio corre dentro de tu propia cuenta de Google. No hay un servidor de Acopio con tu inventario. Si dejas de pagarnos, tu sistema sigue funcionando — nada que migrar, ni al entrar ni al salir.",
   "t31": "Precio",
   "t32": "Sin cobro por usuario",
-  "t33": "Diez personas en la bodega cuestan lo mismo que una. Cada quien con su propio acceso y sus propios permisos. Casi todo el software de inventario cobra por puesto, y ahí es donde se va el dinero de verdad.",
+  "t33": "Diez personas en la bodega cuestan lo mismo que una. En Pro cada quien tiene su propio acceso y sus propios permisos, y el precio no se mueve. Casi todo el software de inventario cobra por puesto, y ahí es donde se va el dinero de verdad.",
   "t34": "Instalación",
   "t35": "Lo dejamos andando, con tus datos",
-  "t36": "Tus categorías, los nombres de tus racks, tu equipo, tus proveedores — configurados contigo en una llamada, no de tarea. Recibes un sistema andando, no un acceso y suerte.",
+  "t36": "Tus categorías, los nombres de tus racks, tu equipo, tus proveedores — configurados contigo en una llamada, no de tarea. Eso es lo que paga la instalación de Pro. Básico la instalas tú, en unos diez minutos, y nadie tiene que llamarte.",
   "t37": "Qué hace",
   "t38": "Hecho por alguien que maneja una bodega.",
   "t39": "Acopio nació como el sistema de la bodega de un taller de instalación de ventanas, y todos los días se lo sigue utilizando. Todo lo que hay aquí existe porque un turno real lo necesitó.",
@@ -742,15 +805,24 @@ var ACOPIO_ES = {
   "t43": "<div><strong>Costo por proyecto</strong> — costo promedio ponderado, estampado en cada movimiento para que los números del año pasado sigan siendo los del año pasado.</div>",
   "t44": "<div><strong>Pedidos por llegar</strong>, con un resumen en la mañana de lo que llega hoy.</div>",
   "t45": "<div><strong>Fotos y PDFs</strong> adjuntos a cualquier movimiento, guardados en privado en tu Drive.</div>",
-  "t46": "<div><strong>Roles y permisos</strong> — decide quién ve costos, quién puede editar el historial y quién es solo lectura.</div>",
+  "t46": "<div><strong>Todo tu equipo</strong>, cada uno con su propio acceso — decide quién ve costos, quién puede editar el historial y quién es solo lectura.</div>",
   "t47": "<div><strong>Respaldos cada noche</strong> en tu propio Drive, guardados 30 días.</div>",
   "t205": "<div><strong>Etiquetas que imprimes al recibir</strong> — térmicas de 4×6, con el material, la cantidad, el rack y el PO.</div>",
-  "t206": "<div><strong>Un mapa de la bodega que se toca</strong>, con los racks puestos como están en tu piso — y un material se puede bloquear a uno, con el motivo y quién lo bloqueó.</div>",
+  "t206": "<div><strong>Un mapa de la bodega que se toca</strong>, con los racks puestos como están en tu piso.</div>",
   "t207": "<div><strong>Pega el correo del proveedor</strong>, o una foto de la factura, y el pedido por llegar sale ya lleno.</div>",
   "t208": "<div><strong>Check my data</strong> — el mismo material escrito de dos formas, encontrado y corregido con un clic.</div>",
   "t209": "<div><strong>Borrar se puede deshacer</strong>. Los movimientos van a una papelera por 30 días, no se van.</div>",
   "t210": "<div><strong>Un reporte cada tarde</strong>, que llega solo por correo, con todo lo que se movió ese día.</div>",
   "t211": "<div><strong>Cada edición guarda su motivo</strong> — quién cambió qué, de qué a qué, y el cambio sale por correo.</div>",
+  /* Los dos encabezados que parten la lista en ediciones, y las tres líneas
+     que faltaban: escanear, avisar por correo al guardar, y reservar material.
+     Las tres son ofertas de `BASIC_PRO` dentro de la app y no estaban en la
+     página — once candados y ocho líneas. */
+  "t215": "Acopio Básico — gratis, y esto es todo lo que trae",
+  "t216": "Acopio Pro añade<span class=\"edi-note\">Nada de lo de arriba se quita. Éstas son las que la versión gratis enseña pero no abre.</span>",
+  "t217": "<div><strong>Escanea una etiqueta con el teléfono</strong> y la app encuentra el material y te llena el formulario.</div>",
+  "t218": "<div><strong>A quien tiene que saberlo le llega un correo</strong> en el momento en que guardas el movimiento — el jefe de obra, y a quien más tú elijas.</div>",
+  "t219": "<div><strong>Aparta material para un trabajo</strong> para que nadie lo saque por error, con el motivo y quién lo apartó.</div>",
   "t48": "Lo que todavía no hace",
   "t49": "Leer el código del proveedor — Acopio lee las etiquetas que imprimió él, no el código del fabricante en una caja que llega",
   "t50": "Conteo cíclico",
@@ -776,9 +848,12 @@ var ACOPIO_ES = {
   "t70": "Esta sección se queda vacía hasta que clientes reales digan algo real. Los testimonios inventados son la forma más rápida de perder a un comprador que verifica, y no valen el riesgo.",
   "t71": "Precio",
   "t72": "Claro, y todo.",
-  "t73": "Instalación — una vez",
+  "t212": "Acopio Básico — gratis",
+  "t213": "Toda la bodega en tu propia hoja de Google: qué tienes, dónde está, qué entró y qué salió. Una persona, sin tarjeta y sin llamada — la instalas tú en unos diez minutos. No es una prueba y no caduca. <a href=\"#contact\">Pide el enlace</a>.",
+  "t214": "<strong>Lo que añade Pro</strong> está listado función por función <a href=\"#what\">más arriba en esta página</a>, y todo lo de Básico sigue en Pro — no se quita nada.",
+  "t73": "Acopio Pro — instalación, una vez",
   "t74": "Instalación, configuración con tus propias categorías y racks, tu equipo cargado, y capacitación. Contigo, en una llamada.",
-  "t75": "Soporte y actualizaciones",
+  "t75": "Acopio Pro — soporte y actualizaciones",
   "t76": "$49 <small>/ mes</small>",
   "t77": "O $490 al año — dos meses gratis. Cada mejora y arreglo va incluido; no hay una versión superior que comprar después.",
   "t78": "¿Más de una bodega?",

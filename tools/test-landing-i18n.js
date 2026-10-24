@@ -82,6 +82,55 @@ const html = fs.readFileSync(SRC, 'utf8');
   // strings stay behind, and nobody can tell which lines are still live.
   check('no Spanish string is left over from something that no longer exists', r.orphan, []);
 
+  /* ── UNA CLAVE, UN TEXTO ──────────────────────────────────────────────────
+   * Las claves son `t` + un número puesto a mano, y el diccionario es un
+   * objeto literal: si alguien añade una sección y reusa un número que ya
+   * existía, nada se queja. El `data-i18n` duplicado se queda en el HTML y
+   * la entrada repetida del diccionario la gana la última — sin error, sin
+   * aviso.
+   *
+   * Pasó el 24/10 añadiendo las dos ediciones al precio: usé t82–t85, que
+   * ya eran «Palabras del fundador» y sus tres párrafos. En español la
+   * tarjeta de Acopio Básico mostraba el texto del fundador. Las pruebas de
+   * arriba no lo veían: la clave existía y estaba en uso, así que ni
+   * faltaba ni era huérfana.
+   *
+   * Dos cosas que tienen que coincidir sin que nada lo obligue: el número
+   * que eliges y los que ya están ocupados. Esto es lo que lo obliga.
+   *
+   * Y OJO DÓNDE SE MIRA: esto se cuenta en el HTML del archivo, no en el DOM
+   * del navegador. `acopioApplyLang` memoriza el inglés en `ACOPIO_EN[k]` —
+   * una entrada por CLAVE, no por elemento — así que el primer elemento
+   * guarda su inglés y acto seguido se lo escribe encima al segundo. Para
+   * cuando el DOM se puede leer, los dos elementos ya dicen lo mismo y la
+   * diferencia ha desaparecido. Mirar el DOM daba verde con la colisión
+   * puesta a mano; lo comprobé. (De paso: eso significa que una clave
+   * reusada también rompe la página INGLESA, no sólo la española.) */
+  const porClave = {};
+  [...html.matchAll(/data-i18n="(t\d+)"\s*>([\s\S]*?)</g)].forEach(m => {
+    (porClave[m[1]] = porClave[m[1]] || new Set()).add(m[2].trim());
+  });
+  check('ninguna clave se usa para dos textos distintos — un número reusado ' +
+        'traduce una sección con el texto de otra, y además pisa el inglés',
+    Object.keys(porClave)
+      .filter(k => porClave[k].size > 1)
+      .map(k => ({ clave: k, textos: [...porClave[k]].map(t => t.slice(0, 40)) })),
+    []);
+
+  /* Y la otra mitad del mismo fallo: la entrada repetida en el diccionario.
+   * El objeto literal se queda con la última, así que la primera sección
+   * nunca se traduce aunque su clave esté ahí escrita. JSON.parse no sirve
+   * para verlo (también se queda con la última), hay que contar en el
+   * texto. */
+  const dic = html.slice(html.indexOf('var ACOPIO_ES'));
+  const repes = {};
+  [...dic.matchAll(/^\s*"(t\d+)"\s*:/gm)].forEach(m => {
+    repes[m[1]] = (repes[m[1]] || 0) + 1;
+  });
+  check('ninguna clave aparece dos veces en el diccionario español — la ' +
+        'segunda gana en silencio y la primera sección se queda sin traducir',
+    Object.keys(repes).filter(k => repes[k] > 1), []);
+
   console.log('\n═══ the switch ═══\n');
 
   r = await page.evaluate(() => {
