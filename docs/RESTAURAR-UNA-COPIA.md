@@ -9,6 +9,19 @@
 
 # Si algo se dañó, así vuelves a ayer
 
+> ### 📦 Esta página es de **Acopio Pro**
+> El respaldo automático es de Pro. **Acopio Básico no hace copias**, y no es
+> una decisión comercial: la edición gratis se instala pidiendo un solo permiso
+> de Google —el que la deja escribir en su propia hoja— y programar una tarea
+> nocturna necesita otro. Sin ese permiso saldría la pantalla de aviso de Google
+> que esa edición existe justamente para evitar.
+>
+> **Si estás en Básico y quieres una copia:** abre tu hoja y usa
+> **Archivo → Hacer una copia**. Eso te deja una de hoy, hecha por ti, en tu
+> propio Drive. Hazlo antes de cualquier cosa grande —una importación, borrar
+> muchas filas— y guárdala con la fecha en el nombre. No es automático, pero es
+> el mismo archivo y vuelve igual que el de abajo.
+
 Tu sistema se copia entero, solo, **todas las noches a las 2 de la mañana**.
 Cada copia se guarda 30 días. No hay que pedirlo ni encenderlo: ya está pasando.
 

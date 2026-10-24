@@ -1,4 +1,17 @@
-# Guía de instalación — Acopio
+# Guía de instalación — Acopio **Pro**
+
+> ### 📦 ¿Cuál de las dos estás instalando?
+> Esta guía es la de **Acopio Pro**: la que montamos contigo, con tu equipo y
+> tus racks. Si lo que tienes es **Acopio Básico** —la edición gratis, de una
+> sola persona— salta a **«Si lo tuyo es Acopio Básico»**, al final: son tres
+> pasos y ninguno de los de abajo.
+>
+> **Lo que más confunde, dicho de una vez:** en Básico **no hay menú 🏭 Acopio
+> dentro de la hoja**, y no es que no aparezca — *no puede* aparecer. Un menú
+> dentro de una hoja necesita un permiso que Google clasifica como sensible, y
+> la edición gratis no lo pide a propósito, porque pedirlo trae la pantalla de
+> aviso que hace abandonar la instalación a la mitad de la gente. Cada vez que
+> esta guía diga «🏭 Acopio → …», eso es de Pro.
 
 > ### ⚠️ SI ALGUIEN NO PUEDE ENTRAR, EMPIEZA POR LA DIRECCIÓN
 > Casi siempre es la misma causa: **la dirección de tu app no está donde tiene
@@ -209,6 +222,35 @@ to…".
 > Si cambió `appsscript.json`, el cliente re-autoriza. Si no cambió, no.
 > Ante la duda, mándalo igual: re-autorizar cuesta treinta segundos, y
 > diagnosticar un permiso que falta cuesta una tarde.
+
+---
+
+## Si lo tuyo es Acopio Básico
+
+La edición gratis se instala en tres pasos y **no tiene asistente ni menú**.
+
+1. **Abre el enlace que te enviamos** y acepta **«Hacer una copia»**.
+2. En tu copia: **Extensiones → Apps Script → Implementar → Implementación
+   nueva → App web**. Google te va a pedir permiso una vez; acéptalo. (Medido
+   con un cronómetro en una copia limpia: **1 minuto 47 segundos**. Y **no**
+   sale la pantalla de «Google no ha verificado esta aplicación» — ésa es la
+   diferencia por la que esta edición existe.)
+3. **Copia la dirección que termina en `/exec`** y ábrela. Ésa es tu app.
+   Guárdala en favoritos; es por donde vas a entrar siempre.
+
+**El nombre de tu empresa** se escribe dentro de la app, la primera vez que
+entra: en Básico no hay asistente que te lo pregunte desde la hoja.
+
+**Lo que esta edición no trae**, para que no lo busques: equipo con sus propios
+accesos, fotos y documentos, etiquetas impresas y lectura de códigos, pedidos
+por llegar, correos y avisos, respaldo automático, alertas de stock mínimo, y
+leer un correo o una factura para llenar la entrada. **No están escondidas:** se
+ven en la app y al tocarlas te dicen qué son. Y lo que sí trae no se quita nunca
+y no caduca. La lista completa de cada edición está en
+[acopio.net](https://www.acopio.net/#pro).
+
+**¿Una copia de seguridad en Básico?** A mano: **Archivo → Hacer una copia**,
+con la fecha en el nombre. Hazlo antes de importar o de borrar muchas filas.
 
 ---
 

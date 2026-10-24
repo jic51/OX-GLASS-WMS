@@ -5840,7 +5840,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.95';
+var APP_VERSION = '12.96';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5852,7 +5852,7 @@ var APP_VERSION = '12.95';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'ac9fd6eb';
+var APP_BUILD = '4839af6b';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -29353,11 +29353,24 @@ function _proPitch(clave){
  * ABRIR una página no es una petición nuestra. Así las estadísticas del sitio
  * dicen qué función empuja gente hacia Pro, sin rastrear a nadie.
  *
- * VA A LA RAÍZ, y no a `/pro`: esa página no existe, y habría sido un 404 justo
- * en el momento de más interés. El día que exista, se cambia esta línea.
+ * IBA A LA RAÍZ, y no a `/pro`: esa página no existía, y habría sido un 404
+ * justo en el momento de más interés.
+ *
+ * YA EXISTE (24/10). Jose: *"en la landing y en todos los documentos sólo se
+ * habla de Acopio, no hay Acopio Básico ni Pro"*. La landing se partió en las
+ * dos ediciones y la lista de lo que añade Pro tiene su propia ancla, `#pro`,
+ * encima del encabezado «Acopio Pro adds». Así el candado ya no deja al
+ * visitante en la portada a buscar: lo deja delante de la línea que explica
+ * justo lo que acaba de pulsar.
+ *
+ * SIGUE SIENDO LA RAÍZ, con un ancla detrás: un `#` que no exista no es un
+ * 404, es la misma página sin desplazar. Ésa es la diferencia con `/pro`, y es
+ * la razón de que esto se pueda cambiar sin miedo. Lo vigila
+ * `tools/test-ediciones-coinciden.js`, que exige que el ancla esté en la
+ * página.
  */
 function _proUrl(clave){
-  return 'https://www.acopio.net/?de=' + encodeURIComponent(clave);
+  return 'https://www.acopio.net/?de=' + encodeURIComponent(clave) + '#pro';
 }
 
 /**
@@ -29961,8 +29974,18 @@ var LEGAL_DOCS = {
   terms:   { title: 'Terms of Service', html: `<p><strong>Last updated:</strong> 27 August 2026</p>
 <p>These terms govern your use of Acopio, warehouse-management software provided by Jose Castro ("we", "us"). By installing or using it, you agree to them. If you are agreeing on behalf of a company, you confirm you are authorised to do so.</p>
 <hr>
+<h3>The two editions, and which parts of this apply to you</h3>
+<p>Acopio comes in two editions, and several clauses below only make sense for one of them.</p>
+<ul>
+<li><strong>Acopio Basic</strong> is free: no fee, no subscription, no expiry, not a trial.</li>
+<li><strong>Acopio Pro</strong> is the paid edition: a one-off setup fee and a subscription.</li>
+</ul>
+<p><strong>Acopio Basic</strong> you install yourself. Because nothing is paid, nothing in <strong>section 9 (payment, cancellation and refunds)</strong> applies to it, and the response time in <strong>section 5</strong> is not promised for it — write to us and we will look, but a free edition carries no support commitment.</p>
+<p><strong>Acopio Pro</strong> is covered by everything in this document.</p>
+<p>Two things are identical in both, and they are the ones that matter most: <strong>your data is yours and stays in your own Google account</strong> (section 3), and <strong>we are not a hosted service you depend on</strong> (section 1). Stopping paying, or never paying at all, does not take your system away from you.</p>
+<p>Features that are only in Pro are visible in the free edition and say so when you touch them; they are not a defect of your installation. Which features belong to which edition is listed at <a href="https://www.acopio.net/#pro">www.acopio.net</a> and may change as the software changes; what you have already been given in your edition is not taken away.</p>
 <h3>1. What you are buying</h3>
-<p>A licence to install and run one copy of Acopio inside your own Google account, for your own business, plus updates and support for as long as your licence is active.</p>
+<p>A licence to install and run one copy of Acopio inside your own Google account, for your own business, plus — in Pro — updates and support for as long as your licence is active.</p>
 <p><strong>You are not buying a hosted service.</strong> Acopio runs in your Google account, on your data, under your control. We do not operate a server your business depends on — which is why there is no uptime commitment below, and why there also is no one who can take your data away from you.</p>
 <h3>2. What you need to provide</h3>
 <ul>
@@ -30027,7 +30050,8 @@ var LEGAL_DOCS = {
 <p>Acopio is built on Google Workspace and Google Apps Script. Google's platform carries limits that are theirs, not ours — including a daily cap on outgoing email (100/day on personal accounts, 1,500/day on Workspace), execution time limits, and a maximum spreadsheet size.</p>
 <p>We will tell you about the limits we know of and design around them where we can. We cannot remove them, and we are not liable if Google changes them, enforces them, or discontinues a service we rely on.</p>
 <h3>8. Backups</h3>
-<p>Acopio can make a copy of your spreadsheet nightly into your own Drive, kept 30 days. It is enabled during setup and we strongly recommend leaving it on.</p>
+<p><strong>In Pro</strong>, Acopio can make a copy of your spreadsheet nightly into your own Drive, kept 30 days. It is enabled during setup and we strongly recommend leaving it on.</p>
+<p><strong>In Basic there is no automatic backup at all.</strong> The free edition is installed with a single, non-sensitive Google permission, and scheduling a nightly task needs another one. Copies in Basic are made by you, by hand, with <strong>File → Make a copy</strong>. Everything in the paragraph below applies to those with at least as much force.</p>
 <p><strong>It is a convenience, not a guarantee.</strong> It protects against ordinary mistakes — a bad edit, a deleted row. It does not protect against your Google account being deleted, suspended or compromised, because the backups live in that same account. If your data is critical, keep an independent copy outside Google. Verifying that your backups exist and work is your responsibility.</p>
 <h3>9. Payment, cancellation and refunds</h3>
 <p>Fees, billing period and any add-on pricing are as agreed in writing when you purchase.</p>
@@ -30133,6 +30157,17 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '12.96',
+    titulo: 'The pages now say which edition each thing belongs to',
+    puntos: [
+      'Almost all of this version is the website and the guides, which are already updated. <b>Two things changed in the app itself</b>, and they are the reason it has a version number.',
+      '<b>The Terms you accept live in your own sheet</b>, not only on the website, and they said you were buying something and that your system backs itself up every night \u2014 <b>neither is true of the free edition</b>. They now say which clauses belong to which edition.',
+      'And the <b>\u201cCheck Acopio Pro\u201d link</b> on a feature that is not in the free edition used to leave you on the front page to go looking. It now lands on the list that explains <b>the very thing you just pressed</b>.',
+      'On the website: the feature list is <b>split in two</b>, with a heading per edition, and the price opens with <b>Acopio Basic \u2014 free, $0</b>. The list used to promise photos, your team, printed labels and the nightly backup to everyone reading it, and all four are closed in the free edition.'
+    ],
+    antes:  'One thing called \u201cAcopio\u201d, and four promises it did not keep',
+    ahora:  'Two editions, each saying what it is' },
+
   { ver: '12.95',
     titulo: 'A job site is not a shelf',
     puntos: [
@@ -30167,18 +30202,6 @@ var NOVEDADES = [
     ],
     antes:  'Twenty-eight merges, twenty-eight refusals',
     ahora:  'One button, and the error log tells you what just happened' },
-
-  { ver: '12.92',
-    titulo: 'Deleting a lot of movements takes seconds, and can be stopped',
-    puntos: [
-      'Deleting 490 movements took <b>almost half an hour</b>, lost 40 of them to a \u201ctoo many requests\u201d error, and <b>could not be stopped</b>. All of it was one cause: 490 rows were <b>490 separate requests</b>, each rebuilding your whole stock.',
-      '<b>It is two requests now.</b> The half hour becomes seconds, the rate limit is nowhere near reached, forty error notices become one answer, and nothing ends up half done.',
-      'The \u201ctoo many requests\u201d was <b>the app flooding the server</b> with its own burst and then asking you to wait. That answer now counts as \u201cwait your turn\u201d and retries by itself.',
-      '<b>And there is a Stop button.</b> It stops before the next batch and says exactly where it got to \u2014 <i>\u201c200 of 490 deleted. The other 290 are untouched.\u201d</i>',
-      'The same notice no longer stacks: it gets a small <b>\u00d7 4</b> instead of piling up. And undoing a large import keeps going until it is finished.'
-    ],
-    antes:  'Half an hour, 40 lost, and no way to stop it',
-    ahora:  'Seconds, nothing lost, and a Stop button' },
 
 ];
 

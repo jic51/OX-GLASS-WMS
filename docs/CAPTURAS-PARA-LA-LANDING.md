@@ -254,6 +254,44 @@ probar una duración.** El corte es justo lo que haría sospechar.
 | Qué NO debe verse | Marcadores, otras pestañas, el nombre de la cuenta real, notificaciones |
 | Grabación | OBS o la grabadora de pantalla, 1080p, **sin recortar después** |
 
+### Cómo se pone el cronómetro — la pregunta de Jose, 21/10
+
+> *"«Cronómetro arriba a la izquierda» — ¿cómo consigo poner el cronómetro?"*
+
+La tabla de arriba decía **dónde** va y no **cómo** se pone, y hay una trampa
+que sólo aparece al intentarlo: el guion pide la ventana **a pantalla completa**,
+y una ventana a pantalla completa **tapa el cronómetro**. Grabar la pantalla sólo
+graba lo que se ve en la pantalla; lo que está detrás de la ventana no sale.
+
+Tres formas, de la más barata a la más limpia:
+
+**1 · La geometría, y es la que yo haría.** No pongas la ventana a pantalla
+completa. Abre el cronómetro en una ventana pequeña, déjala **arriba a la
+izquierda**, y a la ventana de incógnito dale un tamaño que **no llegue a esa
+esquina** — unos 300 × 120 píxeles de hueco bastan. Graba la pantalla entera
+(Display Capture) y el cronómetro sale porque **está a la vista**. Cero programas
+nuevos, cero configuración, y nada que pueda fallar en mitad de la toma. Lo único
+que hay que recordar: **no maximizar** la ventana sin querer a mitad del vídeo.
+
+**2 · OBS, con el cronómetro como capa.** OBS ya está en la tabla de arriba.
+`Fuentes → + → Navegador`, la dirección del cronómetro, 400 × 120, y la arrastras
+**encima** de la fuente de pantalla, arriba a la izquierda. Así el cronómetro va
+en la grabación aunque la ventana esté a pantalla completa. Dos avisos: la fuente
+de navegador no responde al ratón hasta que pulsas **«Interactuar»** sobre ella
+—es donde le das a *Start*— y conviene ponerle en **CSS personalizado**
+`body { background: transparent !important; }` o te saldrá un rectángulo blanco.
+Esto **no es edición**: la capa es parte de la grabación, no un montaje después,
+así que la regla de «sin edición» sigue intacta.
+
+**3 · El teléfono apoyado y una cámara.** Grabar el monitor con una cámara, con
+el cronómetro del teléfono apoyado al lado. Se ve peor y es **lo más creíble que
+existe**: nadie sospecha de un plano de una pantalla con un reloj físico delante.
+Si al final el vídeo se graba así, mejor que no se grabe.
+
+**Lo que NO vale:** poner el cronómetro después, en un editor. El vídeo entero
+existe para probar una duración; un número sobreimpreso después es exactamente
+lo que un comprador desconfiado asume que hicimos.
+
 ### El guion, que es simplemente hacerlo
 
 1. **Arrancas el cronómetro** y lo primero que se ve es `www.acopio.net`.

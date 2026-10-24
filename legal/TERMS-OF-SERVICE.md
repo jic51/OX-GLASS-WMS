@@ -12,11 +12,37 @@ are agreeing on behalf of a company, you confirm you are authorised to do so.
 
 ---
 
+## The two editions, and which parts of this apply to you
+
+Acopio comes in two editions, and several clauses below only make sense for one
+of them.
+
+- **Acopio Basic** is free: no fee, no subscription, no expiry, not a trial.
+- **Acopio Pro** is the paid edition: a one-off setup fee and a subscription.
+
+**Acopio Basic** you install yourself. Because nothing is paid, nothing in
+**section 9 (payment, cancellation and refunds)** applies to it, and the
+response time in **section 5** is not promised for it — write to us and we will
+look, but a free edition carries no support commitment.
+
+**Acopio Pro** is covered by everything in this document.
+
+Two things are identical in both, and they are the ones that matter most:
+**your data is yours and stays in your own Google account** (section 3), and
+**we are not a hosted service you depend on** (section 1). Stopping paying, or
+never paying at all, does not take your system away from you.
+
+Features that are only in Pro are visible in the free edition and say so when
+you touch them; they are not a defect of your installation. Which features
+belong to which edition is listed at
+[www.acopio.net](https://www.acopio.net/#pro) and may change as the software
+changes; what you have already been given in your edition is not taken away.
+
 ## 1. What you are buying
 
 A licence to install and run one copy of Acopio inside your own Google account,
-for your own business, plus updates and support for as long as your licence is
-active.
+for your own business, plus — in Pro — updates and support for as long as your
+licence is active.
 
 **You are not buying a hosted service.** Acopio runs in your Google account, on
 your data, under your control. We do not operate a server your business depends
@@ -151,8 +177,15 @@ enforces them, or discontinues a service we rely on.
 
 ## 8. Backups
 
-Acopio can make a copy of your spreadsheet nightly into your own Drive, kept 30
-days. It is enabled during setup and we strongly recommend leaving it on.
+**In Pro**, Acopio can make a copy of your spreadsheet nightly into your own
+Drive, kept 30 days. It is enabled during setup and we strongly recommend
+leaving it on.
+
+**In Basic there is no automatic backup at all.** The free edition is installed
+with a single, non-sensitive Google permission, and scheduling a nightly task
+needs another one. Copies in Basic are made by you, by hand, with
+**File → Make a copy**. Everything in the paragraph below applies to those with
+at least as much force.
 
 **It is a convenience, not a guarantee.** It protects against ordinary mistakes
 — a bad edit, a deleted row. It does not protect against your Google account

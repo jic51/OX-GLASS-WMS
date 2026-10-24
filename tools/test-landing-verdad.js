@@ -88,10 +88,10 @@ const AFIRMACIONES = [
     dice:'Check my data',                        marca:'_runDataCheck',      en:'html',
     porque:'el barrido de calidad de datos (v11.23)' },
   { pagina:'landing/acopio.html', existe:true,
-    dice:'Deleting can be undone',               marca:'restoreMovement',    en:'gs',
+    dice:'the trash that holds a deleted movement', marca:'restoreMovement',  en:'gs',
     porque:'la papelera de 30 días (v11.55)' },
   { pagina:'landing/acopio.html', existe:true,
-    dice:'An evening report',                    marca:'dailyReportSettings_', en:'gs',
+    dice:'an evening report of everything that moved', marca:'dailyReportSettings_', en:'gs',
     porque:'el reporte diario por correo' },
   { pagina:'landing/acopio.html', existe:true,
     dice:'Every edit keeps its reason',          marca:'em_reason',          en:'html',
@@ -103,7 +103,7 @@ const AFIRMACIONES = [
     dice:'who can edit history',                  marca:'canEditMovements',   en:'html',
     porque:'los permisos por rol' },
   { pagina:'landing/acopio.html', existe:true,
-    dice:'Nightly backups',                      marca:'runBackup',          en:'gs',
+    dice:'made on its own every night',          marca:'runBackup',          en:'gs',
     porque:'el respaldo nocturno' },
 
   // ── Lo que la landing dice que TODAVÍA NO hace ──────────────────────────

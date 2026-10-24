@@ -128,7 +128,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.95';
+var APP_VERSION = '12.96';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -140,7 +140,7 @@ var APP_VERSION = '12.95';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'ac9fd6eb';
+var APP_BUILD = '4839af6b';
 
 // ═══ ACOPIO BASIC — EL INTERRUPTOR DE LA VERSIÓN GRATIS ══════════════════════
 //
@@ -11365,9 +11365,24 @@ var LEGAL_SHEET_TEXT = {
     ["p",""],
     ["p","These terms govern your use of Acopio, warehouse-management software provided by Jose Castro (\"we\", \"us\"). By installing or using it, you agree to them. If you are agreeing on behalf of a company, you confirm you are authorised to do so."],
     ["p",""],
+    ["head","The two editions, and which parts of this apply to you"],
+    ["p",""],
+    ["p","Acopio comes in two editions, and several clauses below only make sense for one of them."],
+    ["p",""],
+    ["li","•   Acopio Basic is free: no fee, no subscription, no expiry, not a trial."],
+    ["li","•   Acopio Pro is the paid edition: a one-off setup fee and a subscription."],
+    ["p",""],
+    ["p","Acopio Basic you install yourself. Because nothing is paid, nothing in section 9 (payment, cancellation and refunds) applies to it, and the response time in section 5 is not promised for it — write to us and we will look, but a free edition carries no support commitment."],
+    ["p",""],
+    ["p","Acopio Pro is covered by everything in this document."],
+    ["p",""],
+    ["p","Two things are identical in both, and they are the ones that matter most: your data is yours and stays in your own Google account (section 3), and we are not a hosted service you depend on (section 1). Stopping paying, or never paying at all, does not take your system away from you."],
+    ["p",""],
+    ["p","Features that are only in Pro are visible in the free edition and say so when you touch them; they are not a defect of your installation. Which features belong to which edition is listed at www.acopio.net (https://www.acopio.net/#pro) and may change as the software changes; what you have already been given in your edition is not taken away."],
+    ["p",""],
     ["head","1. What you are buying"],
     ["p",""],
-    ["p","A licence to install and run one copy of Acopio inside your own Google account, for your own business, plus updates and support for as long as your licence is active."],
+    ["p","A licence to install and run one copy of Acopio inside your own Google account, for your own business, plus — in Pro — updates and support for as long as your licence is active."],
     ["p",""],
     ["p","You are not buying a hosted service. Acopio runs in your Google account, on your data, under your control. We do not operate a server your business depends on — which is why there is no uptime commitment below, and why there also is no one who can take your data away from you."],
     ["p",""],
@@ -11466,7 +11481,9 @@ var LEGAL_SHEET_TEXT = {
     ["p",""],
     ["head","8. Backups"],
     ["p",""],
-    ["p","Acopio can make a copy of your spreadsheet nightly into your own Drive, kept 30 days. It is enabled during setup and we strongly recommend leaving it on."],
+    ["p","In Pro, Acopio can make a copy of your spreadsheet nightly into your own Drive, kept 30 days. It is enabled during setup and we strongly recommend leaving it on."],
+    ["p",""],
+    ["p","In Basic there is no automatic backup at all. The free edition is installed with a single, non-sensitive Google permission, and scheduling a nightly task needs another one. Copies in Basic are made by you, by hand, with File → Make a copy. Everything in the paragraph below applies to those with at least as much force."],
     ["p",""],
     ["p","It is a convenience, not a guarantee. It protects against ordinary mistakes — a bad edit, a deleted row. It does not protect against your Google account being deleted, suspended or compromised, because the backups live in that same account. If your data is critical, keep an independent copy outside Google. Verifying that your backups exist and work is your responsibility."],
     ["p",""],

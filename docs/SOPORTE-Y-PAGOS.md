@@ -19,13 +19,23 @@ que obliga son los [Términos de Servicio](/terms.html).
 
 ## Lo que cuesta
 
+Hay **dos ediciones**, y sólo una se paga.
+
 | | |
 |---|---|
-| **Instalación** | $500, una sola vez |
-| **Suscripción** | $49 al mes, o $490 el año completo |
+| **Acopio Básico** | **$0.** No hay tarjeta, no hay suscripción, no caduca y no es una prueba. La instalas tú |
+| **Acopio Pro — instalación** | $500, una sola vez |
+| **Acopio Pro — suscripción** | $49 al mes, o $490 el año completo |
 
 El año completo sale a dos meses gratis. Los precios son en dólares y no
 incluyen impuestos; si aplican, se suman.
+
+**Todo lo que sigue en esta página es de Pro.** De Básico no hay nada que cobrar
+y por tanto nada que facturar, cancelar ni reembolsar — y tampoco hay soporte
+con plazo: si algo se rompe ahí, escríbenos y lo miramos cuando podamos, pero no
+hay un día hábil prometido, porque no hay nada que lo pague. Lo que sí tiene
+Básico, y es lo mismo que Pro: el sistema es **tuyo**, está en tu Drive, y sigue
+abriendo pase lo que nos pase a nosotros.
 
 **La instalación no es una cuota de alta.** Es trabajo hecho: se instala en tu
 cuenta, se cargan tus categorías, tus estantes y tu equipo, y se capacita a la
@@ -37,7 +47,9 @@ gente que va a usarlo.
 
 - Soporte con respuesta en **un día hábil**, de lunes a viernes.
 - Todas las versiones nuevas y todos los arreglos, sin costo extra.
-- Ayuda para restaurar una copia de seguridad si algún día la necesitas.
+- Ayuda para restaurar una copia de seguridad si algún día la necesitas. (El
+  respaldo automático de cada noche también es de Pro: en Básico la copia se
+  hace a mano, con **Archivo → Hacer una copia**.)
 
 Lo que se cotiza aparte: bodegas adicionales, importaciones grandes de datos
 históricos, y desarrollo a medida para tu empresa.

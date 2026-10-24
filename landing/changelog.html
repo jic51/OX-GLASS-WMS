@@ -101,6 +101,48 @@
        window instead of a photograph, and the page itself got 300&nbsp;KB lighter over
        the wire.</p>
 
+    <!-- EMPEZÓ SIN NÚMERO DE VERSIÓN —cambiaban las páginas, no la app— y
+         acabó con uno: los Términos que el cliente acepta viven DENTRO de la
+         hoja, generados desde `legal/*.md` por `tools/sync-legal.js`, así que
+         arreglar lo que dicen de las dos ediciones obliga a tocar la app. Ya
+         que había que tocarla, viaja también el ancla `#pro` del candado. -->
+    <div class="entry" id="v12-96">
+      <span class="ver">v12.96</span>
+      <span class="tag ui">Pages</span>
+      <h3>The pages now say which edition each thing belongs to</h3>
+      <p>There are two editions &mdash; <b>Acopio Basic</b>, free, and <b>Acopio Pro</b> &mdash;
+         and until today every page talked about one thing called &ldquo;Acopio&rdquo;. That was
+         worse than an omission: the feature list promised photos, your team with their own
+         sign-ins, printed labels and the nightly backup to anyone reading it, and <b>all four are
+         closed in the free edition</b>. Someone who installed Basic and went looking for the
+         photos did not find a missing feature &mdash; they found a promise that was not kept.</p>
+      <p>The list is now <b>split in two</b>, with a heading for each edition and nothing hidden
+         behind marketing words: Basic says &ldquo;this is all of it&rdquo;, and Pro says
+         &ldquo;nothing above is taken away&rdquo;. The price section opens with
+         <b>Acopio Basic &mdash; free, $0</b>, and the two paid cards now say Pro in their own
+         titles instead of leaving you to guess what the $500 is for.</p>
+      <p>The same went through the documents. The install guides sent a Basic user to a
+         <b>&ldquo;🏭 Acopio&rdquo; menu that cannot exist there</b> &mdash; a menu inside a sheet
+         needs a permission the free edition deliberately does not ask for &mdash; and now each
+         guide says which edition it is for and ends with the three steps Basic actually takes.
+         The restore page said <i>&ldquo;your system copies itself every night&rdquo;</i>, which is
+         not true in Basic: it says so, and tells you how to make a copy by hand. The support page
+         and the Terms now scope payment and support to the paid edition, because there is nothing
+         to bill, cancel or refund on a free one.</p>
+      <p><b>Three features were missing from the page entirely</b> &mdash; scanning a label,
+         holding material for a job, and emailing whoever needs to know &mdash; so they are in
+         now. And the two lists are tied together by a check that runs before anything is
+         published: every feature marked Pro has to match a real lock in the app, and every lock
+         in the app has to appear on the page.</p>
+      <p><b>Two things changed inside the app, which is why this has a version number.</b>
+         The Terms you accept live in your own sheet, not only on the website, and they said
+         you were buying something and that your system backs itself up every night &mdash;
+         neither of which is true of the free edition. They now say which clauses belong to
+         which edition. And the &ldquo;Check Acopio Pro&rdquo; link on a locked feature used to
+         leave you on the front page to go looking; it now lands on the list that explains the
+         very thing you just pressed.</p>
+    </div>
+
     <div class="entry" id="v12-95">
       <span class="ver">v12.95</span>
       <span class="tag fix">Fix</span>

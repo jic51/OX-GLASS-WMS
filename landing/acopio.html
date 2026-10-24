@@ -442,11 +442,21 @@
         <li data-i18n="t41"><div><strong>Stock by rack location</strong>, so "where is it" has an answer before anyone walks.</div></li>
         <li data-i18n="t43"><div><strong>Cost per job</strong> — weighted average cost, stamped on each movement so last year's numbers stay last year's.</div></li>
         <li data-i18n="t206"><div><strong>A warehouse map you can tap</strong>, racks laid out the way they stand on your floor.</div></li><!-- v9.82 -->
-        <li data-i18n="t209"><div><strong>Deleting can be undone</strong>. Movements go to a trash for 30 days, not away.</div></li><!-- v11.55 -->
-        <li data-i18n="t210"><div><strong>An evening report</strong>, emailed on its own, of everything that moved that day.</div></li>
-        <li data-i18n="t211"><div><strong>Every edit keeps its reason</strong> — who changed what, from what to what, and the change goes out by email.</div></li><!-- v11.17 -->
+        <li data-i18n="t220"><div><strong>Your stock, live, with a search box</strong> and filters by category and status &mdash; and you pick which columns you see and in what order.</div></li>
+        <li data-i18n="t221"><div><strong>Every movement kept and searchable</strong>, filtered by date, type, project or person, so &ldquo;who took it&rdquo; has an answer.</div></li>
+        <li data-i18n="t222"><div><strong>Your own categories, racks, projects, suppliers and units</strong> &mdash; named the way your floor names them, not the way the software does.</div></li>
+        <li data-i18n="t211"><div><strong>Every edit keeps its reason</strong> — who changed what, from what to what, and when.</div></li><!-- v11.17 -->
+        <li data-i18n="t223"><div><strong>It works on the phone</strong>, which is where a movement actually gets recorded &mdash; measured on an Android at 411&nbsp;px wide.</div></li>
       </ul>
-      <h3 class="edi-hd" data-i18n="t216">Acopio Pro adds<span class="edi-note">Nothing above is taken away. These are the ones the free edition shows but will not open.</span></h3>
+      <!-- `id="pro"` EXISTE PARA EL CANDADO DE LA APP. `_proUrl` manda a
+           `https://www.acopio.net/?de=<clave>` y va a la raíz a propósito; el
+           comentario de la app dice *"va a la raíz, y no a /pro: esa página no
+           existe, y habría sido un 404 justo en el momento de más interés. El
+           día que exista, se cambia esta línea."* Ya existe. Falta cambiar esa
+           línea, y es UNA línea — anotada en `docs/BACKLOG.md` para que viaje
+           con la próxima versión, en vez de obligar a pegar la app entera por
+           un ancla. -->
+      <h3 class="edi-hd" id="pro" data-i18n="t216">Acopio Pro adds<span class="edi-note">Nothing above is taken away. These are the ones the free edition shows but will not open.</span></h3>
       <ul class="checklist">
         <li data-i18n="t46" data-pro="usuarios"><div><strong>Your whole team</strong>, each with their own sign-in — decide who sees costs, who can edit history, who's read-only.</div></li>
         <li data-i18n="t45" data-pro="fotos"><div><strong>Photos and PDFs</strong> attached to any movement, filed privately in your Drive.</div></li>
@@ -455,9 +465,9 @@
         <li data-i18n="t44" data-pro="llegadas"><div><strong>Incoming deliveries</strong>, with a morning summary of what's arriving today.</div></li>
         <li data-i18n="t207" data-pro="leercorreo lectura"><div><strong>Paste a supplier's email</strong>, or a photo of an invoice, and the expected delivery comes out filled in.</div></li><!-- v9.61, v10.8 -->
         <li data-i18n="t42" data-pro="minimos"><div><strong>Low-stock alerts</strong> on the materials you choose, at the level you set.</div></li>
-        <li data-i18n="t218" data-pro="avisarcorreo"><div><strong>The people who need to know get an email</strong> the moment you save the movement — the project manager, and whoever else you pick.</div></li>
+        <li data-i18n="t218" data-pro="avisarcorreo"><div><strong>The app sends the email</strong> — the project manager and whoever else you pick, the moment you save a movement; and an evening report of everything that moved that day. The free edition asks for one Google permission and sending mail is not in it, so there is no email at all in Basic.</div></li>
         <li data-i18n="t219" data-pro="reservas"><div><strong>Hold material for a job</strong> so nobody takes it out by mistake, with the reason and who held it.</div></li><!-- v11.60 -->
-        <li data-i18n="t47" data-pro="respaldo"><div><strong>Nightly backups</strong> to your own Drive, kept 30 days.</div></li>
+        <li data-i18n="t47" data-pro="respaldo"><div><strong>Settings &rarr; System</strong> &mdash; a backup of everything made on its own every night and kept 30 days, the archive of old movements, and the trash that holds a deleted movement for 30 days so you can put it back.</div></li><!-- v11.55, v11.79 -->
         <li data-i18n="t208" data-pro="btnDataCheck"><div><strong>Check my data</strong> — the same material written two ways, found and corrected with one press.</div></li><!-- v11.23 -->
       </ul>
     </div>
@@ -611,7 +621,7 @@
          —escanear, apartar material y avisar por correo al guardar— porque la
          escribí de memoria. Dos listas de lo mismo que tienen que coincidir
          sin que nada lo obligue; la segunda se borra en vez de vigilarse. -->
-    <p class="price-note" data-i18n="t214"><strong>What Pro adds</strong> is listed feature by feature <a href="#what">further up this page</a>, and everything in Basic stays in Pro &mdash; nothing is taken away.</p>
+    <p class="price-note" data-i18n="t214"><strong>What Pro adds</strong> is listed feature by feature <a href="#pro">further up this page</a>, and everything in Basic stays in Pro &mdash; nothing is taken away.</p>
     <p class="price-note" data-i18n="t81"><strong>No charge per user, ever.</strong> A crew of two and a crew of twenty pay the same. Comparable systems bill $30–$150 per person per month, which is where the cost quietly stops being small.</p>
   </div>
 </section>
@@ -806,22 +816,24 @@ var ACOPIO_ES = {
   "t44": "<div><strong>Pedidos por llegar</strong>, con un resumen en la mañana de lo que llega hoy.</div>",
   "t45": "<div><strong>Fotos y PDFs</strong> adjuntos a cualquier movimiento, guardados en privado en tu Drive.</div>",
   "t46": "<div><strong>Todo tu equipo</strong>, cada uno con su propio acceso — decide quién ve costos, quién puede editar el historial y quién es solo lectura.</div>",
-  "t47": "<div><strong>Respaldos cada noche</strong> en tu propio Drive, guardados 30 días.</div>",
+  "t47": "<div><strong>Ajustes &rarr; Sistema</strong> — un respaldo de todo hecho solo cada noche y guardado 30 días, el archivado de los movimientos viejos, y la papelera que guarda 30 días un movimiento borrado para que lo puedas devolver.</div>",
   "t205": "<div><strong>Etiquetas que imprimes al recibir</strong> — térmicas de 4×6, con el material, la cantidad, el rack y el PO.</div>",
   "t206": "<div><strong>Un mapa de la bodega que se toca</strong>, con los racks puestos como están en tu piso.</div>",
   "t207": "<div><strong>Pega el correo del proveedor</strong>, o una foto de la factura, y el pedido por llegar sale ya lleno.</div>",
   "t208": "<div><strong>Check my data</strong> — el mismo material escrito de dos formas, encontrado y corregido con un clic.</div>",
-  "t209": "<div><strong>Borrar se puede deshacer</strong>. Los movimientos van a una papelera por 30 días, no se van.</div>",
-  "t210": "<div><strong>Un reporte cada tarde</strong>, que llega solo por correo, con todo lo que se movió ese día.</div>",
-  "t211": "<div><strong>Cada edición guarda su motivo</strong> — quién cambió qué, de qué a qué, y el cambio sale por correo.</div>",
+  "t211": "<div><strong>Cada edición guarda su motivo</strong> — quién cambió qué, de qué a qué, y cuándo.</div>",
   /* Los dos encabezados que parten la lista en ediciones, y las tres líneas
      que faltaban: escanear, avisar por correo al guardar, y reservar material.
      Las tres son ofertas de `BASIC_PRO` dentro de la app y no estaban en la
      página — once candados y ocho líneas. */
+  "t220": "<div><strong>Tu stock, en vivo, con una caja de búsqueda</strong> y filtros por categoría y por estado — y tú eliges qué columnas ves y en qué orden.</div>",
+  "t221": "<div><strong>Todos los movimientos guardados y buscables</strong>, filtrados por fecha, tipo, proyecto o persona, para que «quién se lo llevó» tenga respuesta.</div>",
+  "t222": "<div><strong>Tus propias categorías, racks, proyectos, proveedores y unidades</strong> — con los nombres que usa tu bodega, no los que trae el programa.</div>",
+  "t223": "<div><strong>Funciona en el teléfono</strong>, que es donde de verdad se registra un movimiento — medido en un Android de 411&nbsp;px de ancho.</div>",
   "t215": "Acopio Básico — gratis, y esto es todo lo que trae",
   "t216": "Acopio Pro añade<span class=\"edi-note\">Nada de lo de arriba se quita. Éstas son las que la versión gratis enseña pero no abre.</span>",
   "t217": "<div><strong>Escanea una etiqueta con el teléfono</strong> y la app encuentra el material y te llena el formulario.</div>",
-  "t218": "<div><strong>A quien tiene que saberlo le llega un correo</strong> en el momento en que guardas el movimiento — el jefe de obra, y a quien más tú elijas.</div>",
+  "t218": "<div><strong>La app manda el correo</strong> — al jefe de obra y a quien más tú elijas, en el momento en que guardas un movimiento; y un reporte cada tarde con todo lo que se movió ese día. La versión gratis pide un solo permiso de Google y mandar correo no está en él, así que ahí no sale ningún correo.</div>",
   "t219": "<div><strong>Aparta material para un trabajo</strong> para que nadie lo saque por error, con el motivo y quién lo apartó.</div>",
   "t48": "Lo que todavía no hace",
   "t49": "Leer el código del proveedor — Acopio lee las etiquetas que imprimió él, no el código del fabricante en una caja que llega",
@@ -850,7 +862,7 @@ var ACOPIO_ES = {
   "t72": "Claro, y todo.",
   "t212": "Acopio Básico — gratis",
   "t213": "Toda la bodega en tu propia hoja de Google: qué tienes, dónde está, qué entró y qué salió. Una persona, sin tarjeta y sin llamada — la instalas tú en unos diez minutos. No es una prueba y no caduca. <a href=\"#contact\">Pide el enlace</a>.",
-  "t214": "<strong>Lo que añade Pro</strong> está listado función por función <a href=\"#what\">más arriba en esta página</a>, y todo lo de Básico sigue en Pro — no se quita nada.",
+  "t214": "<strong>Lo que añade Pro</strong> está listado función por función <a href=\"#pro\">más arriba en esta página</a>, y todo lo de Básico sigue en Pro — no se quita nada.",
   "t73": "Acopio Pro — instalación, una vez",
   "t74": "Instalación, configuración con tus propias categorías y racks, tu equipo cargado, y capacitación. Contigo, en una llamada.",
   "t75": "Acopio Pro — soporte y actualizaciones",

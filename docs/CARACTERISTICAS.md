@@ -2,8 +2,19 @@
 
 v12.46 · 06/10/2026. Sacado del código, no de memoria.
 
+> **⚠️ «Básico» aquí NO quiere decir Acopio Básico.** Esta lista es anterior a
+> que el producto tuviera dos ediciones, y su 🟢 significa *«sin esto no es un
+> sistema de almacén»* — una escala de importancia, no de edición. Una función
+> puede ser 🟢 aquí y estar **cerrada** en la edición gratis; los permisos y el
+> equipo lo son. **Qué trae cada edición está en `VERSION-BASICA.md` y, para el
+> cliente, en la lista partida en dos de `landing/acopio.html`.** Si algún día
+> esta lista se reescribe, lo primero es cambiar esa letra, porque dos palabras
+> iguales con dos significados en el mismo repositorio es cómo se cuela una
+> promesa falsa en una página.
+
 **Marcas:**
-🟢 **básico** — sin esto no es un sistema de almacén
+🟢 **básico** — sin esto no es un sistema de almacén (importancia, **no**
+edición: ver el aviso de arriba)
 🔵 **lo que lo hace fiable** — ya está, no es básico
 ⚪ **extra**
 

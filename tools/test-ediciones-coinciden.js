@@ -113,8 +113,21 @@ console.log('\n═══ 3· la página parte la lista en dos, y cada línea cae
 /* El encabezado de Pro es el que separa. Todo `data-pro` tiene que estar
  * DEBAJO de él: una línea de Pro arriba, entre las gratis, es exactamente la
  * promesa que rompió la página. */
-const iPro = WEB.indexOf('class="edi-hd" data-i18n="t216"');
+/* Se busca por el `data-i18n` del encabezado y nada más. La primera versión de
+ * esto buscaba la cadena literal `class="edi-hd" data-i18n="t216"` y se rompió
+ * al añadirle un `id="pro"` EN MEDIO — un guardia que se rompe porque el HTML
+ * que vigila ganó un atributo es un guardia que se va a desactivar. */
+const iPro = WEB.search(/<h3[^>]*data-i18n="t216"/);
 check('la lista tiene un encabezado para cada edición', iPro > 0, true);
+/* Y si no se encuentra, se para aquí. Con `iPro === -1` las dos
+ * comprobaciones de abajo pasan sin mirar nada: `m.index < -1` nunca es
+ * cierto y el trozo sale vacío. Verde por no haber encontrado el sitio donde
+ * mirar es el peor resultado posible de una prueba. */
+if (iPro < 0) {
+  console.error('\nFALLÓ: no se encontró el encabezado de Pro; el resto de esta ' +
+                'sección no comprobaría nada.\n');
+  process.exit(1);
+}
 
 const malColocadas = [...WEB.matchAll(/data-pro="([^"]+)"/g)]
   .filter(m => m.index < iPro)
@@ -130,6 +143,30 @@ const sinMarcar = [...trozoPro.matchAll(/<li ([^>]*)>/g)]
   .map(m => m[1].slice(0, 40));
 check('toda línea bajo «Acopio Pro adds» dice qué candado la cierra',
   sinMarcar, []);
+
+/* ── Y NINGUNA OFERTA SOSTIENE DOS LÍNEAS ─────────────────────────────────
+ *
+ * Una línea puede nombrar dos candados (el lector de correos y el de facturas
+ * son dos ofertas y una sola frase); dos líneas NO pueden nombrar el mismo.
+ * Si lo hacen, al pulsar una de ellas la app contesta de la otra — que es
+ * literalmente el fallo que Jose encontró el 21/10: *"al dar clic en la
+ * ventana de low stock aparece un mensaje que dice algo sobre los incomings.
+ * Eso está mal... analiza todos los candados y el mensaje que muestra, deben
+ * hablar de lo mismo"*.
+ *
+ * Lo hice el 24/10 con `respaldo`: puse el respaldo nocturno y la papelera en
+ * dos líneas, las dos cerradas por la pestaña de Sistema. Quien leyera
+ * «borrar se puede deshacer» y pulsara recibiría «Automatic backup». Las dos
+ * en una, nombrando la pestaña. */
+const cuenta = {};
+lineas.forEach(function (l) {
+  l.split(/\s+/).filter(Boolean).forEach(function (k) {
+    cuenta[k] = (cuenta[k] || 0) + 1;
+  });
+});
+check('ninguna oferta aparece en dos líneas — la segunda recibiría el mensaje ' +
+      'de la primera, que es el fallo del 21/10 otra vez',
+  Object.keys(cuenta).filter(function (k) { return cuenta[k] > 1; }), []);
 
 console.log('\n═══ 4· y la página no vende una sola cosa llamada «Acopio» ═══\n');
 
@@ -147,7 +184,58 @@ check('y las nombra en español', /Acopio Básico/.test(WEB) && /Acopio Pro/.tes
  * $49. */
 check('el precio de la versión gratis está en la página', /\$0/.test(WEB), true);
 
-console.log('\n═══ 5· y el español no se queda sin las etiquetas ═══\n');
+console.log('\n═══ 5· lo que la gratis promete, su permiso tiene que permitirlo ═══\n');
+
+/* ── EL CANDADO ES LA MITAD DE LA VERDAD; EL PERMISO ES LA OTRA ────────────
+ *
+ * El 24/10, arreglando justo esto, metí en la lista de Básico dos cosas que la
+ * edición gratis NO PUEDE HACER: «un reporte cada tarde, que llega solo por
+ * correo» y «cada edición guarda su motivo, y el cambio sale por correo».
+ * Ninguna de las dos tiene candado, porque un candado sería absurdo: no es que
+ * estén cerradas, es que **no existen**.
+ *
+ * `appsscript.basic.json` pide UN permiso, `spreadsheets.currentonly`. Sin
+ * `script.send_mail` la gratis no manda ningún correo, y sin `script.scriptapp`
+ * no tiene disparadores, así que un reporte nocturno es imposible dos veces. Lo
+ * puse ahí por leer el mapa de candados y no el manifiesto.
+ *
+ * Esto es una heurística, no una demostración: busca las palabras que delatan
+ * un correo o un disparador en la columna de Básico y exige que el permiso que
+ * harían falta esté en el manifiesto. Puede dejar pasar una promesa escrita con
+ * otras palabras; lo que no puede es dejar pasar ésta, que ya se escribió una
+ * vez. */
+const MANIFIESTO = fs.readFileSync(path.join(ROOT, 'appsscript.basic.json'), 'utf8');
+
+const iBasic = WEB.search(/<h3[^>]*data-i18n="t215"/);
+check('la lista de Básico se encuentra', iBasic >= 0 && iBasic < iPro, true);
+const trozoBasico = WEB.slice(iBasic, iPro);
+
+const PIDEN_PERMISO = [
+  { que: 'mandar correo',   permiso: 'script.send_mail',
+    pistas: /\bemail(s|ed)?\b|\bcorreo\b|\bmail\b/i },
+  { que: 'un disparador',   permiso: 'script.scriptapp',
+    pistas: /\bnightly\b|cada noche|\bevening report\b|reporte cada tarde|every night/i },
+  { que: 'entrar a Drive',  permiso: 'auth/drive',
+    pistas: /\bPDFs?\b|\battach(ed|ments)?\b|\badjunt/i }
+];
+
+PIDEN_PERMISO.forEach(function (r) {
+  const prometido = r.pistas.test(trozoBasico);
+  const concedido = MANIFIESTO.indexOf(r.permiso) !== -1;
+  check('la lista de Básico no promete nada que necesite ' + r.que +
+        ' (`' + r.permiso + '`), que su manifiesto no pide',
+    prometido && !concedido ? 'lo promete y no puede' : 'bien',
+    'bien');
+});
+
+/* Y que el manifiesto siga siendo el de un solo permiso. Si algún día pide
+ * más, estas tres reglas dejan de valer y hay que volver a mirarlas — mejor
+ * que lo diga la prueba a que lo descubra un cliente. */
+const permisos = (MANIFIESTO.match(/"https:\/\/www\.googleapis\.com[^"]+"/g) || []);
+check('el manifiesto de la gratis sigue pidiendo un solo permiso — si crece, ' +
+      'las tres reglas de arriba hay que volver a mirarlas', permisos.length, 1);
+
+console.log('\n═══ 6· y el español no se queda sin las etiquetas ═══\n');
 
 /* `acopioApplyLang` reemplaza el innerHTML del `<li>`, así que la línea en
  * español es OTRO texto: si alguien la traduce y se le va el `<strong>` o el

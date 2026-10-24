@@ -107,6 +107,12 @@
   .flag.now{background:var(--good-wash);color:#046C4E}
   .flag.next{background:#E3EEFC;color:var(--accent-ink)}
   .flag.later{background:var(--amber-wash);color:var(--amber-ink)}
+  /* Jose, 24/10: *"en la landing y en todos los documentos sólo se habla de
+     Acopio, no hay Acopio Básico ni Pro"*. Esta página listaba siete grupos de
+     funciones como si fueran uno solo, y dos de ellos —los permisos y el
+     respaldo— no existen en la edición gratis. */
+  .flag.pro{background:#EDE9FE;color:#5B21B6}
+  .cap h3 .flag{margin-left:.4rem;font-size:.7em;padding:.22rem .45rem}
 
   /* The honest section gets a visibly different ground. Burying limits in the
      same card style as the features is how a deck loses an investor twice:
@@ -146,7 +152,7 @@
 
     <dl class="facts">
       <div><dt>Mercado</dt><dd>PyME con bodega</dd></div>
-      <div><dt>Precio</dt><dd>$500 + $49/mes</dd></div>
+      <div><dt>Precio</dt><dd>Básico $0 · Pro $500 + $49/mes</dd></div>
       <div><dt>Costo de servidor</dt><dd>$0</dd></div>
       <div><dt>Estado</dt><dd>En producción</dd></div>
     </dl>
@@ -203,6 +209,42 @@
       <p>Además, el cliente ya tiene Google. No hay cuenta nueva, no hay
         contraseña nueva, no hay app que instalar. Entra con el mismo correo con
         el que ya trabaja.</p>
+    </div>
+  </section>
+
+  <!-- ── LAS DOS EDICIONES ───────────────────────────────────────────────
+       Jose, 24/10: *"me puse a ver que en la landing y en todos los documentos
+       sólo se habla de Acopio, no hay Acopio Básico ni Pro, así que hay que
+       buscar, analizar, añadir o cambiar todo lo que habla de Acopio."*
+
+       Esta página hablaba de «Acopio» como de una sola cosa y daba un precio
+       solo, «$500 + $49/mes». Hay dos ediciones desde hace semanas, y la
+       diferencia no es de catálogo: cambia qué permiso de Google pide la
+       instalación, que es la objeción más cara que tiene este producto. Va
+       aquí, justo después del modelo y ANTES de la lista de funciones, porque
+       lo que sigue hay que leerlo sabiendo cuál de las dos se está mirando. -->
+  <section>
+    <p class="kicker">Las dos ediciones</p>
+    <h2>Una se instala sola y es gratis. La otra la montamos nosotros.</h2>
+    <div class="prose">
+      <p><strong>Acopio Básico</strong> es la bodega entera para una persona: qué
+        hay, dónde está, qué entró y qué salió, con sus costos y su mapa de
+        racks. Se instala copiando el archivo, no pide tarjeta, no caduca y no
+        es una prueba. Lo importante es lo que <em>no</em> pide: la edición
+        gratis se instala <strong>sin ningún permiso sensible</strong> de Google,
+        y por eso no aparece la pantalla de aviso que hace abandonar a la mitad
+        de la gente a mitad de la instalación.</p>
+      <p><strong>Acopio Pro</strong> añade lo que necesita una empresa con
+        cuadrilla: el equipo con su propio acceso y sus permisos, fotos y
+        documentos en cada movimiento, etiquetas impresas y lectura de códigos,
+        pedidos por llegar, avisos por correo, respaldo cada noche, alertas de
+        stock mínimo, y leer un correo del proveedor o la foto de una factura
+        para llenar la entrada. La lista entera, función por función, está en
+        <a href="/#pro">la página principal</a>.</p>
+      <p>Lo de Básico no se quita en Pro. Y en la edición gratis las funciones
+        de Pro <strong>se ven</strong> —no se esconden— y al tocarlas dicen qué
+        son y dónde están, porque alguien que acaba de descubrir que necesita
+        algo es el mejor momento que vamos a tener para contárselo.</p>
     </div>
   </section>
 
@@ -337,7 +379,7 @@
     </div>
 
     <div class="cap">
-      <h3>Decidir quién puede hacer qué</h3>
+      <h3>Decidir quién puede hacer qué <span class="flag pro">Sólo Pro</span></h3>
       <p class="who">Lo configura el dueño una vez</p>
       <ul>
         <li><b>Tres roles:</b> administrador, bodega y consulta.</li>
@@ -354,7 +396,7 @@
     </div>
 
     <div class="cap">
-      <h3>Que el sistema se cuide solo</h3>
+      <h3>Que el sistema se cuide solo <span class="flag pro">Respaldo y archivado, sólo Pro</span></h3>
       <p class="who">Invisible cuando funciona, y ese es el punto</p>
       <ul>
         <li><b>Respaldo automático cada noche</b> al Drive del cliente, más uno a

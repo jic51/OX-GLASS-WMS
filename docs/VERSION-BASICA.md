@@ -271,6 +271,23 @@ función empuja gente hacia Pro — **sin rastrear a nadie y sin pedir un permis
 más**, porque abrir una página no es una petición nuestra. Es el único dato que
 la versión básica puede darnos.
 
+#### 🔴 PENDIENTE, 24/10 — ya hay dónde apuntar, y es UNA línea
+
+El 24/10 la landing se partió en las dos ediciones y la lista de lo que añade
+Pro tiene su propio ancla: **`#pro`**, encima del encabezado «Acopio Pro adds».
+El comentario de `_proUrl` dice *"el día que exista, se cambia esta línea"*. Ya
+existe.
+
+```js
+// Index_v3_fixed.html, _proUrl()
+return 'https://www.acopio.net/?de=' + encodeURIComponent(clave) + '#pro';
+```
+
+**No se cambió al vuelo a propósito.** Tocar la app obliga a Jose a pegar los
+archivos otra vez en Apps Script, y pedirle eso por un ancla no vale la pena:
+viaja con la próxima versión que tenga algo más dentro. Hasta entonces el enlace
+sigue llegando a la portada, que es correcto, sólo que no al sitio exacto.
+
 ## 11 · ARRANCADA POR PRIMERA VEZ — 19/10, y no arrancaba
 
 Jose la montó sobre una copia del demo, con el proyecto de Cloud **automático**

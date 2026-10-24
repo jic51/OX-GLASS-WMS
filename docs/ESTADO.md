@@ -10,7 +10,20 @@
 > **«El estado de Acopio» y `ESTADO.md` son lo mismo**: este fichero. Es el
 > único sitio donde mirar cómo vamos.
 
-**Última actualización:** 23/10/2026 · **versión v12.95** · build `ac9fd6eb`
+**Última actualización:** 24/10/2026 · **versión v12.96** · build `4839af6b`
+· páginas publicadas en www.acopio.net el 24/10 (`landing/.publicado`)
+
+> ### ⚠️ LA v12.96 HAY QUE PEGARLA, Y ESTO ES LO QUE PASA SI TARDAS
+> Casi todo lo de esta entrega son las páginas y los documentos, que ya están
+> publicados. **Dos cosas están dentro de la app**: los Términos que el cliente
+> acepta —que viven en su propia hoja, no sólo en la web— y el ancla del enlace
+> de los candados.
+>
+> Mientras no la pegues: la web dice la verdad sobre las dos ediciones y **la
+> hoja sigue diciendo lo de antes**, que un cliente de Básico está «comprando»
+> algo y que su sistema se respalda solo cada noche. Las dos cosas son falsas en
+> esa edición. Está mejor que ayer —antes lo decían los dos sitios— pero no está
+> bien hasta que la pegues.
 
 ---
 
@@ -19,16 +32,30 @@
 Esta es la lista corta, y es la que importa. Todo lo demás de este documento es
 contexto.
 
+> **Corregido el 24/10, porque la tabla estaba mintiendo.** Jose: *"¿ya
+> habíamos hablado de esto y ya decidí o no? Dime si me equivoco en algo."* No
+> se equivocaba: cuatro de las ocho filas pedían algo que él ya había
+> contestado, y una le atribuía a él un trabajo que era mío. Una lista de
+> pendientes con cosas ya hechas dentro no es una lista, es ruido — y la parte
+> que sí hace falta se pierde entre lo que sobra. Lo decidido está ahora abajo,
+> en «Ya decidido», para que se vea que se movió y no que se perdió.
+
 | # | Qué | Por qué está parado | Cuánto cuesta |
 |---|---|---|---|
-| 1 | **La lista de verificación de abajo** | Hay diez versiones de cambios y ninguno está confirmado por ti | 30 min, con la app abierta |
-| 2 | ~~Que alguien de fuera instale la Básica~~ | ✅ **HECHO el 21/10** — alguien de fuera instaló con los dos enlaces y funcionaron. En computadora | — |
-| 3 | **Grabar V1, el vídeo del cronómetro** | Es el hueco más caro de la landing | una mañana |
-| 4 | **Decidir el precio de la Básica en la página** | El precio de Pro ya está decidido; la columna de la gratis no | 10 min de decisión |
-| 5 | **Una forma de agendar una llamada** | Hoy el camino muere en un correo | 20 min de configuración |
-| 6 | **¿Las filas importadas sin ubicación van a `RECEIVING`?** | Hoy caen en `UNASSIGNED`, que es una palabra del programa | 2 min de decisión |
-| 7 | **La casilla «todos» de Movements** | Tres opciones, y la que tú propusiste no es la que yo construiría | 2 min de decisión |
-| 8 | **¿Destildar filas al importar, en vez de «subir uno por uno»?** | Da el mismo control sin una pantalla nueva | 1 min de decisión |
+| 1 | **La lista de verificación de PRO** (la de abajo) | Básico lo repasaste entero el 23/10 y me contaste todo. De Pro dijiste *"aún estoy esperando para hacerlo"* | 20 min, con la copia Pro abierta |
+| 2 | **El enlace de tu Google Calendar** | No es una decisión: necesito el enlace público de «reservar una cita» para ponerlo en la página. Ver abajo cómo se saca | 5 min |
+| 3 | **Cómo quieres que te contacten** | Dijiste *"no quiero publicar mi número de WhatsApp, quiero sólo un link"*. Tengo tres formas y **ninguna es un `wa.me`**: ése ES tu número en claro | 2 min de decisión |
+| 4 | **Grabar V1, el vídeo del cronómetro** | Es el hueco más caro de la landing. Y el cómo poner el cronómetro ya está escrito: `docs/CAPTURAS-PARA-LA-LANDING.md`, «Cómo se pone el cronómetro» | una mañana |
+| 5 | **Leer lo de importar y `RECEIVING`** | Pediste ideas antes de decidir: *"no quiero decidir algo sin que me des ideas sobre esto o me digas qué es lo que mejor va a funcionar"*. La propuesta entera está en `docs/BACKLOG.md` | 10 min de lectura |
+
+### ✅ Ya decidido — fuera de la lista de arriba
+
+| Qué | Qué decidiste | Dónde quedó |
+|---|---|---|
+| ~~Que alguien de fuera instale la Básica~~ | **Hecho el 21/10** — instaló con los dos enlaces, en computadora | — |
+| ~~El precio de la Básica~~ | **Gratis, $0.** *"Ya habíamos decidido que la básica es gratis"* | Ya está en la página: `landing/acopio.html`, sección de precio |
+| ~~La casilla «todos» de Movements~~ | **No se toca.** *"Ya te dije arriba, no haremos esto"* | Anotado en `BACKLOG.md` para revisarlo algún día, no ahora |
+| ~~Agendar una llamada~~ | **Google Calendar + un enlace de contacto.** Ya no es una decisión, es el enlace (fila 2 de arriba) | — |
 
 ---
 
@@ -52,8 +79,18 @@ del Dashboard ya no se mueven al cambiar de filtro.
 
 ### 🟦 ACOPIO **BÁSICO** — lo que falta mirar
 
+> Jose, 24/10: *"ya revisé todo, y te hablé de todas las cosas, lo que no hice
+> fueron los de PRO."* Lo que queda abajo **no contradice eso**: son las cosas
+> que se publicaron *después* de tu repaso (la v12.94 y la v12.95 salieron el
+> 24/10) o que dependen de un dato que sólo se ve con el fichero delante, como
+> que el número del botón y el del final coincidan. Si alguna ya la miraste y
+> estaba bien, dímelo y se va de aquí.
+
 | ✓ | Qué | Dónde |
 |---|---|---|
+| ☐ | **El candado lleva a la lista de Pro, no a la portada** (v12.96) | En la copia Básica toca una función de Pro → «Check Acopio Pro» → la página tiene que abrir **en la lista de lo que añade Pro**, no arriba del todo |
+| ☐ | **Los Términos de la hoja hablan de las dos ediciones** (v12.96) | En la hoja, pestaña de Términos: arriba del todo tiene que haber un apartado que diga qué cláusula es de Básico y cuál de Pro |
+| ☐ | **Una obra no se ofrece como estantería** (v12.95 — el concepto que encontraste) | Return → en «Came back from» escribe una obra → **no** debe salir *«is not a location in your warehouse yet · + Create»*, y **no** debe pedirte la obra otra vez abajo |
 | ☐ | **Decir «sí» en un aviso guarda** (v12.94 — el fallo que encontraste) | Return → algo con 49 fuera → escribe 60 → Save anyway. Tiene que **guardar**, no dar error |
 | ☐ | **Borrar muchos tarda segundos y se puede parar** (v12.92) | Marca unos cientos → Delete. Botón **Stop** a mitad: debe decir *«Stopped — X of Y deleted»* |
 | ☐ | **Importar no pierde filas** (v12.91) | Un fichero de más de 500 filas: el botón y el final tienen que decir **el mismo número**, con *«matches the file»* |
@@ -96,7 +133,7 @@ las mires otra vez): 🏷 Labels sale a color en vez de gris · la pregunta de
 |---|---|
 | **Ajustes → Sistema en Básico** | Dijiste que mandabas un vídeo y no llegó |
 | **«El menú se apaga»** | ¿Cuál menú? El de arriba, el de la cuenta, o el de la hoja |
-| **La app tarda en abrir** | Un vídeo con la v12.94 ya pegada, para medir con lo de ahora y no con lo de antes |
+| **La app tarda en abrir** | Un vídeo con la **v12.95** ya pegada, para medir con lo de ahora y no con lo de antes. Y antes de grabarlo te paso la sugerencia, que la pediste así: *"no arregles nada antes de decirme la sugerencia... y déjame decidir"* |
 
 ---
 
@@ -402,10 +439,11 @@ con el enlace → Lector*.
 |---|---|
 | Página y textos | ✅ publicada, en dos idiomas |
 | Imagen para compartir | ✅ se genera con un comando |
-| **Vídeos e imágenes** | ❌ **ninguno existe** — las cuatro guías están en `CAPTURAS-PARA-LA-LANDING.md` |
-| **Precios a la vista** | ❌ decididos en `PRECIOS-Y-COMPETENCIA.md`, no publicados |
-| **Sección de Pro** | ❌ el candado de la app apunta a la raíz porque no hay dónde apuntar |
-| **Agendar una llamada** | ❌ hoy muere en un correo |
+| **Las dos ediciones** | ✅ **24/10** — el precio abre con «Acopio Basic — free / $0», y la lista de funciones está partida en dos con un encabezado por edición. Antes la página vendía UNA cosa llamada «Acopio» y prometía a la gratis cuatro funciones que están cerradas en ella |
+| **Precios a la vista** | ✅ **24/10** — los tres están en la página: $0, $500 de instalación y $49/mes |
+| **Sección de Pro** | ⚠️ **el ancla ya existe** (`#pro`, encima de «Acopio Pro adds»). Falta UNA línea en la app: `_proUrl` sigue mandando a la raíz. Viaja con la próxima versión |
+| **Vídeos e imágenes** | ❌ **ninguno existe** — las cuatro guías están en `CAPTURAS-PARA-LA-LANDING.md`, y el cómo poner el cronómetro ya está escrito ahí |
+| **Agendar una llamada** | ⚠️ decidido (Google Calendar + un enlace de contacto). Falta **el enlace**, que sólo lo tienes tú |
 | Testimonios | ⏸ **a propósito vacío** hasta que haya clientes de verdad |
 
 ---
@@ -444,18 +482,23 @@ Para no perder de vista el tamaño de lo que ya hay.
 - Backup automático cada noche, y archivado de lo viejo
 - Informe diario por correo
 - Informe de calidad de datos, con reparaciones
-- **171 comprobaciones automáticas**, todas en verde
+- **178 pruebas automáticas**, todas en verde (177 vigilando; `test-scale.js`
+  es una cinta métrica, no un guardia)
 
 ---
 
 ## 📋 LO SIGUIENTE, EN ORDEN
 
-1. **La lista de verificación** (30 min, tú) — diez versiones de cambios sin confirmar
-2. **Terminar la tarjeta de ajuste** (yo, ~1 versión)
-3. **Precios y sección de Pro en la página** (medio día, yo; la decisión, tú)
-4. **Agendar llamadas** (20 min, tú)
-5. **Grabar V1, el cronómetro** (una mañana, tú)
-6. **Que alguien de fuera instale la Básica** (20 min, tú y otra persona)
+1. **La lista de verificación de PRO** (20 min, tú) — Básico ya lo repasaste
+2. **Importar de verdad**: ventana propia, ubicaciones internas antes de
+   escribir, por tandas, y «importa 20 de prueba» (yo, ~2 versiones; la
+   propuesta está en `BACKLOG.md` y pediste leerla antes de decidir)
+3. **Que lo borrado desaparezca al instante en toda la app** (yo, ~1 versión) —
+   es lo que ya pasa al borrar un movimiento, aplicado a los otros seis sitios
+4. **Terminar la tarjeta de ajuste** (yo, ~1 versión)
+5. **El enlace de Google Calendar y el de contacto** (5 min, tú) — decidido,
+   falta el enlace
+6. **Grabar V1, el cronómetro** (una mañana, tú)
 7. **Incoming: crear varios a la vez**, y que aceptar uno SEA la entrada (yo;
    lo segundo necesita que decidas lo de las llegadas parciales)
 8. Las mejoras visuales de la siguiente versión: bloque de marca, pestañas

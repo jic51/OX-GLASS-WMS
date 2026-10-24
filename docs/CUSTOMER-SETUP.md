@@ -1,4 +1,18 @@
-# Setting up your warehouse system
+# Setting up your warehouse system — Acopio **Pro**
+
+> ### 📦 Which edition are you setting up?
+> This guide is for **Acopio Pro** — the one we set up with you, with your team
+> and your racks. If you have **Acopio Basic**, the free single-person edition,
+> skip to **"If yours is Acopio Basic"** at the end: three steps, none of them
+> the ones below.
+>
+> **The part that confuses people most, said once:** Basic has **no 🏭 Acopio
+> menu inside the sheet**, and it is not that it fails to show up — it *cannot*.
+> A menu inside a sheet needs a permission Google classes as sensitive, and the
+> free edition deliberately does not ask for it, because asking brings up the
+> warning screen that edition exists to avoid. Every "🏭 Acopio → …" below is
+> a Pro instruction. And **step 4's scary screen never appears in Basic** —
+> that is the whole point of it.
 
 > ### ⚠️ IF SOMEBODY CANNOT SIGN IN, START WITH THE ADDRESS
 > It is almost always the same cause: **your app's address is not where it needs
@@ -89,6 +103,35 @@ to the user list can sign in with their Google account.
 **Turn on the nightly backup** from the spreadsheet menu:
 **🏭 Acopio → 🗄 Backup Now / Enable Daily Backup**. It runs at 2am and keeps a
 dated copy for 30 days. The app tells you each time one is made.
+
+---
+
+## If yours is Acopio Basic
+
+The free edition installs in three steps and has **no wizard and no menu**.
+
+1. **Open the link we sent you** and accept **"Make a copy"**.
+2. In your copy: **Extensions → Apps Script → Deploy → New deployment → Web
+   app**. Google asks for permission once; accept it. (Timed on a clean copy:
+   **1 minute 47 seconds**. And the "Google hasn't verified this app" screen
+   from step 4 **does not appear** — that is the difference this edition exists
+   for.)
+3. **Copy the address ending in `/exec`** and open it. That is your app.
+   Bookmark it; it is how you will always get in.
+
+**Your company name** is typed inside the app the first time you open it: in
+Basic there is no wizard in the sheet to ask you for it.
+
+**What this edition does not include**, so you don't go looking: a team with
+their own sign-ins, photos and documents, printed labels and code scanning,
+expected deliveries, any email at all, the automatic backup, low-stock alerts,
+and reading a supplier email or an invoice to fill the entry in. **They are not
+hidden** — you can see them in the app, and touching one tells you what it is.
+What it does include is never taken away and does not expire. The full list for
+each edition is on [acopio.net](https://www.acopio.net/#pro).
+
+**A backup in Basic?** By hand: **File → Make a copy**, with the date in the
+name. Do it before importing or before deleting a lot of rows.
 
 ---
 

@@ -312,6 +312,100 @@ puede contar, porque son trozos y no 490 resultados sueltos.
 
 ---
 
+## ✅ 24/10 — LAS DOS EDICIONES, EN LA PÁGINA Y EN LOS DOCUMENTOS
+
+Jose: *"me puse a ver que en la landing y en todos los documentos sólo se habla
+de Acopio, no hay Acopio Básico ni Pro, así que hay que buscar, analizar, añadir
+o cambiar todo lo que habla de Acopio."*
+
+**Tenía razón, y lo que encontré era peor que una omisión: la página prometía a
+la edición gratis cuatro funciones que están cerradas en ella** — las fotos, el
+equipo con sus permisos, las etiquetas impresas y el respaldo de cada noche. No
+era un hueco de catálogo: era una promesa que no se cumple en el primer minuto.
+
+Hecho y publicado:
+
+| Dónde | Qué decía | Qué dice |
+|---|---|---|
+| `landing/acopio.html`, precio | $500 y $49, sin más | Abre con **Acopio Basic — free / $0**, y las dos de pago dicen **Pro** en su título |
+| `landing/acopio.html`, funciones | UNA lista de quince | Partida en dos, con un encabezado por edición. Entran las tres ofertas que faltaban: escanear, apartar material, avisar por correo |
+| `landing/acopio.html`, hero y «por qué Acopio» | *"lo instalamos y configuramos contigo"*, *"cada quien con su propio acceso"* | Dicen cuál de las dos hace cada cosa |
+| `landing/acopio-overview.html` | Un precio solo y siete grupos de funciones sin distinguir | Sección propia de las dos ediciones, el precio con el $0, y distintivo **Sólo Pro** en los dos grupos que lo son |
+| `docs/INSTALL-GUIDE.md` · `docs/CUSTOMER-SETUP.md` | Mandaban a **🏭 Acopio → …**, un menú que en Básico **no puede existir** | Dicen de qué edición son, y terminan con los tres pasos de Básico |
+| `docs/RESTAURAR-UNA-COPIA.md` | *"tu sistema se copia solo todas las noches"* | Dice que eso es de Pro, y cómo se hace la copia a mano en Básico |
+| `docs/SOPORTE-Y-PAGOS.md` | Un precio y un soporte | El $0 arriba, y **lo que no se promete** en una edición que no se paga |
+| `legal/TERMS-OF-SERVICE.md` | *"what you are buying"*, y el respaldo *"enabled during setup"* | Sección 0 que acota qué cláusula es de cuál, y la 8 dice que en Básico no hay respaldo automático |
+
+### Y UN ERROR MÍO, DOS VECES EN EL MISMO DÍA, QUE DEJA LA LECCIÓN
+
+**Primero**: puse las claves de traducción `t82`–`t85` en el precio y **ya
+estaban en uso** («Palabras del fundador» y sus tres párrafos). En español la
+tarjeta de Acopio Básico mostraba el texto del fundador. Las claves son `t` + un
+número puesto a mano y el diccionario es un objeto literal: reusar un número no
+da ningún error, la entrada repetida la gana la última. Lo vigila ahora
+`test-landing-i18n`, **contando en el HTML y no en el DOM** — `acopioApplyLang`
+memoriza el inglés por CLAVE y no por elemento, así que el primer elemento se lo
+escribe encima al segundo y, para cuando el DOM se puede leer, los dos dicen lo
+mismo. Mirando el DOM la colisión daba verde; lo comprobé.
+
+**Y después, arreglando esto mismo**: metí en la lista de Básico dos cosas que
+esa edición **no puede hacer** — «un reporte cada tarde, que llega solo por
+correo» y «el cambio sale por correo». Leí el mapa de candados y no leí el
+manifiesto. `appsscript.basic.json` pide **un** permiso,
+`spreadsheets.currentonly`: sin `script.send_mail` no hay ningún correo, y sin
+`script.scriptapp` no hay disparadores, así que un reporte nocturno es imposible
+dos veces.
+
+**El candado es la mitad de la verdad; el permiso es la otra.** Una función
+puede faltar en Básico por dos motivos distintos —porque está cerrada con una
+oferta detrás, o porque el permiso que necesita no se pide— y yo sólo había
+mirado la primera. `test-ediciones-coinciden.js` (19) mira las dos:
+
+- toda clave que la página nombre existe en `BASIC_PRO` o en `BASIC_FUERA`;
+- **toda oferta de `BASIC_PRO` sale en la página** — son la superficie de venta
+  de la gratis, y la que no se nombra no se puede comprar;
+- la lista está partida en dos y ninguna función cae del lado que no le toca;
+- y **nada de lo prometido en Básico necesita un permiso que su manifiesto no
+  pide** (correo, disparadores, Drive), con una regla más que se pone roja si el
+  manifiesto deja de tener un solo permiso, porque entonces las tres anteriores
+  hay que volver a mirarlas.
+
+### 🔴 LO QUE QUEDA DE ESTO
+
+1. **La papelera en Básico.** Jose ya lo decidió —*"abro la papelera en la
+   gratis, si hazlo así"*— y **no está construido**: `BASIC_PRO_AJUSTES =
+   { system: 'respaldo' }` apaga la pestaña de Sistema entera y la papelera vive
+   dentro. Mientras tanto la página lo dice como es hoy (*"devolver uno está en
+   Ajustes → Sistema"*, del lado de Pro). **Cuando se construya, esa línea vuelve
+   a la lista de Básico** — y la prueba de arriba no lo detecta sola, porque un
+   candado que se abre no deja rastro en la página.
+2. ~~**El ancla `#pro` del candado**~~ ✅ **v12.96** — `_proUrl` ya termina en
+   `#pro`. Un `#` que no exista no es un 404, es la misma página sin desplazar,
+   y por eso esto se podía cambiar sin miedo; `/pro` no.
+3. **Unos Términos propios para Básico**, si Jose los quiere. El preámbulo de
+   hoy acota qué cláusula es de cuál y quita lo falso, pero un documento legal
+   separado es decisión suya, no mía.
+
+**Y una consecuencia que no vi venir y conviene dejar escrita:** los Términos
+que el cliente acepta **no están sólo en la web** — viven dentro de la hoja,
+generados desde `legal/*.md` por `tools/sync-legal.js`, y `test-legal-sync` los
+compara sección por sección. Arreglar lo que dicen de las dos ediciones obligó a
+tocar la app, así que lo que empezó como «cambiar unas páginas» acabó siendo la
+**v12.96** y hay que pegarla. Dos lecciones:
+
+- **Un texto legal nuevo se escribe como preámbulo sin número.** Lo numeré «0» y
+  corrió las trece secciones de siempre: catorce comparaciones en rojo a la vez,
+  y todas las referencias cruzadas («ver sección 9») apuntando una sección más
+  abajo. Sin número, nada se mueve — y además es la forma correcta de escribir
+  una cláusula de alcance.
+- **Las viñetas del Markdown legal van en UNA línea.** El generador convierte la
+  primera línea de una viñeta en un `li` para la pestaña de la hoja y deja la
+  continuación como un párrafo suelto con sangría, así que una viñeta de cinco
+  líneas sale partida en dos cosas que no parecen la misma. El detalle va en
+  párrafos normales debajo.
+
+---
+
 ## 🔴 23/10, NOCHE — LA APP TIENE DOS REGLAS CONTRARIAS SOBRE CUÁNDO SE VA UNA FILA
 
 Jose, con un vídeo borrando usuarios de uno en uno:
@@ -492,6 +586,47 @@ Anotado, sin tocar nada. Lo que sospecho sin haberlo medido: la gráfica de
 Google redibuja en cada `mouseover` y arrastra consigo un recálculo de la
 tarjeta que la contiene, así que el bloque entero parpadea en vez de sólo el
 trozo resaltado. Hay que medirlo antes de arreglarlo.
+
+### P3. 🔵 CÓMO TE CONTACTAN SIN PUBLICAR TU NÚMERO — Y HAY QUE DECIRLO CLARO
+
+Jose, 24/10: *"no quiero publicar mi número de WhatsApp, quiero sólo un link que
+le permita a los usuarios contactarme."*
+
+**Lo primero, porque cambia la respuesta: `wa.me` ES tu número.** Un enlace de
+WhatsApp se escribe `https://wa.me/1801XXXXXXX` — el número va dentro de la
+dirección, en claro, y cualquiera que pase el ratón por encima lo lee en la
+barra de estado del navegador sin pulsar nada. Un buscador también lo indexa. No
+existe un enlace de WhatsApp que no lleve el número; eso no es una limitación que
+se pueda rodear con un acortador, porque el acortador redirige a la dirección con
+el número dentro. **Así que «un enlace de WhatsApp sin publicar el número» no se
+puede hacer, y prefiero decirlo que entregarle algo que cree que esconde su
+número y no lo esconde.**
+
+Lo que sí se puede, en orden de lo que yo recomendaría:
+
+1. **El enlace de Google Calendar, y que sea el camino principal.** Es lo que ya
+   decidimos. El visitante elige un hueco, pone su correo, y a ti te llega la
+   cita con su nombre y su teléfono — **el contacto va en la dirección contraria
+   a la que te preocupa**: te lo dan ellos a ti. No publica nada tuyo. Hace falta
+   el enlace: Google Calendar → **Horario de citas** → crear uno → **Compartir**
+   → copiar el enlace público.
+2. **El formulario de contacto que la página ya tiene.** Funciona hoy y no
+   publica ningún dato tuyo. Su pega es real y es la que te hizo pedir esto: el
+   camino muere en un correo y el visitante no sabe cuándo le van a contestar.
+   Con el 1 puesto, esto pasa a ser la segunda opción para quien no quiere
+   agendar, que también existe.
+3. **Un número sólo para esto, si quieres WhatsApp de verdad.** Un segundo
+   número —una eSIM de prepago, o Google Voice si está disponible— puesto como
+   WhatsApp Business. Entonces el `wa.me` publica **ese** número y el tuyo sigue
+   sin salir. Cuesta dinero y un trámite, y es la única forma honesta de tener
+   «WhatsApp en la página» sin publicar tu número personal.
+
+**Lo que NO haría:** un `wa.me` con tu número detrás de un botón que diga
+«escríbenos». Oculta el número de la vista y no del navegador, y el día que
+alguien lo copie de ahí la decisión ya no se puede deshacer.
+
+**Hace falta de Jose:** el enlace del punto 1 (5 minutos), y decidir si además
+quiere el 3. El 2 ya está puesto.
 
 ---
 
@@ -1510,6 +1645,73 @@ que se permita, es que después no hay salida.
 `UNASSIGNED` se queda y lo que cambia es sólo que la app lo explique. Yo voto
 `RECEIVING`: una palabra que el almacenero reconoce, contra una que es del
 programa.
+
+#### 5-ter. 🔵 LA PREGUNTA DEL 24/10, Y LA RESPUESTA — ES UNA SOLA PANTALLA
+
+Jose, 24/10:
+
+> *"Sobre esto no tengo respuesta, ya que no entiendo cómo podemos después
+> arreglar todo eso de una sola vez. Recuerdo que habíamos quedado en que desde
+> el 'import' íbamos a arreglar todo lo que necesitamos, ¿o no? La nueva ventana
+> y la opción de elegir locaciones internas en los registros antes de importarlos
+> realmente, también poder hacerlo por tandas o grupos. No quiero decidir algo
+> sin que me des ideas sobre esto o me digas qué es lo que mejor va a
+> funcionar."*
+
+**No puede contestar porque la pregunta está mal hecha, y la hice yo.** Le pedí
+que decidiera entre `RECEIVING` y `UNASSIGNED` como si fuera una decisión suelta.
+No lo es: **es la última línea de una pantalla que todavía no existe**, y
+decidirla antes de construir la pantalla es decidir el color de una puerta antes
+de saber si va a haber pared.
+
+`RECEIVING` lo propuse para el diseño VIEJO —una pregunta al final, «¿dónde van
+las N huérfanas?»— donde el usuario llega al final con filas sin sitio porque
+nunca se le preguntó. En el diseño de Jose, el de 5-bis, **no se llega ahí**: la
+ubicación se elige ANTES de escribir nada, fila por fila o por grupos. Las dos
+propuestas se solapan y la suya gana.
+
+**Lo que yo haría, en una frase:** construir la pantalla de 5-bis, y que
+`RECEIVING` sea **la única salida de emergencia**, imposible de pisar por
+accidente.
+
+Una pantalla, cuatro cosas, en este orden, y **cada una se puede publicar sola**:
+
+| | Qué | Por qué en ese orden | Tamaño |
+|---|---|---|---|
+| 1 | **Ventana propia** para importar, en vez de dentro de Ajustes | Todo lo demás necesita sitio en pantalla. Hoy la previsualización vive dentro de una pestaña de Ajustes y no cabe una tabla editable. **En el teléfono no se abre**: migrar un Excel no es trabajo de teléfono, y fingir que sí es prometer una pantalla que no funciona | mediano |
+| 2 | **Columna Location editable**, y marcar y actuar por grupos | Es el corazón. *"Es su bodega, lo único nuevo es el programa, no las ubicaciones"* | mediano |
+| 3 | **Casillas por fila**, todas marcadas de entrada, con el botón contando lo marcado | Es lo que convierte «todo o nada» en «esto sí y esto no». Sin esto, una errata obliga a volver al Excel | pequeño |
+| 4 | **`RECEIVING` como salida, y sólo como salida** | Lo último porque sólo tiene sentido cuando ya hay dónde elegir | pequeño |
+
+**Y la cuarta, en detalle, porque es la que él no podía decidir:**
+
+- Si al confirmar **queda alguna fila sin ubicación**, la app lo dice con el
+  número y **no deja seguir** sin tocar un botón: *«12 rows have no location.»* →
+  **[ Put them all in… ]** (desplegable) · **[ Leave them in RECEIVING ]** ·
+  **[ Go back ]**.
+- `RECEIVING` se crea como **ubicación de verdad** —existe en Settings →
+  Locations, sale en el mapa, se puede trasladar desde ella con el traslado que
+  ya existe— y **nace sólo si alguien la pide**. Una instalación donde todo el
+  mundo pone sus ubicaciones nunca la ve.
+- Y **una tarjeta en la baraja** mientras quede algo ahí: *«14 items received
+  and not yet put away»*. Es el mecanismo que ya usamos para «la app tiene algo
+  pendiente contigo», y es lo que impide que se convierta en un cajón de olvidos
+  como lo era `UNASSIGNED`.
+- `UNASSIGNED` **desaparece del código**. Está escrito a mano en seis puntos
+  (ver arriba), que es exactamente la forma que ya nos ha costado veinte veces:
+  pasa a ser **una constante**, y la prueba cuenta que no haya ninguna copia
+  suelta.
+
+**Por qué esto no es «arreglarlo todo de una sola vez»** —que es lo que le
+preocupaba—: las cuatro se publican por separado y en ese orden, y **ninguna
+deja la app peor que ahora** si las siguientes tardan. Con la 1 sola, importar
+ya tiene sitio. Con la 2, la ubicación se elige. Con la 3, se puede dejar algo
+fuera. La 4 sólo recoge lo que quede.
+
+**Lo que hace falta de Jose:** nada todavía. Esto se construye y se le enseña.
+La única decisión que queda de verdad es el **nombre** —`RECEIVING` o lo que en
+su bodega se llame el sitio donde se deja lo que llegó y no se ha colocado—, y
+ésa se contesta mejor viendo la pantalla que leyendo esto.
 
 #### 5-bis. ✅ EL REDISEÑO DE JOSE, 22/10 — ES MEJOR QUE EL MÍO, SE ADOPTA
 
