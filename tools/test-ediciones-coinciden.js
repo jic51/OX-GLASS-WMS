@@ -184,6 +184,36 @@ check('y las nombra en español', /Acopio Básico/.test(WEB) && /Acopio Pro/.tes
  * $49. */
 check('el precio de la versión gratis está en la página', /\$0/.test(WEB), true);
 
+/* ── Y EL ENLACE DEL CANDADO CAE DONDE HAY ALGO ───────────────────────────
+ *
+ * `_proUrl` construye la dirección que abre «Check Acopio Pro» desde una
+ * función cerrada. Hasta la v12.96 iba a la raíz, y el comentario decía por
+ * qué: *"va a la raíz, y no a /pro: esa página no existe, y habría sido un 404
+ * justo en el momento de más interés."* Ahora lleva `#pro`.
+ *
+ * Y ahí nace otra pareja que tiene que coincidir sin que nada lo obligue: **el
+ * ancla que escribe la app y el `id` que existe en la página**. Están en dos
+ * archivos, los edita gente distinta, y si alguien renombra el `id` el enlace
+ * no da error — deja al visitante arriba del todo, en silencio, justo en el
+ * momento de más interés. Que es el fallo que `/pro` evitaba y éste se
+ * reintroduce si nadie mira.
+ *
+ * Un `#` que no existe NO es un 404: es la misma página sin desplazar. Por eso
+ * esto se pudo cambiar sin miedo, y por eso hace falta una prueba — porque
+ * romperlo no se nota. */
+const anclaApp = (APP.match(/function _proUrl\([\s\S]*?\n\}/) || [''])[0]
+  .match(/#([A-Za-z][\w-]*)/);
+check('la app manda a un ancla concreta, no a la portada', !!anclaApp, true);
+if (anclaApp) {
+  check('...y ese ancla existe en la página — un `#` que no existe no da error, ' +
+        'deja al visitante arriba del todo y en silencio',
+    new RegExp('id="' + anclaApp[1] + '"').test(WEB) ? 'existe' : 'NO existe',
+    'existe');
+  check('...y es el encabezado de lo que añade Pro, que es lo que acaba de pulsar',
+    WEB.indexOf('id="' + anclaApp[1] + '"') === WEB.search(/<h3[^>]*id="pro"/) ||
+    /<h3[^>]*id="pro"[^>]*data-i18n="t216"/.test(WEB), true);
+}
+
 console.log('\n═══ 5· lo que la gratis promete, su permiso tiene que permitirlo ═══\n');
 
 /* ── EL CANDADO ES LA MITAD DE LA VERDAD; EL PERMISO ES LA OTRA ────────────
