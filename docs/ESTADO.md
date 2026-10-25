@@ -107,6 +107,17 @@ del Dashboard ya no se mueven al cambiar de filtro.
 las mires otra vez): 🏷 Labels sale a color en vez de gris · la pregunta de
 «¿también llegó esto?» no debería salir · no aparece ni una tarjeta en el mazo.
 
+> **25/10 — las dos primeras ya tienen causa, y son la misma.** El CSS del
+> candado está bien (medido: gris y con su 🔒). Lo que pasa es que **la clase no
+> llega**: el candado recorre una lista de `id` escrita a mano, una sola vez, y
+> hay **tres** controles de etiquetas en la app — el de Movements está en la
+> lista, y los otros dos **se crean al vuelo** (el botón «🏷 Print labels» del
+> aviso de «Saved ✓», y el de Ajustes → Locations), así que ninguna lista de
+> `id` recorrida al arrancar puede alcanzarlos. La pregunta de «¿también llegó
+> esto?» está en **ese mismo camino**. Detalle y las dos formas de arreglarlo:
+> `docs/BACKLOG.md`, «POR QUÉ 🏷 LABELS SALE A COLOR». Toca la app, así que
+> decides tú si va con la tercera en una sola versión.
+
 ---
 
 ### 🟪 ACOPIO **PRO** — lo que falta mirar

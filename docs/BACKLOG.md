@@ -312,6 +312,93 @@ puede contar, porque son trozos y no 490 resultados sueltos.
 
 ---
 
+## 🔴 25/10 — POR QUÉ «🏷 LABELS SALE A COLOR», Y HAY DOS, NO UNA
+
+En la lista de verificación había tres cosas apuntadas como «ya sabemos que
+están mal en Básico» sin causa. Ésta ya tiene causa, medida.
+
+### Lo primero: el CSS está bien
+
+Medido en el navegador con el `<style>` de verdad y el botón de verdad. Con
+`.pro-lock` puesto, un botón acaba en `opacity:.4`, `filter:grayscale(1)` y su
+🔒 detrás. **Se ve gris.** (Ojo al medirlo: si se lee el estilo calculado
+inmediatamente después de poner la clase sale `grayscale(0)` y `opacity:1` —
+está a mitad de la transición. Hay que esperar, o se diagnostica al revés.)
+
+### Entonces lo que pasa es que la clase NO ESTÁ
+
+`_basicCandado` recorre `BASIC_PRO_BOTONES`, que es **una lista de `id`
+escrita a mano**, y busca cada uno con `getElementById` **una vez**. Sólo
+alcanza a los botones que existen en ese instante y que están en la lista.
+
+Hay **tres** controles de etiquetas en la app y sólo uno está en la lista:
+
+| Dónde | Qué es | ¿Candado? |
+|---|---|---|
+| `btnMovLabels` (Movements) | estático, en la lista | ✅ sí |
+| **El aviso de «Saved ✓» al guardar una entrada** (~14780) | botón **`🏷 Print labels`** creado por `showToast` al vuelo | ❌ **no**, y va a todo color |
+| **`locPrintBtn`** (Ajustes → Locations) (~17537) | `btn-primary` creado al marcar ubicaciones | ❌ **no**, y es de color primario |
+
+Los dos que fallan **se crean después**, así que una lista de `id` recorrida
+una vez no puede alcanzarlos ni aunque alguien los añadiera. Es la forma de
+siempre: dos cosas que tienen que coincidir sin que nada lo obligue, el
+inventario de controles de Pro y la pantalla que los va creando.
+
+### Y explica la segunda de las tres
+
+La pregunta de **«¿también llegó esto?»** que Jose dice que no debería salir en
+Básico está en **ese mismo camino**: `luego = _offerAlsoArrived(...)`, que corre
+cuando el aviso caduca o al cerrar el cuadro de etiquetas. No son dos fallos
+sueltos: son el mismo trozo de código sin enterarse de la edición.
+
+### Lo que yo haría
+
+**No** añadir dos `id` más a la lista — eso deja el siguiente botón fuera igual.
+Las opciones, en orden:
+
+1. **Que el candado se ponga al crear**, no al arrancar: una función
+   `_proBoton(el, clave)` que llamen los sitios que fabrican botones, y que
+   `showToast` acepte una `clave` en su botón de acción. Es el cambio honesto y
+   es pequeño.
+2. **Y que una prueba lo obligue**: recorrer el archivo buscando los textos que
+   sólo tienen sentido en Pro (`Print labels`, `Scan`, `Backup`…) y exigir que
+   cada uno esté en `BASIC_PRO_BOTONES`, dentro de una zona de
+   `BASIC_PRO_ZONAS`, escondido por `BASIC_FUERA`, o marcado con `_proBoton`.
+   Heurística, sí; pero es justo el agujero por el que se colaron estos dos.
+
+**Decisión de Jose**, porque toca la app y obliga a pegarla: se hace con la
+tercera de las tres (las tarjetas del mazo) en una sola versión, o se deja.
+
+---
+
+## 🟡 25/10 — UN COMENTARIO QUE PROMETE MÁS DE LO QUE SE PUEDE SOSTENER
+
+Escribiendo la prueba que ejecuta de verdad lo de «sólo la fila que falta»
+(`test-errorlog-fila-nueva.js`), la primera comprobación que puse salió **roja
+con el producto sano**: afirmaba que la fila que estabas leyendo no se mueve ni
+un píxel al entrar una nueva arriba. Medido: la fila vieja pasa de `y=31` a
+`y=65` mientras `scrollTop` va de 20 a 30. El anclaje de scroll de Chrome
+compensa **en parte**, no del todo, y eso no lo decide la app.
+
+El comentario de `_errorLogMeterArriba` dice hoy:
+
+> *"El scroll no se mueve, el buscador conserva lo escrito, y lo que estabas
+> mirando sigue donde estaba."*
+
+Las dos últimas son ciertas y están comprobadas. **La primera no**: al meter una
+fila encima, lo de abajo baja un poco. No es un fallo —insertar es ya la
+operación mínima, y redibujar sería peor: te devuelve arriba del todo— pero el
+comentario afirma algo que no se sostiene, y un comentario que promete de más es
+el que hace que alguien no busque un problema real.
+
+**Qué hay que hacer:** cambiar esa frase por lo que sí es verdad —*"no te
+devuelve al principio de la tabla, que es lo que hace un redibujado"*—. Es un
+comentario, así que **no se tocó ahora**: cambiar el archivo cambia la huella y
+obligaría a Jose a pegar la app otra vez por una frase. **Viaja con la próxima
+versión que tenga algo más dentro**, junto a lo que quede de la lista de abajo.
+
+---
+
 ## ✅ 24/10 — LAS DOS EDICIONES, EN LA PÁGINA Y EN LOS DOCUMENTOS
 
 Jose: *"me puse a ver que en la landing y en todos los documentos sólo se habla
