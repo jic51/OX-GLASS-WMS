@@ -99,13 +99,14 @@ del Dashboard ya no se mueven al cambiar de filtro.
 
 | ✓ | Qué | Dónde |
 |---|---|---|
-| ☐ | **Ajustes ya no se queda muerto** (v12.97 — el bloqueador del vídeo) | Abre **Ajustes → Sistema** (gris, correcto) → cambia a **Import**: tiene que verse normal y dejarse tocar. Vuelve a Sistema: gris otra vez |
-| ☐ | **La gratis ya no enseña lo que no lleva** (v12.97) | En Ajustes **no** deben estar Permissions, Directory ni Import |
+| ☑ | ~~**Ajustes ya no se queda muerto** (v12.97)~~ | ✅ **confirmado por ti el 26/10**, en vídeo: sales de Sistema y el Error Log, Materials y Name & Logo se ven y se tocan |
+| ☑ | ~~**La gratis ya no enseña lo que no lleva** (v12.97)~~ | ✅ **confirmado**: Permissions, Directory e Import ya no están en la barra lateral |
 | ☑ | ~~El candado lleva a la lista de Pro~~ | ✅ **lo confirmaste el 25/10**: *"sí funciona así"* |
 | ☐ | **Los Términos de la app** (v12.96) | Menú de la cuenta → Términos: arriba del todo, el apartado de las dos ediciones, con fecha **24 October 2026**. ⚠️ **La pestaña de la HOJA no se actualiza** — es un fallo aparte, ver `BACKLOG.md` |
 | ☐ | **Una obra no se ofrece como estantería** (v12.95 — el concepto que encontraste) | Return → en «Came back from» escribe una obra → **no** debe salir *«is not a location in your warehouse yet · + Create»*, y **no** debe pedirte la obra otra vez abajo |
 | ☐ | **Decir «sí» en un aviso guarda** (v12.94 — el fallo que encontraste) | Return → algo con 49 fuera → escribe 60 → Save anyway. Tiene que **guardar**, no dar error |
 | ☐ | **Borrar muchos tarda segundos y se puede parar** (v12.92) | Marca unos cientos → Delete. Botón **Stop** a mitad: debe decir *«Stopped — X of Y deleted»* |
+| ⚠️ | **Importar en Básico: decidiste abrirlo y no está** | Dijiste el 22/10 *"sí, CSV"*. Hoy Import **no sale** en la gratis — es correcto respecto al código de hoy, no respecto a tu decisión. Para probar importar hace falta la copia **Pro**, o construir esto |
 | ☐ | **Importar no pierde filas** (v12.91) | Un fichero de más de 500 filas: el botón y el final tienen que decir **el mismo número**, con *«matches the file»* |
 | ☐ | **El mismo fichero dos veces avisa** (v12.91) | Súbelo otra vez: recuadro rojo arriba, y el botón **sigue ahí** |
 | ☐ | **Deshacer una importación** (v12.91) | Ajustes → Import → **↩ Undo this import** |
@@ -116,9 +117,10 @@ del Dashboard ya no se mueven al cambiar de filtro.
 | ☐ | **Vaciar la búsqueda con la ✕ relanza la búsqueda** | Movements: escribe, filtra, pulsa ✕ → la tabla se repuebla |
 | ☐ | **La papelera después de borrar** | Ajustes → Sistema → lo borrado está ahí para devolverlo |
 
-**Y tres que YA SABEMOS que están mal en Básico** (anotadas, no hace falta que
-las mires otra vez): 🏷 Labels sale a color en vez de gris · la pregunta de
-«¿también llegó esto?» no debería salir · no aparece ni una tarjeta en el mazo.
+**Y CUATRO que YA SABEMOS que están mal en Básico** (anotadas, no hace falta
+que las mires otra vez): 🏷 Labels sale a color en vez de gris · la pregunta de
+«¿también llegó esto?» no debería salir · no aparece ni una tarjeta en el mazo ·
+**«Choose image» del logo** (nuevo, 26/10).
 
 > **25/10 — las dos primeras ya tienen causa, y son la misma.** El CSS del
 > candado está bien (medido: gris y con su 🔒). Lo que pasa es que **la clase no

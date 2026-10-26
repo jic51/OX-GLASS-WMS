@@ -170,6 +170,67 @@ dirección se lee igual con un palmo*. Los reels lo llevan más lejos todavía.
 
 ---
 
+## 6 · «DOS APPS CARGAN EN EXACTAMENTE 0,9 s. UNA SE SIENTE LENTA, LA OTRA INSTANTÁNEA»
+
+Jose, 26/10, con una captura del reel de **moe.dev** (@mhmdnabdev): *"te mando
+2 vídeos de UI/UX para que aprendas y guardes la información."*
+
+El reel enseña dos teléfonos con **el mismo 0,9 s** encima y pregunta por qué
+uno parece rápido. La respuesta no es de rendimiento: es de **qué se ve
+mientras se espera**.
+
+**Por qué éste nos toca más que ningún otro de la lista.** Es exactamente la
+queja que Jose lleva repitiendo desde el 22/10 y que yo seguía tratando como un
+problema de velocidad: *"según yo el vídeo muestra que aún sigue lenta la app
+al abrir"*. Puede que no haya nada que acelerar. **Lo que hay es un hueco
+blanco que no dice nada, y luego todo apareciendo de golpe y empujándose.**
+
+Lo que se saca de aquí, y encaja con lo que él mismo pidió el 25/10 sobre el
+nombre y el logo:
+
+1. **Enseñar la FORMA antes que el dato.** Un hueco del tamaño exacto de lo que
+   va a llegar —la tabla, las tarjetas, la barra de arriba— se lee como «ya
+   casi». Un hueco vacío se lee como «no ha pasado nada».
+2. **Nada que llegue tarde puede mover lo que ya está colocado.** Es la misma
+   regla que las columnas del Dashboard y la misma que la fila nueva del
+   registro de errores. Tres sitios, una regla.
+3. **Lo primero que aparece tiene que ser lo que la persona vino a ver**, no la
+   decoración. Si el logo llega antes que el stock, hemos gastado el primer
+   segundo en lo que a nadie le importa.
+
+Medido en nuestra propia barra de arriba el 26/10, con el navegador: cuando
+llega el logo, las pestañas, el menú de la cuenta, el punto verde **y todo el
+cuerpo de la página bajan 37 px de golpe**. Lo mismo a 1280, 820 y 390 px de
+ancho — que es una buena noticia, porque significa **una sola regla**, no tres.
+
+## 7 · «TUS NOMBRES DE COMPONENTE O AYUDAN A LA IA O LA CONFUNDEN»
+
+Reel de **Memorisely**, mismo envío. Enseña una pauta de tres partes para
+nombrar: **Base → Variant → Size Modifier** (`Button` · primario, secundario,
+contorno, peligro · `Large`, `Medium`, `Small`), y la rejilla entera dibujada
+para que las combinaciones se vean.
+
+**Lo honesto primero: esto no es nuestro caso, y conviene decirlo.** Acopio no
+tiene biblioteca de componentes ni Figma; es UN archivo con CSS escrito a mano,
+y eso es a propósito. Copiar un sistema de nombres de Figma aquí sería ponerle
+burocracia a algo que no la pide.
+
+**Lo que sí nos sirve, y es la idea de debajo:** un nombre de clase tiene que
+decir **en qué eje está**. Nuestras clases ya lo hacen a medias y por accidente
+—`btn`, `btn-primary`, `btn-ghost`, `btn-sm` son exactamente Base + Variante +
+Tamaño— pero conviven con otras que no siguen ninguna pauta. Y donde eso ya nos
+costó algo real fue el 24/10, con `.pro-lock` y `.pro-off`: dos nombres
+parecidos para dos cosas distintas (un BOTÓN con candado y una ZONA apagada), y
+yo mismo me confundí leyéndolos.
+
+**La regla que me llevo, sin inventar un sistema:** cuando dos clases se
+parezcan en el nombre, o nombran lo mismo —y entonces sobra una— o nombran
+cosas distintas —y entonces el nombre tiene que decir cuál es la diferencia—.
+Ni `.pro-lock` ni `.pro-off` dicen que la una es para un botón y la otra para
+una zona entera.
+
+---
+
 ## LO QUE SE PUEDE HACER MAÑANA, SIN DECIDIR NADA GRANDE
 
 1. **Las sombras** (tanda ya en la lista): en vez de inventar una escala de

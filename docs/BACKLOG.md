@@ -411,6 +411,43 @@ fallo pero sí una promesa que estamos haciendo sin decirla: el **espacio de
 Drive del admin es el de toda la empresa**, y si esa cuenta desaparece, los
 documentos y los respaldos se van con ella.
 
+### 🔴 2-bis. «CHOOSE IMAGE» EN BÁSICO GUARDA A MEDIAS Y REVIENTA CON UN ERROR AJENO
+
+Salió del vídeo del 26/10 en el que Jose repasa Ajustes: en **Name & Logo** —la
+primera pestaña de Ajustes y la primera pantalla que toca alguien que acaba de
+instalar la gratis— hay un botón **«Choose image»** a todo color, sin candado.
+
+**No puede funcionar**, y es de manual: guardar un logo hace
+`getOrCreateFolder_(...).createFile(blob)`, o sea **Drive**, y
+`appsscript.basic.json` pide un solo permiso, `spreadsheets.currentonly`.
+
+**Y falla de la peor forma posible.** Mirando el orden de `saveCompanyProfile`:
+
+```js
+p.setProperty('COMPANY_NAME', name);          // ← se guarda PRIMERO
+p.setProperty('COMPANY_DOMAIN', ...);         // ← y esto también
+...
+} else if (data.logo && data.logo.fileData) {
+  var file = getOrCreateFolder_(...).createFile(blob);   // ← aquí revienta
+```
+
+El nombre y el dominio **ya se guardaron**, y encima sale un error de Google —
+no un mensaje nuestro, porque `saveCompanyProfile` no tiene `basicNiega_`.
+Media operación hecha y el mensaje de otro. Es exactamente la trampa que Jose
+nombró el 19/10: *"se le dice al cliente lo que no se puede hacer ANTES de que
+lo termine de hacer, justo al momento de empezar"*.
+
+**Y es el cuarto control de Pro sin candado**, junto a los tres 🏷 de la nota
+del 25/10. Cuatro no son cuatro descuidos: son el mismo agujero —
+`BASIC_PRO_BOTONES` es una lista de `id` recorrida UNA vez al arrancar, y no
+alcanza ni a los botones que se crean después ni a los que nadie añadió.
+
+**Lo que haría, y ya son dos sitios que lo piden:** el arreglo de la nota del
+25/10 (poner el candado AL CREAR el botón, más una prueba que lo obligue),
+y de paso una oferta nueva en `BASIC_PRO` para el logo — porque esto **vende**:
+«pon el logo de tu empresa arriba» es justo la clase de cosa por la que alguien
+sube a Pro. Esconderlo sería perder la venta; dejarlo así es romper la app.
+
 ### 🟡 3. EL TOAST DE PRO ESTÁ MAL ALINEADO — Y HAY QUE MIRARLOS TODOS
 
 Jose, con una captura: *"el candado está a mitad del toast (está correcto) pero
@@ -439,6 +476,35 @@ dentro sin empujar nada.
 Y conviene hacerlo como regla, no como parche: *nada que llegue tarde puede
 mover lo que ya está colocado*. Es lo mismo que la fila nueva del registro de
 errores, y lo mismo que las columnas.
+
+**MEDIDO EL 26/10, en el navegador, con la barra de verdad.** Cuando llega el
+logo, las pestañas, el menú de la cuenta, el punto verde **y todo el cuerpo de
+la página bajan 37 px de golpe**:
+
+| Ancho | Pestañas antes → después | Salto |
+|---|---|---|
+| 1280 px | 78 → 115 | **37 px** |
+| 820 px | 78 → 115 | **37 px** |
+| 390 px | 78 → 115 | **37 px** |
+
+**Los 37 px son los mismos en los tres anchos, y eso es la buena noticia**:
+significa que es UNA regla, no tres. La causa es literal —
+`<img id="appLogo" style="display:none">`: lo que está en `display:none` no
+ocupa sitio, así que al encenderlo empuja todo lo que tiene debajo.
+
+**El arreglo es el mismo que el de las columnas:** reservar el hueco desde el
+primer pintado. `visibility:hidden` en vez de `display:none`, o un alto fijo en
+`.app-logo` con el `<img>` dentro. Cuando no hay logo, el hueco se quita **una
+sola vez**, al saberlo, y no después.
+
+**Y hay dos cosas más que cambian tarde en esa misma barra**, y conviene
+arreglarlas en el mismo viaje o volverá a moverse por otro lado:
+
+- `<h1 id="appTitle">Warehouse</h1>` nace diciendo «Warehouse» y luego se
+  reemplaza por el nombre de la empresa — cambia de ancho.
+- `#jsVersionTag` nace como **«JS NOT LOADED»** en rojo y se reestiliza a la
+  versión callada. Eso es a propósito y es correcto (si el script no corre, es
+  lo único que lo dice), pero su tamaño tiene que estar reservado igual.
 
 ---
 
