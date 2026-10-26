@@ -91,7 +91,7 @@ const AFIRMACIONES = [
     dice:'the trash that holds a deleted movement', marca:'restoreMovement',  en:'gs',
     porque:'la papelera de 30 días (v11.55)' },
   { pagina:'landing/acopio.html', existe:true,
-    dice:'an evening report of everything that moved', marca:'dailyReportSettings_', en:'gs',
+    dice:'of everything that moved that day',          marca:'dailyReportSettings_', en:'gs',
     porque:'el reporte diario por correo' },
   { pagina:'landing/acopio.html', existe:true,
     dice:'Every edit keeps its reason',          marca:'em_reason',          en:'html',

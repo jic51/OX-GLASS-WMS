@@ -5840,7 +5840,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.97';
+var APP_VERSION = '12.98';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5852,7 +5852,7 @@ var APP_VERSION = '12.97';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'fb3ce95f';
+var APP_BUILD = '216da04c';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -15513,7 +15513,7 @@ function _renderSystemTab() {
                 'their own section below.') +
       '</label>' + actHtml +
     '</div>' +
-    '<div class="field" style="margin-bottom:1.25rem">' +
+    '<div class="field" id="sysArchivado" style="margin-bottom:1.25rem">' +
       '<label style="display:flex;align-items:center;gap:.4rem">Archive movements older than ' +
         _infoIc('Older movements stay accessible via "Load Older History" — this only moves them out of the main table for speed.') +
       '</label>' +
@@ -15525,7 +15525,7 @@ function _renderSystemTab() {
         '</select>' +
       '</div>' +
     '</div>' +
-    '<div class="field" style="margin-bottom:1.25rem">' +
+    '<div class="field" id="sysRespaldo" style="margin-bottom:1.25rem">' +
       '<label style="display:flex;align-items:center;gap:.4rem">Backups ' +
         _infoIc('A full copy of your system is made every night at 2am and kept for 30 days ' +
                 'in a folder in your own Drive. Old copies are deleted after that.\n\n' +
@@ -15534,7 +15534,7 @@ function _renderSystemTab() {
       '</label>' +
       '<div id="backupBox" style="color:var(--muted);font-size:.78rem"><span class="spin-hg">⏳</span> Checking…</div>' +
     '</div>' +
-    '<div class="field" style="margin-bottom:1.25rem">' +
+    '<div class="field" id="sysReporte" style="margin-bottom:1.25rem">' +
       '<label style="display:flex;align-items:center;gap:.4rem">Daily movement report ' +
         _infoIc('An email each evening listing what came into the warehouse and what left that day. ' +
                 'It is sent on quiet days too, saying there were no movements — so a quiet day never ' +
@@ -15548,7 +15548,7 @@ function _renderSystemTab() {
       '</label>' +
       '<div id="spaceBox" style="color:var(--muted);font-size:.78rem"><span class="spin-hg">⏳</span> Measuring…</div>' +
     '</div>' +
-    '<div class="field" style="margin-bottom:1.25rem">' +
+    '<div class="field" id="sysLector" style="margin-bottom:1.25rem">' +
       '<label style="display:flex;align-items:center;gap:.4rem">Document reader (AI) ' +
         _infoIc('Reads a pasted supplier email and pulls out what is arriving, how much and when. It runs on your own Google AI key — Google bills the usage to you, not to us.') +
       '</label>' +
@@ -15591,6 +15591,12 @@ function _renderSystemTab() {
   // The list exists in the DOM as of the line above, so this is the earliest
   // moment the spotlight can land — and the only one that does not depend on
   // how long the server took. See _openSystemActivity.
+  /* SECCIÓN A SECCIÓN, y después de pintar porque estas secciones nacen aquí.
+     Ver `BASIC_PRO_SISTEMA`: la papelera y el espacio usado se quedan abiertos
+     en la gratis, que es lo que Jose decidió y lo que antes impedía que se
+     pudiera devolver un movimiento borrado. */
+  _basicApagarSecciones();
+
   _applySysActSpot();
 
   _loadBackupStatus();
@@ -16649,12 +16655,30 @@ function _renderImportTab() {
     '<div class="field">' +
       '<label>Bring in a file</label>' +
       '<p style="font-size:.8rem;color:var(--muted);margin:0 0 .75rem">' +
-        'Bulk-import an existing inventory from an Excel (.xlsx) or CSV file — useful for the first setup, or catching up after counting on paper. ' +
-        'Every row becomes a real ENTRY movement, reviewed here before anything is saved. Multi-sheet workbooks: the right sheet is detected automatically, and you can switch sheets after loading.' +
+        (APP_BASIC
+          ? 'Bulk-import an existing inventory from a CSV file — useful for the first setup, or catching up after counting on paper. Every row becomes a real ENTRY movement, reviewed here before anything is saved.'
+          : 'Bulk-import an existing inventory from an Excel (.xlsx) or CSV file — useful for the first setup, or catching up after counting on paper. ' +
+        'Every row becomes a real ENTRY movement, reviewed here before anything is saved. Multi-sheet workbooks: the right sheet is detected automatically, and you can switch sheets after loading.') +
       '</p>' +
       '<div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap">' +
         '<button class="btn btn-ghost btn-sm" onclick="_downloadImportTemplate()">⬇ Download CSV Template</button>' +
-        '<input type="file" id="importFileInput" accept=".csv,.xlsx,.xls" style="font-size:.82rem">' +
+        /* ── LA GRATIS SÓLO LEE .csv, Y LO DICE ANTES ─────────────────────
+           Convertir un .xlsx usa la API de Drive por `UrlFetchApp`: dos
+           permisos que esta edición no pide. Así que el selector no los
+           ofrece —«se le dice al cliente lo que no se puede hacer ANTES de
+           que lo termine de hacer»— y debajo va la salida, que es lo que
+           convierte un límite en una instrucción. */
+        '<input type="file" id="importFileInput" accept="' +
+          (APP_BASIC ? '.csv' : '.csv,.xlsx,.xls') + '" style="font-size:.82rem">' +
+        (APP_BASIC
+          ? '<p style="font-size:.78rem;color:var(--muted);margin:.5rem 0 0">' +
+              'Acopio Basic reads <b>.csv</b>. If what you have is an Excel file, open it and use ' +
+              '<b>File &rarr; Download &rarr; Comma-separated values (.csv)</b> &mdash; or, in Excel, ' +
+              '<b>Save As &rarr; CSV</b> &mdash; and bring that one. Reading .xlsx straight needs a ' +
+              'Google permission this edition does not ask for, which is what keeps it installable ' +
+              'in two minutes.' +
+            '</p>'
+          : '') +
       '</div>' +
     '</div>' +
     '<div class="field">' +
@@ -16692,6 +16716,24 @@ function _onImportFileChange(e){
   var file = e.target.files[0];
   if (!file) return;
   var box = document.getElementById('importPreviewBox');
+  /* ── UN .xlsx EN LA GRATIS ES UNA OFERTA, NO UN ERROR ─────────────────────
+   *
+   * El selector ya pide sólo `.csv`, pero eso no basta: se puede arrastrar un
+   * fichero encima, o renombrarlo. El servidor también se niega, con su
+   * mensaje y su salida escrita — pero llegar hasta ahí es subir el fichero
+   * entero para que te digan que no.
+   *
+   * Aquí se decide antes de leer un solo byte, que es lo que Jose pidió el
+   * 19/10: *"se le dice al cliente lo que no se puede hacer ANTES de que lo
+   * termine de hacer"*. Y se dice como OFERTA, porque éste es el momento de
+   * máxima intención que vamos a tener: alguien con su inventario en la mano,
+   * intentando meterlo. */
+  if (APP_BASIC && /\.xlsx?$/i.test(file.name || '')) {
+    e.target.value = '';
+    box.innerHTML = '';
+    _proPitch('importarexcel');
+    return;
+  }
   box.innerHTML = '<p style="color:var(--muted);font-size:.85rem"><span class="spin-hg">⏳</span> Reading file…</p>';
   _readFileAsBase64(file, function(b64, mime){
     if (!b64) { box.innerHTML = '<p style="color:var(--red);font-size:.85rem">Could not read this file.</p>'; return; }
@@ -29160,7 +29202,22 @@ var BASIC_FUERA = {
    *
    * `errorlog` SE QUEDA — él mismo dijo que está bien, y es verdad: un registro
    * de errores no es una función de pago, es cómo se pide ayuda. */
-  ajustes: ['permissions', 'pmdirectory', 'import'],
+  /* ── IMPORT SE QUEDA (26/10) ───────────────────────────────────────────
+   * Jose: *"también quiero que se pueda importar documentos, así que eso sí lo
+   * vamos a hacer en básico... si sólo dejamos que se suban archivos CSV
+   * estamos dándole al cliente una buena forma de utilizar la app."*
+   *
+   * Tiene razón y es la función que decide si la gratis sirve para algo: una
+   * bodega que ya existe llega con su inventario en una hoja, y sin importar
+   * tendría que teclearlo. Leer un CSV **no necesita ningún permiso más** — el
+   * navegador lee el fichero y manda el texto, y escribir en la hoja es lo
+   * único que la gratis sí puede hacer.
+   *
+   * `.xlsx` NO, y no es una decisión comercial: convertirlo usa la API de
+   * Drive por `UrlFetchApp` (ver `excelToSheets_`), o sea DOS permisos que
+   * esta edición no pide. Lo dice en pantalla y da la salida — «Archivo →
+   * Descargar → .csv»— en vez de fallar con un error de Google. */
+  ajustes: ['permissions', 'pmdirectory'],
   pestanas: []
 };
 
@@ -29188,7 +29245,36 @@ var BASIC_PRO_ZONAS = {
 /* Las pestañas de ajustes se pintan cada vez que se entra en ellas, así que no
  * basta con apagarlas una vez: hay que volver a hacerlo después de cada
  * pintada. Ver la llamada al final de `_renderSettingsTab`. */
-var BASIC_PRO_AJUSTES = { system: 'respaldo' };
+/* ── YA NO SE APAGA LA PESTAÑA ENTERA ──────────────────────────────────────
+ *
+ * Jose, 26/10: *"la papelera no se puede probar aún en básico, por lo menos
+ * regresar movimientos borrados no"*. Y lo había decidido hacía días: *"tu
+ * decisión: abro la papelera en la gratis, si hazlo así"*.
+ *
+ * El problema era de grano. `{ system: 'respaldo' }` apagaba el CONTENEDOR de
+ * la pestaña de Sistema, y ahí dentro viven ocho cosas distintas: el respaldo
+ * y el reporte diario, que de verdad son de Pro, y la papelera y el espacio
+ * usado, que no tienen por qué serlo. Apagar la pestaña entera era apagar lo
+ * que sobra por culpa de lo que falta.
+ *
+ * Ahora se apaga SECCIÓN A SECCIÓN, y cada una contesta de lo suyo — que es la
+ * regla que Jose pidió el 21/10 y que una pestaña entera no puede cumplir: el
+ * candado del respaldo no puede explicar por qué no se puede vaciar la
+ * papelera.
+ *
+ * Este mapa se queda vacío a propósito. Lo dejo escrito en vez de borrarlo
+ * porque la próxima pestaña que haya que cerrar a medias va a querer esto, y
+ * `_basicApagarAjuste` sigue siendo el sitio donde ponerlo. */
+var BASIC_PRO_AJUSTES = {};
+
+/* Las secciones de la pestaña de Sistema que la gratis no lleva, cada una con
+ * la oferta que le toca. El `id` lo pone `_renderSystemTab`. */
+var BASIC_PRO_SISTEMA = {
+  sysArchivado: 'archivado',      // archivar solo necesita un disparador
+  sysRespaldo:  'respaldo',
+  sysReporte:   'reportediario',
+  sysLector:    'lectura'
+};
 
 /**
  * Deja una zona entera a la vista pero intocable: gris claro, nada de dentro
@@ -29218,6 +29304,19 @@ function _basicApagarZona(el, clave){
     ev.stopPropagation();
     _proPitch(c);
   }, true);   // en captura: llega antes que cualquier manejador de dentro
+}
+
+/* Las secciones de una pestaña que se pinta de nuevo cada vez. Se llama al
+ * final de `_renderSystemTab`, una vez por pintada, porque esas secciones
+ * nacen ahí: buscarlas antes sería buscar algo que todavía no existe.
+ *
+ * `_basicApagarZona` se salta sola las que ya tienen su marca, así que
+ * repetirla no cuesta nada ni duplica el oyente. */
+function _basicApagarSecciones(){
+  if (!APP_BASIC) return;
+  Object.keys(BASIC_PRO_SISTEMA).forEach(function(id){
+    _basicApagarZona(document.getElementById(id), BASIC_PRO_SISTEMA[id]);
+  });
 }
 
 /* Lo contrario, que faltaba. Ver `_basicApagarAjuste`. */
@@ -29262,6 +29361,18 @@ var BASIC_PRO = {
                que: 'Record what is coming before it arrives, and see at a glance what landed and what is late.' },
   respaldo:  { titulo: '🌙 Automatic backup',
                que: 'A copy of everything, made on its own every night and kept in your own Drive.' },
+  /* ── DOS QUE SALIERON AL ABRIR LA PESTAÑA DE SISTEMA POR SECCIONES ───────
+   * Las tres cosas de esa pestaña que la gratis no lleva necesitan el mismo
+   * permiso que falta (`script.scriptapp`, los disparadores, y
+   * `script.send_mail`), pero **no son la misma función**, y una sola oferta
+   * para las tres volvería a ser el fallo del 21/10: pulsas el reporte de la
+   * tarde y te contestan del respaldo. */
+  archivado: { titulo: '🗂 Keep it fast as it grows',
+               que: 'Old movements move to a tab of their own on their own, so the app stays quick after years of use.' },
+  importarexcel: { titulo: '📊 Excel files straight in',
+                   que: 'Bring an .xlsx in as it comes \u2014 Pro picks the right tab in a workbook and lets you switch tabs after loading. (Basic reads .csv, and any spreadsheet saves as one in two clicks.)' },
+  reportediario: { titulo: '🌆 An evening report',
+                   que: 'An email at the end of the day with everything that moved, sent on its own — including the quiet days, so silence always means the same thing.' },
   /* El lector de correos va aparte y con su propio mensaje: vende muchísimo y
    * no cabe en la frase genérica. */
   /* ── UNA OFERTA POR COSA, Y «CORREO» ERAN DOS ─────────────────────────────
@@ -30224,6 +30335,17 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '12.98',
+    titulo: 'The free edition gets Import, and the trash opens',
+    puntos: [
+      '<b>Import is in Acopio Basic now.</b> A CSV file, every row checked and counted before anything is saved, and the whole import can be undone. It is the thing that decides whether the free edition is usable at all: a warehouse that already exists arrives with its inventory in a spreadsheet, and without this it would have to be typed in.',
+      '<b>.xlsx is not</b>, and it is not a commercial decision: converting one uses the Drive API, which is a permission this edition deliberately does not ask for \u2014 that is what lets it install without the warning screen. The screen says so <b>before</b> you pick the file, and tells you the way out: any spreadsheet saves as .csv in two clicks.',
+      '<b>And deleting can be undone again.</b> Settings \u2192 System used to go grey <b>whole</b> in the free edition because two things inside it are Pro \u2014 and the trash was in there with them. Now each section closes on its own: the backup, the archive, the evening report and the document reader stay closed; the trash, the storage bar and what the system did on its own are open.',
+      'Each of those now answers for <b>itself</b> when you touch it, instead of all of them answering \u201cAutomatic backup\u201d.'
+    ],
+    antes:  'A whole tab closed because two things in it were Pro',
+    ahora:  'Import works, and a deleted movement comes back' },
+
   { ver: '12.97',
     titulo: 'Settings stops going dead in the free edition',
     puntos: [
@@ -30257,17 +30379,6 @@ var NOVEDADES = [
     ],
     antes:  'Offering to turn a job site into a shelf',
     ahora:  'Inside and outside are two different things' },
-
-  { ver: '12.94',
-    titulo: 'Saying \u201cyes\u201d to a warning now saves',
-    puntos: [
-      'Returning more of something than ever went out warned you correctly \u2014 and then <b>pressing \u201cSave anyway\u201d crashed</b>, so the movement could not be saved at all.',
-      '<b>It was not one warning, it was five</b>: too much stock on a multi-location entry, a transfer row over stock, a return with no rack, a return of more than went out, and waste with not enough stock.',
-      'All five asked the question <b>before the movement was ready to be sent</b>, so answering yes had nothing to send. They note the question now, and one place decides between asking and saving once everything is ready.',
-      'That also fixes something nobody had noticed: a soft \u201care you sure?\u201d used to cut the path short, so the real checks below it never ran. <b>A genuine error beats a warning now.</b>'
-    ],
-    antes:  'Five warnings where pressing Yes crashed',
-    ahora:  'Yes means save' },
 
 ];
 

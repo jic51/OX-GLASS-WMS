@@ -88,14 +88,28 @@ ${nav.replace(/onclick="[^"]*"/g, '')}
      pieza que hace posible el fallo. */
   function _renderSettingsTab(tab){
     _settingsTab = tab;
-    document.getElementById('settingsTabContent').innerHTML =
-      '<button id="dentro" onclick="window.__dentroPulsado++">' + tab + '</button>';
+    var c = document.getElementById('settingsTabContent');
+    if (tab === 'system') {
+      /* La pestaña de Sistema, con la forma que importa: varias secciones
+         dentro del MISMO contenedor, unas de Pro y otras no. Los «id» son los
+         de verdad, leídos de «BASIC_PRO_SISTEMA», más la papelera, que es la
+         que tiene que quedarse abierta. */
+      c.innerHTML = Object.keys(BASIC_PRO_SISTEMA).map(function(id){
+        return '<div class="field" id="' + id + '"><button class="b-' + id +
+               '" onclick="window.__dentroPulsado++">x</button></div>';
+      }).join('') +
+      '<div class="field" id="sysPapelera">' +
+        '<button id="dentro" onclick="window.__dentroPulsado++">papelera</button></div>';
+      _basicApagarSecciones();
+    } else {
+      c.innerHTML = '<button id="dentro" onclick="window.__dentroPulsado++">' + tab + '</button>';
+    }
     _basicApagarAjuste(tab);
   }
-${A.constantes(SRC, ['BASIC_PRO_AJUSTES', 'BASIC_FUERA', 'SETTINGS_CATALOG_TABS'])}
+${A.constantes(SRC, ['BASIC_PRO_AJUSTES', 'BASIC_PRO_SISTEMA', 'BASIC_FUERA', 'SETTINGS_CATALOG_TABS'])}
 ${A.levantar(SRC,
   ['_basicApagarZona', '_basicEncenderZona', '_basicApagarAjuste',
-   '_settingsTabVisible', '_filterSettingsSidebar'],
+   '_basicApagarSecciones', '_settingsTabVisible', '_filterSettingsSidebar'],
   { dobles: ['_proPitch', '_renderSettingsTab'] })}
 </script></body></html>`;
 
@@ -118,17 +132,43 @@ ${A.levantar(SRC,
     return { gris: el.classList.contains('pro-off'), pro: el.getAttribute('data-pro') };
   });
 
-  console.log('\n═══ 1· una pestaña de Pro sí se apaga ═══\n');
+  console.log('\n═══ 1· dentro de Sistema se apaga lo de Pro y NADA MÁS ═══\n');
 
+  /* EL GRANO ES LA CORRECCIÓN DEL 26/10. Antes se apagaba el contenedor de la
+   * pestaña, y ahí dentro viven ocho cosas: apagar la pestaña era apagar lo
+   * que sobra por culpa de lo que falta — y lo que sobraba era la papelera,
+   * que Jose había mandado abrir el 22/10. */
   await p.evaluate(() => _renderSettingsTab('system'));
-  check('System queda en gris en la versión gratis', await estado(), { gris: true, pro: 'respaldo' });
+  check('la pestaña NO se apaga entera', await estado(), { gris: false, pro: null });
+  check('...el respaldo sí',
+    await p.evaluate(() => {
+      const el = document.getElementById('sysRespaldo');
+      return { gris: el.classList.contains('pro-off'), pro: el.getAttribute('data-pro') };
+    }), { gris: true, pro: 'respaldo' });
+  check('...y la papelera NO: se puede tocar y devolver un movimiento',
+    await p.evaluate(() => {
+      window.__dentroPulsado = 0;
+      const el = document.getElementById('sysPapelera');
+      document.getElementById('dentro').click();
+      return { gris: el.classList.contains('pro-off'), pulsado: window.__dentroPulsado };
+    }), { gris: false, pulsado: 1 });
+  check('...y tocar el respaldo ofrece el respaldo, no otra cosa',
+    await p.evaluate(() => {
+      window.__ofertas = [];
+      document.getElementById('sysRespaldo').click();
+      return window.__ofertas;
+    }), ['respaldo']);
+  check('...y tocar el reporte diario ofrece el reporte, que es la regla del 21/10',
+    await p.evaluate(() => {
+      window.__ofertas = [];
+      document.getElementById('sysReporte').click();
+      return window.__ofertas;
+    }), ['reportediario']);
 
-  await p.evaluate(() => document.getElementById('settingsTabContent').click());
-  check('...y al tocarla ofrece lo que falta', await p.evaluate(() => window.__ofertas), ['respaldo']);
+  console.log('\n═══ 2· y al salir de Sistema no queda gris — el fallo del vídeo ═══\n');
 
-  console.log('\n═══ 2· y al salir de ella se ENCIENDE — el fallo del vídeo ═══\n');
-
-  await p.evaluate(() => { window.__ofertas = []; _renderSettingsTab('import'); });
+  await p.evaluate(() => { window.__ofertas = []; window.__dentroPulsado = 0;
+                           _renderSettingsTab('import'); });
   check('Import NO se queda en gris al venir desde System',
     await estado(), { gris: false, pro: null });
   await p.evaluate(() => document.getElementById('dentro').click());
@@ -146,14 +186,15 @@ ${A.levantar(SRC,
       await p.evaluate(() => window.__dentroPulsado), 1);
   }
 
-  console.log('\n═══ 3· volver a System la apaga otra vez ═══\n');
+  console.log('\n═══ 3· volver a Sistema vuelve a apagar lo de Pro ═══\n');
 
-  /* Encender no puede ser un camino de ida: si apagar sólo funcionara la
-   * primera vez, el respaldo quedaría abierto en la gratis a partir del
-   * segundo paseo — el fallo contrario y más caro. */
+  /* Apagar no puede ser un camino de ida: si sólo funcionara la primera vez,
+   * el respaldo quedaría ABIERTO en la gratis a partir del segundo paseo — el
+   * fallo contrario y mucho más caro que el gris. */
   await p.evaluate(() => { window.__ofertas = []; _renderSettingsTab('system'); });
-  check('System vuelve a estar en gris', await estado(), { gris: true, pro: 'respaldo' });
-  await p.evaluate(() => document.getElementById('settingsTabContent').click());
+  check('el respaldo vuelve a estar en gris',
+    await p.evaluate(() => document.getElementById('sysRespaldo').classList.contains('pro-off')), true);
+  await p.evaluate(() => document.getElementById('sysRespaldo').click());
   check('...y vuelve a ofrecer, una sola vez por clic — el oyente no se duplicó',
     await p.evaluate(() => window.__ofertas), ['respaldo']);
 
@@ -174,7 +215,9 @@ ${A.levantar(SRC,
   let v = await visibles();
   check('en la gratis no se ve Permissions, aunque seas administrador', v.permissions, false);
   check('...ni Directory', v.pmdirectory, false);
-  check('...ni Import', v.import, false);
+  /* IMPORT YA NO ESTÁ AQUÍ, y es la decisión de Jose del 26/10: *"también
+   * quiero que se pueda importar documentos, así que eso sí lo vamos a hacer
+   * en básico"*. Lo comprueba la sección 6. */
   check('...pero Categories sí', v.categories, true);
   check('...y System también: lleva candado, no está escondida', v.system, true);
   check('...y el Error Log también, que es cómo se pide ayuda', v.errorlog, true);
@@ -190,7 +233,7 @@ ${A.levantar(SRC,
 
   await p.evaluate(() => { APP_BASIC = false; userRole = 'ADMIN'; _filterSettingsSidebar(); });
   v = await visibles();
-  check('y en Pro un administrador las ve todas, incluidas las tres de antes',
+  check('y en Pro un administrador las ve todas, incluidas las dos de antes',
     [v.permissions, v.pmdirectory, v.import], [true, true, true]);
 
   console.log('\n═══ 5· y no se abre en una pestaña que ya no está ═══\n');
@@ -198,12 +241,59 @@ ${A.levantar(SRC,
   /* Cerrar Ajustes en «Import» en una copia de Pro y abrir la gratis en el
    * mismo navegador dejaba un panel en blanco sin botón al que volver: la
    * pestaña guardada vive en `sessionStorage`. El respaldo miraba sólo el rol. */
-  await p.evaluate(() => { APP_BASIC = true; userRole = 'ADMIN'; _settingsTab = 'import';
+  await p.evaluate(() => { APP_BASIC = true; userRole = 'ADMIN'; _settingsTab = 'permissions';
                            _filterSettingsSidebar(); });
   check('una pestaña guardada que la edición no lleva cae en el catálogo',
     await p.evaluate(() => _settingsTab), 'categories');
 
-  console.log('\n═══ 6· y nada revienta ═══\n');
+  console.log('\n═══ 6· las dos decisiones de Jose, del 22 y del 26 de octubre ═══\n');
+
+  /* ── LA PAPELERA SE ABRE, EL RESPALDO NO ──────────────────────────────────
+   *
+   * Jose lo decidió el 22/10 —*"que sí se pueda devolver un borrado"*— y el
+   * 26/10 descubrió que no se había hecho: *"la papelera no se puede probar
+   * aún en básico, por lo menos regresar movimientos borrados no"*.
+   *
+   * La causa era de GRANO: se apagaba la pestaña de Sistema ENTERA, y dentro
+   * viven ocho cosas. Apagar la pestaña era apagar lo que sobra por culpa de
+   * lo que falta. Ahora se apaga sección a sección, y esta prueba fija cuáles
+   * — porque «se apaga por secciones» sin decir cuáles volvería a dejar la
+   * papelera cerrada el día que alguien añada una sección nueva. */
+  const sistema = await p.evaluate(() => {
+    const r = {};
+    Object.keys(BASIC_PRO_SISTEMA).forEach(k => { r[k] = BASIC_PRO_SISTEMA[k]; });
+    return { mapa: r, pestanaEntera: Object.keys(BASIC_PRO_AJUSTES).length };
+  });
+  check('la pestaña de Sistema ya NO se apaga entera', sistema.pestanaEntera, 0);
+  check('...se apagan el respaldo, el archivado, el reporte diario y el lector',
+    Object.keys(sistema.mapa).sort(),
+    ['sysArchivado', 'sysLector', 'sysReporte', 'sysRespaldo']);
+  check('...y la papelera NO está entre ellas, que es lo que Jose decidió',
+    Object.keys(sistema.mapa).some(k => /trash|papel/i.test(k)), false);
+  /* Cada sección con su propia oferta: el candado del respaldo no puede
+   * explicar por qué no se archiva solo ni por qué no llega el reporte. Es la
+   * regla del 21/10, aplicada dentro de una pestaña. */
+  check('...y ninguna oferta sirve para dos secciones a la vez',
+    Object.keys(sistema.mapa).length === new Set(Object.values(sistema.mapa)).size, true);
+
+  /* ── IMPORT ENTRA EN LA GRATIS ────────────────────────────────────────────
+   * Jose, 26/10: *"también quiero que se pueda importar documentos, así que
+   * eso sí lo vamos a hacer en básico"*. Es la función que decide si la gratis
+   * sirve para algo: sin ella, una bodega que ya existe tendría que teclear su
+   * inventario entero. */
+  await p.evaluate(() => { APP_BASIC = true; userRole = 'ADMIN'; _filterSettingsSidebar(); });
+  check('Import se ve en la versión gratis',
+    await p.evaluate(() => {
+      const b = document.querySelector('[data-tab="import"]');
+      return b ? b.style.display !== 'none' : 'no existe';
+    }), true);
+  check('...y Permissions y Directory siguen fuera, que ésas no se abrieron',
+    await p.evaluate(() => ['permissions', 'pmdirectory'].map(t => {
+      const b = document.querySelector('[data-tab="' + t + '"]');
+      return b ? b.style.display === 'none' : 'no existe';
+    })), [true, true]);
+
+  console.log('\n═══ 7· y nada revienta ═══\n');
   check('ningún error de JavaScript', errs, []);
 
   await browser.close();

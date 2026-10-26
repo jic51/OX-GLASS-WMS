@@ -312,6 +312,67 @@ puede contar, porque son trozos y no 490 resultados sueltos.
 
 ---
 
+## ✅ 26/10, TARDE — IMPORT EN LA GRATIS Y LA PAPELERA, CON SU DECISIÓN DETRÁS
+
+Jose: *"la papelera no se puede probar aún en básico, por lo menos regresar
+movimientos borrados no"* — y tenía razón; yo le había dicho lo contrario esa
+misma mañana. Y: *"también quiero que se pueda importar documentos, así que eso
+sí lo vamos a hacer en básico... si sólo dejamos que se suban archivos CSV
+estamos dándole al cliente una buena forma de utilizar la app"*.
+
+**Lo que enseña el fallo de la papelera es el GRANO.** No estaba sin construir:
+estaba **dentro de la pestaña de Sistema, que se apagaba entera**. Ahí viven
+ocho cosas, y sólo cuatro son de Pro. Apagar la pestaña era apagar lo que
+quieres por culpa de lo que falta — y de paso ningún candado podía contestar de
+lo suyo, porque el de la pestaña sólo sabía decir «Respaldo automático».
+
+Ahora `BASIC_PRO_SISTEMA` apaga **sección a sección**, y salieron dos ofertas
+nuevas (`archivado`, `reportediario`) porque tres secciones distintas
+compartían el mismo permiso que falta pero **no son la misma función**.
+
+`BASIC_PRO_AJUSTES` se queda vacío **a propósito**, escrito y no borrado: la
+próxima pestaña que haya que cerrar a medias va a querer ese sitio.
+
+**Import** sale de `BASIC_FUERA.ajustes`. `.xlsx` no puede —`excelToSheets_`
+usa la API de Drive por `UrlFetchApp`, dos permisos que esta edición no pide—
+y eso se dice en **tres sitios**, de menos a más tarde: el selector sólo acepta
+`.csv`, el texto de debajo explica la salida («Archivo → Descargar → .csv»), y
+si alguien arrastra un `.xlsx` igualmente **sale la oferta de Pro antes de leer
+un byte**, no un error después. El servidor se niega también, por si llega por
+otro camino, con el mismo texto y la misma salida.
+
+**Y una lección de método:** el guardia que encontró mi error no fue una prueba,
+fue `build-paste.js`. Dejé un paréntesis sin cerrar en el ternario del texto de
+Import; el intérprete del navegador habría muerto al cargar. Como ese comando
+**parsea el JavaScript** antes de escribir nada, se negó a escribir. *Más vale
+ningún archivo que uno roto* — esa línea es suya y hoy valió la versión entera.
+
+---
+
+## 💼 26/10 — QUÉ HACER SI LLAMA UNA EMPRESA GRANDE
+
+Pedido por Jose. Está escrito en `docs/PRECIOS-Y-COMPETENCIA.md`, sección «Una
+empresa mediana-grande llama», con el número delante: **$49/mes a $75/hora son
+40 minutos de soporte**, así que la suscripción paga menos de una hora al mes y
+un cliente que consume dos **cuesta dinero**. De ahí sale lo que él intuía y es
+correcto: diez clientes de $49 valen más que uno de $490, porque el grande no
+consume diez veces menos soporte, consume más.
+
+Lo que hay escrito: **1 hora al mes incluida, $75 la hora extra**, avisando
+antes de empezar y nunca por factura sorpresa; las **tres condiciones** para
+venderle; los **cuatro motivos** para no hacerlo y el guion para decirlo sin
+perder la relación; y la salida que evita el «no» seco — que instalen la
+**gratis** en una bodega.
+
+**🔵 Decisión de Jose, y bloquea dos documentos:** los Términos (sección 5) y
+`SOPORTE-Y-PAGOS.md` dicen hoy que hay soporte **sin número de horas**. Si
+adopta la política, el número tiene que estar ahí, porque es lo que el cliente
+acepta — y entonces se mueve la fecha de los Términos, que ya lo vigila
+`sync-legal.js`. **No lo he escrito en ninguno de los dos**: es su precio y es
+un documento que se firma.
+
+---
+
 ## 🔴 26/10 — LO QUE SALIÓ DEL VÍDEO Y LAS CUATRO CAPTURAS DE JOSE
 
 ### ✅ ARREGLADO EN LA v12.97 — los dos bloqueadores de Ajustes

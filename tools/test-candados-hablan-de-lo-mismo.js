@@ -49,10 +49,19 @@ function check(label, cond, extra) {
  * que esta prueba persigue, cometida por la prueba. */
 const vm = require('vm');
 const ctx = vm.createContext({});
-vm.runInContext(A.constantes(HTML, ['BASIC_PRO', 'BASIC_PRO_BOTONES', 'BASIC_PRO_ZONAS']), ctx);
+vm.runInContext(A.constantes(HTML, ['BASIC_PRO', 'BASIC_PRO_BOTONES', 'BASIC_PRO_ZONAS',
+                                    'BASIC_PRO_SISTEMA']), ctx);
 const OFERTAS = vm.runInContext('BASIC_PRO', ctx);
 const BOTONES = vm.runInContext('BASIC_PRO_BOTONES', ctx);
 const ZONAS   = vm.runInContext('BASIC_PRO_ZONAS', ctx);
+/* LA CUARTA PUERTA, desde la v12.98. La pestaña de Sistema ya no se apaga
+ * entera: se apaga sección a sección, y cada sección enseña su propia
+ * oferta. Olvidarla aquí habría dicho que `archivado` y `reportediario` son
+ * trabajo muerto estando perfectamente vivas — y es LITERALMENTE el fallo
+ * que esta prueba nació para vigilar: el 21/10 mi repaso recorrió los
+ * botones y no tocó las zonas. Tercera vez que la lista de puertas crece.
+ * Si crece una cuarta, se añade aquí. */
+const SECCIONES = vm.runInContext('BASIC_PRO_SISTEMA', ctx);
 
 /** Lo que una persona LEE en ese botón: su texto Y su `title`, porque el `title`
  *  es lo que sale al pasar el ratón y a menudo es el que lo explica de verdad
@@ -292,6 +301,7 @@ const directas = (A.sinComentarios(HTML).match(/_pro(?:Pitch|Toast)\(\s*'([a-z]+
   .map(t => /'([a-z]+)'/.exec(t)[1]);
 const usadas = new Set(Object.keys(BOTONES).map(k => BOTONES[k])
   .concat(Object.keys(ZONAS).map(k => ZONAS[k]))
+  .concat(Object.keys(SECCIONES).map(k => SECCIONES[k]))
   .concat(directas));
 const huerfanas = Object.keys(OFERTAS).filter(k => !usadas.has(k));
 check('toda oferta la enseña algún candado — una oferta que nadie puede ver es ' +

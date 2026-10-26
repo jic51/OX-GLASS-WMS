@@ -128,7 +128,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.97';
+var APP_VERSION = '12.98';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -140,7 +140,7 @@ var APP_VERSION = '12.97';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'fb3ce95f';
+var APP_BUILD = '216da04c';
 
 // ═══ ACOPIO BASIC — EL INTERRUPTOR DE LA VERSIÓN GRATIS ══════════════════════
 //
@@ -9634,6 +9634,25 @@ function leerFilasDelFichero_(data) {
   var isExcel  = /\.xlsx?$/i.test(fileName);
   if (!isExcel && !/\.csv$/i.test(fileName)) {
     throw new Error('Please upload a .csv or .xlsx file.');
+  }
+  /* ── EN LA GRATIS, .csv Y LA SALIDA ESCRITA ──────────────────────────────
+   *
+   * No es `basicNiega_`, y la diferencia importa. Esa función dice «esto es de
+   * Pro» y se acabó, que es lo correcto para subir fotos o para los usuarios:
+   * no hay nada que el cliente pueda hacer. Aquí sí lo hay, y son dos clics
+   * en el programa que ya tiene abierto.
+   *
+   * Un muro donde cabe una instrucción es una venta perdida y un cliente que
+   * cree que la app no sirve. La pantalla ya lo avisa antes de elegir el
+   * fichero; esto es la segunda barrera, para quien llegue por otro camino. */
+  if (isExcel && basicApagado_()) {
+    throw new Error(
+      'Acopio Basic reads .csv files. Open your Excel file and use ' +
+      'File \u2192 Download \u2192 Comma-separated values (.csv) \u2014 in Excel, ' +
+      'Save As \u2192 CSV \u2014 and bring that one; everything else works the same. ' +
+      'Reading .xlsx directly needs a Google permission this edition does not ask ' +
+      'for, which is what lets it install without the warning screen. ' +
+      'Acopio Pro reads .xlsx straight.');
   }
 
   var text;

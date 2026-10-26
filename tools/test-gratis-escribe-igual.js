@@ -410,8 +410,20 @@ console.log('\n═══ 8. LA PANTALLA: LO QUE SE ESCONDE Y LO QUE SE OFRECE �
    * Que el número suba sin que el producto gane una función es raro, y por eso
    * queda escrito: lo que ha cambiado no es cuánto ofrece la gratis, es que
    * ahora cada cosa que se pulsa contesta de lo suyo. */
-  check('las ofertas son las ONCE decididas con Jose',
-    claves.length === 11, claves);
+  /* 26/10: CATORCE. Las tres nuevas no son funciones nuevas — son funciones
+   * que ya existían compartiendo una oferta ajena, separadas al abrir la
+   * pestaña de Sistema por secciones:
+   *
+   *   `archivado`     — archivar solo contestaba «Respaldo automático»
+   *   `reportediario` — el reporte de la tarde, lo mismo
+   *   `importarexcel` — leer un .xlsx; antes era un error del servidor, y
+   *                     ahora es una oferta que sale ANTES de subir el fichero
+   *
+   * Que el número suba sin que el producto gane una función sigue siendo la
+   * señal de lo mismo que en octubre: cada cosa que se pulsa contesta de lo
+   * suyo. Es un trinquete, y sube con su motivo escrito o no sube. */
+  check('las ofertas son las CATORCE decididas con Jose',
+    claves.length === 14, claves);
 
   /* DOS LISTAS QUE TIENEN QUE COINCIDIR — Y AQUÍ SÍ HAY QUIEN LO OBLIGUE.
    *
@@ -425,7 +437,21 @@ console.log('\n═══ 8. LA PANTALLA: LO QUE SE ESCONDE Y LO QUE SE OFRECE �
         'botón quedaría muerto en silencio',
     huerfanas.length === 0, huerfanas);
 
-  const sinBoton = claves.filter(k => usadas.indexOf(k) === -1);
+  /* LAS SECCIONES DE LA PESTAÑA DE SISTEMA TAMBIÉN SON PUERTAS. Desde la
+   * v12.98 esa pestaña no se apaga entera: se apaga sección a sección
+   * (`BASIC_PRO_SISTEMA`), y cada sección enseña su propia oferta. Mirar sólo
+   * los botones y las zonas dejaría a `archivado` y `reportediario` como
+   * huérfanas cuando están perfectamente vivas — que es el mismo agujero que
+   * esta prueba tuvo el 21/10 al recorrer los botones y no las zonas. */
+  const secciones = Object.values(JSON.parse(JSON.stringify(
+    (function () {
+      const m = {};
+      const bloque = (htmlCodigo.match(/var BASIC_PRO_SISTEMA = \{[\s\S]*?\n\};/) || [''])[0];
+      [...bloque.matchAll(/(\w+):\s*'([^']+)'/g)].forEach(x => { m[x[1]] = x[2]; });
+      return m;
+    })())));
+  const puertas = usadas.concat(secciones);
+  const sinBoton = claves.filter(k => puertas.indexOf(k) === -1);
   /* Dos ofertas no tienen botón fijo y es correcto: «reservas» se abre desde
    * una fila de la tabla y se caza en `openLockModal`. */
   check('toda oferta tiene por dónde salir — por un botón, o por su propio ' +
@@ -612,7 +638,12 @@ console.log('\n═══ 10. NO SE PUEDE EMPEZAR LO QUE NO SE PUEDE TERMINAR ═
   /* Permissions y PM directory fuera; error log dentro. */
   check('fuera `permissions` y `pmdirectory`; `errorlog` se queda — ' +
         'un registro de errores no es una función de pago, es cómo se pide ayuda',
-    /ajustes: \['permissions', 'pmdirectory', 'import'\]/.test(htmlCodigo));
+    /* `import` SALIÓ el 26/10, por decisión de Jose: *"también quiero que se
+     * pueda importar documentos, así que eso sí lo vamos a hacer en básico...
+     * si sólo dejamos que se suban archivos CSV estamos dándole al cliente una
+     * buena forma de utilizar la app"*. Es la función que decide si la gratis
+     * sirve para algo: sin ella hay que teclear el inventario entero. */
+    /ajustes: \['permissions', 'pmdirectory'\]/.test(htmlCodigo));
 }
 
 console.log('\n═══ 11. LA OFERTA DICE QUE ES DE PRO, Y DEJA LLEGAR ═══\n');

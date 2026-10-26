@@ -446,6 +446,7 @@
         <li data-i18n="t221"><div><strong>Every movement kept and searchable</strong>, filtered by date, type, project or person, so &ldquo;who took it&rdquo; has an answer.</div></li>
         <li data-i18n="t222"><div><strong>Your own categories, racks, projects, suppliers and units</strong> &mdash; named the way your floor names them, not the way the software does.</div></li>
         <li data-i18n="t211"><div><strong>Every edit keeps its reason</strong> — who changed what, from what to what, and when.</div></li><!-- v11.17 -->
+        <li data-i18n="t224"><div><strong>Bring your inventory in from a spreadsheet</strong> &mdash; a CSV file, every row checked and counted before anything is saved, and the whole import can be undone. (An Excel file converts to CSV in two clicks.)</div></li>
         <li data-i18n="t223"><div><strong>It works on the phone</strong>, which is where a movement actually gets recorded &mdash; measured on an Android at 411&nbsp;px wide.</div></li>
       </ul>
       <!-- `id="pro"` EXISTE PARA EL CANDADO DE LA APP. `_proUrl` manda a
@@ -465,7 +466,10 @@
         <li data-i18n="t44" data-pro="llegadas"><div><strong>Incoming deliveries</strong>, with a morning summary of what's arriving today.</div></li>
         <li data-i18n="t207" data-pro="leercorreo lectura"><div><strong>Paste a supplier's email</strong>, or a photo of an invoice, and the expected delivery comes out filled in.</div></li><!-- v9.61, v10.8 -->
         <li data-i18n="t42" data-pro="minimos"><div><strong>Low-stock alerts</strong> on the materials you choose, at the level you set.</div></li>
-        <li data-i18n="t218" data-pro="avisarcorreo"><div><strong>The app sends the email</strong> — the project manager and whoever else you pick, the moment you save a movement; and an evening report of everything that moved that day. The free edition asks for one Google permission and sending mail is not in it, so there is no email at all in Basic.</div></li>
+        <li data-i18n="t218" data-pro="avisarcorreo"><div><strong>The app sends the email</strong> — the project manager and whoever else you pick, the moment you save a movement. The free edition asks for one Google permission and sending mail is not in it, so there is no email at all in Basic.</div></li>
+        <li data-i18n="t225" data-pro="reportediario"><div><strong>An evening report</strong> of everything that moved that day, emailed on its own — including the quiet days, so silence always means the same thing.</div></li>
+        <li data-i18n="t226" data-pro="archivado"><div><strong>It stays fast as it grows</strong> — old movements move to a tab of their own on their own, so the app does not slow down after years of use.</div></li>
+        <li data-i18n="t227" data-pro="importarexcel"><div><strong>Excel files straight in</strong> — Basic reads CSV; Pro reads .xlsx as it comes, picks the right tab in a workbook, and lets you switch tabs after loading.</div></li>
         <li data-i18n="t219" data-pro="reservas"><div><strong>Hold material for a job</strong> so nobody takes it out by mistake, with the reason and who held it.</div></li><!-- v11.60 -->
         <li data-i18n="t47" data-pro="respaldo"><div><strong>Settings &rarr; System</strong> &mdash; a backup of everything made on its own every night and kept 30 days, the archive of old movements, and the trash that holds a deleted movement for 30 days so you can put it back.</div></li><!-- v11.55, v11.79 -->
         <li data-i18n="t208" data-pro="btnDataCheck"><div><strong>Check my data</strong> — the same material written two ways, found and corrected with one press.</div></li><!-- v11.23 -->
@@ -829,11 +833,15 @@ var ACOPIO_ES = {
   "t220": "<div><strong>Tu stock, en vivo, con una caja de búsqueda</strong> y filtros por categoría y por estado — y tú eliges qué columnas ves y en qué orden.</div>",
   "t221": "<div><strong>Todos los movimientos guardados y buscables</strong>, filtrados por fecha, tipo, proyecto o persona, para que «quién se lo llevó» tenga respuesta.</div>",
   "t222": "<div><strong>Tus propias categorías, racks, proyectos, proveedores y unidades</strong> — con los nombres que usa tu bodega, no los que trae el programa.</div>",
+  "t224": "<div><strong>Trae tu inventario desde una hoja de cálculo</strong> — un fichero CSV, con cada fila revisada y contada antes de guardar nada, y la importación entera se puede deshacer. (Un Excel se convierte a CSV en dos clics.)</div>",
   "t223": "<div><strong>Funciona en el teléfono</strong>, que es donde de verdad se registra un movimiento — medido en un Android de 411&nbsp;px de ancho.</div>",
   "t215": "Acopio Básico — gratis, y esto es todo lo que trae",
   "t216": "Acopio Pro añade<span class=\"edi-note\">Nada de lo de arriba se quita. Éstas son las que la versión gratis enseña pero no abre.</span>",
   "t217": "<div><strong>Escanea una etiqueta con el teléfono</strong> y la app encuentra el material y te llena el formulario.</div>",
-  "t218": "<div><strong>La app manda el correo</strong> — al jefe de obra y a quien más tú elijas, en el momento en que guardas un movimiento; y un reporte cada tarde con todo lo que se movió ese día. La versión gratis pide un solo permiso de Google y mandar correo no está en él, así que ahí no sale ningún correo.</div>",
+  "t218": "<div><strong>La app manda el correo</strong> — al jefe de obra y a quien más tú elijas, en el momento en que guardas un movimiento. La versión gratis pide un solo permiso de Google y mandar correo no está en él, así que ahí no sale ningún correo.</div>",
+  "t225": "<div><strong>Un reporte cada tarde</strong> con todo lo que se movió ese día, que llega solo por correo — también los días tranquilos, para que el silencio signifique siempre lo mismo.</div>",
+  "t226": "<div><strong>Sigue rápida según crece</strong> — los movimientos viejos se van solos a una pestaña aparte, así la app no se vuelve lenta con los años.</div>",
+  "t227": "<div><strong>Los Excel entran tal cual</strong> — Básico lee CSV; Pro lee .xlsx como viene, elige la pestaña correcta en un libro de varias, y te deja cambiar de pestaña después de cargarlo.</div>",
   "t219": "<div><strong>Aparta material para un trabajo</strong> para que nadie lo saque por error, con el motivo y quién lo apartó.</div>",
   "t48": "Lo que todavía no hace",
   "t49": "Leer el código del proveedor — Acopio lee las etiquetas que imprimió él, no el código del fabricante en una caja que llega",

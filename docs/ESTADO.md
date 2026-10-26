@@ -10,15 +10,23 @@
 > **«El estado de Acopio» y `ESTADO.md` son lo mismo**: este fichero. Es el
 > único sitio donde mirar cómo vamos.
 
-**Última actualización:** 26/10/2026 · **versión v12.97** · build `fb3ce95f`
+**Última actualización:** 26/10/2026 · **versión v12.98** · build `216da04c`
 · páginas publicadas en www.acopio.net el 24/10 (`landing/.publicado`)
 
-> ### ⚠️ LA v12.97 HAY QUE PEGARLA — Y ÉSTA DESBLOQUEA TU LISTA
-> La v12.97 arregla lo que te impedía probar: en Básico, abrir **Ajustes →
-> Sistema** dejaba **todo Ajustes** gris y muerto hasta recargar. Por eso no
-> podías probar importar, borrar, fusionar ni la papelera: no era que
-> fallaran, es que no se podían abrir. Con ésta pegada, esas cuatro vuelven a
-> ser verificables.
+> ### ⚠️ LA v12.98 HAY QUE PEGARLA — Y AHORA SÍ DESBLOQUEA LAS CUATRO
+> **Me equivoqué el 26/10**: te dije que la papelera ya se podía probar en
+> Básico y no era verdad. Vive dentro de Ajustes → Sistema, y esa pestaña
+> seguía con candado **entera**. La v12.97 arregló que no se quedara gris al
+> salir, pero Sistema en sí seguía cerrado.
+>
+> La **v12.98** lo arregla de verdad, y con el grano correcto: Sistema ya no se
+> apaga entera, se apaga **sección a sección**. Siguen cerrados el respaldo, el
+> archivado, el reporte de la tarde y el lector de documentos. Están abiertos
+> **la papelera**, el espacio usado y lo que el sistema hizo solo.
+>
+> Y trae **Import en Básico**, que decidiste el 26/10. Con esta versión pegada,
+> las cuatro que no podías probar —importar, borrar en tanda, fusionar y la
+> papelera— son verificables en la copia gratis.
 >
 > Y lo de la v12.96 sigue valiendo:
 > Casi todo lo de esta entrega son las páginas y los documentos, que ya están
@@ -57,7 +65,8 @@ contexto.
 | 2 | **El enlace de tu Google Calendar** | No es una decisión: necesito el enlace público de «reservar una cita» para ponerlo en la página. Ver abajo cómo se saca | 5 min |
 | 3 | **Cómo quieres que te contacten** | Dijiste *"no quiero publicar mi número de WhatsApp, quiero sólo un link"*. Tengo tres formas y **ninguna es un `wa.me`**: ése ES tu número en claro | 2 min de decisión |
 | 4 | **Grabar V1, el vídeo del cronómetro** | Es el hueco más caro de la landing. Y el cómo poner el cronómetro ya está escrito: `docs/CAPTURAS-PARA-LA-LANDING.md`, «Cómo se pone el cronómetro» | una mañana |
-| 5 | **Leer lo de importar y `RECEIVING`** | Pediste ideas antes de decidir: *"no quiero decidir algo sin que me des ideas sobre esto o me digas qué es lo que mejor va a funcionar"*. La propuesta entera está en `docs/BACKLOG.md` | 10 min de lectura |
+| 5 | **La política para empresas grandes** | Está escrita entera en `docs/PRECIOS-Y-COMPETENCIA.md` con el número delante: **1 hora de soporte al mes, $75 la extra**. Falta que digas sí o no, porque va a los **Términos**, que es lo que el cliente firma | 10 min de lectura |
+| 6 | **Leer lo de importar y `RECEIVING`** | Pediste ideas antes de decidir: *"no quiero decidir algo sin que me des ideas sobre esto o me digas qué es lo que mejor va a funcionar"*. La propuesta entera está en `docs/BACKLOG.md` | 10 min de lectura |
 
 ### ✅ Ya decidido — fuera de la lista de arriba
 
@@ -106,7 +115,8 @@ del Dashboard ya no se mueven al cambiar de filtro.
 | ☐ | **Una obra no se ofrece como estantería** (v12.95 — el concepto que encontraste) | Return → en «Came back from» escribe una obra → **no** debe salir *«is not a location in your warehouse yet · + Create»*, y **no** debe pedirte la obra otra vez abajo |
 | ☐ | **Decir «sí» en un aviso guarda** (v12.94 — el fallo que encontraste) | Return → algo con 49 fuera → escribe 60 → Save anyway. Tiene que **guardar**, no dar error |
 | ☐ | **Borrar muchos tarda segundos y se puede parar** (v12.92) | Marca unos cientos → Delete. Botón **Stop** a mitad: debe decir *«Stopped — X of Y deleted»* |
-| ⚠️ | **Importar en Básico: decidiste abrirlo y no está** | Dijiste el 22/10 *"sí, CSV"*. Hoy Import **no sale** en la gratis — es correcto respecto al código de hoy, no respecto a tu decisión. Para probar importar hace falta la copia **Pro**, o construir esto |
+| ☐ | **Import en Básico** (v12.98 — tu decisión del 26/10) | Ajustes → **Import** tiene que estar. Sube un **.csv** y debe funcionar entero. Prueba a elegir un **.xlsx**: tiene que salir la oferta de Pro **antes** de subirlo, no un error después |
+| ☐ | **La papelera en Básico** (v12.98) | Borra un movimiento → Ajustes → **Sistema** → la papelera se ve y **devuelve** el movimiento. El respaldo y el reporte de la tarde en esa misma pestaña siguen en gris, cada uno con su propio mensaje |
 | ☐ | **Importar no pierde filas** (v12.91) | Un fichero de más de 500 filas: el botón y el final tienen que decir **el mismo número**, con *«matches the file»* |
 | ☐ | **El mismo fichero dos veces avisa** (v12.91) | Súbelo otra vez: recuadro rojo arriba, y el botón **sigue ahí** |
 | ☐ | **Deshacer una importación** (v12.91) | Ajustes → Import → **↩ Undo this import** |
@@ -115,7 +125,7 @@ del Dashboard ya no se mueven al cambiar de filtro.
 | ☐ | **El candado del correo** (v12.91) | «Send notification email» → el mensaje habla de **avisar**, no de *leer* un correo |
 | ☐ | **La ✕ dentro de la ventana de movimiento** | Abre Entry y escribe en un campo: la ✕ va **dentro** de la caja |
 | ☐ | **Vaciar la búsqueda con la ✕ relanza la búsqueda** | Movements: escribe, filtra, pulsa ✕ → la tabla se repuebla |
-| ☐ | **La papelera después de borrar** | Ajustes → Sistema → lo borrado está ahí para devolverlo |
+
 
 **Y CUATRO que YA SABEMOS que están mal en Básico** (anotadas, no hace falta
 que las mires otra vez): 🏷 Labels sale a color en vez de gris · la pregunta de
