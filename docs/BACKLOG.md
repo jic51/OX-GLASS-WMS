@@ -35,16 +35,27 @@ El orden no es el orden en que él las contó: es el orden del **daño**. Primer
 lo que le dice al cliente algo falso o le deja datos sin dueño; después lo que
 molesta; al final lo que a lo mejor ya está bien.
 
-| # | Qué | Por qué ahí | Tamaño |
-|---|---|---|---|
-| 1 | Borrar un movimiento en la gratis manda a un sitio cerrado | promesa incumplida en el minuto uno | pequeño |
-| 2 | Permissions (y Directory, e Import) vuelven en la gratis | la gratis enseña lo que no lleva | pequeño |
-| 3 | Fusionar nombres falla justo en el caso más común | la función no se puede usar | pequeño |
-| 4 | El registro de errores es una foto, no una ventana | se diagnostica con datos viejos | pequeño |
-| 5 | Importar sin ubicación deja material en un cajón sin nombre | datos reales sin dueño | mediano |
-| 6 | Materials (Ajustes) como las alertas de stock bajo | pedido de Jose | mediano |
-| 7 | Directory (Ajustes) como la pantalla de usuarios | pedido de Jose | mediano |
-| 8 | La casilla «todos» de Movements | **puede que no haya nada que arreglar** | nada / mirar |
+> **ESTADO AL 26/10, repasado por Jose una por una.** Lo tachado está hecho y
+> confirmado por él en su propia copia; lo que queda lleva por qué.
+
+| # | Qué | Estado |
+|---|---|---|
+| 1 | ~~Borrar un movimiento en la gratis manda a un sitio cerrado~~ | ✅ **hecho** (v12.98, la papelera se abrió) — *"ya está corregido"* |
+| 2 | ~~Permissions, Directory e Import vuelven en la gratis~~ | ✅ **hecho** (v12.97) — *"corregido"*. Y después Import **volvió a propósito**, por decisión suya del 26/10 |
+| 3 | Fusionar nombres falla en el caso más común | 🔶 **a medias.** Jose: *"esto funciona, pero cuando hay muchos en cola algo pasa y la app no los maneja muy bien aún; a veces sale el mensaje de busy"*. Ver **3-bis**, abajo |
+| 4 | ~~El registro de errores es una foto, no una ventana~~ | ✅ **hecho** (v12.93) — *"recuerdo que los errores no se actualizaban con la ventana abierta; ahora ya lo hace"*. Era eso: la frase de la izquierda estaba mal escrita, ver abajo |
+| 5 | Importar sin ubicación deja material en un cajón sin nombre | 🔶 **en marcha**, con el resto del rediseño de Import (§5-bis y §5-ter) |
+| 6 | Materials (Ajustes) como las alertas de stock bajo | 🔴 **sin empezar.** Jose, 26/10: *"no recuerdo esta, ¿de qué se trataba?"* — contestado en la §6 |
+| 7 | Directory (Ajustes) como la pantalla de usuarios | 🔴 **sin empezar** — *"esto aún no está hecho"* |
+| 8 | ~~La casilla «todos» de Movements~~ | ✅ **cerrado sin tocar nada.** Jose, 26/10: *"eso ya no hay que moverlo, sácalo de la lista y anota que está bien todo pero que se analizará luego en siguientes versiones, después del lanzamiento"* |
+
+> **«El registro de errores es una foto, no una ventana» — qué quería decir, en
+> claro.** Jose: *"no entiendo lo que dices aquí"*. Con razón: era una metáfora
+> que sólo se entiende si ya sabes la respuesta. Lo que pasaba, dicho normal:
+> **la lista de errores se cargaba UNA vez al abrir Ajustes y no volvía a
+> preguntar.** Si pasaba algo mientras tenías la ventana abierta, no aparecía
+> hasta cerrar y volver a entrar — así que estabas diagnosticando con una lista
+> vieja sin saberlo. Eso es lo que él recordaba, y es lo que se arregló.
 
 ---
 
@@ -309,6 +320,124 @@ Con el arreglo (a)+(b) esto deja de ser un problema grande por construcción:
 tres peticiones en vez de 490, cada una atómica en el servidor. Cerrar la
 pestaña a mitad deja un trozo hecho y los demás sin tocar — y eso **sí** se
 puede contar, porque son trozos y no 490 resultados sueltos.
+
+---
+
+## 🔐 26/10 — ANÁLISIS DE SEGURIDAD, PARTE 1 (lo accionable)
+
+El informe entero está en `docs/ANALISIS-SEGURIDAD.md`. Aquí sólo lo que hay
+que hacer, para que no se pierda entre la prosa.
+
+| | Qué | Dónde | Tamaño |
+|---|---|---|---|
+| 🟡 | `addDocGroup` escapa sólo `"` a mano. **Hoy no es explotable** —los tres que la llaman pasan literales— pero el cuarto que pase el nombre de un material la convierte en un fallo, y con el importador de CSV abierto ese nombre lo escribe otra persona | `Index_v3_fixed.html` ~19973 | **una línea**: usar `_he()` |
+| 🟡 | `handleOAuthCallback_` imprime `msg` sin escapar. Lo decide Google, no quien ataca, así que es higiene más que agujero — pero es gratis | `Code_v3_fixed.gs` ~2185 | una línea |
+| 🟠 | **`XFrameOptionsMode.ALLOWALL` en la pantalla de inicio de sesión.** Cualquier web puede incrustarla en un marco invisible | `Code_v3_fixed.gs` ~2194 | **medir antes de tocar** |
+
+**🔵 Decisión de Jose en la tercera**, y es la única de las tres que no es
+obvia: puede que ese `ALLOWALL` haga falta para que la sesión funcione dentro
+del marco de Google. **Quitarlo a ciegas podría dejar a un cliente sin poder
+entrar, que es peor que el riesgo que quita.** Lo que haría: probarlo con el
+modo por defecto en una copia de pruebas; si entra, cambiarlo; si no, dejarlo y
+**escribir por qué**, para que dentro de un año nadie lo lea como un descuido.
+
+Las dos primeras las haría sin preguntar, pero **no las he tocado**: no tiene
+sentido meter mano al código el mismo día que empieza un análisis estructural
+que puede mover esas mismas líneas de sitio.
+
+---
+
+## 🔶 26/10 — FUSIONAR MUCHOS A LA VEZ: EL «BUSY» VUELVE (punto 3-bis)
+
+Jose, repasando: *"esto funciona, pero cuando hay muchos en cola algo pasa y la
+app no los maneja muy bien aún; a veces sale el mensaje de busy. Hay que
+analizar mejor esa parte."*
+
+**Es la misma falta que ya pagamos dos veces**, y por eso va anotada aquí en vez
+de arreglarse a ciegas: borrar 490 movimientos eran 490 peticiones (v12.92, se
+arregló haciéndolas en tandas de 300), y el importador mandaba una por fila
+(v12.91). Fusionar sigue yendo **de uno en uno**, y con veintiocho grupos en
+cola la ráfaga choca contra el regulador del servidor.
+
+**Lo que hay que mirar, en este orden, y NO antes del análisis estructural:**
+
+1. ¿Es la app la que inunda —como en la v12.92— o es de verdad el candado del
+   stock ocupado por otra persona? Son dos cosas distintas con el mismo
+   mensaje, y ya nos confundió una vez.
+2. Si es lo primero: una sola llamada que reciba **todas** las fusiones, como
+   `borrarFilasEnTanda_`.
+3. Y el regulador que Jose pidió el 23/10 —*"la app calcula cuántos puede
+   enviar al servidor"*— que sigue sin existir y es el punto **C** del barrido.
+
+---
+
+## 🔴 26/10 — LA PAPELERA DEVUELVE EN UN ORDEN, Y NO LO DICE
+
+**El mejor hallazgo de Jose hasta ahora sobre el diseño, y él mismo lo nombró:
+*"es un punto débil de la app y sólo tiene que ver con el ORDEN en que hace las
+cosas, no con lo que hace"*.**
+
+Lo que le pasó: borró un ENTRY y dos EXIT del mismo material. Al intentar
+devolver un EXIT desde la papelera, salió:
+
+> *⚠ CANNOT PUT THIS BACK — the warehouse changed while it was in the trash.
+> RAIN BUSTER 444 now has 0 in the warehouse, and this movement takes 300 out.
+> Putting it back would leave you holding less than nothing. It is still in the
+> trash: check whether the same material left again after this was deleted.*
+
+Devolvió primero el ENTRY, luego los dos EXIT, y funcionó.
+
+### El guardia está BIEN. El mensaje está MAL
+
+Comprobado en `Code_v3_fixed.gs` (~15200): al devolver un `EXIT`, `DISPATCH` o
+`WASTE`, se recalcula el stock del material y se niega si la salida dejaría el
+almacén por debajo de cero. Eso hay que conservarlo tal cual — **es lo que
+impide que la papelera invente existencias negativas.**
+
+Lo que falla es lo que el mensaje DICE. Propone una causa —*"the warehouse
+changed while it was in the trash"*— que en el caso de Jose **era falsa**: el
+almacén no cambió, lo que pasa es que la entrada que sostenía esa salida está
+**en la misma papelera, dos filas más abajo**. Y la pista que da *("check
+whether the same material left again")* manda a mirar justo donde no está.
+
+**Resultado: parece un fallo de la app y es un problema de orden con solución
+de un clic.** Esa diferencia es toda la diferencia — un cliente que ve lo
+primero desconfía de la papelera entera.
+
+### Lo que propone Jose, y lo que yo añadiría
+
+Él: *"la app debe mostrar un mensaje que diga «debes regresar este movimiento
+primero»... si alguien regresa un exit y el entry también está en papelera,
+debe ofrecer regresar el movimiento entry específico de ese material primero,
+el usuario lo acepta y enseguida se hace el regreso"*.
+
+Exacto, y la pieza clave es **«el entry ESPECÍFICO»**: no vale decir «mira la
+papelera», hay que señalar la fila.
+
+**Cómo lo haría, y es poco porque los datos ya están todos:**
+
+1. Cuando el guardia salte, **antes de lanzar el error**, buscar en la papelera
+   las entradas del **mismo material** que cubrirían el hueco (`haveBack` frente
+   a `qtyBack`). Es la misma hoja que ya se está leyendo.
+2. Si las hay, devolver un **rechazo con datos**, no un texto: el id del
+   movimiento que falta, su nombre y su cantidad.
+3. La pantalla lo convierte en **una pregunta con un botón**: *«Para devolver
+   esta salida de 300 hace falta antes la entrada de 500 del 14/10. ¿La
+   devuelvo también?»* → y al aceptar se devuelven **las dos, en orden**.
+4. Si NO hay ninguna entrada en la papelera, entonces sí el mensaje de ahora —
+   que en ese caso **sí es verdad**.
+
+**Y una cosa que hay que decidir antes de construirlo**, porque es donde esto
+se puede complicar: si hacen falta **dos o tres** entradas para cubrir el
+hueco, ¿se ofrecen todas juntas? Yo diría que sí, en una sola pregunta y en
+orden de fecha, pero que la app **nunca devuelva nada que el usuario no haya
+visto en la lista** — ofrecer «y otras 4» sin nombrarlas es volver al mismo
+problema por el otro lado.
+
+**Esto es un caso particular de algo más grande**, y conviene verlo así: la
+papelera guarda movimientos **sueltos** cuando lo que se borró fue una
+**historia**. Lo mismo va a pasar con un traslado (dos filas) y con una
+importación deshecha a medias. Ver el análisis estructural.
 
 ---
 

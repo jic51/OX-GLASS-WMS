@@ -157,10 +157,26 @@ troubleshooting is in `ACCESO-Y-LOGIN.md`.
 
 ---
 
-## ⚠️ IF SIGNING IN FAILS, START WITH THE ADDRESS
+## ⚠️ IF SIGNING IN FAILS, START WITH THE ADDRESS — **Acopio Pro**
 
-**🏭 Acopio → 🔧 Advanced → 🩺 Check this installation.** It checks your app's
-address and repairs it.
+> Jose, 26/10, viendo esta página publicada: *"no creo que esté bien esta parte,
+> porque está debajo de «si tu copia es Acopio Basic», entonces debería decir
+> que esto se aplica sólo a la Pro."*
+>
+> Tenía razón, y por partida doble. Está colocada **después** de la sección de
+> Básico, así que se lee como si fuera para ella; y manda al menú
+> **🏭 Acopio**, que en Básico **no puede existir**. Peor aún: el único síntoma
+> de los tres que le puede pasar a alguien de Básico —el tercero, el del correo
+> no registrado— se arregla en una pantalla, Permissions, que esa edición
+> tampoco lleva.
+>
+> **En Acopio Basic no hay nada que comprobar aquí:** no hay varias personas,
+> así que no hay nadie a quien se le pueda negar la entrada, y la dirección la
+> abres tú desde tu propio favorito. Si no abre, vuelve al paso 3 y despliega
+> otra vez.
+
+**Esto es de Acopio Pro.** **🏭 Acopio → 🔧 Advanced → 🩺 Check this
+installation.** It checks your app's address and repairs it.
 
 The three messages you might see, and what each one means:
 
