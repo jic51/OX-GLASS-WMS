@@ -9,3 +9,6 @@ pegar/
 # Las herramientas usan los módulos instalados globalmente (NODE_PATH), igual
 # que playwright y jsqr. Nada de node_modules dentro del repositorio.
 node_modules/
+
+# Ficheros de prueba generados: se rehacen con semilla fija, no se versionan.
+pruebas/

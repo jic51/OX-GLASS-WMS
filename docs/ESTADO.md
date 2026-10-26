@@ -10,10 +10,17 @@
 > **«El estado de Acopio» y `ESTADO.md` son lo mismo**: este fichero. Es el
 > único sitio donde mirar cómo vamos.
 
-**Última actualización:** 26/10/2026 · **versión v12.98** · build `216da04c`
+**Última actualización:** 26/10/2026 · **versión v12.99** · build `26d0d5a7`
 · páginas publicadas en www.acopio.net el 24/10 (`landing/.publicado`)
 
-> ### ⚠️ LA v12.98 HAY QUE PEGARLA — Y AHORA SÍ DESBLOQUEA LAS CUATRO
+> ### ⚠️ LA v12.99 HAY QUE PEGARLA
+> Lleva lo de la v12.98 (Import en la gratis, la papelera abierta) **más**
+> tres cosas de tu repaso del 26/10: la ✕ para quitar un fichero del
+> importador, que un error deje de seguirte entre pestañas, y que una
+> cantidad escrita `1,250` vuelva a ser un número en vez de tirarse en
+> silencio. Esa última la encontró un fichero de prueba, no una persona.
+>
+> ### Lo que la v12.98 ya traía
 > **Me equivoqué el 26/10**: te dije que la papelera ya se podía probar en
 > Básico y no era verdad. Vive dentro de Ajustes → Sistema, y esa pestaña
 > seguía con candado **entera**. La v12.97 arregló que no se quedara gris al
@@ -115,6 +122,9 @@ del Dashboard ya no se mueven al cambiar de filtro.
 | ☐ | **Una obra no se ofrece como estantería** (v12.95 — el concepto que encontraste) | Return → en «Came back from» escribe una obra → **no** debe salir *«is not a location in your warehouse yet · + Create»*, y **no** debe pedirte la obra otra vez abajo |
 | ☐ | **Decir «sí» en un aviso guarda** (v12.94 — el fallo que encontraste) | Return → algo con 49 fuera → escribe 60 → Save anyway. Tiene que **guardar**, no dar error |
 | ☐ | **Borrar muchos tarda segundos y se puede parar** (v12.92) | Marca unos cientos → Delete. Botón **Stop** a mitad: debe decir *«Stopped — X of Y deleted»* |
+| ☐ | **La ✕ del importador** (v12.99) | Ajustes → Import → elige un fichero → la **✕** al lado de Choose File lo quita y la previsualización desaparece |
+| ☐ | **Un error no sigue entre pestañas** (v12.99) | Provoca el error del logo en Name & Logo → cambia de pestaña: el mensaje rojo **ya no está** |
+| ☐ | **Una cantidad con coma de millares entra** (v12.99) | Importa `pruebas/inventario-600-sucio.csv`: la fila con `1,250` tiene que contar como **válida**, no como error |
 | ☐ | **Import en Básico** (v12.98 — tu decisión del 26/10) | Ajustes → **Import** tiene que estar. Sube un **.csv** y debe funcionar entero. Prueba a elegir un **.xlsx**: tiene que salir la oferta de Pro **antes** de subirlo, no un error después |
 | ☐ | **La papelera en Básico** (v12.98) | Borra un movimiento → Ajustes → **Sistema** → la papelera se ve y **devuelve** el movimiento. El respaldo y el reporte de la tarde en esa misma pestaña siguen en gris, cada uno con su propio mensaje |
 | ☐ | **Importar no pierde filas** (v12.91) | Un fichero de más de 500 filas: el botón y el final tienen que decir **el mismo número**, con *«matches the file»* |

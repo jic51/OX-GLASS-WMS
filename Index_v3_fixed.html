@@ -2116,11 +2116,24 @@
      *
      * Con el envoltorio, el `<td>` sigue siendo un `table-cell` normal y la
      * rejilla vive dentro. La costura no cambia; la alineación vuelve. */
+    /* LOS 46px NO SE TOCAN, y conviene decir por qué: la rejilla vive DENTRO
+       de una columna de ancho declarado (`MOV_COLS`). Ensanchar esta mitad a
+       52px arregló el número de cinco cifras y sacó de su sitio a todas las
+       demás celdas — el total 46+48+5 es lo que cabe. Lo que estaba mal no era
+       el ancho: ver `qty-lg`, abajo. */
     #tableContainer td.mc-qty .qpair{
       display:grid;grid-template-columns:46px 48px;gap:5px;align-items:baseline}
     #tableContainer td.mc-qty .qv{
       text-align:right;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
-    #tableContainer td.mc-qty .qv.qty-lg{font-size:var(--fs-base)}
+    /* ── `qty-lg` HACÍA LO CONTRARIO DE LO QUE DICE SU COMENTARIO ──────────
+       Su nota dice «baja un punto la letra» para que quepa. Ponía
+       `--fs-base` (.82rem), que es MÁS GRANDE que el `--fs-md` (.78rem) de la
+       fila: el número que no cabía se dibujaba aún mayor. Nadie lo vio porque
+       con el Chromium anterior cinco cifras cabían por los pelos; con el nuevo
+       se salían 5px y `test-columnas` lo cazó.
+       Ahora baja de verdad, y entra a las CINCO cifras —`12500` ya no cabe a
+       tamaño normal— en vez de a las seis. */
+    #tableContainer td.mc-qty .qv.qty-lg{font-size:var(--fs-sm)}
     #tableContainer td.mc-qty .qu{
       text-align:left;color:var(--muted);font-size:var(--fs-md);
       white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -5840,7 +5853,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.98';
+var APP_VERSION = '12.99';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5852,7 +5865,7 @@ var APP_VERSION = '12.98';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '216da04c';
+var APP_BUILD = '26d0d5a7';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -9561,7 +9574,7 @@ function renderMovements(){
         var txt = (isOut ? '−' : '+') + m.qty;
         var uni = String(m.unit || '—');
         return '<td class="mc-qty"><span class="qpair">' +
-          '<span class="qv' + (txt.length > 5 ? ' qty-lg' : '') + '" style="color:' +
+          '<span class="qv' + (txt.length >= 5 ? ' qty-lg' : '') + '" style="color:' +
             (isOut ? 'var(--red)' : 'var(--accent2)') + '">' + _he(txt) + '</span>' +
           '<span class="qu" title="' + _escAttr(uni) + '">' + _he(uni) + '</span>' +
         '</span></td>';
@@ -16668,8 +16681,18 @@ function _renderImportTab() {
            ofrece —«se le dice al cliente lo que no se puede hacer ANTES de
            que lo termine de hacer»— y debajo va la salida, que es lo que
            convierte un límite en una instrucción. */
+        /* UN FICHERO Y UNA FORMA DE QUITARLO. Jose, 26/10, con una captura:
+           *"si el usuario seleccionó el archivo incorrecto, no puede
+           eliminarlo; debe salir de settings y volver a entrar"*. Tenía razón:
+           elegir otro lo REEMPLAZA, pero volver a «ningún fichero» no se podía.
+           Y `multiple` va explícitamente ausente — un `<input type="file">` ya
+           es de uno, pero escribirlo aquí dice que es a propósito y no por
+           descuido, que es lo que hace que nadie lo "arregle" mañana. */
         '<input type="file" id="importFileInput" accept="' +
           (APP_BASIC ? '.csv' : '.csv,.xlsx,.xls') + '" style="font-size:.82rem">' +
+        '<button type="button" id="importFileClear" class="btn btn-ghost btn-sm" ' +
+          'onclick="_limpiarFicheroImport()" title="Remove the selected file" ' +
+          'style="display:none;padding:.15rem .45rem">✕</button>' +
         (APP_BASIC
           ? '<p style="font-size:.78rem;color:var(--muted);margin:.5rem 0 0">' +
               'Acopio Basic reads <b>.csv</b>. If what you have is an Excel file, open it and use ' +
@@ -16712,9 +16735,27 @@ function _downloadImportTemplate() {
 // the user pick the file again.
 var _importFileB64 = '', _importFileName = '', _importFileMime = '';
 
+/* Deja la pantalla como estaba antes de elegir nada: el selector vacío, la
+ * previsualización fuera y la memoria del fichero borrada. Lo último importa
+ * más de lo que parece — `_importFileB64` se manda al confirmar, así que
+ * dejarlo puesto sería quitar el fichero de la vista y seguir importando el
+ * que ya no se ve. */
+function _limpiarFicheroImport(){
+  var inp = document.getElementById('importFileInput');
+  if (inp) inp.value = '';
+  var box = document.getElementById('importPreviewBox');
+  if (box) box.innerHTML = '';
+  var x = document.getElementById('importFileClear');
+  if (x) x.style.display = 'none';
+  _importFileB64 = ''; _importFileName = ''; _importFileMime = '';
+  _importParsedRows = []; _importValidTotal = 0; _importFingerprint = '';
+}
+
 function _onImportFileChange(e){
   var file = e.target.files[0];
-  if (!file) return;
+  if (!file) { _limpiarFicheroImport(); return; }
+  var x = document.getElementById('importFileClear');
+  if (x) x.style.display = '';
   var box = document.getElementById('importPreviewBox');
   /* ── UN .xlsx EN LA GRATIS ES UNA OFERTA, NO UN ERROR ─────────────────────
    *
@@ -16729,8 +16770,7 @@ function _onImportFileChange(e){
    * máxima intención que vamos a tener: alguien con su inventario en la mano,
    * intentando meterlo. */
   if (APP_BASIC && /\.xlsx?$/i.test(file.name || '')) {
-    e.target.value = '';
-    box.innerHTML = '';
+    _limpiarFicheroImport();
     _proPitch('importarexcel');
     return;
   }
@@ -17096,7 +17136,27 @@ function _syncSettingsTabButtons(tab){
   });
 }
 
+/* ── EL AVISO ES DE LA PANTALLA QUE LO PRODUJO ────────────────────────────
+ *
+ * Jose, 26/10, con un vídeo: al intentar poner un logo en la gratis sale el
+ * error (eso ya estaba anotado), pero *"el error se mantiene en el mismo lugar
+ * y no se va aunque cambiemos de pestaña; sólo al salir del menú se mueve"*.
+ *
+ * La causa: `_settingMsg` sólo se esconde solo cuando el mensaje es de ÉXITO
+ * —`if (type === 'ok') setTimeout(...)`— y lo único que limpiaba la barra era
+ * abrir Ajustes. Un error se quedaba pegado encima de otra pestaña, hablando
+ * de algo que ya no está en pantalla. Eso no es un aviso: es ruido que parece
+ * un aviso, y enseña a ignorar la barra justo donde más hace falta.
+ *
+ * Un error no caduca solo a propósito —hay que poder leerlo— pero sí deja de
+ * ser de la pantalla en cuanto te vas de ella. */
+function _limpiarAvisoAjustes(){
+  var bar = document.getElementById('settingsMsgBar');
+  if (bar) { bar.style.display = 'none'; bar.textContent = ''; }
+}
+
 function switchSettingsTab(tab) {
+  _limpiarAvisoAjustes();
   // Edit and Delete belong to the screen they were switched on in. Carrying
   // them across meant you could leave Delete armed on four tabs at once and
   // come back to a screen already primed to remove things.
@@ -30335,6 +30395,17 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '12.99',
+    titulo: 'Importing: a way to unpick a file, and 1,250 is a number again',
+    puntos: [
+      '<b>A row written <code>1,250</code> was being thrown away in silence</b>, with the reason \u201cQty must be a number greater than 0\u201d \u2014 which is not even true: the number was there, and it was the biggest one in the file. Exporting with a thousands separator is normal in Excel, so this was not a rare case; and it fell on the expensive side, because the row lost was always the largest.',
+      'Separators are now removed <b>only when what is left either side are groups of three</b>. A <code>1,25</code> is still refused on purpose: in half of Europe that is a decimal, and turning it into 125 would invent a hundred and twenty-five units nobody has. A refused row is on screen and gets fixed; an invented one is never seen.',
+      '<b>You can take a file back off.</b> There is an \u2715 beside Choose File now: picking the wrong one no longer means leaving Settings and coming back in.',
+      '<b>And an error stops following you between tabs.</b> A failure message used to sit there over the next screen, talking about something no longer in front of you \u2014 that is not a warning, it is noise shaped like one.'
+    ],
+    antes:  'The biggest row in the file, dropped without a word',
+    ahora:  '1,250 is one thousand two hundred and fifty' },
+
   { ver: '12.98',
     titulo: 'The free edition gets Import, and the trash opens',
     puntos: [
@@ -30367,18 +30438,6 @@ var NOVEDADES = [
     ],
     antes:  'One thing called \u201cAcopio\u201d, and four promises it did not keep',
     ahora:  'Two editions, each saying what it is' },
-
-  { ver: '12.95',
-    titulo: 'A job site is not a shelf',
-    puntos: [
-      'Returning material from a site offered to <b>create that site as a shelf in your warehouse</b>. Pressing it added a rack to your map that does not exist.',
-      'The app had <b>one idea of \u201cplace\u201d and needed two</b>: inside are your racks, which you create on purpose; outside are the job sites, which come into being on their own when material leaves.',
-      'On a return the box now offers <b>the places your material has actually gone to</b>, and never offers to turn one into a shelf. The rack you return <i>to</i> still warns if it does not exist.',
-      '<b>And it asks once.</b> \u201cFrom\u201d and \u201cCame back from\u201d were the same question with two different lists. One question now; the project is worked out from your answer.',
-      'Separately: <b>\u201csystem busy\u201d is no longer filed as a breakage</b> \u2014 it was emailing the admin every time two people saved at once.'
-    ],
-    antes:  'Offering to turn a job site into a shelf',
-    ahora:  'Inside and outside are two different things' },
 
 ];
 

@@ -322,6 +322,58 @@ check('y el navegador lo enseña antes del botón, no en el mensaje final',
   /import-will/.test(srcBrowser) &&
   srcBrowser.indexOf('This import will also create') !== -1);
 
+console.log('\n═══ UN NÚMERO COMO LO ESCRIBE UNA HOJA DE CÁLCULO ═══\n');
+
+/* ── LO ENCONTRÓ UN FICHERO DE PRUEBA, NO UNA PERSONA ─────────────────────
+ *
+ * Jose, 26/10: *"tú puedes inventar un archivo Excel y uno CSV con 1000 u 800
+ * datos inventados... para ver cómo se comporta la app al subirlos"*. Se
+ * hicieron tres (`pruebas/`), y uno de ellos lleva a propósito lo que llega de
+ * verdad: cantidades vacías, en letra, negativas, a cero — y una escrita
+ * **`1,250`**.
+ *
+ * `Number('1,250')` es `NaN`. Esa fila se descartaba en silencio con el motivo
+ * «Qty must be a number greater than 0», que además es mentira: el número está
+ * y es grande. Exportar con separador de millares es lo NORMAL en Excel, así
+ * que no era un caso raro — y caía del lado más caro, porque la fila que se
+ * perdía era la de más cantidad.
+ *
+ * La regla que lo arregla sin inventar nada: se quitan los separadores SÓLO si
+ * lo que queda a los lados son grupos de tres. Un `1,25` sigue siendo inválido
+ * a propósito, porque en media Europa eso es un decimal y convertirlo en 125
+ * sería inventar ciento veinticinco unidades que nadie tiene. **Una fila
+ * rechazada se ve en la pantalla y se arregla; una fila inventada no se ve
+ * nunca.** */
+{
+  const ctx = vm.createContext({});
+  vm.runInContext(A.levantar(GS, ['numeroDeFichero_']), ctx);
+  const num = vm.runInContext('numeroDeFichero_', ctx);
+  const casos = [
+    ['1,250',    1250,  'coma de millares — la que perdía la fila más grande'],
+    ['12,500',   12500, 'dos grupos'],
+    ['1,250.75', 1250.75, 'millares y decimales a la vez'],
+    ['1 250',    1250,  'espacio de millares, que es lo normal en español'],
+    ['360',      360,   'un número normal sigue igual'],
+    ['0',        0,     'el cero llega como cero y lo rechaza la validación, no esto'],
+    ['-5',       -5,    'lo mismo con un negativo'],
+    ['1.250',    1.25,  'un punto decimal NO se toca']
+  ];
+  casos.forEach(function (c) {
+    /* `check` aquí es (etiqueta, CONDICIÓN, extra), no (got, want). Pasarle el
+       valor directamente hacía que un 0 correcto contara como fallo. */
+    check(c[2] + ' («' + c[0] + '» → ' + c[1] + ')', num(c[0]) === c[1], num(c[0]));
+  });
+  /* Y los que tienen que seguir fallando. Si éstos pasaran, la app estaría
+   * inventando cantidades, que es peor que rechazar la fila. */
+  [['1,25', 'un decimal europeo no se convierte en 125'],
+   ['doce', 'una palabra no es un número'],
+   ['',     'vacío no es cero'],
+   ['1,2345', 'un grupo que no es de tres no es un millar']
+  ].forEach(function (c) {
+    check(c[1] + ' («' + c[0] + '»)', Number.isNaN(num(c[0])), true);
+  });
+}
+
 if (fails.length) {
   console.error('\nFALLÓ:\n  ' + fails.join('\n  ') + '\n');
   process.exit(1);

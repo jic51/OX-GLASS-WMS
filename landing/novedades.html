@@ -105,6 +105,29 @@
 
     <!-- EMPEZ&Oacute; SIN N&Uacute;MERO —cambiaban las p&aacute;ginas, no la app— y acab&oacute;
          con uno: los T&eacute;rminos que el cliente acepta viven DENTRO de la hoja. -->
+    <div class="entry" id="v12-99">
+      <span class="ver">v12.99</span>
+      <span class="tag fix">Correcci&oacute;n</span>
+      <h3>Importar: quitar un fichero, y que 1,250 vuelva a ser un n&uacute;mero</h3>
+      <p><b>Una fila escrita <code>1,250</code> se tiraba en silencio</b>, con el motivo
+         &laquo;Qty must be a number greater than 0&raquo; &mdash;que adem&aacute;s es mentira: el
+         n&uacute;mero estaba, y era el m&aacute;s grande del fichero&mdash;. Exportar con
+         separador de millares es lo normal en Excel, as&iacute; que nunca fue un caso raro. Y
+         ca&iacute;a del lado caro: la fila que se perd&iacute;a era siempre la de m&aacute;s
+         cantidad.</p>
+      <p>Ahora los separadores se quitan &mdash;coma, espacio, todos&mdash; pero <b>s&oacute;lo si
+         lo que queda a los lados son grupos de tres</b>. Un <code>1,25</code> se sigue rechazando
+         a prop&oacute;sito: en media Europa eso es un decimal, y convertirlo en 125 ser&iacute;a
+         inventar ciento veinticinco unidades que nadie tiene. Una fila rechazada se ve en la
+         pantalla y se arregla; una inventada no se ve nunca.</p>
+      <p><b>Y se puede quitar un fichero.</b> Hay una &#10005; al lado de Choose File: elegir el
+         equivocado ya no obliga a salir de Ajustes y volver a entrar.</p>
+      <p><b>Un error deja de seguirte entre pesta&ntilde;as.</b> El mensaje de un fallo se
+         quedaba encima de la pantalla siguiente, hablando de algo que ya no estaba delante. Eso no
+         es un aviso: es ruido con forma de aviso, y ense&ntilde;a a ignorar el &uacute;nico sitio
+         donde salen los avisos.</p>
+    </div>
+
     <div class="entry" id="v12-98">
       <span class="ver">v12.98</span>
       <span class="tag new">Nuevo</span>

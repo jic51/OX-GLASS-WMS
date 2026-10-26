@@ -249,6 +249,108 @@ De ahí sale la conclusión de Jose, y es correcta: **diez clientes de $49 valen
 más que uno de $490**, porque el de $490 no consume diez veces menos soporte,
 consume más.
 
+### ⚠️ REVISADO EL 26/10 — TENÍA RAZÓN JOSE, Y LO DE ABAJO SE QUEDA SÓLO COMO ARITMÉTICA
+
+Jose, leyendo la propuesta de «1 hora al mes, $75 la extra»:
+
+> *"Esto suena bien para mí, pero ¿te parece que suena bien para el cliente? 1
+> hora al mes es muy poco, y nadie va a querer pagar por soporte si necesitan 1
+> hora diaria. Por 1 mes, a 75, eso es bastante dinero, incluso si es una
+> empresa grande, ni hablar de las pequeñas."*
+
+**Tiene razón, y el error es mío y de método: calculé desde nuestro coste y no
+desde lo que el cliente está comprando.** La aritmética de abajo es correcta y
+hay que conservarla —dice cuánto soporte aguanta el precio— pero convertirla en
+una CLÁUSULA es el error. Tres motivos, y el tercero es el que decide:
+
+1. **Un contador de horas convierte cada duda en una decisión de dinero.** El
+   cliente que no sabe si le quedan minutos **deja de preguntar**, y el que deja
+   de preguntar deja de usar la app. Perdimos la renovación para ahorrarnos
+   media hora.
+2. **Un cliente que necesita una hora diaria no tiene un problema de soporte:
+   tiene un problema de producto**, y cobrárselo es cobrarle por nuestro fallo.
+   Esa hora diaria es la señal de que falta una pantalla, un texto o una guía.
+3. **Nadie en nuestra categoría cobra el soporte por horas.** Vender a $49 y
+   facturar $75/h es mezclar dos negocios distintos, y el cliente lo nota.
+
+### Lo que hacen de verdad otros, y qué sacamos de cada uno
+
+**GMass** — el ejemplo que trajo Jose: una extensión de Gmail con **más de siete
+cifras de ingresos anuales** y decenas de miles de usuarios, construida **sin un
+solo empleado fijo** ([Effective Founder][ef]). Su fundador lo dice sin
+rodeos: *"contamos con que los clientes se apoyen a sí mismos, y estamos ahí si
+no consiguen resolverlo"*, y apunta que su producto va dirigido a **un usuario
+algo sofisticado que normalmente no necesita mucho soporte**
+([Medium][med]). Su página de soporte no promete tiempos: pide que
+mandes **el identificador de la campaña**, y para problemas de hojas, que
+compartas la hoja **por adelantado** ([GMass][gm]).
+
+**Lo que de verdad enseña GMass no es «no deis soporte».** Es tres cosas:
+
+- **Documentación en lugar de horas.** El soporte barato no se consigue
+  limitándolo: se consigue **quitándole trabajo**, y eso es documentación y
+  mensajes de error que explican.
+- **Pedir los datos por adelantado.** Que la primera respuesta no sea «¿qué
+  versión tienes?» es la mitad del tiempo ahorrado. Nosotros ya tenemos el
+  equivalente: la **versión y el sello** en la app, y el **Error Log**.
+- **No prometer un tiempo que no se puede cumplir.** GMass no promete; nosotros
+  prometemos un día hábil. Prometer menos y cumplirlo vale más que prometer
+  mucho.
+
+**Los números del mercado de soporte por horas**, para saber con qué se compara
+quien pida una cifra: el soporte técnico a empresas se mueve entre **$100 y
+$250/hora**, y fuera de horario se suele cobrar **1,5 a 2 veces** la tarifa
+normal ([Talo][talo], [IT Pro Expert][ipe]). Los planes de bolsa de horas van
+sobre **$100/h**, con la hora por encima de la bolsa a **$125**
+([Solzorro][sz]). Los contratos lo escriben como un recargo: la hora extra a un
+**15% más** que la contratada, o a partir del **150%** de las horas base
+([Law Insider][li]). **Nuestros $75 no eran caros** — estaban por debajo de
+todo el mercado. El problema nunca fue el precio: fue **ponerle contador a una
+suscripción de $49**.
+
+### 🔵 LO QUE YO PONDRÍA AHORA — y es decisión de Jose
+
+**Nada de horas en los Términos. Lo que se acota es la FORMA, no el tiempo.**
+
+| | Incluido en los $49/mes |
+|---|---|
+| **Soporte** | **Sin límite de horas**, por correo |
+| Respuesta | **Un día hábil**, de lunes a viernes |
+| Qué entra | Que la app funcione: fallos, dudas de uso, recuperar un respaldo |
+| Qué NO entra, y se cotiza aparte | **Formar gente nueva**, limpiar o migrar datos, cambios a medida, integraciones, y **bodegas adicionales** |
+| Llamadas | Las que hagan falta para un fallo. Las de formación, no |
+
+**Por qué «sin límite» no nos arruina, que es la pregunta que queda:** porque el
+límite real **no es el reloj, es el tipo de trabajo**. Un cliente no puede
+consumir una hora diaria «de soporte» — puede consumirla de **formación** o de
+**trabajo a medida**, y esas dos están fuera y se cotizan. La frase que lo
+resuelve en la llamada es la misma de antes, sin contador:
+
+> *"Esto ya no es que algo no funcione: es enseñar a tu gente nueva, y eso lo
+> hacemos aparte. ¿Te paso un precio, o prefieres que te deje una guía y lo haces
+> tú?"*
+
+**Y la salida que no cuesta dinero: la guía.** Cada vez que una pregunta se
+repite dos veces, se escribe una página en acopio.net y la respuesta siguiente
+es un enlace. Eso es exactamente lo que hace GMass, y es lo que convierte el
+soporte en un coste que **baja** con el número de clientes en vez de subir.
+
+**Si aun así hace falta un número en algún sitio**, que sea el único caso en el
+que de verdad duele y es fácil de defender: **formación más allá de la
+instalación, $75/hora, cotizada antes de empezar.** Eso no es un contador sobre
+la suscripción: es un servicio distinto con su propio precio, que es lo que de
+verdad es.
+
+[ef]: https://www.effectivefounder.com/podcast/ajay-goel-gmass/
+[med]: https://medium.com/the-business-of-content/this-guy-built-a-1-million-business-on-top-of-the-gmail-api-3e893ad0b172
+[gm]: https://www.gmass.co/blog/support/
+[talo]: https://talo.com/costs/tech-support-prices
+[ipe]: https://itproexpert.com/it-support-cost-calculator-usa-2026-real-prices-hidden-extras-and-in-house-costs/
+[sz]: https://solzorro.com/pricing/
+[li]: https://www.lawinsider.com/dictionary/overage-rate
+
+### La aritmética que sigue valiendo (lo que NO cambia)
+
 ### El único soporte que la suscripción paga
 
 Para que esto se pueda decir en una llamada sin inventar nada en el momento,

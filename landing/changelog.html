@@ -106,6 +106,28 @@
          hoja, generados desde `legal/*.md` por `tools/sync-legal.js`, así que
          arreglar lo que dicen de las dos ediciones obliga a tocar la app. Ya
          que había que tocarla, viaja también el ancla `#pro` del candado. -->
+    <div class="entry" id="v12-99">
+      <span class="ver">v12.99</span>
+      <span class="tag fix">Fix</span>
+      <h3>Importing: a way to unpick a file, and 1,250 is a number again</h3>
+      <p><b>A row written <code>1,250</code> was being thrown away in silence</b>, with the reason
+         &ldquo;Qty must be a number greater than 0&rdquo; &mdash; which is not even true: the
+         number was there, and it was the biggest one in the file. Exporting with a thousands
+         separator is normal in Excel, so this was never a rare case. And it fell on the expensive
+         side: the row lost was always the largest one.</p>
+      <p>Separators come off now &mdash; comma, space, the lot &mdash; but <b>only when what is
+         left either side are groups of three</b>. A <code>1,25</code> is still refused on purpose:
+         in half of Europe that is a decimal, and turning it into 125 would invent a hundred and
+         twenty-five units nobody has. A refused row is on the screen and gets fixed; an invented
+         one is never seen.</p>
+      <p><b>You can take a file back off.</b> There is an &#10005; beside Choose File: picking the
+         wrong one no longer means leaving Settings and coming back in.</p>
+      <p><b>And an error stops following you between tabs.</b> A failure message used to sit there
+         over the next screen, talking about something that was no longer in front of you. That is
+         not a warning, it is noise shaped like one &mdash; and it teaches people to ignore the one
+         place warnings appear.</p>
+    </div>
+
     <div class="entry" id="v12-98">
       <span class="ver">v12.98</span>
       <span class="tag new">New</span>

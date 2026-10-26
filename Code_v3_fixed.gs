@@ -128,7 +128,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.98';
+var APP_VERSION = '12.99';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -140,7 +140,7 @@ var APP_VERSION = '12.98';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '216da04c';
+var APP_BUILD = '26d0d5a7';
 
 // ═══ ACOPIO BASIC — EL INTERRUPTOR DE LA VERSIÓN GRATIS ══════════════════════
 //
@@ -9617,6 +9617,39 @@ function chooseImportSheet_(sheets, wanted) {
 // up front instead. Kept in step with MAX_ATTACH_BYTES in Index.html.
 var MAX_ATTACH_BYTES = 25 * 1024 * 1024;   // 25 MB
 
+/* ── UN NÚMERO COMO LO ESCRIBE UNA HOJA DE CÁLCULO ────────────────────────
+ *
+ * `Number('1,250')` es `NaN`. Lo encontré el 26/10 con un fichero de prueba
+ * hecho a propósito con lo que llega de verdad: una fila de **1.250 unidades
+ * se descartaba en silencio** por una coma de millares, y el motivo que salía
+ * era «Qty must be a number greater than 0», que es mentira — el número está
+ * y es grande.
+ *
+ * Exportar con separador de millares es lo NORMAL en Excel, así que esto no
+ * es un caso raro: es el caso. Y cae del lado más caro, porque la fila que se
+ * pierde es la de más cantidad.
+ *
+ * SÓLO se quitan las comas cuando el patrón es inequívocamente de millares —
+ * grupos de tres: `1,250`, `12,500`, `1,250.75`. Un `1,25` NO se toca, porque
+ * en media Europa eso es un decimal y convertirlo en 125 sería inventar
+ * ciento veinticinco unidades que nadie tiene. Ante la duda, se rechaza la
+ * fila: una fila rechazada se ve en la pantalla y se arregla; una fila
+ * inventada no se ve nunca.
+ *
+ * También cae el espacio fino de millares (1 250) y el apóstrofo suizo. */
+function numeroDeFichero_(v) {
+  var t = String(v == null ? '' : v).trim();
+  if (!t) return NaN;
+  /* El separador puede ser coma, espacio normal, espacio fino, espacio duro o
+     el apóstrofo suizo. Se quitan TODOS, pero sólo si lo que queda a los lados
+     son grupos de tres — ésa es la comprobación que distingue un millar de un
+     decimal, y es la que impide convertir «1,25» en 125. */
+  if (/^-?\d{1,3}([,\u00A0\u202F\u2009' ]\d{3})+(\.\d+)?$/.test(t)) {
+    t = t.replace(/[,\u00A0\u202F\u2009' ]/g, '');
+  }
+  return Number(t);
+}
+
 var IMPORT_REQUIRED_HEADERS = ['category', 'name', 'qty'];
 var IMPORT_ALL_HEADERS      = ['category', 'name', 'qty', 'unit', 'location', 'project', 'supplier', 'po', 'comments'];
 
@@ -9732,7 +9765,7 @@ function leerFilasDelFichero_(data) {
       rowNum:   i + 1,
       category: String(r[col.category] || '').trim(),
       name:     String(r[col.name]     || '').trim(),
-      qty:      Number(r[col.qty]),
+      qty:      numeroDeFichero_(r[col.qty]),
       unit:     col.unit     !== -1 ? (String(r[col.unit]     || '').trim() || 'UNIT') : 'UNIT',
       location: col.location !== -1 ?  String(r[col.location] || '').trim() : '',
       project:  col.project  !== -1 ?  String(r[col.project]  || '').trim() : '',

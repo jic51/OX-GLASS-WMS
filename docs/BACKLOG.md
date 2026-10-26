@@ -312,6 +312,126 @@ puede contar, porque son trozos y no 490 resultados sueltos.
 
 ---
 
+## 🖥 26/10 — CÓMO SE ENTRA AL ORDENADOR DE UN CLIENTE
+
+Jose: *"también dame el nombre de la extensión que me permite manejar la
+computadora de los clientes."*
+
+**La que encaja con Acopio es Chrome Remote Desktop**, de Google
+(`remotedesktop.google.com`). Por tres motivos que son del producto, no de la
+herramienta:
+
+- **Es gratis**, sin licencia por técnico ni por sesión.
+- **El cliente ya tiene cuenta de Google** — es el requisito de Acopio. No hay
+  cuenta nueva que crear ni programa que comprar.
+- **Para pedir ayuda puntual sólo instala la extensión y te da un código de 12
+  cifras** que caduca. No queda nada encendido en su máquina cuando termináis.
+
+Las otras tres, por si alguna vez hace falta:
+
+| | Cuándo | Pega |
+|---|---|---|
+| **AnyDesk** | Rápida y ligera; va bien con mala conexión | De pago para uso comercial |
+| **TeamViewer** | La más conocida; el cliente probablemente la reconoce | **Corta las sesiones gratuitas acusando uso comercial**, y suele pasar en mitad de una instalación |
+| **RustDesk** | Libre, se puede alojar uno mismo | Hay que montar el servidor; no es para empezar |
+
+**Y la regla que yo pondría desde el primer día, antes de usar ninguna:**
+
+1. **Nunca sin que el cliente esté delante y lo vea.** Es su inventario y sus
+   precios. Entrar cuando no está, aunque sea más cómodo, es exactamente lo que
+   esta arquitectura promete que no pasa.
+2. **Pídele que cierre lo que no tenga que ver contigo** antes de empezar. Lo
+   que no se ve no se puede filtrar sin querer.
+3. **Que escriba él las contraseñas.** Nunca tú, ni aunque te las dicte.
+4. **Grabar sólo si él lo pide**, y guardarlo donde guardas lo demás.
+
+Vale la pena escribirlo porque el día que entres a la máquina de alguien estás
+dentro de su empresa, y lo que te protege no es la herramienta: es haber dicho
+antes cómo se usa.
+
+---
+
+## 🔵 26/10, NOCHE — LOS ID DEL FICHERO: HOY SE TIRAN, Y QUÉ YO HARÍA
+
+Jose: *"la app le da un id a cada movimiento, pero no sabemos si al subir un
+archivo con id's propios la app vaya a utilizar los mismos (si lo hace debe
+verificar que no haya repetidos), o generar nuevos... pero sería bueno mantener
+el id anterior para tener trazabilidad hacia atrás. ¿Qué piensas?"*
+
+**Comprobado en el código, y la respuesta es la tercera opción que no estaba en
+su lista: hoy el ID del fichero ni siquiera se lee.**
+
+```
+IMPORT_ALL_HEADERS = ['category','name','qty','unit','location',
+                      'project','supplier','po','comments']
+```
+
+No hay `id`. Una columna que no está en esa lista **se ignora en silencio** —
+lo confirmé subiendo un fichero de prueba con 800 filas y una columna `id`: el
+lector devolvió las nueve columnas de siempre y ni mencionó la décima.
+
+Y la otra mitad de su pregunta ya está resuelta: cada fila importada recibe un
+ID nuevo de `uniqueMovId_`, que **sí** comprueba duplicados — lleva el mapa de
+los que ya existen y añade `-1`, `-2`… si el base está cogido.
+
+**Lo que yo NO haría: meter el ID del fichero en `MOV_ID`.** Esa columna es la
+llave única de la app: es por donde se borra, se edita y se deshace una
+importación. Aceptar llaves de fuera es aceptar que un fichero decida las
+llaves de un sistema que ya tiene las suyas, y el primer fichero con un ID
+repetido —o con el mismo ID que un movimiento viejo— rompe el borrado.
+
+**Lo que SÍ haría, y es la idea de Jose bien puesta:** una **décima columna
+opcional**, `id`, que no se usa como llave sino que se **conserva como dato**.
+La app sigue poniendo el suyo; el del fichero viaja al lado. Entonces
+«¿de dónde salió este movimiento?» tiene respuesta hacia atrás, que es
+exactamente lo que él busca.
+
+Dos formas, y la decisión es suya:
+
+| | Cómo | Coste | Pega |
+|---|---|---|---|
+| **A · En el comentario** | Se añade `· src:LEG-0001-2606` al texto que ya se escribe (`Imported from file IMP-XXXX`) | **Casi nada** | No se puede buscar por columna; es texto |
+| **B · Columna propia** | Una columna nueva en ARCHIVE, `SOURCE_ID` | Mediano: toca el ancho de la hoja, la migración de las instalaciones que ya existen y las pruebas de columnas | Es lo correcto a largo plazo |
+
+**Yo empezaría por A** — resuelve la trazabilidad hoy, no migra nada, y se ve
+en la propia tarjeta del movimiento. **B** cuando haya un segundo motivo para
+tocar el ancho de la hoja, porque ese cambio no se hace dos veces.
+
+---
+
+## ✅ 26/10, NOCHE — TRES FICHEROS DE PRUEBA, Y UNO ENCONTRÓ UN FALLO REAL
+
+Jose: *"tú puedes inventar un archivo Excel y uno CSV con 1000 u 800 datos
+inventados (diferentes fechas, diferentes nombres, diferentes id's, todo
+diferente) para ver cómo se comporta la app al subirlos"*.
+
+Hechos, en `pruebas/`, con semilla fija —el mismo fichero cada vez, para que un
+fallo se pueda repetir—:
+
+| Fichero | Qué prueba |
+|---|---|
+| `inventario-1000.csv` | el caso normal, 1.000 filas, cabecera exacta |
+| `inventario-800-con-id.csv` | lleva una columna `id` propia — es la pregunta de arriba |
+| `inventario-600-sucio.csv` | **lo que llega de verdad**: cantidades vacías, en letra, negativas, a cero; nombres con espacios de más; comillas y punto y coma dentro del texto; una OBRA metida en la columna de ubicación |
+| `inventario-800.xlsx` | un `.xlsx` legítimo de **dos pestañas**, para probar que Pro elige la correcta y que la gratis lo rechaza con su oferta |
+
+**Pasados por el lector de verdad** (`leerFilasDelFichero_`, no por una
+imitación): 1.000 de 1.000 y 800 de 800 válidas, y el sucio marcó correctamente
+cada fila mala con su motivo.
+
+**Y encontró uno que no buscaba.** Una fila con la cantidad escrita `1,250` se
+descartaba en silencio: `Number('1,250')` es `NaN`, y el motivo que salía era
+«Qty must be a number greater than 0» — **que además es mentira, el número
+estaba y era el más grande del fichero**. Exportar con separador de millares es
+lo normal en Excel, así que no era un caso raro; y caía del lado más caro,
+porque la fila perdida era siempre la de más cantidad. Arreglado en la v12.99
+con la regla que no inventa nada: los separadores se quitan **sólo si lo que
+queda a los lados son grupos de tres**, así que `1,25` se sigue rechazando a
+propósito. *Una fila rechazada se ve en la pantalla y se arregla; una inventada
+no se ve nunca.*
+
+---
+
 ## ✅ 26/10, TARDE — IMPORT EN LA GRATIS Y LA PAPELERA, CON SU DECISIÓN DETRÁS
 
 Jose: *"la papelera no se puede probar aún en básico, por lo menos regresar
