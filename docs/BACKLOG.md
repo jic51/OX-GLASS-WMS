@@ -323,6 +323,96 @@ puede contar, porque son trozos y no 490 resultados sueltos.
 
 ---
 
+## ✅ 26/10 — LA PAPELERA AGRUPADA: SU IDEA, Y LO QUE HAY QUE HACER ANTES
+
+Jose: *"tal vez lo que necesitamos es que al borrar la app los organice por
+nombre, categoría y tipo de movimiento... si se borran muchos se los pone en
+grupos ordenados por nombre-categoría-tipo, y si son pocos se los pone arriba
+de la lista o se trae todo el grupo. También podríamos poner filtros por fecha
+y un buscador por nombre. ¿Qué piensas?"*
+
+**La idea es buena y va en la dirección correcta. Dos matices, y uno es un
+bloqueo.**
+
+### El bloqueo: agrupar una lista truncada es peor que no agrupar
+
+Mirando esto encontré **H-01**: `listTrash` lee **sólo las últimas 200 filas**.
+Jose borró 490 el 23/10 — **290 no están en la papelera y no se pueden
+devolver desde la app.**
+
+Eso cambia el orden de las cosas. Si se agrupa ahora, la pantalla diría
+«RAIN BUSTER 444 · 3 salidas» cuando de verdad hay nueve: **seis invisibles
+dentro de un grupo que afirma estar completo.** Un número que miente es peor
+que una lista larga. **H-01 primero, agrupar después.**
+
+### El matiz: una regla, no dos
+
+Jose propone dos comportamientos —pocos arriba, muchos agrupados— y él mismo
+dice *"está un poco confuso"*. Lo está, y no por cómo lo explicó: **el problema
+es el umbral.** Cualquier número que elijamos (¿5? ¿20?) hace que la misma
+pantalla se comporte de dos maneras según cuántas filas haya, y nadie entiende
+por qué hoy ve una lista y ayer veía grupos.
+
+**Lo que yo haría, que da lo mismo que él quiere con una sola regla:**
+
+- **Siempre agrupado** por material (nombre + categoría), y dentro por tipo.
+- **Los grupos ordenados por lo más reciente**, así lo que acabas de borrar
+  sale arriba — que es el caso de «se borran pocos» sin necesidad de una regla
+  aparte.
+- **Un grupo de uno se dibuja como una línea**, no como un grupo con una cosa
+  dentro. Así «pocos» y «muchos» se ven distinto **sin que haya dos reglas**:
+  la diferencia la pone el dato, no un umbral escrito por nosotros.
+- **El buscador y el filtro por fecha, sí**, los dos. Y van del lado del
+  **servidor**, no filtrando lo que ya llegó: es lo que de verdad arregla H-01.
+
+### Y lo que esto desbloquea, que es lo que lo hace valer la pena
+
+Con los movimientos agrupados por material, **el arreglo del orden de la
+papelera se vuelve obvio en la pantalla**: la entrada y sus salidas salen
+juntas, en el mismo grupo, y «devuelve primero ésta» deja de ser un mensaje de
+error para ser una flecha señalando dos filas más arriba.
+
+---
+
+## 🧊 26/10 — EL MAPA 3D, Y QUÉ APRENDER DEL COMPETIDOR DE REDDIT
+
+Jose, con una captura de un post de Reddit: *"encontré una aplicación parecida
+en internet, está mucho mejor, y creo que un mapa 3D sería increíble de tener.
+Podemos anotarlo para analizar luego."*
+
+Lo que enseña el post: un inventario **doméstico** —garaje, trastero, garantías,
+seguros— con un **mapa 3D de la casa** y centenares de comentarios. Anotado
+para analizar, sin empezar nada. Dos cosas que me parece importante separar
+antes de que esto se convierta en «hay que hacer un 3D»:
+
+**1 · No es nuestro cliente, y eso cambia lo que hay que copiar.** Un inventario
+de casa se mira **de vez en cuando** y la gracia está en recorrerlo; una bodega
+se usa **cuarenta veces al día** y la gracia está en no mirar. Copiar el 3D sin
+ver eso sería ponerle a un bodeguero con guantes una cámara que girar.
+
+**2 · Lo que SÍ vale la pena, y ya está medio hecho.** Lo que hace fuerte a ese
+mapa no son los polígonos: es que **el sitio físico es la forma de navegar**.
+Acopio ya tiene el mapa de racks plano. El salto grande no es de 2D a 3D — es
+que el mapa sea **por donde se trabaja**, no una pantalla de consulta.
+
+**Qué miraría yo antes de decidir nada**, en este orden:
+
+- ¿Resuelve el 3D algún problema que Jose haya nombrado? Hasta hoy ninguno.
+  Los que ha nombrado son: no encontrar material, el orden de la papelera, la
+  lentitud al abrir.
+- Un plano **con alturas** (rack, nivel, hueco) cubre casi todo lo que la gente
+  cree querer del 3D, y se dibuja con lo que ya tenemos.
+- El 3D de verdad pide WebGL o una librería, y **la app es un archivo a
+  propósito**. Eso no es un detalle: es la decisión que hace que se instale en
+  dos minutos. Un 3D que obligue a un `<script src>` cambia el producto.
+
+**Y lo que yo copiaría del post, que es gratis y vale más hoy:** ese producto
+enseña **capturas de la pantalla de verdad** y responde a cada comentario con
+detalle técnico. Eso es exactamente lo que dice `SALIR-A-PUBLICAR.md` y
+todavía no hemos hecho.
+
+---
+
 ## 🔐 26/10 — ANÁLISIS DE SEGURIDAD, PARTE 1 (lo accionable)
 
 El informe entero está en `docs/ANALISIS-SEGURIDAD.md`. Aquí sólo lo que hay
