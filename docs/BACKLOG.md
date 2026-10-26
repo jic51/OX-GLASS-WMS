@@ -312,6 +312,136 @@ puede contar, porque son trozos y no 490 resultados sueltos.
 
 ---
 
+## 🔴 26/10 — LO QUE SALIÓ DEL VÍDEO Y LAS CUATRO CAPTURAS DE JOSE
+
+### ✅ ARREGLADO EN LA v12.97 — los dos bloqueadores de Ajustes
+
+Están contados en el commit y en el changelog. Lo que hay que recordar de
+ellos es la forma, porque las dos la repiten:
+
+- **El gris que no se iba.** Había una función para APAGAR una zona y ninguna
+  para ENCENDERLA. *Una pareja a la que le falta una mitad se acaba usando a
+  medias.* Y el oyente del clic llevaba la clave dentro de un `function`
+  anónimo, así que no se podía quitar ni queriendo: lo que se enciende y se
+  apaga ahora es el atributo, y el oyente la lee al pulsar.
+- **Las pestañas que reaparecían.** Dos reglas escribiendo el mismo
+  `style.display` — el rol y la edición — y ganaba la que corriera la última.
+  No tenían que coincidir: tenían que **combinarse**, y nadie las combinaba.
+  `_settingsTabVisible` es el único sitio donde se juntan. **Esto es lo que yo
+  llamaba «un solo dueño de la visibilidad de pestañas», que Jose pidió que le
+  explicara el 22/10.** Ya no es una idea: es una función.
+
+### 🔴 1. LOS TÉRMINOS DE LA HOJA NO SE ACTUALIZAN NUNCA
+
+Jose, con dos capturas: la ventana de Términos **dentro de la app** ya trae el
+apartado de las dos ediciones, y la pestaña **de la hoja** sigue como estaba.
+
+Y es verdad, y es estructural:
+
+| Copia | Quién la escribe | ¿Se actualiza al pegar código? |
+|---|---|---|
+| La ventana de la app | `LEGAL_DOCS`, se lee del archivo en cada carga | ✅ sí |
+| **La pestaña de la hoja** | `createLegalSheets_`, llamada **sólo** desde `createStartHereSheet_` | ❌ **no** |
+
+`createStartHereSheet_` corre en tres sitios y los tres son de instalación: si
+no existe la hoja de bienvenida, al fabricar la plantilla, y al diagnosticar un
+permiso que falta. **En una instalación que ya existe, esa pestaña se escribió
+una vez y se queda congelada para siempre.**
+
+Y es la copia que importa: es la que el cliente tenía delante **cuando marcó la
+casilla**. El comentario del código dice *"rebuilt from scratch each time rather
+than patched... so the file's copy should always be the current one"* — es
+verdad de la función y falso del producto, porque nadie la vuelve a llamar.
+
+**LA TRAMPA, y por eso no lo arreglé al vuelo.** `createLegalSheets_` hace
+`deleteSheet` + `insertSheet`. Eso le da un **gid nuevo** a la pestaña, y los
+dos enlaces de la casilla de consentimiento en START HERE apuntan al gid viejo
+(`#gid=101`, `#gid=102` en la captura de Jose). Reconstruir a lo bruto deja la
+frase del consentimiento enlazando a dos pestañas que ya no existen —
+exactamente la pantalla que no se puede romper.
+
+**Lo que haría:** reescribir el CONTENIDO de la pestaña en su sitio, sin
+borrarla ni insertarla, y dispararlo solo cuando la fecha de la pestaña no
+coincida con la del código. Tamaño: pequeño; el cuidado está en no tocar el
+gid. **Decisión de Jose**, porque toca la app.
+
+### 🔴 2. QUIEN NO ES ADMIN PUEDE SUBIR UN DOCUMENTO Y NO PUEDE ABRIRLO
+
+Jose: *"¿cómo manejamos que un usuario no admin (warehouse/supervisor) ingrese
+documentos en los movimientos, en los incomings o en las entries, si todos los
+documentos y los backups se guardan en el Drive del admin que empezó la app?"*
+
+**Subir funciona, y la razón es buena.** El manifiesto despliega la app con
+`executeAs: USER_DEPLOYING`: TODO el código de servidor corre con la cuenta del
+administrador que la desplegó. El navegador del bodeguero manda los bytes, y
+quien escribe en Drive es el admin. El bodeguero **no concede ningún permiso de
+Drive y no necesita ninguno** — por eso entrar a la app es sólo iniciar sesión.
+
+**Abrirlo no funciona, y eso no lo habíamos hablado.** Desde la v8.10 los
+documentos se guardan **privados** (antes eran «cualquiera con el enlace», y esa
+fue una exposición que se cerró). Pero la app enseña el documento como un enlace
+normal de Drive:
+
+```
+https://drive.google.com/file/d/<id>/view
+```
+
+- El **admin** lo abre.
+- Un **bodeguero o supervisor** recibe de Google «necesitas acceso».
+
+Así que hoy un operario puede adjuntar la foto del albarán y **no puede volver a
+verla**. Nadie lo ha reportado porque sólo lo nota quien no es admin, y la app
+todavía no ha tenido equipos de verdad. No lo toqué: es un arreglo con tres
+caminos y una decisión de privacidad dentro.
+
+**Las tres salidas, de menos a más expuestas:**
+
+1. **Que el servidor sirva el archivo.** El código ya corre como el admin: puede
+   leer los bytes y devolverlos a quien tenga permiso en la app. El fichero
+   sigue privado en Drive y el control de quién lo ve vuelve a ser nuestro, que
+   es donde debe estar. Más trabajo, y es lo que yo haría.
+2. **Dar acceso de lector a cada usuario de la app** cuando se sube. Es exacto,
+   pero mete a Google en medio de cada alta y baja de personal, y un usuario
+   borrado de la app conserva el acceso en Drive.
+3. **Volver a «cualquiera con el enlace»**. Es lo más fácil y es **deshacer la
+   corrección de la v8.10**. No lo recomiendo.
+
+**Y dos consecuencias del modelo que conviene tener escritas**, porque no son un
+fallo pero sí una promesa que estamos haciendo sin decirla: el **espacio de
+Drive del admin es el de toda la empresa**, y si esa cuenta desaparece, los
+documentos y los respaldos se van con ella.
+
+### 🟡 3. EL TOAST DE PRO ESTÁ MAL ALINEADO — Y HAY QUE MIRARLOS TODOS
+
+Jose, con una captura: *"el candado está a mitad del toast (está correcto) pero
+el texto y la 'x' están más arriba de la mitad y se ven mal colocados. Anótalo
+para corregirlo luego y también revisar todos los demás toasts, de Pro y no de
+Pro."*
+
+Anotado tal cual, sin tocar nada. Lo que hay que hacer **no** es empujar ese
+texto: es mirar la fila entera y decidir **una** regla de alineación vertical
+para todos los avisos, los de Pro y los normales. Arreglar sólo el que se ve mal
+es cómo se acaba con cinco avisos alineados de cinco maneras.
+
+### 🟡 4. EL NOMBRE SALTA CUANDO APARECE EL LOGO
+
+Jose: *"siempre que se abre la app aparece el nombre solamente y luego de unos
+segundos aparece el logo y hace mover al nombre hacia abajo. Debemos
+estandarizar también eso, para que no se muevan al aparecer o desaparecer algo
+(como lo hicimos con las columnas)."*
+
+Tiene razón y la comparación es la correcta: es **el mismo fallo que las
+columnas del Dashboard**, que se movían al cambiar de filtro y se arregló
+reservando el ancho. Aquí falta reservar el **alto** del logo antes de que
+llegue: el hueco existe desde el primer pintado, vacío, y la imagen aparece
+dentro sin empujar nada.
+
+Y conviene hacerlo como regla, no como parche: *nada que llegue tarde puede
+mover lo que ya está colocado*. Es lo mismo que la fila nueva del registro de
+errores, y lo mismo que las columnas.
+
+---
+
 ## 🔴 25/10 — POR QUÉ «🏷 LABELS SALE A COLOR», Y HAY DOS, NO UNA
 
 En la lista de verificación había tres cosas apuntadas como «ya sabemos que

@@ -5840,7 +5840,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.96';
+var APP_VERSION = '12.97';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5852,7 +5852,7 @@ var APP_VERSION = '12.96';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '4839af6b';
+var APP_BUILD = 'fb3ce95f';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -14874,13 +14874,42 @@ function openSettingsModal() {
 // which is a different order of risk than adding a supplier.
 var SETTINGS_CATALOG_TABS = { categories:1, projects:1, suppliers:1, locations:1 };
 
+/* ── QUIÉN DECIDE SI UNA PESTAÑA DE AJUSTES SE VE ─────────────────────────
+ *
+ * UNA sola función, y es la respuesta a lo que Jose pidió que le explicara:
+ * *"«un solo dueño de la visibilidad de pestañas» no entiendo esto"*. Esto es.
+ *
+ * Había DOS reglas escribiendo sobre el MISMO `style.display`:
+ *
+ *   · el ROL — `_filterSettingsSidebar`: un no-administrador sólo ve el
+ *     catálogo;
+ *   · la EDICIÓN — `_basicPintar`: la versión gratis no lleva Permissions,
+ *     Directory ni Import.
+ *
+ * Y la segunda corría primero. `_basicPintar` las escondía al arrancar, y al
+ * abrir Ajustes `_filterSettingsSidebar` recorría TODOS los botones poniendo
+ * `display = ''` a los que el rol permite — y para un administrador eso es
+ * todos. Las volvía a enseñar.
+ *
+ * Así se veía: Jose, 25/10, con un vídeo de su copia Básica, Permissions,
+ * Directory e Import **a la vista y funcionando**. No es que la lista de la
+ * edición estuviera mal: es que alguien la pisaba después.
+ *
+ * Dos cosas que tienen que coincidir sin que nada lo obligue, otra vez — con
+ * el agravante de que aquí ni siquiera tenían que coincidir, tenían que
+ * COMBINARSE, y nadie las combinaba. Ahora las dos reglas viven aquí y el que
+ * pinta sólo pregunta. */
+function _settingsTabVisible(tab){
+  if (APP_BASIC && BASIC_FUERA.ajustes.indexOf(tab) !== -1) return false;
+  if (userRole === 'ADMIN') return true;
+  return !!SETTINGS_CATALOG_TABS[tab];
+}
+
 function _filterSettingsSidebar(){
-  var isAdmin = (userRole === 'ADMIN');
   var nav = document.querySelector('.settings-sidebar');
   if (!nav) return;
   nav.querySelectorAll('.settings-tab').forEach(function(btn){
-    var tab = btn.getAttribute('data-tab');
-    btn.style.display = (isAdmin || SETTINGS_CATALOG_TABS[tab]) ? '' : 'none';
+    btn.style.display = _settingsTabVisible(btn.getAttribute('data-tab')) ? '' : 'none';
   });
   // The section labels ("Company", "Diagnostics") read oddly sitting above an
   // empty space once their only buttons are hidden.
@@ -14895,7 +14924,11 @@ function _filterSettingsSidebar(){
   // A non-admin landing on a tab they can no longer see (e.g. Settings was
   // last closed on "System" by an admin using the same browser profile) gets
   // dropped onto the first catalog tab instead of a blank pane.
-  if (!isAdmin && !SETTINGS_CATALOG_TABS[_settingsTab]) _settingsTab = 'categories';
+  /* Y si la pestaña guardada ya no se puede ver —por el rol o por la edición—
+     se cae al catálogo en vez de dejar un panel en blanco. Antes esto sólo
+     miraba el rol, así que una copia gratis que hubiera cerrado Ajustes en
+     «Import» volvía a abrirse en una pestaña sin botón. */
+  if (!_settingsTabVisible(_settingsTab)) _settingsTab = 'categories';
 }
 
 /* A refresh that lands while somebody is typing must not take the field away.
@@ -29167,14 +29200,31 @@ var BASIC_PRO_AJUSTES = { system: 'respaldo' };
  * tener que ir control por control.
  */
 function _basicApagarZona(el, clave){
-  if (!el || el.getAttribute('data-pro') === clave) return;
+  if (!el) return;
   el.setAttribute('data-pro', clave);
   el.classList.add('pro-off');
+  /* EL OYENTE SE PONE UNA VEZ Y SE QUEDA; lo que se enciende y se apaga es el
+     atributo. Una función anónima no se puede quitar con `removeEventListener`
+     —no hay referencia— así que si el oyente llevara la clave dentro, apagar la
+     zona sería imposible y el panel se quedaría muerto para siempre. Que es
+     exactamente lo que pasaba. Ahora el oyente lee la clave en el momento del
+     clic: sin atributo, el clic es de quien lo pidió. */
+  if (el.__proOyente) return;
+  el.__proOyente = true;
   el.addEventListener('click', function(ev){
+    var c = el.getAttribute('data-pro');
+    if (!c) return;
     ev.preventDefault();
     ev.stopPropagation();
-    _proPitch(clave);
+    _proPitch(c);
   }, true);   // en captura: llega antes que cualquier manejador de dentro
+}
+
+/* Lo contrario, que faltaba. Ver `_basicApagarAjuste`. */
+function _basicEncenderZona(el){
+  if (!el) return;
+  el.removeAttribute('data-pro');
+  el.classList.remove('pro-off');
 }
 
 /* ── LO QUE SÍ SE ENSEÑA, CON CANDADO ────────────────────────────────────────
@@ -29644,10 +29694,11 @@ function _basicPintar(){
     var b = document.getElementById(par[1]);
     if (b) b.style.display = 'none';
   });
-  BASIC_FUERA.ajustes.forEach(function(t){
-    var b = document.querySelector('[data-tab="' + t + '"]');
-    if (b) b.style.display = 'none';
-  });
+  /* Las pestañas de ajustes YA NO SE TOCAN AQUÍ. Las decide
+     `_settingsTabVisible`, que es el único sitio donde se juntan la regla del
+     rol y la de la edición; escribir el `display` también desde aquí era
+     justo lo que hacía que la una pisara a la otra. */
+  _filterSettingsSidebar();
   Object.keys(BASIC_PRO_ZONAS).forEach(function(id){
     _basicApagarZona(document.getElementById(id), BASIC_PRO_ZONAS[id]);
   });
@@ -29665,11 +29716,27 @@ function _equisTrasPintar(){
   try { _ponerEquis(document); } catch (e) {}
 }
 
+/* ── Y HAY QUE ENCENDERLA AL SALIR, QUE ES LA MITAD QUE FALTABA ───────────
+ *
+ * Jose, 25/10, con un vídeo: *"cuando en Settings la pantalla se queda en gris
+ * y no deja tocar nada, todas las ventanas aparecen con un Acopio Pro en la
+ * esquina"*. Y no podía probar importar, borrar, fusionar ni la papelera —
+ * cuatro cosas de su lista bloqueadas por esto.
+ *
+ * `settingsTabContent` es UN SOLO elemento que se repinta en cada pestaña. Al
+ * abrir «System» —que sí es de Pro— se le ponía `pro-off`. Al cambiar a
+ * cualquier otra, esta función salía por el `return` de arriba **sin quitarlo**:
+ * el contenido cambiaba y el gris se quedaba. Desde ese momento, todo Ajustes
+ * quedaba muerto hasta recargar.
+ *
+ * El error de fondo no es el `return`: es que había una función para apagar y
+ * ninguna para encender. Una pareja a medias siempre se usa a medias. */
 function _basicApagarAjuste(tab){
   if (!APP_BASIC) return;
+  var el = document.getElementById('settingsTabContent');
   var clave = BASIC_PRO_AJUSTES[tab];
-  if (!clave) return;
-  _basicApagarZona(document.getElementById('settingsTabContent'), clave);
+  if (!clave) { _basicEncenderZona(el); return; }
+  _basicApagarZona(el, clave);
 }
 
 /**
@@ -29971,7 +30038,7 @@ var LEGAL_DOCS = {
 <p>Material changes to this policy will be communicated to active customers by email before they take effect. The date at the top always reflects the current version.</p>
 <h3>11. Contact</h3>
 <p>Jose Castro — joseisrael5101@gmail.com</p>` },
-  terms:   { title: 'Terms of Service', html: `<p><strong>Last updated:</strong> 27 August 2026</p>
+  terms:   { title: 'Terms of Service', html: `<p><strong>Last updated:</strong> 24 October 2026</p>
 <p>These terms govern your use of Acopio, warehouse-management software provided by Jose Castro ("we", "us"). By installing or using it, you agree to them. If you are agreeing on behalf of a company, you confirm you are authorised to do so.</p>
 <hr>
 <h3>The two editions, and which parts of this apply to you</h3>
@@ -30157,6 +30224,17 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '12.97',
+    titulo: 'Settings stops going dead in the free edition',
+    puntos: [
+      'In Acopio Basic, opening <b>Settings \u2192 System</b> \u2014 which is a Pro screen \u2014 greyed the panel out correctly, and then <b>every other Settings tab stayed grey and untouchable</b> until you reloaded. Import, Locations, Materials, the Error Log: all dead, with a faint \u201cAcopio Pro\u201d in the corner.',
+      'All the tabs are drawn into the <b>same box</b>. There was a function to switch that box off and <b>none to switch it back on</b>, so leaving the Pro tab left the grey behind. Both now exist.',
+      'And in the same free edition, <b>Permissions, Directory and Import were visible and usable</b> when they are not part of it. Two separate rules were writing to the same place: one decided by your role, the other by your edition, and the role one ran last and undid the other. <b>One place decides now</b>, and it asks both questions.',
+      'The <b>Terms you accept</b> say <i>Last updated: 24 October 2026</i>, which is when they actually changed. They still said August while already carrying the new text about the two editions \u2014 and in a document somebody signs, the date is the answer to \u201cwhat did I agree to, and when?\u201d.'
+    ],
+    antes:  'One Pro tab, and the whole of Settings dies',
+    ahora:  'You leave the Pro tab and everything works again' },
+
   { ver: '12.96',
     titulo: 'The pages now say which edition each thing belongs to',
     puntos: [
@@ -30190,18 +30268,6 @@ var NOVEDADES = [
     ],
     antes:  'Five warnings where pressing Yes crashed',
     ahora:  'Yes means save' },
-
-  { ver: '12.93',
-    titulo: 'Merging duplicate names works, and the error log keeps up',
-    puntos: [
-      '<b>Every merge was failing.</b> Twenty groups of duplicate projects and eight of suppliers, and all twenty-eight answered \u201cpick at least one other name to merge in\u201d.',
-      'The screen offered to merge names that are the same once you ignore capitals and spacing, and the server refused exactly those \u2014 <b>the tool for joining misspelled names refused the commonest misspelling there is</b>. It does the job now.',
-      'When a group is <b>the same name listed fourteen times</b>, it no longer asks which to keep \u2014 fourteen options that read identically is not a choice. It says how many and offers <b>Keep one</b>.',
-      '<b>The duplicates had a way in, and it is closed.</b> Only the \u201cadd\u201d button checked for a name already there, so anything arriving another way piled up. That check now sits where every write passes.',
-      '<b>And the error log was a photograph, not a window</b> \u2014 it loaded once when you opened Settings and never asked again. It refreshes when you open the tab, and new entries slide in at the top instead of redrawing the table.'
-    ],
-    antes:  'Twenty-eight merges, twenty-eight refusals',
-    ahora:  'One button, and the error log tells you what just happened' },
 
 ];
 

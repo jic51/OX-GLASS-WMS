@@ -241,7 +241,90 @@ if (hi === -1 || hj === -1) {
 const hcurrent = hsrc.slice(hi, hj + HEND.length);
 const hfresh = htmlBlock();
 
+/* ── LA FECHA TIENE QUE SEGUIR AL TEXTO ────────────────────────────────────
+ *
+ * El 24/10 cambié los Términos —el apartado de las dos ediciones, y la sección
+ * 8 porque decía que el respaldo se activa en la instalación y en la edición
+ * gratis no existe— y dejé la fecha en «27 August 2026». El documento decía
+ * una cosa y su propia fecha juraba que no se tocaba desde agosto.
+ *
+ * Jose lo vio en su hoja: *"la última actualización fue en agosto, por lo que
+ * creo que no hiciste los cambios que se debe"*. Sospechó lo correcto por el
+ * dato equivocado: el cambio sí estaba, lo que mentía era la fecha. Y en un
+ * documento que alguien ACEPTA, la fecha no es decoración — es la respuesta a
+ * «¿qué firmé y cuándo?».
+ *
+ * `test-legal-sync` ya comparaba las fechas ENTRE COPIAS, y las dos casaban,
+ * porque las dos estaban viejas. Comparar dos copias no sirve de nada cuando
+ * las dos salen del mismo sitio: nada miraba la fecha CONTRA EL TEXTO.
+ *
+ * `legal/.sellado` guarda la huella del cuerpo de cada documento junto a su
+ * fecha. Si el cuerpo cambia y la fecha no, esto se para y lo dice. */
+const crypto = require('crypto');
+
+function huella(md) {
+  return crypto.createHash('sha256')
+    .update(md.replace(/\*\*Last updated:\*\*.*/, ''))
+    .digest('hex').slice(0, 16);
+}
+function fechaDe(md) {
+  const m = md.match(/\*\*Last updated:\*\*\s*(.+)/);
+  return m ? m[1].trim() : '';
+}
+
+const SELLO = path.join(ROOT, 'legal', '.sellado');
+const DOCS = [
+  { k: 'terms',   f: path.join(ROOT, 'legal', 'TERMS-OF-SERVICE.md') },
+  { k: 'privacy', f: path.join(ROOT, 'legal', 'PRIVACY-POLICY.md') }
+];
+
+function leerSello() {
+  const out = {};
+  if (!fs.existsSync(SELLO)) return out;
+  fs.readFileSync(SELLO, 'utf8').split('\n').forEach(function (l) {
+    if (!l.trim() || l.trim()[0] === '#') return;
+    const i = l.indexOf('=');
+    if (i < 0) return;
+    const v = l.slice(i + 1).trim();
+    out[l.slice(0, i).trim()] = { huella: v.slice(0, v.indexOf(' ')), fecha: v.slice(v.indexOf(' ') + 1) };
+  });
+  return out;
+}
+
+function revisarFechas(parar) {
+  const sello = leerSello();
+  const quejas = [];
+  DOCS.forEach(function (d) {
+    const md = fs.readFileSync(d.f, 'utf8');
+    const h = huella(md), fecha = fechaDe(md);
+    const s = sello[d.k];
+    if (!fecha) { quejas.push(d.k + ': no tiene línea "Last updated"'); return; }
+    if (!s) return;                                   // primera vez: se sella
+    if (s.huella === h) return;                       // el texto no ha cambiado
+    if (s.fecha !== fecha) return;                    // cambió el texto Y la fecha: bien
+    quejas.push(d.k + ': el texto cambió y "Last updated" sigue en «' + fecha +
+                '». Es el documento que el cliente ACEPTA: pon la fecha del cambio.');
+  });
+  if (quejas.length && parar) {
+    console.error('\n  \u2717 ' + quejas.join('\n  \u2717 ') + '\n');
+    process.exit(1);
+  }
+  return quejas;
+}
+
+function escribirSello() {
+  const lineas = fs.existsSync(SELLO)
+    ? fs.readFileSync(SELLO, 'utf8').split('\n').filter(function (l) {
+        return !l.trim() || l.trim()[0] === '#'; }).join('\n').replace(/\n+$/, '') + '\n'
+    : '';
+  fs.writeFileSync(SELLO, lineas + DOCS.map(function (d) {
+    const md = fs.readFileSync(d.f, 'utf8');
+    return d.k + '=' + huella(md) + ' ' + fechaDe(md);
+  }).join('\n') + '\n');
+}
+
 if (process.argv.includes('--check')) {
+  revisarFechas(true);
   const gsOk = current === fresh, htmlOk = hcurrent === hfresh;
   if (gsOk && htmlOk) {
     const n = (fresh.match(/\n/g) || []).length + (hfresh.match(/\n/g) || []).length;
@@ -259,4 +342,6 @@ if (process.argv.includes('--check')) {
 
 fs.writeFileSync(GS, src.slice(0, i) + fresh + src.slice(j + END.length));
 fs.writeFileSync(HTMLF, hsrc.slice(0, hi) + hfresh + hsrc.slice(hj + HEND.length));
+revisarFechas(true);
+escribirSello();
 console.log('legal text regenerated from legal/*.md — sheet tab and in-app window');

@@ -4,7 +4,7 @@
 
 # Terms of Service — Acopio
 
-**Last updated:** 27 August 2026
+**Last updated:** 24 October 2026
 
 These terms govern your use of Acopio, warehouse-management software provided by
 Jose Castro ("we", "us"). By installing or using it, you agree to them. If you

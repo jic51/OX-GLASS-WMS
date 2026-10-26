@@ -10,20 +10,31 @@
 > **«El estado de Acopio» y `ESTADO.md` son lo mismo**: este fichero. Es el
 > único sitio donde mirar cómo vamos.
 
-**Última actualización:** 24/10/2026 · **versión v12.96** · build `4839af6b`
+**Última actualización:** 26/10/2026 · **versión v12.97** · build `fb3ce95f`
 · páginas publicadas en www.acopio.net el 24/10 (`landing/.publicado`)
 
-> ### ⚠️ LA v12.96 HAY QUE PEGARLA, Y ESTO ES LO QUE PASA SI TARDAS
+> ### ⚠️ LA v12.97 HAY QUE PEGARLA — Y ÉSTA DESBLOQUEA TU LISTA
+> La v12.97 arregla lo que te impedía probar: en Básico, abrir **Ajustes →
+> Sistema** dejaba **todo Ajustes** gris y muerto hasta recargar. Por eso no
+> podías probar importar, borrar, fusionar ni la papelera: no era que
+> fallaran, es que no se podían abrir. Con ésta pegada, esas cuatro vuelven a
+> ser verificables.
+>
+> Y lo de la v12.96 sigue valiendo:
 > Casi todo lo de esta entrega son las páginas y los documentos, que ya están
 > publicados. **Dos cosas están dentro de la app**: los Términos que el cliente
 > acepta —que viven en su propia hoja, no sólo en la web— y el ancla del enlace
 > de los candados.
 >
-> Mientras no la pegues: la web dice la verdad sobre las dos ediciones y **la
-> hoja sigue diciendo lo de antes**, que un cliente de Básico está «comprando»
-> algo y que su sistema se respalda solo cada noche. Las dos cosas son falsas en
-> esa edición. Está mejor que ayer —antes lo decían los dos sitios— pero no está
-> bien hasta que la pegues.
+> Mientras no la pegues, la ventana de Términos **de la app** sigue diciendo lo
+> de antes.
+>
+> **Y la pestaña de Términos de la HOJA no se arregla pegando.** Jose lo vio el
+> 25/10 con dos capturas: la ventana de la app ya trae el texto nuevo y la
+> pestaña de la hoja no. No es que falte pegar — **esa pestaña se escribe una
+> vez, al instalar, y no se vuelve a tocar nunca**. Es un fallo aparte, con su
+> causa y su trampa (reconstruirla le cambia el `gid` y rompe los dos enlaces de
+> la casilla de consentimiento) escritas en `docs/BACKLOG.md`. Decides tú.
 
 ---
 
@@ -88,8 +99,10 @@ del Dashboard ya no se mueven al cambiar de filtro.
 
 | ✓ | Qué | Dónde |
 |---|---|---|
-| ☐ | **El candado lleva a la lista de Pro, no a la portada** (v12.96) | En la copia Básica toca una función de Pro → «Check Acopio Pro» → la página tiene que abrir **en la lista de lo que añade Pro**, no arriba del todo |
-| ☐ | **Los Términos de la hoja hablan de las dos ediciones** (v12.96) | En la hoja, pestaña de Términos: arriba del todo tiene que haber un apartado que diga qué cláusula es de Básico y cuál de Pro |
+| ☐ | **Ajustes ya no se queda muerto** (v12.97 — el bloqueador del vídeo) | Abre **Ajustes → Sistema** (gris, correcto) → cambia a **Import**: tiene que verse normal y dejarse tocar. Vuelve a Sistema: gris otra vez |
+| ☐ | **La gratis ya no enseña lo que no lleva** (v12.97) | En Ajustes **no** deben estar Permissions, Directory ni Import |
+| ☑ | ~~El candado lleva a la lista de Pro~~ | ✅ **lo confirmaste el 25/10**: *"sí funciona así"* |
+| ☐ | **Los Términos de la app** (v12.96) | Menú de la cuenta → Términos: arriba del todo, el apartado de las dos ediciones, con fecha **24 October 2026**. ⚠️ **La pestaña de la HOJA no se actualiza** — es un fallo aparte, ver `BACKLOG.md` |
 | ☐ | **Una obra no se ofrece como estantería** (v12.95 — el concepto que encontraste) | Return → en «Came back from» escribe una obra → **no** debe salir *«is not a location in your warehouse yet · + Create»*, y **no** debe pedirte la obra otra vez abajo |
 | ☐ | **Decir «sí» en un aviso guarda** (v12.94 — el fallo que encontraste) | Return → algo con 49 fuera → escribe 60 → Save anyway. Tiene que **guardar**, no dar error |
 | ☐ | **Borrar muchos tarda segundos y se puede parar** (v12.92) | Marca unos cientos → Delete. Botón **Stop** a mitad: debe decir *«Stopped — X of Y deleted»* |
@@ -144,7 +157,8 @@ las mires otra vez): 🏷 Labels sale a color en vez de gris · la pregunta de
 |---|---|
 | **Ajustes → Sistema en Básico** | Dijiste que mandabas un vídeo y no llegó |
 | **«El menú se apaga»** | ¿Cuál menú? El de arriba, el de la cuenta, o el de la hoja |
-| **La app tarda en abrir** | Un vídeo con la **v12.95** ya pegada, para medir con lo de ahora y no con lo de antes. Y antes de grabarlo te paso la sugerencia, que la pediste así: *"no arregles nada antes de decirme la sugerencia... y déjame decidir"* |
+| **El toast mal alineado y el salto del logo** | Los dos anotados el 26/10 en `BACKLOG.md`; toca la app y decides tú cuándo |
+| **La app tarda en abrir** | Un vídeo con la **v12.97** ya pegada, para medir con lo de ahora y no con lo de antes. Y antes de grabarlo te paso la sugerencia, que la pediste así: *"no arregles nada antes de decirme la sugerencia... y déjame decidir"* |
 
 ---
 

@@ -106,6 +106,29 @@
          hoja, generados desde `legal/*.md` por `tools/sync-legal.js`, así que
          arreglar lo que dicen de las dos ediciones obliga a tocar la app. Ya
          que había que tocarla, viaja también el ancla `#pro` del candado. -->
+    <div class="entry" id="v12-97">
+      <span class="ver">v12.97</span>
+      <span class="tag fix">Fix</span>
+      <h3>Settings stops going dead in the free edition</h3>
+      <p>In Acopio Basic, opening <b>Settings &rarr; System</b> &mdash; a Pro screen &mdash; greyed the
+         panel out correctly, and then <b>every other Settings tab stayed grey and untouchable</b>
+         until you reloaded the page. Import, Locations, Materials, the Error Log: all dead, with a
+         faint &ldquo;Acopio&nbsp;Pro&rdquo; sitting in the corner of each one.</p>
+      <p>Every tab is drawn into the <b>same box</b>. There was a function to switch that box off and
+         <b>none to switch it back on</b>, so leaving the Pro tab left the grey behind. A pair with
+         only one half gets used half way, every time. Both halves exist now.</p>
+      <p>In the same edition, <b>Permissions, Directory and Import were visible and usable</b> when
+         they are not part of it. The list saying so was right; something was overwriting it. Two
+         rules were writing to the same place &mdash; one decided by your role, the other by your
+         edition &mdash; and the role one ran last. <b>One place decides now</b>, and it asks both
+         questions before answering.</p>
+      <p>And the <b>Terms you accept</b> now say <i>Last updated: 24 October 2026</i>, which is when
+         they actually changed. They were still dated August while already carrying the new text
+         about the two editions. In a document somebody signs, the date is the answer to
+         &ldquo;what did I agree to, and when?&rdquo; &mdash; so a check now refuses to let the text
+         change without the date moving with it.</p>
+    </div>
+
     <div class="entry" id="v12-96">
       <span class="ver">v12.96</span>
       <span class="tag ui">Pages</span>

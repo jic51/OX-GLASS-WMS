@@ -1,0 +1,20 @@
+# QUÉ ES ESTO, Y POR QUÉ EXISTE.
+#
+# El 24/10 cambié los Términos —les añadí el apartado de las dos ediciones y
+# reescribí la sección 8— y dejé la fecha de arriba en «27 August 2026». El
+# documento decía una cosa y su propia fecha decía que no había cambiado desde
+# agosto. Jose lo vio en su hoja: *"la última actualización fue en agosto, por
+# lo que creo que no hiciste los cambios que se debe"*. Tenía razón en
+# sospechar, aunque el cambio sí estaba: lo que mentía era la fecha.
+#
+# `test-legal-sync` comparaba las fechas ENTRE COPIAS —que coincidieran el .md
+# y la app— y las dos coincidían, porque las dos estaban viejas. Nada comparaba
+# la fecha contra EL TEXTO.
+#
+# Aquí va la huella del cuerpo de cada documento (sin su línea de fecha) junto
+# a la fecha que le corresponde. Si alguien cambia el texto y no mueve la
+# fecha, la huella deja de casar y la prueba se pone roja.
+#
+# Lo escribe `node tools/sync-legal.js`. No editar a mano.
+terms=e95c8a4fd9085000 24 October 2026
+privacy=6a002fc3d4bb5a45 27 August 2026
