@@ -5853,7 +5853,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '13.0';
+var APP_VERSION = '13.1';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5865,7 +5865,7 @@ var APP_VERSION = '13.0';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '9a16bf6a';
+var APP_BUILD = '46ddab23';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -30411,6 +30411,17 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '13.1',
+    titulo: 'The document reader said your key was wrong. It was not.',
+    puntos: [
+      'If you set up the AI document reader on a <b>newly installed copy</b> and it kept refusing the key, <b>the key was never the problem</b> \u2014 and no key would have worked. Google closed the model this app asked for to accounts that had not already used it, so an older installation kept working and a brand new one could not get in.',
+      'The app now asks for the current model, and keeps the older names <b>behind it</b>, so an installation already using one carries on untouched.',
+      '<b>And it stopped testing a key against a single model.</b> A model that is gone and a key that is wrong fail differently, and only one of them is something you can fix \u2014 checking just one turned the first into the second.',
+      'Nothing to do beyond pasting this version in. A key that was refused before is accepted now.'
+    ],
+    antes:  'Error: the AI reader could not finish (error 404)',
+    ahora:  'Checked and saved' },
+
   { ver: '13.0',
     titulo: 'Two things hardened that you will never see',
     puntos: [
@@ -30442,19 +30453,7 @@ var NOVEDADES = [
       'Each of those now answers for <b>itself</b> when you touch it, instead of all of them answering \u201cAutomatic backup\u201d.'
     ],
     antes:  'A whole tab closed because two things in it were Pro',
-    ahora:  'Import works, and a deleted movement comes back' },
-
-  { ver: '12.97',
-    titulo: 'Settings stops going dead in the free edition',
-    puntos: [
-      'In Acopio Basic, opening <b>Settings \u2192 System</b> \u2014 which is a Pro screen \u2014 greyed the panel out correctly, and then <b>every other Settings tab stayed grey and untouchable</b> until you reloaded. Import, Locations, Materials, the Error Log: all dead, with a faint \u201cAcopio Pro\u201d in the corner.',
-      'All the tabs are drawn into the <b>same box</b>. There was a function to switch that box off and <b>none to switch it back on</b>, so leaving the Pro tab left the grey behind. Both now exist.',
-      'And in the same free edition, <b>Permissions, Directory and Import were visible and usable</b> when they are not part of it. Two separate rules were writing to the same place: one decided by your role, the other by your edition, and the role one ran last and undid the other. <b>One place decides now</b>, and it asks both questions.',
-      'The <b>Terms you accept</b> say <i>Last updated: 24 October 2026</i>, which is when they actually changed. They still said August while already carrying the new text about the two editions \u2014 and in a document somebody signs, the date is the answer to \u201cwhat did I agree to, and when?\u201d.'
-    ],
-    antes:  'One Pro tab, and the whole of Settings dies',
-    ahora:  'You leave the Pro tab and everything works again' },
-
+    ahora:  'Import works, and a deleted movement comes back' }
 ];
 
 var NV_CLAVE = 'acopio_novedades_vista';

@@ -106,6 +106,23 @@
          hoja, generados desde `legal/*.md` por `tools/sync-legal.js`, así que
          arreglar lo que dicen de las dos ediciones obliga a tocar la app. Ya
          que había que tocarla, viaja también el ancla `#pro` del candado. -->
+    <div class="entry" id="v13-1">
+      <span class="ver">v13.1</span>
+      <span class="tag fix">Fix</span>
+      <h3>The document reader said your key was wrong. It wasn&rsquo;t.</h3>
+      <p>If you tried to set up the AI document reader on a <b>newly installed copy</b> and it kept
+         refusing the key, the key was never the problem &mdash; and no key would have worked.
+         Google closed the model this app asked for to accounts that had not already used it. An
+         older installation kept working, a brand new one could not get in, and the screen called
+         that <b>a bad key</b>.</p>
+      <p>The app now asks for the current model, and keeps the older names <b>behind it</b> so
+         installations already using them carry on untouched. It also stopped checking a key
+         against a single model: a model that is gone and a key that is wrong fail differently, and
+         only one of them is something you can fix.</p>
+      <p>Nothing to do beyond pasting this version in. If a key was refused before, it will be
+         accepted now.</p>
+    </div>
+
     <div class="entry" id="v13-0">
       <span class="ver">v13.0</span>
       <span class="tag safe">Safety</span>
