@@ -362,6 +362,22 @@ nadie ha revisado.
 **Lo que yo haría:** que **🩺 Check this installation** los cuente, lo diga, y
 tenga el botón ahí dentro. La función ya está escrita.
 
+> ### ✅ DECIDIDO EL 27/10 — SE HACE
+>
+> Jose: *"anótalo como decisión tomada, no hagas nada aún."*
+>
+> **Qué se construye:** 🩺 Check this installation cuenta los ficheros de la
+> carpeta que siguen compartidos con enlace público, lo dice con el número
+> (*"412 files are shared with a public link"*), y lleva el botón de arreglarlo
+> **dentro de la app** — no en el menú del Sheet.
+>
+> **Lo que NO cambia:** `menuRevokePublicSharing` se queda donde está. Ya
+> funciona, respeta el límite de seis minutos y se puede correr varias veces.
+> Lo único que se añade es la forma de enterarse y de pulsarlo sin salir de
+> la app.
+>
+> **Tamaño:** media tarde. **Pendiente de construir.**
+
 ---
 
 ## 🟡 H-14 · Un documento lo abre cualquiera con sesión, sea cual sea su rol
@@ -380,3 +396,78 @@ enlace.
 garantía**. El día que haya permisos por proyecto o por bodega —que está en la
 lista— el documento se seguirá abriendo para todos y nadie se acordará de esta
 función.
+
+---
+
+## 🟠 H-15 · El inicio de sesión entero descansa en una cadena hecha con `Math.random()`
+
+**Dónde:** `Index_v3_fixed.html` ~27422 y `Code_v3_fixed.gs` ~2245 (`pollLogin`).
+
+```js
+var state = 'st_' + Math.random().toString(36).slice(2) + '_' + Date.now();
+```
+
+**El camino completo:** la ventanita de Google devuelve el correo verificado y
+el servidor lo guarda en la caché bajo `login_<state>` durante 300 segundos.
+`pollLogin(state)` **no tiene autenticación** —no puede tenerla, corre antes de
+que exista ninguna identidad— así que **quien presente el `state` correcto en
+esos cinco minutos se lleva un token de sesión válido para ese correo.**
+
+**Por fuerza bruta no es explotable hoy** (del orden de 2⁵² posibilidades) y
+conviene decirlo. Pero `Math.random()` no es un generador criptográfico, el
+`Date.now()` que lleva pegado es **lo único que el atacante ya sabe**, y el
+arreglo es una línea con `crypto.getRandomValues`.
+
+**Y hay una segunda parte, que es peor:** el comentario del código dice que el
+limitador *"blunts guessing at other people's login states"*. **No lo hace.**
+El limitador está contado **por `state`**, así que quien prueba mil cadenas
+distintas estrena un contador en cada una y nunca llega al límite. Un comentario
+equivocado en un sitio de seguridad es peor que ningún comentario, porque
+alguien —nosotros, dentro de un año— va a dar por protegido algo que no lo está.
+
+**Tercera, menor:** `handleOAuthCallback_` no comprueba el `state` contra nada;
+es una llave de encuentro, no una protección contra falsificación de petición.
+Cerrarla es gratis cuando se toque esto.
+
+---
+
+## 🟡 H-16 · El token de sesión dura 30 días y no hay forma de anular uno solo
+
+**Dónde:** `Code_v3_fixed.gs` ~2131, `makeSessionToken_`.
+
+El token es `base64(correo|caducidad).HMAC` — **imposible de falsificar sin el
+secreto**, y eso está bien. Pero es **sin estado**: no hay lista de tokens
+vivos, así que no se puede matar uno.
+
+**Baja, y por qué:** a quien se le quita el acceso, el token le sigue valiendo
+**pero no le sirve**, porque el rol se busca en cada llamada y sale `DENIED`. El
+agujero real es estrecho: **un token robado de alguien que sigue en la empresa**
+vale hasta 30 días, y lo único que lo mata es cambiar `SESSION_SECRET`, que echa
+a todo el mundo.
+
+**Lo que yo haría:** 7 días con renovación silenciosa mientras se usa la app.
+Quien entra a diario no nota nada; un portátil robado deja de servir el lunes en
+vez de dentro de un mes.
+
+---
+
+## 🟠 H-17 · Los registros guardan el correo de cada persona **para siempre**
+
+**Dónde:** `AUDIT_LOG` (`Timestamp | Action | User | Details ×3`, ~845) y
+`ERROR_LOG`. **Busqué una limpieza de registros en todo el archivo y no existe
+ninguna.**
+
+**Qué significa:** un bodeguero que se fue hace tres años sigue nombrado, con su
+correo, en miles de filas. Si pide que le borren, la única respuesta que la app
+puede dar hoy es **«borra la hoja entera»** — que es literalmente lo que dice el
+texto de privacidad.
+
+**Por qué es MEDIA:** no es un agujero por el que entre nadie. Es que estamos
+**guardando datos personales sin plazo**, y eso no duele nunca hasta el día que
+duele mucho. Y es el mismo problema de H-02 con otra ropa: una hoja que sólo
+crece porque nadie decidió hasta cuándo.
+
+**Lo que yo haría, y NO es borrar la auditoría** —existe para poder mirar
+atrás—: **decir el plazo y cumplirlo.** Dos años de auditoría en la hoja viva y
+lo anterior exportado al Drive del cliente; el registro de errores, 90 días. Y
+escribirlo en los Términos, que hoy no dicen nada.
