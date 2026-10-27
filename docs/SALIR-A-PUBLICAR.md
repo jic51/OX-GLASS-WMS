@@ -329,3 +329,72 @@ No es una lista de todo a la vez: es qué hacer esta semana.
 hay que leerlas y contestarlas **el mismo día**. Un post con diez comentarios sin
 contestar es peor que no haber publicado — queda ahí, con tu nombre, diciendo que
 preguntaste y no te importó la respuesta.
+
+---
+
+## 5. CONTESTAR COMENTARIOS — EL PRIMERO DE VERDAD (27/10)
+
+El post en inglés ya está publicado y llegó el primer comentario técnico, de
+**agentUi**:
+
+> *"we see this exact path with a lot of ops teams, they build a slick ui on top
+> of sheets but eventually hit limits when concurrent edits start overwriting row
+> states or formulas break. moving to a proper relational db with location-level
+> reservation logic stops that dead, and having a mobile intake where workers
+> just tap the rack to confirm picks saves tons of manual reconciliation at month
+> end. really clean rack map layout by the way."*
+
+**Antes del texto, dos cosas que conviene ver:**
+
+1. **Las dos averías que nombra son reales, y las dos vienen de lo mismo:** que
+   la interfaz escriba *dentro* de la hoja. Acopio no escribe en la hoja desde
+   el navegador — escribe el servidor, de uno en uno, bajo un `LockService`
+   (`withStockLock_`, 13 sitios; `test-concurrency.js` lo vigila). Y **no hay un
+   solo `setFormula` en todo el archivo**: las vistas derivadas se reconstruyen
+   del registro de movimientos. Comprobado antes de escribir esto.
+2. **Lo de las reservas por ubicación ya existe** (`MATERIAL_LOCKS`: apartado en
+   un estante concreto, con motivo, y se puede limitar a dónde se le permite
+   ir). Él lo propone como lo que falta; es de lo que ya está.
+3. **El comentario huele a vendedor.** *"we see this exact path with a lot of ops
+   teams"* y *"moving to a proper relational db... stops that dead"* es la forma
+   normal de presentar un producto propio sin nombrarlo. **Eso no lo vuelve
+   falso** —el techo de la hoja existe— pero sí cambia el tono de la respuesta:
+   se contesta a lo técnico, no se discute.
+
+### El texto, para pegar tal cual
+
+> Fair points, and the first two are the ones that actually kill these setups —
+> but both come from the UI writing into the sheet. Mine doesn't.
+>
+> Every write goes through the server, one at a time, under a script lock. The
+> browser sends an intention ("move 40 of this out of rack B-12"), not a row, so
+> two people picking the same material in the same second get queued instead of
+> merged. And there isn't a single formula in it anywhere — the stock-by-location
+> view is rebuilt from the movement log, so there's nothing to break when rows
+> move around.
+>
+> Location-level reservation is in there too: material gets held at a specific
+> rack, with a reason, and it can be restricted to where it's allowed to move
+> next. I only built that because of exactly the mess you're describing.
+>
+> Where you're right is the ceiling. A spreadsheet is a row budget and a
+> six-minute execution limit, and the day that stops being enough it's a
+> migration, not a tweak. The reason it doesn't worry me much: everything is
+> derived from one append-only log, so moving that log to a real database is a
+> port of the storage layer. Nothing downstream owns state.
+>
+> The rack-tap intake is the best thing in your comment. I have the rack map on a
+> phone, but confirming a pick is still a form. Tapping the rack to confirm what
+> you just took is a different thing, and closer to how the job actually works.
+> Stealing that one.
+
+**Reglas que sigue este texto**, las mismas del post: sin enlace, sin nombre del
+producto, sin precio, nada inventado, y **se concede lo que es verdad** — el
+techo de la hoja y la idea del estante. Un comentario técnico contestado así
+suele traer más que el post.
+
+### Y lo que hay que anotar del comentario, que es producto, no conversación
+
+**Confirmar una recogida tocando el estante en el teléfono.** Hoy el mapa de
+estantes está en el móvil, pero registrar la salida es un formulario. Pendiente
+en `BACKLOG.md`.

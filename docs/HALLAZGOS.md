@@ -18,7 +18,26 @@ lista, no el parte de trabajo.
 
 ---
 
-## 🔴 H-01 · La papelera sólo enseña 200, y Jose ya borró 490
+## 🟠 H-01 · La papelera sólo enseña 200, y Jose ya borró 490
+
+> **Bajada de 🔴 a 🟠 el 27/10, y la corrección es de Jose.** Yo dije que esto
+> «bloquea» su idea de agrupar. No la bloquea. Yo estaba usando **la cuenta
+> actual, ya descuadrada, como punto de partida**, y su propuesta parte de un
+> inventario cuadrado. Y con **deshacer una importación fuera de la papelera**,
+> el caso que llenó la papelera de 490 filas **deja de existir**: esas 490 no
+> fueron 490 borrados, fue una importación deshecha.
+>
+> **Orden que queda, y es el suyo:** deshacer una importación desde Import →
+> tope de 200 al borrar → agrupar → paginar la papelera, al final.
+>
+> **Lo único que sobrevive del hallazgo**, y es un requisito *dentro* de
+> agrupar, no antes: el tope de 200 es **por operación, no acumulado**. 200 hoy
+> y 200 mañana son 400 en la papelera, y la lectura seguiría enseñando las 200
+> últimas. Así que **el número que enseñe la vista agrupada no puede salir de
+> una lectura truncada**: o lo cuenta el servidor sobre toda la hoja TRASH, o la
+> pantalla dice «las 200 más recientes de 400». Un número inventado por el
+> recorte es peor que no agrupar. Con la limpieza a los 30 días el techo pasa a
+> ser «lo borrado en 30 días», que en un almacén normal no llega a 200.
 
 **Dónde:** `Code_v3_fixed.gs` ~15264, en `listTrash`.
 

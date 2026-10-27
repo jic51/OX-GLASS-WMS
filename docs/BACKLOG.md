@@ -12676,3 +12676,36 @@ sino escribir la regla.
    app—, así que el reloj está en la caja y nunca se lee. Se volvió visible al
    migrarla, porque el detector sólo entiende nombres literales y antes los pedía
    con una variable.
+
+---
+
+## 🔵 27/10 — TOCAR EL ESTANTE EN EL TELÉFONO PARA CONFIRMAR UNA SALIDA
+
+De un comentario en Reddit (agentUi), y es la única parte de ese comentario que
+es una idea y no una venta:
+
+> *"having a mobile intake where workers just tap the rack to confirm picks saves
+> tons of manual reconciliation at month end."*
+
+**Qué tenemos hoy:** el mapa de estantes se ve en el móvil, pero **registrar una
+salida es un formulario**: material, cantidad, ubicación, proyecto. El estante se
+elige en una lista, no se toca.
+
+**Qué propone, y por qué es distinto:** el que recoge **ya está delante del
+estante**. Lo que sabe sin pensar es *de aquí*; lo que tiene que buscar es el
+nombre del material. Invertir el orden —toco el estante, me enseña lo que hay
+ahí, marco cuánto me llevo— es menos pantalla y menos error, y es la única forma
+en que alguien lo apunta **en el momento** en vez de «luego». Ése era el problema
+número uno del post: *"somebody would take material and write it down later. Or
+not."*
+
+**Lo que hay que resolver antes, y no es la pantalla:** hoy una salida necesita
+**proyecto** para que el gasto cuadre. Si el que toca el estante no sabe a qué
+proyecto va, o tenemos una salida sin proyecto —y entonces alguien la completa
+después, que es otra cola— o el estante pregunta el proyecto, y vuelve a ser un
+formulario. **Es la decisión, y es de Jose.** Yo pondría la lista de los
+proyectos abiertos del día, que en un almacén son dos o tres, no veinte.
+
+**Prioridad: media-alta.** No es urgente para vender, pero es lo que convierte el
+mapa de una pantalla bonita en la forma de trabajar. Y ya está pedido por alguien
+de fuera, que es la primera vez que eso pasa.
