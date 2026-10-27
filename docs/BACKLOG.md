@@ -12829,3 +12829,70 @@ la conversación con un cliente, y el trabajo es pequeño.
 hora, así que la media en horas sólo se puede calcular dentro del mismo día. Lo
 que sí se puede decir siempre y es casi igual de bueno: **qué porcentaje se
 apuntó el mismo día**, y **a qué hora del día se amontonan las escrituras**.
+
+---
+
+## 🔴 27/10 — EL LECTOR DE CORREOS TARDA 4 MINUTOS, Y HAY UNA CAUSA PROBABLE
+
+La clave entró con la v13.1. Pero leer un correo tardó **cerca de cuatro
+minutos**, con la pantalla diciendo *"Reading the email — a few seconds"* todo
+el rato. Jose salió y volvió a entrar creyendo que se había colgado.
+
+### La causa que yo miraría primero, y por qué
+
+**`gemini-3.8-flash` razona por defecto**, en nivel **medio**. La petición que
+manda la app no dice nada al respecto:
+
+```js
+generationConfig: { temperature: 0.05, maxOutputTokens: 2048 }
+```
+
+Antes el modelo era `gemini-2.5-flash`, que contesta directo. **Así que el
+arreglo de la clave trajo de regalo un modelo que piensa antes de responder**, y
+eso explica pasar de segundos a minutos sin que nadie tocara el lector.
+
+**Y hay un segundo coste que no se ve:** los tokens de razonamiento **se cobran
+como salida**. O sea que esto no sólo tarda: es más caro, en la clave de pago
+del cliente, por cada correo.
+
+**⚠ NO LO HE CAMBIADO, y conviene decir por qué.** Las fuentes que encontré se
+contradicen en cómo se baja: 3.8 usa *niveles* (`low`/`medium`/`high`) y 2.5
+usaba *presupuesto* (`thinkingBudget: 0`), y nadie coincide en si lo segundo
+sigue valiendo. **Mandar el campo equivocado hace fallar la petición entera
+antes de generar un solo token** — cambiaría un lector lento por uno roto. Hay
+que comprobarlo contra la documentación de Google antes de tocarlo.
+
+**Lo que propondría, en este orden:**
+
+1. **Medir** el mismo correo con `gemini-2.5-flash` forzado (la Script Property
+   `GEMINI_MODEL` ya existe para eso) y con 3.8. Si la diferencia es ésta, se
+   ve en una prueba.
+2. **Pedir el nivel bajo** de razonamiento, con el nombre de campo confirmado.
+   Leer un albarán no necesita que la máquina piense: necesita que copie.
+3. **Y dejarlo en una Script Property**, como el nombre del modelo, para que la
+   próxima vez que Google cambie esto no haga falta volver a pegar el archivo.
+
+---
+
+## 🟠 27/10 — Y LA VENTANA «READ AN EMAIL» HAY QUE MEJORARLA
+
+Pedido por Jose el mismo día. Lo que se vio en los tres vídeos:
+
+| | Qué pasa | Por qué importa |
+|---|---|---|
+| **1** | Dice *"a few seconds"* y tarda **cuatro minutos** | **La app miente sobre lo que va a pasar.** Es lo mismo que H-23 con otra ropa: el mensaje manda a la persona a concluir algo falso —que se colgó— y a cerrar la ventana |
+| **2** | **No se puede cancelar.** Sólo la ✕, que no para nada | Quien cierra creyendo que lo detuvo deja la llamada corriendo, y la paga igual |
+| **3** | Cerrar y volver a entrar **enseña la misma rueda** | Parece que reanudó. No reanudó nada: es otra espera, o la misma, y no hay forma de saberlo desde la pantalla |
+| **4** | Lo que sacó no está bien: nombre `644 N IGU`, **cantidad vacía**, y el PO repetido en las notas | Un formulario que hay que corregir entero no ahorra trabajo. Y la cantidad vacía es la que más cuesta: es el dato por el que existe la pantalla |
+
+**Lo que yo haría, y lo primero no es la IA:**
+
+- **Decir la verdad mientras espera.** Un reloj que cuenta —*"llevo 45 s; esto
+  suele tardar un minuto"*— convierte una espera en una espera. Es texto.
+- **Un botón de cancelar de verdad**, que pare y lo diga.
+- **Y sólo después, mirar lo que extrae.** Antes de tocar el *prompt* hay que
+  arreglar la velocidad: cada prueba de extracción cuesta hoy cuatro minutos,
+  así que mejorar el texto del *prompt* es imposible en la práctica.
+
+**Prioridad: la lentitud es ALTA** —hace la función inservible y cuesta dinero
+por uso—; la ventana es MEDIA y el *prompt*, después.
