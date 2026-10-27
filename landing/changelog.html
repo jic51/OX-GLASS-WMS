@@ -106,6 +106,26 @@
          hoja, generados desde `legal/*.md` por `tools/sync-legal.js`, así que
          arreglar lo que dicen de las dos ediciones obliga a tocar la app. Ya
          que había que tocarla, viaja también el ancla `#pro` del candado. -->
+    <div class="entry" id="v13-0">
+      <span class="ver">v13.0</span>
+      <span class="tag safe">Safety</span>
+      <h3>Two things hardened that you will never see</h3>
+      <p>Both are places where the app built part of a page out of text it did not write itself,
+         and made that text safe <b>by hand instead of properly</b>. Neither could be exploited
+         today &mdash; that was checked, not assumed &mdash; and both are now done the same way the
+         rest of the app does it.</p>
+      <p>The first is the name on an attached document: it escaped quotation marks and <b>not
+         ampersands</b>, so a name containing the right six characters could have broken out of the
+         box it was written in. Nothing reaches it today except words we put there ourselves. But
+         with the CSV importer now open in the free edition, <b>the words in a file are written by
+         somebody else</b> &mdash; and that is a change of circumstances, not of code.</p>
+      <p>The second is the message on the sign-in screen when signing in fails. That text comes
+         from Google, not from us, and it went onto the page without being made safe first.</p>
+      <p><b>Why fix what cannot be exploited:</b> in both cases the safety was not in the line
+         itself. It was in every other part of the app remembering to be careful on its behalf.
+         That holds until the day it does not, and the day it does not is not announced.</p>
+    </div>
+
     <div class="entry" id="v12-99">
       <span class="ver">v12.99</span>
       <span class="tag fix">Fix</span>

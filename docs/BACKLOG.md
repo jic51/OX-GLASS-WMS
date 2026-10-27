@@ -323,6 +323,100 @@ puede contar, porque son trozos y no 490 resultados sueltos.
 
 ---
 
+## ✅ 26/10 — EL TOPE DE 200 Y DESHACER UNA IMPORTACIÓN: LA IDEA DE JOSE, Y SÍ
+
+Jose, sobre H-01: *"no dejemos que el cliente borre más de 200 filas a la vez,
+pero si lo que borra es algo de un import, el botón de borrar todo lo que se
+importó debe estar en el mismo import... esto hace que lo que se elimina no
+vaya a la papelera sino que se elimina para siempre, ya que si se importó una
+vez debe poder importarse otra vez. ¿Qué piensas?"*
+
+**Pienso que es mejor que lo mío, y por un motivo que no había visto:
+separa dos cosas que yo estaba metiendo en el mismo cajón.**
+
+Borrar **movimientos de verdad** —los que alguien registró a mano, uno por uno,
+a lo largo de meses— y deshacer **una importación** no son la misma operación
+aunque las dos quiten filas:
+
+| | Borrar movimientos | Deshacer una importación |
+|---|---|---|
+| ¿De dónde salieron? | De personas, durante meses | De **un fichero que sigue existiendo** |
+| ¿Se pueden recuperar? | Sólo desde la papelera | **Volviendo a subir el fichero** |
+| ¿Cuántas de golpe? | Unas pocas, normalmente | **Cientos o miles** |
+| ¿Hace falta papelera? | **Sí** | **No** — el fichero ES la copia |
+
+**Y ahí está la causa de H-01.** La papelera se llenó de 490 filas no porque
+alguien borrara 490 movimientos: fue **una importación deshecha**. Estábamos
+guardando por si acaso lo que ya estaba guardado en el disco de Jose.
+
+### Lo que se adopta
+
+1. **Tope de 200 al borrar movimientos**, y **dicho antes**: *«Puedes borrar
+   200 a la vez. Has marcado 340 — se borran las 200 primeras y puedes repetir»*.
+   El tope deja de ser un muro invisible y pasa a ser una regla que se lee. Y
+   coincide con lo que la papelera puede enseñar, que es lo que lo hace
+   honesto.
+2. **Deshacer una importación vive EN Import**, no en Movements, y **no pasa
+   por la papelera**: se quitan y ya.
+3. **La app recuerda lo importado** — ya lo hace: cada importación lleva su
+   `IMP-XXXXXXXX` y su huella, y la lista de importaciones ya está en pantalla.
+
+### Las dos condiciones que yo pondría, y la segunda es la importante
+
+- **Decirlo con todas las letras en el botón**, no en letra pequeña: *«Esto
+  quita las 1.052 filas de esta importación. No van a la papelera. Para
+  recuperarlas, vuelve a subir el mismo fichero.»* Quien lo lea sabe qué
+  pierde y qué le queda.
+- **Y lo que hay que mirar antes de construirlo:** ¿qué pasa si alguien
+  **editó** un movimiento después de importarlo? Hoy esa fila lleva el
+  `IMP-…` y se iría igual, llevándose por delante un trabajo que no estaba en
+  el fichero. Yo lo **contaría y lo diría**: *«1.052 filas, de las cuales 3 se
+  han editado desde entonces»*, y esas tres a la papelera aunque las demás no.
+  Es la única parte de esto que no se puede recuperar subiendo el fichero.
+
+### Y encaja con lo que ya estaba planeado
+
+Jose: *"encaja con lo que tenemos planeado de poder seleccionar las columnas
+que se quiere importar y editarlas también antes de hacerlo"*. Sí: si la
+previsualización es donde se decide y se corrige, **deshacer deja de ser un
+arrepentimiento y pasa a ser un paso más del mismo trabajo** — importas,
+miras, no te gusta, lo quitas, lo arreglas en el fichero y lo vuelves a subir.
+
+---
+
+## ✅ 26/10 — LA PAPELERA A LOS 30 DÍAS: DECIDIDO, CON AVISOS
+
+Jose: *"construyamos el borrado a los 30 días, pero la app le enviará un correo
+y una tarjeta al usuario a los 15, a los 25, a los 28, a los 29 y finalmente a
+los 30 días. En la tarjeta y en el email se adjuntará el link y el botón de
+borrar, ya que si no son importantes se eliminan y ya no se ve el mensaje...
+así nos eliminamos el compromiso de mantener cosas que el cliente no quiere y
+la responsabilidad cae sobre él."*
+
+**Decidido, y el razonamiento de por qué la responsabilidad se mueve es
+correcto:** un borrado automático sin avisar es algo que le pasa al cliente; con
+cinco avisos y un botón, es algo que el cliente decide. No es lo mismo ni
+legalmente ni en la conversación del día siguiente.
+
+**Lo del aviso al vaciar la papelera ya existe** —Jose dudaba—: el botón
+«🗑 Empty the trash» abre una ventana de confirmación en rojo que dice que se
+descarta para siempre y que esto sólo renuncia a poder deshacer, no cambia el
+stock. No hay que construirlo.
+
+**Lo que sí hay que mirar antes, y son dos cosas:**
+
+1. **Cinco avisos para el mismo movimiento es mucho.** Si alguien borra cuatro
+   cosas en semanas distintas, recibe correos casi a diario y deja de leerlos —
+   y entonces el aviso del día 29 no sirve. Yo juntaría **todo lo que caduca
+   esa semana en un solo correo**, con su lista. Los días siguen siendo los
+   suyos; lo que cambia es que son **un correo por día con todo dentro**, no
+   uno por movimiento.
+2. **En la edición gratis no hay correo**, y eso no se puede saltar: el
+   manifiesto pide un solo permiso. Ahí los avisos tienen que ser **la tarjeta
+   del mazo** y nada más. Conviene decidirlo ahora y no al final.
+
+---
+
 ## ✅ 26/10 — LA PAPELERA AGRUPADA: SU IDEA, Y LO QUE HAY QUE HACER ANTES
 
 Jose: *"tal vez lo que necesitamos es que al borrar la app los organice por
@@ -371,6 +465,49 @@ Con los movimientos agrupados por material, **el arreglo del orden de la
 papelera se vuelve obvio en la pantalla**: la entrada y sus salidas salen
 juntas, en el mismo grupo, y «devuelve primero ésta» deja de ser un mensaje de
 error para ser una flecha señalando dos filas más arriba.
+
+---
+
+## 💡 26/10 — UNA RAMA PARALELA: UN CRM PARA QUIEN YA USA SHEETS O EXCEL
+
+Jose: *"anota esto para analizarlo luego: ¿qué pasa si tratamos de crear una
+rama paralela a Acopio que sea un CRM para empresas que utilizan Sheet o
+Excel?"*
+
+Anotado para analizar. Lo que me parece que hay que mirar cuando se analice,
+dicho ahora para no volver a pensarlo desde cero:
+
+**Lo que se reutiliza es más de lo que parece, y no son las pantallas.** Lo
+caro de Acopio no es la bodega: es todo lo que hay debajo y ya está pagado — la
+instalación de un clic sin pantalla de aviso, los roles y permisos, el registro
+de auditoría, los respaldos, la papelera, el importador de CSV, el motor de
+escritura con su candado, la edición gratis con un solo permiso, y el modelo de
+«tus datos no pasan por nuestro servidor». **Un CRM sobre esa base empieza al
+60%**, y ninguna de esas piezas tiene nada que ver con inventario.
+
+**Y el argumento de venta es el mismo, que es lo bueno:** las empresas pequeñas
+llevan sus clientes en una hoja por exactamente los mismos motivos por los que
+llevan su bodega en una hoja. El competidor no es Salesforce: es la hoja que ya
+tienen.
+
+**Lo que yo miraría antes de decidir, en este orden:**
+
+1. **¿Qué parte del código es de verdad común?** No de palabra: medido. Si al
+   mirarlo resulta que el 60% es común **pero está mezclado** con lo del
+   inventario, entonces la primera tarea no es un CRM, es separar el motor — y
+   eso es caro y no lo nota ningún cliente.
+2. **Dos productos con un solo autor.** Acopio todavía no tiene su primer
+   cliente de pago. Abrir una rama antes de eso es la forma clásica de acabar
+   con dos cosas a medias. **Yo no lo empezaría hasta tener Acopio vendido.**
+3. **El soporte se multiplica, no se suma.** Lo que ya analizamos sobre el
+   tiempo de soporte vale el doble aquí: dos productos son dos juegos de dudas
+   distintas con la misma persona contestando.
+
+**Dónde sí veo el valor, y es más barato:** no como producto aparte, sino como
+**lo mismo vendido a otro sector**. La pieza que de verdad vale es *«tu sistema
+dentro de tu Google, instalado en dos minutos»*, y esa pieza no es de
+inventario. Pero eso se decide **después** de que Acopio demuestre que la pieza
+funciona con clientes de verdad, no antes.
 
 ---
 

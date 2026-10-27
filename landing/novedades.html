@@ -105,6 +105,29 @@
 
     <!-- EMPEZ&Oacute; SIN N&Uacute;MERO —cambiaban las p&aacute;ginas, no la app— y acab&oacute;
          con uno: los T&eacute;rminos que el cliente acepta viven DENTRO de la hoja. -->
+    <div class="entry" id="v13-0">
+      <span class="ver">v13.0</span>
+      <span class="tag safe">Seguridad</span>
+      <h3>Dos cosas reforzadas que nunca vas a ver</h3>
+      <p>Las dos son sitios donde la app armaba un trozo de p&aacute;gina con un texto que no
+         escribi&oacute; ella, y lo volv&iacute;a seguro <b>a mano en vez de bien</b>. Ninguna se
+         pod&iacute;a aprovechar hoy &mdash;eso se comprob&oacute;, no se supuso&mdash; y las dos
+         se hacen ahora como las hace el resto de la app.</p>
+      <p>La primera es el nombre de un documento adjunto: escapaba las comillas y <b>no los
+         ampersands</b>, as&iacute; que un nombre con los seis caracteres correctos pod&iacute;a
+         salirse de la caja en la que estaba escrito. Hoy ah&iacute; no llega nada que no hayamos
+         escrito nosotros. Pero con el importador de CSV abierto en la edici&oacute;n gratis,
+         <b>las palabras de un fichero las escribe otra persona</b> &mdash; y eso es un cambio de
+         circunstancias, no de c&oacute;digo.</p>
+      <p>La segunda es el mensaje de la pantalla de inicio de sesi&oacute;n cuando algo falla. Ese
+         texto viene de Google, no de nosotros, y entraba en la p&aacute;gina sin pasar antes por
+         ning&uacute;n filtro.</p>
+      <p><b>Por qu&eacute; arreglar algo que no se pod&iacute;a aprovechar:</b> en los dos casos la
+         seguridad no estaba en la l&iacute;nea. Estaba en que todo el resto de la app se acordara
+         de tener cuidado por ella. Eso aguanta hasta el d&iacute;a que no, y ese d&iacute;a no
+         se avisa.</p>
+    </div>
+
     <div class="entry" id="v12-99">
       <span class="ver">v12.99</span>
       <span class="tag fix">Correcci&oacute;n</span>

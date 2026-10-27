@@ -209,6 +209,45 @@ permiso debería irse con ella. Hoy no hay nada que lo vigile.
 
 ---
 
+## 🔴 H-09 · Quitar un documento sólo quita el ENLACE. El archivo se queda en Drive para siempre
+
+**Dónde:** `Code_v3_fixed.gs` `updateDocument_` (~8729). Lo encontró Jose el
+26/10: *"podemos cambiar esos documentos y fotos pero nunca eliminarlos por
+completo, no hay opción."*
+
+**Comprobado.** La ✕ de un documento adjunto marca la fila como quitada, y el
+servidor escribe la lista que queda en la celda `DOC_LINKS` del movimiento.
+**Y nada más.** No hay una sola llamada a Drive en ese camino: el fichero sigue
+en la carpeta del administrador, entero, para siempre.
+
+Lo mismo con **las fotos de rack**: no existe ninguna función para borrar una.
+Se pueden reemplazar; quitarlas, no.
+
+**Por qué es ALTA, y no es por el espacio.** Es por lo que el cliente cree que
+hizo:
+
+1. **Pulsa ✕, el documento desaparece de la pantalla, y concluye que lo
+   borró.** No lo borró. Si ese PDF llevaba el precio de un proveedor, o una
+   foto de algo que no debía fotografiarse, sigue ahí — y la app le dijo que
+   no.
+2. **Es nuestro problema además del suyo.** Un cliente que borra algo
+   «definitivamente» y luego descubre que seguía guardado tiene una queja
+   razonable, y en algunos sitios una obligación legal detrás.
+3. El espacio es lo de menos, pero también: esos ficheros cuentan contra el
+   Drive del administrador y **nadie los va a encontrar nunca**, porque ya no
+   hay ningún enlace que lleve a ellos.
+
+**Lo que yo haría, y hay una decisión dentro:** mandar el fichero **a la
+papelera de Drive del cliente** (`setTrashed(true)`), no destruirlo. Así se
+puede recuperar 30 días desde el propio Drive, que es el comportamiento que
+cualquiera espera. Destruirlo del todo sería irreversible y no hace falta.
+
+**Decisión de Jose:** si al pulsar ✕ se avisa («esto también lo quita de tu
+Drive») o se hace callando. Yo avisaría, porque hoy la gente cree que ya lo
+hace.
+
+---
+
 ## Lo que falta por mirar
 
 Parte 2 sigue abierta: el camino de los documentos adjuntos y quién puede

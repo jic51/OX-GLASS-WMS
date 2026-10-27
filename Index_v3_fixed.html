@@ -5853,7 +5853,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '12.99';
+var APP_VERSION = '13.0';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5865,7 +5865,7 @@ var APP_VERSION = '12.99';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '26d0d5a7';
+var APP_BUILD = '9a16bf6a';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -19972,7 +19972,23 @@ function addDocGroup(suggestedName, containerId, idPrefix) {
   group.dataset.gid = uid;
   group.innerHTML =
     '<div class="doc-group-hdr">' +
-      '<input class="doc-group-name" type="text" value="' + name.replace(/"/g,'&quot;') + '" placeholder="Document name">' +
+      /* ── H-04 · ESCAPAR LAS CINCO, NO SÓLO LA COMILLA ────────────────────
+         Antes: `name.replace(/"/g,'&quot;')`. Escapaba `"` y NO `&`, así que
+         un nombre que contuviera el texto `&quot;` lo decodificaba el
+         navegador a una comilla de verdad, se salía del atributo, y lo que
+         viniera detrás se ejecutaba.
+
+         Hoy los tres que llaman a esta función pasan `null` o la cadena
+         literal 'Document', así que no era explotable — pero la seguridad
+         estaba en QUIENES LLAMAN, no en esta línea, y eso es dos cosas que
+         tienen que coincidir sin que nada lo obligue. Con el importador de
+         CSV abierto en la gratis, el nombre de un material lo escribe otra
+         persona en un fichero.
+
+         `_he` escapa `& " < >`. Para un atributo entre comillas dobles eso es
+         de sobra, y como los nombres de hoy no llevan ninguno de esos cuatro
+         caracteres, el resultado visible es IDÉNTICO. */
+      '<input class="doc-group-name" type="text" value="' + _he(name) + '" placeholder="Document name">' +
       '<button class="doc-group-remove" title="Remove" onclick="this.closest(\'.doc-group\').remove();_updateDocPhotoCount()">×</button>' +
     '</div>' +
     '<div class="doc-photos-strip" id="strip-' + uid + '"></div>' +
@@ -30395,6 +30411,17 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '13.0',
+    titulo: 'Two things hardened that you will never see',
+    puntos: [
+      'Both are places where the app built a piece of a page out of text it did not write itself, and escaped it <b>by hand instead of properly</b>. Neither could be exploited today \u2014 that was checked, not assumed \u2014 and both are now done the same way the rest of the app does it.',
+      'The first is the name on an attached document. It escaped quotation marks and <b>not ampersands</b>, so a name containing the right six characters could have broken out of the box it was written in. Nothing reaches it today except words we put there ourselves \u2014 but with the CSV importer now open in the free edition, <b>the words in a file are written by somebody else</b>.',
+      'The second is the message on the sign-in screen when signing in fails. That text comes from Google, not from us, and it went onto the page without being made safe first.',
+      '<b>Why fix what cannot be exploited:</b> in both cases the safety was not in the line itself \u2014 it was in every other place in the app remembering to be careful. That is the kind of thing that holds until the day it does not.'
+    ],
+    antes:  'Safe because of what nobody had typed yet',
+    ahora:  'Safe because of what the line itself does' },
+
   { ver: '12.99',
     titulo: 'Importing: a way to unpick a file, and 1,250 is a number again',
     puntos: [
@@ -30427,17 +30454,6 @@ var NOVEDADES = [
     ],
     antes:  'One Pro tab, and the whole of Settings dies',
     ahora:  'You leave the Pro tab and everything works again' },
-
-  { ver: '12.96',
-    titulo: 'The pages now say which edition each thing belongs to',
-    puntos: [
-      'Almost all of this version is the website and the guides, which are already updated. <b>Two things changed in the app itself</b>, and they are the reason it has a version number.',
-      '<b>The Terms you accept live in your own sheet</b>, not only on the website, and they said you were buying something and that your system backs itself up every night \u2014 <b>neither is true of the free edition</b>. They now say which clauses belong to which edition.',
-      'And the <b>\u201cCheck Acopio Pro\u201d link</b> on a feature that is not in the free edition used to leave you on the front page to go looking. It now lands on the list that explains <b>the very thing you just pressed</b>.',
-      'On the website: the feature list is <b>split in two</b>, with a heading per edition, and the price opens with <b>Acopio Basic \u2014 free, $0</b>. The list used to promise photos, your team, printed labels and the nightly backup to everyone reading it, and all four are closed in the free edition.'
-    ],
-    antes:  'One thing called \u201cAcopio\u201d, and four promises it did not keep',
-    ahora:  'Two editions, each saying what it is' },
 
 ];
 

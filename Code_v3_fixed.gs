@@ -128,7 +128,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '12.99';
+var APP_VERSION = '13.0';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -140,7 +140,7 @@ var APP_VERSION = '12.99';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '26d0d5a7';
+var APP_BUILD = '9a16bf6a';
 
 // ═══ ACOPIO BASIC — EL INTERRUPTOR DE LA VERSIÓN GRATIS ══════════════════════
 //
@@ -2161,6 +2161,15 @@ function emailFromIdToken_(idToken) {
 
 // Popup callback: exchange the auth code for the user's email, stash it under the
 // random state so the main window can pick it up via pollLogin().
+/* El `_he` del servidor. No existía: esta pantalla era el único sitio del .gs
+ * que arma HTML con un texto que no controla. Escapa los cuatro que importan
+ * dentro de un cuerpo HTML. */
+function escapeHtmlSrv_(s) {
+  return String(s === null || s === undefined ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 function handleOAuthCallback_(code, state) {
   var ok = false, msg = '';
   try {
@@ -2189,7 +2198,12 @@ function handleOAuthCallback_(code, state) {
       '<script>setTimeout(function(){try{window.close();}catch(e){}},800);<\/script>'
     : '<div style="font-family:system-ui,sans-serif;text-align:center;padding:2.5rem 1rem;color:#b91c1c">' +
       '<div style="font-size:3rem">⚠</div><h2 style="margin:.5rem 0">Could not sign in</h2>' +
-      '<p style="color:#555">' + msg + '</p><p>Close this window and try again.</p></div>';
+      /* H-05 · `msg` lo decide el servidor de tokens de Google o un `throw`
+         nuestro, no quien ataca — por eso esto era higiene y no un agujero.
+         Pero es una cadena de un tercero metida en nuestra página sin
+         escapar, y escaparla es una línea. Los mensajes reales de Google no
+         llevan `< > &`, así que lo que ve el cliente no cambia. */
+      '<p style="color:#555">' + escapeHtmlSrv_(msg) + '</p><p>Close this window and try again.</p></div>';
   return HtmlService.createHtmlOutput(html).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
