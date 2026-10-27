@@ -639,3 +639,40 @@ más nuevo es justo lo que acepta ficheros de fuera — el importador de CSV tie
 **Lo que yo haría:** que lo **nuevo** que toque datos de fuera nazca con su
 prueba el mismo día, aunque no se haya roto nunca. Para lo viejo y estable, la
 cobertura por incidentes es la correcta y más barata.
+
+---
+
+## 🟠 H-22 · Editar el comentario de una fila importada la vuelve invisible para «deshacer la importación»
+
+**Dónde:** `Code_v3_fixed.gs` `undoImport` (~10337).
+
+```js
+var marca = 'Imported from file ' + importId;
+var res = borrarFilasEnTanda_(ss, auth, function (f) {
+  return String(f[AC.COMMENTS] || '').indexOf(marca) === 0;   // ← por el comentario
+}, MAX_BORRADO_POR_TANDA);
+```
+
+**Lo encontró Jose el 27/10**, razonando sobre otra cosa: *"la app le pone ese
+comentario e igual el usuario puede editar el comentario, entonces no es un
+arreglo fijo, es sólo provisional."*
+
+**Y no es provisional: ya está roto hoy.** `comments` es uno de los campos que
+`modifyMovement` deja editar (`~16374`). Así que basta con que alguien corrija
+el comentario de una fila importada —algo completamente normal: *"llegó roto",
+"revisar con el proveedor"*— para que esa fila **deje de pertenecer a su
+importación** a ojos de la app.
+
+**Qué pasa entonces, y es lo peor de los dos mundos:** «deshacer la importación»
+se lleva las otras mil y **deja ésa**. El cliente ve la importación deshecha y
+una fila huérfana que no sabe de dónde salió, con un material que ya no debería
+existir. **Y nada avisa.**
+
+**Por qué es MEDIA y no baja:** es *dos cosas que tienen que coincidir sin que
+nada lo obligue* otra vez, pero con un agravante — **una de las dos la puede
+cambiar el usuario, sin saber que está cambiando nada.** El guardia depende de
+que nadie toque un campo de texto libre.
+
+**Lo que yo haría, y la idea es de Jose:** que la pertenencia a una importación
+viva en **un campo que el usuario no pueda tocar**, no en el comentario. Ver la
+discusión del 27/10 en `BACKLOG.md`.
