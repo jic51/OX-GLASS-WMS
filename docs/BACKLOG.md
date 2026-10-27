@@ -12709,3 +12709,62 @@ proyectos abiertos del día, que en un almacén son dos o tres, no veinte.
 **Prioridad: media-alta.** No es urgente para vender, pero es lo que convierte el
 mapa de una pantalla bonita en la forma de trabajar. Y ya está pedido por alguien
 de fuera, que es la primera vez que eso pasa.
+
+---
+
+## 🔵 27/10 — POR DÓNDE SEGUIR, ANOTADO PARA NO PERDERLO
+
+Jose: *"aún no empieces, anótalo para que recuerdes tu sugerencia."*
+
+### Hecho hoy — las tres pruebas guardianas ✅
+
+Cierran las tres filas rojas del censo del análisis estructural. **Son pruebas:
+no cambian comportamiento, no pueden romper nada.**
+
+| | Prueba | Qué ata |
+|---|---|---|
+| ✅ | `test-la-misma-version.js` | Las dos `APP_VERSION` (E-01) |
+| ✅ | `test-nombres-que-no-se-pisan.js` | 1.176 funciones de primer nivel, ninguna repetida (E-03) |
+| ✅ | `test-los-dos-escapes.js` | `_he` y `escapeHtmlSrv_` hacen lo mismo |
+
+### Lo siguiente, y es la pieza grande: **DESHACER UNA IMPORTACIÓN**
+
+**Por qué ésta y no otra:** es **la llave de las otras tres**. Por el orden que
+decidió Jose el 27/10 —*"los 200 sí son una buena idea luego de poner la opción
+de deshacer una importación"*—:
+
+```
+deshacer una importación  →  tope de 200 al borrar  →  agrupar  →  paginar la papelera
+```
+
+**Hasta que exista, el tope de 200 no se puede poner**: alguien que importó mil
+filas y quiere quitarlas se quedaría atrapado teniendo que borrar de doscientas
+en doscientas. Y mientras el tope no exista, agrupar la papelera puede enseñar
+números sacados de una lectura recortada.
+
+**Lo que ya está decidido y escrito** (ver el bloque del 26/10 más arriba):
+
+- Vive **EN Import**, no en Movements.
+- **No pasa por la papelera** — el fichero ES la copia de seguridad.
+- El botón lo dice con todas las letras: *«Esto quita las 1.052 filas de esta
+  importación. No van a la papelera. Para recuperarlas, vuelve a subir el mismo
+  fichero.»*
+- **Y lo que hay que resolver dentro:** las filas que alguien EDITÓ después de
+  importarlas. Se cuentan y se dicen —*«1.052 filas, de las cuales 3 se han
+  editado desde entonces»*— y **ésas sí van a la papelera**, porque son lo único
+  que no se recupera volviendo a subir el fichero.
+
+### Y después, por orden
+
+1. **El tope de 200 al borrar**, dicho antes de borrar, no después.
+2. **Agrupar la papelera** por material, con el número contado en el servidor
+   (no de la lectura recortada — ver H-01).
+3. **Paginar la papelera** (H-01), al final, que es cuando ya casi no hace falta.
+
+### Lo que NO entra todavía, y por qué
+
+- **Las otras 22 cosas de `HALLAZGOS.md`.** Están escritas con gravedad y
+  motivo; se eligen de ahí cuando toque, no se hacen en bloque.
+- **El análisis de invariantes** (*¿el stock SIEMPRE cuadra con el registro?*),
+  que es lo que falta por analizar de verdad. Va **después** de construir, no
+  antes: analizar un suelo que está a punto de moverse es trabajo tirado.

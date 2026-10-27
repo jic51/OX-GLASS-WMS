@@ -661,3 +661,63 @@ estamos haciendo bien.
 **Por qué éste va corto:** no preguntó nada. Dio una experiencia. Lo que quiere
 es que alguien diga *sí, a mí también* — y el regalo es contarle **la cosa
 concreta** que a nosotros nos sirvió.
+
+### 7.4 · LAS VERSIONES CORTAS — SON ÉSTAS LAS QUE SE PUBLICAN (27/10)
+
+Jose: *"parecen de AI, deben ser más informales (no tanto) y más cortos."*
+
+**Tiene razón, y lo que los delataba se puede nombrar:** listas numeradas con
+negritas dentro de un comentario de Reddit, frases perfectamente equilibradas de
+tres partes, y aperturas de ensayo (*"the honest version is probably more useful
+than the flattering one"*). **Nadie escribe así en un hilo.** Se escribe con
+contracciones, frases desiguales y algún «yeah».
+
+#### A BinhopApp
+
+> Honestly, price wasn't it. What I ended up with costs me more than 30 a month.
+>
+> It was that it'd be one more subscription on top of Workspace, one more login
+> for guys in gloves, and two years of purchase history living somewhere I can't
+> open if the vendor goes away. And everything I tried assumed SKUs and bins.
+> I've got glass in racks, cut to size, charged to a job — the setup was the
+> real cost, not the fee.
+>
+> On your churn thing, I'd bet that's timing more than price. If people hit the
+> limit before they've got one result worth paying for, you're charging against
+> a promise. Might be worth checking how many record a full week of movements
+> before they hit the wall.
+
+#### A Reasonable-Papaya221
+
+> Yeah, you put it better than I did — record it when it happens and "later"
+> never shows up. Everything else comes after that.
+>
+> Two things I did differently. Location for us isn't just a rack, it's what's
+> allowed to happen there: material gets held at a rack for a job, and can be
+> restricted on where it's allowed to go next. The fights were never about where
+> stuff was, they were about who'd already claimed it.
+>
+> And the stock number isn't stored anywhere. Entries, exits, transfers, count
+> adjustments — all just rows, every view rebuilt from them. Means I can't fix a
+> number by typing over it. Annoyed me for about a week, and it's why the numbers
+> are trustworthy now.
+>
+> Your last bit matches what I see exactly. Reports go untouched until the basics
+> are boring.
+
+#### A CatchWeightCarl
+
+> Yep. Accumulation is the right word — no single one is big enough to go
+> chasing.
+>
+> What helped us wasn't catching them faster, it was writing down the
+> corrections. Every time a count disagreed with the sheet we logged it as its
+> own entry instead of just fixing the number. Few months in the pattern showed
+> up on its own: two materials with nearly the same name being used
+> interchangeably. Never would've found that from one count.
+
+**Qué se perdió al acortar, y por qué no importa:** las explicaciones de por qué
+cada cosa es como es. En un comentario eso sobra — quien quiera saber, pregunta,
+y entonces se explica. **Lo que se conservó es lo único que no se puede imitar:**
+el vidrio en estantes cortado a medida, y los dos materiales con el nombre
+parecido.
