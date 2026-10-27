@@ -498,3 +498,70 @@ quieres abrir conversación, sólo cerrar la duda:
 
 **Cuál usar:** la primera. La segunda no menciona lo que falta, y eso en Reddit
 se nota a la siguiente pregunta.
+
+---
+
+## 6 — EL POST «WHAT DO YOU GUYS DO WHEN YOUR STOCK COUNT IS OFF?» (27/10)
+
+r/InventoryManagement, 3 días, 5 votos, **16 comentarios**. Jose: *"dame ideas
+para empezar a hablar con esta gente en los comentarios y meter una cuña
+comercial."*
+
+**Lo primero, y es estrategia, no texto:** un post de tres días con 16
+comentarios **ya no trae tráfico**. Lo que trae es **el OP**, que lee todo lo que
+llega, y **el buscador** — esta pregunta la escribe alguien en Google cada
+semana. Así que no se contesta para que lo vea mucha gente: se contesta para que
+lo vea **la persona exacta que tiene el problema**.
+
+**Y la cuña: una cláusula, no un párrafo.** La regla del § 1 sigue valiendo —sin
+enlace, sin nombre, sin precio— y aquí todavía más, porque en un comentario de
+un hilo ajeno **cualquier cosa que parezca un anuncio se borra sin que un
+moderador lo vea**. Lo que convierte un comentario en una venta no es la cuña: es
+que alguien conteste *"how do you do that?"*, y entonces el enlace va por privado,
+que es donde está permitido siempre.
+
+### El texto, para pegar tal cual
+
+> Three things, in this order, and the third is the one nobody does.
+>
+> First: stop counting and go look at the last 10 movements of that one SKU,
+> not the whole system. Nine times out of ten the 8 units are in the last two
+> weeks and they're one of three things — a pick that went out against a job
+> and never got written down, a return that came back to a different rack, or
+> a unit-of-measure mismatch where somebody received a box of 4 as 1.
+>
+> Second: if you can't find it in 20 minutes, stop looking. The 8 units cost
+> less than the hour you're spending.
+>
+> Third, and this is the part that actually fixes it: when you change the
+> count, **record the change as its own transaction** — date, who, which rack,
+> which direction, "counted 92, system said 100". Don't just overwrite the
+> number. Six months of those tell you what no single count can: whether that
+> SKU drifts every single time (then it's your unit of measure or your
+> receiving process, not theft) or whether it's random (then it's counting
+> error). We only found our real problem — two materials with nearly the same
+> name — after the adjustments piled up enough to see the pattern.
+>
+> If your software lets you edit a stock number directly without leaving a
+> trail, that's the thing I'd change first. Ours didn't either, which is
+> eventually why I ended up building something where you can't.
+
+**Por qué este comentario funciona y no se lee como un anuncio:**
+
+- **Las dos primeras partes no venden nada.** Son consejo de alguien que ha
+  estado ahí, y la segunda —*deja de buscar*— es lo contrario de lo que diría
+  un vendedor.
+- **La tercera parte es la cuña, y es un principio, no un producto:** «anota el
+  ajuste como un movimiento». Quien lo lea y mire su sistema **va a descubrir
+  que el suyo no lo hace**, y esa es la venta entera.
+- **La última línea es la única comercial, y va en pasado y sin nombre.**
+  *"which is eventually why I ended up building something"* — quien quiera saber,
+  pregunta.
+- **El ejemplo de los dos materiales con nombre parecido es verdad** y es tuyo.
+  Es lo que no se puede imitar.
+
+**Y lo que de verdad hay detrás, por si preguntan:** un ajuste en Acopio es un
+movimiento con su dirección —contaste menos, el estante va en SRC; contaste más,
+va en DEST— con la misma gramática que una entrada o una salida
+(`adjustDirection_`, ~13277). **El stock no se escribe nunca: se deriva.** Por
+eso no existe «editar el número», que es justo lo que pregunta el post.
