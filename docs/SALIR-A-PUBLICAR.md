@@ -398,3 +398,66 @@ suele traer más que el post.
 **Confirmar una recogida tocando el estante en el teléfono.** Hoy el mapa de
 estantes está en el móvil, pero registrar la salida es un formulario. Pendiente
 en `BACKLOG.md`.
+
+---
+
+## 5.2 — SEGUNDO COMENTARIO: «¿sigues intentando que funcione?» (27/10)
+
+**scmsteve:** *"You already know the downside of running this in spreadsheets,
+are you still tying to make it work?"*
+
+### Lo que Jose quería decir, y lo que de eso es verdad hoy
+
+| Lo que pidió decir | ¿Es verdad? |
+|---|---|
+| «Sheets tiene un potencial grande y por eso trabajamos con ello» | **Sí**, y es la mejor parte de la respuesta |
+| «Medimos el espacio y la probabilidad de llenado» | **Sí, y está construido.** `getSpaceUsage` + `spaceEstimate_` |
+| «Para una empresa pequeña son 20–30 años» | **Sí** — a 20 movimientos/día, ~19 años hasta que empieza a ir lento y décadas hasta el techo |
+| **«La app puede manejar varias hojas de inventario cuando se llene la primera»** | **NO. Eso no está construido.** |
+
+**Esa última hay que sacarla, y conviene decir por qué sin rodeos.** El cierre de
+período en un segundo archivo es la **Opción 1 recomendada** de
+`docs/CUANDO-SE-LLENE-EL-SHEET.md`, y ese documento empieza diciendo *"Nada de
+esto está construido"*. Lo comprobé en el código antes de escribir esto: no hay
+una sola llamada que cree un segundo Sheet. El archivado que sí existe
+(`ARCHIVE_HISTORY`) mueve filas **a otra pestaña del mismo archivo**, y el tope
+de 10M celdas es **por archivo**, así que no libera ni una celda.
+
+Y es justo la clase de frase que no se puede decir en Reddit: el que pregunta es
+alguien que ya conoce el límite —por eso pregunta—, y si le contestas con algo
+que no existe, el siguiente comentario es *"show me"*. **Lo que sí tenemos es
+mejor que lo que quería decir**, porque es comprobable: la app **mide** y **dice
+cuántos años quedan**, que es exactamente lo que nadie más hace.
+
+### El texto, para pegar tal cual
+
+> Yeah, on purpose — and the downside isn't the one most people name. It isn't
+> "spreadsheets are flaky", it's a hard number: 10 million cells per file,
+> counted as grid cells and not filled ones, and it gets slow around 100k rows
+> long before you reach that.
+>
+> So the app measures it instead of hoping. There's a line in settings showing
+> how much of the file is used and roughly how many years are left, worked out
+> from the actual pace of the last 90 days — not from the first week, when
+> loading the opening inventory would make any projection nonsense. It shows
+> nothing at all before 60 days of use, and if the pace is clearly rising it
+> gives a second, shorter number rather than pretending it knows the curve.
+>
+> At our volume that comes out in decades. A warehouse doing 300 moves a day is
+> a different conversation, and I'd rather have it before they start than after.
+>
+> When a file does fill up, the plan is the boring accounting one: close the
+> period into a second file in the same Drive, keep an opening balance per
+> material and location in the live one, read the old file on demand. That part
+> is designed and not built — nobody is close enough to justify it yet, and I'd
+> rather say so than claim it works.
+>
+> What I get for staying inside the limit: the data sits in the customer's own
+> Drive, there's no server of mine between them and their inventory, and if they
+> stop paying me they still have the file and it still opens. That's worth a
+> ceiling I can see coming years out.
+
+**Por qué este texto gana la conversación:** contesta con **el número exacto del
+límite**, que es lo que demuestra que no eres el que no lo sabía; y después dice
+**lo que no está hecho**. Admitir una pieza sin construir, en Reddit, vale más
+que tres frases de producto — porque todo lo demás que dijiste pasa a creerse.
