@@ -175,3 +175,56 @@ cambia; éstas no.
 El orden no es por tamaño: es porque los puntos 1 y 2 encuentran los fallos que
 **pierden datos**, y el punto 3 encuentra los que **molestan**. Los primeros van a
 V1 por definición.
+
+---
+
+## 27/10 — JOSE VUELVE A LA IDEA, Y AHORA HAY UN DATO QUE CAMBIA EL PLAN
+
+> *"Creo que para poder mejorar la app más rápido necesitamos tener un agente
+> que utilice la app todos los días durante 8-12 horas (seguidas / en grupos),
+> alguien que supervise que los datos sean coherentes y que no cambien porque
+> sí, y alguien que anote las anomalías y las estudie."*
+
+**Las tres personas que describe son las tres máquinas de este documento**, y en
+el mismo orden: el que usa, el que vigila que todo cuadre, y el que estudia.
+Nada que cambiar ahí.
+
+### Lo que SÍ cambia: dónde corre el robot
+
+Cuando se escribió esto, el robot iba a ser *"un `.gs` con disparador en la copia
+DEMO"*. **Con lo que salió en la Parte 4 del análisis de seguridad, eso ya no
+vale, y el motivo es un número:**
+
+| Cuenta | Tiempo total de disparadores **al día** |
+|---|---|
+| Gmail normal | **90 minutos** |
+| Google Workspace | **6 horas** |
+
+**Jose pide 8-12 horas diarias. No caben en ninguna de las dos.** Un robot por
+disparadores se quedaría sin cuota a media mañana — y lo peor no es que se pare:
+es que **se llevaría por delante el respaldo nocturno y el archivado**, que
+comparten esa misma bolsa. El robot de pruebas rompería la copia de seguridad.
+
+**Entonces el robot tiene que correr DESDE FUERA**, llamando a la app como la
+llama un navegador: con su token de sesión, contra la dirección `/exec`. Eso lo
+saca de la cuota de disparadores. **No lo saca de todas** —las ejecuciones del
+web app también cuentan y son del administrador (H-18)—, así que:
+
+1. **Corre contra la copia DEMO**, nunca contra la de OX Glass. Su cuota, sus
+   datos inventados, su desastre.
+2. **Se mide la primera semana.** Cuánta cuota se come de verdad, no cuánta
+   creemos. Es la misma medida que hace falta para H-20.
+3. **Y corre en tandas con pausas**, no 12 horas seguidas a toda velocidad: lo
+   que buscamos son fallos del tiempo y del volumen, no una prueba de carga.
+
+### Lo que no cambia, y conviene repetirlo
+
+**Las piezas 1 y 2 no necesitan ninguna IA.** El robot hace operaciones al azar
+con datos feos a propósito; las invariantes comprueban lo que debe ser verdad
+pase lo que pase. **Son las dos que encuentran los fallos graves**, y las dos
+corren gratis. La tercera —el panel que opina por oficio— es la de agentes, y es
+la que hay que racionar.
+
+**Prioridad:** después de deshacer-importación. Y el orden interno sigue siendo
+**2 antes que 1**: un robot sin invariantes hace mil cosas y no sabe decir cuál
+salió mal.
