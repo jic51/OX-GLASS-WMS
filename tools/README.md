@@ -109,6 +109,7 @@ node tools/test-indice.js
 node tools/test-la-misma-version.js
 node tools/test-nombres-que-no-se-pisan.js
 node tools/test-los-dos-escapes.js
+node tools/test-auditoria-nombra-el-movimiento.js
 node tools/test-url-de-la-app.js
 node tools/test-no-saltar-al-cargar.js
 node tools/test-config-escritura.js

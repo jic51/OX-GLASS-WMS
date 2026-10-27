@@ -16468,9 +16468,27 @@ function modifyMovementLocked_(data, auth) {
     normalizeString(rowVals[AC.CATEGORY] || ''),
     normalizeString(rowVals[AC.NAME]     || ''));
 
-  // Audit log
+  /* ── EL REGISTRO DICE QUÉ MOVIMIENTO, NO QUÉ FILA ───────────────────────────
+   *
+   * Esto decía `'Row ' + rowIdx` y nada más, que es el mismo fallo que la
+   * columna MOV_ID vino a arreglar en septiembre, vivo en el único sitio que
+   * nadie volvió a mirar.
+   *
+   * UN NÚMERO DE FILA SE MUEVE. El archivado nocturno reescribe las dos hojas
+   * enteras, y borrar cualquier fila levanta todas las de abajo. Así que una
+   * línea de auditoría que dice «se modificó la fila 814» apunta, al día
+   * siguiente, a un movimiento distinto. Y el registro de auditoría es
+   * precisamente el sitio donde eso no puede pasar: se lee meses después, para
+   * contestar «¿quién tocó esto?».
+   *
+   * El id va primero y la fila detrás, entre paréntesis: el id es lo que
+   * identifica, y el número de fila sigue valiendo como contexto de aquel
+   * momento —qué tenía delante quien lo hizo—. Una fila sin id, que sólo puede
+   * ser anterior al relleno de septiembre, conserva el texto de antes, porque
+   * es lo único que se puede decir de ella con verdad. */
+  var idEditado = String(rowVals[AC.MOV_ID] || '').trim();
   auditLog_(ss, 'MODIFY_MOVEMENT', auth.email,
-    'Row ' + rowIdx + ' | Reason: ' + reason,
+    (idEditado ? idEditado + ' (row ' + rowIdx + ')' : 'Row ' + rowIdx) + ' | Reason: ' + reason,
     changes.join(' | '), '');
 
   /* ── EL AVISO POR CORREO, Y POR QUÉ SE SALTA ENTERO EN LA BÁSICA ─────────
