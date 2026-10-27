@@ -112,6 +112,7 @@ node tools/test-los-dos-escapes.js
 node tools/test-auditoria-nombra-el-movimiento.js
 node tools/test-papelera-se-alinea-sola.js
 node tools/test-importacion-con-nombre-propio.js
+node tools/test-deshacer-no-llena-la-papelera.js
 node tools/test-url-de-la-app.js
 node tools/test-no-saltar-al-cargar.js
 node tools/test-config-escritura.js

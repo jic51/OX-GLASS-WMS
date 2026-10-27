@@ -10608,23 +10608,52 @@ function undoImport(data, auth) {
   return withStockLock_(function () {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 
+    /* ── LO IMPORTADO NO VA A LA PAPELERA. LO EDITADO, SÍ ─────────────────
+     *
+     * Decisión de Jose, 26/10: *"si se importó una vez debe poder importarse
+     * otra vez"*. **El fichero ES la copia de seguridad**, así que guardar en
+     * la papelera mil filas que ya están en el disco del cliente no protege
+     * nada y sí llena la papelera de cosas que nadie va a mirar — fue lo que
+     * la llenó de 490 (H-01).
+     *
+     * La excepción es la que importa: una fila que alguien EDITÓ después de
+     * importarla ya no es la del fichero. Volver a subirlo devolvería el dato
+     * viejo, y la corrección se habría perdido sin rastro. **Ésa sí se
+     * guarda**, y es lo único de esta operación que no se puede recuperar
+     * subiendo el fichero otra vez. */
+    var editados = movimientosEditados_(ss);
+
     var res = borrarFilasEnTanda_(ss, auth, function (f) {
       return esDeLaImportacion_(f, importId);
-    }, MAX_BORRADO_POR_TANDA);
+    }, MAX_BORRADO_POR_TANDA, function (f) {
+      return !!editados[String(f[AC.MOV_ID] || '').trim()];
+    });
 
     if (!res.movidas) {
       throw new Error('Nothing left from that import — it may have been undone already.');
     }
+
+    var aLaPapelera = res.movidas - res.descartadas;
 
     // El sello de datos NO se toca aquí: lo pone `processMovement` al salir
     // bien, desde `DATA_STAMP_ACTIONS`, que es el único sitio por el que pasan
     // todas las acciones. Ponerlo también aquí sería un segundo dueño del
     // mismo sello.
     refreshDerivedSheets_(ss);
+    /* La línea de auditoría dice las DOS cifras, no el total. Decir sólo
+     * «se quitaron 1.052» deja sin registro lo único que hay que poder
+     * encontrar después: cuáles se guardaron y por qué. */
     auditLog_(ss, 'IMPORT_UNDONE', auth.email,
-      res.movidas + ' row(s) from import ' + importId + ' moved to the trash', importId, '');
+      res.movidas + ' row(s) from import ' + importId + ' removed — ' +
+      res.descartadas + ' discarded (the file is the copy), ' +
+      aLaPapelera + ' kept in the trash (edited since importing)',
+      importId, '');
 
     return { status: 'success', removed: res.movidas, importId: importId,
+             // Las dos cifras, para que la pantalla pueda decir la verdad
+             // completa en vez de un total que esconde la mitad.
+             discarded: res.descartadas,
+             trashed:   aLaPapelera,
              // Si la importación era mayor que un trozo, el navegador vuelve a
              // llamar. Sin esto, una importación de 1.200 filas se deshacía «a
              // medias» y la pantalla decía que ya estaba.
