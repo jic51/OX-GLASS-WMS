@@ -276,3 +276,107 @@ perímetro: OAuth, el token de sesión, qué pasa al quitarle el acceso a alguie
 con la pestaña abierta— y Parte 4, lo que Google puede cambiar debajo.
 
 Y el análisis estructural, que es la otra mitad del encargo.
+
+---
+
+## 🟠 H-10 · El respaldo copia **todas** las Script Properties menos cuatro nombres
+
+**Dónde:** `Code_v3_fixed.gs` ~6828 (`SNAPSHOT_EXCLUDE`) y ~6917.
+
+Antes de cada copia, la app vuelca las Script Properties en una pestaña para que
+la copia las herede. **Por defecto se copia todo**: sólo se salvan cuatro
+nombres exactos (`OAUTH_CLIENT_SECRET`, `GEMINI_API_KEY`, `SESSION_SECRET`,
+`WMS_SESSIONS`). Hoy está bien y el motivo de cada uno está escrito.
+
+**Por qué hay que arreglarlo.** El día que se añada una propiedad con un secreto
+—Stripe, un webhook, una contraseña de correo— **se copia sola**, a la hoja y a
+cada respaldo, sin que nadie haga nada mal. Y el fallo es retroactivo: cuando se
+descubra, el secreto ya está en treinta copias repartidas por el Drive del
+cliente, y quitarlo de la lista **no limpia las que ya existen**.
+
+**Lo que yo haría:** añadir un patrón sobre el nombre
+(`/SECRET|KEY|TOKEN|PASSWORD|PRIVATE/i`) que excluya por defecto. Así el
+descuido falla hacia el lado seguro.
+
+---
+
+## 🟠 H-11 · Nuestro secreto de OAuth es el mismo en todas las instalaciones y vive en el Drive de cada cliente
+
+**Dónde:** `OAUTH_CLIENT_SECRET`, en las Script Properties de cada copia.
+
+No es una fuga: **es el diseño**, y el código ya lo dice. El administrador de
+cualquier cliente puede leerlo porque el proyecto es suyo.
+
+**Por qué importa igual:** con el identificador y el secreto se puede montar una
+pantalla de consentimiento que **diga «Acopio»** y pedirle permisos a quien sea
+—no da acceso a datos de otro cliente, pero sí permite engañar en nuestro
+nombre—; y **rotarlo los rompe a todos a la vez**, porque no hay forma de
+cambiarlo para uno solo.
+
+**Lo que yo haría, a partir de cierto número de clientes:** un cliente OAuth por
+instalación, que además es lo coherente con *"tus datos en tu cuenta"*. El coste
+es un paso más, feo, en la instalación. **Decisión de Jose.**
+
+---
+
+## 🟠 H-12 · La frontera de la carpeta de documentos acepta por NOMBRE
+
+**Dónde:** `isFileWithinAppFolder_` (~1782), segunda línea del bucle.
+
+El identificador se comprueba primero y está bien. Pero también se acepta la
+carpeta **por nombre**, y la lista de nombres lleva uno **fijo en el código**
+(`OX_WMS_v3_Docs`). Cualquier carpeta del Drive del administrador que se llame
+así —incluida **una que le hayan compartido**— vuelve servible todo lo que tiene
+debajo, hasta ocho niveles.
+
+**Por qué importa ahora y no antes:** con una instalación no podía chocar con
+nada. **El plan es tener muchos clientes**, y quien tendrá carpetas con ese
+nombre es justo el que administra más de una copia.
+
+**Por qué no se puede quitar sin más:** las instalaciones anteriores al
+asistente no tienen identificador guardado y se quedarían sin abrir ni un
+documento.
+
+**Lo que yo haría:** aceptar el nombre **sólo cuando no hay identificador
+guardado** para esa carpeta.
+
+---
+
+## 🟠 H-13 · La limpieza de los ficheros públicos existe, pero hay que ir al Sheet a pulsarla
+
+**Dónde:** `menuRevokePublicSharing` (~12418).
+
+Hasta la v8.10 cada foto y documento se subía marcado **«cualquiera con el
+enlace puede ver»**. La línea se quitó, pero eso sólo afecta a lo que se sube
+desde entonces. Para lo ya subido hay una función que lo arregla, y está bien
+hecha.
+
+**El problema es cómo se llega a ella:** vive en el menú del Sheet —y la regla
+es *el cliente no debe ir al sheet nunca*—, y **nada le dice que existe**. No
+hay aviso ni cuenta en ninguna pantalla.
+
+**Por qué es MEDIA y no baja:** son facturas de proveedores con precios y
+albaranes con nombres de clientes, públicas con enlace, en instalaciones que
+nadie ha revisado.
+
+**Lo que yo haría:** que **🩺 Check this installation** los cuente, lo diga, y
+tenga el botón ahí dentro. La función ya está escrita.
+
+---
+
+## 🟡 H-14 · Un documento lo abre cualquiera con sesión, sea cual sea su rol
+
+**Dónde:** `resolveOwnFile_` (~1694).
+
+Comprueba sesión, cuota y que el fichero esté dentro de la carpeta de la app.
+**No comprueba el rol ni de quién es el movimiento:** la frontera es la carpeta,
+no la persona.
+
+**Baja hoy, y por qué:** los identificadores de Drive no se adivinan y todos los
+usuarios ven los mismos movimientos, así que quien puede pedirlo ya veía el
+enlace.
+
+**Por qué se anota igual:** esa frase es **una propiedad de hoy, no una
+garantía**. El día que haya permisos por proyecto o por bodega —que está en la
+lista— el documento se seguirá abriendo para todos y nadie se acordará de esta
+función.
