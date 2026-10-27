@@ -12896,3 +12896,36 @@ Pedido por Jose el mismo día. Lo que se vio en los tres vídeos:
 
 **Prioridad: la lentitud es ALTA** —hace la función inservible y cuesta dinero
 por uso—; la ventana es MEDIA y el *prompt*, después.
+
+### Y «Save all» se queda encendido cuando ya no queda nada que guardar
+
+Jose, 27/10: *"al dar clic a Save cuando sólo hay una cosa leída del email, la
+que dice Save all sigue activa, no sé qué pase si le doy clic ya habiendo
+guardado lo que tengo."*
+
+**Comprobado en el código, y la respuesta tranquiliza:** `_eiSave` (~24529)
+empieza mirando si la tarjeta ya está marcada como guardada y, si lo está, **no
+manda nada**:
+
+```js
+if (!card || card.classList.contains('saved') || card.classList.contains('skipped')){ ... return; }
+```
+
+**Así que no se duplica nada.** Pulsar «Save all» con todo guardado recorre las
+tarjetas, no manda ninguna petición, cierra la ventana y refresca la lista.
+
+**Pero está mal igual, y por dos motivos:**
+
+1. **El botón promete un trabajo que ya no existe.** Quien lo pulsa cree que
+   está guardando algo; lo único que hace es cerrar. Que el resultado sea
+   inofensivo es suerte del diseño de `_eiSave`, no algo que la pantalla diga.
+2. **Y es otra vez lo mismo de hoy:** que no pase nada malo **depende de que
+   `_eiSave` siga comprobando esa clase**. Nada lo obliga. El día que alguien
+   simplifique esa línea, «Save all» duplica entradas y nadie lo ve venir.
+
+**Lo que yo haría:** cuando no quede ninguna tarjeta sin guardar, el botón pasa
+a decir **«Close»** —que es lo que de verdad hace— o se apaga. Y una prueba que
+fije lo otro: **guardar dos veces la misma tarjeta no manda dos peticiones.**
+
+**Prioridad: media.** No hace daño hoy; quita una duda razonable y cierra la
+puerta a un duplicado futuro.

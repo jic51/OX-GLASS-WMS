@@ -10432,10 +10432,10 @@ function listImports(auth) {
  * necesita saber si queda faena sin tener que volver a leer la hoja. Un
  * `removed` a secas obligaría a adivinar si ya está.
  */
-function borrarFilasEnTanda_(ss, auth, seLleva, tope) {
+function borrarFilasEnTanda_(ss, auth, seLleva, tope, vaALaPapelera) {
   var trash = ensureTrashSheet_(ss);
   var ahora = new Date();
-  var movidas = 0, quedanPor = 0;
+  var movidas = 0, quedanPor = 0, descartadas = 0;
   /* QUE IDS SE LLEVO, UNO A UNO, Y NO SOLO CUANTOS.
    *
    * La primera version de esto devolvia el numero, y el navegador quitaba de
@@ -10457,7 +10457,7 @@ function borrarFilasEnTanda_(ss, auth, seLleva, tope) {
     if (!sheet || sheet.getLastRow() < 2) return;
 
     var filas = sheet.getRange(2, 1, sheet.getLastRow() - 1, AC_WIDTH).getValues();
-    var quedan = [], aPapelera = [];
+    var quedan = [], aPapelera = [], enEstaHoja = 0;
     filas.forEach(function (f) {
       // Una fila vacía no es una fila. Misma regla que `contarConDatos_`.
       if (!f[AC.CATEGORY] && !f[AC.NAME]) return;
@@ -10466,25 +10466,55 @@ function borrarFilasEnTanda_(ss, auth, seLleva, tope) {
        * cabe en este trozo **se queda en la hoja**, y se cuenta. Descartarla
        * sería perderla; contarla es lo que deja al navegador pedir otro trozo
        * sabiendo cuántos faltan. */
-      if (tope && movidas + aPapelera.length >= tope) { quedan.push(f); quedanPor++; return; }
+      if (tope && movidas + enEstaHoja >= tope) { quedan.push(f); quedanPor++; return; }
+      enEstaHoja++;
+      var idf = String(f[AC.MOV_ID] || '').trim();
+      if (idf) idsMovidos.push(idf);
+
+      /* ── ¿A LA PAPELERA, O FUERA DEL TODO? ───────────────────────────────
+       *
+       * Sin `vaALaPapelera` todo va a la papelera, que es lo que hacía esta
+       * función desde siempre y lo que tiene que seguir haciendo al borrar
+       * movimientos: los escribió una persona y no hay copia en ningún sitio.
+       *
+       * Deshacer una importación es el caso distinto, y lo razonó Jose el
+       * 26/10: **el fichero ES la copia**. Guardar en la papelera lo que ya
+       * está guardado en el disco del cliente llena la papelera de miles de
+       * filas que nadie va a mirar — y es lo que la llenó de 490 (ver H-01).
+       *
+       * La excepción dentro de la excepción: una fila que alguien EDITÓ
+       * después de importarla ya no es la del fichero. Volver a subirlo
+       * devolvería el dato viejo y la corrección se perdería sin rastro. Ésas
+       * sí van a la papelera, aunque las demás no. */
+      if (typeof vaALaPapelera === 'function' && !vaALaPapelera(f)) {
+        descartadas++;
+        return;                       // fuera de `quedan`: se va y no se guarda
+      }
       var guardada = f.slice();
       guardada[TR.DELETED_AT] = ahora;
       guardada[TR.DELETED_BY] = auth.email;
       guardada[TR.FROM_SHEET] = par.nombre;
       aPapelera.push(guardada);
-      var idf = String(f[AC.MOV_ID] || '').trim();
-      if (idf) idsMovidos.push(idf);
     });
 
-    if (!aPapelera.length) return;
+    if (!enEstaHoja) return;
 
-    trash.getRange(trash.getLastRow() + 1, 1, aPapelera.length, TRASH_WIDTH)
-         .setValues(aPapelera.map(textSafeRow_));
+    /* EL ORDEN, Y ES LA LECCIÓN DEL 26 DE SEPTIEMBRE: primero se ESCRIBE en la
+     * papelera, y sólo después se reescribe la hoja sin esas filas. Al revés,
+     * un fallo entre las dos operaciones se lleva las filas sin haberlas
+     * guardado en ningún sitio. */
+    if (aPapelera.length) {
+      trash.getRange(trash.getLastRow() + 1, 1, aPapelera.length, TRASH_WIDTH)
+           .setValues(aPapelera.map(textSafeRow_));
+    }
     escribirHojaCompleta_(sheet, quedan, AC_WIDTH);
-    movidas += aPapelera.length;
+    movidas += enEstaHoja;
   });
 
-  return { movidas: movidas, quedanPor: quedanPor, ids: idsMovidos };
+  return { movidas: movidas, quedanPor: quedanPor, ids: idsMovidos,
+           // Cuántas de las que se fueron NO quedaron en la papelera. Quien
+           // llama necesita poder decirlo con un número, no de memoria.
+           descartadas: descartadas };
 }
 
 /* CUÁNTAS FILAS CABEN EN UNA LLAMADA.
@@ -10527,6 +10557,47 @@ function esDeLaImportacion_(fila, importId) {
   if (String(fila[AC.IMPORT_ID] || '').trim() === id) return true;
   // Heredado: las tandas anteriores a la columna.
   return String(fila[AC.COMMENTS] || '').indexOf('Imported from file ' + id) === 0;
+}
+
+/* ─── QUÉ MOVIMIENTOS SE HAN EDITADO A MANO ──────────────────────────────────
+ *
+ * Hace falta para deshacer una importación: una fila que alguien corrigió
+ * después de importarla **ya no es la del fichero**, así que volver a subirlo
+ * devolvería el dato viejo y la corrección se perdería sin que nadie se entere.
+ * Ésas van a la papelera aunque las demás no.
+ *
+ * SALE DEL REGISTRO DE AUDITORÍA, y sólo se puede desde el 27/10: hasta esa
+ * mañana la línea de `MODIFY_MOVEMENT` guardaba el NÚMERO DE FILA, que se
+ * mueve, y no servía para señalar un movimiento. Ahora guarda su id.
+ *
+ * LO QUE ESTO NO PUEDE SABER, y hay que decirlo donde se use: las ediciones
+ * anteriores a ese cambio sólo dejaron un número de fila. No se pueden
+ * recuperar, así que una importación vieja puede tener correcciones que esto no
+ * ve. Es un motivo más para avisar antes de deshacer, no para callarlo.
+ *
+ * Una lectura de dos columnas, no de la hoja entera: el registro crece sin
+ * límite (H-17) y aquí sólo hacen falta la acción y el detalle.
+ */
+function movimientosEditados_(ss) {
+  var out = {};
+  var sheet = ss.getSheetByName(SHEETS.AUDIT);
+  if (!sheet) return out;
+  var last = sheet.getLastRow();
+  if (last < 2) return out;
+
+  // Columnas 2 a 4: Action, User, Details. Se piden las tres de una porque
+  // getRange no toma columnas sueltas, y se usa la primera y la última.
+  var filas = sheet.getRange(2, 2, last - 1, 3).getValues();
+  for (var i = 0; i < filas.length; i++) {
+    if (String(filas[i][0] || '').trim() !== 'MODIFY_MOVEMENT') continue;
+    var det = String(filas[i][2] || '').trim();
+    // Formato nuevo: «MOVID (row 814) | Reason: …». El viejo empieza por
+    // «Row », y de ése no hay nada que sacar.
+    if (!det || det.indexOf('Row ') === 0) continue;
+    var id = det.split(/[\s|]/)[0].trim();
+    if (id) out[id] = true;
+  }
+  return out;
 }
 
 function undoImport(data, auth) {
