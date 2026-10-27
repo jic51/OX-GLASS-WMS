@@ -12768,3 +12768,43 @@ números sacados de una lectura recortada.
 - **El análisis de invariantes** (*¿el stock SIEMPRE cuadra con el registro?*),
   que es lo que falta por analizar de verdad. Va **después** de construir, no
   antes: analizar un suelo que está a punto de moverse es trabajo tirado.
+
+---
+
+## 🔵 27/10 — EL RETRASO: MEDIR CUÁNTO TARDA LA GENTE EN APUNTAR
+
+De la pregunta de un programador en Reddit, y es mejor idea que la pregunta:
+
+> *"On your last busy day, when did staff actually record the material they'd
+> taken?"*
+
+**Resulta que la app ya tiene los dos datos y nunca los ha restado.** Cada
+movimiento guarda `DATE_REC` —cuándo dice el usuario que pasó— y `TIMESTAMP`
+—cuándo se escribió la fila—. **La distancia entre las dos es la medida exacta
+del problema que este producto dice resolver.**
+
+**Qué construiría:** una línea en el tablero o en el reporte diario:
+
+> *«El 68 % de las salidas de esta semana se apuntaron el mismo día. La media
+> fue de 3 h 40 min después de que ocurrieran.»*
+
+**Por qué vale la pena, y no es una curiosidad:**
+
+1. **Es la única cifra que mide si la app está funcionando.** El stock cuadrado
+   no lo mide —se puede cuadrar a base de ajustes—; el retraso sí.
+2. **Es la prueba del antes y el después.** Si el toque en el estante se
+   construye, esta cifra es la que dice si sirvió. Sin ella, la discusión será
+   de opiniones.
+3. **Es un argumento de venta que nadie más tiene.** *«Mira cuánto tardaba tu
+   gente en apuntar antes de mí, y cuánto tarda ahora.»*
+4. **Y es barato:** los datos ya están guardados, en todas las instalaciones,
+   desde siempre. No hay que recoger nada nuevo — sólo restar dos columnas que
+   llevan ahí desde el principio.
+
+**Prioridad: media-alta.** No bloquea nada, pero es la clase de cosa que cambia
+la conversación con un cliente, y el trabajo es pequeño.
+
+**Lo que hay que mirar antes:** `DATE_REC` tiene precisión de **día**, no de
+hora, así que la media en horas sólo se puede calcular dentro del mismo día. Lo
+que sí se puede decir siempre y es casi igual de bueno: **qué porcentaje se
+apuntó el mismo día**, y **a qué hora del día se amontonan las escrituras**.

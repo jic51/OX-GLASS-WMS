@@ -721,3 +721,66 @@ cada cosa es como es. En un comentario eso sobra — quien quiera saber, pregunt
 y entonces se explica. **Lo que se conservó es lo único que no se puede imitar:**
 el vidrio en estantes cortado a medida, y los dos materiales con el nombre
 parecido.
+
+---
+
+## 8 — «¿CUÁNDO LO APUNTAN DE VERDAD?» (27/10) — EL COMENTARIO QUE NO PUEDO CONTESTAR YO
+
+**Tricky_Cherry9226**, programador: *"You mentioned the pick confirmation is
+still a form. I'm a developer trying to understand that moment on the floor: on
+your last busy day, when did staff actually record the material they'd taken? If
+the current form works well, that's useful to hear too."*
+
+**Esta no la puedo escribir yo, y conviene decir por qué:** no pregunta por la
+app. Pregunta **qué pasó en la bodega de Jose el último día de trabajo fuerte**,
+y eso sólo lo sabe Jose. Cualquier cosa que yo redacte aquí es un invento con
+forma de respuesta.
+
+**Y es el comentario más valioso del hilo**, porque es el único que pide un dato
+en vez de una opinión.
+
+### Lo bueno: el dato existe y es medible
+
+Cada movimiento guarda **dos fechas distintas**:
+
+| Columna | Qué es |
+|---|---|
+| `AC.DATE_REC` (col 7) | **Cuándo dice el usuario que pasó.** La escribe él; por defecto, hoy |
+| `AC.TIMESTAMP` (col 0) | **Cuándo se escribió la fila.** Lo pone el servidor, al segundo |
+
+**La distancia entre esas dos es exactamente lo que pregunta.** Dos medidas, y
+la segunda es la buena:
+
+1. **Qué porcentaje de movimientos se apuntó un día distinto del que pasaron.**
+   `DATE_REC` sólo tiene precisión de día, así que esto contesta *«¿se apuntó
+   otro día?»*, no *«¿a qué hora?»*.
+2. **A qué hora se escribieron las salidas de un día cargado.** `TIMESTAMP` sí
+   tiene la hora. Si se amontonan entre las 16:00 y las 17:00, *«luego»* sigue
+   ganando — y eso es la respuesta literal a lo que pregunta.
+
+### El borrador — PERO HAY QUE COMPROBARLO ANTES DE PUBLICARLO
+
+**Lo que va en cursiva es mi suposición, no un dato.** Jose: cámbialo por lo que
+de verdad pasa, o míralo antes.
+
+> Good question, and the honest answer is "not when they took it."
+>
+> *On a busy day the exits get written in clumps — a couple around lunch, most
+> at the end of the shift when somebody sits down and reconstructs the morning.*
+> The form itself is fine, and that's the thing: four fields, fifteen seconds.
+> The problem was never the form. It's that at the moment you're carrying a
+> glass unit with both hands you're not stopping to open an app.
+>
+> Which is why the rack-tap idea got my attention. It's not about fewer fields,
+> it's about the recording happening in the one moment your hands are already
+> free — right after you've set the thing down.
+>
+> I can actually check this instead of guessing, by the way. Every movement
+> stores both the date it happened and the timestamp of when the row got
+> written. Haven't looked yet. Might be depressing.
+
+**Por qué el final funciona:** *"haven't looked yet, might be depressing"* es lo
+contrario de una respuesta de vendedor, y a un programador le dice que tienes
+los datos y que no te asusta lo que digan. **Si lo mides antes de contestar,
+sustituye esa última frase por el número** — y entonces es el mejor comentario
+de todo el hilo.
