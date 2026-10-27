@@ -1,6 +1,18 @@
 # Cuando el Sheet del cliente se llene — plan
 
-Investigación y plan. **Nada de esto está construido.**
+Investigación y plan. **El cierre de período no está construido.** Lo que sí está construido es la mitad barata: `getSpaceUsage` y `spaceEstimate_` miden el llenado y dicen los años que quedan, y eso se ve en Ajustes → Sistema.
+
+---
+
+## ✅ DECIDIDO EL 27/10 — SE DEJA ESCRITO, NO SE CONSTRUYE TODAVÍA
+
+Jose, al contestar un comentario en Reddit que preguntaba justo por esto: *"déjalo escrito"*.
+
+**Qué significa, para que dentro de un año nadie lo lea como un descuido:**
+
+- **No se puede decir en público que la app maneja varios archivos.** No los maneja. Lo que se dice es lo que hace —mide y avisa— y que el cierre de período está diseñado y sin construir. Así está escrito en `SALIR-A-PUBLICAR.md` § 5.2.
+- **El disparador para construirlo ya existe y es un número:** el día que el primer cliente cruce el **60 %** de las 10M celdas. La app ya calcula ese porcentaje, así que no hace falta vigilarlo a mano.
+- **Por qué no ahora:** mover 100.000 filas no cabe en los seis minutos de una ejecución —hay que partirlo en tandas y poder retomarlas— y antes de cerrar nada hay que calcular el stock por los dos caminos y comprobar que cuadran exactamente. Es trabajo grande, y **ningún cliente está cerca**. Construirlo ahora es gastar semanas en el problema del año 2040.
 
 ---
 

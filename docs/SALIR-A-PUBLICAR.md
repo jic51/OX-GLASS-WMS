@@ -461,3 +461,40 @@ cuántos años quedan**, que es exactamente lo que nadie más hace.
 límite**, que es lo que demuestra que no eres el que no lo sabía; y después dice
 **lo que no está hecho**. Admitir una pieza sin construir, en Reddit, vale más
 que tres frases de producto — porque todo lo demás que dijiste pasa a creerse.
+
+### 5.3 — La versión corta, que es la que se publica (27/10)
+
+Jose: *"hazlo más resumido, no quiero parecer un sabelotodo, sólo queremos que
+sepan que ya sabemos y tenemos creado algo que maneja esos puntos."*
+
+**Tiene razón y el motivo es medible:** su comentario es **una línea con un
+voto**. Contestar una pregunta de una línea con cinco párrafos se lee como
+defenderse, y defenderse es exactamente lo que hace que alguien parezca un
+sabelotodo. **La respuesta debe parecerse en tamaño a la pregunta.**
+
+Lo que hay que conservar, y es poco: **el número** (demuestra que lo sabías
+antes que él), **que la app lo mide** (demuestra que está hecho) y **la pieza
+que falta** (es lo que hace creíble todo lo anterior). Lo demás sobra.
+
+> Yeah, on purpose. The limit is 10M cells per file and it slows down well
+> before that, so the app measures it — there's a line in settings with how much
+> of the file is used and roughly how many years are left, based on the actual
+> pace of the last 90 days. At our volume that's decades.
+>
+> When a file does fill up, the plan is a period close into a second file in the
+> same Drive, with an opening balance in the live one. Designed, not built —
+> nobody's close enough yet to justify it.
+>
+> The trade is that the data stays in the customer's own Drive, with no server
+> of mine in the middle. Worth a ceiling I can see coming years out.
+
+**Y una más corta todavía, por si el hilo se queda tranquilo** — sirve cuando no
+quieres abrir conversación, sólo cerrar la duda:
+
+> Yeah, on purpose. 10M cells per file, and it slows down before that — so the
+> app shows how full the file is and about how many years are left at your
+> actual pace. At our volume that's decades. The data stays in the customer's
+> own Drive, which is what I'd be giving up otherwise.
+
+**Cuál usar:** la primera. La segunda no menciona lo que falta, y eso en Reddit
+se nota a la siguiente pregunta.
