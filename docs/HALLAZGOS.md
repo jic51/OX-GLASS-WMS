@@ -674,5 +674,29 @@ cambiar el usuario, sin saber que está cambiando nada.** El guardia depende de
 que nadie toque un campo de texto libre.
 
 **Lo que yo haría, y la idea es de Jose:** que la pertenencia a una importación
-viva en **un campo que el usuario no pueda tocar**, no en el comentario. Ver la
-discusión del 27/10 en `BACKLOG.md`.
+viva en **un campo que el usuario no pueda tocar**, no en el comentario.
+
+> ### ✅ ARREGLADO EL 27/10 — la columna `IMPORT_ID`
+>
+> `AC.IMPORT_ID` (col 25), añadida **al final**, que es lo único seguro sobre
+> datos que ya existen. La escribe **sólo** el importador y **no está en el
+> mapa de campos editables** de `modifyMovement` — esa es la propiedad
+> entera: si se pudiera editar, no sería mejor que el comentario.
+>
+> `esDeLaImportacion_(fila, importId)` es ahora la única regla, con nombre y
+> suelta para poder probarla: **columna primero, comentario como respaldo**.
+> El respaldo no es decoración — las importaciones anteriores a la columna no
+> tienen más rastro que ése, y poder deshacerlas a medias es mejor que decirle
+> a alguien que su botón dejó de funcionar.
+>
+> **Lo que se pudo hacer primero, y sin lo cual esto no era posible:** desatar
+> la papelera del ancho del archivo (`alinearPapelera_`). El 22/10 esta misma
+> columna se descartó escrita en el código —*«es un riesgo enorme para una
+> etiqueta»*— y tenía razón entonces.
+>
+> Prueba: `tools/test-importacion-con-nombre-propio.js`, 19 comprobaciones,
+> incluido el caso exacto de este hallazgo — una fila importada con el
+> comentario reescrito entero sigue siendo de su tanda.
+>
+> **Lo que NO cambia con esto, y sigue pendiente:** deshacer sigue mandando las
+> filas a la papelera. Que no vayan —decisión del 26/10— es el paso siguiente.

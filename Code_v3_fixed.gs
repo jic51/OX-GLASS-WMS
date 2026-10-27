@@ -473,14 +473,43 @@ var AC = {
   // las 3am mueve historia vieja— y entonces el paseo se corta y la respuesta
   // desaparece. El puntero es la CADENA; el proyecto es el HECHO, y el hecho de
   // esta fila no puede depender de que otra fila siga existiendo.
-  ORIGIN_PROJECT:23, FROM_MOV:24
+  ORIGIN_PROJECT:23, FROM_MOV:24,
+
+  // ── DE QUÉ IMPORTACIÓN SALIÓ ESTA FILA ────────────────────────────────────
+  //
+  // Idea de Jose, 27/10. Hasta hoy, «deshacer una importación» reconocía sus
+  // filas POR EL TEXTO DEL COMENTARIO («Imported from file IMP-A1B2C3D4»), y
+  // él vio por qué eso no podía quedarse: *"la app le pone ese comentario e
+  // igual el usuario puede editar el comentario, entonces no es un arreglo
+  // fijo, es sólo provisional"*.
+  //
+  // No era provisional: estaba roto (H-22). `comments` es uno de los campos
+  // que `modifyMovement` deja editar, así que corregir el comentario de una
+  // fila importada —algo tan normal como escribir «llegó roto»— la sacaba de
+  // su importación. Deshacer se llevaba las otras mil y dejaba ésa, huérfana y
+  // sin avisar.
+  //
+  // Ahora la pertenencia vive en una columna QUE EL USUARIO NO PUEDE TOCAR: no
+  // está en el mapa de campos editables, no se enseña en ningún formulario, y
+  // viaja con la fila al archivarse, a la papelera y de vuelta.
+  //
+  // VACÍA EN CASI TODAS, Y ESO ESTÁ BIEN. Sólo la llevan las filas que entraron
+  // por un fichero. La respuesta honesta para el resto —lo que tecleó una
+  // persona— es que no vienen de ninguna importación.
+  //
+  // Y POR QUÉ SE PUDO HACER HOY Y NO EL 22/10, cuando se descartó aquí mismo
+  // («es un riesgo enorme para una etiqueta»): porque ese riesgo era que la
+  // papelera aparcaba sus tres columnas en AC_WIDTH, así que mover el ancho le
+  // corría los datos a todos los clientes. Eso se desató primero — ver
+  // `alinearPapelera_`. Primero se quita el riesgo, después se añade la columna.
+  IMPORT_ID:25
 };
 // The archive row's true width. Every fixed-size read or write of the whole
 // row uses this constant, not a literal — four different places in this file
 // used to each spell out `20` by hand, which is exactly the kind of duplicated
 // magic number that gets fixed in three places and shipped broken in the
 // fourth. One constant, so adding a column here again means changing ONE line.
-var AC_WIDTH = 25;
+var AC_WIDTH = 26;
 
 // A deleted movement is the movement's OWN row, unchanged, with three columns
 // added on the end saying what happened to it. The row is copied verbatim so a
@@ -814,7 +843,7 @@ function ensureCoreSheets_(ss) {
         'System Date','Type','Name','GC','PO#','Qty','Unit','Date Received','Source Location',
         'Supplier','Comments','Status','Received By','Project','Mat ID','Doc Links','User Email',
         'Destination Location','MoveType','PM','Unit Cost','Total Cost','Movement ID',
-        'Left Over From','From Movement'] },
+        'Left Over From','From Movement','Import ID'] },
     { name: SHEETS.CONFIG, header: [
         'Projects','Categories','Suppliers','Locations','Location Type','User Email','User Role',
         'Admin Email','Truck','Truck Person','Truck Status','Min Stock Material','Min Stock Qty',
@@ -5057,6 +5086,17 @@ function addMovementsBatch_(ss, archive, movements, auth, opciones) {
         row[AC.ORIGIN_PROJECT] = '';
         row[AC.FROM_MOV]       = '';
       }
+
+      /* ── DE QUÉ IMPORTACIÓN VIENE, SI VIENE DE ALGUNA ─────────────────────
+       *
+       * Lo pone el importador y nadie más: no hay formulario que lo escriba, y
+       * `IMPORT_ID` no está en el mapa de campos editables de modifyMovement.
+       * Por eso sirve para reconocer una tanda — lo que el comentario no podía
+       * (H-22).
+       *
+       * Vacío para todo lo que teclea una persona, que es la verdad: no viene
+       * de ninguna importación. */
+      row[AC.IMPORT_ID] = String(d.importId || '').trim();
 
       newRows.push(row);
       rowMeta.push({
@@ -10125,6 +10165,13 @@ function commitImport(data, auth) {
       po:          r.po || '',
       comments:    ('Imported from file ' + importId +
                     (r.comments ? ' — ' + r.comments : '')).trim(),
+      /* LA MISMA TANDA, EN UN SITIO QUE NADIE PUEDE EDITAR.
+       *
+       * El comentario de arriba se queda: se lee en la propia fila, es lo que
+       * se escribiría a mano en un albarán, y viaja con ella. Pero ya no es él
+       * quien RECONOCE la tanda — eso lo hace esta columna, porque el
+       * comentario se puede editar y la columna no (H-22). */
+      importId:    importId,
       // Blank, not auth.email — a bulk import says nothing about who received
       // the goods. The importing user is recorded in USER_EMAIL.
       responsible: '',
@@ -10412,17 +10459,40 @@ function borrarFilasEnTanda_(ss, auth, seLleva, tope) {
  * el camino viejo —una llamada por fila— tardó media hora con 490. */
 var MAX_BORRADO_POR_TANDA = 300;
 
+/* ─── ¿ES ESTA FILA DE ESTA IMPORTACIÓN? ─────────────────────────────────────
+ *
+ * Por la COLUMNA primero, que es la que el usuario no puede tocar. El
+ * comentario queda como respaldo, y no es decoración: las importaciones hechas
+ * ANTES de que existiera la columna no tienen más rastro que ése. Para ellas
+ * sigue valiendo lo de siempre —con su fallo conocido (H-22) incluido— porque
+ * poder deshacer una importación vieja a medias es mejor que decirle a alguien
+ * que su botón dejó de funcionar.
+ *
+ * Las nuevas no dependen del comentario para nada: aunque alguien lo reescriba
+ * entero, la columna sigue diciendo de qué tanda es.
+ *
+ * ESTÁ SUELTA Y CON NOMBRE a propósito. Era una función anónima dentro de
+ * `undoImport`, y una regla que decide qué filas se van tiene que poder
+ * probarse sola, sin montar media hoja alrededor.
+ */
+function esDeLaImportacion_(fila, importId) {
+  var id = String(importId || '').trim();
+  if (!id || !fila) return false;
+  if (String(fila[AC.IMPORT_ID] || '').trim() === id) return true;
+  // Heredado: las tandas anteriores a la columna.
+  return String(fila[AC.COMMENTS] || '').indexOf('Imported from file ' + id) === 0;
+}
+
 function undoImport(data, auth) {
   auth = requireAuth_('ADMIN');
   var importId = String((data && data.importId) || '').trim();
   if (!importId) throw new Error('Which import?');
 
   return withStockLock_(function () {
-    var ss    = SpreadsheetApp.getActiveSpreadsheet();
-    var marca = 'Imported from file ' + importId;
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
 
     var res = borrarFilasEnTanda_(ss, auth, function (f) {
-      return String(f[AC.COMMENTS] || '').indexOf(marca) === 0;
+      return esDeLaImportacion_(f, importId);
     }, MAX_BORRADO_POR_TANDA);
 
     if (!res.movidas) {
