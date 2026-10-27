@@ -38,11 +38,33 @@ las salidas del archivo:
 | `script.googleapis.com` | Comprobar el propio despliegue |
 | `drive.google.com` / `docs.google.com` / `lh3.googleusercontent.com` | Enlaces que se enseñan, no llamadas |
 
-**No hay una sola llamada a un servidor nuestro.** Eso significa, dicho como lo
-diría un cliente: *la app no le cuenta a Jose lo que hago*. No hay telemetría,
-ni «llamar a casa», ni comprobación de licencia contra un servidor. **Es una de
-las cosas más fuertes que tiene este producto y hoy no se dice en ninguna
-parte** — ni en la landing ni en los Términos.
+**No hay una sola llamada HTTP a un servidor nuestro.** No hay «llamar a casa»
+ni comprobación de licencia contra un servidor. **Es una de las cosas más
+fuertes que tiene este producto y hoy no se dice en ninguna parte** — ni en la
+landing ni en los Términos.
+
+> ### ⚠ CORRECCIÓN DEL 27/10 — SÍ HAY UNA COSA QUE NOS LLEGA, Y VA POR CORREO
+>
+> Al hacer la Parte 4 encontré que lo de arriba, tal como estaba escrito, daba
+> a entender más de lo que es verdad. **`dailyCheckinTrigger` nos manda un
+> correo** (`~7422`), y conviene decir exactamente qué es, porque la diferencia
+> importa si alguna vez esto se dice en público:
+>
+> - **Cuándo:** sólo los días 3 y 7 desde la instalación, **y sólo si el cliente
+>   no ha registrado ni un movimiento**. Si usa la app, no se manda nunca.
+> - **Qué lleva:** cuatro campos — nombre de la empresa, correo del
+>   administrador, cuántos usuarios hay y cuántos días han pasado. **Nada de su
+>   inventario.**
+> - **Está declarado**, palabra por palabra, en la sección 3 de la política de
+>   privacidad — y el 22/09 se quitó del correo la URL de la instalación porque
+>   el texto prometía cuatro cosas y el código mandaba cinco.
+> - **Se puede apagar:** `CHECKIN_ALERTS_ENABLED = false`.
+>
+> O sea: **telemetría la hay, es una, es estrecha, está escrita y se apaga.** Lo
+> que no se puede decir es «la app no nos cuenta nada» a secas. Lo que sí se
+> puede decir, y es verdad y suena mejor: *«nos llega un aviso si una
+> instalación se queda parada en su primera semana, con cuatro datos y ninguno
+> de tu inventario, y lo puedes apagar»*.
 
 ---
 

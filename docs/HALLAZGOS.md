@@ -471,3 +471,92 @@ crece porque nadie decidió hasta cuándo.
 atrás—: **decir el plazo y cumplirlo.** Dos años de auditoría en la hoja viva y
 lo anterior exportado al Drive del cliente; el registro de errores, 90 días. Y
 escribirlo en los Términos, que hoy no dicen nada.
+
+> ### ✅ DECIDIDO EL 27/10 — EL PLAZO QUEDA FIJADO
+>
+> Jose: *"anota la decisión y sigue."*
+>
+> | Registro | Cuánto se guarda | Qué pasa después |
+> |---|---|---|
+> | **AUDIT_LOG** | **2 años** en la hoja viva | Se **exporta** a un fichero en el Drive del cliente y sale de la hoja. **No se borra** |
+> | **ERROR_LOG** | **90 días** | Se borra. A nadie le sirve un error de hace un año |
+>
+> **Por qué la auditoría se exporta y no se borra:** un registro de auditoría
+> existe justamente para poder mirar atrás. Sacarlo de la hoja resuelve el
+> crecimiento sin renunciar a lo único para lo que sirve.
+>
+> **Y hay que escribirlo en los Términos**, que hoy no dicen nada de plazos.
+> Mientras el texto no lo diga, el plazo no existe para el cliente.
+>
+> **Pendiente de construir.** Encaja con la limpieza de la papelera a los 30
+> días: es el mismo trabajo —un disparador que mira fechas y limpia— y debería
+> hacerse a la vez.
+
+---
+
+## 🟠 H-18 · Todas las cuotas de Google las paga UNA cuenta, y las gasta el almacén entero
+
+**Dónde:** `appsscript.json`, `executeAs: USER_DEPLOYING`.
+
+Cada clic de cada bodeguero se ejecuta **como el administrador**, y las cuotas
+de Google son **por usuario**. Así que las **30 ejecuciones a la vez** no son 30
+por persona: son 30 para toda la empresa. Y los **90 minutos de disparadores al
+día** —en una cuenta normal— los comparten el respaldo, el archivado, el reporte
+diario y el aviso de instalación parada.
+
+**Por qué hay que arreglarlo.** El que se queda sin cuota **no es quien la
+gastó**: es el almacén entero, hasta el día siguiente. El código ya lo sabe
+(`throttle_` lo dice), así que la defensa existe. **Lo que falta es verlo
+venir.**
+
+**Lo que yo haría:** que 🩺 Check this installation enseñe lo que se gasta
+—ejecuciones, minutos de disparadores, correos— igual que ya enseña el espacio.
+Mismo razonamiento que funcionó con las 10M celdas.
+
+---
+
+## 🟠 H-19 · La app manda 14 clases de correo y **nunca pregunta cuántos le quedan**
+
+**Medido:** 14 llamadas a `MailApp.sendEmail`, **cero** a
+`getRemainingDailyQuota()`. El límite de correo es del orden de **100
+destinatarios al día** en una cuenta normal frente a 1.500 en Workspace, y
+varios sitios se tragan el fallo a propósito para que un aviso no tumbe la
+operación.
+
+**Por qué es MEDIA, y no es por el correo:** la limpieza de la papelera a los 30
+días se decidió sobre el argumento de que *se avisa cinco veces y la
+responsabilidad pasa al cliente*. **Ese argumento sólo vale si los correos
+llegan.** Si el día 29 la cuenta se quedó sin cuota, el borrado ocurre igual y
+el cliente no recibió el último aviso — y la frase deja de ser verdad justo
+cuando hace falta que lo sea.
+
+**Lo que yo haría:** preguntar antes de mandar y **juntar en un solo correo todo
+lo que caduca** (que además había que hacerlo porque cinco correos al día nadie
+los lee); y **no borrar lo que no se pudo avisar**.
+
+---
+
+## 🟠 H-20 · Gmail personal: 90 minutos de disparadores al día. Workspace: 6 horas
+
+**Cuatro veces menos**, sobre un recurso que comparte la instalación entera, y
+justo sobre lo que corre de noche sin que nadie lo mire. Un respaldo de una hoja
+grande tarda minutos; el archivado también. **Lo que falla de noche falla en
+silencio** — y el aviso de que falló es un correo, que es la cuota de H-19.
+
+**Y tiene la misma causa que el problema de continuidad** de
+`SI-SE-VA-EL-ADMINISTRADOR.md`: con Gmail personal no se puede transferir la
+propiedad. **Una sola frase en la guía arregla los dos:** instálalo desde una
+cuenta de empresa, no desde un Gmail personal. Hoy la guía no lo dice.
+
+---
+
+## 🟡 H-21 · Los seis minutos por ejecución son iguales en Workspace
+
+Comprobado hoy contra la página de cuotas de Google, **porque se repite mucho lo
+contrario** (que Workspace da 30 minutos) y es falso: **6 minutos en los dos
+casos.**
+
+**Por qué se anota:** es la diferencia entre «cuando el cliente crezca que pague
+Workspace» y la verdad, que es que **todo lo que procese muchas filas tiene que
+poder reanudarse**. No hay salida comercial a ese límite, y el cierre de período
+de `CUANDO-SE-LLENE-EL-SHEET.md` va a chocar con él de frente.
