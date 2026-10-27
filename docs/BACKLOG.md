@@ -12804,6 +12804,27 @@ del problema que este producto dice resolver.**
 **Prioridad: media-alta.** No bloquea nada, pero es la clase de cosa que cambia
 la conversación con un cliente, y el trabajo es pequeño.
 
+> ### ✅ DECIDIDO EL 27/10 — SE CONSTRUYE, PERO DESPUÉS
+>
+> Jose: *"anota lo del retraso para construirlo luego."* Primero
+> deshacer-importación. Esto espera.
+>
+> ### Y lo que YA existe, que no es nada: la columna **Sys Date**
+>
+> Jose preguntó si hoy se puede ver el dato en algún sitio. **Medio sí, y
+> conviene ser exacto:**
+>
+> En **Movements** hay una columna llamada **`Sys Date`** cuyo texto de ayuda
+> dice *"When the record was saved — not the date of the movement itself"*
+> (`Index_v3_fixed.html` ~6628). Está **oculta por defecto** (~6705) y se
+> enciende desde el selector de columnas. Con ella puesta, cada fila enseña
+> **las dos fechas una al lado de la otra**.
+>
+> **O sea: el dato se ve fila por fila, y no existe el resumen.** Nadie resta,
+> nadie promedia, nadie dice el porcentaje. Para saber «cuánto tardamos» hay
+> que mirar con los ojos, una por una. **Eso es exactamente lo que falta por
+> construir**, y es poco: el dato lleva ahí desde el principio.
+
 **Lo que hay que mirar antes:** `DATE_REC` tiene precisión de **día**, no de
 hora, así que la media en horas sólo se puede calcular dentro del mismo día. Lo
 que sí se puede decir siempre y es casi igual de bueno: **qué porcentaje se
