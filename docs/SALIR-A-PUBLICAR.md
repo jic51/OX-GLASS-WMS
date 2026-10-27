@@ -565,3 +565,99 @@ movimiento con su dirección —contaste menos, el estante va en SRC; contaste m
 va en DEST— con la misma gramática que una entrada o una salida
 (`adjustDirection_`, ~13277). **El stock no se escribe nunca: se deriva.** Por
 eso no existe «editar el número», que es justo lo que pregunta el post.
+
+---
+
+## 7 — LOS TRES COMENTARIOS DEL 27/10, Y POR QUÉ CADA UNO LLEVA UN TONO DISTINTO
+
+El hilo se movió. Tres comentarios, **tres personas distintas**, y contestarles
+igual sería el error:
+
+| Quién | Qué es | Qué quiere |
+|---|---|---|
+| **BinhopApp** | Fundador de un producto parecido | **Aprender de ti.** Pregunta en serio por qué alguien no paga 20-30 $/mes |
+| **Reasonable-Papaya221** | Fundador de TetraWMS, **lo declara** y pone su enlace | Posicionarse — pero con un análisis bueno y honesto |
+| **CatchWeightCarl** | **Un usuario**, no un vendedor | Que alguien le dé la razón |
+
+**El de arriba es el más valioso y es el que casi todo el mundo contestaría a la
+defensiva.** Está pidiendo ayuda con su negocio. Dársela, de verdad, es lo que
+hace que luego te escriba por privado.
+
+### 7.1 · A BinhopApp — el precio no era la razón, y eso es lo útil para él
+
+> Happy to answer, because the honest version is probably more useful to you
+> than the flattering one: **price wasn't the reason.** What I ended up with
+> costs me more than 20 or 30 a month. So that's not where we lost you.
+>
+> Three things actually decided it:
+>
+> 1. **It wasn't one subscription, it was one more.** We already pay for
+>    Workspace. Adding another vendor means another login for guys who are
+>    wearing gloves, another thing to cancel if I leave, and a conversation
+>    with the owner that costs more than the fee itself.
+> 2. **The data leaving.** Two years of purchase history moving somewhere I
+>    can't open without you still existing. That's not distrust, it's just a
+>    thing small shops feel strongly about and rarely say out loud in a sales
+>    call.
+> 3. **It never fit the floor.** Everything I tried assumed a warehouse with
+>    SKUs and bins set up properly. Mine has glass in racks, cut to size,
+>    charged to a job. The setup cost was the real price.
+>
+> On your actual question — people hitting the limit and not coming back:
+> that's usually not a price objection, it's a **timing** one. If the free
+> ceiling arrives before they've gotten the one result that makes the tool feel
+> necessary, the fee is being asked for a promise instead of for a thing that
+> already happened. I'd look at what percentage of people have recorded their
+> first real week of movements *before* they hit the wall. If that number is
+> low, the wall is in the wrong place, not at the wrong price.
+
+**Por qué este texto es bueno para nosotros aunque regale consejo:** dice sin
+decirlo que nuestro producto cuesta más y aun así se eligió, da una razón
+concreta que un fundador puede usar mañana, y **no vende nada**. Quien lee eso
+se pregunta qué construiste.
+
+### 7.2 · A Reasonable-Papaya221 — coincidir donde coincidís, y marcar lo propio sin discutir
+
+> Agreed on the core of it, and you said it better than I did: *record the
+> movement at the moment it happens, so "later" never comes into it.* Every
+> other feature is downstream of that.
+>
+> Two places I landed slightly differently, for what they're worth:
+>
+> Location isn't just a rack for us, it's **what's allowed to happen there** —
+> material can be held at a specific rack for a specific job, and restricted on
+> where it's allowed to move next. Turned out the fights weren't about where
+> things were, they were about who had already claimed them.
+>
+> And the one that surprised me: the stock number is never stored. Entries,
+> exits, transfers and **count adjustments** are all just appended rows, and
+> every view is rebuilt from them. Meant I couldn't "fix" a number by typing
+> over it, which was annoying for about a week and has been the reason the
+> numbers are trustworthy ever since.
+>
+> Your last paragraph matches what I see exactly — scanning, lookup, transfers
+> daily, and the reports nobody opens until the basics are boring. Good to hear
+> it from someone with more installs than me.
+
+**Lo que hace este texto, y conviene verlo:** le da la razón en lo que la tiene,
+**no menciona su enlace ni compite**, y enseña dos decisiones de diseño concretas
+—reservas por ubicación, stock derivado— que cualquiera que sepa del tema
+reconoce como difíciles. *Mostrar que lo estamos haciendo bien* sin decir que lo
+estamos haciendo bien.
+
+### 7.3 · A CatchWeightCarl — el más corto, y el más cálido
+
+> That's exactly it, and the word *accumulation* is the right one. No single
+> mistake is big enough to go looking for. They just pile up quietly until the
+> day one of them is standing between you and a job.
+>
+> The thing that helped us most wasn't catching the mistakes faster — it was
+> recording the corrections. Every time a count disagreed with the sheet we
+> wrote that down as its own entry instead of overwriting the number. After a
+> few months the pattern showed up on its own, and it turned out two materials
+> with nearly identical names were being used interchangeably. We'd never have
+> found that from any single count.
+
+**Por qué éste va corto:** no preguntó nada. Dio una experiencia. Lo que quiere
+es que alguien diga *sí, a mí también* — y el regalo es contarle **la cosa
+concreta** que a nosotros nos sirvió.
