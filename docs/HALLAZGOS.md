@@ -560,3 +560,82 @@ casos.**
 Workspace» y la verdad, que es que **todo lo que procese muchas filas tiene que
 poder reanudarse**. No hay salida comercial a ese límite, y el cierre de período
 de `CUANDO-SE-LLENE-EL-SHEET.md` va a chocar con él de frente.
+
+---
+
+# Hallazgos estructurales
+
+Del `ANALISIS-ESTRUCTURAL.md` del 27/10. Misma escala de gravedad: no es lo feo
+que es, es **qué pasa si no se arregla**.
+
+## 🟠 E-01 · El número de versión está escrito dos veces y nada ata los dos
+
+**Dónde:** `Code_v3_fixed.gs:131` y `Index_v3_fixed.html:5856`, los dos
+`var APP_VERSION = '13.0'`.
+
+**Comprobado que nadie los compara:** `check-publicado.js` lee sólo el del
+`.gs`; `test-pegar.js` compara **cada archivo con su propia salida**, no un
+archivo contra el otro; los demás sitios lo usan, no lo cotejan.
+
+**Qué pasa si se separan.** El cliente ve el número del `Index`; el registro de
+cambios y el sello de publicación usan el del `.gs`. Una instalación puede decir
+**13.0** mientras nosotros creemos que tiene **13.1**.
+
+**Por qué es MEDIA:** es *dos cosas que tienen que coincidir sin que nada lo
+obligue*, en **el dato con el que se diagnostica todo lo demás**. Cada
+conclusión de soporte partiría de un dato falso.
+
+**Tamaño:** tres líneas en una prueba que ya existe.
+
+---
+
+## 🟠 E-02 · Seis funciones pasan de 300 líneas; la mayor tiene 655
+
+`addMovementsBatch_` (655), `archiveOldMovements` (465), `onEdit` (424),
+`processMovementInner_` (341), `refreshDerivedSheets_` (340), `getInitialData`
+(339).
+
+**Por qué importa aquí y no es manía:** casi todos los incidentes de este
+proyecto —el archivado que perdió filas, el guardia de la papelera que culpaba
+al almacén, el `Number('1,250')`, la fusión que vuelve sola— vivían dentro de
+una de estas seis. **Una función de 655 líneas no se lee entera antes de
+tocarla**, así que se cambia mirando las veinte de alrededor — y ahí el contexto
+local miente.
+
+**Lo que NO haría: partirlas.** Tocar el camino por el que entra cada movimiento
+del sistema, para ganar elegancia, es riesgo real por beneficio estético.
+
+**Lo que sí:** una regla — *nada nuevo entra dentro de esas seis*. Lo nuevo va a
+una función con nombre, como se hizo con `numeroDeFichero_` y `adjustDirection_`.
+
+---
+
+## 🟡 E-03 · 873 funciones en un solo ámbito global. Hoy está limpio y nada lo obliga
+
+**Comprobado, y sale bien:** ningún nombre de función se repite entre los dos
+archivos, y los únicos repetidos dentro del `Index` (`draw`, `attempt`) están
+anidados, cada uno en su ámbito.
+
+**Por qué se anota igual:** esa limpieza **no la sostiene nada**. En JavaScript
+la segunda declaración de un nombre **gana en silencio** — es el mismo patrón
+que ya mordió en el `data-i18n` de la landing. Dos `_guardarAjustes()` a 9.000
+líneas de distancia no dan error, no dan aviso, y la app hace lo que dice la
+segunda.
+
+**Tamaño:** una prueba de diez líneas, y vale para siempre.
+
+---
+
+## 🟡 E-04 · Las pruebas tienen forma de historia, no de sistema
+
+180 archivos, cada uno nacido de algo que pasó de verdad — **y ninguno de esos
+fallos puede volver**. Eso primero, porque es una virtud.
+
+**La pega es la otra cara:** la cobertura sigue **lo que se rompió**, no lo que
+importa. Consecuencia comprobable: **lo más nuevo es lo menos cubierto**, y lo
+más nuevo es justo lo que acepta ficheros de fuera — el importador de CSV tiene
+**dos** pruebas que lo mencionan, de 180.
+
+**Lo que yo haría:** que lo **nuevo** que toque datos de fuera nazca con su
+prueba el mismo día, aunque no se haya roto nunca. Para lo viejo y estable, la
+cobertura por incidentes es la correcta y más barata.
