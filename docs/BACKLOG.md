@@ -574,6 +574,53 @@ que puede mover esas mismas líneas de sitio.
 
 ---
 
+## 🔴 27/10 — EL VÍDEO DE PRO: LAS FUSIONES VUELVEN SOLAS Y NO LO DICEN
+
+Vídeo de Jose repasando Ajustes en **Pro**. Lo que se ve, fotograma a
+fotograma, es más preciso que *"a veces sale el mensaje de busy"* — y peor:
+
+| Momento | Qué se ve |
+|---|---|
+| t=02:18 | **Projects**: «10 possible duplicate projects found». Pulsa varios |
+| t=02:28 | **Suppliers**: **cuatro tarjetas a la vez** en «⟳ Merging…» |
+| t=02:52 | Esas mismas tarjetas **han vuelto a tener botones**… |
+| | …y abajo, la lista sigue enseñando **FOUR PEAKS MILLWORK dos veces** |
+
+**O sea: las fusiones no se completaron, la tarjeta volvió sola a su estado
+anterior, y la app no dijo nada.** No es que salga un error: es que **no sale
+nada**. El duplicado sigue ahí y el usuario cree que lo arregló.
+
+**Y un detalle que lo empeora:** al volver, el botón ya no dice «Keep one»
+sino **«Merge into selected»**. La misma tarjeta, dos textos distintos, sin
+que el usuario haya cambiado nada — así que ni siquiera parece la misma
+situación de antes. Alguien que mire eso concluye que la app le pidió otra
+cosa, no que falló.
+
+### La causa, y es la de siempre con otro traje
+
+Cada «Keep one» es **una petición suelta**. Se pueden pulsar cuatro seguidas y
+salen cuatro, todas peleando por el mismo candado del stock. Lo de la v12.92
+—borrar 490 eran 490 peticiones— sin resolver aquí.
+
+Pero el fallo que se ve en el vídeo **no es la lentitud: es el silencio**. Una
+promesa a medias (`.withFailureHandler`) que repinta la tarjeta y se calla.
+
+### Lo que hay que arreglar, por orden de daño
+
+1. 🔴 **Que un fallo se vea.** Si una fusión no se hace, la tarjeta tiene que
+   decirlo y quedarse en rojo, no volver a su sitio como si nada. Esto es
+   independiente de lo demás y es lo primero.
+2. 🔴 **Un texto por estado.** «Keep one» y «Merge into selected» no pueden
+   turnarse solos en la misma tarjeta.
+3. 🟠 **Una sola petición para todas**, como `borrarFilasEnTanda_`. Y mientras
+   una está en marcha, las demás esperan en cola — no salen todas a la vez.
+4. 🟠 **El regulador** que Jose pidió el 23/10 (*"la app calcula cuántos puede
+   enviar al servidor"*), que sigue sin existir y es el punto **C**.
+
+**Esto sustituye al 3-bis de abajo, que decía menos.**
+
+---
+
 ## 🔶 26/10 — FUSIONAR MUCHOS A LA VEZ: EL «BUSY» VUELVE (punto 3-bis)
 
 Jose, repasando: *"esto funciona, pero cuando hay muchos en cola algo pasa y la
