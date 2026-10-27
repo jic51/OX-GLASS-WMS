@@ -180,3 +180,55 @@ La decisión de hoy no cambia:
 **Son compatibles:** la C se puede hacer hoy y la columna el día que la papelera
 esté desatada. Lo único que no se puede es añadir la columna **sin** desatar la
 papelera, que es donde estábamos esta mañana.
+
+
+---
+
+## 7 · ✅ HECHO EL 27/10 — LA 2 ESTÁ CONSTRUIDA Y MEDIDA
+
+Jose: *"dale con la 2."*
+
+### Qué se hizo
+
+**`alinearPapelera_(sheet)`**, llamada desde los tres sitios que tocan columnas
+de la papelera (`ensureTrashSheet_`, `findTrashedById_`, `listTrash`). Busca
+«Deleted At» **en la cabecera —no lo calcula: lo LEE—** y, si está a la
+izquierda de donde ahora le toca, mete columnas vacías delante hasta cuadrarlo.
+
+**Lo importante de cómo lo hace:** las mete con `insertColumnsBefore`, **que es
+Sheets quien mueve los datos**. No se lee ni se reescribe una sola fila, así que
+no existe un estado a medias. Es la lección del 26 de septiembre aplicada antes
+de que haga falta: *la forma más segura de mover datos es no tocarlos.*
+
+**Lo que no hace, a propósito:** no crea la hoja (se llama desde caminos de sólo
+lectura), no quita columnas nunca, y si la cabecera no dice «Deleted At» deja la
+hoja intacta en vez de adivinar.
+
+### Y una prueba que de verdad lo demuestra
+
+`tools/test-papelera-se-alinea-sola.js`, 15 comprobaciones. **No mira si el
+código llama a `insertColumnsBefore`** —eso sería comprobar que el código hace
+lo que el código dice—: construye una hoja falsa cuyo `insertColumnsBefore`
+mueve los datos como Sheets, ejecuta la función real sacada del archivo, y
+**lee la fila con `TR.DELETED_AT`** para ver si sale el dato correcto.
+
+Y empieza comprobando que **el fallo existía**: antes de alinear, el dato sale
+corrido. Sin ese paso, la prueba aprobaría también a quien no hiciera nada.
+
+### LA MEDIDA — qué cuesta ahora una columna
+
+No es una opinión. Se probó: se subió `AC_WIDTH` a 26, se añadió `IMPORT_ID:25`
+al mapa, y se corrieron las pruebas de papelera y de columnas.
+
+| Antes de hoy | Después |
+|---|---|
+| La papelera de cada cliente se leía desplazada | **Se coloca sola, al leerla** |
+| `test-boneyard` exigía `AC_WIDTH = 25` clavado | Exige que el ancho **cubra la última columna**, que es lo que de verdad importa |
+| *"Es un riesgo enorme para una etiqueta"* | **7 de 7 pruebas en verde con la columna 26 puesta** |
+
+**Añadir una columna pasó a ser añadir una columna.**
+
+Lo de `test-boneyard` merece una línea aparte: decía `/var AC_WIDTH = 25;/`, o
+sea, **era una tercera lista que tenía que coincidir con las otras dos**. Ahora
+comprueba que `AC_WIDTH` cubra la última columna del mapa — el mismo guardia,
+sin tener que apaciguarlo cada vez.

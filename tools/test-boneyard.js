@@ -206,7 +206,27 @@ console.log('\n═══ 5. EL ESQUEMA: DOS COLUMNAS, AÑADIDAS AL FINAL ══�
         'insertaron — insertarlas correría cada columna posterior en todas ' +
         'las instalaciones que ya tienen datos',
     /MOV_ID:\s*22/.test(ac));
-  check('`AC_WIDTH` subió a 25', /var AC_WIDTH = 25;/.test(src));
+  /* ESTO DECÍA `/var AC_WIDTH = 25;/`, Y ERA LA FORMA EQUIVOCADA DE MEDIRLO.
+   *
+   * Clavar el número convertía esta prueba en una tercera lista que tiene que
+   * coincidir con las otras dos: el día que el archivo gane una columna —por
+   * `IMPORT_ID`, por un campo que pida un cliente— esto se pondría rojo sin
+   * que nada estuviera mal, y alguien tendría que venir a subir el número a
+   * mano. Un guardia que hay que apaciguar cada vez deja de leerse.
+   *
+   * Lo que de verdad importa no es que el ancho sea 25: es que el ancho CUBRA
+   * la última columna del mapa. Si `FROM_MOV` cae fuera, las lecturas de fila
+   * entera dejan de traerla y nadie se entera — que es exactamente el desastre
+   * de la noche del 26 de septiembre, con otra columna.
+   *
+   * Medido así, el guardia protege lo mismo y no hay que tocarlo nunca más. */
+  {
+    const ancho = Number((src.match(/var AC_WIDTH = (\d+);/) || [])[1]);
+    const ultima = Math.max.apply(null,
+      (ac.match(/:\s*(\d+)/g) || []).map(function (m) { return Number(m.slice(1)); }));
+    check('`AC_WIDTH` (' + ancho + ') cubre la última columna del mapa (' + ultima + ')',
+      ancho === ultima + 1, { ancho: ancho, ultima: ultima });
+  }
 
   /* `padRow_` es lo que hace que una hoja vieja y estrecha siga leyéndose. Sin
    * eso, el día del despliegue toda instalación existente empieza a reventar

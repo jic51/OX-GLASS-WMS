@@ -6040,6 +6040,83 @@ function packMath_(packCount, perPack, pricePerPack) {
 // below shift up, so a stale number points somewhere else). Deleting by the
 // movement's own id cannot: an id names one movement and no other, wherever it
 // happens to be sitting.
+/* ─── LA PAPELERA DEJA DE ESTAR ATADA AL ANCHO DEL ARCHIVO ──────────────────
+ *
+ * Jose, 27/10, parando otra cosa para preguntar lo de fondo: *"¿cuál es el
+ * problema real en toda la app de aumentar columnas?"*
+ *
+ * El problema era esto, y era UNA línea:
+ *
+ *     var TR = { DELETED_AT: AC_WIDTH, DELETED_BY: AC_WIDTH + 1, ... };
+ *
+ * Una fila de la papelera es la fila del movimiento ENTERA más tres columnas
+ * pegadas detrás. Así que **el ancho del movimiento era el plano de la
+ * papelera**: añadir una columna al archivo corría esas tres de sitio, y las
+ * filas que ya estaban en la papelera de un cliente pasaban a leerse
+ * desplazadas — la fecha de borrado leída como otra cosa, el «borrado por»
+ * leído como fecha.
+ *
+ * Eso convertía cualquier columna nueva en una migración de datos, y por eso
+ * el importador del 22/10 renunció a tener la suya: *"es un riesgo enorme
+ * para una etiqueta"*.
+ *
+ * ── LO QUE HACE ESTO, Y POR QUÉ ES SEGURO ──────────────────────────────────
+ *
+ * Busca «Deleted At» en la cabecera —no lo calcula: lo LEE— y, si está a la
+ * izquierda de donde ahora le toca, mete columnas vacías delante hasta
+ * cuadrarlo. **Las mete con `insertColumnsBefore`, que es Sheets quien mueve
+ * los datos**, no nosotros: no se lee ni se reescribe una sola fila, así que
+ * no hay un estado a medias posible. Es la lección del 26 de septiembre
+ * aplicada antes de tiempo — la forma más segura de mover datos es no
+ * tocarlos.
+ *
+ * ── LO QUE NO HACE, A PROPÓSITO ────────────────────────────────────────────
+ *
+ *   · **No crea la hoja.** Se llama también desde caminos de SÓLO LECTURA, y
+ *     crear una pestaña por mirar es la clase de sorpresa que este archivo
+ *     evita en todas partes.
+ *   · **No quita columnas nunca.** Si «Deleted At» apareciera a la DERECHA de
+ *     su sitio —algo que este código no puede provocar, pero una mano en el
+ *     Sheet sí— se deja como está y se anota. Entre equivocarse y no tocar,
+ *     no tocar.
+ *   · **No adivina.** Si la cabecera no dice «Deleted At», no hay nada que
+ *     alinear con certeza y se devuelve la hoja intacta.
+ *
+ * Correrlo dos veces no hace nada la segunda: después de la primera, «Deleted
+ * At» ya está en su sitio y la función sale por la primera puerta.
+ */
+function alinearPapelera_(sheet) {
+  if (!sheet) return sheet;
+  try {
+    var ancho = sheet.getMaxColumns();
+    if (ancho < 1) return sheet;
+    var cab = sheet.getRange(1, 1, 1, ancho).getValues()[0];
+    var pos = -1;
+    for (var i = 0; i < cab.length; i++) {
+      if (String(cab[i] || '').trim() === 'Deleted At') { pos = i; break; }
+    }
+    if (pos === -1) return sheet;        // sin cabecera reconocible: no se adivina
+    if (pos === TR.DELETED_AT) return sheet;   // ya está donde toca
+
+    if (pos > TR.DELETED_AT) {
+      // Más a la derecha de lo que el modelo espera. Quitar columnas sería
+      // borrar datos de alguien por una suposición nuestra.
+      Logger.log('alinearPapelera_: "Deleted At" en ' + pos + ', el modelo espera ' +
+                 TR.DELETED_AT + '. No se toca.');
+      return sheet;
+    }
+
+    // `insertColumnsBefore` es 1-based y empuja a la derecha lo que haya desde
+    // ahí: las tres columnas de la papelera y nada más, porque están al final.
+    sheet.insertColumnsBefore(pos + 1, TR.DELETED_AT - pos);
+  } catch (e) {
+    // Alinear es una reparación, no el trabajo. Que falle no puede impedir que
+    // alguien vea su papelera.
+    Logger.log('alinearPapelera_: ' + (e && e.message));
+  }
+  return sheet;
+}
+
 function ensureTrashSheet_(ss) {
   var sheet = ss.getSheetByName(SHEETS.TRASH);
   if (!sheet) {
@@ -6053,6 +6130,10 @@ function ensureTrashSheet_(ss) {
     sheet.setFrozenRows(1);
     sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
   }
+  // El orden importa: PRIMERO se corren las tres columnas de la papelera a su
+  // sitio nuevo, y DESPUÉS se ensancha. Al revés, ensanchar escribiría encima
+  // de «Deleted At» antes de haberlo movido.
+  alinearPapelera_(sheet);
   ensureArchiveWidth_(sheet);
   if (sheet.getMaxColumns() < TRASH_WIDTH) {
     sheet.insertColumnsAfter(sheet.getMaxColumns(), TRASH_WIDTH - sheet.getMaxColumns());
@@ -6094,7 +6175,10 @@ function findMovementById_(ss, movId) {
 function findTrashedById_(ss, movId) {
   var want = String(movId || '').trim();
   if (!want) return null;
-  var sheet = ss.getSheetByName(SHEETS.TRASH);
+  // Alinear ANTES de leer, no después: una papelera escrita antes de que el
+  // archivo ganara una columna tiene sus tres columnas un sitio a la izquierda,
+  // y `TR.DELETED_BY` apuntaría al dato de al lado. No crea la hoja si no está.
+  var sheet = alinearPapelera_(ss.getSheetByName(SHEETS.TRASH));
   if (!sheet) return null;
   var last = sheet.getLastRow();
   if (last < 2) return null;
@@ -15272,7 +15356,8 @@ function manageMaterialLocked_(data, auth) {
     return { status: 'success', removed: n };
 
   } else if (op === 'listTrash') {
-    var tSheet = ss.getSheetByName(SHEETS.TRASH);
+    // Igual que en findTrashedById_: alinear antes de leer, sin crear la hoja.
+    var tSheet = alinearPapelera_(ss.getSheetByName(SHEETS.TRASH));
     if (!tSheet || tSheet.getLastRow() < 2) return { status: 'success', items: [] };
     var tLast  = tSheet.getLastRow();
     var span   = Math.min(200, tLast - 1);          // the tail: recent deletions

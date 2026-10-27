@@ -192,6 +192,10 @@ function mundo(){
   vm.runInContext([
     fnSrc(GS, 'textCell_'), fnSrc(GS, 'textSafeRow_'),
     fnSrc(GS, 'padRow_'), fnSrc(GS, 'readWidth_'), fnSrc(GS, 'ensureArchiveWidth_'),
+    /* `alinearPapelera_` entra desde el 27/10: la papelera dejó de estar atada
+     * al ancho del archivo y `ensureTrashSheet_` la llama antes de ensanchar.
+     * Sin ella aquí, lo que falla es la prueba, no el producto. */
+    fnSrc(GS, 'alinearPapelera_'),
     fnSrc(GS, 'ensureTrashSheet_'), fnSrc(GS, 'findMovementById_'),
     fnSrc(GS, 'findTrashedById_'), fnSrc(GS, 'ensureArchiveHistorySheet_'),
     fnSrc(GS, 'manageMaterialLocked_'),
