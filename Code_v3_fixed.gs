@@ -1878,7 +1878,28 @@ function oauthCfg_() {
 // useful to a warehouse manager. The name lives in one place now, and in a
 // Script Property, so a retirement is a two-minute settings change instead of
 // a code release for every customer.
-var GEMINI_MODEL_DEFAULT = 'gemini-2.5-flash';
+/* ── 27/10: `gemini-2.5-flash` DEJÓ DE ADMITIR CUENTAS NUEVAS ────────────────
+ *
+ * Jose, intentando poner la clave en la copia de OX Glass: *"es raro porque en
+ * la cuenta de mi warehouse (DEMO) las claves sí funcionan y las estoy usando.
+ * Intenté usar la misma, pero no me deja, e incluso creé otra, pero tampoco.
+ * La intenté cambiar como 5 veces."*
+ *
+ * **No era la clave, y ninguna clave lo habría arreglado.** Google contestó:
+ *
+ *     This model models/gemini-2.5-flash is no longer available to new users.
+ *
+ * No está retirado: está CERRADO A QUIEN NO LO USABA YA. Por eso la DEMO sigue
+ * funcionando —esa cuenta entró antes— y OX Glass no puede entrar. Es una
+ * diferencia que no se le ocurre a nadie, porque de cara al usuario las dos
+ * cosas se ven igual: «mi clave no funciona».
+ *
+ * Comprobado el 27/10 en la página de retiradas de Google: `gemini-3.8-flash`
+ * salió el 2 de septiembre de 2026, es el recomendado para proyectos nuevos y
+ * no tiene fecha de apagado. Los nombres 2.5 siguen sirviendo a quien ya los
+ * usaba, así que se quedan AL FINAL de la lista: quitarlos apagaría la DEMO y
+ * cualquier instalación que lleve meses andando con ellos. */
+var GEMINI_MODEL_DEFAULT = 'gemini-3.8-flash';
 
 function geminiModel_() {
   return String(PropertiesService.getScriptProperties().getProperty('GEMINI_MODEL') || '').trim()
@@ -1890,7 +1911,14 @@ function geminiModel_() {
 // feature down with it.
 function geminiModels_() {
   var out = [geminiModel_()];
-  ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-flash-latest'].forEach(function (m) {
+  [
+    // El recomendado hoy, y el alias que sobrevive a las retiradas.
+    'gemini-3.8-flash', 'gemini-flash-latest',
+    // Los viejos VAN DETRÁS, no se borran: siguen sirviendo a las cuentas que
+    // ya los usaban —la DEMO es una— y quitarlos las apagaría a cambio de
+    // nada. Delante no pueden ir: una instalación nueva recibe 404 por ellos.
+    'gemini-2.5-flash', 'gemini-2.5-flash-lite'
+  ].forEach(function (m) {
     if (out.indexOf(m) === -1) out.push(m);
   });
   return out;
@@ -1987,19 +2015,33 @@ function setAiKey(data, auth) {
   // all — days later, in front of somebody trying to read an email. Better to
   // find out here, in the one place where the person can still fix it.
   //
-  // UN SOLO MODELO, y antes probaba cuatro. `geminiFetch_` recorre la lista de
-  // respaldo hasta que uno conteste, y eso es lo correcto PARA TRABAJAR: si
-  // Google retira un modelo, la app sigue. Pero PARA COMPROBAR UNA CLAVE no
-  // aporta nada —si la clave está mal, está mal para los cuatro— y lo que sí
-  // hace es multiplicar por cuatro el tiempo que la rueda da vueltas. Jose,
-  // 2026-10-07: *"lleva mucho tiempo verificando con Google, así que creo que
-  // está mal"*. Creyó que la clave fallaba porque tardaba. Tardaba por esto.
+  /* ── POR QUÉ ESTO VUELVE A RECORRER LA LISTA (27/10) ──────────────────────
+   *
+   * Aquí ponía `true` —un solo modelo— y el motivo era bueno: el 07/10 Jose
+   * dijo *"lleva mucho tiempo verificando con Google, así que creo que está
+   * mal"*, y tardaba porque probaba cuatro modelos con una clave mala.
+   *
+   * Pero la conclusión de entonces —*"si la clave está mal, está mal para los
+   * cuatro"*— era verdad sólo para las claves malas, y el 27/10 pasó el caso
+   * que no cubre: la clave era BUENA y el modelo por defecto había dejado de
+   * admitir cuentas nuevas. Comprobar un solo modelo convirtió «este nombre de
+   * modelo ya no te sirve» en «tu clave no vale», y Jose probó cinco claves
+   * contra un problema que ninguna clave podía arreglar.
+   *
+   * Y recorrer la lista YA NO CUESTA TIEMPO, que es lo que hace que esto se
+   * pueda deshacer sin perder nada: `geminiFetch_` sigue al siguiente modelo
+   * SÓLO con un 404. Una clave mala da 400 o 403 y para en el primero —
+   * exactamente igual de rápido que con `true`. Lo único que cambia es el caso
+   * en que el modelo es el que falla, que es justo el que no estaba cubierto.
+   *
+   * La lección, para no volver a hacerlo: un atajo que pasa por alto el 404 da
+   * por sentado que lo único que puede fallar es la clave. */
   var probe;
   try {
     probe = geminiFetch_({
       contents: [{ parts: [{ text: 'Reply with the single word: ok' }] }],
       generationConfig: { maxOutputTokens: 5 }
-    }, key, true);
+    }, key);
   } catch (e) {
     throw new Error('Could not reach Google to check the key: ' + e.message);
   }
@@ -2061,12 +2103,16 @@ function setAiKey(data, auth) {
 // One call, trying each model until one answers. Returns the HTTPResponse of
 // the first success, or of the last attempt so the caller can report something.
 //
-// `unSoloModelo` — para COMPROBAR una clave, no para trabajar. Recorrer la
-// lista de respaldo cuando lo que se quiere saber es si la clave vale sólo
-// multiplica la espera: una clave mala lo es para todos los modelos. Ver
-// setAiKey.
-function geminiFetch_(requestBody, apiKey, unSoloModelo) {
-  var models = unSoloModelo ? [geminiModel_()] : geminiModels_();
+// HUBO UN TERCER PARÁMETRO, `unSoloModelo`, y se quitó el 27/10. Servía para
+// que comprobar una clave no diera cuatro vueltas, y dejó de hacer falta en
+// cuanto el bucle de abajo empezó a parar en cualquier código que no sea 404:
+// una clave mala para en el primer modelo igual de rápido. Lo que sí hacía era
+// esconder el caso en que el modelo es el que ya no sirve — ver setAiKey.
+//
+// Un parámetro que ya no se usa no se deja «por si acaso»: se va, porque el
+// siguiente que lo lea va a suponer que alguien lo necesita.
+function geminiFetch_(requestBody, apiKey) {
+  var models = geminiModels_();
   var last = null;
   for (var i = 0; i < models.length; i++) {
     last = UrlFetchApp.fetch(geminiUrl_(models[i], apiKey), {

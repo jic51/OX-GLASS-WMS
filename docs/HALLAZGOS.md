@@ -700,3 +700,55 @@ viva en **un campo que el usuario no pueda tocar**, no en el comentario.
 >
 > **Lo que NO cambia con esto, y sigue pendiente:** deshacer sigue mandando las
 > filas a la papelera. Que no vayan —decisión del 26/10— es el paso siguiente.
+
+---
+
+## 🔴 H-23 · Un nombre de modelo de Google dentro del archivo apagó el lector en una instalación entera
+
+**Dónde:** `Code_v3_fixed.gs` ~1881, `GEMINI_MODEL_DEFAULT`.
+
+Lo encontró Jose el 27/10 intentando poner la clave de IA en la copia de OX
+Glass: *"es raro porque en la cuenta de mi warehouse (DEMO) las claves sí
+funcionan... intenté usar la misma, pero no me deja, e incluso creé otra. La
+intenté cambiar como 5 veces."*
+
+**No era la clave, y ninguna clave lo habría arreglado.** Google contestaba:
+
+> *This model `models/gemini-2.5-flash` is no longer available to new users.*
+
+**La distinción que lo explica todo: el modelo NO está retirado — está cerrado
+a quien no lo usaba ya.** La DEMO entró antes y sigue funcionando; OX Glass es
+cuenta nueva y no puede entrar. De cara a quien lo sufre, las dos cosas se ven
+igual: *«mi clave no funciona»*.
+
+**Por qué es ALTA:** no es que una función fallara. Es que **la app dijo algo
+falso sobre la causa**, y mandó a Jose a hacer cinco veces lo único que no podía
+servir. Un cliente en esa situación concluye que el producto está roto y pide la
+devolución — y tendría razón con la información que la app le dio.
+
+**Y había un segundo fallo detrás del primero,** que es el que convirtió un
+mensaje raro en un callejón sin salida: `setAiKey` comprobaba la clave contra
+**un solo modelo** (`unSoloModelo = true`), por una optimización del 07/10 cuyo
+razonamiento —*"si la clave está mal, está mal para los cuatro"*— **era verdad
+sólo de las claves malas**. La lista de respaldo existía y habría contestado al
+segundo intento. El atajo la desactivó justo en el caso que la necesitaba.
+
+**Arreglado el 27/10:**
+
+1. `GEMINI_MODEL_DEFAULT` pasa a **`gemini-3.8-flash`** — comprobado en la
+   página de retiradas de Google: salió el 2/9/2026, es el recomendado para
+   proyectos nuevos y no tiene fecha de apagado.
+2. La lista de respaldo queda `gemini-3.8-flash` → `gemini-flash-latest` →
+   `gemini-2.5-flash` → `gemini-2.5-flash-lite`. **Los viejos se quedan, al
+   final:** siguen sirviendo a las cuentas que ya los usaban, y quitarlos
+   apagaría la DEMO a cambio de nada.
+3. **El atajo se quita.** Validar una clave vuelve a recorrer la lista, y no
+   cuesta tiempo: `geminiFetch_` sólo pasa al siguiente modelo con un **404**,
+   así que una clave mala para en el primero igual de rápido. El parámetro
+   `unSoloModelo` se borra entero — uno que ya no se usa no se deja «por si
+   acaso».
+
+**La lección, anotada para no repetirla:** un atajo que pasa por alto el 404 da
+por sentado que lo único que puede fallar es la clave. Y es el ejemplo vivo de
+la Parte 4 del análisis de seguridad — *lo que Google puede cambiar debajo*—
+ocurriendo el mismo día en que se escribió.

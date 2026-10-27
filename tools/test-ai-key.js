@@ -68,8 +68,8 @@ function build(opts) {
     // El tercer argumento es "prueba UN solo modelo". Se registra para poder
     // comprobarlo abajo: validar una clave con cuatro modelos multiplicaba por
     // cuatro la espera y no demostraba nada más.
-    geminiFetch_: (body, key, unSoloModelo) => {
-      fetches.push({ body, key, unSoloModelo });
+    geminiFetch_: (body, key) => {
+      fetches.push({ body, key, args: arguments.length });
       if (opts.reject) {
         return {
           getResponseCode: () => opts.reject,
@@ -202,12 +202,34 @@ console.log('\n═══ Google ocupado ≠ clave mala ═══\n');
 }
 
 {
-  // La espera que hizo creer a Jose que la clave estaba mal.
+  /* ESTA COMPROBACIÓN DECÍA LO CONTRARIO, Y ESTABA MAL. Hasta el 27/10 exigía
+   * que validar una clave pidiera UN SOLO MODELO, con este razonamiento: «si
+   * la clave está mal, está mal para los cuatro». Era verdad sólo de las
+   * claves malas.
+   *
+   * El 27/10 pasó el caso que no cubría: la clave de Jose era BUENA y el
+   * modelo por defecto había dejado de admitir cuentas nuevas. Pedir un solo
+   * modelo convirtió «este nombre de modelo ya no te sirve» en «tu clave no
+   * vale», y Jose probó cinco claves contra algo que ninguna clave arreglaba.
+   *
+   * La espera que motivó aquello ya no existe por otro sitio: `geminiFetch_`
+   * sólo pasa al siguiente modelo con un 404, así que una clave mala para en
+   * el primero igual de rápido.
+   *
+   * Lo que se vigila ahora es que NADIE vuelva a poner el atajo. */
   const { sandbox, fetches } = build({});
   sandbox.setAiKey({ key: REAL_KEY });
-  check('comprobar una clave pide UN SOLO MODELO — la lista de respaldo sirve para trabajar, ' +
-        'no para validar: si la clave está mal, está mal para los cuatro',
-    fetches.length === 1 && fetches[0].unSoloModelo === true);
+  check('validar una clave NO se limita a un solo modelo — un 404 es un problema ' +
+        'del modelo, no de la clave, y limitarlo convierte uno en el otro',
+    fetches.length === 1 && fetches[0].args !== 3);
+
+  /* Y en el archivo de verdad: que no quede ninguna llamada con el atajo. Se
+   * busca el texto exacto porque es corto, inconfundible, y no depende de
+   * acertar dónde empieza y acaba una función de cien líneas. */
+  check('y en el código no queda ninguna llamada con el tercer argumento',
+    GS.indexOf('}, key, true)') === -1);
+  check('geminiFetch_ ya no declara ese parámetro',
+    /function geminiFetch_\(requestBody, apiKey\)/.test(GS));
 }
 
 {
