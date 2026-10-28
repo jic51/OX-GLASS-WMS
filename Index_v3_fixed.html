@@ -5853,7 +5853,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '13.1';
+var APP_VERSION = '13.2';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5865,7 +5865,7 @@ var APP_VERSION = '13.1';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '46ddab23';
+var APP_BUILD = 'a95805d7';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -30456,6 +30456,17 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '13.2',
+    titulo: 'Undoing an import no longer fills your trash',
+    puntos: [
+      'Taking an import back off used to move every one of its rows into the trash. That sounds safe, and mostly it was noise: <b>the file is the backup</b>. If it imported once it can import again \u2014 so a thousand rows were kept \u201cjust in case\u201d next to the copy already sitting on your own disk.',
+      '<b>Now they are removed, and the screen says so before you press it</b>, along with how to get them back: import the same file again.',
+      '<b>With one exception, and it is the one that matters.</b> A row you edited after importing is no longer the row that was in the file \u2014 re-importing would bring back the old value and your correction would be gone with no trace. Those are kept in the trash, counted, and named in what the app tells you afterwards.',
+      'Behind it: a movement now carries <b>which import it came from</b> in a field nobody can edit, and the audit line for an edit names the <b>movement</b> instead of the row number, which moves.'
+    ],
+    antes:  '1,052 movements moved to the trash',
+    ahora:  '1,052 removed \u2014 3 kept, because you had edited them' },
+
   { ver: '13.1',
     titulo: 'The document reader said your key was wrong. It was not.',
     puntos: [
@@ -30487,18 +30498,7 @@ var NOVEDADES = [
       '<b>And an error stops following you between tabs.</b> A failure message used to sit there over the next screen, talking about something no longer in front of you \u2014 that is not a warning, it is noise shaped like one.'
     ],
     antes:  'The biggest row in the file, dropped without a word',
-    ahora:  '1,250 is one thousand two hundred and fifty' },
-
-  { ver: '12.98',
-    titulo: 'The free edition gets Import, and the trash opens',
-    puntos: [
-      '<b>Import is in Acopio Basic now.</b> A CSV file, every row checked and counted before anything is saved, and the whole import can be undone. It is the thing that decides whether the free edition is usable at all: a warehouse that already exists arrives with its inventory in a spreadsheet, and without this it would have to be typed in.',
-      '<b>.xlsx is not</b>, and it is not a commercial decision: converting one uses the Drive API, which is a permission this edition deliberately does not ask for \u2014 that is what lets it install without the warning screen. The screen says so <b>before</b> you pick the file, and tells you the way out: any spreadsheet saves as .csv in two clicks.',
-      '<b>And deleting can be undone again.</b> Settings \u2192 System used to go grey <b>whole</b> in the free edition because two things inside it are Pro \u2014 and the trash was in there with them. Now each section closes on its own: the backup, the archive, the evening report and the document reader stay closed; the trash, the storage bar and what the system did on its own are open.',
-      'Each of those now answers for <b>itself</b> when you touch it, instead of all of them answering \u201cAutomatic backup\u201d.'
-    ],
-    antes:  'A whole tab closed because two things in it were Pro',
-    ahora:  'Import works, and a deleted movement comes back' }
+    ahora:  '1,250 is one thousand two hundred and fifty' }
 ];
 
 var NV_CLAVE = 'acopio_novedades_vista';

@@ -106,6 +106,27 @@
          hoja, generados desde `legal/*.md` por `tools/sync-legal.js`, así que
          arreglar lo que dicen de las dos ediciones obliga a tocar la app. Ya
          que había que tocarla, viaja también el ancla `#pro` del candado. -->
+    <div class="entry" id="v13-2">
+      <span class="ver">v13.2</span>
+      <span class="tag new">Change</span>
+      <h3>Undoing an import no longer fills your trash</h3>
+      <p>Taking an import back off used to move every one of its rows into the trash. That sounds
+         safe and mostly it was noise: <b>the file is the backup</b>. If it imported once it can
+         import again, so a thousand rows were being kept &ldquo;just in case&rdquo; alongside the
+         copy already sitting on your own disk &mdash; and that is what filled one trash with
+         hundreds of rows nobody was ever going to read.</p>
+      <p><b>Now they are removed, and the screen says so before you press it</b>, along with how to
+         get them back: import the same file again.</p>
+      <p><b>With one exception, and it is the one that matters.</b> A row you edited after
+         importing is no longer the row that was in the file &mdash; re-importing would bring back
+         the old value and your correction would be gone with no trace. Those are kept in the
+         trash, counted, and named in what the app tells you afterwards.</p>
+      <p>Behind it, two smaller things that made this possible: a movement now carries <b>which
+         import it came from</b> in a field nobody can edit (the note in its comments could be
+         rewritten, and then that row quietly stopped belonging to its import), and the audit line
+         for an edit now names the <b>movement</b> instead of the row number, which moves.</p>
+    </div>
+
     <div class="entry" id="v13-1">
       <span class="ver">v13.1</span>
       <span class="tag fix">Fix</span>
