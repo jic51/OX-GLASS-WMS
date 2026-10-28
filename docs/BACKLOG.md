@@ -12897,6 +12897,29 @@ Pedido por Jose el mismo día. Lo que se vio en los tres vídeos:
 **Prioridad: la lentitud es ALTA** —hace la función inservible y cuesta dinero
 por uso—; la ventana es MEDIA y el *prompt*, después.
 
+> ### ⏸ APARCADO EL 27/10 — SE MIRA DESPUÉS
+>
+> Jose: *"anota lo del lector lento para luego y sigue con lo que falta."*
+>
+> **Queda escrito lo que hay que hacer el día que se retome, para no volver a
+> investigarlo desde cero:**
+>
+> 1. **Medir el mismo correo con los dos modelos.** La Script Property
+>    `GEMINI_MODEL` ya existe: ponerla en `gemini-2.5-flash` en la DEMO —que sí
+>    puede usarlo— y cronometrar. Si la diferencia es de segundos a minutos, la
+>    causa es el razonamiento y no hay que buscar más.
+> 2. **Confirmar el nombre del campo** en la documentación de Google antes de
+>    tocar nada: 3.8 usa niveles (`low`/`medium`/`high`), 2.5 usaba presupuesto
+>    (`thinkingBudget`). **El campo equivocado hace fallar la petición entera.**
+> 3. **Y dejarlo en una Script Property**, como el nombre del modelo, para que
+>    el próximo cambio de Google no obligue a volver a pegar el archivo.
+>
+> **Mientras tanto hay una salida que no cuesta nada y conviene saberla:** si el
+> lector se vuelve inusable, poner `GEMINI_MODEL = gemini-2.5-flash` en una
+> instalación **que ya usaba ese modelo** la devuelve a la velocidad de antes
+> sin tocar código. En una instalación nueva no sirve —Google no la deja
+> entrar— y por eso no es el arreglo: es el paracaídas.
+
 ### Y «Save all» se queda encendido cuando ya no queda nada que guardar
 
 Jose, 27/10: *"al dar clic a Save cuando sólo hay una cosa leída del email, la
