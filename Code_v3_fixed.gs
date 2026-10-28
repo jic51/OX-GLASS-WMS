@@ -10395,12 +10395,23 @@ function listImports(auth) {
  * filas de la tanda, las escribe en la papelera de una tacada y reescribe la
  * hoja sin ellas. Un viaje de lectura, dos de escritura.
  *
- * ── Y VAN A LA PAPELERA, COMO CUALQUIER BORRADO ───────────────────────────
+ * ── Y NO VAN A LA PAPELERA (cambiado el 27/10) ────────────────────────────
  *
- * Deshacer una importación no es más definitivo que borrar un movimiento. Si
- * alguien deshace la importación equivocada, sus filas siguen ahí para
- * devolverlas. Lo único irreversible de esta app sigue siendo vaciar la
- * papelera.
+ * Esto decía lo contrario —*"deshacer una importación no es más definitivo que
+ * borrar un movimiento"*— y era verdad hasta que Jose señaló lo que faltaba:
+ * **el fichero ES la copia**. Si se importó una vez, se puede importar otra.
+ * Guardar en la papelera mil filas que siguen enteras en el disco del cliente
+ * no protege nada, y sí llena la papelera de cosas que nadie va a mirar — es
+ * lo que la llenó de 490 (H-01).
+ *
+ * LA EXCEPCIÓN, que es lo que mantiene esto seguro: una fila que alguien
+ * **editó** después de importarla ya no es la del fichero. Volver a subirlo
+ * devolvería el dato viejo y la corrección se perdería sin rastro. **Ésas sí
+ * se guardan**, y son lo único de esta operación que no se recupera subiendo
+ * el fichero otra vez.
+ *
+ * Lo irreversible de esta app sigue siendo vaciar la papelera; esto es la
+ * segunda cosa, y por eso la pantalla tiene que decirlo antes, no después.
  */
 /* ═══ BORRAR MUCHAS FILAS DE UNA VEZ — EL MOTOR, UNO SOLO ════════════════════
  *

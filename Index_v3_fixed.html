@@ -17074,6 +17074,33 @@ function _drawImportHistory(){
     }).join('') + '</div>';
 }
 
+/* LO QUE SE LE DICE A ALGUIEN CUANDO TERMINA.
+ *
+ * Tres frases distintas para tres resultados distintos, y ninguna de las tres
+ * es la de antes («N moved to the trash»), que desde el 27/10 sería mentira en
+ * los tres casos.
+ *
+ * El caso normal —nada editado— no menciona la papelera para nada: nombrar una
+ * papelera que no recibió nada sólo siembra la duda de si hay algo ahí. Y el
+ * caso con filas editadas las nombra **con su número**, porque son las únicas
+ * que volver a subir el fichero no devuelve, y quien acaba de pulsar es quien
+ * tiene que saberlo.
+ */
+function _textoDeshecho(total, fuera, guardadas){
+  var n = total + ' movement' + (total === 1 ? '' : 's');
+  if (!total) return 'Nothing was removed.';
+  if (!guardadas){
+    return n + ' removed. Import the same file again to bring them back.';
+  }
+  if (!fuera){
+    return n + ' removed and kept in the trash — ' +
+           (total === 1 ? 'it was' : 'they were') + ' edited since importing.';
+  }
+  return n + ' removed — ' + fuera + ' discarded, ' + guardadas +
+         ' kept in the trash because ' + (guardadas === 1 ? 'it was' : 'they were') +
+         ' edited since importing.';
+}
+
 function _undoImport(btn){
   var id = btn ? (btn.getAttribute('data-impid') || '') : '';
   if (!id) return;
@@ -17081,10 +17108,22 @@ function _undoImport(btn){
   _showConfirm({
     icon: '↩', danger: true,
     title: 'Undo this import?',
+    /* EL AVISO DICE LO QUE DE VERDAD PASA (27/10).
+     *
+     * Decía que las filas iban a la papelera y que nada era definitivo. Desde
+     * hoy no van: el fichero ES la copia (ver undoImport en el .gs). Un aviso
+     * que describe el comportamiento de ayer es peor que no avisar — quien lo
+     * lee pulsa tranquilo por un motivo que ya no existe.
+     *
+     * Las tres frases están en este orden a propósito: qué pasa, cómo se
+     * recupera, y la única parte que no se recupera así. La última no es letra
+     * pequeña: es lo que alguien necesita saber ANTES, no después. */
     message: (fila && fila.details ? fila.details + '\n\n' : '') +
       'Every movement that came in with this file is removed from your stock.\n\n' +
-      'They go to the trash, exactly like deleting a movement — nothing here is ' +
-      'final, and anything you take out can be put back.',
+      'They do NOT go to the trash — the file is the backup. To get them back, ' +
+      'import the same file again.\n\n' +
+      'Anything that was edited since you imported it is kept in the trash instead, ' +
+      'because re-importing would bring back the old value and lose the correction.',
     confirmText: 'Undo it',
     onConfirm: function(){
       _btnBusy(btn, 'Undoing…');
@@ -17096,22 +17135,28 @@ function _undoImport(btn){
        * `more:true` si quedaron. Sin este bucle, deshacer una importación de
        * 1.200 filas se habría quedado a medias DICIENDO QUE YA ESTABA, que es
        * la peor forma de fallar: un número en pantalla que no es verdad. */
-      var total = 0;
+      var total = 0, fuera = 0, guardadas = 0;
       function vuelta(){
         google.script.run
           .withSuccessHandler(function(res){
-            total += (res && res.removed) || 0;
+            total     += (res && res.removed)   || 0;
+            fuera     += (res && res.discarded) || 0;
+            guardadas += (res && res.trashed)   || 0;
             _importsData = null;
             _sysCacheDrop('trash');
             if (res && res.more){ vuelta(); return; }
-            _progEnd(total + ' movement' + (total === 1 ? '' : 's') +
-                     ' from that import moved to the trash.');
+            /* LAS DOS CIFRAS SE SUMAN TROZO A TROZO, no se piden al final.
+             * Una importación grande llega en varias vueltas, y el último
+             * trozo sólo sabe lo suyo: quedarse con su número diría «3
+             * quitadas» después de haber quitado mil doscientas. */
+            _progEnd(_textoDeshecho(total, fuera, guardadas));
             _drawImportHistory();
             loadDataFromGoogle(true, true);
           })
           .withFailureHandler(function(err){
             _btnReset(btn);
-            _progEnd(total ? (total + ' moved to the trash — the rest were not.')
+            _progEnd(total ? (total + ' removed — the rest were not. ' +
+                              'Press Undo again to finish.')
                            : 'Nothing was undone.', true);
             showToast('Could not undo that import: ' +
               (err.message || err).replace(/^Error:\s*/i,''), 'err', 8000);
