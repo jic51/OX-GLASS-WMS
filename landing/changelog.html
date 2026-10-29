@@ -106,6 +106,27 @@
          hoja, generados desde `legal/*.md` por `tools/sync-legal.js`, así que
          arreglar lo que dicen de las dos ediciones obliga a tocar la app. Ya
          que había que tocarla, viaja también el ancla `#pro` del candado. -->
+    <div class="entry" id="v13-4">
+      <span class="ver">v13.4</span>
+      <span class="tag fix">Fix</span>
+      <h3>A movement you put back lands where it belongs, and lands now</h3>
+      <p>Two things that looked like one. <b>A restored movement came back at the top of the list</b>
+         no matter how old it was, and <b>it took a few seconds to appear at all</b> after the app
+         said it was done.</p>
+      <p>The second one was the app waiting to ask again: the server had already put it back, and
+         the screen still requested the whole list afterwards to find out something it already
+         knew. It goes in straight away now &mdash; the trash row disappearing and the movement
+         reappearing are the same moment, instead of a few seconds where it was in neither place.</p>
+      <p>The first was never about restoring. The list was drawn in <b>sheet order</b>, which is
+         usually the same as time order because rows get added as things happen &mdash; but putting
+         one back writes it at the end, so a movement from two months ago came out first. The list
+         now reads the movement's own date. Anything without a date keeps exactly the order it had,
+         so every normal day looks identical to before.</p>
+      <p>Also: the progress line no longer sits there spinning at &ldquo;6 of 6&rdquo; after a batch
+         delete has finished, the trash shows <b>who</b> deleted something by name with their
+         contact card on hover, and the import screen stopped saying undone rows go to the trash.</p>
+    </div>
+
     <div class="entry" id="v13-3">
       <span class="ver">v13.3</span>
       <span class="tag fix">Fix</span>

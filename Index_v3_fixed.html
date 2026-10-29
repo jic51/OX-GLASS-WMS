@@ -5860,7 +5860,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '13.3';
+var APP_VERSION = '13.4';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5872,7 +5872,7 @@ var APP_VERSION = '13.3';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '908d5ed4';
+var APP_BUILD = '9b416fde';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -9506,13 +9506,62 @@ function renderDocLinks(linksStr){
 }
 
 // ── Movements: Table ──────────────────────────────────────────────────────────
+/* ── DEL MÁS NUEVO AL MÁS VIEJO, POR SU FECHA Y NO POR SU SITIO EN LA HOJA ───
+ *
+ * Esto era `allMovs.slice().reverse()`, y funcionaba por una coincidencia: las
+ * filas se añaden al final de la hoja según van pasando, así que el revés de
+ * la hoja **casi siempre** es el orden del tiempo.
+ *
+ * Casi. Jose, 29/10: *"los movimientos que se borran y se restauran no regresan
+ * a su lugar en la lista, regresan en el orden en el que se los restaura"*.
+ * Y es exacto: restaurar vuelve a escribir la fila **al final de la hoja**, así
+ * que un movimiento de hace dos meses aparecía EL PRIMERO de la lista.
+ *
+ * No era un fallo de restaurar: era que la lista nunca miró la fecha. Lo mismo
+ * le pasa a una importación de filas con fechas viejas.
+ *
+ * ── LO QUE SE HACE SI NO HAY FECHA, QUE ES LA MITAD DEL TRABAJO ─────────────
+ *
+ * `timestamp` llega como `MM/dd/yyyy HH:mm` (lo escribe `parseArchiveRow`), y
+ * una fila vieja puede no traerlo. Una comparación que devuelva `NaN` deja el
+ * orden a merced del algoritmo de `sort` y **barajaría la tabla entera** — un
+ * destrozo mucho peor que el que viene a arreglar.
+ *
+ * Por eso: se calcula la clave UNA vez por fila, las que no tienen fecha
+ * conservan **exactamente** el orden que tenían (el de la hoja, al revés), y
+ * los empates también. Es decir: donde antes acertaba, sigue acertando igual.
+ */
+function _movsMasNuevoPrimero(lista){
+  var conClave = lista.map(function(m, i){
+    var t = NaN;
+    if (m && m.timestamp){
+      var d = new Date(m.timestamp);
+      t = d.getTime();
+      if (isNaN(t)){
+        // `MM/dd/yyyy HH:mm` lo entienden todos los navegadores de hoy, pero
+        // si alguno no lo hiciera, se parte a mano antes que rendirse.
+        var p = String(m.timestamp).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ T](\d{1,2}):(\d{2}))?/);
+        if (p) t = new Date(+p[3], +p[1] - 1, +p[2], +(p[4] || 0), +(p[5] || 0)).getTime();
+      }
+    }
+    return { m: m, i: i, t: t };
+  });
+  conClave.sort(function(a, b){
+    var ta = a.t, tb = b.t;
+    // Sin fecha una de las dos: no se compara nada, manda el sitio de la hoja.
+    if (isNaN(ta) || isNaN(tb) || ta === tb) return b.i - a.i;
+    return tb - ta;                       // más nuevo primero
+  });
+  return conClave.map(function(x){ return x.m; });
+}
+
 function renderMovements(){
   var q    = (document.getElementById('movSearch').value || '').toLowerCase();
   var tf   = document.getElementById('movTypeFilter').value;
   var cf   = document.getElementById('movCatFilter').value;
 
   var allMovs = _oldHistoryLoaded ? oldMovements.concat(movements) : movements;
-  var filtered = allMovs.slice().reverse().filter(function(m){
+  var filtered = _movsMasNuevoPrimero(allMovs).filter(function(m){
     var norm = normMT(m.moveType);
     if (tf && norm !== tf) return false;
     if (cf && nt(m.category) !== cf) return false;
@@ -15867,12 +15916,34 @@ function _restoreMovement(btn){
     // la ventana de Ajustes que la persona está usando — y la fila ya se va
     // sola, así que el aviso no contaba nada que no se viera.
     prog: true,
-    ok: function(){
+    ok: function(res){
       delete _trashPending[movId];
       // AL INSTANTE Y EN LOCAL. El servidor YA lo hizo — esto es el manejador
       // de ÉXITO — así que volver a pedirle la lista para enterarnos de algo
       // que ya sabemos es lo que borraba el "Restoring…" de los demás.
       _trashDrop(movId);
+      /* ── Y LO MISMO AL OTRO LADO (29/10) ──────────────────────────────────
+       *
+       * Esto ya quitaba la fila de la papelera al instante, pero el movimiento
+       * **tardaba segundos en reaparecer** en Movements, porque esa mitad sí
+       * esperaba a `_reloadWhenIdle`. Jose: *"todo funciona pero el movimiento
+       * no regresa cuando dice que está hecho"*.
+       *
+       * Media verdad al instante es peor que ninguna: la papelera dice que ya
+       * está y la tabla todavía no lo tiene, así que durante unos segundos el
+       * movimiento **no está en ningún sitio**. El servidor devuelve ahora la
+       * fila ya convertida (ver restoreMovement), así que se mete donde va y
+       * se repinta.
+       *
+       * Si una versión vieja del servidor no la manda, no se inventa nada: se
+       * deja que la recarga lo traiga, como antes. */
+      if (res && res.movement){
+        var yaEsta = movements.some(function(m){
+          return m.movId && m.movId === res.movement.movId;
+        });
+        if (!yaEsta) movements.push(res.movement);
+        renderAll();
+      }
       // Y UNA sola recarga del almacén al final de la ráfaga, no una por
       // movimiento. Misma razón que en "Check my data".
       _reloadWhenIdle();
@@ -30538,6 +30609,17 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '13.4',
+    titulo: 'A movement you put back lands where it belongs, and lands now',
+    puntos: [
+      'Two things that looked like one. A restored movement <b>came back at the top of the list</b> no matter how old it was, and <b>took a few seconds to appear at all</b> after the app said it was done.',
+      'The second was the app waiting to ask again: the server had already put it back, and the screen still requested the whole list to find out something it already knew. <b>It goes in straight away now</b> \u2014 the trash row leaving and the movement reappearing are the same moment, instead of a few seconds where it was in neither place.',
+      'The first was never about restoring. The list was drawn in <b>sheet order</b>, which is usually the same as time order because rows get added as things happen \u2014 but putting one back writes it at the end. <b>The list now reads the movement\u2019s own date</b>, and anything without one keeps exactly the order it had.',
+      'Also: the progress line no longer spins at \u201c6 of 6\u201d after a batch delete has finished, and the trash says <b>who</b> deleted something by name, with their contact card on hover.'
+    ],
+    antes:  'A movement from August, first in the list',
+    ahora:  'Back in its place, the moment you press it' },
+
   { ver: '13.3',
     titulo: 'Deleting works again \u2014 and the reason it broke is now guarded',
     puntos: [
@@ -30570,17 +30652,6 @@ var NOVEDADES = [
     ],
     antes:  'Error: the AI reader could not finish (error 404)',
     ahora:  'Checked and saved' },
-
-  { ver: '13.0',
-    titulo: 'Two things hardened that you will never see',
-    puntos: [
-      'Both are places where the app built a piece of a page out of text it did not write itself, and escaped it <b>by hand instead of properly</b>. Neither could be exploited today \u2014 that was checked, not assumed \u2014 and both are now done the same way the rest of the app does it.',
-      'The first is the name on an attached document. It escaped quotation marks and <b>not ampersands</b>, so a name containing the right six characters could have broken out of the box it was written in. Nothing reaches it today except words we put there ourselves \u2014 but with the CSV importer now open in the free edition, <b>the words in a file are written by somebody else</b>.',
-      'The second is the message on the sign-in screen when signing in fails. That text comes from Google, not from us, and it went onto the page without being made safe first.',
-      '<b>Why fix what cannot be exploited:</b> in both cases the safety was not in the line itself \u2014 it was in every other place in the app remembering to be careful. That is the kind of thing that holds until the day it does not.'
-    ],
-    antes:  'Safe because of what nobody had typed yet',
-    ahora:  'Safe because of what the line itself does' },
 
 ];
 

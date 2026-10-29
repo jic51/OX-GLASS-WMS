@@ -105,6 +105,29 @@
 
     <!-- EMPEZ&Oacute; SIN N&Uacute;MERO —cambiaban las p&aacute;ginas, no la app— y acab&oacute;
          con uno: los T&eacute;rminos que el cliente acepta viven DENTRO de la hoja. -->
+    <div class="entry" id="v13-4">
+      <span class="ver">v13.4</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Un movimiento que devuelves vuelve a su sitio, y vuelve ya</h3>
+      <p>Dos cosas que parec&iacute;an una. <b>Un movimiento restaurado volv&iacute;a al principio
+         de la lista</b> por viejo que fuera, y <b>tardaba unos segundos en aparecer</b> despu&eacute;s
+         de que la app dijera que ya estaba.</p>
+      <p>Lo segundo era la app esperando a volver a preguntar: el servidor ya lo hab&iacute;a puesto,
+         y la pantalla ped&iacute;a la lista entera para enterarse de algo que ya sab&iacute;a. Ahora
+         entra en el acto &mdash; la fila que se va de la papelera y el movimiento que reaparece son
+         el mismo momento, en vez de unos segundos en los que no estaba en ninguna parte.</p>
+      <p>Lo primero nunca fue cosa de restaurar. La lista se pintaba en <b>orden de hoja</b>, que
+         casi siempre coincide con el del tiempo porque las filas se a&ntilde;aden seg&uacute;n van
+         pasando &mdash; pero devolver una la escribe al final, as&iacute; que un movimiento de hace
+         dos meses sal&iacute;a el primero. Ahora la lista mira la fecha del propio movimiento. Lo
+         que no tenga fecha conserva exactamente el orden que ten&iacute;a, as&iacute; que un
+         d&iacute;a normal se ve igual que antes.</p>
+      <p>Adem&aacute;s: la l&iacute;nea de progreso ya no se queda girando en &laquo;6 of 6&raquo;
+         cuando el borrado en tanda ya termin&oacute;, la papelera dice <b>qui&eacute;n</b>
+         borr&oacute; algo por su nombre con su ficha al pasar por encima, y la pantalla de importar
+         dej&oacute; de decir que lo deshecho va a la papelera.</p>
+    </div>
+
     <div class="entry" id="v13-3">
       <span class="ver">v13.3</span>
       <span class="tag fix">Arreglo</span>

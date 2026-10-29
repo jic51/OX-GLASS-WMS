@@ -195,6 +195,11 @@ function mundo(){
     /* `alinearPapelera_` entra desde el 27/10: la papelera dejó de estar atada
      * al ancho del archivo y `ensureTrashSheet_` la llama antes de ensanchar.
      * Sin ella aquí, lo que falla es la prueba, no el producto. */
+    /* `parseArchiveRow` y su ayudante entran el 29/10: restaurar devuelve
+     * ahora el movimiento ya convertido, con la MISMA funcion que usa
+     * getInitialData, para que la pantalla pueda ponerlo al instante en vez
+     * de esperar a la recarga. Ver test-vuelven-a-su-sitio.js. */
+    fnSrc(GS, 'tipoDeMovimiento_'), fnSrc(GS, 'parseArchiveRow'),
     fnSrc(GS, 'alinearPapelera_'),
     fnSrc(GS, 'ensureTrashSheet_'), fnSrc(GS, 'findMovementById_'),
     fnSrc(GS, 'findTrashedById_'), fnSrc(GS, 'ensureArchiveHistorySheet_'),

@@ -128,7 +128,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '13.3';
+var APP_VERSION = '13.4';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -140,7 +140,7 @@ var APP_VERSION = '13.3';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '908d5ed4';
+var APP_BUILD = '9b416fde';
 
 // ═══ ACOPIO BASIC — EL INTERRUPTOR DE LA VERSIÓN GRATIS ══════════════════════
 //
@@ -15587,7 +15587,27 @@ function manageMaterialLocked_(data, auth) {
     auditLog_(ss, 'RESTORE_ROW', auth.email, String(restored[AC.CATEGORY]), String(restored[AC.NAME]),
               rid + ' → ' + backTo);
     refreshOrDefer_(ss, data);
-    return { status: 'success', movId: rid };
+    /* ── SE DEVUELVE EL MOVIMIENTO, NO SÓLO SU NOMBRE ───────────────────────
+     *
+     * Jose, 29/10: *"al poner un movimiento de regreso, todo funciona pero el
+     * movimiento no regresa cuando dice que está hecho, regresa y aparece
+     * varios segundos después"*.
+     *
+     * Y no era lentitud: la pantalla **esperaba a volver a preguntar**. El
+     * servidor ya lo había puesto —esto es el camino del éxito— y aun así el
+     * navegador pedía la lista entera 700 ms más tarde para enterarse de algo
+     * que ya sabía.
+     *
+     * Devolver la fila cuesta una llamada a `parseArchiveRow`, que es la MISMA
+     * que usa `getInitialData`. Eso importa más de lo que parece: si aquí se
+     * armara el objeto a mano, serían dos sitios construyendo la misma forma
+     * sin que nada los obligue a coincidir, y el movimiento restaurado se
+     * vería distinto al resto hasta la siguiente recarga.
+     *
+     * La recarga diferida se queda igual, como reconciliación. Esto no la
+     * sustituye: le quita la espera de en medio. */
+    return { status: 'success', movId: rid,
+             movement: parseArchiveRow(restored, target.getLastRow()) };
 
   } else if (op === 'emptyTrash') {
     // ESTE SÍ ES DEFINITIVO, y es el único sitio de la app que lo es. Por eso

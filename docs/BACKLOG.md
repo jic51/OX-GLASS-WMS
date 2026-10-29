@@ -13046,3 +13046,34 @@ frase en **todo** el archivo, no en la función.
 | **2** | Un movimiento restaurado **tarda segundos en volver**, después de que la app dice que ya está | `_reloadWhenIdle` espera 700 ms y luego pide la lista entera al servidor. **Lo correcto es lo que ya hace la papelera**: quitarlo/ponerlo en local al instante, porque el servidor YA lo hizo |
 | **3** | Los restaurados **vuelven en el orden en que se restauran**, no al suyo | Es el fallo de esta semana: hay que devolver **entrada antes que salida**, y la lista tiene que colocarlos por su fecha, no por cuándo se pulsó |
 | **4** | Tras deshacer y reimportar el mismo fichero, **la lista de importaciones enseña una sola entrada** | Hay que comprobar si la deshecha se quita o si la lista se quedó vieja |
+
+---
+
+## 🟠 29/10 — LAS CABECERAS: SÓLO ALGUNAS EXPLICAN QUÉ SON
+
+Jose: *"al hacer hover en las cabeceras de las filas (tanto en dashboard,
+movements, project e incoming) sólo algunas de las cabeceras muestran el texto
+descriptivo, las demás no lo muestran."*
+
+**Por qué importa más de lo que parece, y no es por completar una lista:** un
+texto de ayuda que está en unas columnas y no en otras **enseña a no buscarlo**.
+Quien pasa por encima de tres cabeceras y no sale nada, deja de intentarlo — y
+entonces la ayuda que sí existe en la cuarta tampoco la encuentra nadie. Media
+función de ayuda vale menos que ninguna, porque además cuesta mantenerla.
+
+**Lo que hay que mirar antes de escribir textos:**
+
+1. **Cuántas cabeceras hay en las cuatro tablas y cuántas tienen texto hoy.**
+   El número decide si esto es rellenar huecos o si falta el mecanismo en tres
+   de las cuatro pantallas.
+2. **Si el que falta es el texto o el enganche.** No es lo mismo que una
+   columna no tenga frase escrita a que la tenga y la tabla no la pinte: lo
+   primero es escribir, lo segundo es un fallo.
+3. **Y una prueba que las cuente**, como `test-endpoint-auth` cuenta las
+   puertas: toda cabecera tiene su texto, o está en una lista de excepciones
+   **con el motivo escrito**. Es lo único que impide que la próxima columna
+   nueva vuelva a nacer muda.
+
+**Prioridad: media.** No rompe nada, pero es de las cosas que un cliente nuevo
+nota en los primeros diez minutos — justo cuando está decidiendo si la app está
+cuidada.
