@@ -58,6 +58,15 @@ check('no queda «They go to the trash, exactly like deleting a movement»',
 check('ni «nothing here is final» sobre esta operación',
   undoUI.indexOf('nothing here is') === -1);
 
+/* Y LA OTRA FRASE, la que se lee ANTES de pulsar nada. El 29/10 se arregló el
+ * aviso del botón y ésta se quedó diciendo lo de la papelera — el mismo
+ * descuido dos veces: cambiar el comportamiento y buscar sólo UNO de los
+ * sitios que lo describen. Se busca en TODO el archivo justamente por eso. */
+check('ni la descripción de «Imports you have already done» lo dice',
+  HTML.indexOf('Undoing sends those movements to the trash') === -1);
+check('y esa descripción explica que el fichero es la copia',
+  /the file is the\s+backup/.test(HTML) || /the file is the backup/.test(HTML));
+
 console.log('\n═══ 2. y dice las tres cosas que hay que decir ═══\n');
 
 check('1 · que NO van a la papelera',

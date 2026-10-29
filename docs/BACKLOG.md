@@ -12994,3 +12994,55 @@ añada una columna.*
 | **4** | El fichero de 600 filas **nunca** termina de leerse | ⏳ **a medir** — hay un CSV de 20 filas preparado para aislar si es el tamaño o es siempre |
 | **5** | El texto dice que acepta `.xlsx` | 🔵 **pregunta abierta** — en Pro es verdad; hay que confirmar en qué edición se vio |
 | **6** | El lector de documentos no dice cuánto va a tardar | ⏸ ya anotado el 27/10, aparcado |
+
+---
+
+## 29/10 — LO QUE SALIÓ EN LOS DOS VÍDEOS
+
+### 🔴 La barra de progreso nunca se cerraba — **arreglado**
+
+Jose: *"borré 6 movimientos, todo funciona bien... pero al llegar a 6 of 6 nunca
+se detiene ni termina... han pasado varios minutos y eso me da una mala idea de
+lo que está haciendo la app."*
+
+**Y la app no estaba haciendo nada: había terminado.** En `_tandaPaso`, los
+cinco caminos de salida cierran la barra con `_progEnd` — el de parar, el de «ya
+no estaban», el de fallo, el de error... **menos el bueno.** El único en el que
+todo sale bien era el único que no la cerraba.
+
+Lo más llamativo: `_progStart(ids.length, 'Deleting movements', _progFinBorrado)`
+**ya pasaba la frase de cierre** desde el principio. Estaba escrita y nadie la
+usaba.
+
+**La forma del fallo, para reconocerla la próxima vez:** *una rueda que no para
+no dice «terminé»; dice «sigo»*. Quien la mira no espera: se preocupa — y con
+razón, porque la app le está diciendo que hay un trabajo en marcha que no
+existe.
+
+### 🔴 «Undoing sends those movements to the trash» — **arreglado**
+
+Lo encontré mirando el vídeo del importador. Ayer se arregló el aviso del botón
+y **se quedó la descripción de arriba**, que es la que se lee **antes** de
+pulsar nada — o sea, la que de verdad forma la idea de lo que va a pasar.
+
+**El mismo descuido dos veces:** cambiar el comportamiento y buscar sólo UNO de
+los sitios que lo describen. Ahora `test-el-aviso-dice-la-verdad.js` busca la
+frase en **todo** el archivo, no en la función.
+
+### ✅ Dos preguntas que los vídeos cierran
+
+- **El texto del `.xlsx`:** la DEMO es **Acopio Básico** y dice *"Acopio Basic
+  reads .csv"*, correcto. Lo que Jose vio ayer era la copia Pro, donde **sí** es
+  verdad. **No hay nada que corregir.**
+- **El fichero que no cargaba:** `prueba-20-filas.csv` entró sin problema —
+  *"20 row(s) imported · 368 unit(s)"*. **El problema es el tamaño**, no el
+  importador. Las 600 filas son el siguiente hilo del que tirar.
+
+### 🟠 Lo que queda por arreglar de los vídeos
+
+| | Qué | Por qué importa |
+|---|---|---|
+| **1** | Al deshacer, **la ventana de Ajustes se cierra sola** y los movimientos siguen en pantalla mientras corre | Jose no ve el resultado donde estaba mirando, y la tabla de atrás le enseña filas que ya no existen |
+| **2** | Un movimiento restaurado **tarda segundos en volver**, después de que la app dice que ya está | `_reloadWhenIdle` espera 700 ms y luego pide la lista entera al servidor. **Lo correcto es lo que ya hace la papelera**: quitarlo/ponerlo en local al instante, porque el servidor YA lo hizo |
+| **3** | Los restaurados **vuelven en el orden en que se restauran**, no al suyo | Es el fallo de esta semana: hay que devolver **entrada antes que salida**, y la lista tiene que colocarlos por su fecha, no por cuándo se pulsó |
+| **4** | Tras deshacer y reimportar el mismo fichero, **la lista de importaciones enseña una sola entrada** | Hay que comprobar si la deshecha se quita o si la lista se quedó vieja |

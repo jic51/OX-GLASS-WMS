@@ -81,6 +81,12 @@ function hojaFalsa(filas) {
     _estado: estado,
     getLastRow: () => estado.filas.length + 1,
     getMaxRows: () => estado.max,
+    /* Desde el 28/10 `borrarFilasEnTanda_` ensancha la hoja antes de leerla
+     * —ver test-hoja-estrecha-no-revienta.js—, asi que la hoja de mentira
+     * tiene que saber decir su ancho. Se le da el del modelo: lo que aqui se
+     * mide es el reparto en trozos, no el ensanche. */
+    getMaxColumns: () => K.AC_WIDTH,
+    insertColumnsAfter: () => {},
     insertRowsAfter: (a, n) => { estado.max += n; },
     getParent: () => ({}),
     getRange: function (fila, col, nFilas, nCols) {
@@ -328,8 +334,13 @@ const undoHtml = A.sinComentarios(A.fnSrc(HTML, '_undoImport') || '');
 check('y el navegador sigue pidiendo hasta que no queden — sin esto, deshacer ' +
       '1.200 filas se quedaba a medias DICIENDO QUE YA ESTABA',
   /res\.more[\s\S]{0,40}vuelta\(\)/.test(undoHtml), undoHtml.slice(0, 300));
+/* `\s*` y no un espacio: esta comprobación se puso roja el 29/10 porque las
+ * tres sumas se alinearon en columna y «total     +=» dejó de coincidir con
+ * «total +=». El código estaba bien. Una prueba que se cae por un espacio
+ * enseña a maquillar el código para contentarla, que es justo lo contrario de
+ * lo que tiene que hacer. */
 check('...y suma el total de todos los trozos, no sólo el último',
-  /total \+=/.test(undoHtml));
+  /total\s*\+=/.test(undoHtml));
 
 const delGs = A.sinComentarios(A.fnSrc(GS, 'deleteMovements') || '');
 check('borrar en tanda pide el permiso de editar movimientos, como el borrado ' +

@@ -7252,6 +7252,37 @@ function _userCellHtml(email){
          dentro + '</span>';
 }
 
+/* LA MISMA PERSONA, EN UNA SOLA LÍNEA.
+ *
+ * Jose, 29/10, viendo su papelera decir «Deleted by joseisrael5101@gmail.com»:
+ * *"debería aparecer el nombre... mi opción: hacer lo que hace el hover de la
+ * columna usuario en Movements, mostrar nombre, correo y las opciones de
+ * llamar, reunión, email."*
+ *
+ * **Es la mejor de las cuatro, y no por gusto: es la única que no obliga a
+ * elegir.** Mostrar sólo el nombre pierde el correo, que es lo que de verdad
+ * identifica a alguien cuando hay dos Josés; mostrar sólo el correo es lo que
+ * hay y se lee mal; mostrar los dos en la línea la llena de texto para un dato
+ * que casi nunca se mira. La ficha resuelve las tres: **se lee el nombre, y el
+ * correo está a un segundo de distancia, con qué hacer con él.**
+ *
+ * Y no hay que construir nada. `_personShow` ya existe, ya trae nombre, correo
+ * y los tres botones, y ya se engancha a cualquier elemento con `data-person`.
+ * Lo único que faltaba era usarla fuera de la tabla de movimientos.
+ *
+ * Se diferencia de `_userCellHtml` en que ésa apila nombre y correo en dos
+ * renglones —bien en una celda de tabla, mal dentro de una frase—. Ésta pone
+ * el nombre si se sabe, el correo si no, y **nunca inventa un nombre**: la
+ * misma regla que la celda, por la misma razón escrita arriba.
+ */
+function _userInlineHtml(email){
+  var mail = String(email || '').trim();
+  if (!mail) return '';
+  var nombre = _personName(mail);
+  return '<span class="mc-who" data-person="' + _escAttr(mail) + '" tabindex="0" ' +
+         'style="cursor:default">' + _he(nombre || mail) + '</span>';
+}
+
 /* ── LA FOTO SE ENDEREZA ANTES DE SUBIRLA ───────────────────────────────────
  *
  * Jose, 2026-10-12, con dos capturas: *"todas las fotos que se hacen pdf salen
@@ -10186,7 +10217,28 @@ function _tandaPaso(){
     return;
   }
   if (!t.ids.length){
+    /* ── CERRAR LA BARRA CUANDO TODO SALE BIEN ───────────────────────────────
+     *
+     * Jose, 29/10, con un vídeo: borró seis movimientos, todo funcionó —
+     * desaparecieron de la tabla, aparecieron en la papelera, la barra contó
+     * hasta «6 of 6»— *"y nunca se detiene ni termina... han pasado varios
+     * minutos y eso me da una mala idea de lo que está haciendo la app"*.
+     *
+     * Y la app no estaba haciendo nada: había terminado. **Este camino —el
+     * único en el que todo sale bien— era el único que no cerraba la barra.**
+     * Los otros cuatro llaman a `_progEnd`: el de parar, el de «ya no
+     * estaban», el de fallo y el de error. El bueno, no.
+     *
+     * Por eso `_progStart` recibe `_progFinBorrado` como tercer argumento: la
+     * frase de cierre estaba escrita desde el principio y nadie la usaba.
+     * `_progFinish` es quien la pone, y quien cambia el reloj por el visto.
+     *
+     * **La forma del fallo, para reconocerla la próxima vez:** una rueda que
+     * no para no dice «terminé»; dice «sigo». Alguien que la mira no espera,
+     * se preocupa — y con razón, porque la app le está diciendo que hay un
+     * trabajo en marcha que no existe. */
     _progPararQuitar();
+    _progFinish();
     _tandaBorrado = null;
     loadDataFromGoogle(true, true);
     return;
@@ -15716,7 +15768,7 @@ function _paintTrash(items){
                  la app afirmando que tiene un dato que no tiene, y manda a
                  quien lo lee a buscar por qué falta. Si no hay nombre, la
                  línea dice la fecha y se calla lo demás. */
-              (it.deletedBy ? 'Deleted by ' + _he(it.deletedBy) +
+              (it.deletedBy ? 'Deleted by ' + _userInlineHtml(it.deletedBy) +
                 (it.deletedAt ? ' · ' : '') : '') +
               (it.deletedAt ? 'Deleted ' + _he(_fmtWhen(it.deletedAt)) : '') + '</div>' +
             (it.movId ? '<div style="font-size:.66rem;color:var(--muted);opacity:.75;' +
@@ -16734,8 +16786,15 @@ function _renderImportTab() {
     '<div class="field">' +
       '<label>Imports you have already done</label>' +
       '<p style="font-size:.78rem;color:var(--muted);margin:0 0 .6rem">' +
-        'If the same file went in twice, undo one of them here. Undoing sends ' +
-        'those movements to the trash, so nothing is lost for good.' +
+        /* ESTA FRASE TAMBIÉN DECÍA QUE IBAN A LA PAPELERA (arreglado el 29/10).
+           Se arregló el aviso del botón y SE QUEDÓ ÉSTA, que es la que se lee
+           ANTES de pulsar nada — o sea, la que de verdad forma la idea de lo
+           que va a pasar. Es el mismo descuido dos veces: cambiar el
+           comportamiento y buscar sólo UNO de los sitios que lo describen.
+           Ahora lo vigila test-el-aviso-dice-la-verdad.js. */
+        'If the same file went in twice, undo one of them here. Undoing removes ' +
+        'those movements — they do not go to the trash, because the file is the ' +
+        'backup: import it again and they come back.' +
       '</p>' +
       '<div id="importHistBox"></div>' +
     '</div>';
