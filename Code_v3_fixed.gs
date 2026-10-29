@@ -10467,6 +10467,28 @@ function borrarFilasEnTanda_(ss, auth, seLleva, tope, vaALaPapelera) {
     var sheet = par.sh;
     if (!sheet || sheet.getLastRow() < 2) return;
 
+    /* ── ENSANCHAR ANTES DE LEER. ES LA LECCIÓN DEL 26 DE SEPTIEMBRE ─────────
+     *
+     * Jose, 28/10, con un vídeo: borrar un movimiento dejó de funcionar en la
+     * copia de OX Glass en cuanto se añadió la columna `IMPORT_ID`. **Y es
+     * exactamente el fallo de aquella noche**, con otra columna y en otra
+     * función:
+     *
+     *   La hoja de un cliente mide lo que medía el día que se creó. El modelo
+     *   mide `AC_WIDTH`, que crece cada vez que añadimos una columna. Pedir
+     *   `getRange(2, 1, n, AC_WIDTH)` a una hoja más estrecha **revienta**, y
+     *   revienta la operación entera.
+     *
+     * Una hoja estrecha NO es el caso raro: es el caso NORMAL en cualquier
+     * actualización, y lo será cada vez que se añada una columna. Que esta
+     * línea no llamara a `ensureArchiveWidth_` —que existe desde hace meses,
+     * para esto— es lo que hizo que la v13.2 llegara sin poder borrar.
+     *
+     * Aquí ensanchar es seguro y no hace falta pedir permiso: añade columnas
+     * vacías al final, no toca ni un dato, y la hoja ya iba a necesitarlas a la
+     * primera escritura. */
+    ensureArchiveWidth_(sheet);
+
     var filas = sheet.getRange(2, 1, sheet.getLastRow() - 1, AC_WIDTH).getValues();
     var quedan = [], aPapelera = [], enEstaHoja = 0;
     filas.forEach(function (f) {

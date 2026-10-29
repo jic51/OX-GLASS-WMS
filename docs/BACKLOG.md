@@ -12952,3 +12952,45 @@ fije lo otro: **guardar dos veces la misma tarjeta no manda dos peticiones.**
 
 **Prioridad: media.** No hace daño hoy; quita una duda razonable y cierra la
 puerta a un duplicado futuro.
+
+---
+
+## 🔴 28/10 — LA v13.2 LLEGÓ SIN PODER BORRAR, Y ES EL FALLO DEL 26 DE SEPTIEMBRE OTRA VEZ
+
+Jose, con un vídeo: *"no se puede borrar movimientos, no funciona el borrado."*
+
+**La causa, y es mía:** añadir `IMPORT_ID` subió `AC_WIDTH` de 25 a 26.
+`borrarFilasEnTanda_` pedía `getRange(2, 1, n, AC_WIDTH)` **sin ensanchar la
+hoja antes**. La hoja de OX Glass tenía las columnas de ayer, y Sheets revienta
+cuando le pides columnas que no existen.
+
+> Es **exactamente** lo que pasó la noche del 26 de septiembre: *«Los datos
+> tienen 23 columnas y el rango 20»*, con el archivo entero ya borrado. Aquel
+> día se arregló el archivador nocturno. **Esta función nunca se miró.**
+
+**Arreglado:** `ensureArchiveWidth_(sheet)` antes de leer, en el mismo sitio y
+por el mismo motivo que lo lleva el archivador.
+
+**Y lo que de verdad hacía falta, que es lo que faltó en septiembre:**
+`tools/test-hoja-estrecha-no-revienta.js`. Monta una hoja falsa **que revienta
+igual que Sheets** cuando le piden columnas de más, corre las funciones de
+verdad contra ella, y además **recorre el archivo exigiendo que toda lectura de
+`AC_WIDTH` columnas ensanche antes** o use `readWidth_`. Comprobado que muerde:
+quitando el arreglo, falla.
+
+**La lección, escrita donde se vea:** *una hoja más estrecha que el modelo no es
+el caso raro — es el NORMAL en cada actualización, y lo será cada vez que se
+añada una columna.*
+
+---
+
+## 🟠 28/10 — LO DEMÁS QUE SALIÓ EN LA MISMA RONDA
+
+| | Qué | Estado |
+|---|---|---|
+| **1** | El título de la ventana de Pro se corta: *«Let the app read the invoice is part of Aco…»* | ✅ **arreglado** — ese título puede ocupar dos renglones. En casi todas las ventanas recortar está bien; en ésta **el título ES el mensaje** |
+| **2** | La papelera dice *«Deleted by»* y no dice quién | ✅ **arreglado en pantalla** — si no hay nombre, no se escribe la etiqueta. ⚠️ **Falta saber por qué está vacío** en esas 200 filas: la fecha sí sale bien, así que la papelera se alineó correctamente y el dato nunca se guardó |
+| **3** | La ✕ del selector de fichero sale **debajo** del botón | ✅ **arreglado** — no estaba mal colocada: la fila lleva `flex-wrap:wrap` y, al crecer el nombre del fichero, la ✕ caía de renglón. Ahora van atados |
+| **4** | El fichero de 600 filas **nunca** termina de leerse | ⏳ **a medir** — hay un CSV de 20 filas preparado para aislar si es el tamaño o es siempre |
+| **5** | El texto dice que acepta `.xlsx` | 🔵 **pregunta abierta** — en Pro es verdad; hay que confirmar en qué edición se vio |
+| **6** | El lector de documentos no dice cuánto va a tardar | ⏸ ya anotado el 27/10, aparcado |
