@@ -106,6 +106,24 @@
          hoja, generados desde `legal/*.md` por `tools/sync-legal.js`, así que
          arreglar lo que dicen de las dos ediciones obliga a tocar la app. Ya
          que había que tocarla, viaja también el ancla `#pro` del candado. -->
+    <div class="entry" id="v13-3">
+      <span class="ver">v13.3</span>
+      <span class="tag fix">Fix</span>
+      <h3>Deleting works again &mdash; and the reason it broke is now guarded</h3>
+      <p>v13.2 added a column to the movement record, and <b>deleting stopped working</b> on
+         installations that already had data. A spreadsheet is as wide as it was the day it was
+         created; the app asked for one column more than it had, and the whole operation failed.</p>
+      <p>Fixed, and more to the point: <b>there is now a test that makes this impossible to repeat.</b>
+         It builds a sheet that fails the same way a real one does and runs the real code against
+         it &mdash; and it sweeps the whole file for any other place that reads a full row without
+         widening first. A sheet narrower than the model is not the rare case; it is the normal
+         one, every time a column is added.</p>
+      <p>Three smaller things from the same round: the Acopio&nbsp;Pro window no longer cuts its
+         own title off halfway, the trash stops printing &ldquo;Deleted by&rdquo; when it does not
+         know who, and the &times; beside the file picker stays next to the picker instead of
+         dropping onto the line below when the filename is long.</p>
+    </div>
+
     <div class="entry" id="v13-2">
       <span class="ver">v13.2</span>
       <span class="tag new">Change</span>

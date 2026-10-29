@@ -5860,7 +5860,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '13.2';
+var APP_VERSION = '13.3';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5872,7 +5872,7 @@ var APP_VERSION = '13.2';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'a95805d7';
+var APP_BUILD = '908d5ed4';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -30479,6 +30479,17 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '13.3',
+    titulo: 'Deleting works again \u2014 and the reason it broke is now guarded',
+    puntos: [
+      'v13.2 added a column to the movement record, and <b>deleting stopped working</b> on installations that already had data. A spreadsheet is as wide as it was the day it was created; the app asked for one column more than it had, and the whole operation failed.',
+      'Fixed \u2014 and more to the point, <b>there is now a test that makes this impossible to repeat</b>. It builds a sheet that fails the same way a real one does, runs the real code against it, and sweeps the whole file for any other place that reads a full row without widening first.',
+      'The Acopio Pro window no longer cuts its own title off halfway, and the trash stops printing \u201cDeleted by\u201d when it does not know who.',
+      'And the <b>\u2715 beside the file picker</b> stays next to the picker instead of dropping onto the line below when the filename is long.'
+    ],
+    antes:  'Delete did nothing, with no message',
+    ahora:  'It deletes \u2014 and a test keeps it that way' },
+
   { ver: '13.2',
     titulo: 'Undoing an import no longer fills your trash',
     puntos: [
@@ -30512,16 +30523,6 @@ var NOVEDADES = [
     antes:  'Safe because of what nobody had typed yet',
     ahora:  'Safe because of what the line itself does' },
 
-  { ver: '12.99',
-    titulo: 'Importing: a way to unpick a file, and 1,250 is a number again',
-    puntos: [
-      '<b>A row written <code>1,250</code> was being thrown away in silence</b>, with the reason \u201cQty must be a number greater than 0\u201d \u2014 which is not even true: the number was there, and it was the biggest one in the file. Exporting with a thousands separator is normal in Excel, so this was not a rare case; and it fell on the expensive side, because the row lost was always the largest.',
-      'Separators are now removed <b>only when what is left either side are groups of three</b>. A <code>1,25</code> is still refused on purpose: in half of Europe that is a decimal, and turning it into 125 would invent a hundred and twenty-five units nobody has. A refused row is on screen and gets fixed; an invented one is never seen.',
-      '<b>You can take a file back off.</b> There is an \u2715 beside Choose File now: picking the wrong one no longer means leaving Settings and coming back in.',
-      '<b>And an error stops following you between tabs.</b> A failure message used to sit there over the next screen, talking about something no longer in front of you \u2014 that is not a warning, it is noise shaped like one.'
-    ],
-    antes:  'The biggest row in the file, dropped without a word',
-    ahora:  '1,250 is one thousand two hundred and fifty' }
 ];
 
 var NV_CLAVE = 'acopio_novedades_vista';

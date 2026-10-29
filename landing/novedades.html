@@ -105,6 +105,25 @@
 
     <!-- EMPEZ&Oacute; SIN N&Uacute;MERO —cambiaban las p&aacute;ginas, no la app— y acab&oacute;
          con uno: los T&eacute;rminos que el cliente acepta viven DENTRO de la hoja. -->
+    <div class="entry" id="v13-3">
+      <span class="ver">v13.3</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Borrar vuelve a funcionar &mdash; y el motivo por el que fall&oacute; queda vigilado</h3>
+      <p>La v13.2 a&ntilde;adi&oacute; una columna al registro de movimientos, y <b>borrar
+         dej&oacute; de funcionar</b> en las instalaciones que ya ten&iacute;an datos. Una hoja
+         mide lo que med&iacute;a el d&iacute;a que se cre&oacute;; la app ped&iacute;a una columna
+         m&aacute;s de las que ten&iacute;a, y la operaci&oacute;n entera fallaba.</p>
+      <p>Arreglado, y sobre todo: <b>ahora hay una prueba que hace imposible repetirlo.</b> Monta
+         una hoja que falla igual que una de verdad y ejecuta el c&oacute;digo real contra ella
+         &mdash; y recorre el archivo entero buscando cualquier otro sitio que lea una fila
+         completa sin ensanchar primero. Una hoja m&aacute;s estrecha que el modelo no es el caso
+         raro: es el normal, cada vez que se a&ntilde;ade una columna.</p>
+      <p>Tres cosas m&aacute;s de la misma ronda: la ventana de Acopio&nbsp;Pro ya no se corta su
+         propio t&iacute;tulo a la mitad, la papelera deja de escribir &laquo;Deleted by&raquo;
+         cuando no sabe qui&eacute;n, y la &times; del selector de ficheros se queda al lado del
+         selector en vez de caerse al rengl&oacute;n de abajo cuando el nombre es largo.</p>
+    </div>
+
     <div class="entry" id="v13-2">
       <span class="ver">v13.2</span>
       <span class="tag new">Cambio</span>

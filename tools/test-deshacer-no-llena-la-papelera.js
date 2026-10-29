@@ -122,6 +122,11 @@ function correr(filasArchivo, seLleva, vaALaPapelera) {
     Date: Date
   });
   ctx.ss = { getSheetByName: function (n) { return n === 'MASTER_ARCHIVE_V3' ? archivo : null; } };
+  /* La de verdad, no un remedo: desde el 28/10 `borrarFilasEnTanda_`
+   * ensancha la hoja antes de leerla, y una hoja falsa sin esa funcion
+   * revienta — que es justamente lo que tiene que hacer si alguien la quita.
+   * Ver test-hoja-estrecha-no-revienta.js. */
+  vm.runInContext(fnSrc(GS, 'ensureArchiveWidth_'), ctx);
   vm.runInContext(fnSrc(GS, 'borrarFilasEnTanda_'), ctx);
   const res = vm.runInContext('borrarFilasEnTanda_', ctx)(
     ctx.ss, { email: 'jose@oxglass.com' }, seLleva, 300, vaALaPapelera);
