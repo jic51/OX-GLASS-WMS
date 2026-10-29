@@ -13077,3 +13077,120 @@ función de ayuda vale menos que ninguna, porque además cuesta mantenerla.
 **Prioridad: media.** No rompe nada, pero es de las cosas que un cliente nuevo
 nota en los primeros diez minutos — justo cuando está decidiendo si la app está
 cuidada.
+
+---
+
+## 29/10 — LAS CUATRO DE LA NOCHE
+
+### 🟠 1 · «Check my data» no está en Básico, y el recuadro sí
+
+Jose: *"en Acopio Básico no hay botón de Check my data... ¿son parte de Acopio
+Pro?"*
+
+**No son de Pro. Los escondí yo el 19/10, a propósito**, y el motivo está
+escrito en `BASIC_FUERA.botones`:
+
+> *"Lo que se ESCONDE: fontanería que no vende nada. Nadie sube a Pro por un
+> botón de soporte ni por un reconstructor de existencias. Un candado aquí no es
+> una oferta, es una puerta cerrada más."*
+
+Son cuatro: `btnReportIssue`, `btnDataCheck`, `btnRebuildStock`, `btnMovIdFill`.
+
+**El razonamiento sigue valiendo para el botón. Lo que hice mal es lo otro: se
+va el botón y SE QUEDA EL RECUADRO.** Por eso su pantalla enseña un marco que
+dice *"Runs only when you press it"* **sin nada que pulsar**, y un «Stock
+totals» vacío. Eso es peor que las dos opciones: no esconde la función **y**
+tampoco la ofrece — sólo deja un hueco que hay que explicar.
+
+**Y de los cuatro, uno está mal escondido y es el importante.** `btnDataCheck`
+no necesita ningún permiso de Pro: sólo lee la hoja. Y la edición gratis es
+justo donde llega un inventario desordenado, **porque el importador de CSV está
+abierto ahí desde el 26/10**. Esconder lo que encuentra el desorden en la
+edición que lo recibe es al revés.
+
+| Botón | ¿Puede funcionar en Básico? | Qué haría |
+|---|---|---|
+| `btnReportIssue` | **No** — necesita `script.send_mail` | Esconderlo, con su recuadro |
+| `btnDataCheck` | **Sí** | **Devolverlo a Básico** |
+| `btnRebuildStock` | **Sí** | Devolverlo |
+| `btnMovIdFill` | **Sí** | Devolverlo |
+
+**Y la regla que falta, que es lo que lo arregla de verdad:** *si se esconde el
+botón, se esconde su recuadro*. Hoy son dos cosas que tienen que coincidir sin
+que nada lo obligue — la lista de botones y la lista de recuadros.
+
+---
+
+### 🟠 2 · Una sección con candado NO debería llamar al servidor — y es mejor que «estática»
+
+Jose: *"si esas partes Pro en Settings no las usa el cliente, ¿por qué se
+calculan y se actualizan cada vez que abro la app? Mi idea: sólo se deben ver
+como normalmente se ven; no se calcula ni se actualiza nada."*
+
+**Medido: abrir System lanza SEIS llamadas al servidor**, y en Básico **tres son
+de secciones con candado**:
+
+```js
+_loadBackupStatus();   // 🔒 sysRespaldo
+_loadDailyReport();    // 🔒 sysReporte
+_loadSpaceUsage();     //    abierto en Básico
+_loadAiStatus();       // 🔒 sysLector
+_loadMovIdStatus();    //    abierto
+_loadTrash();          //    abierto
+```
+
+**Tiene razón, y cuesta más de lo que parece.** Cada llamada es una ejecución
+del servidor que **la paga la cuenta del administrador y la comparte el almacén
+entero** (H-18). Son tres ejecuciones regaladas cada vez que alguien abre
+Ajustes, por tres cosas que esa copia no puede usar.
+
+**Yo lo afinaría un paso más que «estáticas»: que no llamen, punto.** Una
+sección con candado no enseña un número viejo —que habría que explicar— sino
+**la oferta y nada más**. Así:
+
+- no se gasta cuota,
+- no hay un dato de hace semanas que alguien pueda creerse,
+- y el registro de errores deja de llenarse de negativas del servidor.
+
+**Lo que hay que mirar antes:** que las abiertas en Básico —espacio, papelera,
+IDs— **sigan actualizándose**. El arreglo es por sección, no «apagar todo en
+Básico».
+
+---
+
+### 🟡 3 · La papelera salta arriba cada vez que devuelves un movimiento
+
+Jose: *"la papelera se actualiza cada vez que un movimiento regresa, lo que hace
+que yo regrese arriba cada vez aunque necesite estar abajo dando clic."*
+
+**Es la mecánica la que estorba, no el repintado.** `_trashDrop` quita la fila y
+vuelve a pintar la lista entera, y con ella el scroll vuelve al principio.
+Devolver cinco movimientos seguidos obliga a bajar cinco veces.
+
+**Lo que haría:** quitar **sólo esa fila** del DOM en vez de repintar la lista
+—la animación de salida ya existe (`_rowLeave`)— y, si hay que repintar,
+**guardar y restaurar la posición del scroll**. Es la diferencia entre una lista
+que se usa y una que se pelea.
+
+---
+
+### 🟡 4 · La casilla se desmarca sola cuando llegan movimientos nuevos
+
+Jose: *"hay que revisar que el checkbox se desactiva al aparecer nuevos
+movimientos en la lista, no siempre (ese es el problema) pero sí se desactiva
+cuando llegan algunos de golpe."*
+
+**«No siempre» es la parte importante del informe**, y es lo que dice dónde
+buscar: si fuera siempre, sería que el repintado borra la selección y ya. Que
+pase sólo **cuando llegan varios de golpe** apunta a una carrera entre el
+repintado y la selección — probablemente el refresco silencioso reconstruye las
+filas mientras la selección vive en el DOM, y las casillas nuevas nacen vacías.
+
+**Dónde mirar:** si la selección se guarda **en memoria por `movId`** o **en el
+DOM**. Si está en el DOM, cada repintado la pierde y el único motivo de que
+«casi siempre» funcione es que casi nunca llega nada mientras tienes algo
+marcado.
+
+**Por qué importa más que un detalle:** la selección es lo que precede a
+**borrar**. Una casilla que se desmarca sola delante de un botón de borrar es
+una forma de borrar lo que no era.
