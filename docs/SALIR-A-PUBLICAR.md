@@ -238,8 +238,10 @@ esta máquina está filtrada y no responden. Así que:
 | `r/Entrepreneur` | Gran volumen | Muy saturado; publica aquí después de probar en los dos de arriba |
 | `r/EntrepreneurRideAlong` | Más tolerante con contar lo que estás construyendo | — |
 | `r/supplychain` | Gente de logística e inventario | Más corporativa; tu caso es pequeño para ellos |
-| `r/manufacturing` | Almacén de materiales, mismo problema | — |
-| `r/warehouse` | Gente que trabaja EN el almacén | Es más de quejas del trabajo que de dueños; buenísimo para **escuchar**, flojo para vender |
+| ~~`r/manufacturing`~~ | **NO. Ver § 3.4** | Prohíbe encuestas, representantes de empresas Y posts escritos con IA |
+| ~~`r/warehouse`~~ | **Ese nombre no existe. Error mío** | Los de verdad son `r/Warehousing` y `r/Warehouseworkers` |
+| `r/Warehousing` | Gente de almacén | — |
+| `r/Warehouseworkers` | Gente que trabaja EN el almacén | Más de quejas del trabajo que de dueños; buenísimo para **escuchar**, flojo para vender |
 
 **Grupo 2 — donde está tu herramienta.** Aquí funciona mejor contar **cómo** está
 hecho, y el enlace suele estar permitido.
@@ -865,3 +867,51 @@ anterior se crea.
 
 **Y hay que anotarlo como producto, no sólo como respuesta:** lo de trabajar sin
 conexión está en `BACKLOG.md` desde hoy, y es un hueco real.
+
+
+---
+
+## 3.4 — LAS REGLAS, LEÍDAS UNA POR UNA (30/10)
+
+Jose mandó capturas de cinco comunidades y preguntó si le dejan publicar. Esto
+es lo que dicen **sus propias reglas**, no lo que yo suponía.
+
+| | Veredicto | Lo que dice su regla |
+|---|---|---|
+| **r/Construction** | 🟡 **Probablemente sí, pero mira las reglas completas** | *"Construction professionals only... anybody working in this field is welcome"*. **Tú lo eres** — llevas el almacén de una empresa de vidrio—, y tu post es una pregunta, no un anuncio. La barra lateral no enseña la lista entera: ábrela antes |
+| **r/Entrepreneur** | 🟢 **Sí, tal como está escrito** | *"this is a space for genuine connection and exchange of ideas, **not self-promotion**"*. Tu post no lleva enlace ni nombre, así que pasa. Pero está saturadísimo |
+| **r/EntrepreneurRideAlong** | 🟢 **Sí, y es el mejor de los cinco** | *"Follow real founders in real time. No gurus, no hindsight. Just the raw, unfiltered journey"*. Tres reglas y todas de educación. El post de arriba del todo es alguien enseñando sus ingresos — **aquí sí puedes contar qué construiste y cómo va** |
+| **r/supplychain** | 🟢 **Sí** | *"Posts must be pertaining to a supply chain topic"*. La exactitud del inventario lo es. Ojo: el público es corporativo y tu caso les va a parecer pequeño |
+| **r/manufacturing** | 🔴 **NO. Ni la versión sin enlace** | Cuatro reglas lo cierran, y la 7 sola ya basta |
+
+### Por qué r/manufacturing es un NO, con sus números
+
+- **Regla 4:** *"Selling products or services is not allowed, nor is other self promotion."*
+- **Regla 5:** *"This is a subreddit for individuals, not companies, organizations **or their representatives**."*
+- **Regla 7:** *"**Surveys, questionnaires and (product/market/academic) research are not allowed**."* — **y tu post termina con tres preguntas.** Eso es exactamente un cuestionario
+- **Regla 11:** *"Posts written by ChatGPT, Google Bard, or other AI services are not permitted."*
+- Y lo que no es una regla pero cuenta igual: el post fijado **«Any poster that begins with "I have an idea for an AI tool....."»** lleva 138 votos. Esa comunidad está harta
+
+**No merece la pena.** Una retirada por romper cuatro reglas queda en el
+historial de la cuenta y encarece todos los sitios siguientes.
+
+### Y la regla 11 vale para todos, no sólo para ahí
+
+Varias comunidades prohiben ya los textos escritos con IA, y las que no lo
+prohiben lo **huelen** — es lo mismo que Jose notó el 27/10 en los comentarios:
+*"parecen de AI"*.
+
+**Antes de publicar en cualquier sitio nuevo: reescribe el post con tus
+palabras.** No hace falta que quede bonito; hace falta que suene a ti. Los
+cuatro problemas del post son tuyos de verdad y eso es lo único que no se puede
+imitar — ni por una IA ni por un competidor.
+
+### El orden que yo seguiría con estos cinco
+
+1. **r/EntrepreneurRideAlong** — el más permisivo, y el que mejor encaja con
+   contar lo que llevas construido. Es además donde una respuesta tuya puede
+   traer los primeros que lo prueben.
+2. **r/Construction** — tu gremio. Lee la lista completa de reglas primero.
+3. **r/supplychain** — la versión pregunta, sin nada de producto.
+4. **r/Entrepreneur** — último: pasa, pero se pierde entre cien posts al día.
+5. **r/manufacturing** — no.
