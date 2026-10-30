@@ -784,3 +784,84 @@ contrario de una respuesta de vendedor, y a un programador le dice que tienes
 los datos y que no te asusta lo que digan. **Si lo mides antes de contestar,
 sustituye esa última frase por el número** — y entonces es el mejor comentario
 de todo el hilo.
+
+---
+
+## 9 — LOS CUATRO DEL 30/10
+
+Tres se contestan y uno no. Conviene saber cuál es cuál antes de escribir nada.
+
+| Quién | Qué es | Qué hacer |
+|---|---|---|
+| **agentUi** (tablet en el estante) | Vendedor declarado, con una idea buena de verdad | Contestar, y preguntarle algo que sólo él sabe |
+| **nian2326076** | **Spam** | **No contestar** |
+| **SoniyaSharma_Kognify** | Consejo bueno y **sin empujar** — *"si la hoja te funciona, yo no correría a dejarla"* | Contestar, y conceder lo que no tenemos |
+| **agentUi** (lockservice) | La pega técnica concreta | Contestar con números |
+
+### 9.1 · A agentUi — lo de la tablet en el estante
+
+> Mounted at the rack is the part I hadn't thought through. I was picturing the
+> phone, and the phone is exactly the thing nobody pulls out with both hands
+> full. The lanyard tag is clever too &mdash; it puts the identity on the person
+> instead of on the item.
+>
+> One thing I'd want to know before buying anything: do the tablets survive?
+> We're a glass shop, so it's dust, forklifts and the occasional dropped unit.
+> Have you seen people get away with cheap consumer ones, or does it end up
+> being rugged kit every time?
+
+**Por qué funciona:** concede algo de verdad —*"no lo había pensado"*— y la
+pregunta sólo la puede contestar alguien con instalaciones reales. Eso convierte
+un comentario en una conversación.
+
+### 9.2 · A nian2326076 — **no contestar**
+
+Dos frases genéricas sobre inventario para colar un enlace a una web de empleo
+que no tiene nada que ver con el hilo. **Contestar legitima el anuncio y lo sube
+en el orden del hilo.** Lo correcto es reportarlo.
+
+Si aun así Jose quiere ser educado, una línea y nada más —sin tocar el enlace—:
+
+> Thanks. Barcode scanning is on the list; the cloud part is the bit I
+> deliberately skipped.
+
+### 9.3 · A SoniyaSharma_Kognify — la mejor del hilo, y hay que conceder
+
+> This is the most useful comment in the thread, and the last line especially.
+>
+> Two of your three we ended up doing: every rack and shelf has its own label,
+> so the record says B-12 and not "warehouse", and movements get recorded at the
+> rack instead of at the end of the shift.
+>
+> **The weekly count on a few locations is the one we don't do**, and reading
+> your comment I think that's the gap. We still do it the bad way &mdash; notice
+> something is off, then go looking. Counting three racks every Friday would
+> have caught our worst one months earlier.
+>
+> How do people pick which locations to count? Rotating through everything, or
+> weighted toward the fast movers?
+
+**Por qué este texto:** ella no vende, así que responderle vendiendo sería el
+error. Se le da la razón, **se nombra lo que no tenemos** —que es lo que hace
+creíble lo que sí— y se pregunta algo concreto.
+
+### 9.4 · A agentUi — lo del `LockService`
+
+> Fair, and that's the right thing to poke at. Two things that have kept it
+> quiet so far: every write goes through one script lock with a 15-second wait,
+> and **a busy lock is treated as a turn, not a failure** &mdash; the client
+> backs off and retries instead of dropping the row. Nothing is written outside
+> that lock, so a queue is slow, never lost.
+>
+> Where you're right is offline. **I have nothing for the dead spot in the back
+> aisle.** If the connection drops mid-save, the person sees it fail and has to
+> redo it, and "redo it later" is the exact habit this whole thing exists to
+> kill. That one I'm still thinking about.
+
+**Lo que hace este texto, y por qué es el mejor de los cuatro:** contesta la
+pega técnica **con números** —un candado, 15 segundos, reintento— y después
+**concede el agujero de verdad**. Conceder algo concreto es lo que hace que lo
+anterior se crea.
+
+**Y hay que anotarlo como producto, no sólo como respuesta:** lo de trabajar sin
+conexión está en `BACKLOG.md` desde hoy, y es un hueco real.

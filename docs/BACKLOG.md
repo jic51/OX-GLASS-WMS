@@ -13194,3 +13194,47 @@ marcado.
 **Por qué importa más que un detalle:** la selección es lo que precede a
 **borrar**. Una casilla que se desmarca sola delante de un botón de borrar es
 una forma de borrar lo que no era.
+
+---
+
+## 🟠 30/10 — DOS HUECOS QUE SALIERON DE LOS COMENTARIOS
+
+### 1 · No hay nada para cuando se cae la conexión
+
+**agentUi:** *"offline local caching so guys don't lose rows when wifi drops in
+the back aisles."*
+
+**Y es verdad: no tenemos nada.** Si la conexión se cae a mitad de guardar, la
+persona ve el fallo y tiene que repetirlo — y *«lo repito luego»* es exactamente
+el hábito que esta app existe para matar. En un almacén de nave grande el fondo
+del pasillo es justo donde peor llega el wifi, o sea, donde más movimientos se
+hacen y peor se guardan.
+
+**Lo que hay que mirar antes de prometer nada:** la app corre dentro de un marco
+de Apps Script, así que un trabajador sin conexión **no puede ni cargar la
+página**. Guardar en el aparato sólo ayuda a quien **ya la tenía abierta** y
+pierde la señal a mitad. Eso es un caso real —el bodeguero que camina con la
+pestaña abierta— pero es más estrecho de lo que suena, y conviene no venderlo
+como «funciona sin internet».
+
+**Prioridad: media-alta**, y antes de construir hay que medir cuántas veces pasa
+de verdad en la nave de Jose.
+
+### 2 · Conteos pequeños y frecuentes, en vez de uno grande al año
+
+**SoniyaSharma_Kognify:** *"do a small count each week on a few locations rather
+than one big count a year. You'll catch drift while it's still small and easy to
+trace."*
+
+**No lo tenemos, y es la mejor idea del hilo.** Hoy la app ayuda cuando ya
+sospechas —Check My Data, Stock Totals, el ajuste con su dirección— pero **nadie
+te dice qué contar esta semana**. Se descubre el descuadre cuando ya es grande y
+el rastro está frío.
+
+**Lo que construiría:** una lista corta y rotatoria —*"esta semana toca B-12,
+A-01 y C-03"*— que la app elija sola, pesando lo que más se mueve y lo que más
+tiempo lleva sin contarse. Y que cada conteo deje su ajuste con su dirección,
+que ya es como funciona.
+
+**Y encaja con lo del retraso** (27/10): las dos son la misma idea —medir el
+desorden mientras es pequeño— y las dos salen de datos que la app ya tiene.
