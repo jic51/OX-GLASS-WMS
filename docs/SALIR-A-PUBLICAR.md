@@ -915,3 +915,146 @@ imitar — ni por una IA ni por un competidor.
 3. **r/supplychain** — la versión pregunta, sin nada de producto.
 4. **r/Entrepreneur** — último: pasa, pero se pierde entre cien posts al día.
 5. **r/manufacturing** — no.
+
+---
+
+## 10 — LOS CINCO DEL 3/11
+
+### 10.1 · A agentUi — lo de IndexedDB y el service worker
+
+**Antes del texto, lo que hay que saber:** su idea es buena y **la mitad no se
+puede hacer aquí**, por un motivo concreto que conviene decirle porque es el
+tipo de cosa que un programador agradece.
+
+- **IndexedDB sí.** La app corre en un iframe de Apps Script con
+  `allow-same-origin`, así que el almacenamiento del navegador funciona.
+- **El service worker, no — y no es por permisos: es por el origen.** La página
+  la sirve Google desde `googleusercontent.com`; un service worker tiene que
+  servirse desde el mismo origen y por debajo de su ámbito, y **ese origen no
+  es nuestro**. No hay sitio donde poner el fichero.
+- **Y el visto verde inmediato es justo lo que decidimos NO hacer.** Un número
+  de stock optimista es un número que puede ser mentira, y quien lo lee camina
+  hasta un estante confiando en él.
+
+> That's the sharpest version of this I've heard, and the first half I can do
+> — IndexedDB works fine inside the Apps Script frame, so parking the intent
+> locally is real.
+>
+> The service worker is where I get stuck, and not on permissions: the page is
+> served from Google's own origin, and a service worker has to come from the
+> same origin at or above its scope. There is no path there I can put a file
+> on. If you have seen someone get one registered from inside a sandboxed
+> Google frame I would genuinely like to know how.
+>
+> The green checkmark I would push back on, though. An optimistic stock number
+> is a number that can be wrong, and the person reading it walks to a rack on
+> the strength of it. I would rather queue the write and show it as pending
+> than show it as done and be right most of the time.
+
+**Por qué esta respuesta es buena:** concede la mitad que sirve, **nombra la
+pared con precisión** —origen, no permisos— y discrepa de una sola cosa, con un
+motivo que es del almacén y no del código.
+
+### 10.2 · A agentUi — las tablets en funda de silicona
+
+> That is more useful than the hardware list I was dreading. Mounting behind
+> the steel upright so a tine cannot clip it on a turn is the part I would not
+> have thought of until the first one got clipped.
+>
+> The pre-configured spare in the back office is the bit I am stealing today.
+> How do you handle the sign-in on a shared tablet at the rack? One account the
+> whole shift, or does each person tap something?
+
+**La pregunta no es de relleno:** es el problema que tenemos de verdad si la
+tablet se queda en el estante, y él tiene instalaciones donde ya se resolvió.
+
+### 10.3 · A truecakesnake
+
+> Yeah, that matches what the other comments say too. Rotating everything
+> sounds thorough and then nobody does it twice. Fast movers weekly is small
+> enough to actually happen.
+
+Corta, de acuerdo, y sin inventar experiencia que no tiene.
+
+### 10.4 · A Few_Parsnip1039 — **el mejor comentario del hilo entero**
+
+**Lo que trae, y conviene verlo antes de contestar:** *"the spreadsheet rarely
+fails on math. It fails on the unrecorded pull and the missing bin location"*,
+**que son exactamente los dos primeros problemas del post de Jose** — se lo
+confirma alguien de fuera. Más tres cosas medibles: cada línea con su ubicación
+sin excepciones, **contar por movimiento y no por calendario**, y la prueba de
+exactitud (50 ubicaciones a ciegas; más de 2 o 3 que no cuadren = el problema es
+el proceso).
+
+> This is the most useful thing anyone has written in this thread, and the last
+> line is the one I will remember.
+>
+> Two of your habits we got to the hard way: every line carries a bin location,
+> no exceptions, and nobody writes "warehouse" any more. **Counting on movement
+> instead of the calendar** is the one I did not have, and it is better than
+> what I was going to build — I was thinking of a rotating list, and weighting
+> by what actually moves is the same idea without the pretending.
+>
+> The blind count of 50 is going on the board this week. We have never once
+> measured where we stand; we only ever notice a discrepancy and then go
+> looking, which tells you nothing about the other 400 locations.
+>
+> On software earning its keep later: agreed, and that is roughly where we
+> were. Ours earns it on "which job used this" more than on counting — the
+> discipline you are describing is what makes the count right, and no tool
+> fixes a habit.
+
+**Lo que hace este texto:** le da la razón en lo grande, **nombra lo que él trae
+y nosotros no teníamos**, y concede su última frase en vez de pelearla — que es
+lo que la vuelve creíble, porque es la frase que un vendedor nunca concedería.
+
+### 10.5 · A rhettlee-Gribal
+
+> That was the one I expected to hit us and it is the one that did not, for a
+> boring reason: nothing is written from inside the sheet. Every change goes
+> through one server lock, one at a time, so two people saving in the same
+> second get queued instead of merged. It is the formulas that go first, and we
+> do not have any of those either.
+
+Corta, concreta, y **contesta con el mecanismo** en vez de con una opinión.
+
+---
+
+## 11 — r/Construction: LAS SEIS REGLAS, Y LA QUE DECIDE
+
+Jose las mandó el 3/11:
+
+> 1 Be Polite and Civil · 2 **No Commercial Content** · 3 Do Not Promote Unsafe
+> Work Practices · 4 No Politics · 5 **No DIY Content** · 6 Stay On Topic
+
+**Cinco no te afectan y una sí.** La 3 y la 4 no tocan el tema; la 5 va contra
+preguntas de aficionado y tú llevas el almacén de una empresa de vidrio, que es
+lo contrario; la 6 la cumples: llevar el control del material de obra es del
+oficio.
+
+### 🔴 La 2 es la que manda, y cambia el post
+
+**«No Commercial Content» no es sólo «no pongas enlaces».** En un subreddit de
+gremio, **contar que construiste un software y que lo vendes ES contenido
+comercial**, aunque no lo nombres y aunque no pongas la dirección.
+
+Y en el post hay una línea exacta que lo convierte en eso:
+
+> *"I ended up building something for ourselves"*
+
+Esa frase, que en r/EntrepreneurRideAlong es justo lo que la comunidad quiere
+leer, en r/Construction es lo que un moderador señala.
+
+### Lo que yo publicaría ahí
+
+**El post SIN esa línea.** Los cuatro problemas, las tres preguntas, y nada
+más — eres un encargado de almacén preguntando a otros cómo lo llevan. Eso
+cumple las seis reglas sin forzar ninguna.
+
+**Y si alguien pregunta qué acabaste haciendo, se contesta en el hilo sin
+nombres ni enlaces** —«acabé montando algo encima de una hoja de Google»— y el
+enlace, por privado, que es donde está permitido casi siempre.
+
+**Lo que NO haría:** publicar la versión con la línea y esperar a ver. Una
+retirada por contenido comercial en el subreddit de tu propio gremio es la más
+cara de todas: es la comunidad a la que vas a volver.
