@@ -40,6 +40,10 @@ de pendientes que incluye lo ya hecho deja de usarse en una semana.**
 | — | La barra de progreso que no se cerraba | v13.4 |
 | — | Un movimiento restaurado vuelve a su sitio, y vuelve ya | v13.4 |
 | — | Las dos frases que decían que lo deshecho va a la papelera | v13.2/13.4 |
+| — | **Básico: «Check my data» de vuelta y los recuadros escondidos** — *verificado por Jose el 3/11* | v13.5 |
+| — | **La papelera no salta al restaurar** — *verificado por Jose el 3/11* | v13.5 |
+| — | **El tope de 200 al borrar, dicho antes de borrar** — *verificado el 3/11* | v13.5 |
+| — | Las cabeceras de Dashboard, Movements e Incoming explican qué son | v13.5 |
 
 ### 🔵 Decidido por Jose, **sin construir todavía**
 
@@ -63,9 +67,18 @@ de pendientes que incluye lo ya hecho deja de usarse en una semana.**
 
 ### 🔴 Abierto y me toca a mí
 
-H-02, H-09, H-10, H-12, H-14, H-15, H-16, H-18, H-19, E-02, E-04, más las
-cuatro del 29/10 (la papelera que salta, la casilla que se desmarca, las
-cabeceras mudas, la ventana que se cierra sola al deshacer).
+H-02, H-09, H-10, H-12, H-14, H-15, H-16, H-18, H-19, E-02, E-04.
+
+**Y lo del 3/11, que es lo primero de la cola** (sección `LO DEL 3/11`):
+
+| | Qué | Por qué va primero |
+|---|---|---|
+| 🔴 N-04 | «Undo this import» no se va nunca, y el fichero sigue contando como importado | Bloquea volver a importar. Es lo que impide avanzar con el fichero de OX |
+| 🔴 N-01 | La sección con candado se queda con el reloj girando para siempre | Lo ven los clientes nuevos, y parece que la app está colgada |
+| 🔴 N-02 | La casilla se desmarca sola — mi arreglo del 2/11 tiene un agujero medido | Va justo antes de un botón de borrar |
+| 🟠 N-05 | El fichero de 600 filas no termina de leerse | Hace falta medirlo antes de arreglar nada |
+| 🟠 N-03 | Project View no tiene cabeceras explicadas — no hay mecanismo, no falta texto | Pequeño y cerrado |
+| — | La ventana de Ajustes que se cierra sola al deshacer una importación | Del 29/10, sigue abierta |
 
 ### 🙋 Abierto y **necesita tus manos**
 
@@ -75,6 +88,200 @@ cabeceras mudas, la ventana que se cierra sola al deshacer).
 | H-11 | Decidir si cada instalación lleva su propio cliente OAuth |
 | H-20 | Mirar en el registro de ejecuciones cuánto gastan los cuatro disparadores |
 | H-03 | Decidir cuándo quitar el permiso `userinfo.profile` (obliga a reautorizar) |
+
+---
+
+## 📋 LO DEL 3/11 — lo que Jose verificó de la v13.5, y lo nuevo
+
+Jose probó los siete arreglos de la v13.5 uno por uno. **Cuatro pasaron, tres
+no.** Y los tres que no pasaron tienen algo en común que conviene decir en voz
+alta: **los tres los dejé a medias**, no equivocados. Hice la mitad del arreglo
+y la di por hecha sin verla funcionando.
+
+| Lo que probó | Resultado |
+|---|---|
+| 1 · Básico: «Check my data» de vuelta y los recuadros escondidos | ✅ *"todo listo, y todo funcionando"* |
+| 2 · Las secciones con candado no llaman al servidor | 🔴 *"las partes de Acopio Pro sigue cargando y no paran"* |
+| 3 · El tope de 200 al borrar | ✅ + una pregunta (abajo) |
+| 4 · La papelera no salta al restaurar | ✅ *"sí, funciona"* |
+| 5 · La casilla no se desmarca sola | 🔴 *"se desmarca cada vez que aparecen más de 4-5 movimientos"* |
+| 6 · Las cabeceras explican qué son | 🟠 todas menos **Project View**, donde **ninguna** |
+
+---
+
+### 🔴 N-01 · La sección con candado se queda dando vueltas para siempre
+
+**Qué hice y qué falta.** `_sysCargarSiAbierta` hace exactamente lo que dice:
+si la sección está con candado, **no llama al servidor**. Eso está bien y es la
+mitad que importa — tres ejecuciones menos de la cuota compartida cada vez que
+alguien abre Ajustes (H-18).
+
+Lo que no miré: **quién borra el `⏳ Checking…`**. Lo escribe el HTML del
+recuadro al pintarse (líneas 15799, 15807 y 15819 del Index), y lo borraba
+siempre la respuesta del servidor. Al no preguntar nada, nadie lo sustituye.
+Así que el recuadro se queda con el reloj girando, en gris, para siempre.
+
+**Por qué es peor que lo que había.** Antes el recuadro contestaba algo. Ahora
+parece que la app está colgada, que es la peor cosa que puede parecer. Y pasa en
+la copia **que ven los clientes nuevos**.
+
+**El arreglo.** Una sección con candado no tiene que *cargar* ni *esperar*:
+tiene que **pintar lo que ofrece**. Donde hoy hay `⏳ Checking…` va la frase de
+la oferta, sin reloj y sin pregunta. Es una línea por recuadro y una prueba que
+diga que **ningún recuadro con candado contiene la palabra `Checking`**.
+
+---
+
+### 🔴 N-02 · La casilla se sigue desmarcando, y mi arreglo tiene un agujero medible
+
+El arreglo de la v13.5 ensancha la ventana pintada para que nada marcado se
+caiga, **pero sólo cuando la lista ha crecido** (`total > _movTotalAnterior`).
+Ese discriminante es correcto en la idea y **se consume solo en la práctica**:
+
+```
+guardas movimientos → _pintarGuardado() → renderMovements()   ← la lista crece, la ventana se ensancha, se guarda `total`
+                    → loadDataFromGoogle(true, true)
+                    → renderAll()       → renderMovements()   ← `total` YA es igual al guardado: no ensancha, y la poda se lo lleva
+```
+
+**La lista crece una vez y se repinta dos.** El primer repintado gasta el
+«ha crecido» y el segundo llega con las manos vacías. Por eso Jose ve que pasa
+«cuando llegan varios de golpe» y no cuando llega uno con calma: con uno solo
+es más probable que la fila marcada siga cabiendo en las 75 de la página.
+
+**Y la otra mitad, que explica el número 4-5:** la página son 75 filas, así que
+esto sólo se nota cuando hay más de 75 movimientos en la lista — que es
+exactamente lo que pasa desde que importó 600.
+
+**El arreglo que propongo.** Dejar de preguntar «¿ha crecido la lista?», que es
+una medida indirecta, y preguntar lo que de verdad distingue los dos casos:
+**¿se ha plegado la tabla a mano?** Eso es `_movPage`, y cambia sólo cuando una
+persona cambia de filtro, de pestaña o de página. Mientras `_movPage` no se
+toque, lo marcado sujeta la ventana, se repinte una vez o diez. Plegar sigue
+desmarcando, que es la regla de septiembre y no se toca.
+
+**La prueba que faltaba:** llamar a `renderMovements` **dos veces seguidas** con
+los mismos datos y comprobar que la selección sobrevive a la segunda. La prueba
+del 2/11 lo llamaba una sola vez, y por eso salió verde con esto dentro.
+
+---
+
+### 🟠 N-03 · Project View no tiene cabeceras que expliquen nada — y no es que falte el texto
+
+Medido: `COL_TABLES` contiene **`stock` y `mov`, nada más**. Las cabeceras de
+Project View son seis `<th>` escritos a mano en el HTML (línea 4689):
+
+```html
+<th>Category</th><th>Name / Description</th>
+<th>In Warehouse</th><th>Sent to Site</th><th>Net</th><th>Status</th>
+```
+
+Sin `class="tip"` y sin `data-tip`. **No es que les falte el texto: es que no
+hay mecanismo.** Por eso ahí no funciona *ninguna* y en las otras funcionan
+todas.
+
+**El arreglo es pequeño** —añadir `class="tip" data-tip="…"` a las seis— y hay
+dos que lo merecen más que las otras cuatro, porque son las que nadie adivina:
+**Net** (lo que queda a nombre de la obra: entregado menos devuelto) y **Status**.
+
+---
+
+### 🔴 N-04 · «Undo this import» no se va nunca, y el fichero sigue contando como ya importado
+
+Jose, 3/11: *"aún sigue el botón de undo this import, incluso después de que ya
+lo hice antes, y al intentar subir el mismo archivo me dice que el archivo ya
+existe, pero en realidad ya está borrado. Y no se puede eliminar ese botón."*
+
+**Encontrado, y es un solo fallo con dos caras.** El registro de importaciones
+**es el registro de auditoría**: `importacionesRecientes_` lee las filas hacia
+atrás y se queda con las de acción `BULK_IMPORT`. Y deshacer una importación
+**no quita** esa fila —el registro de auditoría es de sólo añadir, a propósito—
+sino que escribe una fila nueva, `IMPORT_UNDONE`, con el mismo `importId` en la
+columna 5.
+
+Nadie lee esa fila. Así que:
+
+- `listImports` sigue devolviendo la importación → **el botón de deshacer se
+  queda ahí**, y al pulsarlo dice *«Nothing left from that import»*.
+- `importacionConHuella_` sigue encontrando la huella → **«este fichero ya se
+  importó»** sobre un fichero cuyas filas ya no están.
+
+**El dato que falta ya está escrito en la hoja.** El arreglo son unas ocho
+líneas: recoger en `importacionesRecientes_` los `importId` que aparezcan en
+filas `IMPORT_UNDONE` y saltarse los `BULK_IMPORT` que estén en esa lista. No
+hay que borrar nada ni añadir ninguna columna.
+
+**Y la cara que no se arregla con eso:** una importación deshecha **a medias**
+(`more: true`, porque pasó de `MAX_BORRADO_POR_TANDA`) sí tiene filas vivas y
+sí debe seguir en la lista. Así que la marca de «deshecha» tiene que ponerla el
+último trozo, no el primero.
+
+---
+
+### 🟠 N-05 · El fichero de 600 filas no termina de leerse
+
+Jose: *"el archivo de 20 filas sí lo carga pero el de 600 no… sigo esperando y
+no carga."*
+
+**Lo que ya medí, para no perder el tiempo buscando donde no está:**
+
+| Paso | Coste medido |
+|---|---|
+| Partir el CSV y validar 600 filas | **10 ms** |
+| El fichero en sí | ~45 KB · ~60 KB en base64 |
+| `loQueCrearia_` | una lectura de CONFIG, en memoria |
+| `importacionConHuella_` | 400 filas de auditoría, una lectura |
+
+**Nada de eso tarda minutos.** Así que el tiempo se va en otro sitio, y hay dos
+candidatos reales que **no se pueden distinguir leyendo el código**:
+
+1. **La conversión del .xlsx.** `excelToSheets_` sube el fichero a Drive, pide
+   la exportación en zip, lo descomprime y borra la copia: **tres viajes de red**
+   antes de leer una sola fila. Un .csv no pasa por aquí. *Pregunta que lo
+   resuelve en un minuto: ¿el de 600 es .xlsx y el de 20 .csv?* Si es así, el
+   culpable es la conversión y no el tamaño.
+2. **La cuota compartida** (H-18): la app corre con la cuenta del administrador,
+   así que las ejecuciones del almacén entero se suman. Una lectura que espera
+   detrás de otra cosa parece una lectura lenta.
+
+**Cómo salir de la duda, en este orden:**
+
+1. **Mirar el registro de ejecuciones** del script (Apps Script → Executions).
+   Dice si `parseImportFile` llegó, cuánto tardó y si murió a los 6 minutos. Es
+   la diferencia entre «el servidor está trabajando» y «la respuesta se perdió»,
+   y ninguna otra cosa la distingue.
+2. **Probar el mismo fichero guardado como .csv.** Si va, el culpable es la
+   conversión de Excel y hay sitio donde arreglarlo.
+3. **Devolver los tiempos por paso** en la respuesta de `parseImportFile`
+   (subida · conversión · lectura · huella). Es lo que convierte esto en un
+   número en vez de una teoría — y lo que falta para poder decir «arreglado».
+
+---
+
+### 🔵 N-06 · La pregunta del tope de 200 — contestada
+
+Jose: *"¿y qué pasa si ya hay movimientos en la papelera? ¿igual me deja marcar
+y eliminar 200?"*
+
+**Sí, y es a propósito.** El tope cuenta **lo que marcas en esta operación**, no
+lo que ya hay guardado. 200 hoy y 200 mañana son 400 en la papelera.
+
+**Y eso sigue siendo un problema de verdad**, el único que sobrevive de H-01: la
+papelera **enseña** 200. Con 400 dentro, 200 no se ven. El tope por operación
+evita el borrado de media hora que mediste el 22/10, pero no evita que la
+papelera acabe guardando más de lo que puede mostrar. Lo que lo cierra es
+**paginar o agrupar la papelera**, que es lo último de tu orden y sigue pendiente.
+
+---
+
+### 🔵 N-07 · Apuntado para hacer luego, sin construir todavía
+
+| | Qué | Mi opinión |
+|---|---|---|
+| **a** | La pantalla de precios en el orden correcto: **categoría → buscar el material → unidad → precio** (imagen 2) | De acuerdo, y además es **lo que desbloquea el encargo de OX** — ver `VALOR-DEL-INVENTARIO.md` §3.1. Yo la pondría antes que nada de esta lista |
+| **b** | En Básico no debería dejar buscar y seleccionar materiales para ponerles precio | Tu decisión y la anoto. **Mi opinión es la contraria** y te la digo en una línea: los precios son una de las pocas cosas que Básico puede hacer sin pedir ningún permiso de Google, y un almacén que no puede valorar lo que tiene es un almacén al que le falta la mitad. Si el motivo es que no se guardan, el arreglo es que se guarden, no esconderlo |
+| **c** | Un anillo de carga que se llena mientras la app ya va leyendo el fichero | **No al anillo**, y el motivo es el de siempre en este archivo: un anillo que se llena sin saber cuánto queda **finge un progreso que no existe**. Lo que sí: **empezar a leer el fichero en cuanto se elige**, no al pulsar. Eso es gratis porque el fichero ya está en el navegador. Pero primero N-05: si tarda cuatro minutos, adelantarlo no lo arregla |
+| **d** | Poner la versión y el código de la compilación en Ajustes, además del menú de usuario | **Sí, y es gratis.** Va en Ajustes → System, al lado del espacio usado. El motivo no es el adorno: cuando algo no cuadra, lo primero que hay que saber es **qué versión tiene delante el cliente**, y hoy para eso hay que pedirle que abra el menú de su foto |
 
 ---
 
