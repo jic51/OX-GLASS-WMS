@@ -18,6 +18,66 @@ lista, no el parte de trabajo.
 
 ---
 
+## 📍 DÓNDE VA CADA UNO — al 2/11
+
+Esta tabla existe porque el registro empezaba a mentir por omisión: arreglé
+nueve cosas y la lista seguía describiéndolas todas como pendientes. **Una lista
+de pendientes que incluye lo ya hecho deja de usarse en una semana.**
+
+### ✅ Arreglado y entregado (v13.0 → v13.4)
+
+| | Qué | Dónde |
+|---|---|---|
+| H-04 | El escape a mano en el nombre de un documento | v13.0 |
+| H-05 | El texto sin escapar en la pantalla de inicio de sesión | v13.0 |
+| H-23 | El lector de documentos, apagado por un modelo retirado | v13.1 |
+| H-22 | Editar el comentario sacaba una fila de su importación | v13.2 |
+| E-01 | Las dos `APP_VERSION` podían separarse | v13.3 |
+| E-03 | Dos funciones podían llamarse igual sin que nadie lo notara | v13.3 |
+| — | **La papelera, desatada del ancho del archivo** | v13.3 |
+| — | **Borrar, roto por la columna nueva** (el fallo del 26/9 otra vez) | v13.3 |
+| — | Deshacer una importación ya no llena la papelera | v13.2 |
+| — | La barra de progreso que no se cerraba | v13.4 |
+| — | Un movimiento restaurado vuelve a su sitio, y vuelve ya | v13.4 |
+| — | Las dos frases que decían que lo deshecho va a la papelera | v13.2/13.4 |
+
+### 🔵 Decidido por Jose, **sin construir todavía**
+
+| | Qué |
+|---|---|
+| H-13 | Que 🩺 Check this installation cuente los ficheros públicos y traiga el botón |
+| H-17 | 2 años de auditoría · 90 días de errores, y escribirlo en los Términos |
+| — | Limpieza de la papelera a los 30 días, con avisos |
+| — | Tope de 200 al borrar · agrupar la papelera · paginar (H-01) |
+| — | Restaurar en orden: la entrada antes que la salida |
+| — | Devolver `btnDataCheck` a Básico, y esconder el recuadro con su botón |
+| — | Que una sección con candado no llame al servidor |
+
+### ⏸ Aparcado con los pasos escritos
+
+| | Qué |
+|---|---|
+| — | El lector de correos que tarda 4 minutos (3 pasos anotados el 27/10) |
+| — | El robot de pruebas y las invariantes |
+| — | Trabajar sin conexión · conteos rotatorios · tocar el estante |
+
+### 🔴 Abierto y me toca a mí
+
+H-02, H-09, H-10, H-12, H-14, H-15, H-16, H-18, H-19, E-02, E-04, más las
+cuatro del 29/10 (la papelera que salta, la casilla que se desmarca, las
+cabeceras mudas, la ventana que se cierra sola al deshacer).
+
+### 🙋 Abierto y **necesita tus manos**
+
+| | Qué tienes que hacer |
+|---|---|
+| H-06 | Medir `ALLOWALL` en una copia de pruebas |
+| H-11 | Decidir si cada instalación lleva su propio cliente OAuth |
+| H-20 | Mirar en el registro de ejecuciones cuánto gastan los cuatro disparadores |
+| H-03 | Decidir cuándo quitar el permiso `userinfo.profile` (obliga a reautorizar) |
+
+---
+
 ## 🟠 H-01 · La papelera sólo enseña 200, y Jose ya borró 490
 
 > **Bajada de 🔴 a 🟠 el 27/10, y la corrección es de Jose.** Yo dije que esto
