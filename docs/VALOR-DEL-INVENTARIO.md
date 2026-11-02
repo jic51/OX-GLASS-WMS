@@ -60,17 +60,64 @@ acuerda por escrito el primer informe se discute en vez de usarse:
 | **WASTE** | **Sí** | Se perdió, y costó dinero igual |
 | **RETURN** de una obra | **Resta** | Volvió: ese valor no se consumió |
 | **TRANSFER** entre estanterías | **No** | Sigue en el almacén |
-| **ADJUST** | **No** (pero se informa aparte) | Es una corrección de conteo, no consumo. Meterlo dentro esconde los errores de inventario dentro del coste de las obras |
+| **ADJUST** hacia abajo | **Sí** | **Decisión de Jose, 3/11.** Ver abajo |
+| **ADJUST** hacia arriba | **Resta** | Apareció material que la app no sabía que había |
 
-**Mi recomendación:** `utilizado = EXIT + WASTE − RETURN`, y los ADJUST en una
-línea propia al final del informe, con su valor. Así el número de las obras es
-el de las obras, y el descuadre del almacén se ve en vez de disolverse.
+### 2.2 · El ADJUST cuenta, y la razón de Jose es la correcta
+
+Mi primera recomendación fue dejar los ADJUST fuera, en una línea aparte, para
+que «el número de las obras fuera el de las obras». **Estaba razonando sobre un
+almacén que no es el suyo.** Jose, 3/11:
+
+> *"vamos a poner también ajuste en la lista, porque ya te conté que el problema
+> que tengo y que no me deja llevar un control estable del inventario es que
+> toman cosas y no me avisan. Entonces cuando haga el ajuste al final del mes,
+> eso nos ayudará a contar lo que teníamos al inicio de lo que quedó al final, y
+> sacar la cuenta con el valor por unidad."*
+
+Y es exactamente así. En OX, **el material que se llevan sin avisar es consumo
+real**: salió del almacén y se usó en una obra. Lo único que pasa es que nadie
+registró la salida. El conteo de fin de mes es lo que lo encuentra, y el ADJUST
+que lo corrige **es** ese consumo, llegando tarde.
+
+Dejarlo fuera del total haría justo lo contrario de lo que pedí: el informe
+diría que se usó menos de lo que se usó, y la diferencia —que es la grande—
+quedaría en una nota al pie que nadie suma.
+
+**Entonces la regla es:**
+
+```
+utilizado = EXIT + WASTE + ADJUST(hacia abajo) − RETURN − ADJUST(hacia arriba)
+```
+
+que es, dicho de otra forma, exactamente lo que OX pidió: **lo que había al
+inicio menos lo que quedó al final.** El ADJUST es lo que hace que las dos
+cuentas den el mismo número en vez de parecerse.
+
+**Lo que sí conviene, y no cuesta nada:** que el informe enseñe el ADJUST **en
+su propia línea dentro del total**, no fuera. Así el número de arriba es el
+correcto y debajo se lee cuánto de eso fue material que nadie registró. Ese
+segundo número, mes a mes, es la medida de si el problema del almacén está
+mejorando — que es la pregunta de fondo de Jose, no la del informe.
 
 ---
 
 ## 3 · Lo que falta, y es poco
 
-### 🔴 3.1 · No se puede ponerle precio a lo que YA está en la estantería
+### ✅ 3.1 · Ponerle precio a lo que YA está en la estantería — **hecho en la v13.6**
+
+> **Construido el 3/11.** Está en **Ajustes → Prices**, y hace exactamente lo
+> que decía esta sección: categoría → buscar el material → el precio, con la
+> unidad del material a la vista. Escribe el **promedio** que el motor de costes
+> ya lee, así que desde el momento en que un material tiene precio, **todas sus
+> salidas salen valoradas**. Y arriba dice *«12 de 48 materiales de FLASHING
+> tienen precio»*, que es lo que hace que el informe del mes se pueda creer.
+>
+> Está también en Básico, por decisión de Jose del 3/11.
+>
+> Lo que sigue describe por qué hacía falta.
+
+#### Lo que estaba roto
 
 Esto es el bloqueo real del mes 1, y conviene entenderlo bien porque es fácil
 creer que ya está resuelto:
@@ -147,6 +194,10 @@ mes siguiente. Mi recomendación: **el corte es el último día del mes a las
 23:59, por la fecha del movimiento**, y los registros atrasados se corrigen con
 la fecha real, no con la de captura.
 
+**Paso 4b — pon los precios.** Ajustes → **Prices** → categoría `FLASHING`.
+Rellena los que tengas y mira el contador de arriba hasta que diga *«48 de
+48»*. Lo que quede sin precio sale del almacén sin coste y el mes sale bajo.
+
 **Paso 5 — el conteo inicial.** Para que el «valor al inicio» del mes 1 sea
 real, la cantidad en mano de FLASHING tiene que estar bien ese día. Si no lo
 está, el primer informe arrastra el error para siempre. Un conteo de FLASHING
@@ -156,10 +207,9 @@ está, el primer informe arrastra el error para siempre. Un conteo de FLASHING
 
 ## 5 · Lo que yo haría, en este orden
 
-1. **Pasos 1 a 3 de arriba.** No necesitan código y son lo que tarda, porque
+1. ~~**La pantalla de precios** (3.1).~~ ✅ **Hecha en la v13.6.**
+2. **Pasos 1 a 3 de arriba.** No necesitan código y son lo que tarda, porque
    dependen de que OX conteste.
-2. **La pantalla de precios** (3.1), con el contador de materiales sin precio.
-   Es lo único que bloquea de verdad.
 3. **El mes 1 se cierra a mano**, exportando Movements y sumando en Excel, y se
    compara con lo que diga la app. Ese cuadre es la prueba.
 4. **Después** el informe de dos fechas (3.2), ya sabiendo que el número cuadra.

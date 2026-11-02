@@ -5652,6 +5652,7 @@
         <button class="settings-tab"        data-tab="suppliers"   onclick="switchSettingsTab('suppliers')">🏢 <span>Suppliers</span></button>
         <button class="settings-tab"        data-tab="locations"   onclick="switchSettingsTab('locations')">📍 <span>Locations</span></button>
         <button class="settings-tab"        data-tab="materials"   onclick="switchSettingsTab('materials')">🔧 <span>Materials</span></button>
+        <button class="settings-tab"        data-tab="prices"      onclick="switchSettingsTab('prices')">💲 <span>Prices</span></button>
         <button class="settings-tab"        data-tab="pmdirectory" onclick="switchSettingsTab('pmdirectory')">📇 <span>Directory</span></button>
         <button class="settings-tab"        data-tab="import"      onclick="switchSettingsTab('import')">📥 <span>Import</span></button>
         <div class="settings-sidebar-label">Diagnostics</div>
@@ -5860,7 +5861,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '13.5';
+var APP_VERSION = '13.6';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5872,7 +5873,7 @@ var APP_VERSION = '13.5';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'bed84217';
+var APP_BUILD = 'bef45127';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -17569,6 +17570,7 @@ function _renderSettingsTab(tab) {
    * todas sus opciones pulsables: *"todas están disponibles, si doy clic
    * muestran un mensaje que parece de error"*. El mensaje llegaba tarde. */
   if (tab === 'materials')   { _renderMaterialsTab();   _basicApagarAjuste(tab); _equisTrasPintar(); return; }
+  if (tab === 'prices')      { _renderPricesTab();      _basicApagarAjuste(tab); _equisTrasPintar(); return; }
   if (tab === 'errorlog')    { _renderErrorLogTab();    _basicApagarAjuste(tab); _equisTrasPintar(); return; }
   if (tab === 'system')      { _renderSystemTab();      _basicApagarAjuste(tab); _equisTrasPintar(); return; }
   if (tab === 'pmdirectory') { _renderPmDirectoryTab(); _basicApagarAjuste(tab); _equisTrasPintar(); return; }
@@ -19116,6 +19118,232 @@ function _applyCfgChangeLocally(p) {
 }
 
 // ── Materials tab ─────────────────────────────────────────────────────────────
+/* ═══ PRECIOS · PONERLE VALOR A LO QUE YA ESTÁ EN LA ESTANTERÍA ═════════════
+ *
+ * Jose, 3/11: OX quiere el valor del inventario utilizado cada mes, empezando
+ * por el FLASHING. Y lo que faltaba no era el cálculo —el motor de costes
+ * lleva meses entero— sino **poder decir cuánto vale algo que ya está en el
+ * almacén**. Hasta hoy el precio sólo se podía escribir al registrar una
+ * entrada; lo que entró sin precio se quedaba sin valor para siempre, y sus
+ * salidas se escribían con el coste en blanco. Sin avisar.
+ *
+ * ── EL ORDEN DE LA PANTALLA ES EL QUE PIDIÓ ───────────────────────────────
+ *
+ * *"quiero que primero me pida seleccionar una categoría y luego me deje
+ * buscar en una lista el material que quiero ponerle precio, luego la unidad
+ * y el precio"*. Eso es exactamente esto: categoría → buscar → unidad → precio.
+ *
+ * La única diferencia con su dibujo es que la lista **deja escribir el precio
+ * en la propia fila** en vez de abrir un formulario por material. Con 48
+ * materiales de FLASHING que valorar el primer mes, un formulario de uno en
+ * uno son 48 idas y vueltas; aquí se ve la lista entera y se va rellenando.
+ *
+ * ── LA UNIDAD SE ENSEÑA, NO SE ELIGE, Y ES A PROPÓSITO ────────────────────
+ *
+ * La unidad de un material ya existe: es la que llevan sus movimientos. Si
+ * esta pantalla dejara elegir otra, habría **dos unidades para el mismo
+ * material** y nada que obligara a que coincidieran — que es la falta que este
+ * archivo lleva cuarenta veces encontrando. Así que enseña la que hay y dice
+ * «per UNIT» al lado del precio, para que nadie escriba el precio de la caja
+ * creyendo que escribe el de la pieza. Un precio por caja se escribe en
+ * Materiales → paquetes, que es la pantalla que ya hace esa cuenta.
+ *
+ * ── Y EL CONTADOR DE ARRIBA ES LA MITAD DEL TRABAJO ───────────────────────
+ *
+ * «12 de 48 materiales de FLASHING tienen precio» es lo que convierte un
+ * informe mensual en un número de fiar. Sin él, el mes sale bajo y nadie sabe
+ * por qué. */
+var _preciosCat = '';
+
+function _renderPricesTab() {
+  var content = document.getElementById('settingsTabContent');
+
+  if (!_canSeeCosts()) {
+    content.innerHTML = '<p style="font-size:.85rem;color:var(--muted);padding:1rem">' +
+      'Your account does not have access to prices. An admin can turn this on in ' +
+      'Settings &rarr; Permissions.</p>';
+    return;
+  }
+
+  var cats = (config.categories || []).slice().sort();
+  content.innerHTML =
+    '<p style="font-size:.8rem;color:var(--muted);margin-bottom:.75rem">' +
+      'What one unit of a material is worth. Every movement that takes material ' +
+      'out of the warehouse is valued at this price, so this is what makes a ' +
+      'monthly value report add up.</p>' +
+    '<div class="field" style="max-width:320px">' +
+      '<label for="priceCatSel">Category</label>' +
+      '<select id="priceCatSel" onchange="_preciosCambiarCat(this.value)">' +
+        '<option value="">Pick a category…</option>' +
+        cats.map(function(c){
+          return '<option value="' + _escAttr(c) + '"' +
+                 (_normKey(c) === _normKey(_preciosCat) ? ' selected' : '') + '>' +
+                 _he(c) + '</option>';
+        }).join('') +
+      '</select>' +
+    '</div>' +
+    '<div id="priceBody" style="margin-top:.9rem"></div>';
+
+  _preciosPintarCuerpo();
+}
+
+function _preciosCambiarCat(cat){
+  _preciosCat = cat || '';
+  _preciosPintarCuerpo();
+}
+
+/* Los materiales de una categoría, con su unidad y lo que hay en mano. Sale de
+ * `stockData`, que el navegador ya tiene: un material que nunca se ha movido no
+ * tiene ni unidad ni cantidad, así que tampoco hay nada que valorar todavía. */
+function _preciosDeLaCategoria(cat){
+  var clave = _normKey(cat);
+  var out = [];
+  Object.keys(stockData).forEach(function(k){
+    var s = stockData[k];
+    if (!s || _normKey(s.category) !== clave) return;
+    var mid = _normKey(s.category) + '|||' + _normKey(s.name);
+    var c   = config.avgCost && config.avgCost[mid];
+    out.push({
+      matId: mid,
+      category: s.category,
+      name: s.name,
+      unit: s.unit || 'UNIT',
+      enMano: Number(s.warehouseQty) || 0,
+      precio: (c && Number(c.avg)) ? Number(c.avg) : null
+    });
+  });
+  return out.sort(function(a, b){ return a.name.localeCompare(b.name); });
+}
+
+function _preciosPintarCuerpo(){
+  var box = document.getElementById('priceBody');
+  if (!box) return;
+  if (!_preciosCat){
+    box.innerHTML = '<p style="font-size:.82rem;color:var(--muted)">' +
+      'Pick a category above to see its materials.</p>';
+    return;
+  }
+
+  var lista = _preciosDeLaCategoria(_preciosCat);
+  if (!lista.length){
+    box.innerHTML = '<p style="font-size:.82rem;color:var(--muted)">' +
+      'Nothing has moved in and out of ' + _he(_preciosCat) + ' yet, so there is ' +
+      'nothing to put a price on.</p>';
+    return;
+  }
+
+  var conPrecio = lista.filter(function(m){ return m.precio !== null; }).length;
+  var faltan    = lista.length - conPrecio;
+
+  box.innerHTML =
+    '<div id="priceCount" style="font-size:.82rem;font-weight:600;margin-bottom:.6rem;' +
+      'padding:.5rem .7rem;border-radius:6px;' +
+      (faltan
+        ? 'background:var(--warn-bg,#fff6e5);color:var(--warn-fg,#8a5a00)'
+        : 'background:var(--ok-bg,#e9f7ef);color:var(--ok-fg,#1b6e3c)') + '">' +
+      conPrecio + ' of ' + lista.length + ' materials in ' + _he(_preciosCat) +
+      ' have a price' +
+      (faltan
+        ? ' — the ' + faltan + ' without one are counted as worth nothing in any ' +
+          'value report, and their movements go out with no cost at all.'
+        : '. Every movement out of this category is valued.') +
+    '</div>' +
+    '<div class="mat-search-row">' +
+      '<input type="text" id="priceSearchInp" placeholder="Search material name…" ' +
+             'oninput="_preciosFiltrar()">' +
+    '</div>' +
+    '<div class="mat-list" id="priceList"></div>';
+
+  _preciosFiltrar();
+}
+
+function _preciosFiltrar(){
+  var cont = document.getElementById('priceList');
+  if (!cont) return;
+  var q  = ((document.getElementById('priceSearchInp') || {}).value || '').toLowerCase();
+  var ls = _preciosDeLaCategoria(_preciosCat).filter(function(m){
+    return !q || m.name.toLowerCase().indexOf(q) !== -1;
+  });
+
+  if (!ls.length){
+    cont.innerHTML = '<p style="color:var(--muted);font-size:.82rem;padding:.5rem">' +
+      'No materials match that.</p>';
+    return;
+  }
+
+  cont.innerHTML = ls.slice(0, 120).map(function(m){
+    return '<div class="mat-item" data-price-mat="' + _escAttr(m.matId) + '">' +
+      '<span class="mat-item-name" style="flex:1 1 auto">' + _he(m.name) + '</span>' +
+      '<span style="color:var(--muted);font-size:.72rem;white-space:nowrap">' +
+        _he(String(m.enMano)) + ' ' + _he(m.unit) + ' on hand</span>' +
+      '<span style="display:inline-flex;align-items:center;gap:.25rem;white-space:nowrap">' +
+        '<span style="color:var(--muted);font-size:.78rem">$</span>' +
+        '<input type="number" step="0.01" min="0" class="price-inp" ' +
+               'style="width:92px;padding:.25rem .4rem;font-size:.82rem" ' +
+               'value="' + (m.precio === null ? '' : _escAttr(String(m.precio))) + '" ' +
+               'placeholder="' + (m.precio === null ? 'no price' : '') + '" ' +
+               'data-mat="' + _escAttr(m.matId) + '">' +
+        '<span style="color:var(--muted);font-size:.72rem">per ' + _he(m.unit) + '</span>' +
+      '</span>' +
+      '<button class="cfg-btn" onclick="_guardarPrecio(this)" ' +
+              'data-cat="' + _escAttr(m.category) + '" ' +
+              'data-name="' + _escAttr(m.name) + '">💾 Save</button>' +
+    '</div>';
+  }).join('') +
+  (ls.length > 120
+    ? '<p style="font-size:.75rem;color:var(--muted);padding:.5rem">Showing first 120. Type to filter.</p>'
+    : '');
+}
+
+function _guardarPrecio(btn){
+  var fila = btn.closest('.mat-item');
+  var inp  = fila && fila.querySelector('.price-inp');
+  if (!inp) return;
+  var cat  = btn.getAttribute('data-cat');
+  var name = btn.getAttribute('data-name');
+  var val  = parseFloat(inp.value);
+
+  /* El 0 se para AQUÍ además de en el servidor, y no por cortesía: escribir 0
+   * y que se guarde «gratis» es indistinguible de no haber escrito nada, y
+   * luego el informe del mes no cuadra sin que nadie sepa por qué. */
+  if (!isFinite(val) || val <= 0){
+    showToast('Type a price greater than zero for ' + name + '.', 'warn', 5000);
+    inp.focus();
+    return;
+  }
+
+  _btnBusy(btn, 'Saving…');
+  google.script.run
+    .withSuccessHandler(function(res){
+      _btnDone(btn);
+      /* La copia del navegador se pone al día con lo que CONTESTÓ el servidor,
+       * no con lo que se escribió en la casilla: el servidor redondea, y pintar
+       * lo tecleado dejaría la pantalla diciendo 12.345 sobre un 12.35
+       * guardado. Dos números para el mismo dato, otra vez. */
+      if (!config.avgCost) config.avgCost = {};
+      config.avgCost[res.matId] = { category: res.category, name: res.name, avg: res.avg };
+      /* CINCO SEGUNDOS, NO LOS DOS DE TOAST_QUICK. Los dos segundos son para
+       * un «hecho» que no hay que leer. Esto lleva DINERO y lleva el número de
+       * antes: «ahora $12.35 (antes $9.00)» es justo lo que hay que poder leer
+       * para pillar un cero de más antes de que el mes se cierre con él. */
+      showToast('✓ ' + res.name + ' is now $' + res.avg.toFixed(2) + ' per unit' +
+                (res.previous ? ' (was $' + Number(res.previous).toFixed(2) + ')' : '') +
+                '.', 'ok', 5000);
+      /* Se repinta el cuerpo entero y no sólo la fila, porque el contador de
+       * arriba acaba de cambiar — y ese contador es el motivo de la pantalla.
+       * Se conserva lo escrito en el buscador. */
+      var q = ((document.getElementById('priceSearchInp') || {}).value || '');
+      _preciosPintarCuerpo();
+      var inp2 = document.getElementById('priceSearchInp');
+      if (inp2 && q) { inp2.value = q; _preciosFiltrar(); }
+    })
+    .withFailureHandler(function(e){
+      _btnDone(btn);
+      showToast('Could not save that price: ' + _stripTags(e), 'err', 7000);
+    })
+    .processMovement('setMaterialPrice', _h({ category: cat, name: name, price: val }));
+}
+
 function _renderMaterialsTab() {
   var content = document.getElementById('settingsTabContent');
   content.innerHTML =
@@ -30845,6 +31073,17 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '13.6',
+    titulo: 'What a material is worth, and an undone import that finally goes away',
+    puntos: [
+      '<b>Settings → Prices.</b> Pick a category, find the material, type what one unit is worth. Until now a price could only be typed while recording an <i>entry</i>, so anything already sitting on the shelf had no value at all — and every movement that took it out went through with <b>no cost on it</b>, silently. Now it has one, and <b>the screen says how many materials in that category still do not</b>: “12 of 48 have a price” is what makes a monthly value report worth reading.',
+      'It writes the <b>average cost</b> the costing engine already uses, not a second price of its own, so there is nothing that can disagree with anything. A price per box still goes through Materials → packs, which is the screen that already does that arithmetic. <b>In Acopio Basic too</b> — it needs no Google permission, and a warehouse that cannot value what it holds is missing half of one.',
+      '<b>“Undo this import” now disappears once you have used it.</b> Before, the button stayed for ever and answered “nothing left from that import” when pressed, and the same file came back as “already imported” even though none of its rows were there any more. The record had said what happened all along — nothing was reading it.',
+      'An import still being undone in chunks <b>keeps</b> its button, because it still has rows left to remove.'
+    ],
+    antes:  'Material on the shelf worth nothing, and a button that would not go',
+    ahora:  'A price you can set, and an import that stays undone' },
+
   { ver: '13.5',
     titulo: 'Things the free edition should always have had, and a limit worth having',
     puntos: [
@@ -30877,17 +31116,6 @@ var NOVEDADES = [
     ],
     antes:  'Delete did nothing, with no message',
     ahora:  'It deletes \u2014 and a test keeps it that way' },
-
-  { ver: '13.2',
-    titulo: 'Undoing an import no longer fills your trash',
-    puntos: [
-      'Taking an import back off used to move every one of its rows into the trash. That sounds safe, and mostly it was noise: <b>the file is the backup</b>. If it imported once it can import again \u2014 so a thousand rows were kept \u201cjust in case\u201d next to the copy already sitting on your own disk.',
-      '<b>Now they are removed, and the screen says so before you press it</b>, along with how to get them back: import the same file again.',
-      '<b>With one exception, and it is the one that matters.</b> A row you edited after importing is no longer the row that was in the file \u2014 re-importing would bring back the old value and your correction would be gone with no trace. Those are kept in the trash, counted, and named in what the app tells you afterwards.',
-      'Behind it: a movement now carries <b>which import it came from</b> in a field nobody can edit, and the audit line for an edit names the <b>movement</b> instead of the row number, which moves.'
-    ],
-    antes:  '1,052 movements moved to the trash',
-    ahora:  '1,052 removed \u2014 3 kept, because you had edited them' },
 
 ];
 

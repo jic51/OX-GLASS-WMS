@@ -44,6 +44,8 @@ de pendientes que incluye lo ya hecho deja de usarse en una semana.**
 | — | **La papelera no salta al restaurar** — *verificado por Jose el 3/11* | v13.5 |
 | — | **El tope de 200 al borrar, dicho antes de borrar** — *verificado el 3/11* | v13.5 |
 | — | Las cabeceras de Dashboard, Movements e Incoming explican qué son | v13.5 |
+| N-04 | **«Undo this import» desaparece cuando ya se usó** — y el fichero se puede volver a subir | v13.6 |
+| — | **Ponerle precio a lo que ya está en la estantería** (Ajustes → Prices) — desbloquea el encargo de OX | v13.6 |
 
 ### 🔵 Decidido por Jose, **sin construir todavía**
 
@@ -71,13 +73,15 @@ H-02, H-09, H-10, H-12, H-14, H-15, H-16, H-18, H-19, E-02, E-04.
 
 **Y lo del 3/11, que es lo primero de la cola** (sección `LO DEL 3/11`):
 
-| | Qué | Por qué va primero |
+| | Qué | Estado |
 |---|---|---|
-| 🔴 N-04 | «Undo this import» no se va nunca, y el fichero sigue contando como importado | Bloquea volver a importar. Es lo que impide avanzar con el fichero de OX |
-| 🔴 N-01 | La sección con candado se queda con el reloj girando para siempre | Lo ven los clientes nuevos, y parece que la app está colgada |
-| 🔴 N-02 | La casilla se desmarca sola — mi arreglo del 2/11 tiene un agujero medido | Va justo antes de un botón de borrar |
-| 🟠 N-05 | El fichero de 600 filas no termina de leerse | Hace falta medirlo antes de arreglar nada |
+| ~~🔴 N-04~~ | ~~«Undo this import» no se va nunca~~ | ✅ **v13.6** |
+| 🔴 **N-08** | **El guardia de cuota bloquea la app y la pantalla no lo dice** | Encontrado y medido el 3/11. **Jose: no tocar todavía** |
+| 🔴 N-01 | La sección con candado se queda con el reloj girando para siempre | **Siguiente tanda** |
+| 🔴 N-02 | La casilla se desmarca sola — mi arreglo del 2/11 tiene un agujero medido | **Siguiente tanda** |
+| 🟠 N-09 | Restaurar pliega la lista a la primera página, y por eso no se ve volver el movimiento | Anotado el 3/11 |
 | 🟠 N-03 | Project View no tiene cabeceras explicadas — no hay mecanismo, no falta texto | Pequeño y cerrado |
+| — | La versión y el código de compilación en Ajustes | Aprobado, sin construir |
 | — | La ventana de Ajustes que se cierra sola al deshacer una importación | Del 29/10, sigue abierta |
 
 ### 🙋 Abierto y **necesita tus manos**
@@ -218,6 +222,85 @@ sí debe seguir en la lista. Así que la marca de «deshecha» tiene que ponerla
 
 ---
 
+### 🔴 N-08 · **ENCONTRADO: no es lentitud, es nuestro propio guardia de cuota**
+
+Jose mandó el registro de ejecuciones del momento exacto en que el fichero de
+600 no cargaba, y ahí estaba, sin teoría de por medio:
+
+```
+12:31:40  processMovement  4.585 s  Completed
+12:31:45  processMovement  1.112 s  Failed   ← y ocho más iguales
+    Error: Too many requests — please wait a moment and try again.
+        at requireQuota_(Code:2314:11)
+        at processMovement(Code:3904:3)
+```
+
+**El mensaje es nuestro.** Lo lanza `requireQuota_('pm', auth.email, 240, 60)`:
+240 llamadas por minuto y por usuario, para **todo** `processMovement`.
+
+Y Jose aclaró lo que mata mi primera teoría: **todos sus ficheros son CSV**, y
+el de 800 carga rápido mientras el de 600 no. Así que no es la conversión de
+Excel ni el tamaño. Es que **llegó al tope**, y el tope no se mide como parece:
+
+```js
+if (n >= limit) return false;
+cache.put(key, String(n + 1), windowSec);   // ← la cuenta vuelve a durar 60 s ENTERA
+```
+
+**Cada llamada que pasa renueva el plazo completo.** No es una ventana que se
+desliza: es *«60 segundos de silencio y se borra»*. Mientras alguien siga
+usando la app, **la cuenta nunca se reinicia** — se acumula. A cien llamadas
+por minuto sostenidas, a los dos minutos y medio estás bloqueado sin haber
+pasado de 240 en ningún minuto.
+
+Y encima la pantalla **no dice nada**: se queda girando. Por eso Jose esperó
+sin ver un error.
+
+**Lo que NO hice, y es a propósito:** Jose dijo *"la 5 no hagas nada aún, hay
+que verificar bien todo"*. Queda escrito y medido, sin tocar.
+
+**Lo que yo propondría cuando toque, en este orden:**
+
+1. **Que la ventana se deslice de verdad** (no renovar el plazo en cada
+   llamada). Es el arreglo real y son dos líneas.
+2. **Que la pantalla diga que está esperando por la cuota**, en vez de girar.
+   Un tope que no se explica es indistinguible de una app colgada.
+3. **Revisar si 240/minuto es el número correcto** ahora que hay operaciones
+   masivas: importar, deshacer y restaurar hacen muchas llamadas seguidas por
+   diseño, y el tope se escribió pensando en alguien tecleando movimientos.
+
+---
+
+### 🟠 N-09 · Al borrar y restaurar, la lista vuelve a la primera página
+
+Jose: *"estoy restaurando movimientos para ver si regresan al orden justo de
+donde se los borró pero no logro verlo, porque al borrar un movimiento la lista
+se actualiza y se regresa a la pantalla más arriba, no completamente arriba
+pero al final de la lista inicial."*
+
+**Medido sobre su vídeo, fotograma a fotograma:** antes de la operación la
+tabla decía **«300 of 1347 records»**; después, **«150 of 1347»**. O sea que
+perdió las veces que había pulsado «Load 75 more».
+
+La única línea que puede hacer eso es `_movPage = 1` dentro de
+`_showMovementRows`, que es lo que corre **al restaurar desde la papelera**:
+lleva a Movements, pliega la lista a la primera página y busca ahí la fila
+devuelta. Es el mismo fallo que ya se arregló el 4/10 para el botón de histórico
+—*"un botón que trae cosas no puede esconder las que ya estaban"*— y que a esta
+función no se le aplicó.
+
+**Y tiene una consecuencia peor que el salto**, que es justo lo que impide la
+prueba que Jose quería hacer: si el movimiento restaurado cae **más allá de las
+75 primeras**, `_spotMovementRows` no lo encuentra y la app dice *«those rows
+are no longer in the history»* sobre una fila que sí está. **Por eso no logra
+verlo.**
+
+**El arreglo:** en vez de plegar a la página 1, **ensanchar hasta que la fila
+buscada esté pintada**. Y envolverlo en `_repintarSinSaltar`, que ya existe y
+es exactamente para esto.
+
+---
+
 ### 🟠 N-05 · El fichero de 600 filas no termina de leerse
 
 Jose: *"el archivo de 20 filas sí lo carga pero el de 600 no… sigo esperando y
@@ -256,6 +339,11 @@ candidatos reales que **no se pueden distinguir leyendo el código**:
    (subida · conversión · lectura · huella). Es lo que convierte esto en un
    número en vez de una teoría — y lo que falta para poder decir «arreglado».
 
+> **CERRADO el 3/11 por N-08.** Jose mandó el registro de ejecuciones y
+> confirmó que **todos sus ficheros son CSV**. No era la conversión de Excel ni
+> el tamaño: era nuestro propio guardia de cuota. Los dos candidatos de arriba
+> quedan descartados por medición, no por opinión. Lo que queda está en N-08.
+
 ---
 
 ### 🔵 N-06 · La pregunta del tope de 200 — contestada
@@ -279,7 +367,7 @@ papelera acabe guardando más de lo que puede mostrar. Lo que lo cierra es
 | | Qué | Mi opinión |
 |---|---|---|
 | **a** | La pantalla de precios en el orden correcto: **categoría → buscar el material → unidad → precio** (imagen 2) | De acuerdo, y además es **lo que desbloquea el encargo de OX** — ver `VALOR-DEL-INVENTARIO.md` §3.1. Yo la pondría antes que nada de esta lista |
-| **b** | En Básico no debería dejar buscar y seleccionar materiales para ponerles precio | Tu decisión y la anoto. **Mi opinión es la contraria** y te la digo en una línea: los precios son una de las pocas cosas que Básico puede hacer sin pedir ningún permiso de Google, y un almacén que no puede valorar lo que tiene es un almacén al que le falta la mitad. Si el motivo es que no se guardan, el arreglo es que se guarden, no esconderlo |
+| **b** | ~~En Básico no debería dejar poner precios~~ | **Resuelto el 3/11: se queda.** Jose: *"tienes razón, sería un buen feature para algo básico"*. La pantalla de precios de la v13.6 está abierta en Básico |
 | **c** | Un anillo de carga que se llena mientras la app ya va leyendo el fichero | **No al anillo**, y el motivo es el de siempre en este archivo: un anillo que se llena sin saber cuánto queda **finge un progreso que no existe**. Lo que sí: **empezar a leer el fichero en cuanto se elige**, no al pulsar. Eso es gratis porque el fichero ya está en el navegador. Pero primero N-05: si tarda cuatro minutos, adelantarlo no lo arregla |
 | **d** | Poner la versión y el código de la compilación en Ajustes, además del menú de usuario | **Sí, y es gratis.** Va en Ajustes → System, al lado del espacio usado. El motivo no es el adorno: cuando algo no cuadra, lo primero que hay que saber es **qué versión tiene delante el cliente**, y hoy para eso hay que pedirle que abra el menú de su foto |
 

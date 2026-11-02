@@ -128,7 +128,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '13.5';
+var APP_VERSION = '13.6';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -140,7 +140,7 @@ var APP_VERSION = '13.5';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'bed84217';
+var APP_BUILD = 'bef45127';
 
 // ═══ ACOPIO BASIC — EL INTERRUPTOR DE LA VERSIÓN GRATIS ══════════════════════
 //
@@ -4183,6 +4183,7 @@ function processMovementInner_(ss, action, data, auth) {
   if (action === 'sendDailyReportNow')      return sendDailyReportNow(auth);
   if (action === 'getMaterialPacks')   return getMaterialPacks(auth);
   if (action === 'saveMaterialPack')   return saveMaterialPack(data, auth);
+  if (action === 'setMaterialPrice')   return setMaterialPrice(data, auth);
   if (action === 'deleteMaterialPack') return deleteMaterialPack(data, auth);
   throw new Error('Unknown action: ' + action);
 }
@@ -9669,6 +9670,91 @@ function saveAvgCostUpdates_(ss, touched, avgCostMap) {
   }
 }
 
+/* ═══ PONERLE PRECIO A LO QUE YA ESTÁ EN LA ESTANTERÍA ═══════════════════════
+ *
+ * Jose, 3/11: OX quiere el valor del inventario utilizado cada mes, empezando
+ * por el FLASHING. *"No sé si podemos asignar valores de precio a los
+ * materiales luego de hacer un ingreso."*
+ *
+ * Hasta hoy, **no**. Y la explicación importa porque es fácil creer lo
+ * contrario mirando la pantalla de paquetes:
+ *
+ *   · La hoja PACKS guarda **el precio que usará la PRÓXIMA entrada**.
+ *   · El promedio de un material (`avgCost`) sólo se movía **cuando entraba
+ *     mercancía con precio**.
+ *
+ * Así que un material que ya estaba en el almacén y entró sin precio **no
+ * valía nada**, y cada salida suya se escribía con el coste en blanco. Sin
+ * avisar. El informe del mes salía bajo y nada decía por qué — que es
+ * exactamente la clase de fallo que este proyecto lleva meses persiguiendo:
+ * dos cosas que tienen que coincidir (los materiales y sus precios) sin que
+ * nada lo obligue.
+ *
+ * Esto es la pieza que faltaba, y es deliberadamente la MÁS PEQUEÑA que
+ * resuelve el encargo: escribe el promedio de UN material. A partir de ese
+ * momento todas sus salidas salen valoradas, y el valor inicial del mes es
+ * cantidad en mano × precio.
+ *
+ * ── POR QUÉ ESCRIBE EL PROMEDIO Y NO UNA COLUMNA NUEVA ────────────────────
+ *
+ * Porque el promedio es el número que el motor de costes YA lee para valorar
+ * una salida. Una columna «precio de catálogo» aparte sería un segundo dueño
+ * del mismo dato, y el día que las dos no coincidieran nadie sabría cuál manda.
+ * Aquí no hay dos: se corrige el que ya existe.
+ *
+ * ── Y POR QUÉ NO LLEVA UNIDAD PROPIA ──────────────────────────────────────
+ *
+ * La unidad de un material ya existe —es la que llevan sus movimientos— y la
+ * pantalla la enseña para que se sepa por qué se está pagando. Guardarla otra
+ * vez aquí crearía la misma pareja descoordinada de siempre. Un precio por
+ * caja se escribe con los paquetes, que es la pantalla que ya hace esa cuenta.
+ *
+ * Está disponible en Básico a propósito: no necesita ningún permiso extra de
+ * Google, y un almacén que no puede valorar lo que tiene es un almacén al que
+ * le falta la mitad.
+ */
+function setMaterialPrice(data, auth) {
+  auth = requireAuth_('WRITE');
+  requirePerm_(auth, 'canManageCatalog');
+  /* Quien no puede VER precios tampoco los pone. Si no, alguien sin acceso al
+   * dinero podría mover el valor del almacén entero sin poder leer el daño. */
+  if (!canSeeCosts_(auth)) {
+    throw new Error('Your account does not have access to prices.');
+  }
+
+  var cat  = cleanDisplay_(String((data && data.category) || '').trim());
+  var name = cleanDisplay_(String((data && data.name) || '').trim());
+  if (!cat)  throw new Error('Pick a category first.');
+  if (!name) throw new Error('Pick a material first.');
+
+  /* Un precio de 0 no es «gratis», es «no lo sé», y los dos se escriben igual
+   * de fácil. El motor trata el 0 como «sin precio», así que aceptarlo aquí
+   * sería dejar guardar algo que no hace nada y parece que sí. */
+  var precio = Number(data && data.price);
+  if (!isFinite(precio) || precio <= 0) {
+    throw new Error('The price has to be a number greater than zero.');
+  }
+  precio = round2_(precio);
+
+  var ss    = SpreadsheetApp.getActiveSpreadsheet();
+  var mid   = getMaterialId(cat, name);
+  var cfg   = loadConfig();
+  var antes = (cfg.avgCost && cfg.avgCost[mid]) ? (Number(cfg.avgCost[mid].avg) || 0) : 0;
+
+  var mapa = {};
+  mapa[mid] = { category: cat, name: name, avg: precio };
+  saveAvgCostUpdates_(ss, mapa, mapa);
+
+  /* Queda en el registro con el número de antes y el de después. Cambiar el
+   * precio de un material cambia el valor de todo lo que salga a partir de
+   * ahora, así que tiene que poder contestarse «quién puso esto y cuándo». */
+  auditLog_(ss, 'MATERIAL_PRICE_SET', auth.email, cat + ' / ' + name,
+            antes ? String(antes) : '', String(precio));
+
+  return { status: 'success', category: cat, name: name,
+           avg: precio, previous: antes || null, matId: mid };
+}
+
 // ─── BULK IMPORT (CSV) ────────────────────────────────────────────────────────
 // Lets an admin migrate an existing inventory (from Excel, a competitor's
 // export, a paper count) into the app in one shot instead of typing every line
@@ -10329,6 +10415,45 @@ function commitImport(data, auth) {
  */
 var IMPORTS_A_MIRAR = 400;   // filas de audit hacia atrás; de sobra para meses
 
+/* ─── UNA IMPORTACIÓN DESHECHA TIENE QUE DESAPARECER DE LA LISTA ────────────
+ *
+ * Jose, 3/11: *"aún sigue el botón de undo this import, incluso después de que
+ * ya lo hice antes, y al intentar subir el mismo archivo me dice que el archivo
+ * ya existe, pero en realidad ya está borrado. Y no se puede eliminar ese
+ * botón."*
+ *
+ * Son las dos caras del mismo fallo. **El registro de importaciones ES el
+ * registro de auditoría**, y el de auditoría es de SÓLO AÑADIR, a propósito:
+ * nadie borra una línea de ahí, ni siquiera nosotros. Así que deshacer no
+ * quitaba la fila `BULK_IMPORT` — escribía una `IMPORT_UNDONE` nueva, con el
+ * mismo número de importación en la columna 5.
+ *
+ * **Nadie leía esa fila.** De ahí las dos cosas que Jose vio: el botón que no
+ * se va (`listImports`) y el «este fichero ya se importó» sobre filas que ya
+ * no están (`importacionConHuella_`). Las dos leen de aquí, así que las dos se
+ * arreglan en esta función y no en dos sitios parecidos — que es como se
+ * arreglan a medias.
+ *
+ * ── EL CASO A MEDIAS, QUE ES EL QUE OBLIGA A LA MARCA ─────────────────────
+ *
+ * Una importación mayor que `MAX_BORRADO_POR_TANDA` se deshace por trozos y el
+ * navegador vuelve a llamar (`more: true`). Entre trozo y trozo **quedan filas
+ * vivas**, así que esa importación TIENE que seguir en la lista: si
+ * desapareciera con el primer trozo, el resto se quedaría en el almacén sin
+ * botón con el que terminar. Por eso cada trozo escribe en la columna 6 si fue
+ * el último o no.
+ *
+ * ── Y POR QUÉ UNA FILA SIN MARCA CUENTA COMO TERMINADA ────────────────────
+ *
+ * Las `IMPORT_UNDONE` escritas antes de hoy llevan la columna 6 vacía, porque
+ * la marca no existía. Exigir la marca dejaría colgada para siempre la
+ * importación que Jose ya deshizo, que es justo el fallo que esto viene a
+ * quitar. Así que la ausencia de marca vale por «terminada», y sólo
+ * `UNDONE_PARTIAL` —que es nueva y la escribimos nosotros— la mantiene viva.
+ */
+var UNDO_COMPLETO = 'UNDONE_COMPLETE';
+var UNDO_PARCIAL  = 'UNDONE_PARTIAL';
+
 function importacionesRecientes_(ss, cuantas) {
   var sheet = ss.getSheetByName(SHEETS.AUDIT);
   if (!sheet) return [];
@@ -10337,9 +10462,23 @@ function importacionesRecientes_(ss, cuantas) {
   var n     = Math.min(last - 1, IMPORTS_A_MIRAR);
   var desde = last - n + 1;
   var filas = sheet.getRange(desde, 1, n, 6).getValues();
+
+  /* Las deshechas, en una pasada aparte: la fila que dice que algo se deshizo
+   * está SIEMPRE por debajo de la que dice que se importó, así que leyendo de
+   * atrás hacia delante no se puede decidir sobre la marcha. */
+  var deshechas = {};
+  for (var d = 0; d < filas.length; d++) {
+    if (String(filas[d][1] || '') !== 'IMPORT_UNDONE') continue;
+    if (String(filas[d][5] || '').trim() === UNDO_PARCIAL) continue;   // aún quedan filas vivas
+    var idDeshecho = String(filas[d][4] || '').trim();
+    if (idDeshecho) deshechas[idDeshecho] = true;
+  }
+
   var out = [];
   for (var i = filas.length - 1; i >= 0; i--) {
     if (String(filas[i][1] || '') !== 'BULK_IMPORT') continue;
+    var idImp = String(filas[i][4] || '').trim();
+    if (idImp && deshechas[idImp]) continue;
     out.push({
       when:        filas[i][0] instanceof Date ? filas[i][0].toISOString() : String(filas[i][0]),
       who:         String(filas[i][2] || ''),
@@ -10676,11 +10815,15 @@ function undoImport(data, auth) {
     /* La línea de auditoría dice las DOS cifras, no el total. Decir sólo
      * «se quitaron 1.052» deja sin registro lo único que hay que poder
      * encontrar después: cuáles se guardaron y por qué. */
+    /* LA COLUMNA 6 DICE SI ESTE TROZO FUE EL ÚLTIMO, y no es un detalle de
+     * registro: es lo que `importacionesRecientes_` lee para decidir si la
+     * importación sigue en la lista. Una tanda a medias conserva su botón;
+     * la última lo retira. Ver la nota larga en esa función. */
     auditLog_(ss, 'IMPORT_UNDONE', auth.email,
       res.movidas + ' row(s) from import ' + importId + ' removed — ' +
       res.descartadas + ' discarded (the file is the copy), ' +
       aLaPapelera + ' kept in the trash (edited since importing)',
-      importId, '');
+      importId, res.quedanPor > 0 ? UNDO_PARCIAL : UNDO_COMPLETO);
 
     return { status: 'success', removed: res.movidas, importId: importId,
              // Las dos cifras, para que la pantalla pueda decir la verdad

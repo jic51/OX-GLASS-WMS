@@ -117,6 +117,8 @@ node tools/test-el-aviso-dice-la-verdad.js
 node tools/test-hoja-estrecha-no-revienta.js
 node tools/test-vuelven-a-su-sitio.js
 node tools/test-las-tres-del-2-de-noviembre.js
+node tools/test-la-importacion-deshecha-se-va.js
+node tools/test-precio-al-material.js
 node tools/test-url-de-la-app.js
 node tools/test-no-saltar-al-cargar.js
 node tools/test-config-escritura.js
