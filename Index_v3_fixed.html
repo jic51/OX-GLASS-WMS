@@ -5860,7 +5860,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '13.4';
+var APP_VERSION = '13.5';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5872,7 +5872,7 @@ var APP_VERSION = '13.4';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '9b416fde';
+var APP_BUILD = 'bed84217';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -6670,22 +6670,51 @@ var _MOV_MIN_WHAT = 192;
  * existía mientras Jose no podía pulsarlo. */
 var _COL_EDIT_MIN = 184;
 
+/* ── TODAS LAS CABECERAS EXPLICAN QUÉ SON, O NINGUNA (2/11) ──────────────────
+ *
+ * Jose, 29/10: *"al hacer hover en las cabeceras sólo algunas muestran el texto
+ * descriptivo, las demás no"*.
+ *
+ * El mecanismo estaba bien: `renderColHead` pone el `data-tip` cuando hay texto
+ * y no lo pone cuando no lo hay. Lo que faltaba era el texto — **13 de 23
+ * columnas no tenían ninguno**, medido.
+ *
+ * Y media función de ayuda vale menos que ninguna: quien pasa por tres
+ * cabeceras y no sale nada **deja de intentarlo**, así que la ayuda que sí
+ * existe en la cuarta tampoco la encuentra nadie. El coste de mantenerla sigue
+ * estando entero.
+ *
+ * `tools/test-cabeceras-hablan.js` cuenta que no falte ninguna, como
+ * `test-endpoint-auth` cuenta las puertas. */
 var STOCK_COL_TIPS = {
+  category:     'What kind of material this is. Groups the dashboard and decides which list it appears in',
+  name:         'The material itself, exactly as it is written in your movements',
   levels:       'Everything this material is accounted for as today, in one bar: ' +
                 'what you can take, what is spoken for, what has gone out to a job, ' +
                 'and what was written off. Hover a row to see the numbers.',
   location:     'Where this material is stored',
-  dateReceived: 'Date of the most recent entry'
+  status:       'Whether there is enough of it: below the minimum you set, running low, or fine',
+  lastNote:     'The comment on the most recent movement of this material',
+  dateReceived: 'Date of the most recent entry',
+  docs:         'Invoices, delivery notes and photos attached to this material'
 };
 
 var MOV_COL_TIPS = {
-  locFlow: 'Where the material came from and where it went',
-  rawLoc:  'The source and destination fields exactly as recorded',
-  resp:    'Who received or handled the material',
-  pm:      'Project manager notified about this movement',
-  sysDate: 'When the record was saved — not the date of the movement itself',
-  user:    'The account that saved this record',
-  doc:     'Invoices, photos and other files attached to this movement'
+  when:     'The date the movement happened, as whoever recorded it entered it',
+  what:     'Whether material came in, went out, moved between racks, came back, was written off, or a count was corrected',
+  qty:      'How much moved, and in what unit',
+  po:       'The purchase order this came in on',
+  gc:       'The general contractor the job belongs to',
+  project:  'The job this movement is charged to. Blank means it is stock, not spoken for',
+  supplier: 'Who it came from',
+  comment:  'Whatever was written on the movement when it was recorded',
+  locFlow:  'Where the material came from and where it went',
+  rawLoc:   'The source and destination fields exactly as recorded',
+  resp:     'Who received or handled the material',
+  pm:       'Project manager notified about this movement',
+  sysDate:  'When the record was saved — not the date of the movement itself',
+  user:     'The account that saved this record',
+  doc:      'Invoices, photos and other files attached to this movement'
 };
 
 // Two tables, one editor. Everything that differs between them is described
@@ -9589,6 +9618,55 @@ function renderMovements(){
   // ── Pagination ────────────────────────────────────────────────────────────
   var total     = filtered.length;
   var pageEnd   = Math.min(_movPage * _MOV_PAGE_SZ, total);
+
+  /* ── LO MARCADO NO SE PUEDE CAER DE LA VENTANA (2/11) ─────────────────
+   *
+   * Jose, 29/10: *"el checkbox se desactiva al aparecer nuevos movimientos,
+   * **no siempre** (ese es el problema) pero sí cuando llegan algunos de
+   * golpe"*.
+   *
+   * Ese «no siempre» era la pista. La regla de septiembre —**lo que no está
+   * pintado no está seleccionado**— es correcta y hay que dejarla en paz: sin
+   * ella, marcar ocho, ver cero casillas y que Borrar se lleve ocho es peor
+   * que perder la selección, porque la selección perdida se nota y ésta no.
+   *
+   * El fallo no estaba en la poda: estaba en que **las filas nuevas empujan**.
+   * La ventana pintada mide un número fijo de filas, así que cada movimiento
+   * que llega por arriba tira uno por abajo — y si ése estaba marcado, la
+   * poda lo borraba. Con calma no pasa nunca; con cinco de golpe, sí.
+   *
+   * Así que no se toca la poda: se ensancha la ventana lo justo para que nada
+   * marcado se quede fuera. **La selección sujeta la página.** Filtrar sigue
+   * limpiando —lo que ya no cumple el filtro no está en `filtered` y no se
+   * pinta— y plegar la tabla a mano también, porque eso cambia `_movPage` y no
+   * hay nada marcado más abajo que sostener. */
+  /* SÓLO CUANDO LA LISTA HA CRECIDO, y esa condición es todo el arreglo.
+   *
+   * Hay dos formas de que la ventana deje de pintar algo marcado, y piden lo
+   * contrario la una de la otra:
+   *
+   *   · **La tabla se pliega** —cambias de filtro, de pantalla, de página— y
+   *     lo que queda fuera DEBE desmarcarse. Es la regla de septiembre y
+   *     protege de lo peor: Borrar armado sobre filas que nadie ve.
+   *   · **Llegan filas nuevas** y empujan por abajo lo que ya estaba. Ahí no
+   *     se ha plegado nada: la persona sigue mirando lo mismo y la app le
+   *     quita la marca por su cuenta.
+   *
+   * La diferencia entre las dos es medible en una línea: **en la segunda la
+   * lista ES MÁS LARGA que la vez anterior.** Plegar no alarga nada.
+   *
+   * Un intento anterior sujetaba la ventana siempre, y `test-seleccion-viva`
+   * —que nació de aquel vídeo de septiembre— lo pilló en el acto: impedía el
+   * plegado que esa prueba exige. La prueba tenía razón. */
+  if (pageEnd < total && total > _movTotalAnterior) {
+    var ultimoMarcado = -1;
+    for (var k = pageEnd; k < total; k++) {
+      var mid = filtered[k] && filtered[k].movId;
+      if (mid && _movSelection[mid]) ultimoMarcado = k;
+    }
+    if (ultimoMarcado !== -1) pageEnd = ultimoMarcado + 1;
+  }
+  _movTotalAnterior = total;
   var paged     = filtered.slice(0, pageEnd);
   var remaining = total - pageEnd;
 
@@ -9859,6 +9937,31 @@ function renderMovements(){
    * Va DESPUÉS de escribir la tabla, no antes: lo que se mira son las casillas
    * que acaban de pintarse.
    */
+  /* ── «PINTADO» NO ES LO MISMO QUE «A LA VISTA» (2/11) ──────────────────
+   *
+   * Esto miraba las casillas RECIÉN PINTADAS y borraba de la selección todo lo
+   * que no estuviera entre ellas. Para filtrar era correcto. Para todo lo
+   * demás, no — **y esta tabla está paginada**.
+   *
+   * Jose, 29/10: *"el checkbox se desactiva al aparecer nuevos movimientos en
+   * la lista, **no siempre** (ese es el problema) pero sí cuando llegan
+   * algunos de golpe"*.
+   *
+   * Ese «no siempre» era la pista entera. Llegan movimientos nuevos, el
+   * refresco silencioso vuelve a pintar **la primera página**, y lo que
+   * tenías marcado más abajo —o lo que las filas nuevas acaban de empujar
+   * fuera de la página— deja de estar pintado. Y se borraba, sin decir nada.
+   *
+   * POR QUÉ NO ES UN DETALLE: marcar es lo que va justo antes de BORRAR. Una
+   * casilla que se desmarca sola delante de un botón de borrar es una forma de
+   * borrar lo que no era.
+   *
+   * La regla correcta no es «lo que se ve», es **«lo que sigue cumpliendo el
+   * filtro»**: `filtered` son todas las que pasan la búsqueda y los filtros,
+   * estén en esta página o en la quinta. Así filtrar sigue limpiando la
+   * selección —que era lo que esto protegía, y con razón: no se puede borrar
+   * lo que no se puede ver— y pasar de página o recibir filas nuevas ya no.
+   */
   var pintadas = {};
   tc.querySelectorAll('.mov-select-cb').forEach(function(cb){
     var id = cb.getAttribute('data-movid');
@@ -10011,6 +10114,9 @@ function deleteMovementRow(rowIdx){
    servidor se negaría a borrarlo, así que dejar marcarlo sería prometer algo
    que no se va a cumplir. */
 var _movSelection = {};   // movId → true
+/* Cuántas filas había la última vez que se pintó la tabla. Es lo único que
+ * distingue «llegaron filas nuevas» de «se plegó la tabla» — ver renderMovements. */
+var _movTotalAnterior = 0;
 
 // Quién ve las casillas y la barra: exactamente la misma regla que decide si
 // ve la columna de acciones, escrita una vez.
@@ -10168,19 +10274,56 @@ function editSelectedMovement(){
   openEditMovModal(sel[0].rowIdx);
 }
 
+/* ── CUÁNTOS SE PUEDEN BORRAR DE UNA VEZ ─────────────────────────────────────
+ *
+ * Idea de Jose, 26/10: *"no dejemos que el cliente borre más de 200 filas a la
+ * vez, pero si lo que borra es algo de un import, el botón de borrar todo lo
+ * que se importó debe estar en el mismo import"*.
+ *
+ * Y el número no es redondo por capricho: **es lo que la papelera puede
+ * enseñar**. `listTrash` trae las 200 últimas, así que borrar 490 de golpe
+ * dejaba 290 que no se podían devolver desde la app (H-01). Un tope que
+ * coincide con lo que se puede deshacer es lo que hace honesta la frase «esto
+ * se puede deshacer».
+ *
+ * ESTO NO SE PUDO PONER HASTA HOY, y el orden lo puso Jose: *"los 200 sí son
+ * una buena idea **luego de poner la opción de deshacer una importación**"*.
+ * Sin eso, quien importaba mil filas y quería quitarlas se quedaba atrapado
+ * borrando de doscientas en doscientas. Deshacer-importación existe desde la
+ * v13.2 y no pasa por aquí ni por la papelera, así que el tope ya no atrapa a
+ * nadie.
+ *
+ * SE DICE ANTES, NO DESPUÉS. Un tope que se descubre al terminar es un muro
+ * invisible; dicho en el aviso es una regla que se lee y se entiende.
+ */
+var TOPE_BORRADO_A_LA_VEZ = 200;
+
 function deleteSelectedMovements(){
   var sel = _selectedMovements();
   if (!sel.length) return;
+  var marcados = sel.length;
+  var pasados  = Math.max(0, marcados - TOPE_BORRADO_A_LA_VEZ);
+  if (pasados) sel = sel.slice(0, TOPE_BORRADO_A_LA_VEZ);
   var n = sel.length;
   _showConfirm({
     icon: '🗑️', danger: true,
-    title: n === 1 ? 'Delete this movement?' : 'Delete ' + n + ' movements?',
+    title: pasados
+      ? ('Delete the first ' + n + ' of ' + marcados + '?')
+      : (n === 1 ? 'Delete this movement?' : 'Delete ' + n + ' movements?'),
     message: (n === 1
         ? (sel[0].qty + ' ' + (sel[0].unit || '') + ' of ' + sel[0].name).replace(/\s+/g, ' ')
         : n + ' movements') +
       ' will be removed from the warehouse history.\n\n' +
-      'They go to the trash, so you can put them back from Settings → System.',
-    confirmText: n === 1 ? 'Yes, Delete' : 'Yes, delete ' + n,
+      'They go to the trash, so you can put them back from Settings → System.' +
+      (pasados
+        ? ('\n\nYou ticked ' + marcados + '. ' + n + ' is the most that can go at once, ' +
+           'because it is also the most the trash can show you — past that, some of them ' +
+           'could not be put back. The other ' + pasados + ' stay ticked: press Delete ' +
+           'again when this round is done.' +
+           '\n\nIf what you are removing came in from a file, use Settings → Import → ' +
+           'Undo this import instead. That one has no limit.')
+        : ''),
+    confirmText: pasados ? ('Yes, delete ' + n) : (n === 1 ? 'Yes, Delete' : 'Yes, delete ' + n),
     onConfirm: function(){
       // La selección se suelta ya: las filas se ven irse por su cuenta, y
       // dejarlas marcadas invitaría a pulsar otra vez.
@@ -15720,10 +15863,29 @@ function _renderSystemTab() {
 
   _applySysActSpot();
 
-  _loadBackupStatus();
-  _loadDailyReport();
+  /* ── LO QUE TIENE CANDADO NO LE PREGUNTA NADA AL SERVIDOR (2/11) ──────────
+   *
+   * Jose: *"si esas partes Pro en Settings no las usa el cliente, ¿por qué se
+   * calculan y se actualizan cada vez que abro la app?"*
+   *
+   * Tenía razón, y cuesta más de lo que parece. Abrir esta pestaña lanzaba
+   * SEIS llamadas, y en la edición gratis **tres eran de secciones con
+   * candado**: el respaldo, el reporte diario y el lector. Cada llamada es una
+   * ejecución del servidor que **la paga la cuenta del administrador y la
+   * comparte el almacén entero** (H-18 del análisis). Tres ejecuciones
+   * regaladas cada vez que alguien abre Ajustes, por tres cosas que esa copia
+   * no puede usar.
+   *
+   * Y no se trata de enseñar un número viejo: **no se pregunta nada**. Un dato
+   * de hace semanas al lado de un candado es algo que alguien se puede creer,
+   * y después hay que explicarlo. La sección enseña la oferta y ya.
+   *
+   * LAS ABIERTAS SIGUEN IGUAL —espacio, ids, papelera— y eso es la mitad del
+   * trabajo: la regla es por sección, no «apagar todo en Básico». */
+  _sysCargarSiAbierta('sysRespaldo', _loadBackupStatus);
+  _sysCargarSiAbierta('sysReporte',  _loadDailyReport);
+  _sysCargarSiAbierta('sysLector',   _loadAiStatus);
   _loadSpaceUsage();
-  _loadAiStatus();
   _loadMovIdStatus();
   _loadTrash();
 
@@ -15769,6 +15931,22 @@ function _loadTrash(){
 function _paintTrash(items){
   var box = document.getElementById('trashBox');
   if (!box) return;
+  /* ── DEVOLVER A LA PAPELERA EL SITIO POR DONDE IBA (2/11) ──────────────
+   *
+   * Jose, 29/10: *"la papelera se actualiza cada vez que un movimiento regresa,
+   * lo que hace que yo regrese arriba cada vez aunque necesite estar abajo
+   * dando clic a los movimientos para que regresen"*.
+   *
+   * No era el repintado: era que el repintado **se lleva el scroll**. La caja
+   * que se desplaza se construye aquí, así que al sustituir el contenido nace
+   * otra vez arriba del todo. Devolver cinco movimientos seguidos obligaba a
+   * bajar cinco veces, y cada vez un poco más lejos.
+   *
+   * Se apunta por dónde iba ANTES de tocar nada y se le devuelve después. Si
+   * la lista encogió tanto que ese punto ya no existe, el navegador lo recorta
+   * solo al máximo posible, que es exactamente lo que hay que hacer. */
+  var vieja  = document.getElementById('trashScroll');
+  var altura = vieja ? vieja.scrollTop : 0;
   items = items || [];
   if (!items.length){
     box.innerHTML = '<span style="font-size:.8rem;color:var(--muted)">Nothing deleted. ' +
@@ -15785,7 +15963,10 @@ function _paintTrash(items){
         ' movement' + (items.length === 1 ? '' : 's') + ' you can still put back.</span>' +
       '<button id="btnEmptyTrash" class="btn btn-ghost btn-sm" onclick="_emptyTrash()">🗑 Empty the trash</button>' +
     '</div>' +
-    '<div style="max-height:260px;overflow:auto;border:1px solid var(--border);border-radius:8px">' +
+    /* CON ID, PARA PODER DEVOLVERLE EL SITIO. Ver arriba: esta caja se
+       reconstruye entera en cada repintado, y sin un id no hay forma de
+       encontrarla antes para apuntar por dónde iba. */
+    '<div id="trashScroll" style="max-height:260px;overflow:auto;border:1px solid var(--border);border-radius:8px">' +
       items.map(function(it){
         var where = it.destLoc || it.srcLoc || '';
         // data-trash: para encontrar ESTA fila y animar su salida sin repintar
@@ -15836,6 +16017,11 @@ function _paintTrash(items){
         '</div>';
       }).join('') +
     '</div>';
+
+  // Y de vuelta a donde estaba. Después de escribir, no antes: el elemento
+  // que lleva el scroll acaba de nacer en esta misma línea.
+  var nueva = document.getElementById('trashScroll');
+  if (nueva && altura) nueva.scrollTop = altura;
 }
 
 function _emptyTrash(){
@@ -29466,8 +29652,31 @@ var BASIC_FUERA = {
    * Nadie sube a Pro por un botón de soporte ni por un reconstructor de
    * existencias. Un candado aquí no es una oferta, es una puerta cerrada más —
    * y con veinte puertas cerradas la app deja de parecer una herramienta y
-   * parece una demostración caducada. */
-  botones: ['btnReportIssue', 'btnDataCheck', 'btnRebuildStock', 'btnMovIdFill'],
+   * parece una demostración caducada.
+   *
+   * ── ERAN CUATRO Y SE QUEDA UNO (2/11) ────────────────────────────────────
+   *
+   * Jose, 29/10, con una captura de su Básico: *"no hay botón de Check my
+   * data... ¿son parte de Acopio Pro?"*. No lo son: los escondí yo con este
+   * argumento, y el argumento era bueno para el botón de soporte y malo para
+   * los otros tres.
+   *
+   * `btnDataCheck` es el que más duele. **No necesita ningún permiso de Pro**
+   * —sólo lee la hoja— y la edición gratis es justo donde llega un inventario
+   * desordenado, **porque el importador de CSV está abierto ahí desde el
+   * 26/10**. Esconder lo que encuentra el desorden, en la edición que lo
+   * recibe, es al revés. Lo mismo valía para reconstruir totales y rellenar
+   * ids: las tres funcionan con `spreadsheets.currentonly` y ninguna vende
+   * nada, que era el criterio.
+   *
+   * Se queda `btnReportIssue`, y por un motivo distinto del original: **no
+   * puede funcionar**. Mandar un correo necesita `script.send_mail`, que esta
+   * edición no pide. Un botón que no puede hacer su trabajo no se enseña.
+   *
+   * Y la otra mitad del arreglo está abajo, en `_basicPintar`: lo que se
+   * esconde **se lleva su recuadro**. Dejar el marco y la explicación sin el
+   * botón era peor que las dos opciones. */
+  botones: ['btnReportIssue'],
 
   /* Jose, 19/10, repasando la app entera: *"también se muestra PERMISSIONS,
    * ¿por qué? eso no tiene sentido"* y *"no debe haber DIRECTORY ¿verdad?"*.
@@ -29586,6 +29795,20 @@ function _basicApagarZona(el, clave){
  *
  * `_basicApagarZona` se salta sola las que ya tienen su marca, así que
  * repetirla no cuesta nada ni duplica el oyente. */
+/* ¿Esta sección está con candado en esta edición? Una sola regla, escrita una
+ * vez, que leen tanto el que apaga las zonas como el que decide si vale la
+ * pena preguntarle algo al servidor. Dos listas que tuvieran que coincidir
+ * serían la falta que este archivo lleva veinte veces encontrando. */
+function _sysSeccionBloqueada(id){
+  return !!(APP_BASIC && BASIC_PRO_SISTEMA[id]);
+}
+
+/** Llama a `carga` sólo si esa sección se puede usar aquí. */
+function _sysCargarSiAbierta(id, carga){
+  if (_sysSeccionBloqueada(id)) return;
+  carga();
+}
+
 function _basicApagarSecciones(){
   if (!APP_BASIC) return;
   Object.keys(BASIC_PRO_SISTEMA).forEach(function(id){
@@ -30073,7 +30296,20 @@ function _basicPintar(){
   if (!APP_BASIC) return;
   BASIC_FUERA.botones.forEach(function(id){
     var el = document.getElementById(id);
-    if (el) el.style.display = 'none';
+    if (!el) return;
+    /* SE VA EL BOTÓN Y SE VA SU RECUADRO (2/11).
+     *
+     * Antes sólo se escondía el botón, y el marco se quedaba: Jose vio en su
+     * Básico un recuadro que decía «Runs only when you press it» **sin nada
+     * que pulsar**, y un «Stock totals» vacío. Eso es peor que las dos
+     * opciones — no esconde la función y tampoco la ofrece: sólo deja un
+     * hueco que alguien tiene que explicar.
+     *
+     * Se sube al `.field` que lo contiene, que es la caja de una sección de
+     * Ajustes. Un botón que no esté dentro de uno —`btnReportIssue` vive en
+     * el menú de la cuenta— se esconde solo, como siempre. */
+    var caja = (el.closest && el.closest('.field')) || el;
+    caja.style.display = 'none';
   });
   BASIC_FUERA.pestanas.forEach(function(par){
     var b = document.getElementById(par[1]);
@@ -30609,6 +30845,17 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '13.5',
+    titulo: 'Things the free edition should always have had, and a limit worth having',
+    puntos: [
+      '<b>Check my data is back in Acopio Basic</b>, with rebuilding stock totals and filling in movement IDs. None of them needed a Pro permission \u2014 they only read your own sheet \u2014 and the free edition is exactly where a messy inventory arrives, because importing a CSV has been open there since October.',
+      'What <i>is</i> hidden now <b>takes its box with it</b>. Before, the button went and the frame stayed, so the screen showed an explanation with nothing to press. And <b>a padlocked section no longer asks the server anything</b>: opening Settings made six calls, three for features that copy cannot use.',
+      '<b>Deleting stops at 200 at a time, and says so before, not after.</b> The number is not arbitrary \u2014 it is the most the trash can show you, so past it some of what you deleted could not be put back. More than that came from a file: undo that import instead, it has no limit.',
+      'The trash stays where you left it instead of jumping to the top each time you put something back, a tick stops clearing itself when new movements arrive, and <b>all 23 column headings explain what they are</b> \u2014 ten did before.'
+    ],
+    antes:  'A box that said \u201cpress it\u201d with nothing to press',
+    ahora:  'It is there, and it works' },
+
   { ver: '13.4',
     titulo: 'A movement you put back lands where it belongs, and lands now',
     puntos: [
@@ -30641,17 +30888,6 @@ var NOVEDADES = [
     ],
     antes:  '1,052 movements moved to the trash',
     ahora:  '1,052 removed \u2014 3 kept, because you had edited them' },
-
-  { ver: '13.1',
-    titulo: 'The document reader said your key was wrong. It was not.',
-    puntos: [
-      'If you set up the AI document reader on a <b>newly installed copy</b> and it kept refusing the key, <b>the key was never the problem</b> \u2014 and no key would have worked. Google closed the model this app asked for to accounts that had not already used it, so an older installation kept working and a brand new one could not get in.',
-      'The app now asks for the current model, and keeps the older names <b>behind it</b>, so an installation already using one carries on untouched.',
-      '<b>And it stopped testing a key against a single model.</b> A model that is gone and a key that is wrong fail differently, and only one of them is something you can fix \u2014 checking just one turned the first into the second.',
-      'Nothing to do beyond pasting this version in. A key that was refused before is accepted now.'
-    ],
-    antes:  'Error: the AI reader could not finish (error 404)',
-    ahora:  'Checked and saved' },
 
 ];
 

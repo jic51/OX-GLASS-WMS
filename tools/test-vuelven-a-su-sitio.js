@@ -31,6 +31,7 @@
 const fs   = require('fs');
 const path = require('path');
 const vm   = require('vm');
+const A    = require('./andamio.js');
 
 const RAIZ = path.join(__dirname, '..');
 const GS   = fs.readFileSync(path.join(RAIZ, 'Code_v3_fixed.gs'),    'utf8');
@@ -55,9 +56,12 @@ function fnSrc(src, nombre) {
   throw new Error('sin cerrar: ' + nombre);
 }
 
-const ctx = vm.createContext({ Date: Date, isNaN: isNaN, String: String });
-vm.runInContext(fnSrc(HTML, '_movsMasNuevoPrimero'), ctx);
-const ordenar = vm.runInContext('_movsMasNuevoPrimero', ctx);
+/* Con el andamio: `A.montar` arrastra las dependencias de lo que se pide.
+ * Ver la nota en test-papelera-se-alinea-sola.js — el trinquete de
+ * `test-andamio` frena el `fnSrc` propio dentro de runInContext, y esta
+ * semana demostró por qué cinco veces. */
+const ordenar = A.montar({ Date: Date, isNaN: isNaN, String: String },
+                         HTML, ['_movsMasNuevoPrimero'])._movsMasNuevoPrimero;
 
 function mov(id, ts) { return { movId: id, timestamp: ts }; }
 function ids(lista) { return lista.map(function (m) { return m.movId; }); }
@@ -122,9 +126,16 @@ console.log('\n═══ 4. y la vuelta es inmediata, no dentro de un rato ═�
 
 const restore = fnSrc(GS, 'manageMaterialLocked_');
 check('el servidor devuelve el movimiento restaurado, no sólo su id',
-  /movement:\s*parseArchiveRow\(restored/.test(restore));
+  /movement:\s*devuelto/.test(restore) && /parseArchiveRow\(restored/.test(restore));
 check('...y lo arma con la MISMA función que el resto de la app',
   /parseArchiveRow/.test(restore));
+/* Y SIN EL DINERO SI QUIEN PREGUNTA NO PUEDE VERLO. Devolver la fila entera
+ * metía `unitCost` y `totalCost` en la respuesta de cualquiera que pudiese
+ * restaurar. Lo cazó `test-cost-privacy` el mismo día; esto lo fija también
+ * aquí, junto al cambio que lo provocó. */
+check('...y le quita el precio a quien no puede verlo',
+  /canSeeCosts_\(auth\)/.test(restore) &&
+  /unitCost\s*=\s*null/.test(restore) && /totalCost\s*=\s*null/.test(restore));
 
 const restoreUI = fnSrc(HTML, '_restoreMovement') || '';
 check('la pantalla mete el movimiento al instante',

@@ -13238,3 +13238,104 @@ que ya es como funciona.
 
 **Y encaja con lo del retraso** (27/10): las dos son la misma idea —medir el
 desorden mientras es pequeño— y las dos salen de datos que la app ya tiene.
+
+---
+
+## ✅ 2/11 — HECHOS LOS TRES ENCARGOS
+
+Jose: *"¿puedes hacer 1, 2, 3? Si puedes atacar todos de una vez hazlo, pero
+asegúrate de medir y verificar todo al terminar."*
+
+### 1 · Básico
+
+| | Qué |
+|---|---|
+| ✅ | **«Check my data» vuelve a la edición gratis**, con reconstruir totales y rellenar ids. Ninguno necesitaba un permiso de Pro |
+| ✅ | «Report a problem» se queda fuera, y ahora **por el motivo correcto**: sin `script.send_mail` **no puede funcionar** |
+| ✅ | **Lo que se esconde se lleva su recuadro.** Se sube al `.field` que lo contiene; un botón suelto se esconde solo, como siempre |
+| ✅ | **Una sección con candado no llama al servidor.** Tres de las seis llamadas de abrir Ajustes eran de secciones bloqueadas |
+| ✅ | Las abiertas —espacio, ids, papelera— **siguen cargando**, y hay una comprobación para eso: la regla es por sección |
+
+### 2 · El tope de 200
+
+- `TOPE_BORRADO_A_LA_VEZ = 200`, **recortado antes de preguntar**.
+- El aviso dice **cuántos marcaste, cuántos van, por qué ese número** —*«es lo
+  máximo que la papelera puede enseñarte»*— y **que los demás siguen marcados**.
+- Y manda a **deshacer la importación** cuando vienen de un fichero, que no
+  tiene tope.
+- El **título** también cambia: *«Delete the first 200 of 340?»*. Un aviso que
+  dice 340 y borra 200 es el muro invisible que esto venía a quitar.
+
+### 3 · Las tres pequeñas
+
+| | Qué, y lo que resultó ser |
+|---|---|
+| ✅ | **La papelera ya no salta arriba.** No era el repintado: era que el repintado se lleva el scroll, porque la caja que se desplaza se construye ahí |
+| ✅ | **La casilla ya no se desmarca sola.** La poda miraba **las casillas recién pintadas** — y la tabla está paginada. Llegaban filas nuevas, se repintaba la primera página, y lo marcado más abajo dejaba de estar pintado. Ahora se poda contra **el filtro**, así que filtrar sigue limpiando y paginar ya no |
+| ✅ | **Las 23 cabeceras explican qué son.** Antes eran 10. El mecanismo estaba bien: faltaba el texto en 13 |
+
+### Lo que se midió
+
+- **33 comprobaciones nuevas** en `test-las-tres-del-2-de-noviembre.js`.
+- **Y se comprobó que muerden**: rompiendo cada arreglo a mano —esconder Check
+  my data otra vez, subir el tope a 2000, quitar la vuelta del scroll, borrar
+  el texto de una cabecera, devolver la llamada de una sección bloqueada— la
+  prueba falla en los cinco casos. Una prueba que no se ha visto fallar no
+  protege nada.
+
+### Lo que NO entró, y por qué
+
+**La ventana de Ajustes que se cierra sola al deshacer una importación.** Es la
+cuarta de la lista del 29/10 y la dejé fuera a propósito: tocar cuándo se cierra
+esa ventana afecta a todos los caminos que la cierran, no sólo a éste, y no
+quería meterlo en una versión que ya mueve la edición gratis, el borrado y la
+selección. **Queda pendiente, sola.**
+
+### Y lo que encontró la suite completa — **dos regresiones mías**
+
+Correr las 191 al terminar no fue un trámite: **salieron dos cosas que yo había
+roto el mismo día**, y ninguna se veía en las 33 comprobaciones que escribí para
+lo que estaba haciendo.
+
+#### 🔴 Una fuga de precios, metida en la v13.4
+
+Hacer que restaurar devolviera **el movimiento entero** —para que apareciera al
+instante— metió `unitCost` y `totalCost` en la respuesta de **cualquiera que
+pueda restaurar**, incluido un bodeguero con permiso de editar movimientos pero
+sin permiso de ver precios.
+
+Lo cazó `test-cost-privacy`, que recorre **toda** función capaz de mandar uno de
+esos objetos al navegador y exige que pregunte el rol o que los borre. **Se
+escribió para esto exactamente y mordió el mismo día.**
+
+**La lección:** devolver un objeto completo en vez de un id se paga mirando qué
+lleva dentro. Lo que se gana en pantalla no es gratis.
+
+#### 🔴 Y el arreglo de la casilla rompía una regla de septiembre
+
+El primer intento podaba la selección contra el filtro en vez de contra lo
+pintado. `test-seleccion-viva` —nacida del vídeo de Jose del 16/9— lo tumbó, y
+tenía razón: **«lo que no está pintado no está seleccionado»** protege de lo
+peor, que es Borrar armado sobre filas que nadie ve.
+
+**El fallo de Jose era más estrecho de lo que yo creí:** la ventana pinta un
+número fijo de filas, así que cada movimiento que llega por arriba **tira uno
+por abajo**. Si ése estaba marcado, la poda lo borraba. Con calma no pasa nunca;
+con cinco de golpe, sí — que es su *«no siempre»* exacto.
+
+**El arreglo bueno:** la poda se queda, y se ensancha la ventana **sólo cuando
+la lista ha crecido**. Plegar no alarga nada, así que plegar sigue desmarcando.
+
+#### Y tres más que eran de las pruebas, no del producto
+
+- **`test-ediciones-coinciden` tenía razón sobre la landing:** al devolver
+  «Check my data» a Básico, la página **seguía vendiéndolo como Pro**. Movido a
+  la lista de Básico — la edición gratis gana una función nombrada en la página
+  de ventas.
+- **`test-andamio`** frenó una deuda que yo había pagado cinco veces ese día:
+  mis pruebas extraían funciones a mano y reventaban cada vez que faltaba una
+  dependencia. **Migradas al andamio, que las arrastra solo, el contador bajó de
+  49 a 43**, y el techo con él. El trinquete sólo baja.
+- **`test-text-stays-text`**: lo mismo, funciones que faltaban en su contexto.
+
+**191 verdes, 0 rojas** al terminar.

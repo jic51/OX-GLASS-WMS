@@ -220,6 +220,13 @@ function mundo(){
     // Lista de dependencias a mano, igual que test-pricing, con el mismo
     // resultado: se cayó por una función que no tiene que ver con el texto.
     fnSrc(GS, 'autorDeLaFila_'),
+    // `alinearPapelera_` desde el 27/10: ensureTrashSheet_ la llama antes de
+    // ensanchar. Ver test-papelera-se-alinea-sola.js.
+    // `canSeeCosts_` desde el 2/11: restaurar devuelve el movimiento y le
+    // quita el precio a quien no puede verlo. Ver test-cost-privacy.
+    fnSrc(GS, 'canSeeCosts_'), fnSrc(GS, 'rolePerms_'),
+    fnSrc(GS, 'tipoDeMovimiento_'), fnSrc(GS, 'parseArchiveRow'),
+    fnSrc(GS, 'alinearPapelera_'),
     fnSrc(GS, 'ensureTrashSheet_'), fnSrc(GS, 'findMovementById_'),
     fnSrc(GS, 'findTrashedById_'), fnSrc(GS, 'ensureArchiveHistorySheet_'),
     fnSrc(GS, 'manageMaterialLocked_'),

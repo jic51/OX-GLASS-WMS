@@ -23,6 +23,7 @@
 const fs   = require('fs');
 const path = require('path');
 const vm   = require('vm');
+const A    = require('./andamio.js');
 
 const RAIZ = path.join(__dirname, '..');
 const GS   = fs.readFileSync(path.join(RAIZ, 'Code_v3_fixed.gs'), 'utf8');
@@ -86,9 +87,8 @@ check('y en ese orden', pNo < pOtra && pOtra < pEdit, { pNo: pNo, pOtra: pOtra, 
 
 console.log('\n═══ 3. lo que se dice al terminar, ejecutado ═══\n');
 
-const ctx = vm.createContext({});
-vm.runInContext(fnSrc(HTML, '_textoDeshecho'), ctx);
-const texto = vm.runInContext('_textoDeshecho', ctx);
+/* Con el andamio. Ver la nota en test-papelera-se-alinea-sola.js. */
+const texto = A.montar({}, HTML, ['_textoDeshecho'])._textoDeshecho;
 
 /* EL CASO NORMAL no menciona la papelera. Nombrar una papelera que no recibió
  * nada sólo siembra la duda de si hay algo ahí. */

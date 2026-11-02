@@ -82,7 +82,19 @@ console.log('         ' + ofertas.join(', '));
 const fuera = [...new Set(
   [...bloque('BASIC_FUERA').matchAll(/'([A-Za-z][\w]*)'/g)].map(m => m[1])
 )].sort();
-check('se encontró lo que la versión gratis esconde', fuera.length > 3, true);
+/* ESTO EXIGÍA `> 3`, Y SE PUSO ROJO CON UN CAMBIO CORRECTO (2/11).
+ *
+ * El 2/11 volvieron a la edición gratis «Check my data», reconstruir totales y
+ * rellenar ids —ninguno necesitaba un permiso de Pro—, así que la lista de lo
+ * escondido pasó de seis nombres a tres. El código mejoró y el guardia se
+ * quejó.
+ *
+ * El número nunca fue lo que importaba: esto sólo quiere saber si el análisis
+ * del fichero funcionó. Así que ahora se comprueba contra **dos nombres que
+ * tienen que estar** —uno de cada lista de dentro— en vez de contra un
+ * tamaño que baja cada vez que mejoramos la edición gratis. */
+check('se encontró lo que la versión gratis esconde',
+  fuera.indexOf('btnReportIssue') !== -1 && fuera.indexOf('permissions') !== -1, true);
 console.log('         ' + fuera.join(', '));
 
 const existeEnLaApp = new Set([...ofertas, ...fuera]);

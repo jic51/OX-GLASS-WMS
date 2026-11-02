@@ -30,6 +30,7 @@
 const fs   = require('fs');
 const path = require('path');
 const vm   = require('vm');
+const A    = require('./andamio.js');
 
 const RAIZ = path.join(__dirname, '..');
 const GS   = fs.readFileSync(path.join(RAIZ, 'Code_v3_fixed.gs'), 'utf8');
@@ -99,9 +100,11 @@ check('el importador manda su importId en cada movimiento',
 
 console.log('\n═══ 4. la regla de verdad, ejecutada ═══\n');
 
-const ctx = vm.createContext({ AC: AC });
-vm.runInContext(fnSrc(GS, 'esDeLaImportacion_'), ctx);
-const esDe = vm.runInContext('esDeLaImportacion_', ctx);
+/* Con el andamio: `A.montar` arrastra las dependencias de lo que se pide.
+ * Ver la nota en test-papelera-se-alinea-sola.js — el trinquete de
+ * `test-andamio` frena el `fnSrc` propio dentro de runInContext, y esta
+ * semana demostró por qué cinco veces. */
+const esDe = A.montar({ AC: AC }, GS, ['esDeLaImportacion_']).esDeLaImportacion_;
 
 function fila(opts) {
   const f = new Array(AC_WIDTH).fill('');

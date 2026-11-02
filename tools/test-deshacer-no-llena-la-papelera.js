@@ -30,6 +30,7 @@
 const fs   = require('fs');
 const path = require('path');
 const vm   = require('vm');
+const A    = require('./andamio.js');
 
 const RAIZ = path.join(__dirname, '..');
 const GS   = fs.readFileSync(path.join(RAIZ, 'Code_v3_fixed.gs'), 'utf8');
@@ -110,7 +111,7 @@ function filaAMano(nombre, movId) {
 function correr(filasArchivo, seLleva, vaALaPapelera) {
   const archivo = new Hoja([new Array(AC_WIDTH).fill('CAB')].concat(filasArchivo));
   const papelera = new Hoja([new Array(TRASH_WIDTH).fill('CAB')]);
-  const ctx = vm.createContext({
+  const ctx = ({
     AC: AC, AC_WIDTH: AC_WIDTH, TR: TR, TRASH_WIDTH: TRASH_WIDTH,
     SHEETS: { ARCHIVE: 'MASTER_ARCHIVE_V3', ARCHIVE_HISTORY: 'ARCHIVE_HISTORY' },
     ensureTrashSheet_: function () { return papelera; },
@@ -121,15 +122,18 @@ function correr(filasArchivo, seLleva, vaALaPapelera) {
     textSafeRow_: function (r) { return r; },
     Date: Date
   });
-  ctx.ss = { getSheetByName: function (n) { return n === 'MASTER_ARCHIVE_V3' ? archivo : null; } };
+  const ss = { getSheetByName: function (n) { return n === 'MASTER_ARCHIVE_V3' ? archivo : null; } };
   /* La de verdad, no un remedo: desde el 28/10 `borrarFilasEnTanda_`
    * ensancha la hoja antes de leerla, y una hoja falsa sin esa funcion
    * revienta — que es justamente lo que tiene que hacer si alguien la quita.
    * Ver test-hoja-estrecha-no-revienta.js. */
-  vm.runInContext(fnSrc(GS, 'ensureArchiveWidth_'), ctx);
-  vm.runInContext(fnSrc(GS, 'borrarFilasEnTanda_'), ctx);
-  const res = vm.runInContext('borrarFilasEnTanda_', ctx)(
-    ctx.ss, { email: 'jose@oxglass.com' }, seLleva, 300, vaALaPapelera);
+/* Con el andamio: arrastra las dependencias de lo que se pide. Ver la nota
+ * en test-papelera-se-alinea-sola.js. */
+  const listo = A.montar(ctx, GS, ['borrarFilasEnTanda_'],
+    { dobles: ['ensureTrashSheet_', 'ensureArchiveHistorySheet_',
+               'escribirHojaCompleta_', 'textSafeRow_'] });
+  const res = listo.borrarFilasEnTanda_(
+    ss, { email: 'jose@oxglass.com' }, seLleva, 300, vaALaPapelera);
   return { res: res, archivo: archivo, papelera: papelera };
 }
 
@@ -212,12 +216,9 @@ console.log('\n═══ 4. quién se editó sale del registro de auditoría ═
     [new Date(), 'MODIFY_MOVEMENT', 'jose@ox.com', 'Row 92 | Reason: viejo, sin id',   '', ''],
     [new Date(), 'DELETE_MOVEMENT', 'jose@ox.com', 'M8 (row 100) | Reason: dup',       '', '']
   ]);
-  const ctx = vm.createContext({
-    SHEETS: { AUDIT: 'AUDIT_LOG' },
-    ss: { getSheetByName: function (n) { return n === 'AUDIT_LOG' ? auditoria : null; } }
-  });
-  vm.runInContext(fnSrc(GS, 'movimientosEditados_'), ctx);
-  const editados = vm.runInContext('movimientosEditados_', ctx)(ctx.ss);
+  const ss = { getSheetByName: function (n) { return n === 'AUDIT_LOG' ? auditoria : null; } };
+  const editados = A.montar({ SHEETS: { AUDIT: 'AUDIT_LOG' } },
+                            GS, ['movimientosEditados_']).movimientosEditados_(ss);
 
   check('reconoce el id del formato nuevo', editados.M7 === true, Object.keys(editados));
   check('NO se inventa nada del formato viejo (sólo tenía un número de fila)',

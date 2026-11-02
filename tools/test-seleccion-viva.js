@@ -87,6 +87,10 @@ function mundo(nMovs){
     _MOV_PAGE_SZ: 10,
     _movRenderedRows: [],
     _movSelection: {},
+    /* Desde el 2/11: lo que distingue «llegaron filas nuevas» de «se plegó la
+       tabla». Empieza en 0 —la tabla no se ha pintado nunca— igual que en la
+       app, y esta prueba comprueba justo el plegado, donde no crece. */
+    _movTotalAnterior: 0,
     _colEdit: { mov: false },
     // Cuántas columnas hay visibles no dice nada aquí: sólo entra en el
     // colspan del pie. Un doble, y así el trozo extraído corre tal cual.

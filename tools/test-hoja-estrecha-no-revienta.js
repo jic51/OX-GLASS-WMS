@@ -30,6 +30,7 @@
 const fs   = require('fs');
 const path = require('path');
 const vm   = require('vm');
+const A    = require('./andamio.js');
 
 const RAIZ = path.join(__dirname, '..');
 const GS   = fs.readFileSync(path.join(RAIZ, 'Code_v3_fixed.gs'), 'utf8');
@@ -124,7 +125,7 @@ function correrBorrado(anchoDeLaHoja) {
   const archivo  = new HojaEstrecha([cab, fila], anchoDeLaHoja);
   const papelera = new HojaEstrecha([new Array(TRASH_WIDTH).fill('CAB')], TRASH_WIDTH);
 
-  const ctx = vm.createContext({
+  const ctx = ({
     AC: AC, AC_WIDTH: AC_WIDTH, TR: TR, TRASH_WIDTH: TRASH_WIDTH,
     SHEETS: { ARCHIVE: 'MASTER_ARCHIVE_V3', ARCHIVE_HISTORY: 'ARCHIVE_HISTORY' },
     ensureTrashSheet_: function () { return papelera; },
@@ -135,13 +136,15 @@ function correrBorrado(anchoDeLaHoja) {
     textSafeRow_: function (r) { return r; },
     Date: Date
   });
-  // La de verdad, sacada del archivo: si el arreglo fuera «ensanchar a mano en
-  // otro sitio», esto lo delataría.
-  vm.runInContext(fnSrc(GS, 'ensureArchiveWidth_'), ctx);
-  vm.runInContext(fnSrc(GS, 'borrarFilasEnTanda_'), ctx);
+  /* Con el andamio, que arrastra `ensureArchiveWidth_` por su cuenta — y eso
+   * es parte de lo que se mide: si el arreglo fuera «ensanchar a mano en otro
+   * sitio», no vendría con la función y esto lo delataría. */
+  const listo = A.montar(ctx, GS, ['borrarFilasEnTanda_'],
+    { dobles: ['ensureTrashSheet_', 'ensureArchiveHistorySheet_',
+               'escribirHojaCompleta_', 'textSafeRow_'] });
 
   const ss = { getSheetByName: function (n) { return n === 'MASTER_ARCHIVE_V3' ? archivo : null; } };
-  const res = vm.runInContext('borrarFilasEnTanda_', ctx)(
+  const res = listo.borrarFilasEnTanda_(
     ss, { email: 'jose@oxglass.com' },
     function (f) { return String(f[AC.MOV_ID]) === 'M1'; }, 300);
   return { res: res, archivo: archivo, papelera: papelera };

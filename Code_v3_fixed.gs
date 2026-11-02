@@ -128,7 +128,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '13.4';
+var APP_VERSION = '13.5';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -140,7 +140,7 @@ var APP_VERSION = '13.4';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '9b416fde';
+var APP_BUILD = 'bed84217';
 
 // ═══ ACOPIO BASIC — EL INTERRUPTOR DE LA VERSIÓN GRATIS ══════════════════════
 //
@@ -15606,8 +15606,24 @@ function manageMaterialLocked_(data, auth) {
      *
      * La recarga diferida se queda igual, como reconciliación. Esto no la
      * sustituye: le quita la espera de en medio. */
-    return { status: 'success', movId: rid,
-             movement: parseArchiveRow(restored, target.getLastRow()) };
+    /* ── Y SIN EL DINERO, SI QUIEN PREGUNTA NO PUEDE VERLO ─────────────────
+     *
+     * `parseArchiveRow` devuelve la fila ENTERA, y ahí van `unitCost` y
+     * `totalCost`. Devolverla tal cual metía el coste en la respuesta de
+     * cualquiera que pudiese restaurar — un bodeguero con permiso de editar
+     * movimientos pero sin permiso de ver precios incluido.
+     *
+     * Lo cazó `test-cost-privacy`, que recorre TODA función capaz de mandar
+     * uno de estos objetos al navegador y exige que pregunte el rol o que los
+     * borre. **La escribimos para esto exactamente, y mordió el mismo día.**
+     * Es el precio de devolver un objeto completo en vez de un id: lo que se
+     * gana en pantalla hay que pagarlo mirando qué lleva dentro. */
+    var devuelto = parseArchiveRow(restored, target.getLastRow());
+    if (!canSeeCosts_(auth)) {
+      devuelto.unitCost  = null;
+      devuelto.totalCost = null;
+    }
+    return { status: 'success', movId: rid, movement: devuelto };
 
   } else if (op === 'emptyTrash') {
     // ESTE SÍ ES DEFINITIVO, y es el único sitio de la app que lo es. Por eso

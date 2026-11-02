@@ -35,6 +35,7 @@
 const fs   = require('fs');
 const path = require('path');
 const vm   = require('vm');
+const A    = require('./andamio.js');
 
 const RAIZ = path.join(__dirname, '..');
 const GS   = fs.readFileSync(path.join(RAIZ, 'Code_v3_fixed.gs'), 'utf8');
@@ -98,12 +99,14 @@ Hoja.prototype.insertColumnsBefore = function (pos, n) {
   });
 };
 
-const ctx = vm.createContext({
-  TR: TR,
-  Logger: { log: function () {} }
-});
-vm.runInContext(fnSrc(GS, 'alinearPapelera_'), ctx);
-const alinear = vm.runInContext('alinearPapelera_', ctx);
+/* Con el andamio, no a mano: `A.montar` arrastra las funciones de las que
+ * depende la que se pide. Las cinco pruebas que escribí esta semana usaban un
+ * `fnSrc` propio y se rompieron cinco veces por una función que faltaba en el
+ * contexto. `test-andamio` lleva meses frenando esa forma con un trinquete, y
+ * tenía razón. */
+const ctx = A.montar({ TR: TR, Logger: { log: function () {} } },
+                     GS, ['alinearPapelera_']);
+const alinear = ctx.alinearPapelera_;
 
 /** Una papelera tal como quedó escrita cuando el archivo medía `anchoViejo`. */
 function papeleraVieja(anchoViejo) {

@@ -199,6 +199,9 @@ function mundo(){
      * ahora el movimiento ya convertido, con la MISMA funcion que usa
      * getInitialData, para que la pantalla pueda ponerlo al instante en vez
      * de esperar a la recarga. Ver test-vuelven-a-su-sitio.js. */
+    // `canSeeCosts_` desde el 2/11: restaurar devuelve el movimiento y le
+    // quita el precio a quien no puede verlo. Ver test-cost-privacy.
+    fnSrc(GS, 'canSeeCosts_'), fnSrc(GS, 'rolePerms_'),
     fnSrc(GS, 'tipoDeMovimiento_'), fnSrc(GS, 'parseArchiveRow'),
     fnSrc(GS, 'alinearPapelera_'),
     fnSrc(GS, 'ensureTrashSheet_'), fnSrc(GS, 'findMovementById_'),

@@ -324,7 +324,13 @@ m.seccion('NINGUNA prueba mantiene ya una lista de dependencias a mano');
    * porque `onEdit` ganó una llamada a `basicApagado_`. Y como `onEdit` es un
    * disparador simple envuelto en try/catch, NO dijo «no está definida»: dijo
    * que una celda estaba vacía. Décima mordida, y la más callada. */
-  const TECHO_RUNINCONTEXT = 44;
+  /* BAJA A 43 EL 2/11. Las cinco pruebas de esta semana nacieron con la forma
+   * vieja y se rompieron cinco veces por una función que faltaba en su
+   * contexto — `alinearPapelera_`, `parseArchiveRow`, `canSeeCosts_`,
+   * `ensureArchiveWidth_`. Este trinquete llevaba meses diciendo exactamente
+   * eso. Migradas al andamio, que arrastra las dependencias solo, el número
+   * bajó de 49 a 43. */
+  const TECHO_RUNINCONTEXT = 43;
   const porDentro = pruebas.filter(x => dentroDeRunInContext(x.src)).map(x => x.f);
   m.check('la forma «extractFn dentro de runInContext» no crece (hay ' +
           porDentro.length + ', el techo es ' + TECHO_RUNINCONTEXT + ') — es ' +
