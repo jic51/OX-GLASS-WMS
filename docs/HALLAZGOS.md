@@ -308,6 +308,50 @@ es exactamente para esto.
 
 ---
 
+### 🔴 N-17 · La app le dice a cada cliente que tiene la mitad del espacio que tiene
+
+Salió de una pregunta de Jose del 3/11 sobre si varios Sheets dan memoria
+infinita. Buscando la respuesta apareció esto:
+
+> **Google dobló el tope de celdas de un Sheet: de 10 a 20 millones.**
+> Disponible para todos desde el **10/09/2026**, y aplica a los archivos
+> nuevos, **a los que ya existen** y a los importados.
+> *(workspaceupdates.googleblog.com, 10/09/2026)*
+
+Y la app lleva esto escrito:
+
+```js
+var SHEET_CELL_LIMIT = 10000000;
+```
+
+**Consecuencia:** Ajustes → Sistema le dice a cada cliente que ha gastado el
+doble de lo que ha gastado, y los «años que te quedan» que calcula
+`spaceEstimate_` son **la mitad de los de verdad**.
+
+No es un número de adorno: es la cuenta que decide cuándo hay que construir el
+cierre de período (el disparador acordado el 27/10 es el **60 %**). Con el tope
+a la mitad, ese disparador salta **años antes de tiempo** — o sea, trabajo
+grande adelantado por un dato viejo.
+
+**Es la falta de siempre, y esta vez contra algo que no controlamos:** una
+constante escrita a mano que tiene que coincidir con un límite que pone Google
+y que Google cambia sin avisarnos.
+
+**Mi recomendación, y la decides tú:**
+
+1. Subir la constante a `20000000`. Es una línea.
+2. Y lo que de verdad importa: **que el número lleve fecha y fuente al lado**,
+   porque ya cambió dos veces (5M → 10M en 2022, 10M → 20M en 2026). Una
+   constante sin fecha no se vuelve a mirar nunca.
+3. Rehacer la tabla de `CUANDO-SE-LLENE-EL-SHEET.md`, que además usa
+   **22 columnas** cuando `AC_WIDTH` ya es **26**. Los dos errores van en
+   direcciones contrarias y no se cancelan.
+
+Con 20M celdas y 26 columnas, el techo real por archivo pasa de ~250.000–300.000
+movimientos a **~500.000**. Ningún cliente está cerca.
+
+---
+
 ### 🟠 N-10 · Movimientos que no se pueden marcar, y nada dice por qué
 
 Jose, 3/11, con dos capturas del teléfono: *"¿por qué hay movimientos que no
