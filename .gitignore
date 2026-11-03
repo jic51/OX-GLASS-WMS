@@ -12,3 +12,7 @@ node_modules/
 
 # Ficheros de prueba generados: se rehacen con semilla fija, no se versionan.
 pruebas/
+
+# Las capturas y medidas de tools/audit-responsive.js. Se regeneran corriéndolo
+# —son una lectura de hoy, no una fuente— y son 2 MB de PNG por pasada.
+audit/
