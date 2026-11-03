@@ -128,7 +128,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '13.6';
+var APP_VERSION = '13.7';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -140,7 +140,7 @@ var APP_VERSION = '13.6';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'bef45127';
+var APP_BUILD = 'dc64ec77';
 
 // ═══ ACOPIO BASIC — EL INTERRUPTOR DE LA VERSIÓN GRATIS ══════════════════════
 //
@@ -7173,7 +7173,35 @@ function backupEnabled_() {
 // tab with 1,000 blank rows still spends 1,000 × its column count. So this
 // multiplies getMaxRows by getMaxColumns rather than counting data — reporting
 // only filled cells would tell the customer they have room they do not have.
-var SHEET_CELL_LIMIT = 10000000;
+/* ── ESTE NÚMERO LO PONE GOOGLE, Y GOOGLE LO CAMBIA ───────────────────────
+ *
+ * Por eso va con FECHA Y FUENTE, no suelto. Es la lección del 3/11: estuvo en
+ * 10.000.000 durante semanas después de que Google lo doblara, y mientras
+ * tanto la app le dijo a cada cliente que había gastado **el doble** de lo que
+ * gastó, y que le quedaban **la mitad** de los años que le quedan.
+ *
+ * No es un número de adorno: este porcentaje es el disparador acordado el
+ * 27/10 para construir el cierre de período (al 60 %). Con el tope a la mitad,
+ * ese trabajo —semanas— saltaría años antes de tiempo.
+ *
+ * Y es la falta de siempre contra algo que NO controlamos: una constante
+ * escrita a mano que tiene que coincidir con un límite de otro. Lo único que
+ * se puede hacer es dejar escrito cuándo se miró y dónde, para que la
+ * siguiente persona sepa si el dato está viejo sin tener que investigarlo.
+ *
+ * Historia del número, que es lo que avisa de que volverá a cambiar:
+ *   2022         5.000.000 → 10.000.000
+ *   2026-09-10  10.000.000 → 20.000.000   (general, y aplica también a los
+ *                                          archivos que YA existen)
+ *
+ * Fuente, comprobada el 2026-11-03:
+ *   https://workspaceupdates.googleblog.com/2026/09/doubled-cell-limits-in-google-sheets-now-generally-available.html
+ *
+ * Si hoy es mucho después de esa fecha, vuelve a mirarlo antes de fiarte.
+ */
+var SHEET_CELL_LIMIT        = 20000000;
+var SHEET_CELL_LIMIT_FECHA  = '2026-09-10';   // cuándo Google lo puso así
+var SHEET_CELL_LIMIT_VISTO  = '2026-11-03';   // cuándo lo comprobamos
 
 function getSpaceUsage(auth) {
   auth = requireAuth_('ADMIN');
@@ -7194,6 +7222,12 @@ function getSpaceUsage(auth) {
   return {
     cellsUsed:  cellsUsed,
     cellLimit:  SHEET_CELL_LIMIT,
+    /* Jose, 3/11: *"eso hace nuestra vida más increíble, debemos mostrar eso
+     * en la parte de la app que calcula la memoria."* Tiene razón y cuesta un
+     * campo: el cliente que miró esta pantalla hace un mes vio la mitad de
+     * espacio, y sin esta línea no tiene forma de saber que el número cambió
+     * por una buena razón y no por un error nuestro. */
+    cellLimitSince: SHEET_CELL_LIMIT_FECHA,
     pct:        Math.min(100, (cellsUsed / SHEET_CELL_LIMIT) * 100),
     tabs:       sheets.length,
     biggestTab: biggest,

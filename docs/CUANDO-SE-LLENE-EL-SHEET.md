@@ -11,16 +11,42 @@ Jose, al contestar un comentario en Reddit que preguntaba justo por esto: *"déj
 **Qué significa, para que dentro de un año nadie lo lea como un descuido:**
 
 - **No se puede decir en público que la app maneja varios archivos.** No los maneja. Lo que se dice es lo que hace —mide y avisa— y que el cierre de período está diseñado y sin construir. Así está escrito en `SALIR-A-PUBLICAR.md` § 5.2.
-- **El disparador para construirlo ya existe y es un número:** el día que el primer cliente cruce el **60 %** de las 10M celdas. La app ya calcula ese porcentaje, así que no hace falta vigilarlo a mano.
+- **El disparador para construirlo ya existe y es un número:** el día que el primer cliente cruce el **60 %** de las 20M celdas. La app ya calcula ese porcentaje, así que no hace falta vigilarlo a mano.
 - **Por qué no ahora:** mover 100.000 filas no cabe en los seis minutos de una ejecución —hay que partirlo en tandas y poder retomarlas— y antes de cerrar nada hay que calcular el stock por los dos caminos y comprobar que cuadran exactamente. Es trabajo grande, y **ningún cliente está cerca**. Construirlo ahora es gastar semanas en el problema del año 2040.
 
 ---
 
 ## Los números reales
 
+> ## ⚠️ ACTUALIZADO EL 3/11/2026 — LOS NÚMEROS DE ABAJO ESTABAN MAL POR DOS LADOS
+>
+> **1. Google dobló el tope.** De 10 a **20 millones de celdas** por archivo,
+> general desde el **10/09/2026**, y aplica también a los archivos que YA
+> existen. La app lo tenía en 10M, así que durante semanas le dijo a cada
+> cliente que había gastado **el doble** de lo que gastó y que le quedaban **la
+> mitad** de los años. Corregido en la v13.7, y ahora la constante lleva fecha
+> y fuente al lado — ver N-17 en `HALLAZGOS.md`.
+>
+> **2. La app engordó.** Esta tabla calculaba con **22 columnas** y `AC_WIDTH`
+> ya es **26** (entró `IMPORT_ID` en la v13.2).
+>
+> Los dos errores van en direcciones contrarias y **no se cancelan**: el del
+> tope pesa el doble. Resultado neto, con 20M celdas y 26 columnas:
+>
+> | | Antes se decía | De verdad |
+> |---|---|---|
+> | Techo si el archivo no tuviera nada más | ~454.000 mov. | **~769.000** |
+> | Techo práctico (el archivo lleva 9 pestañas más) | ~250–300.000 | **~500.000** |
+> | Bodega grande (300 mov./día) | ~3,5 años | **~4,5 años** |
+> | Operación intensa (500 mov./día) | ~2 años | **~2,7 años** |
+>
+> **Y lo que NO cambia, que es lo que de verdad manda:** el rendimiento
+> empieza a sufrir alrededor de las **100.000 filas**, y eso no lo dobló nadie.
+> Llegar al techo de celdas nunca fue el problema; ponerse lento, sí.
+
 | Límite de Google Sheets | Valor |
 |---|---|
-| Celdas por archivo (**todas las pestañas juntas**) | **10,000,000** |
+| Celdas por archivo (**todas las pestañas juntas**) | **20,000,000** · desde el 10/09/2026 |
 | Pestañas por archivo | 200 |
 | Rendimiento empieza a sufrir | ~100,000 filas |
 | Filas | Sin límite propio — las acota el tope de celdas |
