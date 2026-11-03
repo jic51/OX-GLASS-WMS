@@ -45,9 +45,18 @@ function extractFn(name) {
 const sandbox = { console, Date };
 vm.createContext(sandbox);
 vm.runInContext([
-  /var AC = \{[\s\S]*?\};/.exec(GS)[0],
-  /var AC_WIDTH = \d+;/.exec(GS)[0],
-  /var SHEET_CELL_LIMIT = \d+;/.exec(GS)[0],
+  /* `\s*` alrededor del `=`, no un espacio exacto. Esta prueba se cayó el 3/11
+   * —con un `TypeError` sobre `null`, que no dice nada de nada— porque la
+   * constante pasó a escribirse alineada con sus dos hermanas nuevas:
+   *
+   *     var SHEET_CELL_LIMIT        = 20000000;
+   *
+   * El producto estaba bien; lo que se rompió fue la forma de leerlo. Es la
+   * tercera vez que un regex de esta suite se cae por un espacio, así que
+   * queda escrito: **el espaciado NO es parte de lo que se comprueba.** */
+  /var AC\s*=\s*\{[\s\S]*?\};/.exec(GS)[0],
+  /var AC_WIDTH\s*=\s*\d+;/.exec(GS)[0],
+  /var SHEET_CELL_LIMIT\s*=\s*\d+;/.exec(GS)[0],
   extractFn('spaceEstimate_')
 ].join('\n'), sandbox);
 const { spaceEstimate_, AC, AC_WIDTH, SHEET_CELL_LIMIT } = sandbox;

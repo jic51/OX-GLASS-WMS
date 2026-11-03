@@ -3649,6 +3649,52 @@
       td .btn-danger,td .rm-btn,td .btn-remove-loc,td .cfg-btn-danger
         {min-height:var(--h-btn-lg);min-width:var(--h-btn-lg)}
 
+      /* ── LAS CASILLAS DE MARCAR — 13 PÍXELES, MEDIDOS ────────────────────
+       *
+       * Jose, 3/11: *"debemos trabajar en la vista de las ventanas en teléfono,
+       * la mayoría no está optimizada."* Corrí la cinta métrica
+       * (`tools/audit-responsive.js`) y la respuesta no fue la esperada: **el
+       * reparto está bien**. Las tablas que se salen lo hacen dentro de su
+       * propia caja, que es correcto, y la página entera sólo se va de lado en
+       * un sitio y por 4 px.
+       *
+       * Lo que estaba mal, en los tres tamaños de teléfono y en la tableta:
+       *
+       *     mov-select-cb    13 × 13 px
+       *     movSelAll        13 × 13 px
+       *     stock-select-cb  13 × 13 px
+       *
+       * Trece píxeles — el tamaño por defecto del navegador, o sea el que sale
+       * cuando nadie decidió nada. Apple pide 44 y Android 48.
+       *
+       * ── Y NO ES UNA CASILLA CUALQUIERA ───────────────────────────────────
+       *
+       * Es la que ARMA el botón de borrar, en una bodega, muchas veces con
+       * guantes. Es exactamente el razonamiento que este bloque ya aplicó a
+       * los botones de borrar unas líneas más arriba —*"fallar un tap en Edit
+       * cuesta un toque más; fallarlo en Delete borra algo"*— y que a las
+       * casillas no se le aplicó porque un `<input>` no hereda nada de lo de
+       * arriba. El mismo descuido que dejó la ✕ del popup en 16×19.
+       *
+       * ── POR QUÉ 34 Y NO 44 ───────────────────────────────────────────────
+       *
+       * Porque es `--h-btn-tabla`, la altura que los botones de esa misma fila
+       * YA tienen. A 34 la casilla crece casi siete veces en área y la fila no
+       * crece ni un píxel. A 44 habría que estirar cada fila de la tabla por
+       * una columna de casillas, que es el reparto que este bloque rechazó
+       * con razón para los botones de tabla.
+       *
+       * `accent-color` para que se siga viendo como una casilla del sistema
+       * —no es un control nuevo, es el mismo más grande— y `margin:0` porque
+       * el navegador le pone un margen propio que descentraría la celda. */
+      .mov-select-cb,.stock-select-cb,#movSelAll{
+        width:var(--h-btn-tabla);height:var(--h-btn-tabla);margin:0;
+        accent-color:var(--accent);cursor:pointer}
+      /* La celda que la contiene, para que la columna no la recorte. El Stock
+         no tiene clase propia aquí: su `<th>` lleva el ancho escrito en línea
+         y la tabla se ensancha sola cuando el contenido lo pide. */
+      .mov-sel-cell{width:var(--h-btn-tabla);text-align:center}
+
       .acct-btn{width:44px;height:44px;font-size:var(--fs-lg)}
       .cfg-bell{min-width:var(--h-btn-lg);min-height:var(--h-btn-lg)}
       .nav button{min-height:var(--h-btn-lg)}
@@ -5861,7 +5907,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '13.6';
+var APP_VERSION = '13.7';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5873,7 +5919,7 @@ var APP_VERSION = '13.6';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'bef45127';
+var APP_BUILD = 'dc64ec77';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -11002,9 +11048,61 @@ function _syncTransferSrcRacks(racks, locs){
   });
 }
 
+/* PULSAR UNA ESTANTERÍA LLENA LA FILA VACÍA; SÓLO AÑADE SI NO HAY NINGUNA.
+ *
+ * Jose, 3/11, con dos capturas: *"al dar clic en la locación sugerida, se
+ * agrega otro campo más a lo que ya hay, dejando los demás campos vacíos y que
+ * deben ser borrados antes de guardar porque si no sale un error."*
+ *
+ * ── LA FORMA DEL FALLO ────────────────────────────────────────────────────
+ *
+ * Dos líneas que hacen exactamente lo que su nombre dice, y nadie decidió qué
+ * pasa cuando se juntan:
+ *
+ *   · `_initMultiTransferSection` SIEMBRA una fila vacía al abrir, a propósito,
+ *     para que la pantalla no se vea como una cabecera suelta y un botón.
+ *   · esto llamaba a `addTransferRow`, que AÑADE. Siempre.
+ *
+ * Resultado: la sembrada vacía arriba y la buena debajo — y la vacía no deja
+ * guardar. Ninguna de las dos está mal por su cuenta; lo que faltaba era la
+ * decisión de arriba.
+ *
+ * Y el arreglo NO es dejar de sembrar la fila: eso devolvería la pantalla
+ * desnuda que la siembra vino a quitar, y rompería el camino de quien teclea
+ * la estantería a mano sin usar las sugerencias.
+ */
 function addTransferRowFromChip(chip){
   var rack = chip.getAttribute('data-rack');
   var qty  = _qty(chip.getAttribute('data-qty'));
+
+  /* Una fila está VACÍA si no tiene ni origen ni cantidad ni destino. El
+   * destino cuenta: alguien puede haber elegido a dónde va antes de decir de
+   * dónde sale, y pisarle eso sería borrarle lo que acaba de escribir. */
+  var libre = null;
+  var filas = document.querySelectorAll('#transferRowsContainer .transfer-row');
+  for (var i = 0; i < filas.length; i++){
+    var r = filas[i].querySelector('.tr-rack');
+    var q = filas[i].querySelector('.tr-qty');
+    var d = filas[i].querySelector('.tr-dest');
+    if (!(r && r.value.trim()) && !(q && q.value.trim()) && !(d && d.value.trim())){
+      libre = filas[i];
+      break;
+    }
+  }
+
+  if (libre){
+    libre.querySelector('.tr-rack').value = rack;
+    if (qty) libre.querySelector('.tr-qty').value = qty;
+    /* El mismo final que `addTransferRow`: validar, repintar las sugerencias
+     * —para que esta estantería pase a «usada»— y dejar el cursor en el
+     * destino, que es lo único que falta por decir. */
+    validateTransferRows();
+    renderTransferLocPicker();
+    var dest = libre.querySelector('.tr-dest');
+    if (dest) dest.focus();
+    return;
+  }
+
   addTransferRow(rack, qty, '');
   renderTransferLocPicker(); // refresh chips so this rack shows as "used"
 }
@@ -16751,6 +16849,18 @@ function _drawSpaceBox(st){
     '</div>' +
     '<div style="margin-top:.45rem">' + _fmtInt(st.cellsUsed) + ' of ' + _fmtInt(st.cellLimit) +
       ' cells · ' + _fmtInt(st.movements) + ' movements · ' + _he(String(st.tabs || 0)) + ' tabs</div>' +
+    /* POR QUÉ ESTA LÍNEA EXISTE. Google dobló el tope el 10/09/2026, así que
+     * quien miró esta pantalla antes vio la MITAD de espacio y el doble de
+     * porcentaje gastado. Sin decir de dónde sale el número, ese cambio se lee
+     * como un error nuestro — y un número sobre su almacén que cambia solo y
+     * sin explicación es exactamente lo que hace que alguien deje de creerse
+     * la pantalla entera. */
+    (st.cellLimitSince
+      ? '<div style="margin-top:.2rem;font-size:.72rem;color:var(--muted)">' +
+        'Google raised the per-file limit to ' + _fmtInt(st.cellLimit) +
+        ' cells on ' + _he(String(st.cellLimitSince)) + ', so this file holds about twice ' +
+        'what it did before.</div>'
+      : '') +
     '<div style="margin-top:.25rem">' + _he(line) + '</div>' +
     (pct >= 60
       ? '<div style="margin-top:.45rem;color:' + (pct >= 85 ? 'var(--red)' : 'var(--yellow)') + '">' +
@@ -31073,6 +31183,17 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '13.7',
+    titulo: 'Twice the room you thought you had, and two things that fought your thumb',
+    puntos: [
+      '<b>Google doubled what one spreadsheet holds \u2014 from 10 to 20 million cells \u2014 on 10 September 2026, and it applies to files that already exist.</b> Acopio was still counting against the old number, so Settings \u2192 System told you it had used <i>twice</i> what it really had, and that you had <i>half</i> the years left. Fixed, and the limit now carries the date and the source next to it, because this is the second time Google has raised it.',
+      'In practice: a file holds about <b>500,000 movements</b> rather than 250,000. At 300 movements a day that is four and a half years in the active file alone, and older ones are archived long before that.',
+      '<b>In Transfer, clicking a suggested rack now fills the empty row</b> instead of adding another one below it. Before, you were left with a blank row that had to be deleted by hand or the save refused \u2014 which made the suggestion slower than typing.',
+      '<b>The tick boxes measured 13 pixels on a phone.</b> That is the browser default, which is what you get when nobody decides. They are now the same size as the buttons already in that row \u2014 almost seven times the area \u2014 on touchscreens only. It is the box that arms Delete, pressed in a warehouse, often with gloves on.'
+    ],
+    antes:  'A 13-pixel target in front of a Delete button',
+    ahora:  'The same box, big enough to hit' },
+
   { ver: '13.6',
     titulo: 'What a material is worth, and an undone import that finally goes away',
     puntos: [
@@ -31106,16 +31227,6 @@ var NOVEDADES = [
     antes:  'A movement from August, first in the list',
     ahora:  'Back in its place, the moment you press it' },
 
-  { ver: '13.3',
-    titulo: 'Deleting works again \u2014 and the reason it broke is now guarded',
-    puntos: [
-      'v13.2 added a column to the movement record, and <b>deleting stopped working</b> on installations that already had data. A spreadsheet is as wide as it was the day it was created; the app asked for one column more than it had, and the whole operation failed.',
-      'Fixed \u2014 and more to the point, <b>there is now a test that makes this impossible to repeat</b>. It builds a sheet that fails the same way a real one does, runs the real code against it, and sweeps the whole file for any other place that reads a full row without widening first.',
-      'The Acopio Pro window no longer cuts its own title off halfway, and the trash stops printing \u201cDeleted by\u201d when it does not know who.',
-      'And the <b>\u2715 beside the file picker</b> stays next to the picker instead of dropping onto the line below when the filename is long.'
-    ],
-    antes:  'Delete did nothing, with no message',
-    ahora:  'It deletes \u2014 and a test keeps it that way' },
 
 ];
 
