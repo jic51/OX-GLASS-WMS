@@ -88,7 +88,18 @@ const SIZES=[
 const TABS=[['dashboard','btn-dashboard'],['movements','btn-movements'],['projects','btn-projects'],['warehouse','btn-warehouse'],['incoming','btn-incoming']];
 
 (async()=>{
- const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'});
+ /* LA RUTA DEL NAVEGADOR VIENE DEL ENTORNO, NO ESCRITA AQUÍ.
+  *
+  * Estaba clavada a `chromium-1194`, y el día que la máquina trajo la 1243
+  * esta herramienta dejó de arrancar — o sea que la única cinta métrica que
+  * tenemos del teléfono llevaba sin poder usarse quién sabe cuánto, y nada lo
+  * dijo. El mismo patrón de siempre: dos cosas que tienen que coincidir —la
+  * ruta escrita y el navegador instalado— sin que nada lo obligue.
+  *
+  * Ahora manda `CHROME_PATH`, que es lo que ya usa el resto de la suite, y si
+  * no está se deja que Playwright busque el suyo. */
+ const b=await chromium.launch(
+   process.env.CHROME_PATH ? {executablePath:process.env.CHROME_PATH} : {});
  const findings=[];
  fs.mkdirSync('audit',{recursive:true});
  for(const s of SIZES){

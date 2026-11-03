@@ -141,3 +141,71 @@ que una captura parezca real; lo único que cambia es a quién pertenece.
 
 O sea: **`MY WAREHOUSE` para probar, una copia suya con nombres ficticios para
 publicar.** Sin elegir entre las dos cosas.
+
+---
+
+## 📍 DÓNDE ESTAMOS DE VERDAD — 3/11/2026
+
+Jose, 3/11: *"¿cuántas ramas hay en ese repo? ¿Cuál es la que tiene todo bien?
+¿Tenemos una rama que sea sólo para pruebas? ¿Tenemos una rama que sea sólo para
+avanzar en las mejoras de la siguiente versión? Recuerda el vídeo que te envié,
+¿estamos trabajando así?"*
+
+**No. No estamos trabajando así.** Este documento describía un plan que se montó
+y después se dejó de usar, y el documento no lo decía. Medido hoy:
+
+| Rama | Último commit | Versión | Qué es |
+|---|---|---|---|
+| **`consolidado-v8.8`** | **2/11** | **v13.6** | **Aquí está todo. Es la buena.** |
+| `estable` | 23/10 | v12.95 | La de arreglos del plan. **Parada** |
+| `siguiente` | 23/10 | v12.95 | La de mejoras. **Parada, en el mismo commit que `estable`** |
+| `main` | 28/07 | v7.2 | El prototipo de julio |
+| `security/v7.3-injection-and-auth-fixes` | — | — | Suelta, de una revisión vieja |
+| `claude/ox-glass-warehouse-3d-plans-rnj3gs` | — | — | Suelta, de una sesión |
+
+### Lo que pasó, en dos frases
+
+Las dos ramas **sí se crearon** el 27/09 y **sí se usaron** durante casi un mes
+—de la v12.15 a la v12.95—. El 23/10 el trabajo volvió a `consolidado-v8.8`,
+que este mismo documento decía que se quedaba quieta, y ahí siguió: **treinta
+versiones**, hasta la v13.6.
+
+### La buena noticia, comprobada y no supuesta
+
+```
+git merge-base --is-ancestor 4b89f18 HEAD   →  sí
+git rev-list --left-right --count HEAD...origin/estable   →  55  0
+```
+
+**`consolidado-v8.8` contiene entero lo que hay en `estable` y `siguiente`**, y
+va 55 commits por delante sin nada por detrás. **No se perdió ni un cambio.** Las
+dos ramas no son trabajo paralelo que haya que reconciliar: son dos punteros
+viejos sobre la misma línea.
+
+Así que volver al plan **no cuesta una fusión**. Es adelantar los dos punteros.
+
+### Lo que falta para trabajar como dice el vídeo
+
+El propio documento ya lo había dicho y sigue siendo verdad: **la pieza que
+falta no es Git**.
+
+| | Qué | Estado |
+|---|---|---|
+| 1 | Una copia de Acopio para probar, separada del almacén de OX | 🙋 Jose dijo que tiene **«MY WAREHOUSE»**. **Falta confirmar que está al día y que es ahí donde se estrena** |
+| 2 | Que `estable` y `siguiente` apunten a la v13.6 | 🔴 Cinco minutos. Sin decisión que tomar |
+| 3 | Decidir qué pasa con `consolidado-v8.8` | 🙋 Decisión de Jose |
+| 4 | Que una entrega sea una etiqueta | ✅ Hecho: 15 etiquetas derivadas del historial (falta la v13.5, ver abajo) |
+| 5 | Las tres ramas sueltas (`main`, `security/…`, `claude/…`) | 🙋 Decisión de Jose |
+
+**Y el orden no ha cambiado desde septiembre: primero la copia de pruebas.**
+Mientras no esté confirmada, las dos ramas siguen siendo burocracia — el sitio
+donde se estrena una mejora seguiría siendo el almacén de OX.
+
+### Por qué esto se fue de las manos sin que nadie lo notara
+
+Es el patrón que este proyecto lleva cuarenta veces encontrando, esta vez a
+nivel de repositorio: **un documento que describe cómo se trabaja, y el trabajo
+de verdad, sin nada que obligue a que coincidan.** El documento decía
+«✅ HECHAS» y las ramas llevaban diez días paradas.
+
+Por eso esta sección empieza con una tabla de lo medido y no con un plan.

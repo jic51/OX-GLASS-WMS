@@ -81,7 +81,14 @@ H-02, H-09, H-10, H-12, H-14, H-15, H-16, H-18, H-19, E-02, E-04.
 | 🔴 N-02 | La casilla se desmarca sola — mi arreglo del 2/11 tiene un agujero medido | **Siguiente tanda** |
 | 🟠 N-09 | Restaurar pliega la lista a la primera página, y por eso no se ve volver el movimiento | Anotado el 3/11 |
 | 🟠 N-03 | Project View no tiene cabeceras explicadas — no hay mecanismo, no falta texto | Pequeño y cerrado |
+| 🟠 N-14 | Transfer: la estantería sugerida añade fila en vez de llenar la vacía | Anotado el 3/11. Dos líneas |
+| 🟠 N-15 | El teléfono: las casillas miden **13 px** donde el dedo pide 44 | Medido el 3/11 |
+| 🟠 N-10 | Un movimiento archivado no se puede marcar y nada dice por qué | Anotado el 3/11 |
+| 🟠 N-11 | El Dashboard ve materiales que Movements no, y hay que acordarse | Anotado el 3/11 |
+| 🟡 N-13 | «64 of 65»: la explicación está en un *hover*, y en el móvil no hay | Anotado el 3/11 |
+| 🟡 N-12 | La columna de fecha mezcla dos datos con dos formatos | Anotado el 3/11 |
 | — | La versión y el código de compilación en Ajustes | Aprobado, sin construir |
+| — | **Las ramas no son las del plan** — ver `DOS-RAMAS.md` §3/11 | 🙋 Necesita tus manos |
 | — | La ventana de Ajustes que se cierra sola al deshacer una importación | Del 29/10, sigue abierta |
 
 ### 🙋 Abierto y **necesita tus manos**
@@ -298,6 +305,206 @@ verlo.**
 **El arreglo:** en vez de plegar a la página 1, **ensanchar hasta que la fila
 buscada esté pintada**. Y envolverlo en `_repintarSinSaltar`, que ya existe y
 es exactamente para esto.
+
+---
+
+### 🟠 N-10 · Movimientos que no se pueden marcar, y nada dice por qué
+
+Jose, 3/11, con dos capturas del teléfono: *"¿por qué hay movimientos que no
+puedo seleccionar? Son los más viejos que hay, creo."*
+
+**Acertó.** Son los **archivados** (`ARCHIVE_HISTORY`), y la regla está escrita a
+propósito en `renderMovements`:
+
+```js
+var selCell = isAdmin
+  ? '<td class="mov-sel-cell">' + (m.archived ? '' : '<input …>') + '</td>'
+```
+
+Un movimiento archivado **no se puede editar ni borrar**, así que ofrecer la
+casilla sería ofrecer un callejón sin salida. La decisión es correcta.
+
+**Lo que está mal es el silencio.** Una fila con la casilla simplemente ausente,
+sin una palabra, no se lee como «esto no se puede tocar»: se lee como que la app
+se rompió. Y la prueba es que Jose lo mandó como fallo.
+
+Y fíjate en el contraste, porque la app ya sabe hacerlo bien dos líneas más
+abajo: un movimiento **sin id** sí lleva casilla, **desactivada y con su
+explicación** (*"This movement has no ID yet"*). El archivado no lleva nada.
+
+**El arreglo:** la misma casilla desactivada, con su motivo — *"Archived
+movements are read-only — they can be viewed and exported, not edited."* Es una
+línea, y convierte un fallo aparente en una respuesta.
+
+---
+
+### 🟠 N-11 · El Dashboard enseña materiales que Movements no, y hay que acordarse
+
+Jose: *"tuve que cargar el historial viejo, todo, para poder ver los nombres que
+veía en dashboard pero no en movements, y lo hice porque recordé algo sobre eso,
+**no porque la app me lo dijo o sugirió**."*
+
+Esa última frase es el hallazgo entero.
+
+**Por qué pasa, y es correcto que pase:** el Dashboard suma TODO el histórico
+—por eso el material aparece con su stock— mientras que Movements sólo trae lo
+reciente, para que la app no tenga que descargar doce meses en cada entrada. Las
+dos cosas están bien por separado.
+
+**Lo que falta es la frase que las une.** Cuando el filtro o la búsqueda de
+Movements da menos resultados de los que el Dashboard conoce para ese material,
+la app lo sabe —tiene los dos números— y no lo dice. Debería: *"3 movements
+here. This material also has older ones in the archive — load them."*, con el
+botón al lado.
+
+Hoy la app depende de que el usuario **recuerde** una característica. Eso no es
+una característica: es una trampa con un truco.
+
+---
+
+### 🟡 N-12 · La columna de fecha enseña dos cosas distintas con dos formatos
+
+Se ve en las mismas capturas, y Jose no lo mandó — lo vi midiendo lo anterior:
+
+```
+2026-07-20            ← unas filas
+03/31/2026 08:11      ← otras
+```
+
+No es «archivadas contra activas». Es esto, de `renderMovements`:
+
+```js
+_he(m.dateRec || m.timestamp || '—')
+```
+
+**La fecha de recepción si la hay; si no, la de captura.** Dos datos con
+significados distintos —cuándo llegó el material contra cuándo alguien lo
+tecleó— en la misma columna, sin etiqueta que los distinga, y encima con dos
+formatos distintos porque vienen de sitios distintos.
+
+Una fecha en un almacén se usa para discutir con un proveedor. Que a veces sea
+una cosa y a veces otra, sin decirlo, hace la columna inservible para eso.
+
+**Lo mínimo:** un formato único para las dos. **Lo correcto:** que la ayuda al
+pasar por encima diga cuál de las dos es.
+
+---
+
+### 🟡 N-13 · «64 of 65» — la explicación existe y en el teléfono no se puede leer
+
+Jose: *"¿qué significa 64 of 65? ¿Qué debo intuir o entender por eso?"*
+
+**Significa: 64 disponibles de 65 contabilizados.** El de abajo es la suma de
+todo lo que la app sabe de ese material —en bodega, en obra, reservado,
+desperdiciado— y el grande es lo que se puede sacar hoy. La diferencia de 1 está
+en alguno de los otros estados.
+
+**Y la app ya lo explica**: la barra de colores lleva una ayuda con el desglose
+completo, línea por línea, incluidos los ceros.
+
+**El problema es que esa ayuda sale al pasar el ratón por encima, y en un
+teléfono no hay ratón.** Jose lo está mirando en el móvil, que es donde se usa
+esto en una bodega. Así que la respuesta está escrita y es inalcanzable
+justamente en el aparato donde más falta hace.
+
+**El arreglo:** que en pantalla táctil el bloque se abra al tocarlo. Y como el
+número de arriba es el que se lee, ponerle debajo la palabra que falta
+—`available`— para que no haya que buscar nada en el caso normal.
+
+---
+
+### 🟠 N-14 · Transfer: la estantería sugerida añade una fila en vez de llenar la vacía
+
+Jose, con dos capturas: *"al hacer transfer aparece la parte donde se pone
+source rack, qty, destination, etc., pero al dar clic en la locación sugerida,
+se agrega otro campo más a lo que ya hay, dejando los demás campos vacíos y que
+deben ser borrados antes de guardar porque si no sale un error."*
+
+**Encontrado, y son dos líneas de código que no se conocen entre sí.**
+
+`_initMultiTransferSection` siembra **una fila vacía** al abrir, a propósito,
+para que la pantalla no se vea como una cabecera suelta:
+
+```js
+addTransferRow('', '', '', true /* silent */);
+```
+
+Y pulsar la estantería sugerida hace esto:
+
+```js
+function addTransferRowFromChip(chip){
+  …
+  addTransferRow(rack, qty, '');   // ← AÑADE. Siempre.
+}
+```
+
+Así que quedan dos: la sembrada, vacía, y la buena. Y la vacía no deja guardar.
+
+**La forma del fallo es la de siempre**: cada una de las dos hace exactamente lo
+que su nombre dice, y nadie decidió qué pasa cuando se juntan.
+
+**El arreglo:** que al pulsar la estantería se **rellene la primera fila vacía**
+si la hay, y sólo se añada una nueva cuando todas estén en uso. Es lo que
+cualquiera espera y quita el paso de borrar a mano.
+
+---
+
+### 🟠 N-15 · El teléfono, MEDIDO — y el problema no es el que parece
+
+Jose: *"creo que sí está en el backlog pero debemos trabajar en la vista de las
+ventanas en teléfono, la mayoría no está optimizada."*
+
+Había una cinta métrica escrita para esto (`tools/audit-responsive.js`) que
+abre la app de verdad en seis tamaños y mide. **Llevaba sin poder arrancar**
+—ver N-16— así que lo primero fue arreglarla. Esto es lo que dice:
+
+| Tamaño | Pestaña | La página se va de lado | Demasiado pequeño para el dedo |
+|---|---|---|---|
+| phone-360 | movements | **4 px** | 3 |
+| phone-360 | dashboard | 0 | 2 |
+| phone-390/430 | todas | **0** | 2–3 |
+| tablet | todas | 0 | 2–6 |
+
+**Y la conclusión no es la esperada: el reparto está bien.** Las tablas que
+«se salen» lo hacen **dentro de su propia caja**, que es correcto y a propósito
+—una tabla de 23 columnas se desplaza, no se encoge—. La página sólo se va de
+lado en un sitio y por 4 píxeles.
+
+**Lo que sí está mal, y es grande, son los sitios donde hay que poner el dedo:**
+
+```
+mov-select-cb   13 × 13 px      ← la casilla de marcar un movimiento
+movSelAll       13 × 13 px      ← la de marcar todos
+stock-select-cb 13 × 13 px
+```
+
+**Trece píxeles.** Apple pide 44, Android 48. Y no es una casilla cualquiera:
+**es la que va justo antes del botón de borrar**, en una bodega, a veces con
+guantes. Que Jose esté marcando movimientos en el móvil con una diana de 13 px
+explica más de un dedazo.
+
+**Entonces el trabajo de teléfono no es rehacer pantallas: es agrandar lo que se
+toca.** Mucho más barato y arregla lo que de verdad duele.
+
+---
+
+### ⚪ N-16 · La cinta métrica del teléfono llevaba rota sin que nada lo dijera
+
+`tools/audit-responsive.js` tenía la ruta del navegador escrita a mano:
+
+```js
+executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'
+```
+
+La máquina trae la **1243**. O sea que **la única herramienta que mide la app en
+un teléfono llevaba quién sabe cuánto sin poder arrancar**, y nada lo dijo —no
+está en la suite, así que nadie la ejecutaba.
+
+Otra vez dos cosas que tienen que coincidir sin que nada lo obligue: la ruta
+escrita y el navegador instalado.
+
+**Arreglado el 3/11:** ahora manda `CHROME_PATH`, como el resto de la suite, y
+sin él deja que Playwright busque el suyo.
 
 ---
 
