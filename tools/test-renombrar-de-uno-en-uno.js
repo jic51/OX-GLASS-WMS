@@ -53,7 +53,19 @@ const DATA = {
   monitoredMaterials:null,
   // Cuatro categorías: con una no se puede reproducir nada, y el fallo necesita
   // al menos dos recuadros abiertos a la vez.
-  config:{ categories:['WINDOW','IGU','SCREEN','SHOWER'], projects:[], suppliers:[],
+  /* EL SUJETO ES «PROJECTS» DESDE EL 5/11, y el cambio no es cosmético.
+   *
+   * Esto medía la regla sobre Categorías, que era la pantalla de lista de
+   * siempre. En la v14.0 Categorías pasó a chips que se marcan y ya no tiene
+   * recuadros de edición por fila — así que la prueba no se cayó porque la
+   * regla se rompiera, se cayó porque su sujeto dejó de existir.
+   *
+   * La regla —**un recuadro abierto a la vez, y sin tirar lo tecleado**— sigue
+   * viva en Projects, Suppliers y Directory, que todavía son listas. Se mide
+   * ahí hasta que les toque convertirse, y entonces habrá que volver a mirar
+   * esto en vez de borrarlo. */
+  config:{ categories:['WINDOW','IGU','SCREEN','SHOWER'],
+           projects:['HARBOR LANE','GOLDEN ACRE','QUARRY LANE','SCENIC MOUNTAIN'], suppliers:[],
            locations:[{ name:'A1A', type:'RACK' }], units:['UNIT'] },
   incoming:[], rackPhotos:{}, systemActivity:[],
   rolePerms:{ canSeeCosts:true, canEditMovements:true, canManageCatalog:true, canExportData:true },
@@ -83,7 +95,7 @@ Object.assign(window.google,{script:{run:new Proxy({},{get(t,k){return function(
    setTimeout(function(){ok&&ok([]);},10);return;}
  setTimeout(function(){ok&&ok({});},10);};}})}});
 window.__SETTINGS=${JSON.stringify({
-  categories: DATA.config.categories, projects: [], suppliers: [],
+  categories: DATA.config.categories, projects: DATA.config.projects, suppliers: [],
   locations: DATA.config.locations.map(l => l.name), materials: [],
   pmDirectory: [], archiveCutoffMonths: 12
 })};
@@ -115,36 +127,39 @@ const ESTADO = `window.__estado = function(){
   await page.waitForTimeout(900);
   await page.evaluate(ESTADO);
 
-  // Ajustes → Categories. Es la pestaña que se abre por omisión.
+  // Ajustes → Projects. La que se abre por omisión es Categories, que desde la
+  // v14.0 son chips y no filas; se cambia de pestaña a mano.
   await page.evaluate(() => { openSettingsModal(); });
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(400);
+  await page.evaluate(() => { switchSettingsTab('projects'); });
+  await page.waitForTimeout(400);
 
   console.log('\n═══ 1. El decorado está puesto ═══\n');
   const filas = await page.evaluate(() =>
     document.querySelectorAll('#settingsTabContent li.cfg-item').length);
-  check('hay cuatro categorías en la lista — con una sola no se puede reproducir ' +
+  check('hay cuatro proyectos en la lista — con una sola no se puede reproducir ' +
         'nada de esto', filas === 4, filas);
   check('y ninguna está en modo edición al abrir',
         (await page.evaluate(() => window.__estado())).length === 0);
 
   console.log('\n═══ 2. Uno a la vez ═══\n');
   {
-    await page.evaluate(() => _cfgStartEdit('categories', 0));
+    await page.evaluate(() => _cfgStartEdit('projects', 0));
     await page.waitForTimeout(120);
     let e = await page.evaluate(() => window.__estado());
-    check('se abre el primero', e.length === 1 && e[0].id === 'cfgEdit-categories-0', e);
+    check('se abre el primero', e.length === 1 && e[0].id === 'cfgEdit-projects-0', e);
 
     /* EL CASO DEL VÍDEO. Antes, pulsar el lápiz de la segunda dejaba DOS
      * abiertos; guardar una de ellas repintaba la pestaña y lo escrito en la
      * otra desaparecía. */
-    await page.evaluate(() => _cfgStartEdit('categories', 1));
+    await page.evaluate(() => _cfgStartEdit('projects', 1));
     await page.waitForTimeout(120);
     e = await page.evaluate(() => window.__estado());
     check('ABRIR OTRO NO DEJA DOS ABIERTOS — guardar uno repinta la pestaña y se ' +
           'lleva por delante lo escrito en el otro',
           e.length === 1, e);
     check('...y el que queda abierto es el que se acaba de pedir',
-          e.length === 1 && e[0].id === 'cfgEdit-categories-1', e);
+          e.length === 1 && e[0].id === 'cfgEdit-projects-1', e);
   }
 
   console.log('\n═══ 3. Pero NO se tira lo que alguien escribió ═══\n');
@@ -152,16 +167,16 @@ const ESTADO = `window.__estado = function(){
     /* Cerrar el recuadro abierto para abrir otro sería el mismo pecado más
      * pequeño: tirar lo tecleado, sólo que de a uno. */
     await page.evaluate(() => {
-      var i = document.getElementById('cfgInp-categories-1');
+      var i = document.getElementById('cfgInp-projects-1');
       i.value = 'IGU DOBLE';
       i.dispatchEvent(new Event('input', { bubbles: true }));
     });
-    await page.evaluate(() => _cfgStartEdit('categories', 2));
+    await page.evaluate(() => _cfgStartEdit('projects', 2));
     await page.waitForTimeout(120);
     const e = await page.evaluate(() => window.__estado());
 
     check('con algo escrito sin guardar, el otro NO se abre — lo tecleado no se ' +
-          'tira para hacer sitio', e.length === 1 && e[0].id === 'cfgEdit-categories-1', e);
+          'tira para hacer sitio', e.length === 1 && e[0].id === 'cfgEdit-projects-1', e);
     check('...y LO ESCRITO SIGUE AHÍ, que es la parte que de verdad importa',
           e.length === 1 && e[0].valor === 'IGU DOBLE', e);
 
@@ -175,12 +190,12 @@ const ESTADO = `window.__estado = function(){
 
   console.log('\n═══ 4. Cancelar libera el turno ═══\n');
   {
-    await page.evaluate(() => _cfgCancelEdit('categories', 1));
-    await page.evaluate(() => _cfgStartEdit('categories', 2));
+    await page.evaluate(() => _cfgCancelEdit('projects', 1));
+    await page.evaluate(() => _cfgStartEdit('projects', 2));
     await page.waitForTimeout(120);
     const e = await page.evaluate(() => window.__estado());
     check('después de cancelar, otro se abre sin pelea',
-          e.length === 1 && e[0].id === 'cfgEdit-categories-2', e);
+          e.length === 1 && e[0].id === 'cfgEdit-projects-2', e);
   }
 
   console.log('\n═══ 5. Un recuadro sin tocar no bloquea nada ═══\n');
@@ -188,12 +203,12 @@ const ESTADO = `window.__estado = function(){
     /* Abrir uno, no escribir, y abrir otro: eso tiene que fluir. Si también
      * pidiera cerrar el anterior a mano, la regla se volvería un estorbo en el
      * caso más común — pulsar el lápiz equivocado y corregirse. */
-    await page.evaluate(() => _cfgStartEdit('categories', 3));
+    await page.evaluate(() => _cfgStartEdit('projects', 3));
     await page.waitForTimeout(120);
     const e = await page.evaluate(() => window.__estado());
     check('abrir otro cuando el anterior está sin tocar simplemente funciona — ' +
           'pulsar el lápiz equivocado y corregirse es lo más común que hay',
-          e.length === 1 && e[0].id === 'cfgEdit-categories-3', e);
+          e.length === 1 && e[0].id === 'cfgEdit-projects-3', e);
   }
 
   check('y la página no lanzó ningún error por el camino', errores.length === 0, errores);

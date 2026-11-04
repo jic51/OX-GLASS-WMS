@@ -106,6 +106,29 @@
          hoja, generados desde `legal/*.md` por `tools/sync-legal.js`, así que
          arreglar lo que dicen de las dos ediciones obliga a tocar la app. Ya
          que había que tocarla, viaja también el ancla `#pro` del candado. -->
+    <div class="entry" id="v14-0">
+      <span class="ver">v14.0</span>
+      <span class="tag new">Change</span>
+      <h3>Categories work the way the rest of the app does, and the app stops shutting you out</h3>
+      <p><b>Categories are now chips you tick, grouped in the middle like the Low-Stock Monitor.</b>
+         Tick one and Rename and Delete wake up; tick several and Delete and Merge do, and
+         <b>Rename is not offered at all</b> &mdash; not greyed out, absent. Renaming several things
+         to one name is not renaming, it is merging, and Merge is right there.</p>
+      <p>Renaming happens in the bar rather than in a browser pop-up, so it follows the same text
+         rules as every other screen. Until now this one tab had two ways of picking a row at once:
+         a mode for renaming and a separate tick box for merging.</p>
+      <p><b>And the app stopped shutting itself out.</b> It caps how many operations can run in a
+         minute, so that a runaway loop cannot get your Google account cut off. But the cap reset its
+         own clock every time a call went through, so it did not mean &ldquo;240 a minute&rdquo; &mdash;
+         it meant &ldquo;a full minute of silence, or the count never clears&rdquo;.</p>
+      <p>Working steadily for three minutes could therefore reach the cap without ever going over it
+         in any single minute. That is why a 600-row file sometimes never finished loading while a
+         bigger one loaded fine: it depended on how busy the minutes before it had been.</p>
+      <p>The window now slides properly, and <b>the message says whose limit it is, that nothing was
+         lost, and roughly how long to wait</b>. It is our cap, so saying only &ldquo;too many
+         requests&rdquo; was a system message about our own decision.</p>
+    </div>
+
     <div class="entry" id="v13-9">
       <span class="ver">v13.9</span>
       <span class="tag fix">Fix</span>

@@ -351,8 +351,15 @@ console.log('\n═══ los caminos con candado ═══\n');
   // Las tres fusiones no van por la cola a propósito — encolarlas las dejaría
   // ejecutándose minutos después sobre datos que ya no son los que se vieron —
   // pero sí tienen que distinguir "ocupado" de "no se pudo".
-  check('las tres fusiones comparten un solo manejador de fallo',
-        (HTML.match(/withFailureHandler\(_mergeFailed\(btn,/g) || []).length === 3);
+  /* CUÁNTAS SON NO ES LO QUE SE MIDE — era 3 y pasó a 4 el 5/11, cuando
+   * Categorías estrenó su propia fusión. Lo que importa es que **todas** usen
+   * el mismo manejador; un número escrito a mano convierte cada fusión nueva
+   * en un fallo de esta prueba en vez de en lo que es: una fusión nueva. */
+  const fusiones = (HTML.match(/processMovement\('mergeConfigValues'|processMovement\('mergeLocations'/g) || []).length;
+  const manejadas = (HTML.match(/withFailureHandler\(_mergeFailed\(btn,/g) || []).length;
+  check('hay fusiones que mirar', fusiones >= 3, fusiones);
+  check('y TODAS comparten un solo manejador de fallo',
+        manejadas === fusiones, { fusiones: fusiones, manejadas: manejadas });
   check('...que separa "ocupado" de un fallo de verdad',
         /_isBusyError\(e\)[\s\S]{0,200}busy right now/.test(fnSrc(HTML, '_mergeFailed')));
 

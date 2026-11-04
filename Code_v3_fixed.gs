@@ -128,7 +128,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '13.9';
+var APP_VERSION = '14.0';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -140,7 +140,7 @@ var APP_VERSION = '13.9';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '069a5f12';
+var APP_BUILD = '8707e054';
 
 // ═══ ACOPIO BASIC — EL INTERRUPTOR DE LA VERSIÓN GRATIS ══════════════════════
 //
@@ -2296,22 +2296,86 @@ function handleOAuthCallback_(code, state) {
 // Limits are deliberately generous — several times what heavy normal use
 // looks like — because locking out a real warehouse mid-shift is far worse
 // than letting an abuser through a little longer.
+/* ── LA VENTANA SE DESLIZA; ANTES SE RENOVABA ENTERA EN CADA LLAMADA ───────
+ *
+ * Jose, 3/11, con el registro de ejecuciones delante: el fichero de 600 filas
+ * no cargaba nunca y la pantalla no decía nada. El error era NUESTRO:
+ *
+ *     Error: Too many requests — please wait a moment and try again.
+ *         at requireQuota_(Code:2314:11)
+ *         at processMovement(Code:3904:3)
+ *
+ * No era lentitud, ni la conversión de Excel, ni el tamaño: era este guardia.
+ * Y estaba mal medido de una forma que no se ve leyéndolo por encima.
+ *
+ * Lo que había:
+ *
+ *     cache.put(key, String(n + 1), windowSec);   // ← el plazo, ENTERO, otra vez
+ *
+ * `CacheService` no sabe de ventanas: `put` con un plazo **reinicia** la
+ * cuenta atrás de esa clave. Así que cada llamada que pasaba le regalaba a la
+ * cuenta sesenta segundos más de vida. **No era una ventana de un minuto: era
+ * «un minuto de silencio y se borra».** Mientras alguien siguiera usando la
+ * app, el contador NUNCA se reiniciaba — se acumulaba.
+ *
+ * A cien llamadas por minuto sostenidas —importar, deshacer, restaurar, que es
+ * exactamente lo que Jose estaba haciendo— a los dos minutos y medio llegas a
+ * 240 sin haber pasado de 240 en ningún minuto. Y entonces te quedas fuera.
+ *
+ * ── CÓMO SE MIDE AHORA ───────────────────────────────────────────────────
+ *
+ * La clave lleva **el trozo de tiempo al que pertenece**, y el plazo es el de
+ * ese trozo. Cuando el reloj entra en el siguiente trozo, la clave es otra y
+ * la cuenta empieza de cero — sin que importe cuántas llamadas hubo antes.
+ *
+ * Dos trozos a la vez, el actual y el anterior, repartidos por lo que lleva
+ * corrido el actual. Eso es la «ventana deslizante aproximada» de toda la
+ * vida, y es lo que evita el borde duro de los trozos sueltos: con un solo
+ * trozo se pueden meter 240 al final de uno y 240 al principio del siguiente,
+ * o sea 480 en un segundo.
+ *
+ * Sigue sin ser atómico, y sigue sin importar: esto es un techo contra una
+ * avalancha, no un contador de precisión.
+ */
 function throttle_(bucket, id, limit, windowSec) {
-  var key = 'rl_' + bucket + '_' + Utilities.base64EncodeWebSafe(String(id || 'anon')).substring(0, 40);
+  var base  = 'rl_' + bucket + '_' + Utilities.base64EncodeWebSafe(String(id || 'anon')).substring(0, 40);
   var cache = CacheService.getScriptCache();
-  var raw = cache.get(key);
-  var n = raw ? (parseInt(raw, 10) || 0) : 0;
-  if (n >= limit) return false;
-  // Not atomic — Apps Script has no atomic increment, and two calls landing in
-  // the same instant can both read the same n. That undercounts slightly under
-  // a burst, which is acceptable: this is a flood ceiling, not a precise meter.
-  cache.put(key, String(n + 1), windowSec);
+  var ahora = Math.floor(Date.now() / 1000);
+  var trozo = Math.floor(ahora / windowSec);
+  var dentro = (ahora % windowSec) / windowSec;   // 0..1, lo corrido del trozo
+
+  var kAhora = base + '_' + trozo;
+  var kAntes = base + '_' + (trozo - 1);
+
+  var nAhora = parseInt(cache.get(kAhora), 10) || 0;
+  var nAntes = parseInt(cache.get(kAntes), 10) || 0;
+
+  /* El trozo anterior pesa lo que le queda por salir de la ventana. Al
+   * principio de un trozo cuenta casi entero; al final, casi nada. */
+  var estimado = nAhora + nAntes * (1 - dentro);
+  if (estimado >= limit) return false;
+
+  /* El plazo es DOS trozos: el suyo y el siguiente, porque mientras corre el
+   * siguiente esta clave todavía se consulta como «la anterior». Y es un plazo
+   * fijo desde que la clave nace, no uno que se renueve: ahí estaba el fallo. */
+  cache.put(kAhora, String(nAhora + 1), windowSec * 2);
   return true;
 }
 
 function requireQuota_(bucket, id, limit, windowSec) {
   if (!throttle_(bucket, id, limit, windowSec)) {
-    throw new Error('Too many requests — please wait a moment and try again.');
+    /* El mensaje dice QUÉ es y QUÉ hacer, y conserva «Too many requests»
+     * porque `_isBusyError` lo busca para distinguir un «estoy ocupado» —del
+     * que la fila vuelve— de un «no» de verdad.
+     *
+     * Jose, 3/11, sobre el fichero de 600: *"sigo esperando y no carga"*. El
+     * guardia es NUESTRO, así que decir sólo «too many requests» es un
+     * mensaje de sistema sobre una decisión nuestra: no dice de quién es el
+     * tope, ni cuánto hay que esperar, ni si se perdió algo. Las tres cosas
+     * hacen falta para no quedarse mirando la pantalla. */
+    throw new Error('Too many requests — the app caps how many operations run per ' +
+                    'minute so your Google account is never cut off. Nothing ' +
+                    'was lost. Wait about a minute and try again.');
   }
 }
 

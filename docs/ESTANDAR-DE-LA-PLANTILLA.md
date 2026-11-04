@@ -216,3 +216,90 @@ hacerlo.
 4. La prueba, y el botón en `🩺 Check this installation` que reporta lo que falta.
 
 El punto 1 no es cosmético y no debería esperar al resto.
+
+
+---
+
+# Cómo se comporta una pantalla — la tabla que faltaba
+
+> Escrito el 5/11/2026. Jose repasó Ajustes el 4/11 y encontró veintitrés
+> cosas; al ordenarlas eran **cuatro patrones**. Y los cuatro tenían la misma
+> causa de fondo: **la regla existía en alguna pantalla y no estaba escrita en
+> ningún sitio**, así que la pantalla siguiente elegía por casualidad.
+>
+> Esto es la regla escrita. No describe cómo son las pantallas hoy: describe
+> cómo tienen que ser las que se escriban a partir de ahora. Ver
+> `UNA-SOLA-FORMA.md` para el censo de lo que hay y el orden de la conversión.
+
+## 1 · Guardar
+
+| Si el cambio es… | Entonces | Ya está así en |
+|---|---|---|
+| **Un interruptor** (sí / no) | guarda **al tocarlo**, sin botón | Permissions, Low-Stock Monitor |
+| **Un formulario** (varios campos que van juntos) | **un** Guardar, encendido sólo si algo cambió | Name & Logo, Daily report |
+| **Una fila de una lista** | Guardar **en esa fila**, con su propio estado | Prices |
+| **Algo que se hace ahora** | botón **siempre** encendido | *Send one now*, *Back up now* |
+
+**Las tres primeras pasan por `_vigilarGuardar`.** No se compara a mano: seis
+pantallas comparando a mano son seis copias de la misma idea, y la séptima no
+tendrá ninguna.
+
+**Y dos reglas que no se negocian:**
+
+- **Guardar apagado cuando no hay nada que guardar**, y con el motivo en el
+  `title`. Un botón encendido siempre deja de decir nada; uno apagado sin
+  explicación parece roto.
+- **Guardar apagado si falta algo obligatorio**, haya cambios o no. Y el mismo
+  no, **otra vez dentro de la función que guarda**: un guardia que sólo vive en
+  el botón se lo salta quien no pase por el botón.
+
+## 2 · Elegir en una lista
+
+**Casilla o chip + barra de acciones. Nunca modos.**
+
+Un *modo* —pulsas «Renombrar» y la lista entra en modo— actúa sobre **la fila
+que toques después** y deja encendido un estado que no estás mirando. Una
+*selección* actúa sobre **lo que ya está marcado y se ve**, y la barra dice qué
+va a pasar y sobre cuántas cosas.
+
+**Y qué se enciende con cuántas:**
+
+| Marcadas | Qué se ofrece |
+|---|---|
+| ninguna | nada. La barra lleva **la instrucción** de qué hacer |
+| una | **Renombrar** y **Borrar** |
+| varias | **Borrar** y, donde tenga sentido, **Fusionar**. **Renombrar no aparece** |
+
+**Renombrar es de una; borrar es de muchas.** Y lo que no aplica **no se
+enseña apagado: no se enseña.** Un botón apagado invita a preguntarse qué
+haría.
+
+## 3 · Las franjas de acciones
+
+**Reservan su sitio desde el principio.** Vacías llevan la instrucción en gris;
+al marcar algo se les enciende el fondo. **Nada se mueve nunca.**
+
+Una franja que aparece de la nada empuja hacia abajo justo la lista que estabas
+marcando — y marcar es lo que va antes de borrar. Este proyecto arregló ese
+mismo salto tres veces (la papelera, el «Load more», las franjas de fusionar)
+antes de escribirlo aquí.
+
+## 4 · Editar texto
+
+**En la propia fila o en la barra. Nunca con `prompt()`.**
+
+La ventanita del navegador no pasa por las reglas de texto de la app —de ahí
+las mayúsculas y minúsculas mezcladas en Materials—, bloquea la pantalla
+mientras está abierta, y no se parece a nada más de la app.
+
+## 5 · Lo que casi siempre está bien, plegado
+
+Los diagnósticos van dentro de un abanico que se abre al pedirlo, como *All
+backups in Drive (xx)*. **Una pantalla que grita cuando todo va bien enseña a
+no mirarla.**
+
+## 6 · Un nombre de persona es siempre lo mismo
+
+Donde aparezca alguien con correo, va la tarjeta de contacto que ya existe en
+la columna *User* de Movements: nombre, correo y los botones de escribir,
+llamar y agendar. Misma clase, mismo `data-`, en todas partes.
