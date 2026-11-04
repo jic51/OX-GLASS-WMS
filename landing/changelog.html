@@ -106,6 +106,33 @@
          hoja, generados desde `legal/*.md` por `tools/sync-legal.js`, así que
          arreglar lo que dicen de las dos ediciones obliga a tocar la app. Ya
          que había que tocarla, viaja también el ancla `#pro` del candado. -->
+    <div class="entry" id="v13-9">
+      <span class="ver">v13.9</span>
+      <span class="tag fix">Fix</span>
+      <h3>Save means there is something to save, and nothing jumps when you tick a box</h3>
+      <p><b>Six Save buttons were lit all the time.</b> A lit button is a promise that there is
+         something to do here; lit always, it stops saying anything &mdash; and then you have to
+         remember yourself whether you changed something, which is the work the screen was meant to
+         save you. Worse, a Save still lit after saving leaves the doubt that it worked, so it gets
+         pressed again.</p>
+      <p>They now light up only when what is on screen differs from what was loaded, and go dark
+         again the moment the server confirms the save. There is one rule written once, so the next
+         form added to the app gets it for free rather than by luck.</p>
+      <p><b>And one of them was not cosmetic.</b> In Permissions the role name could be emptied and
+         saved. A role with no name cannot be given to anyone or taken from anyone &mdash; there is
+         nothing to point at in any list &mdash; while the permission underneath keeps granting what
+         it granted. Save now stays dark while a required field is empty, and the save refuses it a
+         second time from inside, for anything that does not come through the button.</p>
+      <p><b>Ticking two names no longer shoves the list down.</b> The merge strip went from taking no
+         room to taking forty-odd pixels, pushing down the very rows you were ticking, so the next
+         one was no longer where your finger was going. It now holds its place from the start: empty
+         it carries the instruction in grey, and ticking something lights it up instead of moving
+         anything.</p>
+      <p>In Prices, each row&rsquo;s Save now belongs to that row: it wakes for a price that is
+         different, and stays dark for one that is already on record, or for a zero &mdash; which the
+         costing engine reads as &ldquo;no price&rdquo; rather than &ldquo;free&rdquo;.</p>
+    </div>
+
     <div class="entry" id="v13-8">
       <span class="ver">v13.8</span>
       <span class="tag fix">Fix</span>

@@ -120,6 +120,7 @@ node tools/test-las-tres-del-2-de-noviembre.js
 node tools/test-la-importacion-deshecha-se-va.js
 node tools/test-precio-al-material.js
 node tools/test-las-tres-del-3-de-noviembre.js
+node tools/test-guardar-y-la-franja.js
 node tools/test-url-de-la-app.js
 node tools/test-no-saltar-al-cargar.js
 node tools/test-config-escritura.js

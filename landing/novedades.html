@@ -105,6 +105,36 @@
 
     <!-- EMPEZ&Oacute; SIN N&Uacute;MERO —cambiaban las p&aacute;ginas, no la app— y acab&oacute;
          con uno: los T&eacute;rminos que el cliente acepta viven DENTRO de la hoja. -->
+    <div class="entry" id="v13-9">
+      <span class="ver">v13.9</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Guardar significa que hay algo que guardar, y nada salta al marcar una casilla</h3>
+      <p><b>Seis botones de Guardar estaban encendidos siempre.</b> Un bot&oacute;n encendido es una
+         promesa: &laquo;hay algo que hacer aqu&iacute;&raquo;. Encendido siempre deja de decir nada
+         &mdash;y entonces tienes que acordarte t&uacute; de si cambiaste algo, que es justo el
+         trabajo que la pantalla ven&iacute;a a ahorrarte&mdash;. Y peor: un Guardar que sigue
+         encendido despu&eacute;s de guardar deja la duda de si funcion&oacute;, as&iacute; que se
+         vuelve a pulsar.</p>
+      <p>Ahora se encienden s&oacute;lo si lo que hay en pantalla es distinto de lo que se
+         carg&oacute;, y se apagan en cuanto el servidor confirma. La regla est&aacute; escrita una
+         vez, as&iacute; que el siguiente formulario que se a&ntilde;ada la tiene de serie y no por
+         casualidad.</p>
+      <p><b>Y uno de ellos no era est&eacute;tica.</b> En Permissions se pod&iacute;a vaciar el
+         nombre del rol y guardar. Un rol sin nombre no se le puede dar ni quitar a nadie
+         &mdash;no hay nada que se&ntilde;alar en ninguna lista&mdash; y el permiso sigue
+         concediendo lo que conced&iacute;a. Ahora Guardar se queda apagado mientras falte algo
+         obligatorio, y la funci&oacute;n lo rechaza una segunda vez desde dentro, para lo que no
+         pase por el bot&oacute;n.</p>
+      <p><b>Marcar dos nombres ya no empuja la lista hacia abajo.</b> La franja de fusionar
+         pasaba de no ocupar nada a ocupar cuarenta y pico p&iacute;xeles, empujando justo las filas
+         que estabas marcando, as&iacute; que la siguiente ya no estaba donde iba tu dedo. Ahora
+         conserva su sitio desde el principio: vac&iacute;a lleva la instrucci&oacute;n en gris, y al
+         marcar algo se le enciende el fondo en vez de mover nada.</p>
+      <p>En Prices, el Guardar de cada fila es de esa fila: se despierta con un precio distinto y se
+         queda apagado con el que ya estaba, o con un cero &mdash;que el motor de costes lee como
+         &laquo;sin precio&raquo;, no como &laquo;gratis&raquo;&mdash;.</p>
+    </div>
+
     <div class="entry" id="v13-8">
       <span class="ver">v13.8</span>
       <span class="tag fix">Arreglo</span>

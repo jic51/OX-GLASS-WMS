@@ -3244,8 +3244,34 @@
       letter-spacing:.03em;vertical-align:middle;
       background:var(--accent2, #1E52A0);color:#fff;border-radius:var(--r-pildora);padding:var(--pad-pildora)}
     .cfg-pick{margin-right:var(--sp-3);flex-shrink:0;cursor:pointer}
-    .cfg-pickbar{display:none;gap:var(--sp-3);align-items:center;flex-wrap:wrap;background:var(--navy);color:#fff;border-radius:8px;padding:var(--sp-3) .7rem;margin-bottom:var(--sp-5)}
-    .cfg-pickbar.show{display:flex}
+    /* ── LA FRANJA RESERVA SU SITIO, NO LO ROBA AL APARECER ─────────────────
+     *
+     * Jose, 4/11: *"al seleccionar 2 o más proyectos con el checkbox, toda la
+     * lista salta hacia abajo al mostrar la franja de merge/clear"*, y lo
+     * mismo en Locations.
+     *
+     * Era `display:none` → `display:flex`: la franja no ocupaba nada y de
+     * pronto ocupaba cuarenta y pico píxeles, así que **empujaba hacia abajo
+     * justo la lista que estabas marcando**. La fila siguiente que ibas a
+     * pulsar ya no estaba donde tu dedo iba — y marcar es lo que va antes de
+     * fusionar y de borrar.
+     *
+     * Es la TERCERA vez que este proyecto se encuentra lo mismo: la papelera
+     * que saltaba al restaurar y el «Load more» que se iba al final. Y la
+     * solución ya estaba escrita las dos veces, en el punto de conexión:
+     * *"el arreglo es dejar de robar sitio y RESERVARLO"*.
+     *
+     * Así que la franja está SIEMPRE en el reparto. Vacía no se ve como una
+     * barra —fondo transparente, letra gris— y lleva la frase que dice qué
+     * hacer, que es sitio mejor empleado que un hueco en blanco. Al marcar
+     * algo se le enciende el fondo y cambian los botones: **nada se mueve,
+     * sólo cambia lo que hay dentro.** */
+    .cfg-pickbar{display:flex;gap:var(--sp-3);align-items:center;flex-wrap:wrap;
+      background:transparent;color:var(--muted);border-radius:8px;
+      padding:var(--sp-3) .7rem;margin-bottom:var(--sp-5);
+      min-height:var(--h-btn-lg);font-size:.78rem;
+      transition:background .12s ease}
+    .cfg-pickbar.show{background:var(--navy);color:#fff}
     .cfg-pick-count{font-size:.78rem;font-weight:700}
     .cfg-pickbar select{font-size:.8rem;padding:var(--sp-1) var(--sp-2);border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);max-width:220px}
     /* Locations grouped by type, drag to reorder */
@@ -5907,7 +5933,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '13.8';
+var APP_VERSION = '13.9';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5919,7 +5945,7 @@ var APP_VERSION = '13.8';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '0bcd6833';
+var APP_BUILD = '069a5f12';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -15470,6 +15496,9 @@ function _rebuildStockNow() {
 // whole wizard to add it. They are settings now.
 var _coLogo = null;          // picked, not saved yet: { dataUrl, fileData, w, h }
 var _coLogoRemove = false;
+var _coVigia = null;   // ver _vigilarGuardar
+var _permVigia = null;
+var _drVigia   = null;
 
 // The header's logo is already an <img> holding the real image, so the preview
 // costs nothing. On a page that hasn't fetched it yet, the copy the splash
@@ -15555,12 +15584,41 @@ function _renderPermissionsTab(){
   document.querySelectorAll('.perm-sw').forEach(function(sw){
     sw.addEventListener('change', function(){ _savePermSwitch(sw); });
   });
+
+  /* ── EL NOMBRE DEL ROL NO SE PUEDE VACIAR Y GUARDAR ─────────────────────
+   *
+   * Jose, 4/11: *"siempre se puede eliminar el nombre del rol y también
+   * guardar, ya que los botones están siempre activos, eso es peligroso."*
+   *
+   * Tenía razón, y era lo único de esa tanda que podía dejar una instalación
+   * en un estado del que no se sale desde la pantalla: **un rol sin nombre no
+   * se le puede dar ni quitar a nadie** —no hay nada que señalar en ninguna
+   * lista— y el permiso sigue existiendo por debajo, concediendo lo que
+   * concedía.
+   *
+   * Dos reglas, y la segunda es la que importa:
+   *   · si no ha cambiado, no hay nada que guardar;
+   *   · **si está vacío, no se guarda, haya cambiado o no.** */
+  _permVigia = _vigilarGuardar({
+    boton:        document.getElementById('btnSaveRoleLabel'),
+    campos:       [document.getElementById('warehouseRoleLabelInput')],
+    obligatorios: [document.getElementById('warehouseRoleLabelInput')]
+  });
 }
 
 function _saveWarehouseRoleLabel(){
   var inp = document.getElementById('warehouseRoleLabelInput');
   var btn = document.getElementById('btnSaveRoleLabel');
   var label = (inp.value || '').trim();
+  /* El mismo no dos veces. La pantalla ya no deja pulsar con el nombre vacío,
+   * pero esta función es pública y la llama un `onclick`: quien la invoque por
+   * otro camino se encuentra la misma regla. Un guardia que sólo vive en el
+   * botón es un guardia que se salta quien no pase por el botón. */
+  if (!label){
+    showToast('The role needs a name — without one it cannot be given to anyone.', 'warn', 6000);
+    inp.focus();
+    return;
+  }
   _btnBusy(btn, 'Saving…');
   google.script.run
     .withSuccessHandler(function(res){
@@ -15640,6 +15698,23 @@ function _renderCompanyTab(){
     // Fuera de los recuadros a propósito: guardar no es un área de ajustes, es
     // lo que se hace con las dos de arriba.
     '<div class="co-save"><button type="button" class="btn btn-primary" id="coSave" onclick="_saveCompanyProfile()">Save changes</button></div>';
+
+  /* Guardar se enciende sólo si algo cambió, y nunca sin nombre de empresa —
+   * que es obligatorio y el servidor lo rechaza igualmente. Antes el botón
+   * estaba encendido siempre, así que ofrecía guardar lo mismo que ya había,
+   * y dejaba pulsar con el nombre vacío para que el servidor dijera que no.
+   *
+   * El logo no está en ningún campo con valor, así que entra por `extra`: su
+   * punto de partida es SIEMPRE «como está guardado», porque elegir una imagen
+   * repinta esta pestaña entera y, sin eso, el botón se apagaría justo sobre
+   * el cambio que se acaba de hacer. */
+  _coVigia = _vigilarGuardar({
+    boton:        document.getElementById('coSave'),
+    campos:       [document.getElementById('coName'), document.getElementById('coDomain')],
+    obligatorios: [document.getElementById('coName')],
+    extra:        function(){ return _coLogo ? 'nueva' : (_coLogoRemove ? 'quitar' : 'igual'); },
+    baseExtra:    'igual'
+  });
 }
 
 function _coLogoPick(inp){
@@ -16474,6 +16549,19 @@ function _drawDailyReport(cfg){
     '<div style="font-size:.74rem;color:var(--muted);margin-top:.4rem">' +
       'Sent on quiet days too, saying there were no movements.' +
     '</div>';
+
+  /* Guardar se enciende con un cambio; «Send one now» se queda SIEMPRE
+   * encendido y es correcto que lo esté. Jose lo dijo así —*"creo que el único
+   * debería ser el de send one now"*— y el motivo es que hacen cosas de clase
+   * distinta: uno **recuerda** una decisión, y sólo tiene sentido si la
+   * decisión cambió; el otro **hace algo ahora**, y eso se puede querer repetir
+   * tantas veces como haga falta. */
+  _drVigia = _vigilarGuardar({
+    boton:  document.getElementById('btnDrSave'),
+    campos: [document.getElementById('drEnabled'),
+             document.getElementById('drHour'),
+             document.getElementById('drExtra')]
+  });
 }
 
 function _saveDailyReport(){
@@ -17757,7 +17845,11 @@ function _renderSettingsTab(tab) {
       (tab === 'categories'
         ? 'Renaming a category updates all existing movements automatically.'
         : 'Renaming updates the list only — existing movements keep the name they were recorded with.') +
-      (mergeable ? ' Tick two or more to merge them by hand.' : '') + '</p>' +
+      /* La instrucción de fusionar YA NO VA AQUÍ: desde el 4/11 vive en la
+       * propia franja, que ahora está siempre en su sitio y la dice justo
+       * encima de las casillas. Decirla en los dos sitios serían dos frases
+       * sobre lo mismo que alguien tendría que mantener iguales. */
+      '</p>' +
     (mergeable ? _renderSimilarGroups(tab, items, label) : '') +
     (mergeable ? '<div class="cfg-pickbar" id="cfgPickBar"></div>' : '') +
     _rowModeBarHtml('cfg') +
@@ -18188,7 +18280,11 @@ function _wireLocMerge(){
      * Así que la barra sale desde UNA, con imprimir siempre, y el bloque de
      * fusionar sólo cuando hay dos o más. Fusionar sí necesita dos; imprimir
      * no necesita ninguna excusa. */
-    if (!sel.length){ bar.innerHTML = ''; bar.classList.remove('show'); return; }
+    if (!sel.length){
+      bar.classList.remove('show');
+      bar.innerHTML = '<span>Tick a location to print its label, or two to merge them.</span>';
+      return;
+    }
     bar.classList.add('show');
     var marcables = todas().length;
     bar.innerHTML =
@@ -18381,7 +18477,16 @@ function _wireManualMerge(tab, label){
 
   function draw(){
     var sel = selected();
-    if (sel.length < 2){ bar.innerHTML = ''; bar.classList.remove('show'); return; }
+    /* Vacía NO se esconde: se queda en su sitio con la frase de qué hacer.
+     * Esconderla la devolvería a robar espacio al aparecer, que es el fallo
+     * que esto viene a quitar — ver la nota larga en `.cfg-pickbar`. */
+    if (sel.length < 2){
+      bar.classList.remove('show');
+      bar.innerHTML = '<span>' + (sel.length === 1
+        ? 'Tick one more to merge them into a single name.'
+        : 'Tick two or more to merge them into a single name.') + '</span>';
+      return;
+    }
     bar.classList.add('show');
     bar.innerHTML =
       '<span class="cfg-pick-count">' + sel.length + ' selected — keep which name?</span>' +
@@ -19420,10 +19525,21 @@ function _preciosFiltrar(){
                'style="width:92px;padding:.25rem .4rem;font-size:.82rem" ' +
                'value="' + (m.precio === null ? '' : _escAttr(String(m.precio))) + '" ' +
                'placeholder="' + (m.precio === null ? 'no price' : '') + '" ' +
+               /* Lo que vale AHORA mismo, pegado a la casilla. Es contra esto
+                * que se compara lo que se teclea; sin ello habría que
+                * guardarlo aparte en un mapa, y un mapa y una lista que tienen
+                * que coincidir son la falta de siempre. */
+               'data-base="' + (m.precio === null ? '' : _escAttr(String(m.precio))) + '" ' +
+               'oninput="_precioCambio(this)" ' +
                'data-mat="' + _escAttr(m.matId) + '">' +
         '<span style="color:var(--muted);font-size:.72rem">per ' + _he(m.unit) + '</span>' +
       '</span>' +
-      '<button class="cfg-btn" onclick="_guardarPrecio(this)" ' +
+      /* Apagado hasta que haya algo que guardar. Jose, 4/11: *"el botón save
+       * siempre está activo, aun luego de guardar se vuelve a poner activo"* —
+       * y un Guardar encendido sobre un precio ya guardado deja la duda de si
+       * se guardó, así que se vuelve a pulsar por si acaso. */
+      '<button class="cfg-btn" onclick="_guardarPrecio(this)" disabled ' +
+              'title="Type a different price first" ' +
               'data-cat="' + _escAttr(m.category) + '" ' +
               'data-name="' + _escAttr(m.name) + '">💾 Save</button>' +
     '</div>';
@@ -19431,6 +19547,23 @@ function _preciosFiltrar(){
   (ls.length > 120
     ? '<p style="font-size:.75rem;color:var(--muted);padding:.5rem">Showing first 120. Type to filter.</p>'
     : '');
+}
+
+/* Enciende el Guardar de ESA fila si el precio tecleado es distinto del que
+ * hay guardado, y lo deja apagado si es igual, si está vacío o si no es un
+ * número mayor que cero. El 0 se para aquí también: el motor lo trata como
+ * «sin precio», así que guardarlo deja el material igual de sin valorar pero
+ * con la pantalla diciendo que ya tiene precio. */
+function _precioCambio(inp){
+  var fila = inp.closest && inp.closest('.mat-item');
+  var btn  = fila && fila.querySelector('.cfg-btn');
+  if (!btn) return;
+  var v    = parseFloat(inp.value);
+  var base = inp.getAttribute('data-base');
+  var vale = isFinite(v) && v > 0;
+  btn.disabled = !vale || String(v) === String(parseFloat(base));
+  btn.title = !vale ? 'Type a price greater than zero'
+            : btn.disabled ? 'That is already the price on record' : '';
 }
 
 function _guardarPrecio(btn){
@@ -29270,6 +29403,90 @@ function _movRowEl(mov){
   }
 }
 
+/* ═══ GUARDAR SE ENCIENDE CUANDO HAY ALGO QUE GUARDAR ═══════════════════════
+ *
+ * Jose, 4/11, repasando Ajustes pantalla por pantalla, encontró lo mismo en
+ * seis sitios: *"siempre está activo el botón save changes, ¿por qué?"*,
+ * *"el botón save siempre está activo, aun luego de guardar se vuelve a poner
+ * activo"*, *"los botones de save y send one now siempre están activos"*.
+ *
+ * ── POR QUÉ ES UN HALLAZGO Y NO SEIS ──────────────────────────────────────
+ *
+ * Un botón encendido es una promesa: **«hay algo que hacer aquí»**. Si está
+ * encendido siempre, deja de decir nada — y entonces la persona tiene que
+ * acordarse ELLA de si cambió algo, que es justo el trabajo que la pantalla
+ * venía a ahorrarle. Y después de guardar, un botón que sigue encendido deja
+ * la duda de si se guardó: se vuelve a pulsar «por si acaso».
+ *
+ * ── Y EN PERMISSIONS NO ERA ESTÉTICA, ERA DAÑO ────────────────────────────
+ *
+ * Jose: *"siempre se puede eliminar el nombre del rol y también guardar, eso
+ * es peligroso."* Tenía razón. **Un rol sin nombre no se le puede dar ni
+ * quitar a nadie desde la pantalla**, y el permiso sigue existiendo por
+ * debajo. Era lo único de la tanda que dejaba una instalación en un estado
+ * del que no se sale. De ahí la segunda regla, que no es negociable:
+ * **Guardar no se enciende si falta algo obligatorio**, haya cambios o no.
+ *
+ * ── UN SOLO SITIO, Y POR QUÉ ──────────────────────────────────────────────
+ *
+ * Seis pantallas comparando a mano «lo que hay» contra «lo que se cargó»
+ * serían seis copias de la misma idea, y la séptima pantalla que alguien
+ * escriba no tendría ninguna. Esto es la idea escrita una vez.
+ *
+ * Devuelve `{ guardado }`: hay que llamarlo DESPUÉS de guardar bien, y es lo
+ * que apaga el botón otra vez. Sin esa llamada el botón se queda encendido
+ * sobre algo ya guardado, que es la mitad de la queja de Jose.
+ */
+function _vigilarGuardar(op){
+  var boton = op && op.boton;
+  if (!boton) return { guardado: function(){}, revisar: function(){} };
+
+  var campos       = (op.campos || []).filter(Boolean);
+  var obligatorios = (op.obligatorios || []).filter(Boolean);
+  /* Lo que cambia y NO vive en un `<input>`: una imagen elegida, un orden
+   * arrastrado. `extra()` dice cómo está ahora y `baseExtra` cómo estaba al
+   * guardarse. Hacen falta los dos: si se dedujera el punto de partida de lo
+   * que hay en pantalla, elegir un logo y repintar dejaría el botón apagado
+   * sobre un cambio real. */
+  var extra     = op.extra || function(){ return ''; };
+  var baseExtra = op.baseExtra != null ? op.baseExtra : extra();
+
+  function leer(el){
+    if (!el) return '';
+    if (el.type === 'checkbox' || el.type === 'radio') return el.checked ? '1' : '0';
+    return String(el.value == null ? '' : el.value);
+  }
+  function foto(){ return campos.map(leer).join('\u0000') + '\u0000' + extra(); }
+
+  var base = campos.map(leer).join('\u0000') + '\u0000' + baseExtra;
+
+  function revisar(){
+    var falta = obligatorios.some(function(el){ return !leer(el).trim(); });
+    boton.disabled = falta || foto() === base;
+    /* El motivo, en el propio botón. Un botón apagado sin explicación es casi
+     * tan malo como uno encendido sin motivo: la persona no sabe si está
+     * roto o si es ella la que no entiende. */
+    boton.title = falta          ? 'Fill in what is required first'
+                : boton.disabled ? 'Nothing has changed yet'
+                : '';
+  }
+
+  campos.forEach(function(el){
+    el.addEventListener('input',  revisar);
+    el.addEventListener('change', revisar);
+  });
+  revisar();
+
+  return {
+    revisar: revisar,
+    /* Lo que se acaba de guardar pasa a ser el nuevo punto de partida. Hay que
+     * llamarlo DESPUÉS de que el servidor diga que sí — y es lo que apaga el
+     * botón otra vez. Sin esto se queda encendido sobre algo ya guardado, que
+     * es la mitad de la queja de Jose. */
+    guardado: function(){ base = foto(); revisar(); }
+  };
+}
+
 function _btnBusy(btn, label){
   if (!btn) return;
   _btnHideSiblings(btn);
@@ -31238,6 +31455,17 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '13.9',
+    titulo: 'Save means there is something to save, and nothing jumps when you tick a box',
+    puntos: [
+      '<b>Six Save buttons were lit all the time.</b> A lit button is a promise that there is something to do; lit always, it says nothing \u2014 and after saving it left you wondering whether the save had worked, so you pressed it again. They now light up only when something has actually changed, and go dark again the moment it is saved.',
+      '<b>And one of them was not cosmetic.</b> In Permissions the role name could be emptied and saved. A role with no name cannot be given to anyone or taken from anyone, while the permission keeps granting what it granted. Now Save stays dark while a required field is empty \u2014 and the save refuses it a second time from inside, for anything that does not go through the button.',
+      '<b>Ticking two names no longer shoves the list down.</b> The merge strip appeared out of nothing and pushed the rows you were ticking, so the next one was no longer where your finger was going. It now keeps its place from the start: empty it carries the instruction in grey, and ticking something lights it up instead of moving anything.',
+      'In Prices, each row\u2019s Save now belongs to that row: it wakes up for a price that is different, and stays dark for one that is already on record.'
+    ],
+    antes:  'Save lit over nothing, and a list that moved under your finger',
+    ahora:  'Both only move when you do' },
+
   { ver: '13.8',
     titulo: 'The spinner that never stopped, and the tick that kept vanishing',
     puntos: [
@@ -31271,16 +31499,6 @@ var NOVEDADES = [
     antes:  'Material on the shelf worth nothing, and a button that would not go',
     ahora:  'A price you can set, and an import that stays undone' },
 
-  { ver: '13.5',
-    titulo: 'Things the free edition should always have had, and a limit worth having',
-    puntos: [
-      '<b>Check my data is back in Acopio Basic</b>, with rebuilding stock totals and filling in movement IDs. None of them needed a Pro permission \u2014 they only read your own sheet \u2014 and the free edition is exactly where a messy inventory arrives, because importing a CSV has been open there since October.',
-      'What <i>is</i> hidden now <b>takes its box with it</b>. Before, the button went and the frame stayed, so the screen showed an explanation with nothing to press. And <b>a padlocked section no longer asks the server anything</b>: opening Settings made six calls, three for features that copy cannot use.',
-      '<b>Deleting stops at 200 at a time, and says so before, not after.</b> The number is not arbitrary \u2014 it is the most the trash can show you, so past it some of what you deleted could not be put back. More than that came from a file: undo that import instead, it has no limit.',
-      'The trash stays where you left it instead of jumping to the top each time you put something back, a tick stops clearing itself when new movements arrive, and <b>all 23 column headings explain what they are</b> \u2014 ten did before.'
-    ],
-    antes:  'A box that said \u201cpress it\u201d with nothing to press',
-    ahora:  'It is there, and it works' },
 
 
 
