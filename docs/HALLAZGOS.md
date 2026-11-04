@@ -44,6 +44,8 @@ de pendientes que incluye lo ya hecho deja de usarse en una semana.**
 | — | **La papelera no salta al restaurar** — *verificado por Jose el 3/11* | v13.5 |
 | — | **El tope de 200 al borrar, dicho antes de borrar** — *verificado el 3/11* | v13.5 |
 | — | Las cabeceras de Dashboard, Movements e Incoming explican qué son | v13.5 |
+| N-01 | **El recuadro con candado enseña lo que ofrece, en vez de girar para siempre** | v13.8 |
+| N-02 | **La casilla aguanta el repintado doble** — se mide el plegado, no el tamaño | v13.8 |
 | N-04 | **«Undo this import» desaparece cuando ya se usó** — y el fichero se puede volver a subir | v13.6 |
 | — | **Ponerle precio a lo que ya está en la estantería** (Ajustes → Prices) — desbloquea el encargo de OX | v13.6 |
 
@@ -77,8 +79,8 @@ H-02, H-09, H-10, H-12, H-14, H-15, H-16, H-18, H-19, E-02, E-04.
 |---|---|---|
 | ~~🔴 N-04~~ | ~~«Undo this import» no se va nunca~~ | ✅ **v13.6** |
 | 🔴 **N-08** | **El guardia de cuota bloquea la app y la pantalla no lo dice** | Encontrado y medido el 3/11. **Jose: no tocar todavía** |
-| 🔴 N-01 | La sección con candado se queda con el reloj girando para siempre | **Siguiente tanda** |
-| 🔴 N-02 | La casilla se desmarca sola — mi arreglo del 2/11 tiene un agujero medido | **Siguiente tanda** |
+| ~~🔴 N-01~~ | ~~La sección con candado se queda con el reloj girando~~ | ✅ **v13.8** |
+| ~~🔴 N-02~~ | ~~La casilla se desmarca sola~~ | ✅ **v13.8** |
 | 🟠 N-09 | Restaurar pliega la lista a la primera página, y por eso no se ve volver el movimiento | Anotado el 3/11 |
 | 🟠 N-03 | Project View no tiene cabeceras explicadas — no hay mecanismo, no falta texto | Pequeño y cerrado |
 | 🟠 N-14 | Transfer: la estantería sugerida añade fila en vez de llenar la vacía | Anotado el 3/11. Dos líneas |
@@ -305,6 +307,232 @@ verlo.**
 **El arreglo:** en vez de plegar a la página 1, **ensanchar hasta que la fila
 buscada esté pintada**. Y envolverlo en `_repintarSinSaltar`, que ya existe y
 es exactamente para esto.
+
+---
+
+## 📋 LO DEL 4/11 — veintitrés cosas de Ajustes, que son CUATRO
+
+Jose repasó Ajustes pantalla por pantalla y mandó veintitrés observaciones. La
+tentación es hacer una lista de veintitrés arreglos. **Sería el error.** Al
+ordenarlas por lo que las causa son **cuatro patrones y dos cosas sueltas**, y
+esa diferencia cambia el trabajo entero: cuatro arreglos de raíz valen más que
+veintitrés parches, y además impiden que vuelvan a aparecer en la próxima
+pantalla que se escriba.
+
+---
+
+### 🔴 P-01 · Botones que siempre están encendidos — **seis pantallas, y una es peligrosa**
+
+| Dónde | Qué dijo Jose |
+|---|---|
+| Name & Logo | *"siempre está activo el botón save changes, ¿por qué?"* |
+| **Permissions** | *"siempre se puede eliminar el nombre del rol y también guardar… eso es peligroso"* |
+| Prices | *"el botón save siempre está activo, aun luego de guardar se vuelve a poner activo"* |
+| Daily movement report | *"los botones de save y send one now siempre están activos"* |
+| Locations | *"los botones de rename/remove siempre están seleccionados"* |
+| Projects | lo mismo al seleccionar |
+
+**Por qué es UN hallazgo y no seis.** Un botón encendido es una promesa: *«hay
+algo que hacer aquí»*. Si está encendido siempre, deja de decir nada — y
+entonces la persona tiene que acordarse ella de si cambió algo, que es
+exactamente el trabajo que la pantalla tenía que ahorrarle.
+
+**Y en Permissions no es estética, es daño.** El nombre del rol se puede
+vaciar y guardar. Un rol sin nombre es un rol que nadie puede nombrar después
+—ni para dárselo a alguien ni para quitárselo— y el permiso sigue existiendo
+por debajo. **Es lo único de esta tanda que puede dejar una instalación en un
+estado del que no se sale desde la pantalla.**
+
+**El arreglo de raíz, una sola vez:** un ayudante que compare *lo que hay en
+pantalla* con *lo que se cargó*, y encienda Guardar sólo si son distintos. Lo
+mismo que ya hace falta para el aviso de «tienes cambios sin guardar». Y una
+regla aparte y no negociable: **Guardar no se enciende si el campo obligatorio
+está vacío.**
+
+---
+
+### 🔴 P-02 · La selección por fila existe, y cada pantalla la hace a su manera
+
+Jose: *"debemos implementar la forma de selección del checkbox con el botón de
+edición igual que en los otros lugares aquí también"*, y lo repite para
+Categories, Materials, Locations, Projects y Directory.
+
+**Lo medido:** el mecanismo YA existe y YA está en las cuatro
+(`_rowModeBarHtml('cfg' | 'loc' | 'pm' | 'mat')`). Así que esto no es «falta
+implementarlo»: es que **se comporta distinto en cada una**, que es peor,
+porque enseña una cosa y luego no la cumple.
+
+El caso que lo deja claro es **Materials** (imagen 1): al renombrar, *"toda la
+lista se queda desactivada hasta que el material se cambia de nombre"*, y el
+nombre se escribe en una ventanita del navegador en vez de en la propia fila —
+de ahí también *"se mezclan letras mayúsculas y minúsculas"*, porque ese camino
+no pasa por la normalización que sí tiene el resto.
+
+**Lo que Jose pide, y es lo correcto:** una sola forma en todas — casilla para
+elegir, y los botones de acción que se encienden **con lo que haya elegido**.
+
+Y su regla para Categories es la mejor parte, porque sale de pensar en lo que
+significa cada acción:
+
+> *"si selecciona una se activan rename/delete, si selecciona más de una, se
+> desactiva rename y sólo queda delete"*
+
+**Renombrar es de uno; borrar es de muchos.** Eso no es una preferencia: es la
+diferencia real entre las dos operaciones, y una pantalla que la respeta no
+necesita explicar nada.
+
+**Y la disposición**, también de Jose: las categorías **agrupadas en el centro
+como en «Low-Stock Monitor Settings»**, no en una lista vertical. Esa pantalla
+ya resolvió el problema; copiarla es gratis y de paso hace que las dos se
+parezcan.
+
+---
+
+### 🟠 P-03 · La lista salta cuando aparece la franja de acciones
+
+Jose, en Projects: *"al seleccionar 2 o más proyectos con el checkbox, toda la
+lista salta hacia abajo al mostrar la franja de merge/clear"*. Y en Locations:
+*"no debería saltar toda la lista al aparecer la franja"*.
+
+**Es la misma familia que la papelera que saltaba** (arreglado en la v13.5) y
+el «Load more» que se iba al final (arreglado el 4/10): algo aparece **arriba**
+de lo que estás mirando y empuja todo hacia abajo, así que la fila que ibas a
+pulsar ya no está donde tu dedo iba.
+
+**Y la solución ya está escrita dos veces en este proyecto:** la franja
+**reserva su sitio** desde el principio (invisible, no ausente) en vez de
+robarlo al aparecer. Es lo mismo que se hizo con el punto de conexión —*"el
+arreglo es dejar de robar sitio y RESERVARLO"*— y con `_repintarSinSaltar`.
+
+**Que haga falta una tercera vez es el hallazgo**: la regla existe, funciona, y
+no hay nada que obligue a usarla en la siguiente pantalla.
+
+---
+
+### 🟠 P-04 · El menú de contacto existe en Movimientos y no en el resto
+
+Jose lo pide tres veces: en **Suppliers**, en **Directory** y en los correos.
+
+> *"quiero que la app muestre el mismo menú con una lista de los emails, y el
+> botón de enviar correo, cuando pase el mouse por cada uno de los
+> supplier/brands"*
+
+Ya existe: es la tarjeta que sale al pasar por encima de la columna *User* en
+Movimientos (nombre, correo, y los botones de Email / Meet / Schedule), y está
+delegada en todo el documento, así que **llevarla a otra pantalla es ponerle la
+clase y el `data-` a un `<span>`**, no escribir nada nuevo.
+
+---
+
+### 🔴 P-05 · **Proveedor y marca no son lo mismo** — y esto es de negocio, no de pantalla
+
+Lo más importante de la tanda, y no es un fallo de la app: es un fallo del
+modelo que la app aceptó sin preguntar.
+
+> *"hoy me di cuenta de algo, supplier y brand no es lo mismo. Yo he estado
+> usando la brand como el supplier en todas las apps, pero hoy recibí unos
+> pallets de flashing tape de la marca **DUPONT**, pero el supplier se llama
+> **ORPAC**, incluso el papel que firmé y subí al sistema tiene ese nombre."*
+
+**Por qué importa de verdad, y no es ordenar nombres:**
+
+- **El albarán firmado dice ORPAC.** Si el movimiento dice DUPONT, el papel y
+  el registro **no se pueden casar** — y ese papel es la prueba de lo que
+  entró. Es lo único que vale en una discusión.
+- **A quién se le reclama** es al proveedor, no a la marca. Un material que
+  llegó mal no se le reclama a DuPont.
+- **El precio es del proveedor**, no de la marca: el mismo DUPONT cuesta
+  distinto comprado a ORPAC o a otro. Y ahora que empieza el seguimiento de
+  valor para OX, **mezclarlos mete ruido justo en la cuenta que acaban de
+  pedir**.
+- Y al revés: *«¿cuánto DUPONT tenemos?»* es una pregunta buena que hoy no se
+  puede contestar si DUPONT está escrito en el hueco del proveedor de unas
+  filas y no de otras.
+
+**Lo que hay que decidir antes de tocar código** (y es de Jose):
+
+1. ¿**Dos campos** (proveedor y marca) o **la marca dentro del material**?
+   *Mi recomendación: dos campos.* La marca es del material y el proveedor es
+   de la compra; meterlos en el mismo sitio es lo que ya pasó.
+2. **Qué se hace con lo que ya está escrito.** Hoy hay filas donde el
+   «proveedor» es en realidad una marca. **No se puede adivinar cuál es cuál**,
+   y una migración automática sería inventarse datos. Lo honesto: campo nuevo
+   vacío, y una pantalla que ayude a repartir los nombres existentes a mano,
+   una vez.
+3. ¿Entra en la plantilla de importación? (Yo: sí, como columna opcional.)
+
+**Esto no es un arreglo rápido.** Toca el archivo, la importación, los
+informes y la pantalla de entrada. Pero cuanto más tarde, más filas hay que
+repartir después.
+
+---
+
+### 🟠 P-06 · Importar: elegir qué filas entran
+
+Jose (imagen 5): casillas para elegir **una, varias o todas**, filtrar **por
+categoría o por los datos de las cabeceras**, y que el botón **cuente sólo las
+elegidas**.
+
+**Media pieza ya existe y está esperando.** `commitImport` recibe
+`skipRowNums` —*"viene vacío hoy. Está porque la pantalla de la v12.94 deja
+destildar filas, y el sitio correcto para decidir qué entra es el servidor"*—
+así que el servidor ya sabe saltarse filas; lo que falta es la pantalla.
+
+**Y el botón es la parte que no se puede dejar para después.** Hoy dice
+«Import 800 valid rows». Si se pueden destildar filas y el botón sigue
+diciendo 800, es **exactamente el fallo del 22/10** —el botón decía 1.052 e
+importaba 500— con otra ropa. El número del botón y lo que entra tienen que
+salir del mismo sitio.
+
+*(Y lo pequeño: «Download CSV Template» pasa a ser **un enlace al final del
+párrafo**, no un botón. Tiene razón: no es una acción principal y compite con
+«Choose File», que sí lo es.)*
+
+---
+
+### 🟡 P-07 · Materials: dos cosas sueltas
+
+- **«Units per box/pallet» no se entera de los renombrados.** Jose corrigió
+  `FLASHING TAPE 6"` y el recuadro de arriba siguió con el nombre viejo hasta
+  salir y volver. Son dos listas de la misma pantalla que se pintan por su
+  cuenta: `_renderPacksPanel()` no se vuelve a llamar cuando cambia un
+  material. **Dos cosas que tienen que coincidir, en la misma pantalla.**
+- **«Showing first 80. Type to filter.»** sale con la lista corta. El código
+  lo condiciona a `filtered.length > 80`, así que **tal como está escrito no
+  debería salir** — hay que mirar en qué pantalla exactamente lo vio (el
+  recorte no lo deja ver) antes de tocar nada.
+
+---
+
+### 🟡 P-08 · Error Log y System: caben en la mitad de sitio
+
+Error Log, propuesta de Jose: juntar **hora + usuario**, **gravedad + dónde**,
+y el **id delante del mensaje**. Altura de fila estándar. **Clic en cualquier
+parte de la fila** para leer el texto entero, y **mantener pulsado** para que
+salga un botón de copiar el mensaje completo.
+
+Las tres son buenas y la última es la que más vale: un mensaje de error que no
+se puede copiar entero es un mensaje que hay que transcribir a mano para
+pedirle ayuda a alguien.
+
+System: *"recoger todos esos mensajes y dejarlos dentro de un abanico que se
+abre sólo al dar clic en «ver», así como «All backups in Drive (xx)»"*. De
+acuerdo, y el motivo es el mismo que ya se aplicó a los respaldos: lo que casi
+siempre está bien no debe ocupar sitio permanente.
+
+---
+
+### 📌 El orden que propongo, y por qué
+
+| | Qué | Por qué ahí |
+|---|---|---|
+| **1** | **P-01 en Permissions** (sólo ahí) | Es lo único que puede dejar una instalación rota desde la pantalla. El resto de P-01 es incomodidad |
+| **2** | ~~N-01 y N-02~~ | Los dos que Jose lleva viendo desde la v13.5 |
+| **3** | P-01 completo + P-03 | Son los dos que se arreglan de raíz una vez y no vuelven |
+| **4** | P-02 (empezando por Categories, que es el diseño que Jose ya definió) | Es el más grande de los de pantalla |
+| **5** | P-06 (importar) | Tiene media pieza hecha en el servidor |
+| **6** | **P-05, proveedor y marca** | El más valioso y el que más decisión necesita. **Cuanto más tarde, más filas hay que repartir a mano** |
+| — | P-04, P-07, P-08 | Pequeños, cuando toque |
 
 ---
 

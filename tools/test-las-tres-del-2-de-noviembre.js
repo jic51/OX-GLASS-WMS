@@ -69,6 +69,41 @@ check('hay UNA regla de si una sección está con candado',
   check('la sección con candado «' + id + '» no llama al servidor',
     new RegExp("_sysCargarSiAbierta\\('" + id + "'").test(HTML));
 });
+/* ── Y LA OTRA MITAD DEL ARREGLO, QUE FALTÓ HASTA EL 4/11 ─────────────────
+ *
+ * Jose, 3/11, con captura: *"las partes de Acopio Pro siguen cargando y no
+ * paran."* No preguntarle nada al servidor era la mitad correcta; la que faltó
+ * es **quién borra el «⏳ Checking…»**. Lo escribía el HTML al pintarse y lo
+ * borraba siempre la respuesta. Sin respuesta, el reloj giraba para siempre —
+ * peor que antes, porque parece que la app está colgada.
+ *
+ * Un recuadro con candado no tiene que cargar ni esperar: tiene que **pintar
+ * lo que ofrece**. */
+['sysRespaldo', 'sysReporte', 'sysLector'].forEach(function (id) {
+  check('el recuadro de «' + id + '» decide su contenido según el candado',
+    new RegExp("_sysCajaInicial\\('" + id + "'").test(HTML));
+});
+check('hay UNA regla de qué poner, escrita una vez',
+  /function _sysCajaInicial/.test(HTML));
+
+/* Y lo que pone sale del MISMO sitio que la ventana que se abre al pulsarlo.
+ * Dos textos distintos sobre la misma función serían dos cosas que tienen que
+ * coincidir sin que nada lo obligue — la falta que este proyecto persigue. */
+const caja = fnSrc(HTML, '_sysCajaInicial');
+check('...y el texto sale de donde ya está escrito, no de una copia nueva',
+  /BASIC_PRO\[clave\]\.que/.test(caja), caja);
+check('...y si la sección está abierta, deja el «Checking…» de siempre',
+  /!_sysSeccionBloqueada\(id\)/.test(caja) && /return placeholder/.test(caja));
+
+/* El guardia del guardia: que no quede ningún «Checking…» escrito a pelo en
+ * los tres recuadros con candado. Es lo que se le quedó al arreglo del 2/11. */
+['backupBox', 'dailyReportBox', 'aiBox'].forEach(function (id) {
+  const i = HTML.indexOf('id="' + id + '"');
+  const trozo = HTML.slice(i, i + 200);
+  check(id + ' ya no trae el reloj escrito a pelo',
+    i !== -1 && trozo.indexOf('Checking…</div>') === -1, trozo.slice(0, 120));
+});
+
 /* Y la otra mitad: las abiertas SIGUEN cargando. La regla es por sección, no
  * «apagar todo en Básico» — si esto fallara habríamos apagado la papelera y el
  * espacio usado, que son lo poco que la gratis tiene ahí. */
@@ -128,11 +163,26 @@ check('la poda sigue siendo «lo que no está pintado no está seleccionado»',
   /mov-select-cb/.test(render) && /pintadas/.test(render));
 check('nada marcado se cae de la ventana cuando llegan filas nuevas',
   /_movSelection\[mid\]/.test(render) && /pageEnd = ultimoMarcado \+ 1/.test(render));
-check('...y sólo cuando la lista ha CRECIDO, que es lo que distingue ' +
-      'llegar filas nuevas de plegar la tabla',
-  /total > _movTotalAnterior/.test(render));
-check('...y se recuerda el tamaño para la próxima vez',
-  /_movTotalAnterior = total/.test(render));
+/* ── CORREGIDO EL 4/11, Y LA PRUEBA ESTABA SUJETANDO LA MEDIDA EQUIVOCADA ──
+ *
+ * Esto fijaba «sólo cuando la lista ha crecido» (`total > _movTotalAnterior`),
+ * que era mi idea del 2/11 y **se gastaba sola**: la lista crece una vez y se
+ * repinta dos —`_pintarGuardado` y después la recarga— así que el primer
+ * repintado consumía el «ha crecido» y el segundo dejaba caer lo marcado.
+ *
+ * Jose lo vio el 3/11 con 300 filas cargadas: *"la casilla se desmarca cada vez
+ * que aparecen más de 4-5 movimientos"*.
+ *
+ * Lo que se mide ahora es lo que de verdad distingue los dos casos: **si la
+ * persona plegó la tabla**, que es `_movPage` y sólo baja cuando ella lo pide.
+ * Un repintado no la toca, se repinta una vez o diez. */
+check('...y sólo si NADIE plegó la tabla — que es lo que distingue llegar ' +
+      'filas nuevas de cambiar de filtro, y no depende de cuántas veces se repinte',
+  /_movPage >= _movPageAnterior/.test(render));
+check('...y se recuerda la página para la próxima vez',
+  /_movPageAnterior = _movPage/.test(render));
+check('y ya no se mide por el tamaño, que era una carrera contra el repintado',
+  !/_movTotalAnterior/.test(render));
 
 console.log('\n  — las cabeceras —\n');
 
