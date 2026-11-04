@@ -310,6 +310,75 @@ es exactamente para esto.
 
 ---
 
+## 📋 LO DEL 5/11
+
+### 🟠 P-09 · Un documento, un material: subir la misma foto diez veces
+
+Jose: *"como cada material se sube en un ingreso diferente, debo subir el mismo
+documento para cada material, lo cual en el teléfono significa tomar varias
+fotos por cada material. ¿Hay alguna forma de subir un solo documento y que se
+vea en todos los materiales con ese mismo nombre?"*
+
+**Sí, y es más barato de lo que parece.** Lo medido:
+
+- Los documentos se guardan en la columna `DOC_LINKS` de cada movimiento, y lo
+  que hay dentro **son enlaces a Drive**, no el fichero.
+- O sea que **el fichero ya puede ser uno solo**. Compartirlo entre varios
+  movimientos es escribir el mismo enlace en varias filas: no se vuelve a
+  subir nada, no ocupa más espacio en el Drive del cliente, y el albarán es
+  literalmente el mismo documento para todos — que es lo correcto, porque **lo
+  es**.
+- Y `openAttachModal` ya recibe el **PO** como segundo argumento, así que la
+  app ya sabe agrupar por albarán. La pieza está medio puesta.
+
+**Lo que propongo, y es lo más pequeño que resuelve su problema:**
+
+> Al terminar una entrada de **varios materiales**, el documento que se suba se
+> adjunta **a todos los movimientos de esa entrada**, con una casilla marcada
+> por defecto: *«Attach to all 6 materials in this entry»*.
+
+Una foto, un toque, seis filas con el albarán. Es el caso de Jose exactamente:
+llega un pallet, un papel firmado, varios materiales.
+
+**Y el segundo paso, para lo que ya está guardado:** en la ventana de adjuntar,
+*«Use a document already attached to this PO»* — elegir de una lista en vez de
+volver a fotografiar.
+
+**Lo que NO haría, y conviene decirlo:** compartir **por nombre de material**,
+que es como Jose lo planteó. Dos entradas del mismo material en meses distintos
+vienen con albaranes distintos, y pegarle a una el papel de la otra es meter
+una prueba falsa en el sitio donde se guardan las pruebas. **Lo que comparte
+documento es una ENTREGA, no un material.**
+
+---
+
+### 🟡 P-10 · La etiqueta corta las letras por la mitad
+
+Jose, con dos etiquetas impresas: `SYM.BR.MODELHOM` / `E`. *"La etiqueta debe
+adaptarse para que los nombres no queden con letras cortadas, o sea no cortar
+letras sino palabras."*
+
+**La causa, medida:** `.lbl-name` lleva `overflow-wrap:anywhere`, que es
+«parte donde sea». Se puso para que un nombre larguísimo no se saliera, y hace
+justo lo que dice.
+
+**Pero cortar por palabras no basta aquí**, y conviene verlo antes de
+arreglarlo mal: `SYM.BR.MODELHOME` **no tiene espacios**. Es un solo trozo. Por
+mucho que se respeten las palabras, sigue sin caber.
+
+**Entonces el arreglo son dos cosas, no una:**
+
+1. **Que el texto se encoja hasta caber.** El tamaño es fijo (8,5 mm) para
+   cualquier nombre; con uno largo debería bajar a 7, a 6, a 5. Una etiqueta se
+   lee desde un metro: 6 mm entero se lee mejor que 8,5 mm partido.
+2. **Y que, si aun así hay que partir, parta por el punto.** `SYM.BR.` / 
+   `MODELHOME` se entiende; `MODELHOM` / `E` no.
+
+Hoy la regla es «máximo tres líneas y lo que sobre se esconde», lo que puede
+**ocultar parte del nombre sin avisar** — peor que partirlo.
+
+---
+
 ## 📋 LO DEL 4/11 — veintitrés cosas de Ajustes, que son CUATRO
 
 Jose repasó Ajustes pantalla por pantalla y mandó veintitrés observaciones. La

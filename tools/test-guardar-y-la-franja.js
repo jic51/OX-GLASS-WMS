@@ -181,8 +181,12 @@ check('lo que cambia al marcar es el aspecto, no el sitio',
 /* Y las dos funciones que la pintan: vacía ya NO se vacía, lleva la frase de
  * qué hacer. Un hueco en blanco reservado sería sitio tirado; la instrucción
  * justo encima de las casillas es sitio bien empleado. */
-const dibujos = HTML.match(/bar\.classList\.remove\('show'\);[\s\S]{0,260}?return;/g) || [];
-check('hay dos franjas y las dos se tratan igual', dibujos.length === 2, dibujos.length);
+/* CUÁNTAS SON NO ES LO QUE SE MIDE. Eran dos y pasaron a tres el 5/11, cuando
+ * Categorías estrenó la suya. Un número escrito a mano convierte cada pantalla
+ * nueva en un fallo de esta prueba en vez de en lo que es: una pantalla nueva.
+ * Lo que se sujeta es que **todas** se traten igual. */
+const dibujos = HTML.match(/bar\.classList\.remove\('show'\);[\s\S]{0,300}?return;/g) || [];
+check('hay franjas que mirar', dibujos.length >= 3, dibujos.length);
 dibujos.forEach(function (d, i) {
   check('franja ' + (i + 1) + ': vacía conserva su sitio y dice qué hacer',
     /Tick /.test(d) && !/bar\.innerHTML = '';/.test(d), d.slice(0, 160));

@@ -5933,7 +5933,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '13.9';
+var APP_VERSION = '14.0';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5945,7 +5945,7 @@ var APP_VERSION = '13.9';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '069a5f12';
+var APP_BUILD = '8707e054';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -17808,6 +17808,11 @@ function _renderSettingsTab(tab) {
   var items = _settingsData[tab] || [];
   var label = { categories:'Category', projects:'Project', suppliers:'Supplier', locations:'Location' }[tab] || 'Item';
 
+  /* Categorías va por su cuenta desde la v14.0: chips centrados y una barra
+   * que se enciende con lo marcado. Es el molde al que irán Projects,
+   * Suppliers, Locations, Materials y Directory — ver `UNA-SOLA-FORMA.md`. */
+  if (tab === 'categories'){ _renderCategoriesTab(items); _basicApagarAjuste(tab); _equisTrasPintar(); return; }
+
   var mergeable = (tab === 'projects' || tab === 'suppliers');
 
   var rows = items.map(function(v, i) {
@@ -17860,6 +17865,193 @@ function _renderSettingsTab(tab) {
     '</div>';
   if (mergeable) { _wireSimilarGroups(tab); _wireManualMerge(tab, label); }
   _mountRowMode('cfg');
+}
+
+/* ═══ CATEGORÍAS: MARCAR Y ACTUAR, COMO EN EL RESTO DE LA APP ═══════════════
+ *
+ * Jose, 4/11: *"en la parte de categories vamos a ponerlo igual que en «Low-Stock
+ * Monitor Settings»: en lugar de una lista vamos a poner las categorías
+ * agrupadas en el centro, con el hover igual, y cuando se seleccione una se
+ * activan rename/delete; si selecciona más de una, se desactiva rename y sólo
+ * queda delete."*
+ *
+ * ── POR QUÉ ESTO ES EL MOLDE Y NO UN RETOQUE DE UNA PANTALLA ──────────────
+ *
+ * La app tenía CINCO formas de elegir una fila. Dos de casilla + barra
+ * (Dashboard, Movements) y tres de «modo»: pulsas Renombrar, la lista entra en
+ * modo, y el lápiz de la fila que toques después hace algo. Y Categorías
+ * llevaba **las dos a la vez** — modo para renombrar y una casilla distinta
+ * para fusionar, en la misma lista.
+ *
+ * La selección gana, y no por gusto: el modo actúa sobre **la fila que pulses
+ * después** y deja encendido un estado que no estás mirando; la selección
+ * actúa sobre **lo que ya está marcado y se ve**, y la barra dice qué va a
+ * pasar y sobre cuántas. Esta app ya tomó esa decisión una vez —`ROW_MODES`
+ * lleva escrito que Movements salió de los modos en la v11.59— y no se llevó
+ * a las demás. Esto empieza a llevarla.
+ *
+ * ── Y LA REGLA DE JOSE ES LA MEJOR PARTE ─────────────────────────────────
+ *
+ * **Renombrar es de UNA; borrar es de MUCHAS.** No es una preferencia: es la
+ * diferencia real entre las dos operaciones. Y escrita en qué botones se
+ * encienden, no hay que explicarla.
+ */
+var _catSel = {};   // nombre → true
+
+function _renderCategoriesTab(items){
+  var cont = document.getElementById('settingsTabContent');
+
+  /* La selección se limpia al repintar la pestaña entera, igual que en
+   * Movements: lo que no está en pantalla no puede quedar armado. */
+  Object.keys(_catSel).forEach(function(n){
+    if (items.indexOf(n) === -1) delete _catSel[n];
+  });
+
+  cont.innerHTML =
+    '<p style="font-size:.8rem;color:var(--muted);margin-bottom:.75rem">' +
+      'Manage categories. Renaming a category updates all existing movements automatically.</p>' +
+    '<div class="mon-chips" id="catChips"></div>' +
+    '<div class="cfg-pickbar" id="catBar"></div>' +
+    '<div class="cfg-add-row">' +
+      '<input type="text" id="cfgNewVal" placeholder="New Category name…" ' +
+             'onkeydown="if(event.key===\'Enter\')_cfgAdd(\'categories\')">' +
+      '<button class="btn btn-primary btn-sm" onclick="_cfgAdd(\'categories\')">+ Add</button>' +
+    '</div>';
+
+  document.getElementById('catChips').innerHTML = items.map(function(c){
+    var cls = CAT_BADGE[nt(c)] || 'badge-gray';
+    return '<button type="button" class="mon-chip ' + cls + (_catSel[c] ? ' on' : '') + '" ' +
+           'data-cat-pick="' + _escAttr(c) + '">' + _he(c) + '</button>';
+  }).join('');
+
+  document.querySelectorAll('[data-cat-pick]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var n = b.getAttribute('data-cat-pick');
+      if (_catSel[n]) delete _catSel[n]; else _catSel[n] = true;
+      b.classList.toggle('on', !!_catSel[n]);
+      _catBarra();
+    });
+  });
+
+  _catBarra();
+}
+
+/* Lo marcado, en el orden en que se ve. */
+function _catMarcadas(){
+  return Array.prototype.map.call(document.querySelectorAll('[data-cat-pick]'), function(b){
+    return b.getAttribute('data-cat-pick');
+  }).filter(function(n){ return _catSel[n]; });
+}
+
+function _catBarra(){
+  var bar = document.getElementById('catBar');
+  if (!bar) return;
+  var sel = _catMarcadas();
+
+  /* Vacía conserva su sitio y lleva la instrucción — ver la nota de
+   * `.cfg-pickbar`. Esconderla volvería a empujar los chips al aparecer. */
+  if (!sel.length){
+    bar.classList.remove('show');
+    bar.innerHTML = '<span>Tick a category to rename or delete it. Tick two or more to merge them.</span>';
+    return;
+  }
+
+  bar.classList.add('show');
+
+  if (sel.length === 1){
+    /* Se renombra AQUÍ, en la barra, y no con una ventanita del navegador:
+     * ese camino es el que en Materials se salta el paso a mayúsculas y deja
+     * la lista muerta mientras está abierto. */
+    bar.innerHTML =
+      '<span class="cfg-pick-count">1 selected</span>' +
+      '<input type="text" id="catRenameInp" maxlength="40" value="' + _escAttr(sel[0]) + '">' +
+      '<button class="btn btn-primary btn-sm" id="catRenameBtn" disabled ' +
+              'title="Type a different name first">Rename</button>' +
+      '<button class="btn btn-sm cfg-btn-danger" id="catDelBtn">🗑 Delete</button>' +
+      '<button class="btn btn-ghost btn-sm" id="catClearBtn">Clear</button>';
+
+    var inp = document.getElementById('catRenameInp');
+    var rbt = document.getElementById('catRenameBtn');
+    /* El mismo guardia de siempre: Renombrar se enciende si el nombre es
+     * distinto, y nunca si está vacío. */
+    _vigilarGuardar({ boton: rbt, campos: [inp], obligatorios: [inp] });
+    rbt.addEventListener('click', function(){
+      var nuevo = (inp.value || '').trim().toUpperCase();
+      if (!nuevo || nuevo === sel[0].toUpperCase()) return;
+      _btnBusy(rbt, 'Renaming…');
+      _catSel = {};
+      _cfgCall({ type: 'categories', op: 'rename', value: sel[0], newValue: nuevo });
+    });
+  } else {
+    bar.innerHTML =
+      '<span class="cfg-pick-count">' + sel.length + ' selected — keep which name?</span>' +
+      '<select id="catKeep">' +
+        sel.map(function(v){ return '<option value="' + _escAttr(v) + '">' + _he(v) + '</option>'; }).join('') +
+      '</select>' +
+      '<button class="btn btn-primary btn-sm" id="catMergeBtn">🔀 Merge</button>' +
+      /* Renombrar NO está. No está apagado: no está. Renombrar varias cosas a
+       * un mismo nombre no es renombrar, es fusionar — y fusionar ya está ahí
+       * al lado. Un botón apagado invitaría a preguntarse qué haría. */
+      '<button class="btn btn-sm cfg-btn-danger" id="catDelBtn">🗑 Delete ' + sel.length + '</button>' +
+      '<button class="btn btn-ghost btn-sm" id="catClearBtn">Clear</button>';
+
+    document.getElementById('catMergeBtn').addEventListener('click', function(){
+      var into = document.getElementById('catKeep').value;
+      var quitada = false;
+      var from = sel.filter(function(v){
+        if (!quitada && v === into){ quitada = true; return false; }
+        return true;
+      });
+      var btn = document.getElementById('catMergeBtn');
+      _showConfirm({
+        icon: '🔀', title: 'Merge into "' + into + '"?',
+        message: from.join('\n') + '\n\nwill become "' + into + '" on every movement. ' +
+                 'This rewrites history and cannot be undone automatically.',
+        confirmText: 'Merge',
+        onConfirm: function(){
+          _btnBusy(btn, 'Merging…');
+          google.script.run
+            .withSuccessHandler(function(){
+              _catSel = {};
+              _applyMergeLocally('categories', from, into);
+              loadDataFromGoogle(true, true);   // skipCache, quiet
+            })
+            .withFailureHandler(_mergeFailed(btn, '🔀 Merge'))
+            .processMovement('mergeConfigValues', _h({ type: 'categories', from: from, into: into }));
+        }
+      });
+    });
+  }
+
+  document.getElementById('catClearBtn').addEventListener('click', function(){
+    _catSel = {};
+    document.querySelectorAll('[data-cat-pick]').forEach(function(b){ b.classList.remove('on'); });
+    _catBarra();
+  });
+
+  /* Borrar vale para una y para muchas, y dice CUÁLES — no «3 categorías».
+   * Un aviso que no nombra lo que se lleva no se puede comprobar. */
+  document.getElementById('catDelBtn').addEventListener('click', function(){
+    _showConfirm({
+      icon: '🗑️', danger: true,
+      title: sel.length === 1 ? 'Delete "' + sel[0] + '"?' : 'Delete ' + sel.length + ' categories?',
+      message: sel.join('\n') + '\n\n' +
+               (sel.length === 1 ? 'It is removed from the list. ' : 'They are removed from the list. ') +
+               'Movements already recorded keep the category they were saved with.',
+      confirmText: sel.length === 1 ? 'Delete' : 'Delete ' + sel.length,
+      onConfirm: function(){
+        var pend = sel.slice();
+        _catSel = {};
+        /* De una en una y en orden: el servidor reescribe la columna entera de
+         * CONFIG en cada borrado, así que mandarlas a la vez haría que la
+         * última pisara a las demás. */
+        (function siguiente(){
+          if (!pend.length) return;
+          _cfgCall({ type: 'categories', op: 'delete', value: pend.shift() }, siguiente);
+        })();
+      }
+    });
+  });
 }
 
 // ── Locations, grouped by type ───────────────────────────────────────────────
@@ -31455,6 +31647,16 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '14.0',
+    titulo: 'Categories work the way the rest of the app does, and the app stops shutting you out',
+    puntos: [
+      '<b>Categories are now chips you tick, grouped in the middle like the Low-Stock Monitor.</b> Tick one and Rename and Delete wake up; tick several and Rename is not offered at all \u2014 renaming several things to one name is not renaming, it is merging, and Merge is right there. Renaming happens in the bar, not in a browser pop-up, so it follows the same text rules as everywhere else.',
+      '<b>And the app stopped shutting itself out.</b> It caps how many operations run per minute so your Google account is never cut off \u2014 but the cap reset its own clock on every call that passed, so instead of \u201c240 a minute\u201d it meant \u201ca minute of total silence or the count never clears\u201d. Working steadily for three minutes could reach the cap without ever passing it in any one minute. That is why a 600-row file sometimes never loaded.',
+      'The window now slides properly, and <b>the message says whose limit it is, that nothing was lost, and how long to wait</b> \u2014 it is our cap, so saying only \u201ctoo many requests\u201d was a system message about our own decision.'
+    ],
+    antes:  'Working steadily until the app said no, and would not say why',
+    ahora:  'It counts the last minute, not the last silence' },
+
   { ver: '13.9',
     titulo: 'Save means there is something to save, and nothing jumps when you tick a box',
     puntos: [
@@ -31488,16 +31690,6 @@ var NOVEDADES = [
     antes:  'A 13-pixel target in front of a Delete button',
     ahora:  'The same box, big enough to hit' },
 
-  { ver: '13.6',
-    titulo: 'What a material is worth, and an undone import that finally goes away',
-    puntos: [
-      '<b>Settings → Prices.</b> Pick a category, find the material, type what one unit is worth. Until now a price could only be typed while recording an <i>entry</i>, so anything already sitting on the shelf had no value at all — and every movement that took it out went through with <b>no cost on it</b>, silently. Now it has one, and <b>the screen says how many materials in that category still do not</b>: “12 of 48 have a price” is what makes a monthly value report worth reading.',
-      'It writes the <b>average cost</b> the costing engine already uses, not a second price of its own, so there is nothing that can disagree with anything. A price per box still goes through Materials → packs, which is the screen that already does that arithmetic. <b>In Acopio Basic too</b> — it needs no Google permission, and a warehouse that cannot value what it holds is missing half of one.',
-      '<b>“Undo this import” now disappears once you have used it.</b> Before, the button stayed for ever and answered “nothing left from that import” when pressed, and the same file came back as “already imported” even though none of its rows were there any more. The record had said what happened all along — nothing was reading it.',
-      'An import still being undone in chunks <b>keeps</b> its button, because it still has rows left to remove.'
-    ],
-    antes:  'Material on the shelf worth nothing, and a button that would not go',
-    ahora:  'A price you can set, and an import that stays undone' },
 
 
 
