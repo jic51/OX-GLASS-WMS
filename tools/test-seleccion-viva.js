@@ -90,7 +90,7 @@ function mundo(nMovs){
     /* Desde el 2/11: lo que distingue «llegaron filas nuevas» de «se plegó la
        tabla». Empieza en 0 —la tabla no se ha pintado nunca— igual que en la
        app, y esta prueba comprueba justo el plegado, donde no crece. */
-    _movTotalAnterior: 0,
+    _movPageAnterior: 0,
     _colEdit: { mov: false },
     // Cuántas columnas hay visibles no dice nada aquí: sólo entra en el
     // colspan del pie. Un doble, y así el trozo extraído corre tal cual.
@@ -212,6 +212,49 @@ m.seccion('el fallo del video, ejecutado');
     w.marcados().join(',') === 'M12,M15,M22,M24,M3', w.marcados());
   m.check('...y Delete sigue armado sobre los mismos cinco',
     /Delete 5 movements/.test(w.ctx.barra.del.title));
+}
+
+{
+  /* ── EL CASO QUE FALTABA, Y POR ESO EL ARREGLO DEL 2/11 SALIÓ VERDE ROTO ──
+   *
+   * Jose, 3/11: *"la casilla se desmarca cada vez que aparecen más de 4-5
+   * movimientos"*. El arreglo del 2/11 ensanchaba la ventana «sólo si la lista
+   * ha crecido», y **la lista crece una vez y se repinta DOS**:
+   *
+   *     guardar → _pintarGuardado()    → renderMovements()   ← crece
+   *             → loadDataFromGoogle() → renderAll()
+   *                                    → renderMovements()   ← ya no «creció»
+   *
+   * El primer repintado gastaba la condición y el segundo dejaba caer lo
+   * marcado. Ninguna prueba lo pilló porque **todas pintaban una sola vez**.
+   *
+   * Aquí se pinta DOS VECES seguidas con los mismos datos, que es lo que la
+   * app hace de verdad cada vez que se guarda algo. */
+  const w = mundo(25);
+  w.ctx._movPage = 2;        // 20 de 25 a la vista
+  w.pintar();
+  w.marcar(['M3', 'M18']);
+  m.check('dos marcados, uno de ellos cerca del borde de la ventana',
+    w.marcados().length === 2);
+
+  /* Llegan cinco filas nuevas POR ARRIBA, como al guardar una tanda. El
+     `unshift` no es un detalle: la tabla pinta de lo más nuevo a lo más viejo,
+     así que cada fila que entra EMPUJA una por abajo fuera de la ventana. Con
+     `push` las nuevas caerían al final, nada saldría, y esta prueba pasaría
+     sin medir nada — que es exactamente lo que hacía en su primera versión. */
+  for (let i = 1; i <= 5; i++) w.ctx.movements.unshift({ movId: 'N' + i, rowIdx: 100 + i });
+
+  w.pintar();                // 1 · _pintarGuardado
+  m.check('tras el primer repintado los dos siguen marcados',
+    w.marcados().length === 2, w.marcados());
+
+  w.pintar();                // 2 · la recarga silenciosa, con los MISMOS datos
+  m.check('y tras el SEGUNDO repintado también — que es donde se perdían',
+    w.marcados().join(',') === 'M18,M3', w.marcados());
+
+  w.pintar(); w.pintar();
+  m.check('...y aguantan repintados de más: no es una carrera',
+    w.marcados().length === 2, w.marcados());
 }
 
 {

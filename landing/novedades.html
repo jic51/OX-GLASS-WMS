@@ -105,6 +105,35 @@
 
     <!-- EMPEZ&Oacute; SIN N&Uacute;MERO —cambiaban las p&aacute;ginas, no la app— y acab&oacute;
          con uno: los T&eacute;rminos que el cliente acepta viven DENTRO de la hoja. -->
+    <div class="entry" id="v13-8">
+      <span class="ver">v13.8</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>El reloj que no paraba nunca, y la casilla que se segu&iacute;a borrando</h3>
+      <p><b>En la edici&oacute;n gratis, tres recuadros de Ajustes &rarr; Sistema daban vueltas para
+         siempre.</b> La v13.5 consigui&oacute; que esas secciones dejaran de preguntarle al
+         servidor, que era el objetivo &mdash;seis llamadas al abrir Ajustes, tres de ellas por
+         funciones que esa copia no puede usar&mdash;. Lo que no hizo fue sustituir el
+         &laquo;Checking&hellip;&raquo; que ense&ntilde;aban mientras esperaban. Sin respuesta que
+         llegara, nadie lo borraba.</p>
+      <p>O sea, peor que antes: un recuadro que antes contestaba algo pas&oacute; a parecer una app
+         colgada, en la copia que ven los clientes nuevos. Ahora ense&ntilde;an <b>lo que hace esa
+         funci&oacute;n</b>, sacado del mismo texto que usa la ventana al pulsarla &mdash; un solo
+         sitio donde est&aacute; escrito, para que el recuadro y la ventana no puedan decir cosas
+         distintas.</p>
+      <p><b>Y un movimiento marcado dej&oacute; de perder la marca cuando llegan otros nuevos.</b>
+         El intento anterior ensanchaba la vista &laquo;s&oacute;lo si la lista hab&iacute;a
+         crecido&raquo;, que suena bien y mide lo que no es: la lista crece una vez pero la pantalla
+         se repinta dos, as&iacute; que el primer repintado gastaba la condici&oacute;n y el segundo
+         soltaba la marca.</p>
+      <p>Ahora se hace la pregunta que de verdad distingue los dos casos: <b>&iquest;plegaste la
+         tabla?</b> Cambiar de filtro, de pesta&ntilde;a o de p&aacute;gina la pliega, y lo que deja
+         de verse deja de estar marcado &mdash;que es lo correcto, porque un bot&oacute;n de borrar
+         armado sobre filas que nadie ve es peor que perder una marca&mdash;. Las filas nuevas no
+         pliegan nada, se repinte la pantalla las veces que se repinte.</p>
+      <p>Adem&aacute;s: una l&iacute;nea de Ajustes segu&iacute;a describiendo el tope viejo de 10
+         millones de celdas despu&eacute;s de que la v13.7 lo subiera a 20.</p>
+    </div>
+
     <div class="entry" id="v13-7">
       <span class="ver">v13.7</span>
       <span class="tag fix">Arreglo</span>

@@ -5907,7 +5907,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '13.7';
+var APP_VERSION = '13.8';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5919,7 +5919,7 @@ var APP_VERSION = '13.7';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'dc64ec77';
+var APP_BUILD = '0bcd6833';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -9699,13 +9699,36 @@ function renderMovements(){
    *     se ha plegado nada: la persona sigue mirando lo mismo y la app le
    *     quita la marca por su cuenta.
    *
-   * La diferencia entre las dos es medible en una línea: **en la segunda la
-   * lista ES MÁS LARGA que la vez anterior.** Plegar no alarga nada.
+   * ── EL INTENTO DEL 2/11 ERA CORRECTO EN LA IDEA Y SE GASTABA SOLO ────────
    *
-   * Un intento anterior sujetaba la ventana siempre, y `test-seleccion-viva`
-   * —que nació de aquel vídeo de septiembre— lo pilló en el acto: impedía el
-   * plegado que esa prueba exige. La prueba tenía razón. */
-  if (pageEnd < total && total > _movTotalAnterior) {
+   * Decía «sólo cuando la lista ha CRECIDO», que suena bien y mide lo que no
+   * es. Jose, 3/11: *"la casilla se desmarca cada vez que aparecen más de 4-5
+   * movimientos"*, con 300 filas cargadas de las 1.347 que tenía tras importar.
+   *
+   * El motivo, medido: **la lista crece una vez y se repinta DOS.**
+   *
+   *   guardar → _pintarGuardado()    → renderMovements()  ← crece, ensancha, guarda el tamaño
+   *           → loadDataFromGoogle() → renderAll()
+   *                                  → renderMovements()  ← el tamaño ya es igual: no ensancha, y la poda se lo lleva
+   *
+   * El primer repintado gastaba el «ha crecido» y el segundo llegaba con las
+   * manos vacías. Una condición que depende de cuántas veces se repinte no es
+   * una condición: es una carrera.
+   *
+   * ── LO QUE SE MIDE AHORA ────────────────────────────────────────────────
+   *
+   * `_movPage` es **la página que la persona pidió ver**, y sólo baja cuando
+   * ella pliega la tabla: entrar a la pestaña, cambiar un filtro, cambiar de
+   * pantalla. Un repintado por datos nuevos no la toca, se repinte una vez o
+   * diez. Así que:
+   *
+   *   · `_movPage` **bajó** → se plegó → NO se sujeta, y la poda desmarca.
+   *   · igual o mayor → nadie plegó → lo marcado sujeta la ventana.
+   *
+   * Y es justo lo que `test-seleccion-viva` exige: su caso duro pone `_movPage`
+   * de 3 a 1 **a mano, sin limpiar la selección**, y espera que lo que queda
+   * fuera se desmarque. Con esta regla se cumple por construcción. */
+  if (pageEnd < total && _movPage >= _movPageAnterior) {
     var ultimoMarcado = -1;
     for (var k = pageEnd; k < total; k++) {
       var mid = filtered[k] && filtered[k].movId;
@@ -9713,7 +9736,7 @@ function renderMovements(){
     }
     if (ultimoMarcado !== -1) pageEnd = ultimoMarcado + 1;
   }
-  _movTotalAnterior = total;
+  _movPageAnterior = _movPage;
   var paged     = filtered.slice(0, pageEnd);
   var remaining = total - pageEnd;
 
@@ -10163,7 +10186,9 @@ function deleteMovementRow(rowIdx){
 var _movSelection = {};   // movId → true
 /* Cuántas filas había la última vez que se pintó la tabla. Es lo único que
  * distingue «llegaron filas nuevas» de «se plegó la tabla» — ver renderMovements. */
-var _movTotalAnterior = 0;
+/* La página que se pintó la vez anterior. Empieza en 0 —la tabla no se ha
+ * pintado nunca— para que el primer pintado no cuente nunca como un plegado. */
+var _movPageAnterior = 0;
 
 // Quién ve las casillas y la barra: exactamente la misma regla que decide si
 // ve la columna de acciones, escrita una vez.
@@ -15895,7 +15920,8 @@ function _renderSystemTab() {
                 '"Back up now" makes one extra copy immediately — it does not change the ' +
                 'schedule.') +
       '</label>' +
-      '<div id="backupBox" style="color:var(--muted);font-size:.78rem"><span class="spin-hg">⏳</span> Checking…</div>' +
+      '<div id="backupBox" style="color:var(--muted);font-size:.78rem">' +
+        _sysCajaInicial('sysRespaldo', '<span class="spin-hg">⏳</span> Checking…') + '</div>' +
     '</div>' +
     '<div class="field" id="sysReporte" style="margin-bottom:1.25rem">' +
       '<label style="display:flex;align-items:center;gap:.4rem">Daily movement report ' +
@@ -15903,11 +15929,12 @@ function _renderSystemTab() {
                 'It is sent on quiet days too, saying there were no movements — so a quiet day never ' +
                 'looks the same as a report that failed to arrive.') +
       '</label>' +
-      '<div id="dailyReportBox" style="color:var(--muted);font-size:.78rem"><span class="spin-hg">⏳</span> Checking…</div>' +
+      '<div id="dailyReportBox" style="color:var(--muted);font-size:.78rem">' +
+        _sysCajaInicial('sysReporte', '<span class="spin-hg">⏳</span> Checking…') + '</div>' +
     '</div>' +
     '<div class="field" style="margin-bottom:1.25rem">' +
       '<label style="display:flex;align-items:center;gap:.4rem">Storage ' +
-        _infoIc('Google caps a spreadsheet at 10 million cells across all its tabs. This is how much of that your file uses.') +
+        _infoIc('Google caps a spreadsheet at 20 million cells across all its tabs. This is how much of that your file uses.') +
       '</label>' +
       '<div id="spaceBox" style="color:var(--muted);font-size:.78rem"><span class="spin-hg">⏳</span> Measuring…</div>' +
     '</div>' +
@@ -15915,7 +15942,8 @@ function _renderSystemTab() {
       '<label style="display:flex;align-items:center;gap:.4rem">Document reader (AI) ' +
         _infoIc('Reads a pasted supplier email and pulls out what is arriving, how much and when. It runs on your own Google AI key — Google bills the usage to you, not to us.') +
       '</label>' +
-      '<div id="aiBox" style="color:var(--muted);font-size:.78rem"><span class="spin-hg">⏳</span> Checking…</div>' +
+      '<div id="aiBox" style="color:var(--muted);font-size:.78rem">' +
+        _sysCajaInicial('sysLector', '<span class="spin-hg">⏳</span> Checking…') + '</div>' +
     '</div>' +
     '<div class="field" style="margin-bottom:1.25rem">' +
       '<label style="display:flex;align-items:center;gap:.4rem">Check my data ' +
@@ -30147,6 +30175,33 @@ function _sysCargarSiAbierta(id, carga){
   carga();
 }
 
+/* ── LO QUE PONE EL RECUADRO ANTES DE QUE CONTESTE NADIE ────────────────────
+ *
+ * Jose, 3/11, con captura: *"las partes de Acopio Pro siguen cargando y no
+ * paran."* Y tenía razón: la v13.5 consiguió **la mitad** del arreglo —esas
+ * secciones ya no le preguntan nada al servidor, que era el objetivo— y yo no
+ * miré **quién borraba el «⏳ Checking…»**.
+ *
+ * Lo escribía este mismo HTML al pintarse, y lo borraba SIEMPRE la respuesta
+ * del servidor. Al dejar de preguntar, nadie lo sustituía. Así que el reloj se
+ * quedaba girando para siempre, en gris, en la copia que ven los clientes
+ * nuevos. **Peor que antes**: antes el recuadro contestaba algo; ahora parece
+ * que la app está colgada, que es la peor cosa que puede parecer.
+ *
+ * Un arreglo a medias, no uno equivocado. Y la lección: **apagar una llamada
+ * no es apagar lo que esa llamada iba a rellenar.**
+ *
+ * Lo que va en su sitio no es un hueco ni un aviso: es **lo que la sección
+ * ofrece**, sacado del mismo texto que enseña la ventana al pulsarla
+ * (`BASIC_PRO[clave].que`). Un solo sitio donde está escrito lo que hace cada
+ * cosa, para que el recuadro y la ventana no puedan decir cosas distintas.
+ */
+function _sysCajaInicial(id, placeholder){
+  var clave = BASIC_PRO_SISTEMA[id];
+  if (!_sysSeccionBloqueada(id) || !clave || !BASIC_PRO[clave]) return placeholder;
+  return _he(BASIC_PRO[clave].que);
+}
+
 function _basicApagarSecciones(){
   if (!APP_BASIC) return;
   Object.keys(BASIC_PRO_SISTEMA).forEach(function(id){
@@ -31183,6 +31238,17 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '13.8',
+    titulo: 'The spinner that never stopped, and the tick that kept vanishing',
+    puntos: [
+      '<b>In the free edition, three boxes in Settings \u2192 System span a loading spinner for ever.</b> v13.5 stopped them asking the server, which was the point \u2014 but nothing replaced the \u201cChecking\u2026\u201d they were showing while they waited. So they looked like the app had frozen, on the copy new customers see. They now show what the feature does instead, taken from the same text the panel itself uses.',
+      '<b>And a ticked movement stopped losing its tick when new ones arrived.</b> The previous attempt widened the view \u201conly when the list had grown\u201d, and the list grows once but is redrawn twice \u2014 so the first redraw used the condition up and the second dropped the tick.',
+      'It now asks the question that actually separates the two cases: <b>did you fold the table?</b> Changing a filter, a tab or a page folds it and clears the tick, which is right. New rows arriving do not, however many times the screen redraws.',
+      'Also: Settings still described the old 10-million-cell limit in one place after v13.7 raised it.'
+    ],
+    antes:  'A spinner with nothing behind it, and a tick that let go',
+    ahora:  'Both say what they mean' },
+
   { ver: '13.7',
     titulo: 'Twice the room you thought you had, and two things that fought your thumb',
     puntos: [
@@ -31216,16 +31282,6 @@ var NOVEDADES = [
     antes:  'A box that said \u201cpress it\u201d with nothing to press',
     ahora:  'It is there, and it works' },
 
-  { ver: '13.4',
-    titulo: 'A movement you put back lands where it belongs, and lands now',
-    puntos: [
-      'Two things that looked like one. A restored movement <b>came back at the top of the list</b> no matter how old it was, and <b>took a few seconds to appear at all</b> after the app said it was done.',
-      'The second was the app waiting to ask again: the server had already put it back, and the screen still requested the whole list to find out something it already knew. <b>It goes in straight away now</b> \u2014 the trash row leaving and the movement reappearing are the same moment, instead of a few seconds where it was in neither place.',
-      'The first was never about restoring. The list was drawn in <b>sheet order</b>, which is usually the same as time order because rows get added as things happen \u2014 but putting one back writes it at the end. <b>The list now reads the movement\u2019s own date</b>, and anything without one keeps exactly the order it had.',
-      'Also: the progress line no longer spins at \u201c6 of 6\u201d after a batch delete has finished, and the trash says <b>who</b> deleted something by name, with their contact card on hover.'
-    ],
-    antes:  'A movement from August, first in the list',
-    ahora:  'Back in its place, the moment you press it' },
 
 
 ];

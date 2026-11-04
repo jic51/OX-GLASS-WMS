@@ -106,6 +106,32 @@
          hoja, generados desde `legal/*.md` por `tools/sync-legal.js`, así que
          arreglar lo que dicen de las dos ediciones obliga a tocar la app. Ya
          que había que tocarla, viaja también el ancla `#pro` del candado. -->
+    <div class="entry" id="v13-8">
+      <span class="ver">v13.8</span>
+      <span class="tag fix">Fix</span>
+      <h3>The spinner that never stopped, and the tick that kept vanishing</h3>
+      <p><b>In the free edition, three boxes in Settings &rarr; System spun a loading spinner for
+         ever.</b> v13.5 stopped those sections asking the server, which was the point &mdash; six
+         calls on opening Settings, three of them for features that copy cannot use. What it did not
+         do was replace the &ldquo;Checking&hellip;&rdquo; they showed while they waited. With no
+         answer coming, nothing cleared it.</p>
+      <p>Worse than before, in other words: a box that used to say something now looked like the app
+         had frozen, on the copy new customers see. Those boxes now show <b>what the feature does</b>,
+         taken from the same text the panel itself uses &mdash; one place where it is written, so the
+         box and the panel cannot disagree.</p>
+      <p><b>And a ticked movement stopped losing its tick when new ones arrived.</b> The previous
+         attempt widened the view &ldquo;only when the list had grown&rdquo;, which sounds right and
+         measures the wrong thing: the list grows once but the screen redraws twice, so the first
+         redraw used the condition up and the second let the tick go.</p>
+      <p>It now asks the question that actually separates the two cases: <b>did you fold the
+         table?</b> Changing a filter, a tab or a page folds it, and anything no longer on screen
+         stops being ticked &mdash; which is the right behaviour, because a Delete button armed over
+         rows nobody can see is worse than losing a tick. New rows arriving do not fold anything,
+         however many times the screen redraws.</p>
+      <p>Also: one line in Settings still described the old 10-million-cell limit after v13.7 raised
+         it to 20 million.</p>
+    </div>
+
     <div class="entry" id="v13-7">
       <span class="ver">v13.7</span>
       <span class="tag fix">Fix</span>
