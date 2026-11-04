@@ -87,6 +87,16 @@ O sea: hoy tenemos media solución y conviene no confundirse con ella.
 
 ### Opción 1 — Cierre de período con archivo aparte ✅ RECOMENDADA
 
+> **➡️ EL PLAN DE CONSTRUCCIÓN ESTÁ EN `REPARTO-POR-TIEMPO.md` (4/11/2026).**
+> Esta sección decide **qué**; aquél dice **cómo**, con las invariantes, los
+> cinco pasos del cierre, las pruebas que hay que escribir antes y el orden de
+> las fases.
+>
+> **Y trae una noticia que cambia el coste:** no hace falta que ningún cliente
+> vuelva a autorizar nada. La app ya sabe crear y leer otros Sheets por Drive
+> —lo hace desde que lee un `.xlsx`— así que el permiso `spreadsheets`
+> completo, que era el obstáculo caro, no hace falta.
+
 Cuando el archivo se acerca al límite, los movimientos de los períodos viejos
 se mueven a **un Sheet distinto en el mismo Drive del cliente**
 (`Acopio — Archivo 2025`), y en el archivo vivo queda un **saldo de apertura**
