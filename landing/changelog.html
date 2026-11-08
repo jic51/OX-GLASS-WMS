@@ -106,6 +106,28 @@
          hoja, generados desde `legal/*.md` por `tools/sync-legal.js`, así que
          arreglar lo que dicen de las dos ediciones obliga a tocar la app. Ya
          que había que tocarla, viaja también el ancla `#pro` del candado. -->
+    <div class="entry" id="v14-1">
+      <span class="ver">v14.1</span>
+      <span class="tag fix">Fix</span>
+      <h3>A blank quantity no longer stops a whole file from loading</h3>
+      <p><b>An import containing one empty quantity cell &mdash; or one that said a word instead of
+         a number &mdash; never finished loading.</b> Not an error, not a warning: the spinner simply
+         ran for ever. A larger file loaded fine seconds later, which made it look as though the
+         smaller one was damaged.</p>
+      <p>It was not. A quantity that is not a number came back as a value that cannot be written to
+         the format the screen is sent in, and <b>that breaks the entire reply, not just that
+         row</b> &mdash; which is why neither the success nor the failure path ever ran, and nothing
+         was ever shown.</p>
+      <p>Those rows now arrive as what they are: invalid, with the reason beside them. And the
+         reason <b>quotes what was actually typed</b> &mdash; <i>Qty &ldquo;doce&rdquo; is not a
+         number greater than 0</i> &mdash; so the cell can be found in the spreadsheet with a
+         search instead of hunted for by eye.</p>
+      <p><b>And a window you reopen is now a window that was just opened.</b> If a save was
+         interrupted, its button stayed spinning; closing the window and coming back showed it
+         exactly as it had been left, which took away the first thing anyone tries. Any window that
+         opens now clears a button left mid-save &mdash; one rule, for all of them.</p>
+    </div>
+
     <div class="entry" id="v14-0">
       <span class="ver">v14.0</span>
       <span class="tag new">Change</span>

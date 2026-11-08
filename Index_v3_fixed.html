@@ -5933,7 +5933,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '14.0';
+var APP_VERSION = '14.1';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5945,7 +5945,7 @@ var APP_VERSION = '14.0';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '8707e054';
+var APP_BUILD = 'bdb3e36d';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -17480,7 +17480,17 @@ function _renderImportPreview(res){
       '<td style="padding:.3rem .5rem;color:var(--muted)">' + r.rowNum + '</td>' +
       cols.map(function(c){
         var v = r[c.k];
-        if (c.k === 'qty') v = isNaN(r.qty) ? '' : r.qty;
+        /* UNA CANTIDAD QUE NO ES NÚMERO SE ENSEÑA TAL CUAL SE ESCRIBIÓ.
+         *
+         * Desde la v14.1 el servidor manda `qty: null` cuando la celda está
+         * vacía o dice algo que no es un número —antes mandaba NaN y eso
+         * rompía la respuesta entera, ver `leerFilasDelFichero_`— y manda
+         * aparte lo que había escrito.
+         *
+         * Enseñar ese texto vale más que un guion: la persona ve «doce» en su
+         * sitio, con el error al lado, y sabe exactamente qué celda abrir en
+         * el Excel. Un «—» sólo dice que algo pasa. */
+        if (c.k === 'qty') v = (r.qty == null) ? (r.qtyTexto || '') : r.qty;
         return '<td style="padding:.3rem .5rem">' + _he(v === '' || v == null ? '—' : String(v)) + '</td>';
       }).join('') +
       '<td style="padding:.3rem .5rem;color:var(--red);font-size:.75rem">' + (r.errors.length ? _he(r.errors.join('; ')) : '') + '</td>' +
@@ -29694,6 +29704,50 @@ function _btnBusy(btn, label){
   btn.innerHTML = '<span class="btn-spin"></span>' + (label ? '<span>' + _he(label) + '</span>' : '');
 }
 
+/* ═══ UNA VENTANA QUE SE ABRE ESTÁ RECIÉN ABIERTA ═══════════════════════════
+ *
+ * Jose, 5/11, con captura de «Add Expected Material»: *"se quedó el botón
+ * cargando y no responde; puedo cerrar la ventana y volver y aparece igual."*
+ *
+ * Esa última frase es el hallazgo entero. Que un guardado falle y deje el
+ * botón girando es un fallo; que **cerrar y volver a abrir no lo arregle** es
+ * otro, y es peor: deja a la persona sin la salida que cualquiera prueba
+ * primero. La ventana no se construye al abrirse —se enseña la que ya
+ * estaba— así que el botón seguía exactamente como lo dejó el intento
+ * anterior.
+ *
+ * ── POR QUÉ UN OBSERVADOR Y NO UNA LÍNEA EN CADA SITIO ───────────────────
+ *
+ * Hay **treinta y tres** sitios que abren una ventana. Poner el reinicio en
+ * cada uno son treinta y tres copias de la misma idea, y la ventana número
+ * treinta y cuatro que alguien escriba no tendría ninguna — que es el patrón
+ * que este proyecto lleva meses persiguiendo.
+ *
+ * Esto es la regla escrita una vez: cuando a una ventana se le enciende la
+ * clase que la muestra, cualquier botón que haya quedado ocupado dentro
+ * vuelve a su sitio. Vale para las treinta y tres y para las que vengan,
+ * sin que nadie tenga que acordarse.
+ *
+ * NO cancela el reintento que pueda haber en el aire: ése sigue su curso y
+ * termina o se agota solo. Lo que arregla es la pantalla, que es lo que la
+ * persona tiene delante.
+ */
+function _vigilarVentanasQueSeAbren(){
+  if (typeof MutationObserver !== 'function') return;
+  var obs = new MutationObserver(function(cambios){
+    for (var i = 0; i < cambios.length; i++){
+      var el = cambios[i].target;
+      if (!el.classList || !el.classList.contains('show')) continue;
+      var ocupados = el.querySelectorAll('.is-busy');
+      for (var j = 0; j < ocupados.length; j++) _btnReset(ocupados[j]);
+    }
+  });
+  var ventanas = document.querySelectorAll('.overlay');
+  for (var k = 0; k < ventanas.length; k++){
+    obs.observe(ventanas[k], { attributes: true, attributeFilter: ['class'] });
+  }
+}
+
 function _btnReset(btn){
   if (!btn) return;
   _btnShowSiblings(btn);
@@ -30307,6 +30361,11 @@ document.addEventListener('DOMContentLoaded', function(){
   // el resto del arranque de los filtros, para que no dependa de que alguien se
   // acuerde de llamarla desde otro sitio.
   try { _llenarFiltroDeEstado(); } catch (e) { console.error('_llenarFiltroDeEstado:', e); }
+
+  /* Una ventana que se abre está recién abierta — ver la nota larga en
+   * `_vigilarVentanasQueSeAbren`. Va aquí, con el resto del cableado, y no
+   * dentro de cada una de las treinta y tres que se pueden abrir. */
+  _vigilarVentanasQueSeAbren();
 
   // Movement filters
   // Cambiar el filtro SUELTA la selección. Sin esto, alguien puede marcar tres
@@ -31647,6 +31706,17 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '14.1',
+    titulo: 'A blank quantity no longer stops a whole file from loading',
+    puntos: [
+      '<b>An import with one empty quantity cell \u2014 or one that says a word instead of a number \u2014 never finished loading.</b> Not an error, not a warning: the spinner simply ran for ever. A bigger file loaded fine seconds later, which made it look like the file was damaged.',
+      'It was not. A quantity that is not a number came back as a value that cannot be written to the format the screen is sent in, and <b>that breaks the whole reply, not just that row</b> \u2014 so neither the success nor the failure path ever ran.',
+      'Those rows now arrive as what they are: invalid, with the reason beside them. And <b>the reason quotes what was actually typed</b> \u2014 <i>Qty &ldquo;doce&rdquo; is not a number greater than 0</i> \u2014 so the cell can be found in the spreadsheet rather than hunted for.',
+      '<b>And a window you reopen is now a window that was just opened.</b> If a save was interrupted, its button stayed spinning, and closing the window and coming back showed it exactly as it was \u2014 taking away the first thing anyone tries.'
+    ],
+    antes:  'A spinner with no error, on a file that looked broken',
+    ahora:  'The row is flagged, the file loads, and the window reopens clean' },
+
   { ver: '14.0',
     titulo: 'Categories work the way the rest of the app does, and the app stops shutting you out',
     puntos: [
@@ -31679,16 +31749,6 @@ var NOVEDADES = [
     antes:  'A spinner with nothing behind it, and a tick that let go',
     ahora:  'Both say what they mean' },
 
-  { ver: '13.7',
-    titulo: 'Twice the room you thought you had, and two things that fought your thumb',
-    puntos: [
-      '<b>Google doubled what one spreadsheet holds \u2014 from 10 to 20 million cells \u2014 on 10 September 2026, and it applies to files that already exist.</b> Acopio was still counting against the old number, so Settings \u2192 System told you it had used <i>twice</i> what it really had, and that you had <i>half</i> the years left. Fixed, and the limit now carries the date and the source next to it, because this is the second time Google has raised it.',
-      'In practice: a file holds about <b>500,000 movements</b> rather than 250,000. At 300 movements a day that is four and a half years in the active file alone, and older ones are archived long before that.',
-      '<b>In Transfer, clicking a suggested rack now fills the empty row</b> instead of adding another one below it. Before, you were left with a blank row that had to be deleted by hand or the save refused \u2014 which made the suggestion slower than typing.',
-      '<b>The tick boxes measured 13 pixels on a phone.</b> That is the browser default, which is what you get when nobody decides. They are now the same size as the buttons already in that row \u2014 almost seven times the area \u2014 on touchscreens only. It is the box that arms Delete, pressed in a warehouse, often with gloves on.'
-    ],
-    antes:  'A 13-pixel target in front of a Delete button',
-    ahora:  'The same box, big enough to hit' },
 
 
 

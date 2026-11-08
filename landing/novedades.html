@@ -105,6 +105,30 @@
 
     <!-- EMPEZ&Oacute; SIN N&Uacute;MERO —cambiaban las p&aacute;ginas, no la app— y acab&oacute;
          con uno: los T&eacute;rminos que el cliente acepta viven DENTRO de la hoja. -->
+    <div class="entry" id="v14-1">
+      <span class="ver">v14.1</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Una cantidad en blanco ya no impide que cargue el fichero entero</h3>
+      <p><b>Una importaci&oacute;n con una sola celda de cantidad vac&iacute;a &mdash;o con una
+         palabra en vez de un n&uacute;mero&mdash; no terminaba de cargar nunca.</b> Ni un error ni
+         un aviso: el reloj girando sin m&aacute;s. Un fichero m&aacute;s grande cargaba bien unos
+         segundos despu&eacute;s, lo que hac&iacute;a parecer que el peque&ntilde;o estaba
+         da&ntilde;ado.</p>
+      <p>No lo estaba. Una cantidad que no es un n&uacute;mero volv&iacute;a como un valor que no se
+         puede escribir en el formato con el que se manda la pantalla, y <b>eso rompe la respuesta
+         ENTERA, no s&oacute;lo esa fila</b> &mdash;por eso no se ejecutaba ni el camino del
+         &eacute;xito ni el del fallo, y nunca se ve&iacute;a nada&mdash;.</p>
+      <p>Esas filas llegan ahora como lo que son: inv&aacute;lidas, con el motivo al lado. Y el
+         motivo <b>cita lo que se escribi&oacute; de verdad</b> &mdash;<i>Qty &ldquo;doce&rdquo; is
+         not a number greater than 0</i>&mdash; as&iacute; que la celda se encuentra en la hoja con
+         una b&uacute;squeda en vez de a ojo.</p>
+      <p><b>Y una ventana que vuelves a abrir es ahora una ventana reci&eacute;n abierta.</b> Si un
+         guardado se interrumpi&oacute;, su bot&oacute;n se quedaba girando; cerrar la ventana y
+         volver lo mostraba igual, lo que quitaba lo primero que cualquiera prueba. Ahora cualquier
+         ventana que se abre devuelve a su sitio un bot&oacute;n que se qued&oacute; a medias
+         &mdash;una regla, para todas&mdash;.</p>
+    </div>
+
     <div class="entry" id="v14-0">
       <span class="ver">v14.0</span>
       <span class="tag new">Cambio</span>

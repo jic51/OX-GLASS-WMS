@@ -198,6 +198,37 @@ dibujos.forEach(function (d, i) {
 check('la instrucción de fusionar ya no se repite en el párrafo de arriba',
   HTML.indexOf('Tick two or more to merge them by hand.') === -1);
 
+console.log('\n═══ UNA VENTANA QUE SE ABRE ESTÁ RECIÉN ABIERTA ═══\n');
+
+/* Jose, 5/11, con captura de «Add Expected Material»: *"se quedó el botón
+ * cargando y no responde; puedo cerrar la ventana y volver y aparece igual."*
+ *
+ * Esa última frase es el hallazgo. Que un guardado falle y deje el botón
+ * girando es un fallo; que **cerrar y volver a abrir no lo arregle** es otro, y
+ * peor: quita la salida que cualquiera prueba primero. */
+const vig = fnSrc(HTML, '_vigilarVentanasQueSeAbren');
+check('hay una regla para eso, y está escrita una sola vez', vig.length > 100);
+check('mira cuándo a una ventana se le enciende la clase que la muestra',
+  /attributeFilter: \['class'\]/.test(vig) && /contains\('show'\)/.test(vig));
+check('...y devuelve a su sitio los botones que quedaron ocupados',
+  /is-busy/.test(vig) && /_btnReset/.test(vig));
+check('...en TODAS las ventanas, no en una', /querySelectorAll\('\.overlay'\)/.test(vig));
+check('y está enchufada al arranque', /_vigilarVentanasQueSeAbren\(\);/.test(HTML));
+
+/* POR QUÉ UN OBSERVADOR Y NO UNA LÍNEA EN CADA SITIO: hay más de treinta
+ * lugares que abren una ventana. El reinicio repetido en cada uno sería
+ * treinta copias de la misma idea, y la ventana treinta y uno no tendría
+ * ninguna. Esto fija que no se haya hecho así. */
+const aperturas = (HTML.match(/classList\.add\('show'\)/g) || []).length;
+check('hay muchas formas de abrir una ventana (' + aperturas + ')', aperturas > 20);
+check('...y NINGUNA reinicia el botón por su cuenta',
+  !/classList\.add\('show'\);[\s\S]{0,120}_btnReset/.test(HTML));
+
+/* Y que no se rompa en un navegador sin MutationObserver: se queda sin hacer
+ * nada en vez de reventar el arranque entero. */
+check('si el navegador no lo soporta, no revienta nada',
+  /typeof MutationObserver !== 'function'/.test(vig));
+
 if (fallos.length) {
   console.error('\nFALLÓ:\n  ' + fallos.join('\n  ') + '\n');
   console.error('  Un botón encendido es una promesa; encendido siempre, no dice\n' +
