@@ -2548,6 +2548,15 @@
     .mon-chip{border:1px solid var(--border);background:var(--bg);color:var(--muted);border-radius:999px;padding:var(--sp-2) .9rem;font-size:.76rem;font-weight:700;font-family:inherit;cursor:pointer;transition:.18s;letter-spacing:.02em}
     .mon-chip:hover{border-color:var(--accent);color:var(--text)}
     .mon-chip .mon-chip-n{font-weight:600;opacity:.7;margin-left:.3rem}
+    /* El resumen en vivo. Reserva su sitio desde el principio —igual que las
+       franjas de acciones— para que la lista no salte cuando cambia el texto. */
+    .mon-resumen{min-height:var(--h-btn-lg);display:flex;align-items:center;
+      justify-content:center;gap:var(--sp-3);flex-wrap:wrap;text-align:center;
+      font-size:.8rem;padding:var(--sp-2) .7rem;margin-bottom:var(--sp-3);
+      border-radius:8px;background:var(--bg);color:var(--muted)}
+    .mon-resumen b{color:var(--text)}
+    .mon-resumen .mr-zero{color:var(--red);font-weight:700}
+    .mon-resumen .mr-bajo{color:var(--yellow);font-weight:700}
     /* Active: the badge colours the rest of the app already gives this category,
        so the chip and the material's own badge agree without a second palette. */
     .mon-chip.on{color:#fff;border-color:transparent}
@@ -5044,10 +5053,19 @@
       drops below that number. <strong>"wh"</strong> = units in the warehouse now.
     </p>
     <div class="mon-chips" id="monChips"></div>
+    <!-- ── UN SOLO BOTÓN, PORQUE LOS DOS HACÍAN LO MISMO ────────────────────
+         Había «✓ Watch everything» y «✕ Clear all», y los dos terminaban en
+         el mismo sitio: sin filtro, o sea vigilándolo todo. «Clear all»
+         prometía dejar de vigilar y encendía todas las alertas — por eso Jose
+         quitó todos los checks y le siguieron saliendo las mismas.
+         Ver la nota en `monitorSelectAll`. -->
     <div style="display:flex;gap:.5rem;margin-bottom:.5rem;justify-content:center">
-      <button class="btn btn-ghost btn-sm" onclick="monitorSelectAll(true)">✓ Watch everything</button>
-      <button class="btn btn-ghost btn-sm" onclick="monitorSelectAll(false)">✕ Clear all</button>
+      <button class="btn btn-ghost btn-sm" onclick="monitorSelectAll(false)"
+              title="Clears the list so every material is watched again">↺ Watch everything</button>
     </div>
+    <!-- Lo que pasaría AHORA MISMO con lo que hay marcado. Se repinta con cada
+         casilla y con cada mínimo que se teclea — era la pregunta de Jose. -->
+    <div id="monResumen" class="mon-resumen"></div>
     <div class="monitor-grid" id="monitorGrid"></div>
     <div class="modal-actions" style="margin-top:1rem">
       <button class="btn btn-ghost btn-sm" onclick="closeModal('monitorOverlay')">Cancel</button>
@@ -5933,7 +5951,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '14.1';
+var APP_VERSION = '14.2';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5945,7 +5963,7 @@ var APP_VERSION = '14.1';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'bdb3e36d';
+var APP_BUILD = '0e026bae';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -8688,6 +8706,66 @@ function _restoreTab() {
 }
 
 // ── Dashboard: Stats ──────────────────────────────────────────────────────────
+/* ═══ QUÉ ESTÁ EN CERO Y QUÉ ESTÁ POR DEBAJO DEL MÍNIMO — UNA SOLA REGLA ════
+ *
+ * Jose, 5/11: *"al quitar todos los checks, igual la lista sigue mostrando lo
+ * que mostraba antes, y al seleccionar todos los materiales la lista no se
+ * actualizó. ¿Debería actualizarse desde el momento que se seleccionan los
+ * materiales y se pone un mínimo?"*
+ *
+ * Sí, y para eso hace falta que la ventana del monitor pueda hacerse la misma
+ * pregunta que el panel de alertas. Antes la regla vivía suelta dentro de
+ * `renderStats`, así que la ventana no podía consultarla sin copiarla — y una
+ * copia habría sido dos respuestas distintas a «¿qué está bajo?», que es
+ * exactamente lo que este proyecto lleva meses persiguiendo.
+ *
+ * ── LOS TRES ESTADOS DE `vigilados`, Y LO QUE DECÍA EL COMENTARIO VIEJO ───
+ *
+ * El comentario que había aquí decía:
+ *
+ *     monitoredMaterials = []   → watching nothing (no alerts)
+ *
+ * **y el código hacía lo contrario**: con la lista vacía, `watchedItems` se
+ * quedaba con TODO. Nunca ha existido un «no vigilar nada»; `null` y `[]`
+ * significan los dos «vigílalo todo». De ahí la queja de Jose: quitó todos
+ * los checks esperando menos avisos y le salieron todos.
+ *
+ * Se deja escrito como es, y se corrige en la pantalla (ver `monitorSelectAll`,
+ * donde había dos botones que hacían lo mismo y uno de ellos mentía).
+ */
+function _alertasDeStock(vigilados, minimos){
+  var items = Object.values(stockData);
+
+  /* Sin lista, o con la lista vacía: se vigila todo. */
+  var mirados = items;
+  if (vigilados && vigilados.length) {
+    var set = {};
+    vigilados.forEach(function(n){ set[String(n || '').toUpperCase().trim()] = true; });
+    mirados = items.filter(function(s){ return set[String(s.name || '').toUpperCase().trim()]; });
+  }
+
+  var zero = mirados.filter(function(s){ return s.warehouseQty <= 0 && s.siteQty <= 0; });
+
+  /* POR DEBAJO DEL MÍNIMO Y NO EN CERO. Un material a cero ya sale en la otra
+   * lista; contarlo dos veces haría que dos avisos hablaran de lo mismo.
+   *
+   * La clave se busca tal cual y en MAYÚSCULAS SIN ESPACIOS, que es como la
+   * escribe el monitor al guardar (`NAME.toUpperCase().trim()`). Sin el
+   * `trim()` un material con un espacio al final guardaba su mínimo y después
+   * no se encontraba nunca — y el aviso simplemente no llegaba. */
+  var below = [];
+  var mm = minimos || {};
+  mirados.forEach(function(s){
+    var nombre = String(s.name || '');
+    var min = mm[nombre] || mm[nombre.toUpperCase()] || mm[nombre.toUpperCase().trim()];
+    if (min > 0 && s.availableQty < min && s.availableQty > 0){
+      below.push({ name: s.name, current: s.availableQty, min: min, category: s.category });
+    }
+  });
+
+  return { zero: zero, below: below, mirados: mirados.length, total: items.length };
+}
+
 function renderStats(){
   var items = Object.values(stockData);
   var inStock  = items.filter(function(s){ return s.availableQty > 0; }).length;
@@ -8720,29 +8798,13 @@ function renderStats(){
     if (m.totalCost !== null && m.totalCost !== undefined) { wasteCost += m.totalCost; wastePriced++; }
   });
 
-  // ── Low-stock alert: apply monitored filter, then find zero + below-min ────
-  // monitoredMaterials = null  → watch everything
-  // monitoredMaterials = []    → watching nothing (no alerts)
-  // monitoredMaterials = [..] → watch only these names
-  var watchedItems = items;
-  if (monitoredMaterials && monitoredMaterials.length) {
-    var monSet = {};
-    monitoredMaterials.forEach(function(n){ monSet[(n||'').toUpperCase()] = true; });
-    watchedItems = items.filter(function(s){ return monSet[(s.name||'').toUpperCase()]; });
-  }
-
-  var zeroItems = watchedItems.filter(function(s){ return s.warehouseQty <= 0 && s.siteQty <= 0; });
-
-  // Below-minimum: matches config.minStock keys against item names
-  var belowMin = [];
-  if (config.minStock) {
-    watchedItems.forEach(function(s){
-      var min = config.minStock[s.name] || config.minStock[(s.name||'').toUpperCase()];
-      if (min > 0 && s.availableQty < min && s.availableQty > 0){
-        belowMin.push({ name: s.name, current: s.availableQty, min: min, category: s.category });
-      }
-    });
-  }
+  // ── Low-stock alert ───────────────────────────────────────────────────────
+  // La regla vive en `_alertasDeStock`, que es el ÚNICO sitio donde está
+  // escrita: la usan este panel y la ventana del monitor, para que no puedan
+  // contestar cosas distintas sobre lo mismo.
+  var alertas   = _alertasDeStock(monitoredMaterials, config.minStock);
+  var zeroItems = alertas.zero;
+  var belowMin  = alertas.below;
 
   var banner    = document.getElementById('alertBanner');
   var alertText = document.getElementById('alertText');
@@ -24353,6 +24415,7 @@ function _renderMonitor(){
 
   document.getElementById('monChips').innerHTML  = chips;
   document.getElementById('monitorGrid').innerHTML = body;
+  _monPintarResumen();
   setTimeout(_shrinkMonitorNames, 0);
 }
 
@@ -24376,6 +24439,11 @@ function _monToggleItem(name, on){
       if (on) inp.focus();
     }
   }
+  /* Y el resumen, que es lo único que dice qué efecto tiene lo que acabas de
+   * marcar. Es barato: una pasada sobre los materiales que ya están en
+   * memoria, sin tocar el servidor. */
+  _monPintarResumen();
+
   // Only the chip's count changes, so only the chips are redrawn.
   var chipHolder = document.getElementById('monChips');
   if (chipHolder){
@@ -24405,11 +24473,13 @@ function _monToggleItem(name, on){
       _monToggleItem(e.target.value, e.target.checked);
     } else if (e.target.classList.contains('mon-min-inp')){
       _monMin[e.target.getAttribute('data-name')] = e.target.value;
+      _monPintarResumen();
     }
   });
   ov.addEventListener('input', function(e){
     if (e.target.classList.contains('mon-min-inp')){
       _monMin[e.target.getAttribute('data-name')] = e.target.value;
+      _monPintarResumen();
     }
   });
 })();
@@ -24429,6 +24499,26 @@ function _shrinkMonitorNames(){
   });
 }
 
+/* ── HABÍA DOS BOTONES Y HACÍAN LO MISMO; UNO DE ELLOS MENTÍA ──────────────
+ *
+ * «✓ Watch everything» marcaba todas las casillas y «✕ Clear all» las
+ * desmarcaba todas. Distintas en pantalla, **idénticas en efecto**: las dos
+ * terminaban en una lista que al guardarse vale `[]`, y `[]` significa «sin
+ * filtro», o sea **vigílalo todo** (ver `_alertasDeStock`).
+ *
+ * O sea que el botón que decía «Clear all» —dejar de vigilar— encendía las
+ * alertas de TODO. Jose, 5/11: *"al quitar todos los checks, igual la lista
+ * sigue mostrando lo que mostraba antes"*. No era un fallo de la lista: era
+ * el botón diciendo lo contrario de lo que hacía.
+ *
+ * Queda uno solo, con el nombre de lo que de verdad pasa. Vacía la selección
+ * —que es como se escribe «sin filtro»— y el resumen de arriba lo dice con
+ * palabras en vez de dejarlo a que alguien lo deduzca de una pantalla de
+ * casillas vacías.
+ *
+ * Sigue aceptando `true` porque `_renderMonitor` no es el único que lo llama,
+ * y porque marcarlas todas es una forma legítima de llegar al mismo sitio.
+ */
 function monitorSelectAll(val) {
   // Operates on the state, not the checkboxes on screen: with categories
   // collapsed, "Select all" would otherwise mean "select the handful I can
@@ -24443,6 +24533,54 @@ function monitorSelectAll(val) {
     });
   }
   _renderMonitor();
+}
+
+/* ═══ LO QUE PASARÍA AHORA MISMO CON LO QUE HAY MARCADO ═════════════════════
+ *
+ * Jose, 5/11: *"¿debería actualizarse desde el momento que se seleccionan los
+ * materiales y se pone un mínimo?"* — sí, y antes no pasaba nada hasta
+ * guardar y cerrar. Se marcaba, se escribía un mínimo, y la pantalla no
+ * contestaba: había que guardar, salir, y mirar el panel de alertas para
+ * descubrir el efecto.
+ *
+ * Lo que se enseña sale de `_alertasDeStock`, **la misma función que pinta el
+ * panel de alertas**, con los mínimos que hay en esta ventana sin guardar
+ * todavía. Así lo que dice aquí y lo que dirá el panel al guardar no pueden
+ * separarse: es una respuesta, no dos.
+ */
+function _monPintarResumen(){
+  var caja = document.getElementById('monResumen');
+  if (!caja) return;
+
+  var marcados = Object.keys(_monSel);
+  /* Marcar TODOS es lo mismo que no marcar ninguno: en los dos casos no hay
+   * filtro. Se dice, en vez de dejar que se descubra. */
+  var sinFiltro = marcados.length === 0 || marcados.length === _monTotal;
+
+  /* Los mínimos que hay escritos AHORA en la ventana, no los guardados. */
+  var minAhora = {};
+  Object.keys(_monMin).forEach(function(nm){
+    var q = _qty(_monMin[nm]);
+    if (q > 0) minAhora[nm] = q;
+  });
+
+  var a = _alertasDeStock(sinFiltro ? null : marcados, minAhora);
+
+  var quien = sinFiltro
+    ? 'Watching <b>every material</b> (' + _monTotal + ')'
+    : 'Watching <b>' + marcados.length + '</b> of ' + _monTotal;
+
+  var partes = [];
+  if (a.zero.length)  partes.push('<span class="mr-zero">' + a.zero.length + ' at zero</span>');
+  if (a.below.length) partes.push('<span class="mr-bajo">' + a.below.length + ' below minimum</span>');
+
+  caja.innerHTML = quien + ' · ' +
+    (partes.length
+      ? 'right now: ' + partes.join(' · ')
+      : 'nothing is low right now') +
+    (sinFiltro && marcados.length === _monTotal
+      ? ' <span style="opacity:.8">— ticking them all is the same as ticking none</span>'
+      : '');
 }
 
 function saveMonitorSettings() {
@@ -31706,6 +31844,17 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '14.2',
+    titulo: 'Low-stock alerts: one button that told the truth, and a screen that answers while you use it',
+    puntos: [
+      '<b>There were two buttons and they did the same thing.</b> &ldquo;Watch everything&rdquo; and &ldquo;Clear all&rdquo; both ended up with no filter \u2014 which means <i>watch everything</i>. So the button that promised to stop watching switched the alerts for <b>every</b> material on. Clearing the ticks and still getting the same warnings was not the list failing: it was the button saying the opposite of what it did.',
+      'One button now, named after what actually happens.',
+      '<b>And the window answers while you use it.</b> Tick a material, type a minimum, and a line at the top says what it would mean right now \u2014 <i>Watching 12 of 48 \u00b7 right now: 3 at zero, 7 below minimum</i>. Before, nothing changed until you saved and closed, so the only way to see the effect was to go and look at the dashboard.',
+      'That line is worked out by <b>the same rule the alert panel uses</b>, so the two cannot disagree. And a minimum set on a material whose name ends in a space is found again \u2014 it used to be saved and then never matched, so the alert simply never arrived.'
+    ],
+    antes:  'A button that cleared the ticks and turned every alert on',
+    ahora:  'It says what it watches, and what that means right now' },
+
   { ver: '14.1',
     titulo: 'A blank quantity no longer stops a whole file from loading',
     puntos: [
@@ -31738,16 +31887,6 @@ var NOVEDADES = [
     antes:  'Save lit over nothing, and a list that moved under your finger',
     ahora:  'Both only move when you do' },
 
-  { ver: '13.8',
-    titulo: 'The spinner that never stopped, and the tick that kept vanishing',
-    puntos: [
-      '<b>In the free edition, three boxes in Settings \u2192 System span a loading spinner for ever.</b> v13.5 stopped them asking the server, which was the point \u2014 but nothing replaced the \u201cChecking\u2026\u201d they were showing while they waited. So they looked like the app had frozen, on the copy new customers see. They now show what the feature does instead, taken from the same text the panel itself uses.',
-      '<b>And a ticked movement stopped losing its tick when new ones arrived.</b> The previous attempt widened the view \u201conly when the list had grown\u201d, and the list grows once but is redrawn twice \u2014 so the first redraw used the condition up and the second dropped the tick.',
-      'It now asks the question that actually separates the two cases: <b>did you fold the table?</b> Changing a filter, a tab or a page folds it and clears the tick, which is right. New rows arriving do not, however many times the screen redraws.',
-      'Also: Settings still described the old 10-million-cell limit in one place after v13.7 raised it.'
-    ],
-    antes:  'A spinner with nothing behind it, and a tick that let go',
-    ahora:  'Both say what they mean' },
 
 
 

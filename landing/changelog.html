@@ -106,6 +106,29 @@
          hoja, generados desde `legal/*.md` por `tools/sync-legal.js`, así que
          arreglar lo que dicen de las dos ediciones obliga a tocar la app. Ya
          que había que tocarla, viaja también el ancla `#pro` del candado. -->
+    <div class="entry" id="v14-2">
+      <span class="ver">v14.2</span>
+      <span class="tag fix">Fix</span>
+      <h3>Low-stock alerts: one button that told the truth, and a screen that answers while you use it</h3>
+      <p><b>There were two buttons and they did exactly the same thing.</b> &ldquo;Watch
+         everything&rdquo; ticked every box and &ldquo;Clear all&rdquo; unticked every box &mdash;
+         different on screen, identical in effect, because both ended up with no filter, and no
+         filter means <i>watch everything</i>.</p>
+      <p>So the button that promised to stop watching switched the alerts for <b>every</b> material
+         on. Clearing the ticks and still getting the same warnings was never the list failing: it
+         was a button saying the opposite of what it did. There is one button now, named after what
+         actually happens.</p>
+      <p><b>And the window answers while you use it.</b> Tick a material, type a minimum, and a line
+         at the top says what it would mean right now &mdash; <i>Watching 12 of 48 &middot; right
+         now: 3 at zero, 7 below minimum</i>. Before, nothing changed until you saved and closed, so
+         the only way to see the effect of a choice was to leave and look at the dashboard.</p>
+      <p>That line is worked out by <b>the same rule the alert panel itself uses</b>, with the
+         minimums currently typed rather than the ones last saved, so the two cannot drift apart.</p>
+      <p>Also fixed: a minimum set on a material whose name ends in a space is now found again. It
+         used to be saved and then never matched, so that alert simply never arrived &mdash; without
+         anything ever saying so.</p>
+    </div>
+
     <div class="entry" id="v14-1">
       <span class="ver">v14.1</span>
       <span class="tag fix">Fix</span>

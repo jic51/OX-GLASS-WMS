@@ -72,6 +72,13 @@ vm.runInContext(
   // esta prueba lo nota en vez de medir un doble que se quedó viejo.
   extractFn('_reservasActivas') + '\n' +
   extractFn('_reservasResumen') + '\n' +
+  /* La regla de qué está en cero y qué está bajo el mínimo salió de dentro de
+   * `renderStats` en la v14.2 —la ventana del monitor necesitaba hacerse la
+   * misma pregunta y una copia habrían sido dos respuestas— así que hay que
+   * levantarla con él. Se levanta LA DE VERDAD y no un doble: con este
+   * almacén de mentira no devuelve nada, que es el caso que esta prueba mide,
+   * y si mañana la regla cambia, esto lo nota. */
+  extractFn('_alertasDeStock') + '\n' +
   extractFn('renderStats'),
   sandbox
 );
