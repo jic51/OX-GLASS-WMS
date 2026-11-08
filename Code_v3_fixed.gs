@@ -128,7 +128,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '14.0';
+var APP_VERSION = '14.1';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -140,7 +140,7 @@ var APP_VERSION = '14.0';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '8707e054';
+var APP_BUILD = 'bdb3e36d';
 
 // ═══ ACOPIO BASIC — EL INTERRUPTOR DE LA VERSIÓN GRATIS ══════════════════════
 //
@@ -10133,7 +10133,37 @@ function leerFilasDelFichero_(data) {
       rowNum:   i + 1,
       category: String(r[col.category] || '').trim(),
       name:     String(r[col.name]     || '').trim(),
-      qty:      numeroDeFichero_(r[col.qty]),
+      /* ── NUNCA UN NaN EN UNA FILA QUE VIAJA AL NAVEGADOR ──────────────
+       *
+       * Jose, 5/11: *"intenté subir el documento de 600 filas otra vez y
+       * sigue sin cargar… incluso le subí el de 1000 líneas y lo leyó
+       * enseguida justo después. ¿Estará dañado el documento?"*
+       *
+       * No lo estaba. Lo medí contra los otros tres ficheros de prueba y la
+       * correlación es perfecta:
+       *
+       *     600 «sucio»   1 qty vacía + 1 que dice «doce»   → NO carga
+       *     1000 / 800 / 20   ninguna de las dos            → cargan
+       *
+       * `numeroDeFichero_` devuelve **NaN** para una celda vacía y para un
+       * texto que no es número. Ese NaN se quedaba en la fila, y
+       * `parseImportFile` devuelve las primeras 200 filas al navegador tal
+       * cual. **`NaN` no es JSON válido**, así que al serializar la respuesta
+       * no se disparaba ni el éxito ni el fallo: la pantalla se quedaba con el
+       * reloj girando para siempre. Ni un error, ni un aviso, nada.
+       *
+       * Y NO ES COSA DEL FICHERO DE PRUEBA. Un inventario real con una celda
+       * de cantidad en blanco —lo más normal del mundo— hace exactamente lo
+       * mismo. El fichero «sucio» hizo su trabajo: encontró esto.
+       *
+       * `null` en vez de NaN: viaja, se pinta como vacío, y la fila sigue
+       * saliendo inválida porque `!item.qty` ya lo detecta. Lo que se tecleó
+       * se guarda aparte para poder DECÍRSELO a la persona — ver `qtyTexto`. */
+      qty:      (function(){
+                  var n = numeroDeFichero_(r[col.qty]);
+                  return isFinite(n) ? n : null;
+                })(),
+      qtyTexto: String(r[col.qty] == null ? '' : r[col.qty]).trim(),
       unit:     col.unit     !== -1 ? (String(r[col.unit]     || '').trim() || 'UNIT') : 'UNIT',
       location: col.location !== -1 ?  String(r[col.location] || '').trim() : '',
       project:  col.project  !== -1 ?  String(r[col.project]  || '').trim() : '',
@@ -10145,7 +10175,14 @@ function leerFilasDelFichero_(data) {
     var errors = [];
     if (!item.category) errors.push('Missing Category');
     if (!item.name)     errors.push('Missing Name');
-    if (!item.qty || item.qty <= 0 || isNaN(item.qty)) errors.push('Qty must be a number greater than 0');
+    /* El aviso dice QUÉ había escrito. «Qty must be a number» sobre una
+     * columna de seiscientas filas no se puede buscar; «Qty "doce" is not a
+     * number» se encuentra en el Excel con Ctrl+F. */
+    if (!item.qty || item.qty <= 0) {
+      errors.push(item.qtyTexto
+        ? 'Qty "' + item.qtyTexto + '" is not a number greater than 0'
+        : 'Qty is empty');
+    }
     item.valid  = errors.length === 0;
     item.errors = errors;
     parsed.push(item);
