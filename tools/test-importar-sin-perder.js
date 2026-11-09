@@ -169,9 +169,15 @@ check('el navegador manda el FICHERO al confirmar, no las filas',
   /processMovement\('commitImport',\s*_h\(\{[\s\S]{0,200}fileData:/.test(srcBrowser));
 check('...y NO manda `rows`, que es lo que perdía las 552',
   !/processMovement\('commitImport',\s*_h\(\{\s*rows:/.test(srcBrowser));
+/* La nota cuenta sobre el TOTAL DEL FICHERO, nunca sobre lo recibido. Contar
+ * la muestra fue el fallo de la v12.90: tres números en la misma pantalla y
+ * ninguno era el bueno. Con P-06 (v14.5) la frase cambió —ahora dice además
+ * que las que fallan están todas aquí— pero el número de referencia sigue
+ * siendo el mismo, y eso es lo que se sujeta. */
 check('la nota bajo la tabla cuenta sobre el total del fichero, no sobre lo ' +
       'recibido',
-  /Showing the first[\s\S]{0,80}res\.totalRows/.test(srcBrowser));
+  /Showing ' \+ _impTodas\.length \+ ' of ' \+ res\.totalRows/.test(srcBrowser), 
+  (srcBrowser.match(/Showing[^;]{0,120}/g) || []).slice(0, 4));
 
 /* ────────────────────────────────────────────────────────────────────────────
  * 3. LA HUELLA RECONOCE EL MISMO FICHERO — y distingue uno parecido.
@@ -225,8 +231,13 @@ if (huellaCtx) {
 
 check('`parseImportFile` contesta si ese fichero ya entró antes',
   /alreadyImported:\s*importacionConHuella_/.test(srcParse));
+/* Y va ARRIBA DEL TODO, antes de cualquier botón: es lo único de esta pantalla
+ * que puede duplicar un almacén entero. Desde P-06 la cabecera la arma
+ * `_impCabecera`, y el aviso sigue siendo lo primero que devuelve. */
 check('y el navegador lo enseña ARRIBA DEL TODO, antes de cualquier botón',
-  /box\.innerHTML\s*=\s*avisoRepe\s*\+\s*summary/.test(srcBrowser));
+  /return avisoRepe \+ sheetNote/.test(srcBrowser) &&
+  /_impCabecera\(res\) \+ '<div id="impTablaBox">/.test(srcBrowser),
+  (srcBrowser.match(/return avisoRepe[^;]{0,80}/g) || []));
 check('...avisando de que SUMA, que es lo que la gente no espera',
   /adds all of it a second time/.test(srcBrowser));
 

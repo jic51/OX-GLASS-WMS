@@ -101,6 +101,33 @@
        window instead of a photograph, and the page itself got 300&nbsp;KB lighter over
        the wire.</p>
 
+    <!-- P-06: LA PANTALLA SABÍA Y NO DEJABA ACTUAR. Ése era todo el defecto:
+         conocía la fila, la columna y el motivo, y lo único que ofrecía era
+         ir a arreglarlo a otro programa. -->
+    <div class="entry" id="v14-5">
+      <span class="ver">v14.5</span>
+      <span class="tag improve">Improvement</span>
+      <h3>Fix the bad rows of an import on the screen</h3>
+      <p><b>Three bad rows in a six-hundred-row file used to send you back to the spreadsheet.</b>
+         The preview said <i>597 ready, 3 need fixing in the file</i> and stopped there &mdash; so you
+         opened Excel, hunted for them, fixed them, exported again and uploaded again. All the while
+         this screen already knew exactly which rows they were and what was wrong with each one.</p>
+      <p><b>Now you fix them where they are.</b> The cell that is wrong is a box you type in, and the
+         row turns green the moment it is right. Only the three fields that can make a row invalid are
+         editable &mdash; Category, Name and Qty &mdash; because this is a preview, not a spreadsheet
+         editor.</p>
+      <p><b>And you can find them.</b> Three tabs above the table &mdash; <i>All</i>, <i>Ready</i>,
+         <i>Needs fixing</i> &mdash; each with its count, so three bad rows out of six hundred take
+         one click instead of a scroll. Rows that need fixing are all shown, wherever they sit in the
+         file; before, one on line 480 of a 600-row file could not be displayed at all.</p>
+      <p><b>You can also leave rows out.</b> Every row that is ready has a tick box, on by default.
+         Untick what you do not want and the button counts down with you.</p>
+      <p>The correction never touches your file. It travels with the import and is applied at the
+         point where rows are checked, so a corrected row passes exactly the same test as one that
+         arrived clean &mdash; what you saw fixed is what gets saved &mdash; and the <i>you already
+         imported this file</i> warning still recognises it.</p>
+    </div>
+
     <!-- P-02: UN MECANISMO, CINCO PANTALLAS. Lo que se quita no es un botón
          sino una SEGUNDA forma de elegir una fila. Mientras convivían dos,
          cada pantalla nueva elegía una por casualidad. -->
