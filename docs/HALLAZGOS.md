@@ -310,6 +310,86 @@ es exactamente para esto.
 
 ---
 
+## 📋 LO DEL 8/11
+
+### ~~🔴 R-01 · **Lo rompí yo**: los botones de Guardar dejaron de responder~~ ✅ **v14.3**
+
+Jose, con vídeo: *"ahora los botones de 'save changes' no se desactivan ni
+cambian, solo se quedan ahí. Hay que analizar el problema, buscar dónde nomás
+se afecta de esa forma a los botones, y arreglarlo."*
+
+**Es mío, de la v14.1, y conviene que quede escrito.** El arreglo de aquella
+versión fue: *una ventana que se reabre está recién abierta*, así que si un
+guardado se interrumpió y dejó el botón girando, reabrir la ventana lo devuelve
+a su sitio. Un `MutationObserver` mira las clases de las ventanas.
+
+**La cadena del fallo:**
+
+1. se pulsa Guardar → `_btnBusy` pone la rueda y apaga el botón
+2. `_setModalBusy` hace `ov.classList.toggle('busy', true)`
+3. eso es un cambio de clase en la ventana → salta el observador
+4. la ventana sigue teniendo `show`, así que da por hecho que acaba de abrirse
+   y devuelve a su sitio **el botón que acaba de empezar a guardar**
+
+Resultado: la rueda desaparecía al instante y el botón se quedaba quieto,
+mientras el guardado seguía su curso por detrás.
+
+**Dónde pegaba, medido:** las tres ventanas que usan `_setModalBusy` —
+`moveOverlay`, `editMovOverlay` y `attachOverlay` — en **19 sitios**. O sea
+mover material, editar un movimiento y adjuntar un documento: tres de las
+operaciones más usadas del día.
+
+**La causa de fondo es la de siempre con otra cara:** *una señal que vale para
+dos cosas distintas.* «Tiene `show`» no distingue «se acaba de abrir» de «sigue
+abierta y ha cambiado otra clase». Abrirse es **pasar de no tener `show` a
+tenerlo**, y eso el navegador sí lo sabe decir: `attributeOldValue`.
+
+**Y por qué no lo vio la prueba.** `test-guardar-y-la-franja.js` ya cubría el
+observador — con ocho comprobaciones, todas de texto: que exista, que mire la
+clase, que llame a `_btnReset`, que no reviente sin `MutationObserver`. **Las
+ocho pasaban con el fallo dentro.** Una prueba que lee el código no puede
+distinguir «mira la clase» de «mira la clase mal». La que hay ahora **ejecuta**
+el observador con el registro que manda el navegador en cada caso. Verificado:
+las tres comprobaciones nuevas fallan contra el código de la v14.1.
+
+### ~~🟠 R-02 · La franja de stock bajo contaba, y dejaba la búsqueda al usuario~~ ✅ **v14.3**
+
+Jose: *"haz que los mismos colores (rojo para los que están en cero y naranja
+para los que están bajo el mínimo) sean los mismos colores con los que se
+muestran los materiales, ya que puedo leer lo que dice la franja pero debo
+buscar el material viendo el número que hay en el warehouse, y eso es dejar
+trabajo para que el usuario lo haga."*
+
+Tenía razón y el defecto era de diseño, no de pintura: la franja de la v14.2
+dice *«3 at zero · 7 below minimum»* y ahí se acaba. **La pantalla sabía la
+respuesta y devolvía una cuenta por hacer** — convertir ese 3 en tres nombres
+era recorrer doscientas tarjetas leyendo el número de almacén.
+
+**El arreglo:** las tarjetas que esa franja cuenta se marcan con **sus mismos
+dos colores**, puestos por **la misma cuenta** (`_alertasDeStock`), no por una
+segunda regla paralela. Rojo a cero, naranja bajo el mínimo, por variable CSS y
+no por un hex copiado — un hex copiado sería otra vez «dos cosas que tienen que
+coincidir sin que nada lo obligue».
+
+Y como la cuenta es la misma, se mueve con lo que se toca: subir un mínimo por
+encima del stock apaga el naranja mientras se escribe.
+
+### 🟡 R-03 · El fichero de 600: lo que falta ahora es la corrección, no la carga
+
+Jose: *"si el fichero carga y muestra todas las filas incluidas las que tienen
+errores, pero no carga esas, debemos trabajar en la parte de la corrección de
+los errores y los filtros en los registros antes de hacer el import."*
+
+La v14.1 arregló que el fichero **cargue**. Lo que queda es lo siguiente:
+poder **ver sólo las filas con error**, **arreglarlas en la propia pantalla** y
+**elegir cuáles entran**. Es la continuación natural de **P-06** (casillas en
+importar), que ya tiene media pieza hecha en el servidor: `skipRowNums` se
+acepta desde hace versiones.
+
+**Anotado, sin construir.**
+
+---
+
 ## 📋 LO DEL 5/11
 
 ### 🟠 P-09 · Un documento, un material: subir la misma foto diez veces

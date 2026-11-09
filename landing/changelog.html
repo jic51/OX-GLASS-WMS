@@ -101,6 +101,32 @@
        window instead of a photograph, and the page itself got 300&nbsp;KB lighter over
        the wire.</p>
 
+    <!-- UNA DE LAS DOS COSAS DE ESTA ENTRADA LA ROMPIMOS NOSOTROS, Y SE DICE.
+         El arreglo de la v14.1 —reabrir una ventana limpia el botón colgado—
+         leía «tiene la clase que la muestra» como «se acaba de abrir», y
+         pulsar Guardar también cambia una clase de la ventana. Un changelog
+         que sólo cuenta lo que salió bien enseña a no leerlo. -->
+    <div class="entry" id="v14-3">
+      <span class="ver">v14.3</span>
+      <span class="tag fix">Fix</span>
+      <h3>The low-stock window points at the materials, and the Save buttons work again</h3>
+      <p><b>The summary line counted, and stopped there.</b> It said <i>3 at zero &middot; 7 below
+         minimum</i>, and turning that 3 into three names meant reading the warehouse figure on card
+         after card &mdash; the screen knew the answer and handed back arithmetic.</p>
+      <p>The cards that line is counting are now marked in <b>the same two colours the line itself
+         uses</b>: red for at zero, orange for below minimum. Both come from the same count, so they
+         cannot say different things, and raising a minimum above the stock puts the orange out as
+         you type.</p>
+      <p><b>And the Save buttons in Move, Edit movement and Attach are fixed.</b> For one version
+         they did nothing visible &mdash; no spinner, no greying out, just a button sitting there
+         while the save went ahead behind it.</p>
+      <p>That was ours, and it came out of the fix before it. Reopening a window clears a button left
+         spinning by an interrupted save; but <i>opening</i> was being read as <i>being open</i>, and
+         pressing Save changes the window too, so the button was put back the instant it started. The
+         two are told apart now, and both behave: the spinner stays while it saves, and a reopened
+         window still comes back clean.</p>
+    </div>
+
     <!-- EMPEZÓ SIN NÚMERO DE VERSIÓN —cambiaban las páginas, no la app— y
          acabó con uno: los Términos que el cliente acepta viven DENTRO de la
          hoja, generados desde `legal/*.md` por `tools/sync-legal.js`, así que

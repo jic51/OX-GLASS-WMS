@@ -2582,6 +2582,22 @@
     .monitor-cat-grid{display:grid;grid-template-columns:repeat(auto-fill,150px);justify-content:start;gap:var(--sp-2);margin-bottom:var(--sp-3)}
     .monitor-item{display:flex;flex-direction:column;gap:var(--sp-1);width:150px;height:76px;padding:var(--sp-2) var(--sp-3);border-radius:6px;cursor:pointer;border:1px solid var(--border);transition:.15s;box-sizing:border-box;overflow:hidden}
     .monitor-item:hover{background:var(--bg);border-color:var(--accent)}
+    /* ── EL MISMO ROJO Y EL MISMO NARANJA QUE LA FRANJA ───────────────────────
+       Jose, 8/11: *"puedo leer lo que dice la franja pero debo buscar el
+       material viendo el número que hay en el warehouse, y eso es dejar
+       trabajo para que el usuario lo haga."*
+       La franja dice «3 at zero · 5 below minimum» en rojo y naranja; las
+       tarjetas llevan ahora esos mismos dos colores, puestos por la MISMA
+       cuenta (`_alertasDeStock`), así que no pueden decir cosas distintas.
+       Van DESPUÉS de :hover a propósito: pasar el ratón por encima no debe
+       borrar el aviso. */
+    .monitor-item.is-zero{background:var(--red-bg);border-color:var(--red)}
+    .monitor-item.is-bajo{background:var(--yellow-bg);border-color:var(--yellow)}
+    .monitor-item.is-zero .monitor-item-wh{color:var(--red);font-weight:700}
+    .monitor-item.is-bajo .monitor-item-wh{color:var(--yellow);font-weight:700}
+    /* Sin filtro no hay nada marcado, así que TODAS las tarjetas están en
+       `.off`: el aviso tiene que seguir leyéndose a través de esa atenuación. */
+    .monitor-item.off.is-zero,.monitor-item.off.is-bajo{opacity:.92}
     .monitor-item-top{display:flex;align-items:center;justify-content:space-between;gap:.3rem;min-width:0}
     .monitor-item-wh{color:var(--muted);font-size:.68rem;font-family:monospace;white-space:nowrap;flex-shrink:0}
     .monitor-item-name{font-size:.75rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
@@ -5951,7 +5967,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '14.2';
+var APP_VERSION = '14.3';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5963,7 +5979,7 @@ var APP_VERSION = '14.2';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '0e026bae';
+var APP_BUILD = '625087ac';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -24581,6 +24597,51 @@ function _monPintarResumen(){
     (sinFiltro && marcados.length === _monTotal
       ? ' <span style="opacity:.8">— ticking them all is the same as ticking none</span>'
       : '');
+
+  /* La franja cuenta; las tarjetas señalan CUÁLES. Una sola cuenta, dos sitios
+   * donde se lee — nunca dos cuentas que haya que hacer coincidir. */
+  _monMarcarEstados(a);
+}
+
+/* ═══ PINTAR LA TARJETA DEL MATERIAL QUE LA FRANJA ESTÁ CONTANDO ════════════
+ *
+ * Jose, 8/11: *"haz que los mismos colores (rojo para los que están en cero y
+ * naranja para los que están bajo el mínimo) sean los mismos colores con los
+ * que se muestran los materiales, ya que puedo leer lo que dice la franja
+ * pero debo buscar el material viendo el número que hay en el warehouse, y
+ * eso es dejar trabajo para que el usuario lo haga."*
+ *
+ * Tenía razón y el defecto era de fondo: la franja sabía la respuesta y la
+ * daba en número, obligando a recorrer doscientas tarjetas a ojo para
+ * convertir «3 at zero» en tres nombres. La cuenta la hace quien ya la hacía
+ * — `_alertasDeStock`, la misma que pinta el panel de alertas de la pantalla
+ * principal — y aquí sólo se reparte sobre las tarjetas.
+ *
+ * El mismo material puede estar en pantalla DOS veces (en su categoría
+ * abierta y en la lista de «ya marcados» de abajo), así que se recorren todos
+ * los `[data-mon-row]`, no el primero que aparezca.
+ *
+ * `classList.toggle(clase, condición)` quita además de poner: subir un mínimo
+ * hasta por encima del stock apaga el naranja en el acto, sin tener que
+ * recordar en qué estado estaba la tarjeta antes.
+ */
+function _monMarcarEstados(a){
+  var estado = {};
+  (a && a.zero  || []).forEach(function(s){
+    estado[String(s.name || '').toUpperCase().trim()] = 'zero';
+  });
+  (a && a.below || []).forEach(function(s){
+    var nm = String(s.name || '').toUpperCase().trim();
+    if (!estado[nm]) estado[nm] = 'bajo';   // cero manda sobre bajo
+  });
+
+  var tarjetas = document.querySelectorAll('[data-mon-row]');
+  for (var i = 0; i < tarjetas.length; i++){
+    var el  = tarjetas[i];
+    var cual = estado[el.getAttribute('data-mon-row')] || '';
+    el.classList.toggle('is-zero', cual === 'zero');
+    el.classList.toggle('is-bajo', cual === 'bajo');
+  }
 }
 
 function saveMonitorSettings() {
@@ -29874,15 +29935,42 @@ function _vigilarVentanasQueSeAbren(){
   if (typeof MutationObserver !== 'function') return;
   var obs = new MutationObserver(function(cambios){
     for (var i = 0; i < cambios.length; i++){
-      var el = cambios[i].target;
+      var el    = cambios[i].target;
+      var antes = cambios[i].oldValue || '';
       if (!el.classList || !el.classList.contains('show')) continue;
+
+      /* ── SÓLO EN EL INSTANTE EN QUE SE ABRE, Y ESTO ES EL ARREGLO ────────
+       *
+       * La primera versión miraba CUALQUIER cambio de clase en la ventana, y
+       * eso la volvía contra el usuario. Jose, 8/11, con vídeo: *"ahora los
+       * botones de save changes no se desactivan ni cambian, sólo se quedan
+       * ahí."*
+       *
+       * Lo rompí yo el día anterior, y la cadena es ésta:
+       *
+       *   1 · se pulsa Guardar → `_btnBusy` pone la rueda y apaga el botón
+       *   2 · `_setModalBusy` hace `ov.classList.toggle('busy', true)`
+       *   3 · eso es un cambio de clase en la ventana → saltaba esto
+       *   4 · la ventana seguía teniendo `show`, así que encontraba el botón
+       *       **que acababa de empezar a guardar** y lo devolvía a su sitio
+       *
+       * Resultado: la rueda desaparecía al instante y el botón se quedaba
+       * como si no hubiera pasado nada — mientras el guardado seguía su curso
+       * por detrás. Afectaba a las tres ventanas que usan `_setModalBusy`
+       * (mover, editar un movimiento y adjuntar), que son las que más se usan.
+       *
+       * Abrirse es **pasar de no tener `show` a tenerlo**, no «tenerlo». Con
+       * `attributeOldValue` se puede distinguir, y entonces un cambio de
+       * cualquier otra clase —`busy` incluida— deja de ser asunto de esto. */
+      if (/(^|\s)show(\s|$)/.test(antes)) continue;
+
       var ocupados = el.querySelectorAll('.is-busy');
       for (var j = 0; j < ocupados.length; j++) _btnReset(ocupados[j]);
     }
   });
   var ventanas = document.querySelectorAll('.overlay');
   for (var k = 0; k < ventanas.length; k++){
-    obs.observe(ventanas[k], { attributes: true, attributeFilter: ['class'] });
+    obs.observe(ventanas[k], { attributes: true, attributeFilter: ['class'], attributeOldValue: true });
   }
 }
 
@@ -31844,6 +31932,16 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '14.3',
+    titulo: 'The low-stock window points at the materials, and Save buttons work again',
+    puntos: [
+      '<b>The summary line counted; now the materials are marked.</b> It said <i>3 at zero · 7 below minimum</i> and stopped there, so turning that 3 into three names meant reading the warehouse figure on card after card. The cards that line is counting are now <b>red for at zero and orange for below minimum</b> — the same two colours the line itself uses, set by the same count, so they cannot disagree. Raise a minimum above the stock and the orange goes out as you type.',
+      '<b>And the Save buttons in Move, Edit movement and Attach are fixed.</b> For one version they did nothing visible: no spinner, no greying out, just a button that sat there while the save went ahead behind it.',
+      'That was ours, and it came from the fix before it. Reopening a window now clears a button left spinning by an interrupted save — but <i>opening</i> was being read as <i>being open</i>, and pressing Save changes the window too. So the button was reset the instant it started. It now tells the two apart, and both behave: the spinner stays while it saves, and a reopened window still comes back clean.'
+    ],
+    antes:  'A count you had to match against the shelves by hand',
+    ahora:  'The list is marked in the colours the count uses' },
+
   { ver: '14.2',
     titulo: 'Low-stock alerts: one button that told the truth, and a screen that answers while you use it',
     puntos: [
@@ -31876,16 +31974,6 @@ var NOVEDADES = [
     antes:  'Working steadily until the app said no, and would not say why',
     ahora:  'It counts the last minute, not the last silence' },
 
-  { ver: '13.9',
-    titulo: 'Save means there is something to save, and nothing jumps when you tick a box',
-    puntos: [
-      '<b>Six Save buttons were lit all the time.</b> A lit button is a promise that there is something to do; lit always, it says nothing \u2014 and after saving it left you wondering whether the save had worked, so you pressed it again. They now light up only when something has actually changed, and go dark again the moment it is saved.',
-      '<b>And one of them was not cosmetic.</b> In Permissions the role name could be emptied and saved. A role with no name cannot be given to anyone or taken from anyone, while the permission keeps granting what it granted. Now Save stays dark while a required field is empty \u2014 and the save refuses it a second time from inside, for anything that does not go through the button.',
-      '<b>Ticking two names no longer shoves the list down.</b> The merge strip appeared out of nothing and pushed the rows you were ticking, so the next one was no longer where your finger was going. It now keeps its place from the start: empty it carries the instruction in grey, and ticking something lights it up instead of moving anything.',
-      'In Prices, each row\u2019s Save now belongs to that row: it wakes up for a price that is different, and stays dark for one that is already on record.'
-    ],
-    antes:  'Save lit over nothing, and a list that moved under your finger',
-    ahora:  'Both only move when you do' },
 
 
 
