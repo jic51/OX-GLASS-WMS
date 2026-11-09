@@ -310,6 +310,91 @@ es exactamente para esto.
 
 ---
 
+## 📋 LO DEL 9/11 — EL ASISTENTE DE INSTALACIÓN (anotado, sin construir)
+
+**Es la primera pantalla que ve un cliente nuevo**, y es la que va a ver la
+panadería. Eso la pone por delante de casi todo lo demás de esta lista: un
+fallo aquí pasa delante de alguien que todavía no ha decidido si la app le
+sirve.
+
+### 🟠 W-01 · La ventana obliga a hacer scroll para llegar a «Continue»
+
+Jose, 9/11: *"la ventana de setup, al empezar el Acopio, debe siempre ser
+suficientemente grande para que no se tenga que hacer scroll; si no se puede,
+entonces hay que mover el botón de Continue más arriba."*
+
+En la captura se ve la barra de desplazamiento a la derecha y «Continue» abajo
+del todo. **El primer paso de la instalación no puede esconder el botón que la
+continúa.** Y la salida que propone Jose es la correcta: si la ventana no puede
+crecer —la altura la manda Google Sheets, no nosotros—, entonces el pie se
+queda fijo abajo y sólo desplaza el contenido.
+
+### 🟠 W-02 · Dos sitios para lo mismo: uno que enseña y otro donde se escribe
+
+Jose: *"quiero aplicar las mismas reglas que tenemos en la app a este lugar:
+un botón «+ Add» arriba a la derecha que añada una categoría, ubicación,
+proveedor o proyecto **vacío**, y que el cursor aparezca dentro para poder
+escribir. Si se añade algo y no se escribe nada, al pasar de página o salir
+simplemente se borra… Así sólo tenemos un lugar donde se muestran todas las
+cosas, en lugar de tener 2 lugares, uno que muestra y otro que escribe."*
+
+Y tiene razón en el fondo, no sólo en la forma: hoy hay **una caja de texto
+abajo y una lista de fichas arriba**, y lo que escribes salta de un sitio a
+otro al pulsar Enter. Con el botón «+ Add» la ficha nace donde va a vivir y se
+escribe ahí.
+
+**Y es exactamente la dirección de P-02**, que acabamos de terminar en la app:
+un solo sitio donde está la cosa, y se actúa sobre ella ahí. El asistente se
+quedó fuera de aquella pasada porque vive en otro archivo
+(`SetupWizard.html`), que es justo cómo se separan dos pantallas que deberían
+parecerse.
+
+### 🔴 W-03 · Un nombre repetido se borra en silencio
+
+Jose: *"si escribo una ubicación que ya existe, la app debe hacérmelo saber, no
+sólo no hacer nada. Actualmente doy Enter a una ubicación que ya existe y sólo
+se borra y no pasa nada."*
+
+**Medido, y es literal.** En `SetupWizard.html`, tanto `addChip` como `addLoc`
+hacen lo mismo:
+
+```js
+if (!W.locations.some(function(x){return x.name===v;})) W.locations.push(...);
+inp.value = '';          // ← esto se ejecuta SIEMPRE
+```
+
+La comprobación del duplicado protege el dato, y después se limpia la caja
+pase lo que pase. Desde fuera eso no se distingue de «se tragó lo que escribí»,
+que es la peor forma de acertar: el dato está bien y la persona cree que la app
+está rota.
+
+**Lo que pidió Jose, que es lo correcto:** no borrar lo escrito, un texto en
+rojo —*«ya existe esta ubicación, intenta con otra»*— y **poner en rojo un
+segundo o dos la ficha que ya existe**, para que además se vea *dónde* está la
+que choca. Eso último es lo que convierte un error en una respuesta.
+
+### ✅ W-04 · Las mayúsculas: verificado, y está bien
+
+Jose: *"no sé cómo maneja el setup las mayúsculas y minúsculas; estoy
+verificando eso."* **No hace falta: está medido.**
+
+`addChip` y `addLoc` hacen los dos `.trim().toUpperCase()` antes de guardar, y
+`expand()` —el generador de la rejilla de estantes— también. O sea que
+categorías, ubicaciones, proveedores y proyectos entran **en mayúsculas y sin
+espacios sobrantes**, igual que `_cfgAdd` en la app. Escribir `flashing` o
+`Flashing` da `FLASHING` en los dos sitios.
+
+Lo que **no** se toca, y es correcto: el nombre de la empresa y el de la
+persona. `cupcake empire` se queda como se escribió, porque es un nombre
+propio y va en la cabecera de la app y en los correos.
+
+**La única pega real es que no se ve:** escribes `p` y aparece `P`, sin que
+nada lo haya avisado. No es un fallo —es la regla de toda la app— pero merece
+una línea de ayuda debajo de la caja. Anotado con W-02, que toca ese mismo
+sitio.
+
+---
+
 ## 📋 LO DEL 9/11
 
 ### ~~🔴 P-02 · La selección por fila, en una sola forma~~ ✅ **v14.4**
