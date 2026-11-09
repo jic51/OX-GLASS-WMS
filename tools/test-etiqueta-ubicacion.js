@@ -264,9 +264,12 @@ const PA4 = { width: 794, height: 1123, mm: 210 };
       const cbs = caja.querySelectorAll('.loc-pick');
       const leer = () => ({
         sale:   bar.classList.contains('show'),
-        print:  !!document.getElementById('locPrintBtn'),
-        todas:  !!document.getElementById('locPickAll'),
-        merge:  !!document.getElementById('locMergeBtn')
+        // P-02 (v14.4): la barra de ubicaciones la pinta ahora `_barraMarcados`,
+        // la misma de Categorías, Projects, Directory y Materials. Los
+        // identificadores llevan el prefijo de la pantalla.
+        print:  !!document.getElementById('locPickPrintBtn'),
+        todas:  !!document.getElementById('locPickAllBtn'),
+        merge:  !!document.getElementById('locPickMergeBtn')
       });
       const out = { cero: leer() };
       cbs[0].checked = true; cbs[0].dispatchEvent(new Event('change', { bubbles: true }));

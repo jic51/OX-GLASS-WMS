@@ -188,8 +188,15 @@ check('y al pulsarlo se manda el resto del grupo quitando UNA aparición, no ' +
       '`from` vacío con catorce copias, que es el fallo original otra vez',
   /yaQuitado/.test(wireSim), wireSim.slice(0, 400));
 
-const manual = A.sinComentarios(A.fnSrc(HTML, '_wireManualMerge') || '');
-check('lo mismo en la selección a mano', /quitada/.test(manual));
+/* Lo mismo en la selección a mano. Desde P-02 (v14.4) eso lo hace
+ * `_barraMarcados`, la barra única de las cinco listas que se marcan — así que
+ * ahora esta regla está escrita UNA vez y vale para Categorías,
+ * Projects/Suppliers, Locations, Materials y Directory a la vez, en vez de
+ * depender de que cada pantalla se acordara. */
+const manual = A.sinComentarios(A.fnSrc(HTML, '_barraMarcados') || '');
+check('lo mismo en la selección a mano', /quitada/.test(manual), manual.slice(0, 200));
+check('...y esa regla está escrita una sola vez para las cinco pantallas',
+  (A.sinComentarios(HTML).match(/var quitada = false;/g) || []).length === 1);
 
 /* ────────────────────────────────────────────────────────────────────────────
  * 4. EL REGISTRO DE ERRORES ES UNA VENTANA.

@@ -19,6 +19,21 @@
 // —prometer una cosa y hacer otra en silencio— sólo que aquí lo que se pierde
 // es lo que la persona acaba de teclear.
 //
+// ── Y EN LA v14.4 EL MECANISMO ENTERO DESAPARECIÓ ─────────────────────────
+//
+// P-02 quitó los recuadros de edición por fila de las cinco listas: ahora sólo
+// hay UN sitio donde se escribe un nombre nuevo, la barra de lo marcado. Así
+// que la situación que este fallo describía —dos recuadros abiertos a la vez—
+// ya no se puede construir.
+//
+// Eso NO es motivo para borrar esta prueba, y su versión anterior ya lo dejó
+// escrito: *"habrá que volver a mirar esto en vez de borrarlo"*. La regla que
+// defendía no era «un recuadro a la vez»; eso era el arreglo. La regla es
+// **la app no puede ofrecer un trabajo que va a tirar**, y eso sigue siendo
+// comprobable: lo que se mide ahora es que no exista ningún segundo sitio
+// donde teclear un renombre, y que el único que hay no guarde nada que no haya
+// cambiado.
+//
 // ── POR QUÉ UNO A LA VEZ, Y NO "GUARDAR TODOS" ────────────────────────────
 //
 // Renombrar una categoría REESCRIBE CADA FILA DEL ARCHIVO que la usaba y
@@ -106,16 +121,27 @@ window.__DATA=${JSON.stringify(DATA)};
   return f;
 }
 
-/** Cuántos recuadros de edición hay abiertos, y qué hay escrito en ellos. */
+/** Dónde se puede teclear un nombre nuevo ahora mismo, y qué pone. Mira TODA
+ *  la pestaña, no sólo la barra: si alguien volviera a meter un recuadro por
+ *  fila, aparecería aquí y esta prueba se pondría roja, que es justo para lo
+ *  que sirve. */
 const ESTADO = `window.__estado = function(){
   var scope = document.getElementById('settingsTabContent');
   var out = [];
-  scope.querySelectorAll('[id^="cfgEdit-"]').forEach(function(c){
-    if (c.style.display === 'none') return;
-    var i = c.querySelector('.cfg-item-input');
-    out.push({ id: c.id, valor: i ? i.value : null });
+  scope.querySelectorAll('[id^="cfgEdit-"], .cfg-item-input, [id$="RenameInp"]').forEach(function(c){
+    if (c.offsetParent === null && c.style.display === 'none') return;
+    out.push({ id: c.id, valor: c.value !== undefined ? c.value : null });
   });
   return out;
+};
+window.__marcar = function(i, on){
+  var cbs = document.querySelectorAll('#settingsTabContent .cfg-pick');
+  cbs[i].checked = on;
+  cbs[i].dispatchEvent(new Event('change', { bubbles: true }));
+};
+window.__barra = function(){
+  var b = document.getElementById('cfgPickBar');
+  return { html: b ? b.innerHTML : '', sale: !!b && b.classList.contains('show') };
 };`;
 
 (async () => {
@@ -139,76 +165,93 @@ const ESTADO = `window.__estado = function(){
     document.querySelectorAll('#settingsTabContent li.cfg-item').length);
   check('hay cuatro proyectos en la lista — con una sola no se puede reproducir ' +
         'nada de esto', filas === 4, filas);
-  check('y ninguna está en modo edición al abrir',
+  check('y al abrir no hay ningún sitio donde teclear un nombre — la lista se ' +
+        'lee, y sólo se escribe cuando has elegido sobre qué',
         (await page.evaluate(() => window.__estado())).length === 0);
+  check('ni queda ningún lápiz ni papelera por fila, que era lo que el «modo» ' +
+        'de arriba encendía',
+        (await page.evaluate(() =>
+          document.querySelectorAll('#settingsTabContent li.cfg-item button').length)) === 0);
 
-  console.log('\n═══ 2. Uno a la vez ═══\n');
+  console.log('\n═══ 2. UN SOLO SITIO DONDE TECLEAR UN NOMBRE ═══\n');
+  /* El nombre se lee de la pantalla, no se escribe a mano: la lista se ordena
+   * alfabéticamente y dar por hecho cuál cae primero es una suposición que se
+   * rompe sola. */
+  const PRIMERO = await page.evaluate(() =>
+    document.querySelectorAll('#settingsTabContent li.cfg-item')[0].getAttribute('data-val'));
   {
-    await page.evaluate(() => _cfgStartEdit('projects', 0));
+    await page.evaluate(() => window.__marcar(0, true));
     await page.waitForTimeout(120);
-    let e = await page.evaluate(() => window.__estado());
-    check('se abre el primero', e.length === 1 && e[0].id === 'cfgEdit-projects-0', e);
-
-    /* EL CASO DEL VÍDEO. Antes, pulsar el lápiz de la segunda dejaba DOS
-     * abiertos; guardar una de ellas repintaba la pestaña y lo escrito en la
-     * otra desaparecía. */
-    await page.evaluate(() => _cfgStartEdit('projects', 1));
-    await page.waitForTimeout(120);
-    e = await page.evaluate(() => window.__estado());
-    check('ABRIR OTRO NO DEJA DOS ABIERTOS — guardar uno repinta la pestaña y se ' +
-          'lleva por delante lo escrito en el otro',
-          e.length === 1, e);
-    check('...y el que queda abierto es el que se acaba de pedir',
-          e.length === 1 && e[0].id === 'cfgEdit-projects-1', e);
+    const e = await page.evaluate(() => window.__estado());
+    check('marcar uno abre EXACTAMENTE un sitio donde escribir', e.length === 1, e);
+    check('...y es el de la barra, no un recuadro dentro de la fila',
+      e.length === 1 && /RenameInp$/.test(e[0].id), e);
+    check('...que viene con el nombre actual puesto',
+      e.length === 1 && e[0].valor === PRIMERO, { e: e, esperado: PRIMERO });
   }
 
-  console.log('\n═══ 3. Pero NO se tira lo que alguien escribió ═══\n');
+  console.log('\n═══ 3. MARCAR OTRO NO DEJA DOS A MEDIAS ═══\n');
   {
-    /* Cerrar el recuadro abierto para abrir otro sería el mismo pecado más
-     * pequeño: tirar lo tecleado, sólo que de a uno. */
-    await page.evaluate(() => {
-      var i = document.getElementById('cfgInp-projects-1');
-      i.value = 'IGU DOBLE';
+    /* EL CASO DEL VÍDEO, en su forma nueva. Antes se podían abrir cinco
+     * recuadros, escribir en los cinco y guardar uno, tirando cuatro **sin
+     * avisar al guardar**. Ahora no hay forma de llegar ahí: marcar un segundo
+     * proyecto quita el sitio de escribir en el acto —a la vista, mientras lo
+     * marcas— y ofrece Fusionar, que es lo que de verdad significa dar el mismo
+     * nombre a dos cosas. */
+    await page.evaluate((nombre) => {
+      var i = document.getElementById('cfgPickRenameInp');
+      i.value = nombre + ' PHASE 2';
       i.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-    await page.evaluate(() => _cfgStartEdit('projects', 2));
+    }, PRIMERO);
+    await page.evaluate(() => window.__marcar(1, true));
     await page.waitForTimeout(120);
     const e = await page.evaluate(() => window.__estado());
-
-    check('con algo escrito sin guardar, el otro NO se abre — lo tecleado no se ' +
-          'tira para hacer sitio', e.length === 1 && e[0].id === 'cfgEdit-projects-1', e);
-    check('...y LO ESCRITO SIGUE AHÍ, que es la parte que de verdad importa',
-          e.length === 1 && e[0].valor === 'IGU DOBLE', e);
-
-    const aviso = await page.evaluate(() =>
-      Array.from(document.querySelectorAll('.toast-msg')).map(t => t.textContent).join(' | '));
-    /* Y se dice por qué no se abrió. Un clic que no hace nada y no explica nada
-     * se vuelve a dar, y entonces parece que la app está colgada. */
-    check('...y se explica por qué no se abrió, en vez de no hacer nada',
-          /Finish the one you are editing/i.test(aviso), aviso);
+    const b = await page.evaluate(() => window.__barra());
+    check('con DOS marcados no queda NINGÚN sitio donde teclear un renombre',
+      e.length === 0, e);
+    check('...y lo que se ofrece en su lugar es fusionar, que es lo que ' +
+          'significa dar un mismo nombre a dos cosas',
+      /cfgPickMergeBtn/.test(b.html), b.html);
+    check('...y hay que decir cuál de los dos nombres se queda',
+      /cfgPickKeep/.test(b.html));
   }
 
-  console.log('\n═══ 4. Cancelar libera el turno ═══\n');
+  console.log('\n═══ 4. SOLTAR UNO DEVUELVE EL RENOMBRE ═══\n');
   {
-    await page.evaluate(() => _cfgCancelEdit('projects', 1));
-    await page.evaluate(() => _cfgStartEdit('projects', 2));
+    await page.evaluate(() => window.__marcar(1, false));
     await page.waitForTimeout(120);
     const e = await page.evaluate(() => window.__estado());
-    check('después de cancelar, otro se abre sin pelea',
-          e.length === 1 && e[0].id === 'cfgEdit-projects-2', e);
+    check('vuelve a haber un sitio donde escribir', e.length === 1, e);
+    /* Y vuelve con el nombre REAL, no con lo que se estaba tecleando antes.
+     * Recuperar un borrador a medias sería peor: parecería que ese cambio
+     * sigue vivo cuando nadie lo guardó. */
+    check('...con el nombre que de verdad tiene el proyecto, no un borrador ' +
+          'de antes que nadie guardó',
+      e.length === 1 && e[0].valor === PRIMERO, { e: e, esperado: PRIMERO });
   }
 
-  console.log('\n═══ 5. Un recuadro sin tocar no bloquea nada ═══\n');
+  console.log('\n═══ 5. Y NO GUARDA LO QUE NO HA CAMBIADO ═══\n');
   {
-    /* Abrir uno, no escribir, y abrir otro: eso tiene que fluir. Si también
-     * pidiera cerrar el anterior a mano, la regla se volvería un estorbo en el
-     * caso más común — pulsar el lápiz equivocado y corregirse. */
-    await page.evaluate(() => _cfgStartEdit('projects', 3));
-    await page.waitForTimeout(120);
-    const e = await page.evaluate(() => window.__estado());
-    check('abrir otro cuando el anterior está sin tocar simplemente funciona — ' +
-          'pulsar el lápiz equivocado y corregirse es lo más común que hay',
-          e.length === 1 && e[0].id === 'cfgEdit-projects-3', e);
+    /* El otro medio fallo de la misma familia: un botón encendido sobre nada
+     * que hacer. Renombrar nace apagado y sólo se enciende con un nombre
+     * distinto y no vacío. */
+    const estados = await page.evaluate((nombre) => {
+      const btn = document.getElementById('cfgPickRenameBtn');
+      const inp = document.getElementById('cfgPickRenameInp');
+      const leer = () => btn.disabled;
+      const out = { alAbrir: leer() };
+      inp.value = ''; inp.dispatchEvent(new Event('input', { bubbles: true }));
+      out.vacio = leer();
+      inp.value = nombre; inp.dispatchEvent(new Event('input', { bubbles: true }));
+      out.igual = leer();
+      inp.value = nombre + ' PHASE 2'; inp.dispatchEvent(new Event('input', { bubbles: true }));
+      out.distinto = leer();
+      return out;
+    }, PRIMERO);
+    check('Renombrar nace apagado: aún no hay nada que renombrar', estados.alAbrir, estados);
+    check('...sigue apagado con el nombre vacío', estados.vacio, estados);
+    check('...sigue apagado con el mismo nombre', estados.igual, estados);
+    check('...y sólo se enciende con un nombre distinto', !estados.distinto, estados);
   }
 
   check('y la página no lanzó ningún error por el camino', errores.length === 0, errores);

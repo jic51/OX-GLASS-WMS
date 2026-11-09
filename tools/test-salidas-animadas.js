@@ -145,7 +145,10 @@ m.seccion('los ocho sitios, contados');
     ['vaciar la papelera',              '_emptyTrash',          /_rowLeaveAll\([\s\S]{0,200}_loadTrash\(\)/],
     ['borrar un valor del catálogo',    '_cfgCall',             /_rowLeaveAll\([\s\S]{0,300}_applyCfgChangeLocally\(payload\)/],
     ['quitar un contacto del directorio', '_drawPmDirectory',   null],   // se comprueba aparte
-    ['borrar una ubicación',            '_locDelete',           /_rowLeaveAll\(_itemsBy\('locGroups'[\s\S]{0,200}_redrawLocGroups\(\)/],
+    /* Desde P-02 (v14.4) `_locDelete` sólo quita del borrador: la animación y
+       el repintado los hace `_trasMoverLoc`, que es por donde pasan también
+       archivar y restaurar. Un solo sitio para las tres, en vez de tres. */
+    ['borrar una ubicación',            '_trasMoverLoc',        /_redrawLocGroups\(\)/],
     ['fusionar materiales',             '_matCall',             /_rowLeaveAll\(payload\.op === 'merge'[\s\S]{0,140}_applyMatChangeLocally\(payload\)/]
   ];
 
@@ -165,8 +168,13 @@ m.seccion('los ocho sitios, contados');
     /_rowLeaveAll\(seVan, function\(\)\{ _redrawLocGroups\(\); \}\)/.test(HTML));
   m.check('fusionar duplicados parecidos: ya no es un g.remove() de golpe',
     /_rowLeave\(g, function\(\)\{ if \(g\) g\.remove\(\); \}\)/.test(HTML));
-  m.check('quitar un contacto del directorio: anima antes de repintar',
-    /_rowLeaveAll\(\s*_itemsBy\('settingsTabContent', 'li\.cfg-item', 'data-val', \[name\]\),[\s\S]{0,200}_renderPmDirectoryTab\(\)/.test(HTML));
+  /* El directorio borra UNO O VARIOS desde la v14.4, de uno en uno y en orden,
+     así que la animación de cada fila encadena con la siguiente en vez de
+     repintar al terminar la única que había. */
+  m.check('quitar un contacto del directorio: anima antes de seguir',
+    /_rowLeaveAll\(\s*_itemsBy\('settingsTabContent', 'li\.cfg-item', 'data-val', \[nombre\]\),\s*siguiente\)/.test(HTML));
+  m.check('...y cuando se acaban, repinta una sola vez',
+    /if \(!pend\.length\)\{[\s\S]{0,120}_renderPmDirectoryTab\(\);/.test(HTML));
 
   /* Y LA FILA DEL DIRECTORIO TIENE QUE SER ENCONTRABLE. El data-val estaba sólo
      en su botón de papelera; sin ponerlo en el <li>, _itemsBy no encuentra

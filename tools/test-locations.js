@@ -370,14 +370,19 @@ function pantalla(opts){
     document: {
       getElementById: (id) => (id === 'locNewVal'
         ? { value: opts.typed || '', focus(){}, placeholder:'' }
-        : { style: {}, focus(){} })
+        : { style: {}, focus(){} }),
+      // `_trasMoverLoc` suelta las casillas marcadas antes de repintar; aquí no
+      // hay casillas, y una lista vacía es la respuesta correcta, no un hueco.
+      querySelectorAll: () => []
     }
   });
-  /* Las cuatro que esta prueba ejercita; el andamio baja por sus ayudantes. */
+  /* Las que esta prueba ejercita; el andamio baja por sus ayudantes.
+     `_trasMoverLoc` entró con P-02 (v14.4): es el paso común de borrar,
+     archivar y restaurar, y es quien marca el borrador como sucio. */
   vm.runInContext(A.levantar(HTML,
-    ['_locUsage', '_locWhyKept', '_locCreate', '_locDelete'], {
+    ['_locUsage', '_locWhyKept', '_locCreate', '_locDelete', '_trasMoverLoc'], {
       dobles: ['showToast', '_showConfirm', '_redrawLocGroups', '_rowLeaveAll',
-               '_itemsBy', '_locMarkDirty', '_locTypesInOrder']
+               '_itemsBy', '_locMarkDirty', '_locTypesInOrder', '_locBarra']
     }), c);
   return { c, avisos, confirmadas, run: (e) => vm.runInContext(e, c) };
 }
@@ -473,31 +478,73 @@ function pantalla(opts){
   check('borrar una que se llenó mientras tanto no pregunta, avisa',
         p.confirmadas.length === 0 && p.avisos.length === 1);
   check('y la locación sigue ahí',                      p.c._locLayout.length === 1);
+  /* NI SE ARCHIVA DE CONSUELO. Esto lo escribí mal primero: al encontrarse el
+     estante lleno, lo archivaba. Archivar es una decisión, y nadie la había
+     tomado — el estante acababa de recibir material, que es exactamente cuando
+     NO quieres que desaparezca de las listas. */
+  check('...y tampoco se archiva por su cuenta: no se toca',
+        p.c._locLayout[0].type !== 'ARCHIVED', p.c._locLayout[0]);
 }
 
+/* ── DESDE P-02 (v14.4) LA PREGUNTA LA HACE LA BARRA, NO ESTA FUNCIÓN ───────
+ *
+ * `_locDelete` preguntaba porque se la llamaba desde la papelera de cada fila.
+ * Con la barra se pueden marcar tres estantes y borrarlos de una, y preguntar
+ * aquí habrían sido tres ventanas seguidas — así que el aviso se da UNA vez,
+ * nombrando los tres, y esto quedó como la acción en crudo.
+ *
+ * Lo que NO cambia, y es lo que de verdad protege: que no se borre nada hasta
+ * pulsar Save layout, y que un estante con material no se vaya. */
 {
   const p = pantalla({ layout: ['A1A','A1B'] });
-  p.run('_locDelete("A1A")');
-  check('borrar una vacía pide confirmación',           p.confirmadas.length === 1);
-  check('el aviso promete que ningún número cambia',
-        /no number changes/.test(p.confirmadas[0].message));
-  check('y explica qué pasa con el historial',
-        /keep the name they were recorded with/.test(p.confirmadas[0].message));
-  check('todavía no se borró nada',                     p.c._locLayout.length === 2);
-  p.confirmadas[0].onConfirm();
-  check('al confirmar, se va de la lista',
+  const fue = p.run('_locDelete("A1A")');
+  check('borrar una vacía no pregunta aquí: la barra ya preguntó una vez por ' +
+        'todas las marcadas', p.confirmadas.length === 0);
+  check('y dice que sí se la llevó',                    fue === true);
+  check('se va de la lista',
         p.c._locLayout.map(l => l.name).join(',') === 'A1B');
+  /* Marcar el borrador como sucio lo hace ahora `_trasMoverLoc`, que es el
+     paso común de borrar, archivar y restaurar: uno solo, en vez de que cada
+     acción se acuerde por su cuenta. */
+  p.run('_trasMoverLoc()');
   check('y queda sin guardar hasta que se pulse Save',  p.c.sucio === true);
+}
+
+/* Y el aviso que la barra sí da, con lo que tiene que decir. */
+{
+  const barra = fnSrc(HTML, '_locBarra');
+  check('el aviso de borrar promete que ningún número cambia',
+        /Nothing is stored/.test(barra));
+  check('y explica qué pasa con el historial',
+        /keep the location they were recorded with/.test(barra));
+  check('y avisa de que no pasa nada hasta pulsar Save layout',
+        /Takes effect when you press Save layout/.test(barra));
+  check('y nombra las que se lleva, no sólo cuántas',
+        /s2\.join\('\\n'\)/.test(barra), barra.slice(0, 200));
 }
 
 console.log('\n── LO QUE LA PANTALLA DIBUJA ──────────────────────────────────\n');
 
 {
   const render = fnSrc(HTML, '_renderLocGroup');
-  check('la papelera sólo se dibuja si no hay razón para retener',
-        /\(why \? '' :/.test(render));
-  check('y la razón se cuenta en el botón de archivar',
-        /why \+ ' — archive it instead/.test(render));
+  /* P-02 (v14.4): archivar y borrar se fueron de la fila a la barra, así que
+     ya no hay papelera por fila que esconder. Lo que SÍ se queda en la fila es
+     el MOTIVO por el que un estante no se puede borrar, porque eso es un dato
+     de ese estante y no una acción. */
+  check('en la fila ya no hay ni papelera ni botón de archivar',
+        !/loc-arch-btn/.test(render) && !/loc-del-btn/.test(render), render.slice(0, 300));
+  check('pero sí el candado que dice que este estante guarda algo',
+        /why \? '<span class="loc-why"/.test(render));
+  check('...con el motivo dentro, no un icono mudo',
+        /_escAttr\(why\)/.test(render));
+  /* Y en la barra, que es donde está el botón que falta, se dice por qué falta.
+     Un botón ausente sin explicación deja adivinando; uno apagado invita a la
+     pulsación que hay que rechazar. Esto es la tercera salida. */
+  const barraLoc = fnSrc(HTML, '_locBarra');
+  check('y la barra sólo ofrece borrar si NINGUNA retiene nada',
+        /if \(sel\.length && !retenidas\.length\)/.test(barraLoc));
+  check('...y cuando no lo ofrece, dice cuántas lo impiden y por qué',
+        /nota:/.test(barraLoc) && /archive (it|them) instead/.test(barraLoc));
   check('el uso se calcula una vez por redibujo, no por fila',
         /var use = _locUsage\(\);/.test(fnSrc(HTML, '_redrawLocGroups')));
 }

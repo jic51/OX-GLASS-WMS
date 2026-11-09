@@ -124,8 +124,13 @@ console.log('\n═══ and the screen has to SAY which tabs carry the rename �
 
   check('the copy branches on the tab instead of one sentence for all four',
     /tab === 'categories'/.test(body));
+  // Categories renders itself since v14.0, so its sentence lives in its own
+  // function — the branch above only routes there. Checked where it is written,
+  // not where it used to be.
+  const cats = HTML.slice(HTML.indexOf('function _renderCategoriesTab('));
   check('Categories still promises the rename carries into the movements',
-    /Renaming a category updates all existing movements automatically\./.test(body));
+    /Renaming a category updates all existing movements automatically\./.test(
+      cats.slice(0, cats.indexOf('\nfunction '))));
   check('the other three say the opposite, plainly, instead of the old claim',
     /Renaming updates the list only — existing movements keep the name they were recorded with\./.test(body));
 }

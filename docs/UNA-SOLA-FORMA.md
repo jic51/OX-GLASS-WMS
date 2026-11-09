@@ -6,6 +6,40 @@ partes donde se puede editar, borrar, etc.) y sugiere qué tenemos ya construido
 y qué le cambiarías tú para que la app se vea profesional, ordenada y con la
 forma de manejar los datos igual en todas partes."*
 
+> ## ✅ HECHO — v14.0 y v14.4
+>
+> **§2.1 está entregado.** Las cinco listas usan una sola forma de elegir:
+> casilla + barra, con la regla de Jose dentro (*una marcada → Renombrar y
+> Borrar; varias → Borrar y Fusionar, y Renombrar no aparece*).
+>
+> | Pantalla | Cuándo | Qué se fue |
+> |---|---|---|
+> | Categories | v14.0 | el modo `cfg` y su casilla aparte |
+> | Projects · Suppliers | v14.4 | el modo `cfg`, el lápiz y la papelera de cada fila |
+> | Locations | v14.4 | el modo `loc` y sus dos botones por fila |
+> | Directory | v14.4 | el modo `pm` y la papelera de cada fila |
+> | Materials | v14.4 | el modo `mat` y **tres** botones por fila |
+>
+> `ROW_MODES` se quedó **vacío de las cinco**: ya sólo lo usa `usr`.
+>
+> Y la barra **se escribe una vez** (`_barraMarcados`). Eso es lo que impide
+> que esto vuelva: la sexta pantalla no puede elegir mal porque no escribe la
+> barra, la pide.
+>
+> **Dos cosas de §2 ya no hacen falta y conviene decirlo:**
+>
+> - **§2.2 estaba desactualizado.** Decía que Materials renombra con un
+>   `prompt()` del navegador. No: usa `_showPrompt`, el diálogo propio de la
+>   app, desde antes. Lo que Jose vio —*"toda la lista se queda desactivada"*—
+>   era otra cosa, `_matSetBusy` apagando todos los botones de la pestaña, y
+>   está arreglado en la v14.4.
+> - **§2.3 y §2.4** se entregaron en la v13.9.
+>
+> **Queda de este documento:** §2.5 (la tarjeta de contacto, P-04) y §2.6
+> (plegar Error Log y System, P-08).
+
+---
+
 **La respuesta corta: no falta casi nada. Lo que falta es usar lo que hay.**
 
 Cada pieza de esta lista existe, funciona y está probada en algún sitio de la

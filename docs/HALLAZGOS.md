@@ -310,6 +310,54 @@ es exactamente para esto.
 
 ---
 
+## 📋 LO DEL 9/11
+
+### ~~🔴 P-02 · La selección por fila, en una sola forma~~ ✅ **v14.4**
+
+Jose, 9/11: *"empieza con P-02 y luego P-06 y P-05 y N-08 como dijiste."*
+
+Entregado entero. Las cinco listas —Projects, Suppliers, Locations, Directory
+y Materials— usan ya casilla + barra, con la regla de uno contra varios dentro.
+El detalle está en `UNA-SOLA-FORMA.md`, que queda marcado como hecho en §2.1.
+
+**Lo que hace que esto no vuelva** no es haber convertido cinco pantallas: es
+que **la barra se escribe una sola vez** (`_barraMarcados`). Copiarla cinco
+veces habría sido cometer otra vez el fallo que P-02 venía a quitar — cinco
+barras que tienen que comportarse igual sin que nada lo obligue. La sexta
+pantalla no podrá elegir mal porque no escribe la barra: la pide.
+
+**Tres cosas aparecieron por el camino y conviene anotarlas:**
+
+| | Qué | Estado |
+|---|---|---|
+| 🟠 | *"al cambiar un nombre en materiales toda la lista se queda desactivada"* (4/11). Era `_matSetBusy` apagando **todos** los botones de la pestaña, buscador incluido. El guardia de verdad siempre fue `if (_matBusy) return;` | ✅ **v14.4** — ahora sólo espera la barra |
+| 🟡 | `UNA-SOLA-FORMA.md` §2.2 decía que Materials renombra con un `prompt()` del navegador. **No es verdad**: usa `_showPrompt`, el diálogo propio, desde antes. Corregido en el documento | ✅ corregido |
+| 🟠 | Al pasar las ubicaciones a la barra me llevé por delante el «Select all» y escribí que un estante que se llena entre medias se archivara solo. Las dos las pilló la suite | ✅ repuesto y corregido |
+
+### ~~🔴 R-04 · «A cero» no significaba que el almacén estuviera vacío~~ ✅ **v14.4**
+
+Salió de la captura del 8/11: la franja decía *«1 at zero»* con **dos**
+tarjetas marcando `0 wh`. Lo expliqué como correcto —la regla pedía que la obra
+también estuviera vacía— y Jose lo zanjó al revés, que es lo que había que
+hacer:
+
+> *"la verdad no me importa ver un cero, pero debemos entender que el cero
+> significa que no queda nada en el warehouse; lo que está en el jobsite no me
+> importa porque ya está fuera."*
+
+**Tiene razón y es de negocio, no de pantalla.** El aviso existe para decidir
+**si hay que pedir**, y lo que ya se llevaron a una obra no se puede volver a
+sacar de la estantería. Contarlo como existencias retrasaba el pedido justo del
+material que se acababa de agotar.
+
+Y deja la regla entera en una sola unidad de medida: `availableQty` es
+`warehouseQty − reservedQty`, o sea **ya era sólo almacén**. Era el cero el que
+miraba otra cosa. Como efecto secundario los dos avisos ya no pueden solaparse
+— si el almacén está a cero, `availableQty` es 0 y ese material no puede caer
+además en «bajo el mínimo».
+
+---
+
 ## 📋 LO DEL 8/11
 
 ### ~~🔴 R-01 · **Lo rompí yo**: los botones de Guardar dejaron de responder~~ ✅ **v14.3**
