@@ -168,10 +168,118 @@ check('...la pide', /_alertasDeStock\(monitoredMaterials, config\.minStock\)/.te
 check('y la regla está escrita UNA vez',
   (HTML.match(/function _alertasDeStock/g) || []).length === 1);
 
+console.log('\n═══ 6 · LA FRANJA CUENTA, LA TARJETA SEÑALA ═══\n');
+
+/* Jose, 8/11: *"puedo leer lo que dice la franja pero debo buscar el material
+ * viendo el número que hay en el warehouse, y eso es dejar trabajo para que el
+ * usuario lo haga."* La franja decía «3 at zero» y ahí se acababa: convertir
+ * ese 3 en tres nombres era recorrer doscientas tarjetas a ojo.
+ *
+ * Esto comprueba el reparto EJECUTÁNDOLO sobre tarjetas de mentira, con la
+ * salida real de `_alertasDeStock`. */
+
+function tarjetaFalsa(nombre) {
+  const clases = new Set(['monitor-item', 'off']);
+  return {
+    nombre: nombre,
+    getAttribute: function (k) { return k === 'data-mon-row' ? nombre : null; },
+    classList: {
+      toggle: function (c, on) { if (on) clases.add(c); else clases.delete(c); },
+      contains: function (c) { return clases.has(c); }
+    },
+    clases: clases
+  };
+}
+
+{
+  // Las mismas cuatro de arriba, en mayúsculas y sin espacios: así es como
+  // `data-mon-row` las escribe.
+  const tarjetas = ['FLASHING TAPE 6', 'FLASHING TAPE 9', 'TYVEK WRAP', 'SILPRUF SC2000']
+    .map(tarjetaFalsa);
+  // El mismo material DOS veces en pantalla: en su categoría abierta y en la
+  // lista de «ya marcados» de abajo. Las dos tienen que pintarse.
+  const repetida = tarjetaFalsa('FLASHING TAPE 9');
+  const todas = tarjetas.concat([repetida]);
+
+  const ctx2 = {
+    Object: Object, String: String, stockData: stockData,
+    document: { querySelectorAll: function () { return todas; } }
+  };
+  const G = A.montar(ctx2, HTML, ['_alertasDeStock', '_monMarcarEstados']);
+
+  G._monMarcarEstados(G._alertasDeStock(null, minimos));
+
+  const porNombre = n => tarjetas.find(t => t.nombre === n);
+  check('el que está a cero se pinta de rojo',
+    porNombre('FLASHING TAPE 9').classList.contains('is-zero'));
+  check('...y no además de naranja — serían dos avisos de lo mismo',
+    !porNombre('FLASHING TAPE 9').classList.contains('is-bajo'));
+  check('el que está bajo el mínimo se pinta de naranja',
+    porNombre('FLASHING TAPE 6').classList.contains('is-bajo'));
+  check('...y no de rojo', !porNombre('FLASHING TAPE 6').classList.contains('is-zero'));
+  check('el nombre con espacio al final también se pinta',
+    porNombre('SILPRUF SC2000').classList.contains('is-bajo'));
+  check('el que está por encima del mínimo se queda como estaba',
+    !porNombre('TYVEK WRAP').classList.contains('is-zero') &&
+    !porNombre('TYVEK WRAP').classList.contains('is-bajo'));
+  check('el material que sale dos veces en pantalla se pinta las dos veces',
+    repetida.classList.contains('is-zero'));
+
+  /* QUITAR ADEMÁS DE PONER. Subir el mínimo por encima del stock tiene que
+   * apagar el naranja en el acto: si sólo se pusiera la clase, la tarjeta se
+   * quedaría avisando de algo que ya no pasa. */
+  G._monMarcarEstados(G._alertasDeStock(null, { 'FLASHING TAPE 6': 1 }));
+  check('subir el mínimo por encima del stock apaga el naranja',
+    !porNombre('FLASHING TAPE 6').classList.contains('is-bajo'),
+    [...porNombre('FLASHING TAPE 6').clases]);
+  check('...y el cero sigue en rojo, porque eso no depende del mínimo',
+    porNombre('FLASHING TAPE 9').classList.contains('is-zero'));
+
+  /* Y con la lista filtrada: la tarjeta sólo se pinta si la franja la cuenta.
+   * Si se pintara lo que no se vigila, el número y los colores dirían cosas
+   * distintas en la misma pantalla. */
+  G._monMarcarEstados(G._alertasDeStock(['FLASHING TAPE 6'], minimos));
+  check('con filtro, lo que no se vigila no se pinta',
+    !porNombre('FLASHING TAPE 9').classList.contains('is-zero'));
+  check('...y lo que sí se vigila sigue pintado',
+    porNombre('FLASHING TAPE 6').classList.contains('is-bajo'));
+}
+
+/* LA MISMA CUENTA, NO DOS. El reparto tiene que salir del resumen, que es
+ * quien ya llama a `_alertasDeStock`. Si se llamara otra vez por su cuenta,
+ * serían dos cuentas que habría que hacer coincidir — exactamente el fallo
+ * que este proyecto repite. */
+check('el reparto de colores sale de la cuenta que ya hacía el resumen',
+  /_monMarcarEstados\(a\)/.test(resumen), resumen.slice(-300));
+check('y `_monMarcarEstados` no vuelve a contar por su cuenta',
+  !/_alertasDeStock/.test(fnSrc('_monMarcarEstados')));
+
+/* Los colores son LOS MISMOS de la franja, por variable, no por un hex
+ * copiado. Un hex copiado es otra vez «dos cosas que tienen que coincidir sin
+ * que nada lo obligue». */
+const cssZero = (HTML.match(/\.monitor-item\.is-zero\{[^}]*\}/) || [''])[0];
+const cssBajo = (HTML.match(/\.monitor-item\.is-bajo\{[^}]*\}/) || [''])[0];
+check('el rojo de la tarjeta es la variable del rojo, no un hex copiado',
+  /var\(--red\)/.test(cssZero) && !/#[0-9A-Fa-f]{3,6}/.test(cssZero), cssZero);
+check('el naranja de la tarjeta es la variable del naranja',
+  /var\(--yellow\)/.test(cssBajo) && !/#[0-9A-Fa-f]{3,6}/.test(cssBajo), cssBajo);
+check('y son las mismas dos variables que usa la franja',
+  /\.mr-zero\{color:var\(--red\)/.test(HTML) && /\.mr-bajo\{color:var\(--yellow\)/.test(HTML));
+/* Pasar el ratón por encima no puede borrar el aviso: las reglas de estado van
+ * después de :hover, que también escribe `background` y `border-color`. */
+check('el aviso sobrevive al ratón por encima',
+  HTML.indexOf('.monitor-item.is-zero{') > HTML.indexOf('.monitor-item:hover{'));
+/* Sin filtro no hay nada marcado, así que TODAS las tarjetas llevan `.off`.
+ * Si la atenuación se comiera el color, el arreglo no se vería justo en el
+ * estado con el que se abre la ventana. */
+check('y se lee a través de la atenuación de lo no marcado',
+  /\.monitor-item\.off\.is-zero,\.monitor-item\.off\.is-bajo\{opacity:/.test(HTML));
+
 if (fallos.length) {
   console.error('\nFALLÓ:\n  ' + fallos.join('\n  ') + '\n');
   console.error('  Un botón que dice «dejar de vigilar» y enciende todas las\n' +
-                '  alertas es peor que no tener botón.\n');
+                '  alertas es peor que no tener botón. Y una franja que cuenta\n' +
+                '  sin señalar deja el trabajo al usuario.\n');
   process.exit(1);
 }
 console.log('\n✓ todo bien · ' + ok + ' comprobaciones\n');

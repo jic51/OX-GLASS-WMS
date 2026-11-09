@@ -229,6 +229,120 @@ check('...y NINGUNA reinicia el botón por su cuenta',
 check('si el navegador no lo soporta, no revienta nada',
   /typeof MutationObserver !== 'function'/.test(vig));
 
+console.log('\n═══ ...Y «ABRIRSE» ES ABRIRSE, NO «ESTAR ABIERTA» ═══\n');
+
+/* ── LO QUE ROMPÍ YO, Y POR QUÉ ESTO SE EJECUTA ──────────────────────────────
+ *
+ * El observador de arriba lo añadí el 7/11 y al día siguiente Jose mandó un
+ * vídeo: *"ahora los botones de 'save changes' no se desactivan ni cambian,
+ * sólo se quedan ahí."*
+ *
+ * La cadena:
+ *   1 · se pulsa Guardar → `_btnBusy` pone la rueda y apaga el botón
+ *   2 · `_setModalBusy` hace `ov.classList.toggle('busy', true)`
+ *   3 · eso es un cambio de clase en la ventana → saltaba el observador
+ *   4 · la ventana seguía teniendo `show`, así que daba por hecho que acababa
+ *       de abrirse y devolvía a su sitio el botón que acababa de empezar
+ *
+ * Es el fallo de siempre con otra cara: **una señal que vale para dos cosas
+ * distintas**. «Tiene `show`» no distingue «se acaba de abrir» de «sigue
+ * abierta y ha cambiado otra clase».
+ *
+ * Y las comprobaciones de arriba, todas de texto, pasaban con el fallo dentro.
+ * Así que ésta EJECUTA el observador: se le da el registro que manda el
+ * navegador en cada uno de los dos casos, y se mira a quién toca. */
+
+{
+  let capturada = null;
+  let devoluciones = [];
+  const observado = [];
+
+  function btnFalso(id) {
+    const clases = new Set(['btn', 'is-busy']);
+    return { id: id, classList: { contains: c => clases.has(c) } };
+  }
+
+  function ventanaFalsa(id, clases) {
+    const set = new Set(clases);
+    const botones = [];
+    return {
+      id: id, botones: botones,
+      classList: { contains: c => set.has(c) },
+      querySelectorAll: () => botones
+    };
+  }
+
+  function MutationObserverFalso(cb) { capturada = cb; }
+  MutationObserverFalso.prototype.observe = function (el, opts) {
+    observado.push({ el: el, opts: opts });
+  };
+
+  const ov = ventanaFalsa('moveOverlay', ['overlay', 'show']);
+  ov.botones.push(btnFalso('btnMoveSave'));
+
+  const ctx = {
+    MutationObserver: MutationObserverFalso,
+    document: { querySelectorAll: () => [ov] },
+    _btnReset: function (b) { devoluciones.push(b.id); }
+  };
+  const F = A.montar(ctx, HTML, ['_vigilarVentanasQueSeAbren'], { dobles: ['_btnReset'] });
+
+  F._vigilarVentanasQueSeAbren();
+
+  check('se pone a mirar la ventana', observado.length === 1, observado.length);
+  check('...y pide además el valor ANTERIOR de la clase, que es lo único que ' +
+        'distingue abrirse de estar abierta',
+    !!observado[0] && observado[0].opts.attributeOldValue === true,
+    observado[0] && observado[0].opts);
+  check('y se pudo capturar el observador para ejecutarlo de verdad',
+    typeof capturada === 'function');
+
+  /* CASO 1 · LA VENTANA SE ABRE DE VERDAD: antes no tenía `show`, ahora sí.
+   * Aquí el botón colgado del intento anterior tiene que volver a su sitio —
+   * es lo que Jose pidió el 5/11, y no se puede perder al arreglar lo otro. */
+  devoluciones = [];
+  capturada([{ target: ov, oldValue: 'overlay' }]);
+  check('al abrirse de verdad, el botón colgado vuelve a su sitio',
+    devoluciones.join(',') === 'btnMoveSave', devoluciones);
+
+  /* CASO 2 · EL FALLO. La ventana ya estaba abierta y lo que cambió fue
+   * `busy`, que es exactamente lo que hace `_setModalBusy` al pulsar Guardar.
+   * No se toca nada. */
+  devoluciones = [];
+  capturada([{ target: ov, oldValue: 'overlay show' }]);
+  check('pulsar Guardar en una ventana YA abierta no toca el botón',
+    devoluciones.length === 0, devoluciones);
+
+  /* Y con `busy` ya puesto, que es el registro que llega al soltarlo. */
+  devoluciones = [];
+  capturada([{ target: ov, oldValue: 'overlay show busy' }]);
+  check('...ni al terminar de guardar', devoluciones.length === 0, devoluciones);
+
+  /* Que no sea una coincidencia de `indexOf`: una clase que CONTIENE «show»
+   * sin serla no cuenta como que la ventana ya estaba abierta. */
+  devoluciones = [];
+  capturada([{ target: ov, oldValue: 'overlay showcase' }]);
+  check('y «showcase» no se confunde con «show»',
+    devoluciones.join(',') === 'btnMoveSave', devoluciones);
+
+  /* Una ventana cerrada no es asunto de esto, cambie lo que cambie. */
+  const cerrada = ventanaFalsa('attachOverlay', ['overlay']);
+  cerrada.botones.push(btnFalso('btnAttachSave'));
+  devoluciones = [];
+  capturada([{ target: cerrada, oldValue: 'overlay busy' }]);
+  check('una ventana cerrada no se toca', devoluciones.length === 0, devoluciones);
+}
+
+/* ── Y LAS VENTANAS A LAS QUE ESTO LES PASABA ───────────────────────────────
+ * `_setModalBusy` es quien enciende y apaga `busy`. Mientras exista, el
+ * observador tiene que seguir distinguiendo, así que esta prueba deja escrito
+ * que la una y el otro conviven a propósito — y cuántos sitios estaban rotos. */
+check('`_setModalBusy` sigue cambiando una clase de la ventana',
+  /classList\.toggle\('busy'/.test(HTML));
+const usosBusy = (HTML.match(/_setModalBusy\(/g) || []).length;
+check('...y se usa en muchos sitios (' + usosBusy + '), que son los que ' +
+      'estaban rotos', usosBusy > 10);
+
 if (fallos.length) {
   console.error('\nFALLÓ:\n  ' + fallos.join('\n  ') + '\n');
   console.error('  Un botón encendido es una promesa; encendido siempre, no dice\n' +
