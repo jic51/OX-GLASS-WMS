@@ -51,7 +51,13 @@ const stockData = {
   c: { name: 'TYVEK WRAP',       category: 'FLASHING', warehouseQty: 50, siteQty: 0, availableQty: 50 },
   // Con un espacio al final a propósito: así es como llega un nombre tecleado,
   // y es lo que antes hacía que su mínimo no se encontrara nunca.
-  d: { name: 'SILPRUF SC2000 ',  category: 'SEALANT',  warehouseQty: 1,  siteQty: 0, availableQty: 1  }
+  d: { name: 'SILPRUF SC2000 ',  category: 'SEALANT',  warehouseQty: 1,  siteQty: 0, availableQty: 1  },
+  // EL CASO QUE JOSE VIO EN LA CAPTURA DEL 8/11: el almacén vacío y material
+  // en una obra. Antes NO salía como cero, porque la regla pedía además que la
+  // obra estuviera vacía. Él lo zanjó: *"el cero significa que no queda nada en
+  // el warehouse, lo que está en el jobsite no me importa porque ya está
+  // fuera."* La estantería está vacía: hay que pedir.
+  e: { name: 'NORTH FORK APTS',  category: 'FLASHING', warehouseQty: 0,  siteQty: 40, availableQty: 0 }
 };
 const ctx = { Object: Object, String: String, stockData: stockData };
 const F = A.montar(ctx, HTML, ['_alertasDeStock']);
@@ -61,9 +67,16 @@ const minimos = { 'FLASHING TAPE 6': 10, 'TYVEK WRAP': 5, 'SILPRUF SC2000': 4 };
 
 {
   const r = alertas(null, minimos);
-  check('sin lista se vigila TODO', r.mirados === 4, r.mirados);
+  check('sin lista se vigila TODO', r.mirados === 5, r.mirados);
   check('...y lo que está a cero sale como cero',
-    r.zero.map(x => x.name).join(',') === 'FLASHING TAPE 9', r.zero.map(x => x.name));
+    r.zero.map(x => x.name).sort().join(',') === 'FLASHING TAPE 9,NORTH FORK APTS',
+    r.zero.map(x => x.name));
+  /* LO QUE JOSE DECIDIÓ EL 8/11. El almacén vacío es cero aunque haya cuarenta
+   * unidades en una obra: lo que se llevaron no se puede volver a sacar de la
+   * estantería, así que seguir contándolo retrasaba el pedido justo del
+   * material que se acababa de agotar. */
+  check('el almacén vacío es CERO aunque haya material en la obra',
+    r.zero.some(x => x.name === 'NORTH FORK APTS'), r.zero.map(x => x.name));
   check('...y lo que tiene algo pero menos del mínimo sale como bajo',
     r.below.map(x => x.name.trim()).sort().join(',') === 'FLASHING TAPE 6,SILPRUF SC2000',
     r.below.map(x => x.name));
@@ -90,7 +103,7 @@ console.log('\n═══ 2 · LOS TRES ESTADOS, Y QUE DOS SON EL MISMO ═══
   const vacia = alertas([], minimos);
   const nula  = alertas(null, minimos);
   check('la lista VACÍA vigila todo, igual que no tener lista',
-    vacia.mirados === nula.mirados && vacia.mirados === 4, { vacia: vacia.mirados, nula: nula.mirados });
+    vacia.mirados === nula.mirados && vacia.mirados === 5, { vacia: vacia.mirados, nula: nula.mirados });
 
   const una = alertas(['FLASHING TAPE 6'], minimos);
   check('con una lista, se vigila sólo eso', una.mirados === 1, una.mirados);
@@ -113,6 +126,21 @@ check('sólo una línea decide a quién se vigila',
   (regla.match(/if \(vigilados && vigilados\.length\)/g) || []).length === 1, regla.slice(0, 200));
 check('...y no hay ninguna rama que apague los avisos con la lista vacía',
   !/vigilados\.length === 0/.test(regla) && !/!vigilados\.length/.test(regla));
+
+/* TODA LA REGLA EN LA MISMA UNIDAD DE MEDIDA. `availableQty` es
+ * `warehouseQty - reservedQty`, o sea almacén; el cero miraba además la obra,
+ * así que los dos avisos medían cosas distintas. Esto sujeta la decisión de
+ * Jose para que nadie vuelva a meter la obra en la cuenta sin querer.
+ *
+ * Y se mira el CÓDIGO, no el archivo: el comentario que explica el arreglo
+ * cita la condición vieja, y una prueba que busca el texto no distingue «el
+ * fallo sigue ahí» de «el fallo está contado». Ya me pasó una vez. */
+const reglaSinComentarios = regla
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .replace(/\/\/[^\n]*/g, '');
+check('la regla no mira lo que hay en la obra',
+  !/siteQty/.test(reglaSinComentarios),
+  reglaSinComentarios.match(/.*siteQty.*/g));
 
 console.log('\n═══ 3 · UN SOLO BOTÓN, Y DICE LO QUE HACE ═══\n');
 

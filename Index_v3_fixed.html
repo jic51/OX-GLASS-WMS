@@ -3297,6 +3297,9 @@
       min-height:var(--h-btn-lg);font-size:.78rem;
       transition:background .12s ease}
     .cfg-pickbar.show{background:var(--navy);color:#fff}
+    /* El motivo por el que falta una acción. Va al final y en pequeño: es una
+       explicación, no un control. */
+    .cfg-pick-nota{font-size:.75rem;opacity:.85;margin-left:auto}
     .cfg-pick-count{font-size:.78rem;font-weight:700}
     .cfg-pickbar select{font-size:.8rem;padding:var(--sp-1) var(--sp-2);border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);max-width:220px}
     /* Locations grouped by type, drag to reorder */
@@ -5967,7 +5970,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '14.3';
+var APP_VERSION = '14.4';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5979,7 +5982,7 @@ var APP_VERSION = '14.3';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '625087ac';
+var APP_BUILD = 'a5da983b';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -6537,17 +6540,24 @@ document.addEventListener('click', function(e){
 // Same two buttons, same place, same behaviour in every window: the value is in
 // not having to learn each screen separately.
 var ROW_MODES = {
-  cfg: { edit: 'Rename', del: 'Delete',
-         editHint: 'Click the pencil on a row to rename it.',
-         delHint:  'Click the bin on a row to delete it.' },
-  pm:  { edit: null, del: 'Delete',
-         delHint:  'Click the bin on a contact to remove it.' },
-  mat: { edit: 'Edit', del: null,
-         editHint: 'Rename a material, move it to another category, or merge it into another.' },
-  loc: { edit: 'Rename', del: 'Remove',
-         editHint: 'Click the pencil on a group to rename it.',
-         delHint:  'On a group, the bin deletes it (its locations move to ALL LOCATIONS). On a location, the box ' +
-                   'archives it, and a bin appears only when nothing is stored there.' },
+  // `cfg` YA NO ESTÁ AQUÍ. Projects y Suppliers salieron de los modos en la
+  // v14.4 (P-02): se marca una casilla y se actúa desde la barra, como en
+  // Categorías, el Dashboard y Movements. Era la lista que peor lo tenía —
+  // llevaba el modo Y una casilla aparte para fusionar, dos mecanismos
+  // distintos para elegir filas en la misma pantalla.
+  // `pm` TAMPOCO. Directory salió de los modos en la v14.4 (P-02), y con él se
+  // fue la pantalla que peor los tenía: un botón arriba que sólo servía para
+  // encender las papeleras de las filas, dos pulsaciones y un estado invisible
+  // para borrar un contacto, y ninguna forma de quitar tres de golpe.
+  // `mat` TAMPOCO. Materials salió de los modos en la v14.4 (P-02). Llevaba
+  // TRES botones por fila —renombrar, mover de categoría y fusionar— y con
+  // ochenta materiales en pantalla eso son doscientos cuarenta botones
+  // compitiendo con los nombres.
+  // `loc` TAMPOCO, desde la v14.4 (P-02). Archivar, restaurar y borrar una
+  // ubicación viven ahora en la barra, con lo marcado. Los botones del
+  // ENCABEZADO DE UN GRUPO se quedan donde están y siempre visibles: un grupo
+  // no es una fila de una lista —hay un puñado, no cuarenta— así que nunca
+  // fueron el problema que el modo venía a esconder.
   // `mov` YA NO ESTÁ AQUÍ. Movements dejó de tener modos en la v11.59: sus
   // acciones viven en la fila de Columns, encendidas por lo que hay marcado, y
   // la columna de la papelera y el lápiz está siempre puesta para quien puede
@@ -8760,7 +8770,26 @@ function _alertasDeStock(vigilados, minimos){
     mirados = items.filter(function(s){ return set[String(s.name || '').toUpperCase().trim()]; });
   }
 
-  var zero = mirados.filter(function(s){ return s.warehouseQty <= 0 && s.siteQty <= 0; });
+  /* ── CERO ES CERO EN EL ALMACÉN. LO DE LA OBRA NO CUENTA ──────────────────
+   *
+   * Hasta la v14.3 esto pedía además `siteQty <= 0`, y eso hacía que un
+   * material con el almacén vacío y material en obra **no saliera** como cero.
+   * Jose lo vio en la captura del 8/11 —dos tarjetas marcando `0 wh` y la
+   * franja diciendo «1 at zero»— y lo zanjó: *"el cero significa que no queda
+   * nada en el warehouse, lo que está en el jobsite no me importa porque ya
+   * está fuera."*
+   *
+   * Tiene razón y es de negocio, no de pantalla: **el aviso existe para
+   * decidir si hay que pedir**, y lo que ya se llevaron a una obra no se puede
+   * sacar de la estantería otra vez. Contarlo como stock retrasaba el pedido
+   * justo del material que se acababa de agotar.
+   *
+   * Y así la regla entera queda en una sola unidad de medida. `availableQty`
+   * es `warehouseQty - reservedQty`, o sea **ya era sólo almacén**: era el cero
+   * el que miraba otra cosa. Con esto los dos avisos hablan de lo mismo, y de
+   * paso no pueden solaparse — si el almacén está a cero, `availableQty` es 0
+   * y el material no puede caer además en la lista de «bajo el mínimo». */
+  var zero = mirados.filter(function(s){ return s.warehouseQty <= 0; });
 
   /* POR DEBAJO DEL MÍNIMO Y NO EN CERO. Un material a cero ya sale en la otra
    * lista; contarlo dos veces haría que dos avisos hablaran de lo mismo.
@@ -17901,24 +17930,29 @@ function _renderSettingsTab(tab) {
    * Suppliers, Locations, Materials y Directory — ver `UNA-SOLA-FORMA.md`. */
   if (tab === 'categories'){ _renderCategoriesTab(items); _basicApagarAjuste(tab); _equisTrasPintar(); return; }
 
+  /* ═══ P-02 · PROJECTS Y SUPPLIERS: MARCAR Y ACTUAR ═══════════════════════
+   *
+   * Lo que había aquí era el caso más claro de las cinco formas de elegir:
+   * esta misma lista llevaba **las dos a la vez**. Un «modo» arriba para
+   * renombrar y borrar —pulsas Rename, y entonces el lápiz de la fila que
+   * toques después hace algo— y, aparte, una casilla por fila que sólo servía
+   * para fusionar. Dos mecanismos, dos barras, en una lista de nombres.
+   *
+   * Ahora hay una casilla y una barra, como en Categorías, Dashboard y
+   * Movements. Y las acciones que había en cada fila —el lápiz y la papelera,
+   * dos botones por nombre en una lista que puede tener cien— se van: estaban
+   * ahí para que el modo tuviera dónde actuar.
+   *
+   * Lo que NO cambia es el detector de parecidos, que vive encima: sugiere
+   * grupos y sigue siendo la forma rápida de limpiar un catálogo que lleva
+   * meses recibiendo el mismo nombre escrito de seis maneras. */
   var mergeable = (tab === 'projects' || tab === 'suppliers');
 
   var rows = items.map(function(v, i) {
     return '<li class="cfg-item" data-idx="'+i+'" data-val="'+_he(v)+'">' +
-      // Manual pairing for the duplicates the detector deliberately won't
-      // guess at — abbreviations like "CLIFTONBUILDING H" vs
-      // "CLIFTONPLACEBLDNGH". Catching those automatically would need matching
-      // loose enough to also group genuinely different jobs, and a wrong merge
-      // rewrites history, so the judgement stays with a person.
-      (mergeable ? '<input type="checkbox" class="cfg-pick" data-val="'+_he(v)+'" title="Select to print a label, or to merge">' : '') +
+      '<input type="checkbox" class="cfg-pick" data-val="'+_he(v)+'" ' +
+             'title="Tick to rename, delete or merge">' +
       '<span class="cfg-item-name" id="cfgName-'+tab+'-'+i+'">'+v+'</span>' +
-      '<div id="cfgEdit-'+tab+'-'+i+'" style="display:none;flex:1;display:none;gap:.35rem;align-items:center">' +
-        '<input class="cfg-item-input" id="cfgInp-'+tab+'-'+i+'" value="'+_he(v)+'">' +
-        '<button class="cfg-btn" onclick="_cfgSaveRename(\''+tab+'\','+i+')">✓</button>' +
-        '<button class="cfg-btn" onclick="_cfgCancelEdit(\''+tab+'\','+i+')">✗</button>' +
-      '</div>' +
-      '<button class="cfg-btn" data-rowact="edit" onclick="_cfgStartEdit(\''+tab+'\','+i+')">✏️</button>' +
-      '<button class="cfg-btn cfg-btn-danger" data-rowact="del" data-action="cfg-delete" data-tab="'+tab+'" data-val="'+_he(v)+'">🗑</button>' +
     '</li>';
   }).join('');
 
@@ -17935,24 +17969,107 @@ function _renderSettingsTab(tab) {
     // on PDFs and emails that went out. Rewriting them would make the app
     // disagree with paperwork the customer is holding.
     '<p style="font-size:.8rem;color:var(--muted);margin-bottom:.75rem">Manage '+label.toLowerCase()+'s. ' +
-      (tab === 'categories'
-        ? 'Renaming a category updates all existing movements automatically.'
-        : 'Renaming updates the list only — existing movements keep the name they were recorded with.') +
+      'Renaming updates the list only — existing movements keep the name they were recorded with.' +
       /* La instrucción de fusionar YA NO VA AQUÍ: desde el 4/11 vive en la
        * propia franja, que ahora está siempre en su sitio y la dice justo
        * encima de las casillas. Decirla en los dos sitios serían dos frases
        * sobre lo mismo que alguien tendría que mantener iguales. */
       '</p>' +
     (mergeable ? _renderSimilarGroups(tab, items, label) : '') +
-    (mergeable ? '<div class="cfg-pickbar" id="cfgPickBar"></div>' : '') +
-    _rowModeBarHtml('cfg') +
-    '<ul class="cfg-list" data-rowscope="cfg">'+rows+'</ul>' +
+    '<div class="cfg-pickbar" id="cfgPickBar"></div>' +
+    '<ul class="cfg-list">'+rows+'</ul>' +
     '<div class="cfg-add-row">' +
       '<input type="text" id="cfgNewVal" placeholder="New '+label+' name…" onkeydown="if(event.key===\'Enter\')_cfgAdd(\''+tab+'\')">' +
       '<button class="btn btn-primary btn-sm" onclick="_cfgAdd(\''+tab+'\')">+ Add</button>' +
     '</div>';
-  if (mergeable) { _wireSimilarGroups(tab); _wireManualMerge(tab, label); }
-  _mountRowMode('cfg');
+  if (mergeable) { _wireSimilarGroups(tab); }
+  _cfgPickWire(tab, label, mergeable);
+}
+
+/* Lo marcado, en el orden en que se ve en la lista. */
+function _cfgMarcados(){
+  return Array.prototype.map.call(
+    document.querySelectorAll('.cfg-pick:checked'),
+    function(cb){ return cb.getAttribute('data-val'); });
+}
+
+function _cfgPickWire(tab, label, mergeable){
+  document.querySelectorAll('.cfg-pick').forEach(function(cb){
+    cb.addEventListener('change', function(){ _cfgPickBarra(tab, label, mergeable); });
+  });
+  _cfgPickBarra(tab, label, mergeable);
+}
+
+function _cfgPickBarra(tab, label, mergeable){
+  var uno = label.toLowerCase();
+  _barraMarcados({
+    barId: 'cfgPickBar', prefijo: 'cfgPick',
+    marcadas: _cfgMarcados,
+    instruccion: 'Tick a ' + uno + ' to rename or delete it.' +
+                 (mergeable ? ' Tick two or more to merge them into a single name.' : ''),
+    limpiar: function(){
+      document.querySelectorAll('.cfg-pick:checked').forEach(function(cb){ cb.checked = false; });
+      _cfgPickBarra(tab, label, mergeable);
+    },
+    renombrar: { hacer: function(viejo, nuevo, btn){
+      _btnBusy(btn, 'Renaming…');
+      _cfgCall({ type: tab, op: 'rename', value: viejo, newValue: nuevo });
+    }},
+    fusionar: mergeable ? { hacer: function(from, into, btn){
+      _showConfirm({
+        icon: '🔀', title: 'Merge into "' + into + '"?',
+        message: from.join('\n') + '\n\nwill become "' + into + '" on every movement. ' +
+                 'This rewrites history and cannot be undone automatically.',
+        confirmText: 'Merge',
+        onConfirm: function(){
+          _btnBusy(btn, 'Merging…');
+          google.script.run
+            .withSuccessHandler(function(){
+              // Sin aviso: los nombres fusionados desaparecen de la lista — y
+              // se los ve irse, que es lo que hace legible CUÁLES se fueron
+              // cuando se fusionan tres de golpe.
+              _rowLeaveAll(
+                _itemsBy('settingsTabContent', 'li.cfg-item', 'data-val', from),
+                function(){ _applyMergeLocally(tab, from, into); });
+              // El parche local arregla el catálogo, pero los movimientos y los
+              // totales se reescribieron en el servidor y las hojas derivadas se
+              // reconstruyeron. Se piden, en vez de intentar repetir aquí esa
+              // reconstrucción.
+              loadDataFromGoogle(true, true);   // skipCache, quiet
+            })
+            .withFailureHandler(_mergeFailed(btn, '🔀 Merge'))
+            .processMovement('mergeConfigValues', _h({ type: tab, from: from, into: into }));
+        }
+      });
+    }} : null,
+    /* Borrar dice CUÁLES se lleva, no sólo cuántas. Un aviso que no nombra lo
+     * que se va no se puede comprobar antes de confirmarlo. */
+    acciones: [{
+      id: 'DelBtn', clase: 'cfg-btn-danger', texto: '🗑 Delete', conVarias: true,
+      hacer: function(sel){
+        _showConfirm({
+          icon: '🗑️', danger: true,
+          title: sel.length === 1
+            ? 'Delete "' + sel[0] + '"?'
+            : 'Delete ' + sel.length + ' ' + uno + 's?',
+          message: sel.join('\n') + '\n\n' +
+                   (sel.length === 1 ? 'It is removed from the list. ' : 'They are removed from the list. ') +
+                   'Existing records using ' + (sel.length === 1 ? 'it' : 'them') + ' are not affected.',
+          confirmText: sel.length === 1 ? 'Delete' : 'Delete ' + sel.length,
+          onConfirm: function(){
+            var pend = sel.slice();
+            /* De una en una y en orden: el servidor reescribe la columna entera
+             * de CONFIG en cada borrado, así que mandarlas a la vez haría que
+             * la última pisara a las demás. */
+            (function siguiente(){
+              if (!pend.length) return;
+              _cfgCall({ type: tab, op: 'delete', value: pend.shift() }, siguiente);
+            })();
+          }
+        });
+      }
+    }]
+  });
 }
 
 /* ═══ CATEGORÍAS: MARCAR Y ACTUAR, COMO EN EL RESTO DE LA APP ═══════════════
@@ -17984,6 +18101,147 @@ function _renderSettingsTab(tab) {
  * diferencia real entre las dos operaciones. Y escrita en qué botones se
  * encienden, no hay que explicarla.
  */
+/* ═══ UNA BARRA DE ACCIONES, PARA TODAS LAS LISTAS QUE SE MARCAN ═══════════
+ *
+ * P-02. Jose, 9/11: *"empieza con P-02."*
+ *
+ * ── POR QUÉ ESTO ES UNA FUNCIÓN Y NO CINCO COPIAS ─────────────────────────
+ *
+ * La v14.0 hizo Categorías con casilla + barra, y funcionó. La forma barata de
+ * llevarlo a las otras cuatro pantallas habría sido copiar `_catBarra` cuatro
+ * veces y cambiarle los nombres. **Sería cometer otra vez el fallo que P-02
+ * viene a quitar**: cinco barras que tienen que comportarse igual sin que nada
+ * lo obligue, y a la sexta pantalla nadie se acuerda de cuál copiar.
+ *
+ * Así que la barra se escribe UNA vez y cada pantalla le dice tres cosas: qué
+ * hay marcado, qué se puede hacer con una, y qué con varias.
+ *
+ * ── LA REGLA DE JOSE, METIDA EN EL MECANISMO ──────────────────────────────
+ *
+ * **Renombrar es de UNA; borrar es de MUCHAS.** Aquí eso no es una costumbre
+ * que cada pantalla deba recordar: `renombrar` sólo se pinta con una marcada y
+ * `fusionar` sólo con varias, porque lo decide esta función. Una pantalla no
+ * puede equivocarse en algo que no escribe.
+ *
+ * Y lo que no aplica **no se pinta apagado: no se pinta**. Un botón apagado
+ * invita a preguntarse qué haría; uno que no está no plantea la pregunta.
+ *
+ * ── LOS IDENTIFICADORES LLEVAN PREFIJO ────────────────────────────────────
+ *
+ * `prefijo: 'cat'` da `catRenameBtn`, `catDelBtn`, `catMergeBtn`… que son los
+ * nombres que Categorías ya tenía. Así el cambio no es una reescritura de una
+ * pantalla que funciona: es la misma pantalla, con el mecanismo fuera.
+ */
+function _barraMarcados(op){
+  var bar = document.getElementById(op.barId);
+  if (!bar) return;
+  var sel = op.marcadas();
+  var P   = op.prefijo;
+
+  /* Vacía CONSERVA SU SITIO y lleva la instrucción en gris. Esconderla
+   * volvería a empujar la lista justo mientras se marca — el salto que este
+   * proyecto ya ha arreglado tres veces. Ver la nota de `.cfg-pickbar`. */
+  if (!sel.length){
+    bar.classList.remove('show');
+    bar.innerHTML = '<span>' + _he(op.instruccion) + '</span>';
+    return;
+  }
+  bar.classList.add('show');
+
+  var una    = sel.length === 1;
+  var trozos = [];
+
+  trozos.push('<span class="cfg-pick-count">' + sel.length + ' selected' +
+    (!una && op.fusionar ? ' — keep which name?' : '') + '</span>');
+
+  /* RENOMBRAR: sólo con una, y se escribe AQUÍ, en la barra. */
+  if (una && op.renombrar){
+    trozos.push('<input type="text" id="' + P + 'RenameInp" maxlength="' +
+                (op.renombrar.max || 40) + '" value="' + _escAttr(sel[0]) + '">');
+    trozos.push('<button class="btn btn-primary btn-sm" id="' + P + 'RenameBtn" disabled ' +
+                'title="Type a different name first">Rename</button>');
+  }
+
+  /* FUSIONAR: sólo con varias, y hay que decir cuál de los nombres se queda. */
+  if (!una && op.fusionar){
+    trozos.push('<select id="' + P + 'Keep">' +
+      sel.map(function(v){ return '<option value="' + _escAttr(v) + '">' + _he(v) + '</option>'; }).join('') +
+      '</select>');
+    trozos.push('<button class="btn btn-primary btn-sm" id="' + P + 'MergeBtn">🔀 Merge</button>');
+  }
+
+  /* LO DEMÁS que cada pantalla quiera: mover de categoría en Materials, el ojo
+   * de una ubicación… Cada una declara si vale para varias. */
+  (op.acciones || []).forEach(function(a){
+    if (!una && !a.conVarias) return;
+    /* El contador va en el botón —«🗑 Delete 3»— porque borrar y fusionar
+     * cambian de peso con el número y conviene verlo ANTES de pulsar. Una
+     * acción que no cambia de peso lo dice con `sinCuenta`: «🏷 Print labels 3»
+     * no aclara nada que no diga ya «3 selected». */
+    trozos.push('<button class="btn btn-sm ' + (a.clase || 'btn-ghost') + '" id="' + P + a.id + '">' +
+      _he(a.texto) + (!una && a.conVarias && !a.sinCuenta ? ' ' + sel.length : '') + '</button>');
+  });
+
+  /* MARCARLAS TODAS. Sólo sale si queda algo por marcar — un botón que ya no
+   * haría nada es ruido. Jose, sobre las etiquetas de estante: *"¿y si el
+   * cliente quiere imprimir todas de una vez? ¿debe hacerlo una por una?"*;
+   * con cincuenta y nueve estantes, marcarlas a mano es un castigo. */
+  if (op.todo && op.todo.faltan > 0){
+    trozos.push('<button class="btn btn-ghost btn-sm" id="' + P + 'AllBtn">Select all</button>');
+  }
+
+  trozos.push('<button class="btn btn-ghost btn-sm" id="' + P + 'ClearBtn">Clear</button>');
+
+  /* LA NOTA: por qué NO está una acción que cabría esperar. Un botón apagado
+   * invita a la pulsación que hay que rechazar; uno ausente y sin explicación
+   * deja adivinando. Esto es la tercera salida: no está, y aquí pone por qué.
+   *
+   * Y va en la barra, no en un `title` de la fila: en un teléfono no hay ratón
+   * que pasar por encima, así que un motivo escondido en un `title` no existe. */
+  if (op.nota) trozos.push('<span class="cfg-pick-nota">' + _he(op.nota) + '</span>');
+
+  bar.innerHTML = trozos.join('');
+
+  if (una && op.renombrar){
+    var inp = document.getElementById(P + 'RenameInp');
+    var rbt = document.getElementById(P + 'RenameBtn');
+    /* El guardia de siempre: Renombrar se enciende si el nombre es distinto, y
+     * nunca si está vacío. Es la misma pieza que vigila Name & Logo. */
+    _vigilarGuardar({ boton: rbt, campos: [inp], obligatorios: [inp] });
+    rbt.addEventListener('click', function(){
+      var nuevo = (inp.value || '').trim().toUpperCase();
+      if (!nuevo || nuevo === String(sel[0]).toUpperCase()) return;
+      op.renombrar.hacer(sel[0], nuevo, rbt);
+    });
+  }
+
+  if (!una && op.fusionar){
+    var mbt = document.getElementById(P + 'MergeBtn');
+    mbt.addEventListener('click', function(){
+      var into = document.getElementById(P + 'Keep').value;
+      /* El que se queda sale de la lista de los que se van UNA sola vez: si el
+       * mismo nombre estuviera repetido, filtrarlo entero se llevaría los dos. */
+      var quitada = false;
+      var from = sel.filter(function(v){
+        if (!quitada && v === into){ quitada = true; return false; }
+        return true;
+      });
+      op.fusionar.hacer(from, into, mbt);
+    });
+  }
+
+  (op.acciones || []).forEach(function(a){
+    if (!una && !a.conVarias) return;
+    var b = document.getElementById(P + a.id);
+    if (b) b.addEventListener('click', function(){ a.hacer(sel, b); });
+  });
+
+  var todoBtn = op.todo && document.getElementById(P + 'AllBtn');
+  if (todoBtn) todoBtn.addEventListener('click', op.todo.hacer);
+
+  document.getElementById(P + 'ClearBtn').addEventListener('click', op.limpiar);
+}
+
 var _catSel = {};   // nombre → true
 
 function _renderCategoriesTab(items){
@@ -18032,65 +18290,26 @@ function _catMarcadas(){
 }
 
 function _catBarra(){
-  var bar = document.getElementById('catBar');
-  if (!bar) return;
   var sel = _catMarcadas();
-
-  /* Vacía conserva su sitio y lleva la instrucción — ver la nota de
-   * `.cfg-pickbar`. Esconderla volvería a empujar los chips al aparecer. */
-  if (!sel.length){
-    bar.classList.remove('show');
-    bar.innerHTML = '<span>Tick a category to rename or delete it. Tick two or more to merge them.</span>';
-    return;
-  }
-
-  bar.classList.add('show');
-
-  if (sel.length === 1){
-    /* Se renombra AQUÍ, en la barra, y no con una ventanita del navegador:
-     * ese camino es el que en Materials se salta el paso a mayúsculas y deja
-     * la lista muerta mientras está abierto. */
-    bar.innerHTML =
-      '<span class="cfg-pick-count">1 selected</span>' +
-      '<input type="text" id="catRenameInp" maxlength="40" value="' + _escAttr(sel[0]) + '">' +
-      '<button class="btn btn-primary btn-sm" id="catRenameBtn" disabled ' +
-              'title="Type a different name first">Rename</button>' +
-      '<button class="btn btn-sm cfg-btn-danger" id="catDelBtn">🗑 Delete</button>' +
-      '<button class="btn btn-ghost btn-sm" id="catClearBtn">Clear</button>';
-
-    var inp = document.getElementById('catRenameInp');
-    var rbt = document.getElementById('catRenameBtn');
-    /* El mismo guardia de siempre: Renombrar se enciende si el nombre es
-     * distinto, y nunca si está vacío. */
-    _vigilarGuardar({ boton: rbt, campos: [inp], obligatorios: [inp] });
-    rbt.addEventListener('click', function(){
-      var nuevo = (inp.value || '').trim().toUpperCase();
-      if (!nuevo || nuevo === sel[0].toUpperCase()) return;
-      _btnBusy(rbt, 'Renaming…');
+  _barraMarcados({
+    barId: 'catBar', prefijo: 'cat',
+    marcadas: _catMarcadas,
+    instruccion: 'Tick a category to rename or delete it. Tick two or more to merge them.',
+    limpiar: function(){
       _catSel = {};
-      _cfgCall({ type: 'categories', op: 'rename', value: sel[0], newValue: nuevo });
-    });
-  } else {
-    bar.innerHTML =
-      '<span class="cfg-pick-count">' + sel.length + ' selected — keep which name?</span>' +
-      '<select id="catKeep">' +
-        sel.map(function(v){ return '<option value="' + _escAttr(v) + '">' + _he(v) + '</option>'; }).join('') +
-      '</select>' +
-      '<button class="btn btn-primary btn-sm" id="catMergeBtn">🔀 Merge</button>' +
-      /* Renombrar NO está. No está apagado: no está. Renombrar varias cosas a
-       * un mismo nombre no es renombrar, es fusionar — y fusionar ya está ahí
-       * al lado. Un botón apagado invitaría a preguntarse qué haría. */
-      '<button class="btn btn-sm cfg-btn-danger" id="catDelBtn">🗑 Delete ' + sel.length + '</button>' +
-      '<button class="btn btn-ghost btn-sm" id="catClearBtn">Clear</button>';
-
-    document.getElementById('catMergeBtn').addEventListener('click', function(){
-      var into = document.getElementById('catKeep').value;
-      var quitada = false;
-      var from = sel.filter(function(v){
-        if (!quitada && v === into){ quitada = true; return false; }
-        return true;
-      });
-      var btn = document.getElementById('catMergeBtn');
+      document.querySelectorAll('[data-cat-pick]').forEach(function(b){ b.classList.remove('on'); });
+      _catBarra();
+    },
+    /* Renombrar una categoría SÍ reescribe los movimientos, y es el único de
+     * los cinco catálogos donde eso es correcto: una categoría es una
+     * CLASIFICACIÓN, no un hecho histórico. Ver la nota larga sobre
+     * `updateConfig` en Code.gs. */
+    renombrar: { hacer: function(viejo, nuevo, btn){
+      _btnBusy(btn, 'Renaming…');
+      _catSel = {};
+      _cfgCall({ type: 'categories', op: 'rename', value: viejo, newValue: nuevo });
+    }},
+    fusionar: { hacer: function(from, into, btn){
       _showConfirm({
         icon: '🔀', title: 'Merge into "' + into + '"?',
         message: from.join('\n') + '\n\nwill become "' + into + '" on every movement. ' +
@@ -18108,37 +18327,33 @@ function _catBarra(){
             .processMovement('mergeConfigValues', _h({ type: 'categories', from: from, into: into }));
         }
       });
-    });
-  }
-
-  document.getElementById('catClearBtn').addEventListener('click', function(){
-    _catSel = {};
-    document.querySelectorAll('[data-cat-pick]').forEach(function(b){ b.classList.remove('on'); });
-    _catBarra();
-  });
-
-  /* Borrar vale para una y para muchas, y dice CUÁLES — no «3 categorías».
-   * Un aviso que no nombra lo que se lleva no se puede comprobar. */
-  document.getElementById('catDelBtn').addEventListener('click', function(){
-    _showConfirm({
-      icon: '🗑️', danger: true,
-      title: sel.length === 1 ? 'Delete "' + sel[0] + '"?' : 'Delete ' + sel.length + ' categories?',
-      message: sel.join('\n') + '\n\n' +
-               (sel.length === 1 ? 'It is removed from the list. ' : 'They are removed from the list. ') +
-               'Movements already recorded keep the category they were saved with.',
-      confirmText: sel.length === 1 ? 'Delete' : 'Delete ' + sel.length,
-      onConfirm: function(){
-        var pend = sel.slice();
-        _catSel = {};
-        /* De una en una y en orden: el servidor reescribe la columna entera de
-         * CONFIG en cada borrado, así que mandarlas a la vez haría que la
-         * última pisara a las demás. */
-        (function siguiente(){
-          if (!pend.length) return;
-          _cfgCall({ type: 'categories', op: 'delete', value: pend.shift() }, siguiente);
-        })();
+    }},
+    /* Borrar vale para una y para muchas, y dice CUÁLES — no «3 categorías».
+     * Un aviso que no nombra lo que se lleva no se puede comprobar. */
+    acciones: [{
+      id: 'DelBtn', clase: 'cfg-btn-danger', texto: '🗑 Delete', conVarias: true,
+      hacer: function(sel){
+        _showConfirm({
+          icon: '🗑️', danger: true,
+          title: sel.length === 1 ? 'Delete "' + sel[0] + '"?' : 'Delete ' + sel.length + ' categories?',
+          message: sel.join('\n') + '\n\n' +
+                   (sel.length === 1 ? 'It is removed from the list. ' : 'They are removed from the list. ') +
+                   'Movements already recorded keep the category they were saved with.',
+          confirmText: sel.length === 1 ? 'Delete' : 'Delete ' + sel.length,
+          onConfirm: function(){
+            var pend = sel.slice();
+            _catSel = {};
+            /* De una en una y en orden: el servidor reescribe la columna entera
+             * de CONFIG en cada borrado, así que mandarlas a la vez haría que la
+             * última pisara a las demás. */
+            (function siguiente(){
+              if (!pend.length) return;
+              _cfgCall({ type: 'categories', op: 'delete', value: pend.shift() }, siguiente);
+            })();
+          }
+        });
       }
-    });
+    }]
   });
 }
 
@@ -18226,8 +18441,7 @@ function _renderLocationsTab(){
     '<div class="field">' +
       '<label>Locations and groups</label>' +
       '<div id="locMergeBar" class="cfg-pickbar"></div>' +
-      _rowModeBarHtml('loc') +
-      '<div class="loc-groups" id="locGroups" data-rowscope="loc"></div>' +
+      '<div class="loc-groups" id="locGroups"></div>' +
     '</div>' +
     '<div id="locSaveBar" class="loc-savebar"></div>';
   _redrawLocGroups();
@@ -18330,18 +18544,14 @@ function _renderLocGroup(type, use){
                                 (r.by ? ' (' + r.by + ')' : '');
                        }).join('\n')) + '">🔒 ' + u + '</span>';
               })() +
-              '<button class="loc-arch-btn" data-rowact="del" title="' +
-                _escAttr(isArchived ? 'Restore'
-                                    : (why ? why + ' — archive it instead of deleting' : 'Archive')) + '" ' +
-                'onclick="_locToggleArchive(\'' + _he(l.name) + '\')">' + (isArchived ? '↩' : '🗄') + '</button>' +
-              // The bin appears only for a location nothing points at. It is
-              // absent rather than disabled on purpose: a disabled bin invites
-              // the click that has to be refused, while its absence plus the
-              // reason on the archive button next to it says the same thing
-              // without the dead end.
-              (why ? '' :
-                '<button class="loc-arch-btn loc-del-btn" data-rowact="del" title="Delete — nothing is stored here" ' +
-                  'onclick="_locDelete(\'' + _he(l.name) + '\')">🗑</button>') +
+              // P-02: ARCHIVAR Y BORRAR SE FUERON A LA BARRA. Eran dos
+              // botones en cada fila gobernados por un «modo» de arriba, y
+              // con cuarenta estantes eso son ochenta botones peleando con
+              // los nombres. Lo que SÍ se queda en la fila es el motivo por
+              // el que un estante no se puede borrar: es un dato de ESTE
+              // estante, no una acción.
+              (why ? '<span class="loc-why" title="' + _escAttr(why) +
+                       ' — archive it instead of deleting">🔒</span>' : '') +
             '</li>';
           }).join('')
         : '<li class="loc-empty">' + (isDefault ? 'Nothing unfiled' : 'Drop a location here') + '</li>') +
@@ -18351,50 +18561,32 @@ function _renderLocGroup(type, use){
 // Deleting is a removal from the list, so like archiving and like dragging it
 // waits for "Save layout" — one trip to the server, and Discard still puts
 // everything back until then.
+/* Quita una ubicación del borrador. **No pregunta**: el aviso lo da la barra,
+ * una sola vez, nombrando todas las que se va a llevar. Antes preguntaba aquí
+ * porque se llamaba desde la papelera de cada fila; con la barra, borrar tres
+ * habría sido tres ventanas seguidas.
+ *
+ * Lo que SÍ se queda es volver a comprobar que el estante está vacío **en este
+ * instante**, y no fiarse de cuando se pintó la fila: el panel puede llevar un
+ * rato abierto mientras alguien mete material en ese mismo estante. */
 function _locDelete(name){
-  var entry = null;
-  _locLayout.forEach(function(l){ if (l.name === name) entry = l; });
-  if (!entry) return;
+  var entry = _locEntrada(name);
+  if (!entry) return false;
 
-  // Re-checked at the moment of the click, not trusted from when the row was
-  // drawn: the panel can sit open while somebody on the floor puts material
-  // into this very rack.
   var why = _locWhyKept(name, _locUsage());
   if (why){
-    showToast(why + ' — archive it instead.', 'warn', 5000);
-    _redrawLocGroups();
-    return;
+    /* Y aquí NO se archiva ni se hace ninguna otra cosa en su lugar. Si el
+     * estante se llenó entre que se dibujó la barra y se pulsó el botón, lo
+     * honesto es no tocarlo y decirlo: archivarlo «de consuelo» sería hacer
+     * algo que nadie pidió, sobre un estante que acaba de recibir material. */
+    showToast(name + ': ' + why + ' — not deleted. Archive it instead.', 'warn', 6000);
+    return false;
   }
 
-  _showConfirm({
-    icon: '📍', title: 'Delete location "' + name + '"?',
-    message: 'Nothing is stored here, so no stock moves and no number changes.\n\n' +
-             'Past movements keep the name they were recorded with — this only takes it off the list ' +
-             'so it stops being offered.',
-    confirmText: 'Delete',
-    danger: true,
-    onConfirm: function(){
-      _rowLeaveAll(_itemsBy('locGroups', 'li.loc-item', 'data-name', [name]), function(){
-        _locLayout = _locLayout.filter(function(l){ return l.name !== name; });
-        _redrawLocGroups();
-        _locMarkDirty();
-      });
-    }
-  });
+  _locLayout = _locLayout.filter(function(l){ return l.name !== name; });
+  return true;
 }
 
-// Archive / restore is a group move, so it goes through the same save as
-// everything else on this screen.
-function _locToggleArchive(name){
-  var entry = null;
-  _locLayout.forEach(function(l){ if (l.name === name) entry = l; });
-  if (!entry) return;
-  entry.type = (entry.type === LOC_ARCHIVED_GROUP) ? LOC_DEFAULT_GROUP : LOC_ARCHIVED_GROUP;
-  _redrawLocGroups();
-  _locMarkDirty();
-}
-
-var _locNewKind = 'location';
 function _locShowNew(kind){
   _locNewKind = kind;
   var row = document.getElementById('locNewRow');
@@ -18528,79 +18720,115 @@ function _redrawLocGroups(){
   box.innerHTML = _locTypesInOrder().map(function(t){ return _renderLocGroup(t, use); }).join('');
   _wireLocDnD();
   _wireLocMerge();
-  _mountRowMode('loc');
 }
 
 // Merging locations, for the case archiving doesn't cover: the same shelf
 // entered under two spellings. Rewrites both the source and destination columns
 // of every movement, so nothing is left pointing at the name that goes away.
 function _wireLocMerge(){
-  var bar = document.getElementById('locMergeBar');
-  if (!bar) return;
+  document.querySelectorAll('.loc-pick').forEach(function(cb){
+    cb.addEventListener('change', _locBarra);
+  });
+  _locBarra();
+}
 
-  function picked(){
-    return Array.prototype.map.call(document.querySelectorAll('.loc-pick:checked'),
-      function(cb){ return cb.getAttribute('data-name'); });
+function _locMarcadas(){
+  return Array.prototype.map.call(document.querySelectorAll('.loc-pick:checked'),
+    function(cb){ return cb.getAttribute('data-name'); });
+}
+
+function _locEntrada(nombre){
+  var e = null;
+  _locLayout.forEach(function(l){ if (l.name === nombre) e = l; });
+  return e;
+}
+
+/* ═══ P-02 · UBICACIONES: TODO LO QUE SE HACE CON UNA, EN LA BARRA ══════════
+ *
+ * Esta pantalla ya tenía casilla y barra —para imprimir etiquetas y para
+ * fusionar— pero **archivar, restaurar y borrar seguían detrás del modo**, con
+ * sus dos botones en cada fila. O sea que la misma lista tenía las dos formas
+ * a la vez, igual que Categorías antes de la v14.0.
+ *
+ * Ahora todo lo que actúa sobre ubicaciones marcadas está en la barra. Las
+ * reglas propias de esta pantalla no se pierden, se hacen explícitas:
+ *
+ *   · **Archivar y restaurar son opuestos**, así que con una mezcla de
+ *     archivadas y activas no se ofrece ninguno de los dos. Un botón que
+ *     hiciera «lo que toque a cada una» sería imposible de predecir.
+ *   · **Borrar sólo si NINGUNA guarda nada.** El botón no se apaga: no está, y
+ *     la barra dice cuántas lo impiden y por qué. Un botón apagado invita a la
+ *     pulsación que hay que rechazar.
+ *   · **Fusionar necesita dos**; imprimir no necesita ninguna excusa, y sale
+ *     desde una (Jose: *"¿y si el cliente quiere imprimir todas de una vez?"*).
+ */
+function _locBarra(){
+  var sel = _locMarcadas();
+  var uso = _locUsage();
+
+  var archivadas = sel.filter(function(n){
+    var e = _locEntrada(n); return e && e.type === LOC_ARCHIVED_GROUP;
+  }).length;
+  var todasArchivadas = sel.length > 0 && archivadas === sel.length;
+  var ningunaArchivada = archivadas === 0;
+
+  /* Las que no se pueden borrar, con su motivo. Se vuelve a preguntar AHORA y
+   * no se fía de cuando se pintó la fila: el panel puede llevar abierto un
+   * rato mientras alguien mete material en ese mismo estante. */
+  var retenidas = sel.map(function(n){ return { n: n, why: _locWhyKept(n, uso) }; })
+                     .filter(function(x){ return !!x.why; });
+
+  var acciones = [{
+    id: 'PrintBtn', clase: 'btn-primary', texto: '🏷 Print labels', conVarias: true,
+    sinCuenta: true,
+    hacer: function(s2){ _locLabelsPrint(s2); }
+  }];
+
+  if (todasArchivadas){
+    acciones.push({ id: 'ArchBtn', clase: 'btn-ghost', texto: '↩ Restore', conVarias: true,
+      hacer: function(s2){ s2.forEach(_locMoverA(LOC_DEFAULT_GROUP)); _trasMoverLoc(); } });
+  } else if (ningunaArchivada){
+    acciones.push({ id: 'ArchBtn', clase: 'btn-ghost', texto: '🗄 Archive', conVarias: true,
+      hacer: function(s2){ s2.forEach(_locMoverA(LOC_ARCHIVED_GROUP)); _trasMoverLoc(); } });
   }
 
-  function todas(){
-    return Array.prototype.map.call(document.querySelectorAll('.loc-pick'),
-      function(cb){ return cb; });
+  if (sel.length && !retenidas.length){
+    acciones.push({ id: 'DelBtn', clase: 'cfg-btn-danger', texto: '🗑 Delete', conVarias: true,
+      hacer: function(s2){
+        _showConfirm({
+          icon: '🗑️', danger: true,
+          title: s2.length === 1 ? 'Delete "' + s2[0] + '"?' : 'Delete ' + s2.length + ' locations?',
+          message: s2.join('\n') + '\n\nNothing is stored ' +
+                   (s2.length === 1 ? 'there' : 'in any of them') + '. ' +
+                   'Past movements are unaffected — they keep the location they were recorded with.\n\n' +
+                   'Takes effect when you press Save layout.',
+          confirmText: s2.length === 1 ? 'Delete' : 'Delete ' + s2.length,
+          onConfirm: function(){ s2.forEach(function(n){ _locDelete(n); }); _trasMoverLoc(); }
+        });
+      }});
   }
 
-  function draw(){
-    var sel = picked();
-    /* ── DESDE UNA, NO DESDE DOS ──────────────────────────────────────────
-     * Esta barra nació para FUSIONAR, que necesita dos, así que no aparecía
-     * con una marcada. Imprimir no necesita dos — y dije en su momento que
-     * eso lo hacía coherente, lo cual era quedarse corto: Jose preguntó *"¿y
-     * si el cliente quiere imprimir todas de una vez? ¿debe hacerlo una por
-     * una?"*. No hay ninguna razón para limitarlo.
-     *
-     * Así que la barra sale desde UNA, con imprimir siempre, y el bloque de
-     * fusionar sólo cuando hay dos o más. Fusionar sí necesita dos; imprimir
-     * no necesita ninguna excusa. */
-    if (!sel.length){
-      bar.classList.remove('show');
-      bar.innerHTML = '<span>Tick a location to print its label, or two to merge them.</span>';
-      return;
-    }
-    bar.classList.add('show');
-    var marcables = todas().length;
-    bar.innerHTML =
-      '<span class="cfg-pick-count">' + sel.length + ' selected</span>' +
-      '<button class="btn btn-primary btn-sm" id="locPrintBtn">🏷 Print labels</button>' +
-      (sel.length < marcables
-        ? '<button class="btn btn-ghost btn-sm" id="locPickAll">Select all</button>' : '') +
-      (sel.length >= 2
-        ? '<span class="cfg-pick-count">keep which one?</span>' +
-          '<select id="locMergeKeep">' +
-            sel.map(function(v){ return '<option value="' + _he(v) + '">' + _he(v) + '</option>'; }).join('') +
-          '</select>' +
-          '<button class="btn btn-sm" id="locMergeBtn">Merge</button>'
-        : '') +
-      '<button class="btn btn-ghost btn-sm" id="locMergeClear">Clear</button>';
-
-    document.getElementById('locPrintBtn').addEventListener('click', function(){
-      _locLabelsPrint(picked());
-    });
-
-    var todasBtn = document.getElementById('locPickAll');
-    if (todasBtn) todasBtn.addEventListener('click', function(){
-      todas().forEach(function(cb){ cb.checked = true; });
-      draw();
-    });
-
-    document.getElementById('locMergeClear').addEventListener('click', function(){
+  _barraMarcados({
+    barId: 'locMergeBar', prefijo: 'locPick',
+    marcadas: _locMarcadas,
+    instruccion: 'Tick a location to print its label, archive it or delete it. ' +
+                 'Tick two or more to merge them into one.',
+    limpiar: function(){
       document.querySelectorAll('.loc-pick:checked').forEach(function(cb){ cb.checked = false; });
-      draw();
-    });
-    if (sel.length < 2) return;
-
-    document.getElementById('locMergeBtn').addEventListener('click', function(){
-      var into = document.getElementById('locMergeKeep').value;
-      var from = sel.filter(function(v){ return v !== into; });
-      var btn  = document.getElementById('locMergeBtn');
+      _locBarra();
+    },
+    todo: {
+      faltan: document.querySelectorAll('.loc-pick').length - sel.length,
+      hacer: function(){
+        document.querySelectorAll('.loc-pick').forEach(function(cb){ cb.checked = true; });
+        _locBarra();
+      }
+    },
+    /* Renombrar una ubicación NO está aquí, y es a propósito: dónde estuvo
+     * algo es un hecho del pasado, y los movimientos guardan el nombre como
+     * texto. Lo que resuelve una ubicación mal escrita es FUSIONARLA con la
+     * buena, que sí reescribe las dos columnas de cada movimiento. */
+    fusionar: { hacer: function(from, into, btn){
       _showConfirm({
         icon: '🔀', title: 'Merge into "' + into + '"?',
         message: from.join('\n') + '\n\nwill become "' + into + '" on every movement, both as a ' +
@@ -18609,7 +18837,7 @@ function _wireLocMerge(){
         onConfirm: function(){
           _btnBusy(btn, 'Merging…');
           google.script.run
-            .withSuccessHandler(function(res){
+            .withSuccessHandler(function(){
               // Sin aviso: las ubicaciones fusionadas desaparecen de la lista.
               // Se las ve irse ANTES de que el repintado se las lleve.
               var seVan = _itemsBy('locGroups', 'li.loc-item', 'data-name', from);
@@ -18621,29 +18849,46 @@ function _wireLocMerge(){
                 if (m.destLoc   && gone[String(m.destLoc).toUpperCase()])   m.destLoc   = into;
               });
               config.locations = (config.locations || []).filter(function(l){ return !gone[String(l.name).toUpperCase()]; });
-              bar.innerHTML = ''; bar.classList.remove('show');
-              // El repintado espera a que las que se van terminen de encogerse.
               _rowLeaveAll(seVan, function(){ _redrawLocGroups(); });
               refreshDropdowns();
-              // The patches above fix the LISTS. They cannot fix the stock,
-              // which is where a location merge actually shows: the Warehouse
-              // Map and the location column read the derived totals, and the
-              // server has just rebuilt those. Without this the merged rack
-              // went on sitting in the map with its old contents until the page
-              // was reloaded by hand — Jose merged A5C into A6C, saw the map
-              // still showing both, and only a manual refresh put the 227 units
-              // in one place. Same fix, same reason, as the category rename in
-              // v10.2.
+              // Los parches de arriba arreglan las LISTAS. No pueden arreglar
+              // las existencias, que es donde una fusión de ubicaciones se ve:
+              // el mapa y la columna de ubicación leen los totales derivados, y
+              // el servidor acaba de rehacerlos. Sin esto el estante fusionado
+              // seguía en el mapa con su contenido viejo hasta recargar a mano.
               loadDataFromGoogle(true, true);   // skipCache, quiet
             })
-            .withFailureHandler(_mergeFailed(btn, 'Merge'))
+            .withFailureHandler(_mergeFailed(btn, '🔀 Merge'))
             .processMovement('mergeLocations', _h({ from: from, into: into }));
         }
       });
-    });
-  }
+    }},
+    acciones: acciones,
+    /* POR QUÉ NO HAY PAPELERA, dicho en la barra en vez de dejarlo adivinar.
+     * Antes el motivo vivía en el `title` del botón de archivar de cada fila —
+     * invisible en un teléfono, donde no hay ratón que pasar por encima. */
+    nota: retenidas.length
+      ? (retenidas.length === 1
+          ? '🔒 ' + retenidas[0].n + ': ' + retenidas[0].why + ' — archive it instead'
+          : '🔒 ' + retenidas.length + ' of these still hold stock or reservations — archive them instead')
+      : ''
+  });
+}
 
-  document.querySelectorAll('.loc-pick').forEach(function(cb){ cb.addEventListener('change', draw); });
+/* Mover a un grupo no llama al servidor: lo apunta en el borrador y enciende
+ * «Save layout», igual que arrastrar. Así archivar tres y arrepentirse sigue
+ * siendo un Discard, no tres viajes. */
+function _locMoverA(grupo){
+  return function(nombre){
+    var e = _locEntrada(nombre);
+    if (e) e.type = grupo;
+  };
+}
+
+function _trasMoverLoc(){
+  document.querySelectorAll('.loc-pick:checked').forEach(function(cb){ cb.checked = false; });
+  _redrawLocGroups();
+  _locMarkDirty();
 }
 
 function _wireLocDnD(){
@@ -18745,87 +18990,6 @@ function _locMarkDirty(){
 }
 
 // ── Manual merge ─────────────────────────────────────────────────────────────
-function _wireManualMerge(tab, label){
-  var bar = document.getElementById('cfgPickBar');
-  if (!bar) return;
-
-  function selected(){
-    return Array.prototype.map.call(
-      document.querySelectorAll('.cfg-pick:checked'),
-      function(cb){ return cb.getAttribute('data-val'); });
-  }
-
-  function draw(){
-    var sel = selected();
-    /* Vacía NO se esconde: se queda en su sitio con la frase de qué hacer.
-     * Esconderla la devolvería a robar espacio al aparecer, que es el fallo
-     * que esto viene a quitar — ver la nota larga en `.cfg-pickbar`. */
-    if (sel.length < 2){
-      bar.classList.remove('show');
-      bar.innerHTML = '<span>' + (sel.length === 1
-        ? 'Tick one more to merge them into a single name.'
-        : 'Tick two or more to merge them into a single name.') + '</span>';
-      return;
-    }
-    bar.classList.add('show');
-    bar.innerHTML =
-      '<span class="cfg-pick-count">' + sel.length + ' selected — keep which name?</span>' +
-      '<select id="cfgPickKeep">' +
-        sel.map(function(v){ return '<option value="' + _he(v) + '">' + _he(v) + '</option>'; }).join('') +
-      '</select>' +
-      '<button class="btn btn-primary btn-sm" id="cfgPickMerge">Merge</button>' +
-      '<button class="btn btn-ghost btn-sm" id="cfgPickClear">Clear</button>';
-
-    document.getElementById('cfgPickClear').addEventListener('click', function(){
-      document.querySelectorAll('.cfg-pick:checked').forEach(function(cb){ cb.checked = false; });
-      draw();
-    });
-
-    document.getElementById('cfgPickMerge').addEventListener('click', function(){
-      var into = document.getElementById('cfgPickKeep').value;
-      // Misma razón que en los grupos de parecidos: se quita UNA aparición de
-      // la elegida, no todas las que se escriban igual.
-      var quitada = false;
-      var from = sel.filter(function(v){
-        if (!quitada && v === into){ quitada = true; return false; }
-        return true;
-      });
-      var btn  = document.getElementById('cfgPickMerge');
-      _showConfirm({
-        icon: '🔀', title: 'Merge into "' + into + '"?',
-        message: from.join('\n') + '\n\nwill become "' + into + '" on every movement. ' +
-                 'This rewrites history and cannot be undone automatically.',
-        confirmText: 'Merge',
-        onConfirm: function(){
-          _btnBusy(btn, 'Merging…');
-          google.script.run
-            .withSuccessHandler(function(res){
-              // Sin aviso: los nombres fusionados desaparecen de la lista —
-              // y ahora se los ve irse, que es lo que hace legible CUÁLES se
-              // fueron cuando se fusionan tres de golpe.
-              _rowLeaveAll(
-                _itemsBy('settingsTabContent', 'li.cfg-item', 'data-val', from),
-                function(){ _applyMergeLocally(tab, from, into); });
-              bar.innerHTML = ''; bar.classList.remove('show');
-              // Same reason as the location merge below: the local patch fixes
-              // the catalog list, but the movements and the project/supplier
-              // totals were rewritten server-side and the derived sheets
-              // rebuilt. Ask for them rather than trying to reproduce the
-              // rebuild in the browser.
-              loadDataFromGoogle(true, true);   // skipCache, quiet
-            })
-            .withFailureHandler(_mergeFailed(btn, 'Merge'))
-            .processMovement('mergeConfigValues', _h({ type: tab, from: from, into: into }));
-        }
-      });
-    });
-  }
-
-  document.querySelectorAll('.cfg-pick').forEach(function(cb){
-    cb.addEventListener('change', draw);
-  });
-}
-
 // ── Near-duplicate detection ─────────────────────────────────────────────────
 // The same job gets typed a dozen ways over months — "PAT BME2", "PAT BME 2",
 // "BME2 TRACIE DOOR_MAIN" — and each spelling then counts as its own project in
@@ -19338,27 +19502,68 @@ function _renderPmDirectoryTab() {
     .processMovement('getPmDirectory', _h({}));
 }
 
+/* ═══ P-02 · DIRECTORY: MARCAR Y ACTUAR ═════════════════════════════════════
+ *
+ * Era la pantalla con el modo más pobre de las cuatro: un botón «Delete» arriba
+ * que sólo servía para encender las papeleras de cada fila, y nada más. O sea
+ * dos pulsaciones y un estado invisible para borrar un contacto, y ninguna
+ * forma de quitar tres de golpe.
+ *
+ * Ahora es la misma casilla y la misma barra que el resto. Y de regalo aparece
+ * algo que antes no existía aquí: **borrar varios a la vez**, que es justo lo
+ * que hace falta cuando se limpia una agenda que lleva meses creciendo.
+ */
 function _drawPmDirectory() {
   var content = document.getElementById('settingsTabContent');
   var rows = _pmDirectoryData.map(function(p) {
     // data-val en la FILA y no sólo en su botón: es por donde se la encuentra
     // para animarla al irse.
     return '<li class="cfg-item" data-val="'+_he(p.name)+'">' +
+      '<input type="checkbox" class="pm-pick" data-val="'+_he(p.name)+'" title="Tick to remove">' +
       '<span class="cfg-item-name" style="flex:1"><strong>'+_he(p.name)+'</strong> <span style="color:var(--muted);font-size:.78rem">'+_he(p.email)+'</span></span>' +
-      '<button class="cfg-btn cfg-btn-danger" data-rowact="del" data-action="pm-dir-delete" data-val="'+_he(p.name)+'">🗑</button>' +
     '</li>';
   }).join('');
 
   content.innerHTML =
     '<p style="font-size:.8rem;color:var(--muted);margin-bottom:.75rem">General address book — employees, suppliers, PMs, anyone you email regularly. One special behavior: if a name here matches what\'s typed in the PM field on ENTRY, materials for that batch auto-send ONE grouped email to that address (not one per material). Everyone else here is just a saved contact — use them with the "Send notification email" option when saving a movement.</p>' +
-    _rowModeBarHtml('pm') +
-    '<ul class="cfg-list" data-rowscope="pm">'+(rows || '<li style="padding:.5rem;color:var(--muted);font-size:.82rem">No contacts registered yet.</li>')+'</ul>' +
+    '<div class="cfg-pickbar" id="pmPickBar"></div>' +
+    '<ul class="cfg-list">'+(rows || '<li style="padding:.5rem;color:var(--muted);font-size:.82rem">No contacts registered yet.</li>')+'</ul>' +
     '<div class="cfg-add-row" style="flex-wrap:wrap">' +
       '<input type="text" id="pmDirNewName" placeholder="Name…" style="flex:1;min-width:120px">' +
       '<input type="email" id="pmDirNewEmail" placeholder="Email…" style="flex:1;min-width:160px">' +
       '<button class="btn btn-primary btn-sm" onclick="_pmDirAdd()">+ Add</button>' +
     '</div>';
-  _mountRowMode('pm');
+
+  document.querySelectorAll('.pm-pick').forEach(function(cb){
+    cb.addEventListener('change', _pmDirBarra);
+  });
+  _pmDirBarra();
+}
+
+function _pmDirMarcados(){
+  return Array.prototype.map.call(
+    document.querySelectorAll('.pm-pick:checked'),
+    function(cb){ return cb.getAttribute('data-val'); });
+}
+
+function _pmDirBarra(){
+  _barraMarcados({
+    barId: 'pmPickBar', prefijo: 'pmPick',
+    marcadas: _pmDirMarcados,
+    instruccion: 'Tick a contact to remove it.',
+    limpiar: function(){
+      document.querySelectorAll('.pm-pick:checked').forEach(function(cb){ cb.checked = false; });
+      _pmDirBarra();
+    },
+    /* NI RENOMBRAR NI FUSIONAR, y no es un olvido: un contacto son dos datos
+     * —nombre y correo— y cambiar sólo el nombre dejaría el correo apuntando a
+     * otra persona. Se quita y se añade, que es lo que de verdad pasa cuando
+     * alguien cambia. */
+    acciones: [{
+      id: 'DelBtn', clase: 'cfg-btn-danger', texto: '🗑 Remove', conVarias: true,
+      hacer: function(sel){ _pmDirDelete(sel); }
+    }]
+  });
 }
 
 function _pmDirAdd() {
@@ -19375,131 +19580,80 @@ function _pmDirAdd() {
     .processMovement('managePmDirectory', _h({ op: 'add', name: name, email: email }));
 }
 
-function _pmDirDelete(name) {
+/* Borra UNO O VARIOS. El aviso nombra a quién se lleva, no sólo cuántos: una
+ * agenda tiene nombres parecidos y «3 contacts» no se puede comprobar antes de
+ * confirmarlo.
+ *
+ * De uno en uno y en orden, por lo mismo que en los catálogos: el servidor
+ * reescribe la hoja entera del directorio en cada borrado, así que mandarlos a
+ * la vez haría que el último pisara a los demás. */
+function _pmDirDelete(nombres) {
+  var sel = [].concat(nombres);
+  if (!sel.length) return;
+  var uno = sel.length === 1;
   _showConfirm({
     icon: '🗑️', danger: true,
-    title: 'Remove PM?',
-    message: '"' + name + '" will be removed from the Directory. If they were a PM, future batches for them won\'t get an automatic email until re-added.',
-    confirmText: 'Remove',
+    title: uno ? 'Remove "' + sel[0] + '"?' : 'Remove ' + sel.length + ' contacts?',
+    message: sel.join('\n') + '\n\n' +
+             (uno ? 'This contact is ' : 'These contacts are ') + 'removed from the Directory. ' +
+             'If ' + (uno ? 'they were a PM, future batches for them won' : 'any of them were PMs, future batches for them won') +
+             '\'t get an automatic email until re-added.',
+    confirmText: uno ? 'Remove' : 'Remove ' + sel.length,
     onConfirm: function(){
-      google.script.run
-        .withSuccessHandler(function() {
-          // Sin aviso: la fila desaparece de la lista, y ahora se la ve irse.
-          _rowLeaveAll(
-            _itemsBy('settingsTabContent', 'li.cfg-item', 'data-val', [name]),
-            function(){
-              _pmDirectoryData = null;
-              _renderPmDirectoryTab();
-            });
-        })
-        .withFailureHandler(function(e) { showToast('⚠ Error: ' + _stripTags(e), 'err', 6000); })
-        .processMovement('managePmDirectory', _h({ op: 'delete', name: name }));
+      var pend = sel.slice();
+      (function siguiente(){
+        if (!pend.length){
+          _pmDirectoryData = null;
+          _renderPmDirectoryTab();
+          return;
+        }
+        var nombre = pend.shift();
+        google.script.run
+          .withSuccessHandler(function() {
+            // Sin aviso: la fila desaparece de la lista, y se la ve irse.
+            _rowLeaveAll(
+              _itemsBy('settingsTabContent', 'li.cfg-item', 'data-val', [nombre]),
+              siguiente);
+          })
+          .withFailureHandler(function(e) {
+            showToast('⚠ Error: ' + _stripTags(e), 'err', 6000);
+            /* Se para aquí y se repinta con lo que de verdad quedó. Seguir
+             * borrando después de un fallo dejaría la lista diciendo una cosa
+             * y el servidor otra. */
+            _pmDirectoryData = null;
+            _renderPmDirectoryTab();
+          })
+          .processMovement('managePmDirectory', _h({ op: 'delete', name: nombre }));
+      })();
     }
   });
 }
 
-/* ── UN RENOMBRE A LA VEZ, Y SIN TIRAR LO QUE ALGUIEN ESCRIBIÓ ───────────────
+/* ── LO QUE SE FUE CON P-02, Y POR QUÉ SE CUENTA EN VEZ DE BORRARLO CALLANDO ─
  *
- * Jose, 2026-10-06, con un vídeo de la pestaña de Categorías: *"al dar clic en
- * editar se habilitan todas las categorías y se pueden editar todas al mismo
- * tiempo, pero al guardar sólo se puede dar clic en 1 a la vez, y cuando esa
- * una se guarda, las demás ya se desactivan del modo edición y SE BORRA EL
- * CAMBIO QUE SE HIZO."*
+ * Aquí vivían `_cfgEditAbierto`, `_cfgStartEdit`, `_cfgCancelEdit`,
+ * `_cfgSaveRename` y `_cfgDelete`: el recuadro que se abría DENTRO de una fila
+ * al pulsar su lápiz, y la papelera de al lado. Se han ido enteros con el
+ * cambio a casilla + barra, porque el lápiz y la papelera por fila existían
+ * para que el «modo» de arriba tuviera dónde actuar.
  *
- * Exacto, y la última parte es la grave. Lo que pasaba:
+ * Con ellos se va también un fallo que costó entender (Jose, 6/10, con vídeo):
+ * *"al dar clic en editar se habilitan todas las categorías y se pueden editar
+ * todas al mismo tiempo, pero al guardar sólo se puede dar clic en 1 a la vez,
+ * y cuando esa una se guarda, las demás ya se desactivan del modo edición y SE
+ * BORRA EL CAMBIO QUE SE HIZO."*
  *
- *   · `_cfgStartEdit` abría una fila y **no cerraba las demás**, así que se
- *     podían abrir todas y escribir en todas.
- *   · Guardar una llama al servidor y, al volver, `_applyCfgChangeLocally`
- *     **repinta la pestaña entera** — se lleva por delante los demás recuadros
- *     y lo tecleado dentro.
+ * La causa era que varias filas podían estar abiertas a la vez mientras que
+ * guardar repintaba la pestaña entera, así que la app **ofrecía un trabajo que
+ * no podía entregar**: dejaba escribir cinco renombres y guardaba uno. Se
+ * arregló en su día con un guardia que impedía abrir una segunda fila con
+ * cambios sin guardar. Ahora ese guardia tampoco hace falta: **sólo hay un
+ * sitio donde se escribe un nombre nuevo, y es la barra**, así que no existe la
+ * situación de tener dos a medias.
  *
- * Así que la app **ofrecía un trabajo que no podía entregar**: dejaba escribir
- * cinco renombres y guardaba uno, tirando los otros cuatro sin avisar. Es la
- * misma familia que el resto de los fallos de esta semana —prometer algo y
- * hacer otra cosa en silencio— sólo que aquí lo que se pierde es lo que la
- * persona acaba de teclear.
- *
- * ── POR QUÉ UNO A LA VEZ Y NO "GUARDAR TODOS" ──────────────────────────────
- *
- * Porque renombrar una categoría **reescribe cada fila del archivo** que la
- * usaba y después rehace la caché de existencias. Cinco de golpe son cinco de
- * esas pasadas, y si la tercera falla queda media tanda aplicada y nadie sabe
- * cuál. Guardar de uno en uno es lo correcto; lo que estaba mal era fingir que
- * se podía empezar de cinco.
- *
- * ── Y NO SE CIERRA UNO QUE TENGA CAMBIOS ───────────────────────────────────
- *
- * Cerrar el recuadro abierto para abrir otro sería el mismo pecado más
- * pequeño: tirar lo tecleado, sólo que de a uno. Si lo abierto está sin tocar,
- * se cierra y ya; si tiene algo escrito, **no se abre el nuevo** y se lleva el
- * cursor al que estaba a medias. */
-function _cfgEditAbierto() {
-  var scope = document.getElementById('settingsTabContent');
-  if (!scope) return null;
-  var cajas = scope.querySelectorAll('[id^="cfgEdit-"]');
-  for (var k = 0; k < cajas.length; k++) {
-    if (cajas[k].style.display === 'none') continue;
-    var inp = cajas[k].querySelector('.cfg-item-input');
-    var li  = cajas[k].closest ? cajas[k].closest('.cfg-item') : null;
-    var original = li ? String(li.dataset.val || '') : '';
-    var ahora    = inp ? String(inp.value || '') : '';
-    return { caja: cajas[k], input: inp,
-             cambiado: ahora.trim().toUpperCase() !== original.trim().toUpperCase(),
-             id: cajas[k].id };
-  }
-  return null;
-}
-
-function _cfgStartEdit(tab, i) {
-  var abierto = _cfgEditAbierto();
-  if (abierto && abierto.id !== 'cfgEdit-' + tab + '-' + i) {
-    if (abierto.cambiado) {
-      showToast('Finish the one you are editing first — saving it would discard ' +
-                'this one.', 'warn', 5000);
-      if (abierto.input) { abierto.input.focus(); abierto.input.select(); }
-      return;
-    }
-    // Sin tocar: se cierra y no se pierde nada.
-    var partes = abierto.id.split('-');
-    _cfgCancelEdit(partes[1], partes[2]);
-  }
-
-  var nm  = document.getElementById('cfgName-'+tab+'-'+i);
-  var ed  = document.getElementById('cfgEdit-'+tab+'-'+i);
-  if (nm) nm.style.display = 'none';
-  if (ed) { ed.style.display = 'flex'; var inp = document.getElementById('cfgInp-'+tab+'-'+i); if(inp) inp.focus(); }
-}
-
-function _cfgCancelEdit(tab, i) {
-  var nm = document.getElementById('cfgName-'+tab+'-'+i);
-  var ed = document.getElementById('cfgEdit-'+tab+'-'+i);
-  if (nm) nm.style.display = '';
-  if (ed) ed.style.display = 'none';
-}
-
-function _cfgSaveRename(tab, i) {
-  var li   = document.querySelector('.cfg-item[data-idx="'+i+'"]');
-  var oldV = li ? li.dataset.val : '';
-  var inp  = document.getElementById('cfgInp-'+tab+'-'+i);
-  var newV = inp ? inp.value.trim() : '';
-  // Uppercased for the same reason _cfgAdd does it, and so the list patched
-  // locally shows exactly what the server stored — not a mixed-case copy that
-  // only corrects itself on the next full load.
-  newV = newV.toUpperCase();
-  if (!newV || newV === oldV.toUpperCase()) { _cfgCancelEdit(tab, i); return; }
-  _cfgCall({ type: tab, op: 'rename', value: oldV, newValue: newV });
-}
-
-function _cfgDelete(tab, val) {
-  _showConfirm({
-    icon:'🗑️', danger: true,
-    title: 'Delete "' + val + '"?',
-    message: 'This will remove "' + val + '" from ' + tab + '.\nExisting records using this value are not affected.',
-    confirmText: 'Delete',
-    onConfirm: function(){ _cfgCall({ type: tab, op: 'delete', value: val }); }
-  });
-}
+ * Se deja escrito porque el fallo era sutil y el arreglo viejo parecía
+ * arbitrario sin conocerlo. Si alguien vuelve a poner un recuadro por fila,
+ * esto es lo que tiene que volver a resolver. */
 
 function _cfgAdd(tab) {
   var inp = document.getElementById('cfgNewVal');
@@ -19904,8 +20058,8 @@ function _renderMaterialsTab() {
       '<input type="text" id="matSearchInp" placeholder="Search material name…" oninput="_filterMatList()">' +
       '<button class="btn btn-ghost btn-sm" onclick="_loadMatList()">↺ Refresh</button>' +
     '</div>' +
-    _rowModeBarHtml('mat') +
-    '<div class="mat-list" id="matListContainer" data-rowscope="mat"><p style="color:var(--muted);font-size:.82rem">Loading…</p></div>';
+    '<div class="cfg-pickbar" id="matPickBar"></div>' +
+    '<div class="mat-list" id="matListContainer"><p style="color:var(--muted);font-size:.82rem">Loading…</p></div>';
   // Already prefetched in _loadSettings() (fired the moment the modal opened) —
   // render immediately instead of re-fetching and flashing "Loading…" again.
   _renderPacksPanel();
@@ -20196,81 +20350,134 @@ function _loadMatList() {
     .processMovement('listMaterials', _h({}));
 }
 
+/* ═══ P-02 · MATERIALS: MARCAR Y ACTUAR ═════════════════════════════════════
+ *
+ * Esta lista llevaba **tres botones en cada fila** —✏️ Rename, ↕ Category,
+ * 🔗 Merge— y un «modo» arriba que los encendía. Con ochenta materiales en
+ * pantalla son doscientos cuarenta botones compitiendo con los nombres.
+ *
+ * Y fusionar era lo peor: había que **escribir el nombre exacto** del material
+ * que se queda, o elegirlo de una lista de cuarenta dentro de un diálogo.
+ * Ahora se marcan los dos y se dice cuál se queda, que es lo que de verdad se
+ * está decidiendo.
+ */
 function _filterMatList() {
   var q    = (document.getElementById('matSearchInp') || {}).value || '';
   var ql   = q.toLowerCase();
   var cont = document.getElementById('matListContainer');
   if (!cont) return;
   var filtered = ql ? _matListAll.filter(function(m){ return m.name.toLowerCase().indexOf(ql) !== -1 || m.category.toLowerCase().indexOf(ql) !== -1; }) : _matListAll;
-  if (!filtered.length) { cont.innerHTML = '<p style="color:var(--muted);font-size:.82rem;padding:.5rem">No materials found.</p>'; return; }
+  if (!filtered.length) {
+    cont.innerHTML = '<p style="color:var(--muted);font-size:.82rem;padding:.5rem">No materials found.</p>';
+    _matBarra();
+    return;
+  }
 
   cont.innerHTML = filtered.slice(0, 80).map(function(m, i) {
-    var mid = 'mat-'+i;
-    return '<div class="mat-item" id="'+mid+'" data-name="'+_he(m.name)+'" data-cat="'+_he(m.category)+'">' +
+    return '<div class="mat-item" id="mat-'+i+'" data-name="'+_he(m.name)+'" data-cat="'+_he(m.category)+'">' +
+      '<input type="checkbox" class="mat-pick" data-val="'+_he(m.name)+'" data-cat="'+_he(m.category)+'" ' +
+             'title="Tick to rename, move or merge">' +
       '<span class="mat-item-cat">'+catBadge(m.category)+'</span>' +
       '<span class="mat-item-name">'+_he(m.name)+'</span>' +
       '<span style="color:var(--muted);font-size:.7rem">'+m.count+' rows</span>' +
-      '<button class="cfg-btn" data-rowact="edit" data-action="mat-action" data-op="rename">✏️ Rename</button>' +
-      '<button class="cfg-btn" data-rowact="edit" data-action="mat-action" data-op="changeCategory">↕ Category</button>' +
-      '<button class="cfg-btn" data-rowact="edit" data-action="mat-action" data-op="merge">🔗 Merge</button>' +
     '</div>';
   }).join('') + (filtered.length > 80 ? '<p style="font-size:.75rem;color:var(--muted);padding:.5rem">Showing first 80. Type to filter.</p>' : '');
-  _mountRowMode('mat');
+
+  /* FILTRAR NO DESMARCA, pero lo que deja de verse deja de contar: la barra
+   * lee las casillas que hay EN PANTALLA, igual que en las demás listas. Un
+   * Fusionar armado sobre un material que el filtro escondió sería una acción
+   * sobre algo que nadie está mirando. */
+  document.querySelectorAll('.mat-pick').forEach(function(cb){
+    cb.addEventListener('change', _matBarra);
+  });
+  _matBarra();
 }
 
-function _matAction(op, name, cat) {
-  if (op === 'rename') {
-    _showPrompt({
-      icon: '✏️', title: 'Rename material', message: 'Every movement recorded under this name changes with it.',
-      value: name, confirmText: 'Rename',
-      onOk: function(nv){
-        if (!nv || nv === name) return;
-        _matCall({ op: 'rename', name: name, category: cat, newName: nv });
-      }
-    });
-
-  } else if (op === 'changeCategory') {
-    var cats = (config.categories || []);
-    if (!cats.length){ showToast('Add categories in Settings first.', 'warn'); return; }
-    // The categories are offered as chips — typing one exactly, from memory,
-    // was never a reasonable thing to ask.
-    _showPrompt({
-      icon: '↕', title: 'Move to another category',
-      message: '"' + name + '" is in ' + cat + '. Pick where it belongs.',
-      value: cat, choices: cats, confirmText: 'Move',
-      onOk: function(nv){
-        nv = String(nv).trim().toUpperCase();
-        if (!nv || nv === cat) return;
-        if (cats.map(function(c){ return String(c).toUpperCase(); }).indexOf(nv) === -1)
-          return 'There is no category called ' + nv + '.';
-        _matCall({ op: 'changeCategory', name: name, category: cat, newCategory: nv });
-      }
-    });
-
-  } else if (op === 'merge') {
-    _showPrompt({
-      icon: '🔗', title: 'Merge into another material',
-      message: 'Every row of "' + name + '" is renamed to the material you pick.',
-      placeholder: 'Exact name of the material to keep', confirmText: 'Continue',
-      choices: (_matListAll || []).filter(function(m){ return m.name !== name; })
-                                  .slice(0, 40).map(function(m){ return m.name; }),
-      onOk: function(nv){
-        if (!nv) return 'Type or pick the material to merge into.';
-        _matMergeConfirm(name, cat, nv);
-      }
-    });
-  }
+function _matMarcados(){
+  return Array.prototype.map.call(
+    document.querySelectorAll('.mat-pick:checked'),
+    function(cb){ return cb.getAttribute('data-val'); });
 }
 
-function _matMergeConfirm(name, cat, nvTrimmed){
-    _showConfirm({
-      icon:'🔀', danger: true,
-      title: 'Merge Materials?',
-      message: '"' + name + '" → "' + nvTrimmed + '"\n\nAll rows will be renamed. This cannot be undone.',
-      confirmText: 'Merge',
-      onConfirm: function(){ _matCall({ op: 'merge', name: name, category: cat, targetName: nvTrimmed }); }
-    });
+/* La categoría del material marcado. Hace falta porque el servidor identifica
+ * un material por su par (nombre, categoría), no sólo por el nombre. */
+function _matCatDe(nombre){
+  var cb = document.querySelector('.mat-pick[data-val="' + String(nombre).replace(/"/g, '\\"') + '"]');
+  return cb ? cb.getAttribute('data-cat') : '';
 }
+
+function _matBarra(){
+  _barraMarcados({
+    barId: 'matPickBar', prefijo: 'matPick',
+    marcadas: _matMarcados,
+    instruccion: 'Tick a material to rename it or move it to another category. ' +
+                 'Tick two or more to merge them into one.',
+    limpiar: function(){
+      document.querySelectorAll('.mat-pick:checked').forEach(function(cb){ cb.checked = false; });
+      _matBarra();
+    },
+    renombrar: { max: 60, hacer: function(viejo, nuevo, btn){
+      _btnBusy(btn, 'Renaming…');
+      _matCall({ op: 'rename', name: viejo, category: _matCatDe(viejo), newName: nuevo });
+    }},
+    /* FUSIONAR VARIOS EN EL QUE SE QUEDA. De uno en uno y en orden: cada
+     * fusión reescribe las filas del archivo y rehace las existencias, así que
+     * mandarlas a la vez dejaría media tanda aplicada si una fallara. */
+    fusionar: { hacer: function(from, into, btn){
+      _showConfirm({
+        icon: '🔀', danger: true,
+        title: 'Merge into "' + into + '"?',
+        message: from.join('\n') + '\n\nEvery row recorded under ' +
+                 (from.length === 1 ? 'that name becomes' : 'those names becomes') +
+                 ' "' + into + '". This cannot be undone.',
+        confirmText: 'Merge',
+        onConfirm: function(){
+          _btnBusy(btn, 'Merging…');
+          var pend = from.slice();
+          (function siguiente(){
+            if (!pend.length) return;
+            var n = pend.shift();
+            _matCall({ op: 'merge', name: n, category: _matCatDe(n), targetName: into }, siguiente);
+          })();
+        }
+      });
+    }},
+    acciones: [{
+      id: 'CatBtn', clase: 'btn-ghost', texto: '↕ Category',
+      hacer: function(sel){
+        var name = sel[0];
+        var cat  = _matCatDe(name);
+        var cats = (config.categories || []);
+        if (!cats.length){ showToast('Add categories in Settings first.', 'warn'); return; }
+        // Las categorías se ofrecen como fichas: teclear una exacta de memoria
+        // nunca fue razonable pedirlo.
+        _showPrompt({
+          icon: '↕', title: 'Move to another category',
+          message: '"' + name + '" is in ' + cat + '. Pick where it belongs.',
+          value: cat, choices: cats, confirmText: 'Move',
+          onOk: function(nv){
+            nv = String(nv).trim().toUpperCase();
+            if (!nv || nv === cat) return;
+            if (cats.map(function(c){ return String(c).toUpperCase(); }).indexOf(nv) === -1)
+              return 'There is no category called ' + nv + '.';
+            _matCall({ op: 'changeCategory', name: name, category: cat, newCategory: nv });
+          }
+        });
+      }
+    }]
+  });
+}
+
+/* `_matAction` y `_matMergeConfirm` se fueron con P-02 (v14.4). Eran el
+ * repartidor de los tres botones que llevaba cada fila y el aviso de la
+ * fusión. Las tres operaciones viven ahora en la barra, que es el único sitio
+ * desde el que se actúa sobre lo marcado.
+ *
+ * Lo que se fue con ellas y conviene no echar de menos: para fusionar había
+ * que **escribir el nombre exacto** del material que se queda —o buscarlo en
+ * una lista de cuarenta dentro de un diálogo— mientras que lo que se está
+ * decidiendo es cuál de los dos que tienes delante sobrevive. Ahora se marcan
+ * los dos y se elige. */
 
 // Renaming, re-filing or merging a material rewrites rows all over the
 // archive, so the totals genuinely have to come back from the server. What
@@ -20284,7 +20491,11 @@ function _matMergeConfirm(name, cat, nvTrimmed){
 // error on the Categories tab, arriving from a different screen — a slow
 // operation with a silent button invites a second press, and a second press is
 // where the damage is.
-function _matCall(payload) {
+/* `onDone` es para fusionar VARIOS: cada fusión reescribe las filas del
+ * archivo y rehace las existencias, así que van de una en una y en orden. Si
+ * una falla, NO se llama —el bucle se para ahí— porque seguir dejaría media
+ * tanda aplicada sin que nada lo dijera. */
+function _matCall(payload, onDone) {
   if (_matBusy) return;
   _matSetBusy(true);
   _acWrite({
@@ -20298,6 +20509,7 @@ function _matCall(payload) {
       _rowLeaveAll(payload.op === 'merge' ? _matItemEls(payload.name, payload.category) : [],
         function(){ _applyMatChangeLocally(payload); });
       loadDataFromGoogle(true, true);   // skipCache, quiet
+      if (onDone) onDone();
     },
     fail: function(e, ocupado){
       _matSetBusy(false);
@@ -20309,12 +20521,29 @@ function _matCall(payload) {
 }
 
 var _matBusy = false;
+/* ── SE APAGA LA BARRA, NO LA PESTAÑA ───────────────────────────────────────
+ *
+ * Jose, 4/11, con captura: *"al cambiar un nombre en la pestaña de materiales
+ * toda la lista se queda desactivada."* Y era literal: esto hacía
+ * `querySelectorAll('button')` sobre la pestaña ENTERA, así que un renombrado
+ * apagaba también el buscador, el ↺ Refresh y el panel de unidades por caja —
+ * cosas que no tienen nada que ver con la operación en curso y que no se
+ * estorban entre sí.
+ *
+ * El guardia de verdad es `if (_matBusy) return;` en `_matCall`: apagar
+ * botones nunca fue lo que impedía una segunda llamada, sólo la explicación de
+ * por qué no se puede. Así que la explicación va donde está la acción —la
+ * barra— y el resto de la pantalla sigue viva. */
 function _matSetBusy(on) {
   _matBusy = on;
-  var scope = document.getElementById('settingsTabContent');
-  if (scope) {
-    var btns = scope.querySelectorAll('button');
+  var barra = document.getElementById('matPickBar');
+  if (barra) {
+    var btns = barra.querySelectorAll('button');
     for (var i = 0; i < btns.length; i++) {
+      /* El que está girando ya lo gestiona `_btnBusy`: devolverlo aquí le
+       * borraría la rueda, que es el fallo que acabo de arreglar en las
+       * ventanas. */
+      if (btns[i].classList.contains('is-busy')) continue;
       btns[i].disabled = on;
       btns[i].style.opacity = on ? '.5' : '';
       btns[i].style.cursor  = on ? 'wait' : '';
@@ -20719,14 +20948,7 @@ document.addEventListener('keydown', function(e){ if (e.key === 'Escape') _perso
 (function _installEventDelegation(){
   function dispatch(el){
     var a = el.getAttribute('data-action');
-    if (a === 'mat-action') {
-      var host = el.closest('[data-name]') || el;
-      _matAction(el.getAttribute('data-op'), host.getAttribute('data-name'), host.getAttribute('data-cat'));
-    } else if (a === 'cfg-delete') {
-      _cfgDelete(el.getAttribute('data-tab'), el.getAttribute('data-val'));
-    } else if (a === 'pm-dir-delete') {
-      _pmDirDelete(el.getAttribute('data-val'));
-    } else if (a === 'open-rack') {
+    if (a === 'open-rack') {
       openRackDrawer(el.getAttribute('data-rack'));
     } else if (a === 'edit-incoming') {
       openIncomingModal(el.getAttribute('data-id'));
@@ -31932,6 +32154,19 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '14.4',
+    titulo: 'One way to pick a row, everywhere \u2014 and zero now means zero on the shelf',
+    puntos: [
+      '<b>Five screens asked you to select things in five different ways.</b> Projects, Suppliers, Locations, Directory and Materials each had a <i>mode</i>: you pressed Rename, the list quietly went into rename state, and the pencil on whichever row you touched next did something. Projects and Locations had the mode <i>and</i> a separate tick box for merging \u2014 two ways of choosing, in one list.',
+      'All five now work the way the Dashboard, Movements and Categories already did: <b>tick what you mean, and a bar says what can be done with it.</b> Tick one and Rename and Delete wake up; tick several and Rename is not offered at all, because renaming several things to one name is not renaming \u2014 it is merging, and Merge is right there.',
+      '<b>And the per-row buttons are gone with it.</b> Materials carried three on every row; with eighty materials on screen that was two hundred and forty buttons competing with the names. Nothing is lost: everything they did is in the bar, acting on what you ticked.',
+      '<b>Things that were not possible before, now are.</b> Remove several contacts from the Directory at once. Merge two materials by ticking them and saying which name stays, instead of typing the exact name of the survivor. Archive or delete several locations in one go \u2014 and Delete only appears when none of them is holding anything, with the reason shown instead of a button that refuses the click.',
+      '<b>Renaming a material no longer freezes the whole tab.</b> It used to grey out every button on the screen, search box included.',
+      '<b>And \u201cat zero\u201d now means the warehouse is empty.</b> It used to require the job sites to be empty too, so a material with nothing left on the shelf did not raise the alarm while a pallet sat at a job \u2014 which is exactly when you need to reorder. What has gone out cannot be taken off the shelf again.'
+    ],
+    antes:  'Five ways to pick a row, and a mode you could not see',
+    ahora:  'Tick it, and the bar tells you what you can do' },
+
   { ver: '14.3',
     titulo: 'The low-stock window points at the materials, and Save buttons work again',
     puntos: [
@@ -31963,23 +32198,6 @@ var NOVEDADES = [
     ],
     antes:  'A spinner with no error, on a file that looked broken',
     ahora:  'The row is flagged, the file loads, and the window reopens clean' },
-
-  { ver: '14.0',
-    titulo: 'Categories work the way the rest of the app does, and the app stops shutting you out',
-    puntos: [
-      '<b>Categories are now chips you tick, grouped in the middle like the Low-Stock Monitor.</b> Tick one and Rename and Delete wake up; tick several and Rename is not offered at all \u2014 renaming several things to one name is not renaming, it is merging, and Merge is right there. Renaming happens in the bar, not in a browser pop-up, so it follows the same text rules as everywhere else.',
-      '<b>And the app stopped shutting itself out.</b> It caps how many operations run per minute so your Google account is never cut off \u2014 but the cap reset its own clock on every call that passed, so instead of \u201c240 a minute\u201d it meant \u201ca minute of total silence or the count never clears\u201d. Working steadily for three minutes could reach the cap without ever passing it in any one minute. That is why a 600-row file sometimes never loaded.',
-      'The window now slides properly, and <b>the message says whose limit it is, that nothing was lost, and how long to wait</b> \u2014 it is our cap, so saying only \u201ctoo many requests\u201d was a system message about our own decision.'
-    ],
-    antes:  'Working steadily until the app said no, and would not say why',
-    ahora:  'It counts the last minute, not the last silence' },
-
-
-
-
-
-
-
 
 ];
 

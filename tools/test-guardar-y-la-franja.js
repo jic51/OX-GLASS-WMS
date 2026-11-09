@@ -181,16 +181,34 @@ check('lo que cambia al marcar es el aspecto, no el sitio',
 /* Y las dos funciones que la pintan: vacía ya NO se vacía, lleva la frase de
  * qué hacer. Un hueco en blanco reservado sería sitio tirado; la instrucción
  * justo encima de las casillas es sitio bien empleado. */
-/* CUÁNTAS SON NO ES LO QUE SE MIDE. Eran dos y pasaron a tres el 5/11, cuando
- * Categorías estrenó la suya. Un número escrito a mano convierte cada pantalla
- * nueva en un fallo de esta prueba en vez de en lo que es: una pantalla nueva.
- * Lo que se sujeta es que **todas** se traten igual. */
+/* ── YA NO HAY QUE CONTARLAS: HAY UNA ──────────────────────────────────────
+ *
+ * Esta comprobación pedía «tres o más franjas, y todas tratadas igual», y su
+ * propio comentario explicaba por qué el número no se escribía a mano: cada
+ * pantalla nueva estrenaba la suya.
+ *
+ * Con P-02 (v14.4) eso dejó de ser verdad en el mejor sentido posible. Las
+ * cinco pantallas —Categorías, Projects/Suppliers, Locations, Directory y
+ * Materials— pasan por `_barraMarcados`, así que **la franja se dibuja en un
+ * solo sitio**. Ya no hay varias que puedan separarse; hay una que o está bien
+ * o está mal para todas.
+ *
+ * Así que lo que se sujeta cambia de forma: que siga habiendo UNA, y que todas
+ * las pantallas la usen. */
 const dibujos = HTML.match(/bar\.classList\.remove\('show'\);[\s\S]{0,300}?return;/g) || [];
-check('hay franjas que mirar', dibujos.length >= 3, dibujos.length);
-dibujos.forEach(function (d, i) {
-  check('franja ' + (i + 1) + ': vacía conserva su sitio y dice qué hacer',
-    /Tick /.test(d) && !/bar\.innerHTML = '';/.test(d), d.slice(0, 160));
-});
+check('la franja se dibuja en UN solo sitio', dibujos.length === 1, dibujos.length);
+check('...y vacía conserva su sitio con la instrucción dentro',
+  /op\.instruccion/.test(dibujos[0] || '') && !/bar\.innerHTML = '';/.test(dibujos[0] || ''),
+  (dibujos[0] || '').slice(0, 200));
+
+/* Y que las cinco pantallas pasen por ella, cada una con su instrucción. Si
+ * una se escribiera su propia barra, volvería a haber dos que mantener
+ * iguales — que es exactamente lo que P-02 vino a quitar. */
+const barras = (HTML.match(/_barraMarcados\(\{/g) || []).length;
+check('las cinco listas que se marcan usan esa misma franja', barras >= 5, barras);
+const instrucciones = HTML.match(/instruccion: '[^']*/g) || [];
+check('...y cada una dice qué hacer, empezando por marcar',
+  instrucciones.length >= 5 && instrucciones.every(t => /Tick /.test(t)), instrucciones);
 
 /* Y la instrucción está en UN sitio. Antes la decía también el párrafo de
  * arriba; dos frases sobre lo mismo son dos que alguien tiene que mantener
