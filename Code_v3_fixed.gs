@@ -128,7 +128,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '14.4';
+var APP_VERSION = '14.5';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -140,7 +140,7 @@ var APP_VERSION = '14.4';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'a5da983b';
+var APP_BUILD = '84311371';
 
 // ═══ ACOPIO BASIC — EL INTERRUPTOR DE LA VERSIÓN GRATIS ══════════════════════
 //
@@ -10030,6 +10030,44 @@ var IMPORT_ALL_HEADERS      = ['category', 'name', 'qty', 'unit', 'location', 'p
  * hay ningún recorte. El recorte se hace después, sólo para la pantalla, y con
  * un nombre que lo dice.
  */
+/* ═══ QUÉ HACE QUE UNA FILA DE IMPORTACIÓN SEA VÁLIDA ═══════════════════════
+ *
+ * Extraída de `leerFilasDelFichero_` con P-06 (v14.5). Estaba suelta dentro del
+ * bucle, y ahora hay DOS sitios que necesitan la misma respuesta: el servidor
+ * al leer el fichero, y la pantalla al corregir una celda para encender o
+ * apagar la fila en el acto.
+ *
+ * La pantalla no puede llamar a esto —vive en el otro archivo— así que tiene su
+ * propia copia, `_impErroresDeFila`. **Eso es exactamente la clase de fallo que
+ * este proyecto repite**, así que no se deja a la buena voluntad:
+ * `test-importar-elegir-y-corregir.js` ejecuta LAS DOS sobre la misma tabla de
+ * casos y exige que digan lo mismo, letra por letra. Si alguien cambia una y no
+ * la otra, la suite se pone roja ese día y no seis versiones después.
+ *
+ * La de aquí manda: es la que decide qué se guarda. La del navegador sólo
+ * adelanta la respuesta.
+ */
+function erroresDeFilaImport_(item) {
+  var errors = [];
+  if (!item.category) errors.push('Missing Category');
+  if (!item.name)     errors.push('Missing Name');
+  /* El aviso dice QUÉ había escrito. «Qty must be a number» sobre una columna
+   * de seiscientas filas no se puede buscar; «Qty "doce" is not a number» se
+   * encuentra en el Excel con Ctrl+F. */
+  if (!item.qty || item.qty <= 0) {
+    errors.push(item.qtyTexto
+      ? 'Qty "' + item.qtyTexto + '" is not a number greater than 0'
+      : 'Qty is empty');
+  }
+  return errors;
+}
+
+/* Los campos que la pantalla deja corregir: los tres que pueden invalidar una
+ * fila, y nada más. Dejar corregir el proveedor o el comentario convertiría la
+ * vista previa en un editor de hojas de cálculo, y el sitio para eso es el
+ * fichero. */
+var IMPORT_CORREGIBLES = ['category', 'name', 'qty'];
+
 function leerFilasDelFichero_(data) {
   var fileName = String(data.fileName || '');
   var isExcel  = /\.xlsx?$/i.test(fileName);
@@ -10124,6 +10162,19 @@ function leerFilasDelFichero_(data) {
         : ' Download the template from this screen to see the exact format expected.'));
   }
 
+  /* Las correcciones que mandó la pantalla, por número de fila. Un objeto
+   * vacío es lo normal: la inmensa mayoría de las importaciones no corrige
+   * nada. */
+  var correcciones = {};
+  if (data.fixes && typeof data.fixes === 'object') {
+    Object.keys(data.fixes).forEach(function (k) {
+      var n2 = Number(k);
+      if (isFinite(n2) && data.fixes[k] && typeof data.fixes[k] === 'object') {
+        correcciones[n2] = data.fixes[k];
+      }
+    });
+  }
+
   var parsed = [];
   for (var i = 1; i < rows.length; i++) {
     var r = rows[i];
@@ -10172,17 +10223,43 @@ function leerFilasDelFichero_(data) {
       comments: col.comments !== -1 ?  String(r[col.comments] || '').trim() : ''
     };
 
-    var errors = [];
-    if (!item.category) errors.push('Missing Category');
-    if (!item.name)     errors.push('Missing Name');
-    /* El aviso dice QUÉ había escrito. «Qty must be a number» sobre una
-     * columna de seiscientas filas no se puede buscar; «Qty "doce" is not a
-     * number» se encuentra en el Excel con Ctrl+F. */
-    if (!item.qty || item.qty <= 0) {
-      errors.push(item.qtyTexto
-        ? 'Qty "' + item.qtyTexto + '" is not a number greater than 0'
-        : 'Qty is empty');
+    /* ── LA CORRECCIÓN SE APLICA AQUÍ, ANTES DE VALIDAR ────────────────────
+     *
+     * P-06. Jose, 8/11: *"si el fichero carga y muestra todas las filas
+     * incluidas las que tienen errores, pero no carga esas, debemos trabajar
+     * en la parte de la corrección de los errores y los filtros en los
+     * registros antes de hacer el import."*
+     *
+     * Va DENTRO de esta función y no en la pantalla, y ése es todo el diseño:
+     * `parseImportFile` (lo que se ve) y `commitImport` (lo que se guarda)
+     * pasan los dos por aquí. Corregir en un solo sitio es lo que impide que
+     * la vista previa enseñe una fila arreglada y se guarde la rota — otra vez
+     * dos cosas que tienen que coincidir sin que nada lo obligue.
+     *
+     * Y se aplica ANTES de validar, no después: así una fila corregida pasa
+     * por **la misma** comprobación que una que vino bien. No hay un camino
+     * «ya validado a mano» que pueda relajarse.
+     *
+     * El fichero no se toca. La corrección vive en esta llamada y nada más, así
+     * que la huella del fichero —la que detecta «esto ya lo subiste»— sigue
+     * siendo la del fichero de verdad. */
+    var arreglo = correcciones[item.rowNum];
+    if (arreglo) {
+      IMPORT_CORREGIBLES.forEach(function (campo) {
+        if (!Object.prototype.hasOwnProperty.call(arreglo, campo)) return;
+        var v = String(arreglo[campo] == null ? '' : arreglo[campo]).trim();
+        if (campo === 'qty') {
+          var n = numeroDeFichero_(v);
+          item.qty = isFinite(n) ? n : null;
+          item.qtyTexto = v;
+        } else {
+          item[campo] = v;
+        }
+      });
+      item.corregida = true;
     }
+
+    var errors = erroresDeFilaImport_(item);
     item.valid  = errors.length === 0;
     item.errors = errors;
     parsed.push(item);
@@ -10232,6 +10309,20 @@ function parseImportFile(data) {
     rows:         parsed.slice(0, IMPORT_PREVIEW_ROWS),
     previewRows:  IMPORT_PREVIEW_ROWS,
 
+    /* ── Y TODAS LAS FILAS CON ERROR, VENGAN DE DONDE VENGAN ───────────────
+     *
+     * La muestra de arriba son las 200 primeras, y eso bastaba cuando lo único
+     * que se hacía con ella era mirarla. Con P-06 se CORRIGEN, y una fila mala
+     * en la línea 480 de un fichero de 600 no estaba en la muestra: la pantalla
+     * decía «3 need fixing» y no podía enseñar ni una.
+     *
+     * Así que las malas viajan aparte y completas. Son pocas por definición —si
+     * fueran muchas, el problema es el fichero y hay que rehacerlo, cosa que la
+     * pantalla dice cuando pasan de este tope. */
+    invalidSample: parsed.filter(function (p) { return !p.valid; })
+                         .slice(0, IMPORT_INVALID_ROWS),
+    invalidCap:    IMPORT_INVALID_ROWS,
+
     // Qué columnas traía EL FICHERO. La pantalla sólo dibuja éstas: hasta hoy
     // enseñaba cinco de las nueve que se importan, así que unidad, obra,
     // proveedor, PO y comentarios entraban a la hoja sin que nadie los mirara.
@@ -10255,6 +10346,11 @@ function parseImportFile(data) {
 // Cuántas filas de la muestra viajan. Es una MUESTRA para mirar, nunca la
 // carga: desde la v12.91 confirmar manda el fichero, no estas filas.
 var IMPORT_PREVIEW_ROWS = 200;
+/* Cuántas filas con error viajan para poder corregirlas en pantalla. Doscientas
+ * es de sobra: corregir doscientas celdas a mano no es el camino —ahí lo que
+ * toca es arreglar el fichero y volver a subirlo— y la pantalla lo dice cuando
+ * se pasa de aquí. */
+var IMPORT_INVALID_ROWS = 200;
 
 /* LA HUELLA DE UN FICHERO, Y POR QUÉ ESTAS TRES COSAS ─────────────────────────
  *

@@ -125,6 +125,7 @@ node tools/test-categorias-marcar-y-actuar.js
 node tools/test-la-cuota-se-desliza.js
 node tools/test-el-fichero-sucio.js
 node tools/test-aviso-de-stock-bajo.js
+node tools/test-importar-elegir-y-corregir.js
 node tools/test-url-de-la-app.js
 node tools/test-no-saltar-al-cargar.js
 node tools/test-config-escritura.js

@@ -3364,6 +3364,33 @@
     [data-theme="dark"] .import-will{background:#17314F;border-color:#1E4976}
     .import-will-hd{font-size:.78rem;font-weight:700;color:var(--accent2);margin-bottom:var(--sp-1)}
     .import-will-ul{margin:0;padding-left:var(--sp-6);font-size:.78rem;line-height:1.5}
+    /* ── P-06: la tabla de la vista previa, que ahora se usa, no sólo se mira ── */
+    .imp-filtros{display:flex;gap:var(--sp-2);flex-wrap:wrap;margin-bottom:var(--sp-2)}
+    .imp-filtro{font-size:var(--fs-md);padding:var(--sp-1) var(--sp-3);border-radius:var(--r-pildora);
+      border:1px solid var(--border);background:var(--card);color:var(--muted);cursor:pointer}
+    .imp-filtro:hover{border-color:var(--accent)}
+    .imp-filtro.on{background:var(--navy);border-color:var(--navy);color:#fff}
+    .imp-filtro span{opacity:.75;margin-left:var(--sp-1);font-variant-numeric:tabular-nums}
+    .imp-tabla-box{max-height:320px;overflow:auto;border:1px solid var(--border);
+      border-radius:6px;margin-bottom:var(--sp-2)}
+    .imp-tabla{width:100%;border-collapse:collapse;font-size:var(--fs-base)}
+    .imp-th{padding:var(--sp-1) var(--sp-2);text-align:left;position:sticky;top:0;background:var(--bg);z-index:1}
+    .imp-td{padding:var(--sp-1) var(--sp-2);vertical-align:middle}
+    .imp-row-mala{background:var(--red-bg)}
+    /* Arreglada aquí: verde, para que se vea de un vistazo lo que has ganado
+       y no haya que volver a leer la columna de errores fila por fila. */
+    .imp-row-arreglada{background:var(--green-bg)}
+    /* Destildada: ni roja ni verde — apagada. No tiene nada de malo; es que no
+       va a entrar, y eso se lee como ausencia, no como problema. */
+    .imp-row-salta{opacity:.45}
+    .imp-td-issue{color:var(--red);font-size:var(--fs-sm)}
+    .imp-ok{color:var(--green);font-weight:600}
+    .imp-fix{width:100%;min-width:70px;padding:2px 4px;border:1px solid var(--red);
+      border-radius:4px;font-size:var(--fs-md);background:var(--card);color:var(--text)}
+    .imp-fix:focus{outline:2px solid var(--accent);outline-offset:1px}
+    .imp-nota{font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--sp-2)}
+    .imp-nota-avisa{color:var(--yellow);font-weight:600}
+    .imp-pick{width:15px;height:15px;cursor:pointer;accent-color:var(--accent2)}
     /* La fila que entra sola cuando llega un error nuevo. Corta y suave: su
        trabajo es que no pase desapercibida en una lista de trescientas, no
        llamar la atención. Y se respeta a quien pidió menos movimiento, igual
@@ -5970,7 +5997,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '14.4';
+var APP_VERSION = '14.5';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -5982,7 +6009,7 @@ var APP_VERSION = '14.4';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'a5da983b';
+var APP_BUILD = '84311371';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -17391,6 +17418,7 @@ function _renderImportTab() {
     '</div>';
   document.getElementById('importFileInput').addEventListener('change', _onImportFileChange);
   _importParsedRows = []; _importValidTotal = 0; _importFingerprint = '';
+  _impFixes = {}; _impSaltar = {}; _impUltimo = null; _impTodas = [];
   _drawImportHistory();
 }
 
@@ -17422,6 +17450,7 @@ function _limpiarFicheroImport(){
   if (x) x.style.display = 'none';
   _importFileB64 = ''; _importFileName = ''; _importFileMime = '';
   _importParsedRows = []; _importValidTotal = 0; _importFingerprint = '';
+  _impFixes = {}; _impSaltar = {}; _impUltimo = null; _impTodas = [];
 }
 
 function _onImportFileChange(e){
@@ -17501,25 +17530,118 @@ function _wireImportSheetPicker(){
   if (sel) sel.addEventListener('change', function(){ _parseImportSheet(sel.value); });
 }
 
-function _renderImportPreview(res){
-  var box  = document.getElementById('importPreviewBox');
-  var rows = res.rows || [];
+/* ═══ P-06 · ELEGIR QUÉ ENTRA, Y ARREGLAR LO QUE NO ════════════════════════
+ *
+ * Jose, 8/11: *"si el fichero carga y muestra todas las filas incluidas las que
+ * tienen errores, pero no carga esas, debemos trabajar en la parte de la
+ * corrección de los errores y los filtros en los registros antes de hacer el
+ * import."*
+ *
+ * Hasta aquí la vista previa era un informe: decía «597 ready, 3 need fixing in
+ * the file» y te mandaba al Excel. Para tres celdas de un fichero de seiscientas
+ * filas eso es abrirlo, buscarlas, corregir, volver a exportar y volver a subir
+ * — mientras la pantalla ya sabía exactamente cuáles eran y qué les pasaba.
+ *
+ * Tres cosas, y las tres son la misma: **la pantalla sabía y no dejaba actuar.**
+ *
+ *   · un FILTRO para ver sólo las que fallan, sin recorrer seiscientas
+ *   · la CORRECCIÓN en la propia fila, en los tres campos que pueden
+ *     invalidarla
+ *   · y poder DESTILDAR lo que no quieres meter, que es la casilla que Jose
+ *     pidió el 4/11 y que el servidor acepta desde la v12.94 (`skipRowNums`)
+ *
+ * La corrección se manda al servidor y se aplica **donde se valida**, así que
+ * lo que se ve arreglado aquí es lo que se guarda. El fichero no se toca: su
+ * huella sigue siendo la suya, y el aviso de «esto ya lo subiste» sigue
+ * funcionando igual.
+ */
+var _impFixes  = {};      // rowNum → { category?, name?, qty? }
+var _impSaltar = {};      // rowNum → true (válidas que NO se quieren meter)
+var _impFiltro = 'todas';
+var _impUltimo = null;    // la última respuesta del servidor
+var _impTodas  = [];      // las filas que se pueden ver y tocar
 
+/* LA MISMA REGLA QUE EL SERVIDOR, Y LA PRUEBA LO EXIGE.
+ *
+ * Es copia de `erroresDeFilaImport_` del otro archivo, palabra por palabra,
+ * porque el navegador no puede llamar a una función de Apps Script. Dos copias
+ * de una regla es el fallo que este proyecto repite, así que
+ * `test-importar-elegir-y-corregir.js` las ejecuta LAS DOS sobre la misma tabla
+ * de casos y exige que contesten lo mismo, letra por letra.
+ *
+ * Y la de allí manda: ésta sólo adelanta la respuesta mientras se teclea, para
+ * que la fila se encienda en el acto. Lo que se guarda lo decide el servidor. */
+function _impErroresDeFila(item){
+  var errors = [];
+  if (!item.category) errors.push('Missing Category');
+  if (!item.name)     errors.push('Missing Name');
+  if (!item.qty || item.qty <= 0) {
+    errors.push(item.qtyTexto
+      ? 'Qty "' + item.qtyTexto + '" is not a number greater than 0'
+      : 'Qty is empty');
+  }
+  return errors;
+}
+
+/* La fila tal y como quedaría con lo corregido encima. NO toca la original:
+ * borrar una corrección tiene que devolver la fila a lo que traía el fichero. */
+function _impFilaCon(r){
+  var f = _impFixes[r.rowNum];
+  if (!f) return r;
+  var out = {};
+  Object.keys(r).forEach(function(k){ out[k] = r[k]; });
+  if (Object.prototype.hasOwnProperty.call(f, 'category')) out.category = String(f.category || '').trim();
+  if (Object.prototype.hasOwnProperty.call(f, 'name'))     out.name     = String(f.name || '').trim();
+  if (Object.prototype.hasOwnProperty.call(f, 'qty')){
+    var t = String(f.qty == null ? '' : f.qty).trim();
+    var n = _qty(t);
+    out.qty      = (t !== '' && isFinite(n)) ? n : null;
+    out.qtyTexto = t;
+  }
+  out.errors    = _impErroresDeFila(out);
+  out.valid     = out.errors.length === 0;
+  out.corregida = true;
+  return out;
+}
+
+function _renderImportPreview(res){
+  _impUltimo = res;
+  _impFixes  = {};
+  _impSaltar = {};
+  _impFiltro = 'todas';
+
+  var box = document.getElementById('importPreviewBox');
   _importSheetNames = res.sheetNames || [];
   _importUsedSheet  = res.usedSheet  || '';
+
+  /* Las filas que se pueden ver y tocar: la muestra del principio MÁS todas las
+   * que fallan, vengan de donde vengan en el fichero. Sin esto, una fila mala
+   * en la línea 480 de un fichero de 600 no se podía ni enseñar: la pantalla
+   * decía «3 need fixing» y no era capaz de señalar ni una. */
+  var vistas = {}, todas = [];
+  (res.rows || []).concat(res.invalidSample || []).forEach(function(r){
+    if (vistas[r.rowNum]) return;
+    vistas[r.rowNum] = 1;
+    todas.push(r);
+  });
+  todas.sort(function(a, b){ return a.rowNum - b.rowNum; });
+  _impTodas = todas;
+
+  box.innerHTML = _impCabecera(res) + '<div id="impTablaBox"></div>';
+  _impPintarTabla();
+  _wireImportSheetPicker();
+}
+
+/* Lo de arriba: el aviso de repetido, el recuento de líneas y lo que se va a
+ * crear. No depende de lo marcado, así que se pinta UNA vez: si se repintara
+ * entero, la pantalla daría un salto cada vez que se toca un filtro. */
+function _impCabecera(res){
   var sheetNote = _importSheetPickerHtml();
 
   var lineNote = res.rawLineCount
     ? '<p style="font-size:.72rem;color:var(--muted);margin-bottom:.4rem">The file itself has ' + res.rawLineCount +
       ' non-empty line(s), including the header. If that number looks too low, the file you selected doesn\'t have all your rows in it yet — re-save/export it and upload again.</p>'
     : '';
-
-  var summary = sheetNote + lineNote + '<div style="display:flex;gap:.6rem;margin:.5rem 0 .75rem;flex-wrap:wrap">' +
-    '<span class="badge badge-blue">' + res.totalRows + ' row(s) found</span>' +
-    '<span class="badge badge-green">' + res.validRows + ' ready to import</span>' +
-    (res.invalidRows ? '<span class="badge badge-red">' + res.invalidRows + ' need fixing in the file</span>' : '') +
-    (res.unitsTotal ? '<span class="badge badge-blue">' + _numMiles(res.unitsTotal) + ' units in total</span>' : '') +
-  '</div>';
 
   /* ── EL AVISO DE «ESTO YA LO SUBISTE» ───────────────────────────────────
    * Va ARRIBA DEL TODO y antes de cualquier botón, porque es lo único de esta
@@ -17561,76 +17683,196 @@ function _renderImportPreview(res){
       '<ul class="import-will-ul">' + creaHtml + '</ul>' +
     '</div>';
 
-  /* ── LAS COLUMNAS SON LAS QUE EL FICHERO TRAÍA ──────────────────────────
-   * Jose, 22/10: *"la información que me deja ver el visor no es ni la cuarta
-   * parte de los datos que ya maneja la app"*. Y lo que importaba no era que
-   * faltaran: es que unidad, obra, proveedor, PO y comentarios SE IMPORTABAN
-   * SIN VERSE. Si la columna «Supplier» del fichero estaba mal asignada, se
-   * descubría con mil filas dentro.
-   *
-   * Se dibujan sólo las que el fichero tiene. Así la tabla no enseña seis
-   * columnas vacías, y además DICE QUÉ ENTENDIÓ del fichero. */
-  var COLS = [
-    { k:'category', t:'Category' }, { k:'name',    t:'Name' },
-    { k:'qty',      t:'Qty'      }, { k:'unit',    t:'Unit' },
-    { k:'location', t:'Location' }, { k:'project', t:'Project' },
-    { k:'supplier', t:'Supplier' }, { k:'po',      t:'PO#' },
-    { k:'comments', t:'Comments' }
-  ];
+  return avisoRepe + sheetNote + lineNote + avisoCrea + '<div id="impResumen"></div>';
+}
+
+/* Las nueve columnas posibles; se dibujan sólo las que el fichero trajo.
+ *
+ * Jose, 22/10: *"la información que me deja ver el visor no es ni la cuarta
+ * parte de los datos que ya maneja la app"*. Y lo que importaba no era que
+ * faltaran: es que unidad, obra, proveedor, PO y comentarios SE IMPORTABAN SIN
+ * VERSE. Si la columna «Supplier» del fichero estaba mal asignada, se descubría
+ * con mil filas dentro. */
+var IMP_COLS = [
+  { k:'category', t:'Category' }, { k:'name',    t:'Name' },
+  { k:'qty',      t:'Qty'      }, { k:'unit',    t:'Unit' },
+  { k:'location', t:'Location' }, { k:'project', t:'Project' },
+  { k:'supplier', t:'Supplier' }, { k:'po',      t:'PO#' },
+  { k:'comments', t:'Comments' }
+];
+
+/* Los tres que se pueden corregir aquí: los que pueden invalidar una fila, y
+ * nada más. Es la misma lista que `IMPORT_CORREGIBLES` en el servidor —
+ * mandar un cuarto campo no haría nada, porque allí se ignora. */
+var IMP_CORREGIBLES = { category: 1, name: 1, qty: 1 };
+
+/* Cuántas van a entrar de verdad.
+ *
+ * El total válido sale del SERVIDOR (`validRows`), nunca de contar lo que se ve:
+ * contar la muestra fue el fallo de la v12.90, cuando el botón prometía 1052 y
+ * entraban 500. A ese número se le suman las que se acaban de arreglar aquí y
+ * se le restan las destildadas. */
+function _impEstado(){
+  var res = _impUltimo || {};
+  var arregladas = 0, rotas = 0;
+  _impTodas.forEach(function(r){
+    if (!_impFixes[r.rowNum]) return;
+    var d = _impFilaCon(r);
+    if (d.valid && !r.valid) arregladas++;
+    if (!d.valid && r.valid) rotas++;
+  });
+  var saltadas = Object.keys(_impSaltar).length;
+  return {
+    arregladas: arregladas,
+    saltadas:   saltadas,
+    entraran:   Math.max(0, (res.validRows || 0) + arregladas - rotas - saltadas)
+  };
+}
+
+function _impPintarTabla(){
+  var res = _impUltimo || {};
+  var e   = _impEstado();
+
+  var cab = document.getElementById('impResumen');
+  if (cab){
+    cab.innerHTML =
+      '<div style="display:flex;gap:.6rem;margin:.5rem 0 .6rem;flex-wrap:wrap;align-items:center">' +
+        '<span class="badge badge-blue">' + res.totalRows + ' row(s) found</span>' +
+        '<span class="badge badge-green">' + e.entraran + ' will be imported</span>' +
+        (e.arregladas ? '<span class="badge badge-green">' + e.arregladas + ' fixed here</span>' : '') +
+        (e.saltadas   ? '<span class="badge badge-yellow">' + e.saltadas + ' skipped</span>' : '') +
+        (res.invalidRows ? '<span class="badge badge-red">' + res.invalidRows + ' need fixing</span>' : '') +
+        (res.unitsTotal ? '<span class="badge badge-blue">' + _numMiles(res.unitsTotal) + ' units in the file</span>' : '') +
+      '</div>' +
+      /* LOS FILTROS. Con tres filas malas entre seiscientas, «ver sólo las que
+       * fallan» es la diferencia entre arreglarlo en un minuto y no arreglarlo.
+       * El número va EN la pestaña: si dice 0, ya no hay nada que buscar. */
+      '<div class="imp-filtros">' +
+        ['todas|All', 'listas|Ready', 'malas|Needs fixing'].map(function(f){
+          var p = f.split('|');
+          var n = p[0] === 'todas'  ? _impTodas.length
+                : p[0] === 'listas' ? _impTodas.filter(function(r){ return _impFilaCon(r).valid; }).length
+                                    : _impTodas.filter(function(r){ return !_impFilaCon(r).valid; }).length;
+          return '<button type="button" class="imp-filtro' + (_impFiltro === p[0] ? ' on' : '') +
+                 '" data-imp-filtro="' + p[0] + '">' + p[1] + ' <span>' + n + '</span></button>';
+        }).join('') +
+      '</div>';
+    cab.querySelectorAll('[data-imp-filtro]').forEach(function(b){
+      b.addEventListener('click', function(){
+        _impFiltro = b.getAttribute('data-imp-filtro');
+        _impPintarTabla();
+      });
+    });
+  }
+
   var trajo = {};
   (res.columns || ['category','name','qty','location']).forEach(function(c){ trajo[c] = 1; });
-  var cols = COLS.filter(function(c){ return trajo[c.k]; });
+  var cols = IMP_COLS.filter(function(c){ return trajo[c.k]; });
 
-  var tableRows = rows.slice(0, 100).map(function(r){
-    var rowBg = r.valid ? '' : 'background:var(--red-bg)';
-    return '<tr style="'+rowBg+'">' +
-      '<td style="padding:.3rem .5rem;color:var(--muted)">' + r.rowNum + '</td>' +
+  var lista = _impTodas.filter(function(r){
+    if (_impFiltro === 'listas') return _impFilaCon(r).valid;
+    if (_impFiltro === 'malas')  return !_impFilaCon(r).valid;
+    return true;
+  });
+
+  var cuerpo = lista.slice(0, 200).map(function(orig){
+    var r     = _impFilaCon(orig);
+    var salta = !!_impSaltar[r.rowNum];
+    var clase = !r.valid ? 'imp-row-mala' : (r.corregida ? 'imp-row-arreglada' : '');
+    return '<tr class="' + clase + (salta ? ' imp-row-salta' : '') + '">' +
+      '<td class="imp-td">' +
+        /* La casilla sólo en las que PUEDEN entrar. Una casilla en una fila
+         * inválida prometería algo que no se puede cumplir: lo que esa fila
+         * necesita es que la arreglen, no que la marquen. */
+        (r.valid
+          ? '<input type="checkbox" class="imp-pick" data-row="' + r.rowNum + '"' + (salta ? '' : ' checked') + '>'
+          : '') +
+      '</td>' +
+      '<td class="imp-td" style="color:var(--muted)">' + r.rowNum + '</td>' +
       cols.map(function(c){
         var v = r[c.k];
-        /* UNA CANTIDAD QUE NO ES NÚMERO SE ENSEÑA TAL CUAL SE ESCRIBIÓ.
-         *
-         * Desde la v14.1 el servidor manda `qty: null` cuando la celda está
-         * vacía o dice algo que no es un número —antes mandaba NaN y eso
-         * rompía la respuesta entera, ver `leerFilasDelFichero_`— y manda
-         * aparte lo que había escrito.
-         *
-         * Enseñar ese texto vale más que un guion: la persona ve «doce» en su
-         * sitio, con el error al lado, y sabe exactamente qué celda abrir en
-         * el Excel. Un «—» sólo dice que algo pasa. */
         if (c.k === 'qty') v = (r.qty == null) ? (r.qtyTexto || '') : r.qty;
-        return '<td style="padding:.3rem .5rem">' + _he(v === '' || v == null ? '—' : String(v)) + '</td>';
+        /* SE CORRIGE DONDE ESTÁ EL ERROR, y sólo ahí: en las filas que fallan y
+         * en los tres campos que pueden hacerlas fallar. Abrir las nueve
+         * columnas de seiscientas filas sería meter un editor de hojas de
+         * cálculo dentro de una vista previa. */
+        if (!orig.valid && IMP_CORREGIBLES[c.k]){
+          return '<td class="imp-td"><input class="imp-fix" data-row="' + r.rowNum +
+                 '" data-campo="' + c.k + '" value="' +
+                 _escAttr(v === null || v === undefined ? '' : String(v)) +
+                 '" placeholder="' + _he(c.t) + '"></td>';
+        }
+        return '<td class="imp-td">' + _he(v === '' || v == null ? '—' : String(v)) + '</td>';
       }).join('') +
-      '<td style="padding:.3rem .5rem;color:var(--red);font-size:.75rem">' + (r.errors.length ? _he(r.errors.join('; ')) : '') + '</td>' +
+      '<td class="imp-td imp-td-issue">' +
+        (r.errors.length ? _he(r.errors.join('; '))
+                         : (r.corregida ? '<span class="imp-ok">✓ fixed here</span>' : '')) +
+      '</td>' +
     '</tr>';
   }).join('');
 
-  /* UN SOLO NÚMERO, Y ES EL DEL FICHERO. Antes decía «the first 100 of 500»
-   * porque contaba lo que había RECIBIDO —la muestra—, no lo que hay. Tres
-   * números distintos en la misma pantalla y ninguno era el bueno. */
-  var mostradas = Math.min(100, rows.length);
-  var notaMuestra = res.totalRows > mostradas
-    ? '<p style="font-size:.72rem;color:var(--muted);margin-bottom:.6rem">Showing the first ' +
-      mostradas + ' of ' + res.totalRows + ' rows — <b>all ' + res.validRows +
-      ' valid rows are imported</b>, not just the ones shown.</p>'
+  var vacia = !lista.length
+    ? '<tr><td class="imp-td" colspan="' + (cols.length + 3) + '" style="color:var(--muted);padding:.8rem">' +
+      (_impFiltro === 'malas' ? 'Nothing left to fix.' : 'Nothing here.') + '</td></tr>'
     : '';
 
-  box.innerHTML = avisoRepe + summary + avisoCrea +
-    '<div style="max-height:280px;overflow:auto;border:1px solid var(--border);border-radius:6px;margin-bottom:.75rem">' +
-      '<table style="width:100%;border-collapse:collapse;font-size:.8rem">' +
-        '<thead><tr style="position:sticky;top:0;background:var(--bg)">' +
-          '<th style="padding:.3rem .5rem;text-align:left">Row</th>' +
-          cols.map(function(c){ return '<th style="padding:.3rem .5rem;text-align:left">' + c.t + '</th>'; }).join('') +
-          '<th style="padding:.3rem .5rem;text-align:left">Issue</th>' +
+  /* UN SOLO NÚMERO, Y ES EL DEL FICHERO. Antes decía «the first 100 of 500»
+   * porque contaba lo que había RECIBIDO —la muestra—, no lo que hay. */
+  var nota = '';
+  if (lista.length > 200){
+    nota = '<p class="imp-nota">Showing 200 of ' + lista.length + ' matching rows.</p>';
+  } else if (res.totalRows > _impTodas.length){
+    nota = '<p class="imp-nota">Showing ' + _impTodas.length + ' of ' + res.totalRows +
+      ' rows — every row that needs fixing is here, and <b>all ' + e.entraran +
+      ' rows that are ready get imported</b>, not just the ones shown.</p>';
+  }
+  /* Y cuando hay más filas malas de las que caben, se dice: corregir
+   * doscientas celdas a mano no es el camino, y fingir que sí lo es sería
+   * dejar a alguien media hora tecleando. */
+  if ((res.invalidRows || 0) > (res.invalidSample || []).length){
+    nota += '<p class="imp-nota imp-nota-avisa">This file has ' + res.invalidRows +
+      ' rows that need fixing — more than can sensibly be corrected on this screen. ' +
+      'Fix them in the file and upload it again.</p>';
+  }
+
+  document.getElementById('impTablaBox').innerHTML =
+    '<div class="imp-tabla-box">' +
+      '<table class="imp-tabla">' +
+        '<thead><tr>' +
+          '<th class="imp-th"></th><th class="imp-th">Row</th>' +
+          cols.map(function(c){ return '<th class="imp-th">' + c.t + '</th>'; }).join('') +
+          '<th class="imp-th">Issue</th>' +
         '</tr></thead>' +
-        '<tbody>' + tableRows + '</tbody>' +
+        '<tbody>' + (cuerpo || vacia) + '</tbody>' +
       '</table>' +
     '</div>' +
-    notaMuestra +
-    '<button class="btn btn-primary" id="btnCommitImport" ' + (res.validRows ? '' : 'disabled') + ' onclick="_commitImport()">' +
-      '✓ Import ' + res.validRows + ' Valid Row(s)' +
-    '</button>';
-  _wireImportSheetPicker();
+    nota +
+    '<button class="btn btn-primary" id="btnCommitImport"' + (e.entraran ? '' : ' disabled') +
+      ' onclick="_commitImport()">✓ Import ' + e.entraran + ' Row(s)</button>';
+
+  document.querySelectorAll('.imp-pick').forEach(function(cb){
+    cb.addEventListener('change', function(){
+      var n = Number(cb.getAttribute('data-row'));
+      if (cb.checked) delete _impSaltar[n]; else _impSaltar[n] = true;
+      _impPintarTabla();
+    });
+  });
+
+  /* Se repinta al SALIR de la celda, no en cada tecla: repintar mientras se
+   * escribe reconstruye la tabla debajo del cursor y se pierde el foco a la
+   * segunda letra. */
+  document.querySelectorAll('.imp-fix').forEach(function(inp){
+    inp.addEventListener('change', function(){
+      var n     = Number(inp.getAttribute('data-row'));
+      var campo = inp.getAttribute('data-campo');
+      _impFixes[n] = _impFixes[n] || {};
+      _impFixes[n][campo] = inp.value;
+      _impPintarTabla();
+    });
+    inp.addEventListener('keydown', function(ev){ if (ev.key === 'Enter') inp.blur(); });
+  });
 }
+
 
 // Mil cincuenta y dos unidades se leen de un vistazo; 1052 no tanto, y 48310
 // menos todavía. Sólo para los números que se enseñan.
@@ -17657,7 +17899,8 @@ function _commitImport(){
     showToast('Pick the file again on this screen before importing.', 'warn');
     return;
   }
-  var prometidas = _importValidTotal;
+  var e = _impEstado();
+  var prometidas = e.entraran;
   var btn = document.getElementById('btnCommitImport');
   _btnBusy(btn, 'Importing…');
   // Importar mil filas tarda, y hasta ahora la pantalla se quedaba
@@ -17682,6 +17925,7 @@ function _commitImport(){
                   'screenshot before importing again.', 'err', 14000);
       }
       _importParsedRows = []; _importValidTotal = 0;
+      _impFixes = {}; _impSaltar = {}; _impUltimo = null; _impTodas = [];
       _importFileB64 = ''; _importFileName = ''; _importFileMime = '';
       var box = document.getElementById('importPreviewBox'); if (box) box.innerHTML = '';
       var fi  = document.getElementById('importFileInput');  if (fi)  fi.value = '';
@@ -17701,11 +17945,17 @@ function _commitImport(){
       // fallar por algo del archivo, y eso hay que leerlo.
       showToast('Import failed: ' + (err.message || err).replace(/^Error:\s*/i,''), 'err', 8000);
     })
+    /* LO MARCADO Y LO CORREGIDO VIAJAN CON EL FICHERO, y el servidor lo aplica
+     * en el mismo sitio donde valida. Así lo que se vio en la vista previa y lo
+     * que se guarda no pueden separarse: no son dos lecturas del fichero, es la
+     * misma con los mismos arreglos encima. */
     .processMovement('commitImport', _h({
       fileData:    _importFileB64,
       fileName:    _importFileName,
       sheetName:   _importUsedSheet || '',
-      fingerprint: _importFingerprint
+      fingerprint: _importFingerprint,
+      skipRowNums: Object.keys(_impSaltar).map(Number),
+      fixes:       _impFixes
     }));
 }
 
@@ -32154,6 +32404,18 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '14.5',
+    titulo: 'Fix the bad rows of an import on the screen, instead of going back to Excel',
+    puntos: [
+      '<b>Three bad rows in a six-hundred-row file used to send you back to the spreadsheet.</b> The preview said <i>597 ready, 3 need fixing in the file</i> and stopped there \u2014 so you opened Excel, hunted for them, fixed them, exported again and uploaded again. All the while this screen already knew exactly which rows they were and what was wrong with each one.',
+      '<b>Now you fix them where they are.</b> The cell that is wrong is a box you type in, and the row turns green the moment it is right. Only the three fields that can make a row invalid are editable \u2014 Category, Name and Qty \u2014 because this is a preview, not a spreadsheet editor.',
+      '<b>And you can find them.</b> Three tabs above the table \u2014 <i>All</i>, <i>Ready</i>, <i>Needs fixing</i> \u2014 each with its count, so three bad rows out of six hundred take one click instead of a scroll. Rows that need fixing are all shown, wherever they sit in the file; before, one on line 480 of a 600-row file could not be displayed at all.',
+      '<b>You can also leave rows out.</b> Every row that is ready has a tick box, on by default. Untick what you do not want and the button counts down with you.',
+      'The fix never touches your file \u2014 it travels with the import and is applied where the rows are checked, so what you saw corrected is what gets saved, and the <i>you already imported this file</i> warning still recognises it.'
+    ],
+    antes:  'Three bad cells, and a round trip through Excel',
+    ahora:  'Fix them here, and the row goes green' },
+
   { ver: '14.4',
     titulo: 'One way to pick a row, everywhere \u2014 and zero now means zero on the shelf',
     puntos: [
@@ -32187,17 +32449,6 @@ var NOVEDADES = [
     ],
     antes:  'A button that cleared the ticks and turned every alert on',
     ahora:  'It says what it watches, and what that means right now' },
-
-  { ver: '14.1',
-    titulo: 'A blank quantity no longer stops a whole file from loading',
-    puntos: [
-      '<b>An import with one empty quantity cell \u2014 or one that says a word instead of a number \u2014 never finished loading.</b> Not an error, not a warning: the spinner simply ran for ever. A bigger file loaded fine seconds later, which made it look like the file was damaged.',
-      'It was not. A quantity that is not a number came back as a value that cannot be written to the format the screen is sent in, and <b>that breaks the whole reply, not just that row</b> \u2014 so neither the success nor the failure path ever ran.',
-      'Those rows now arrive as what they are: invalid, with the reason beside them. And <b>the reason quotes what was actually typed</b> \u2014 <i>Qty &ldquo;doce&rdquo; is not a number greater than 0</i> \u2014 so the cell can be found in the spreadsheet rather than hunted for.',
-      '<b>And a window you reopen is now a window that was just opened.</b> If a save was interrupted, its button stayed spinning, and closing the window and coming back showed it exactly as it was \u2014 taking away the first thing anyone tries.'
-    ],
-    antes:  'A spinner with no error, on a file that looked broken',
-    ahora:  'The row is flagged, the file loads, and the window reopens clean' },
 
 ];
 

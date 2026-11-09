@@ -334,6 +334,47 @@ pantalla no podrá elegir mal porque no escribe la barra: la pide.
 | 🟡 | `UNA-SOLA-FORMA.md` §2.2 decía que Materials renombra con un `prompt()` del navegador. **No es verdad**: usa `_showPrompt`, el diálogo propio, desde antes. Corregido en el documento | ✅ corregido |
 | 🟠 | Al pasar las ubicaciones a la barra me llevé por delante el «Select all» y escribí que un estante que se llena entre medias se archivara solo. Las dos las pilló la suite | ✅ repuesto y corregido |
 
+### ~~🟠 P-06 · Importar: elegir qué entra, y arreglar lo que no~~ ✅ **v14.5**
+
+Jose, 8/11: *"si el fichero carga y muestra todas las filas incluidas las que
+tienen errores, pero no carga esas, debemos trabajar en la parte de la
+corrección de los errores y los filtros en los registros antes de hacer el
+import."*
+
+**El defecto de fondo: la pantalla sabía y no dejaba actuar.** Conocía la fila,
+la columna y el motivo, y lo único que ofrecía era ir a arreglarlo a otro
+programa. Tres celdas malas en un fichero de seiscientas filas eran abrir el
+Excel, buscarlas, corregir, exportar y volver a subir.
+
+**Tres cosas, entregadas:**
+
+| | Qué | Por qué así |
+|---|---|---|
+| **Filtros** | All · Ready · Needs fixing, cada uno con su número | Tres filas malas entre seiscientas son un clic, no un rato buscando |
+| **Corrección en la fila** | la celda que falla es un recuadro; sólo Category, Name y Qty | Son los tres campos que pueden invalidar una fila. Abrir los nueve sería meter un editor de hojas de cálculo dentro de una vista previa |
+| **Casillas** | cada fila lista lleva la suya, marcada | Es lo que Jose pidió el 4/11; el servidor acepta `skipRowNums` desde la v12.94 y **nunca se había usado** |
+
+**Lo que hace que esto sea seguro** es dónde se aplica la corrección: en
+`leerFilasDelFichero_`, **antes de validar**. Por ahí pasan los dos caminos —la
+vista previa y el guardado— así que lo que ves arreglado es lo que se guarda, y
+una fila corregida pasa por **la misma** comprobación que una que vino bien. No
+existe un camino «ya la arreglé a mano, déjala pasar».
+
+Y el fichero no se toca: su huella sigue siendo la suya, así que el aviso de
+«esto ya lo subiste» sigue funcionando.
+
+**El riesgo que esto introduce, y cómo queda atado.** La regla de «esta fila
+vale» tiene que estar en los dos lados —el navegador la necesita para encender
+la fila mientras tecleas— y un navegador no puede llamar a Apps Script. O sea
+**dos copias de una regla**, que es el fallo que este proyecto repite. Así que
+`test-importar-elegir-y-corregir.js` ejecuta **las dos** sobre la misma tabla de
+diez casos y exige que contesten igual, letra por letra. Comprobado: cambiar
+una sola palabra en una de las dos pone la suite roja ese día.
+
+**Y una medida que corrige lo que creía:** el fichero de 600 no tiene dos filas
+malas, tiene **seis** — vacía, una palabra, negativa, cero, sin nombre y sin
+categoría. La prueba las corrige las seis y comprueba que entran las 600.
+
 ### ~~🔴 R-04 · «A cero» no significaba que el almacén estuviera vacío~~ ✅ **v14.4**
 
 Salió de la captura del 8/11: la franja decía *«1 at zero»* con **dos**
@@ -422,7 +463,7 @@ coincidir sin que nada lo obligue».
 Y como la cuenta es la misma, se mueve con lo que se toca: subir un mínimo por
 encima del stock apaga el naranja mientras se escribe.
 
-### 🟡 R-03 · El fichero de 600: lo que falta ahora es la corrección, no la carga
+### ~~🟡 R-03 · El fichero de 600: lo que falta ahora es la corrección, no la carga~~ ✅ **v14.5** (ver P-06 arriba)
 
 Jose: *"si el fichero carga y muestra todas las filas incluidas las que tienen
 errores, pero no carga esas, debemos trabajar en la parte de la corrección de

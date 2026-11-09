@@ -69,7 +69,10 @@ const ctx = {
   },
   Logger: { log(){} },
   IMPORT_ALL_HEADERS:      ['category','name','qty','unit','location','project','supplier','po','comments'],
-  IMPORT_REQUIRED_HEADERS: ['category','name','qty']
+  IMPORT_REQUIRED_HEADERS: ['category','name','qty'],
+  // P-06: los campos que una corrección puede tocar. Es una constante del
+  // módulo, y el andamio levanta funciones, no constantes.
+  IMPORT_CORREGIBLES:      ['category','name','qty']
 };
 const M = A.montar(ctx, GS, ['leerFilasDelFichero_'], { dobles: ['basicApagado_', 'excelToSheets_', 'chooseImportSheet_'] });
 
@@ -146,6 +149,93 @@ check('la vista previa pinta el texto original cuando no es un número',
 check('...y el servidor se lo manda', /qtyTexto:\s*String\(r\[col\.qty\]/.test(GS));
 check('ya no se decide pintando con isNaN, que daba `null` por bueno',
   !/c\.k === 'qty'\) v = isNaN/.test(HTML));
+
+console.log('\n═══ 5 · Y AHORA SE PUEDEN ARREGLAR SIN SALIR DE LA APP ═══\n');
+
+/* P-06. Las dos celdas malas de este fichero son exactamente el caso de Jose:
+ * una vacía y una que dice «doce», entre seiscientas buenas. Hasta la v14.5 eso
+ * mandaba a abrir el Excel, buscar dos celdas, corregir, exportar y volver a
+ * subir. Esto comprueba el camino entero, con el fichero de verdad. */
+{
+  const antes = leer('inventario-600-sucio.csv').parsed;
+  const malas = antes.filter(p => !p.valid);
+  /* SEIS, y son las seis formas de estropear una fila: vacía, una palabra,
+     negativa, cero, sin nombre y sin categoría. El fichero «sucio» hace honor
+     a su nombre — por eso es el que encontró el fallo del NaN. */
+  check('el fichero trae seis filas con error', malas.length === 6,
+    malas.map(m => ({ fila: m.rowNum, por: m.errors })));
+
+  /* Se corrigen POR NÚMERO DE FILA, que es lo que la pantalla manda, y cada
+     una por el campo que la estropea: no hay una corrección genérica. */
+  const fixes = {};
+  malas.forEach(m => {
+    const por = m.errors.join();
+    if (/Missing Name/.test(por))          fixes[m.rowNum] = { name: 'RESCUED ROW ' + m.rowNum };
+    else if (/Missing Category/.test(por)) fixes[m.rowNum] = { category: 'FLASHING' };
+    else                                   fixes[m.rowNum] = { qty: '7' };
+  });
+
+  const texto = fs.readFileSync(path.join(RAIZ, 'pruebas', 'inventario-600-sucio.csv'), 'utf8');
+  ctx.Utilities.base64Decode = () => texto;
+  const despues = M.leerFilasDelFichero_({
+    fileName: 'inventario-600-sucio.csv', fileData: texto, fixes: fixes
+  }).parsed;
+
+  check('corregidas, no queda ninguna mala',
+    despues.filter(p => !p.valid).length === 0,
+    despues.filter(p => !p.valid).map(m => ({ fila: m.rowNum, por: m.errors })));
+  check('...y entran las 600', despues.filter(p => p.valid).length === 600);
+  malas.forEach(m => {
+    const d = despues.find(p => p.rowNum === m.rowNum);
+    const esperado = fixes[m.rowNum];
+    if (esperado.qty)      check('la fila ' + m.rowNum + ' lleva la cantidad corregida', d.qty === 7, d && d.qty);
+    if (esperado.name)     check('la fila ' + m.rowNum + ' lleva el nombre corregido', d.name === esperado.name, d && d.name);
+    if (esperado.category) check('la fila ' + m.rowNum + ' lleva la categoría corregida', d.category === 'FLASHING', d && d.category);
+    check('...y la ' + m.rowNum + ' queda marcada como corregida, no disfrazada de buena',
+      d.corregida === true);
+  });
+
+  /* LAS DEMÁS NO SE TOCAN. Una corrección es de una fila; si rozara a las
+   * vecinas sería mucho peor que el problema que resuelve. */
+  const intactas = despues.filter(p => !fixes[p.rowNum]);
+  check('las otras 594 llegan igual que sin corregir nada',
+    intactas.every(d => {
+      const a = antes.find(p => p.rowNum === d.rowNum);
+      return a && a.qty === d.qty && a.name === d.name && a.category === d.category;
+    }));
+  check('...y ninguna de ellas queda marcada como corregida',
+    intactas.every(d => !d.corregida));
+}
+
+{
+  /* Y una corrección que NO arregla nada deja la fila mala, con el aviso
+   * nuevo. No hay un camino «me lo has mandado corregido, me fío». */
+  const texto = fs.readFileSync(path.join(RAIZ, 'pruebas', 'inventario-600-sucio.csv'), 'utf8');
+  ctx.Utilities.base64Decode = () => texto;
+  const malas = leer('inventario-600-sucio.csv').parsed
+    .filter(p => !p.valid && /Qty/.test(p.errors.join()));
+  ctx.Utilities.base64Decode = () => texto;
+  const fixes = {}; fixes[malas[0].rowNum] = { qty: 'siete' };
+  const r = M.leerFilasDelFichero_({
+    fileName: 'inventario-600-sucio.csv', fileData: texto, fixes: fixes
+  }).parsed.find(p => p.rowNum === malas[0].rowNum);
+  check('una corrección que no arregla nada deja la fila fuera', !r.valid, r.errors);
+  check('...y el aviso cita lo que se acaba de escribir',
+    /"siete"/.test(r.errors.join()), r.errors);
+}
+
+{
+  /* Un número de fila que no existe se ignora sin romper nada. Llega solo:
+   * la pantalla guarda las correcciones por número de fila, y cambiar de hoja
+   * en un Excel renumera. */
+  const texto = fs.readFileSync(path.join(RAIZ, 'pruebas', 'inventario-600-sucio.csv'), 'utf8');
+  ctx.Utilities.base64Decode = () => texto;
+  const r = M.leerFilasDelFichero_({
+    fileName: 'inventario-600-sucio.csv', fileData: texto, fixes: { 99999: { qty: '1' } }
+  }).parsed;
+  check('una corrección para una fila que no existe no rompe nada',
+    r.length === 600 && r.filter(p => !p.valid).length === 6);
+}
 
 if (fallos.length) {
   console.error('\nFALLÓ:\n  ' + fallos.join('\n  ') + '\n');
