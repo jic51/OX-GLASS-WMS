@@ -310,7 +310,86 @@ es exactamente para esto.
 
 ---
 
-## 📋 LO DEL 9/11 — EL ASISTENTE DE INSTALACIÓN (anotado, sin construir)
+## 📋 LO DEL 9/11 — TRES DE LA DEMO DE LA PANADERÍA
+
+### 🔴 W-05 · La etiqueta sale con una ubicación QUE NO EXISTE
+
+Jose, 9/11, con tres capturas: *"al hacer un entry y poner la locación en
+minúscula sí me permite guardar y no se cambia a mayúscula hasta que se guarda,
+lo cual no está mal, PERO AL GUARDAR Y DAR CLIC EN IMPRIMIR LA ETIQUETA, ÉSTA
+SALE CON LA LOCACIÓN EN MINÚSCULA, LA CUAL NO EXISTE. Pero al salir y volver a
+entrar sí se cambia a mayúscula, lo cual significa que el cambio se hace después
+de crear el label."*
+
+**Es el peor de los tres y no es cosmético.** Una etiqueta es un objeto físico:
+sale de la impresora, se pega en un pallet y se queda ahí. Una que dice `d3b`
+cuando el estante se llama `D3B` manda a alguien a buscar un sitio que no
+existe, y el lector de códigos tampoco lo encontrará.
+
+**La causa, medida.** Hay DOS constructores de etiquetas:
+
+| | De dónde saca los datos |
+|---|---|
+| `_labelsFromMovements(movs)` | de los movimientos **ya guardados** — normalizados |
+| `_labelsFromEntry(materiales, compartido)` | **del formulario**, `l.loc` tal como se tecleó |
+
+El aviso de «Saved ✓ · 🏷 Print labels» usa el **segundo**. O sea que la
+etiqueta se construye con lo que había en la pantalla, no con lo que se guardó
+en la hoja — y el servidor normaliza al escribir. De ahí que al recargar sí
+aparezca en mayúsculas: la recarga trae la fila de verdad.
+
+**El arreglo que propongo, y no es poner un `toUpperCase()` ahí.** El servidor
+ya devuelve las filas recién guardadas en `res.movimientos`, ya normalizadas —
+se añadió para pintarlas sin recargar. La etiqueta debe salir **de ahí**, con
+`_labelsFromMovements`, que ya existe. Eso además **borra el segundo
+constructor**, que es el verdadero defecto: dos formas de fabricar la misma
+etiqueta, una de ellas con datos sin pasar por el servidor.
+
+(Si un servidor viejo no devolviera `res.movimientos`, se cae al camino de hoy.
+Pero entonces conviene que la ubicación vaya en mayúsculas igualmente.)
+
+### 🟠 W-06 · «Qty» y «Available» ocupan mal el sitio en la salida
+
+Jose, con captura: *"¿por qué la parte de QTY y AVAILABLE están así de feas? No
+estaban así en la versión anterior. QTY no debe ser tan grande, jamás tendremos
+un número de más de 2 cifras, máximo 3. Entonces la cantidad no debe ocupar
+mucho espacio y se debe ver bien el número verde, que es el número total en ese
+lugar."*
+
+Tiene razón en el reparto: la caja de la cantidad se lleva el ancho de un campo
+de texto para tres dígitos, mientras que **lo que hay disponible** —el dato que
+de verdad se consulta antes de teclear— queda apretado contra el borde, en dos
+líneas (`14` / `avail`).
+
+**Lo que haría:** la caja de cantidad al ancho de tres cifras más las flechas, y
+el disponible en una sola línea con sitio para leerse. Es una redistribución de
+anchos, no una pantalla nueva.
+
+### 🟡 W-07 · El nombre de la empresa y el de la persona, en minúsculas
+
+Jose: *"en el setup, nombre de la empresa y nombre del usuario deben hacerse las
+primeras con mayúscula aunque el usuario las escriba con minúscula, o
+simplemente todo con mayúsculas, pero no se vería bien. ¿Qué piensas?"*
+
+**Mi opinión: la primera de cada palabra, no todo en mayúsculas.** Y el motivo
+no es el gusto:
+
+- `cupcake empire` es una **marca**, y una marca en la cabecera de la app, en la
+  pestaña del navegador y en la firma de los correos se lee como la escribe su
+  dueño. `CUPCAKE EMPIRE` grita, y en un correo a un cliente suyo parece un
+  error nuestro.
+- **El resto de la app está en mayúsculas por un motivo distinto**: categorías,
+  ubicaciones y materiales son **claves** — se comparan entre sí, y `Flashing`
+  y `FLASHING` tienen que ser la misma cosa. Un nombre propio no se compara con
+  nada.
+
+Así que `cupcake empire` → **Cupcake Empire**, `jhon` → **Jhon**. Y con una
+excepción que hay que escribir: **no tocar lo que ya tenga mayúsculas dentro**
+(`McDonald`, `OX Glass`, `3M`), porque «arreglarlos» los estropea.
+
+---
+
+## 📋 LO DEL 9/11 — EL ASISTENTE DE INSTALACIÓN
 
 **Es la primera pantalla que ve un cliente nuevo**, y es la que va a ver la
 panadería. Eso la pone por delante de casi todo lo demás de esta lista: un
