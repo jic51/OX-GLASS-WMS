@@ -1,5 +1,38 @@
 # Revisión completa — 10 de noviembre de 2026
 
+> ## ⚠️ CORRECCIONES A ESTA REVISIÓN — 10/11, al construirla
+>
+> Al ir a arreglar lo de la lista, **tres cosas que escribí aquí resultaron ser
+> falsas**. Van arriba y no escondidas al final, porque una de ellas la puse yo
+> en el puesto 3 de la cola:
+>
+> **1 · H-15 NO EXISTE.** Dije que *"el inicio de sesión descansa en una cadena
+> hecha con `Math.random()`"*. No es verdad. El testigo es
+> `base64(correo|caducidad).HMAC-SHA256(…, secreto)`, el secreto son **dos
+> `Utilities.getUuid()`** y la verificación comprueba firma **y** caducidad. El
+> único `Math.random()` está en el id de un movimiento, donde sirve para evitar
+> colisiones, no es secreto, y hace falta una sesión válida para usar un id.
+> **Lo retiré de la cola antes de gastar tiempo en él.** El hallazgo H-15 de
+> `HALLAZGOS.md` estaba mal redactado desde el principio.
+>
+> **2 · C-03 YA ESTABA CONSTRUIDO.** Dije que `runDataQualityScan` *"no revisa
+> aritmética"*. Sí la revisa: tiene una familia entera de hallazgos
+> `kind: 'negative'` que calcula el neto de cada material desde el archivo, deja
+> fuera TRANSFER y ADJUST con su motivo escrito, y **no ofrece arreglo
+> automático a propósito** porque no hay respuesta segura. Y el navegador lo
+> pinta. Estaba bien hecho y no lo vi.
+>
+> **3 · O-03 eran 14, no 25.** Mi detector de CSS sin usar contaba como muertas
+> las clases que el código **construye al vuelo** (`'dq-kind dq-' + f.kind`,
+> `role-badge-` + rol, `inc-status-` + estado). Once de las veinticinco estaban
+> vivas. Las catorce reales sí lo eran — y tres de ellas (`cfg-item-input`,
+> `loc-arch-btn`, `loc-del-btn`) **las dejé yo** en P-02 y en el asistente.
+>
+> Lo que sigue en pie de la revisión: C-01, C-02, D-01, D-03, O-01, O-02 y la
+> lista de seguridad.
+
+
+
 Pedido por Jose: *"haz una revisión de toda la app: vulnerabilidades, problemas
 en los cálculos, manejo de datos, trazabilidad. También quiero que empecemos a
 trabajar en optimización: en tiempo, en código, en recursos. Y haz una lista."*

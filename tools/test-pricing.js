@@ -239,10 +239,15 @@ console.log('\nScenario B: a second, later ENTRY at a different price blends int
   run(sandbox, ss, archive, [{ moveType: 'ENTRY', category: 'HARDWARE', name: 'BOLT', qty: 100, unit: 'pcs', destLoc: 'A1A', unitCost: 5, forceSubmit: true }]);
   run(sandbox, ss, archive, [{ moveType: 'ENTRY', category: 'HARDWARE', name: 'BOLT', qty: 50,  unit: 'pcs', destLoc: 'A1A', unitCost: 7, forceSubmit: true }]);
   const row = lastCostRow(archive);
-  // (100*5 + 50*7) / 150 = 850/150 = 5.6666... -> 5.67
+  // (100*5 + 50*7) / 150 = 850/150 = 5.666666...
+  //
+  // STORED AT SIX DECIMALS SINCE v14.7 (C-01), not two. See scenario G below
+  // for why: this value feeds the NEXT blend, so rounding it to the cent made
+  // the error compound entry after entry. What is shown on the Prices screen
+  // and stamped on a movement is still cents.
   check('the SECOND row keeps the price actually typed, not the blend', row.unitCost, 7);
   check('total cost uses the typed price too', row.totalCost, 350);
-  check('avg cost blends by quantity (100@5 + 50@7)/150 = 5.67', avgCostFor(sandbox, ss, 'HARDWARE', 'BOLT'), 5.67);
+  check('avg cost blends by quantity (100@5 + 50@7)/150', avgCostFor(sandbox, ss, 'HARDWARE', 'BOLT'), 5.666667);
 }
 
 console.log('\nScenario C: cost left BLANK on an ENTRY changes nothing — cost is opt-in');
@@ -291,13 +296,34 @@ console.log('\nScenario F: one material split across two locations in the SAME e
   check('one purchase split across racks still averages to its own price', avgCostFor(sandbox, ss, 'SCREEN', 'MESH'), 10);
 }
 
-console.log('\nScenario G: the blend rounds to the cent — no drifting fractions of a penny');
+// ── Scenario G: THIS ONE WAS BACKWARDS, AND ITS OWN TITLE SAID SO ───────────
+//
+// It used to read "the blend rounds to the cent — no drifting fractions of a
+// penny", and it asserted 4.50 where the true blend is 4.499.
+//
+// The title had it exactly inverted. Rounding the stored average to the cent is
+// what CAUSED the drift: that rounded value went into the next blend, and the
+// error compounded, always in the same direction. Measured on 10/11 over 1.000
+// entries of 7 units: the stored average came out $0.0290 per unit below the
+// true one — $202.72 across 7.000 units.
+//
+// So the assertion flips, and the reason is written down: what must not drift
+// is the MONEY, and the way to stop it drifting is to keep the working number
+// precise and round only what a person reads.
+console.log('\nScenario G: the stored blend keeps its precision — the cent is for display');
 {
   const { sandbox, ss, archive } = buildSandbox();
   run(sandbox, ss, archive, [{ moveType: 'ENTRY', category: 'MISC', name: 'WIDGET', qty: 7, unit: 'pcs', destLoc: 'A1A', unitCost: 5.00, forceSubmit: true }]);
   run(sandbox, ss, archive, [{ moveType: 'ENTRY', category: 'MISC', name: 'WIDGET', qty: 3, unit: 'pcs', destLoc: 'A1A', unitCost: 3.33, forceSubmit: true }]);
-  // (7*5 + 3*3.33) / 10 = 44.99 / 10 = 4.499 -> rounds to 4.50
-  check('rounds to the nearest cent, not a long float', avgCostFor(sandbox, ss, 'MISC', 'WIDGET'), 4.5);
+  // (7*5 + 3*3.33) / 10 = 44.99 / 10 = 4.499 exactly — and 4.499 is what is kept.
+  check('keeps the exact blend, not a value already rounded to the cent',
+    avgCostFor(sandbox, ss, 'MISC', 'WIDGET'), 4.499);
+  // And a third entry blends from 4.499, not from 4.50. That difference is the
+  // whole point: it is where the compounding used to start.
+  run(sandbox, ss, archive, [{ moveType: 'ENTRY', category: 'MISC', name: 'WIDGET', qty: 10, unit: 'pcs', destLoc: 'A1A', unitCost: 4.00, forceSubmit: true }]);
+  // (10*4.499 + 10*4) / 20 = 4.2495
+  check('and the NEXT blend starts from the precise value, not the rounded one',
+    avgCostFor(sandbox, ss, 'MISC', 'WIDGET'), 4.2495);
 }
 
 console.log('\nScenario H: the CONFIG write-back updates ONE row per material, never appends a duplicate');

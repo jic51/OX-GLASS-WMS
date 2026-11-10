@@ -312,6 +312,16 @@ es exactamente para esto.
 
 ## 📋 LO DEL 10/11 — REVISIÓN COMPLETA
 
+> **Tres correcciones a mi propia revisión, hechas al ir a construirla:**
+> **H-15 no existe** (el testigo es HMAC-SHA256 con dos UUID, no `Math.random()`
+> — retirado de la cola antes de gastar tiempo); **C-03 ya estaba construido**
+> (`runDataQualityScan` sí revisa aritmética, con la familia `negative`); y
+> **O-03 eran 14 clases muertas, no 25** (once las construye el código al
+> vuelo). Está explicado en `REVISION-10-11.md`.
+>
+> **Entregado en la v14.7:** ~~C-01~~, ~~C-02~~, ~~D-01~~ y las 14 reglas de CSS
+> muertas. **Sigue abierto:** D-03, O-01, O-02 y la lista de seguridad.
+
 Está entera en **`docs/REVISION-10-11.md`**, con los números medidos. Aquí sólo
 lo que entra en la cola:
 

@@ -103,6 +103,37 @@
        de ser una foto a ser una ventana, y la p&aacute;gina adelgaz&oacute;
        300&nbsp;KB por la red.</p>
 
+    <!-- C-01: EL ERROR QUE NO SE COMPENSA. -->
+    <div class="entry" id="v14-7">
+      <span class="ver">v14.7</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>El coste medio deja de desviarse</h3>
+      <p><b>La media de coste se desviaba unos c&eacute;ntimos, y el desv&iacute;o se
+         acumulaba.</b> Cada vez que entraba material, la media se recalculaba y <i>se redondeaba a
+         c&eacute;ntimos</i> &mdash;y ese valor redondeado entraba en el c&aacute;lculo
+         siguiente&mdash;. El error no se compensaba: se iba siempre hacia el mismo lado.</p>
+      <p>Medido sobre 1.000 entradas de 7 unidades: la media guardada sal&iacute;a <b>$0,029 por
+         unidad por debajo</b> de la real, que sobre 7.000 unidades son <b>$202,72</b> de valor de
+         inventario que nunca estuvo ah&iacute;. Eso no se nota hasta que alguien cuadra el
+         inventario con la contabilidad, y para entonces es un misterio en vez de una l&iacute;nea
+         de c&oacute;digo.</p>
+      <p>La media se guarda ahora con seis decimales. Lo que se ve en la pantalla de Prices, y lo
+         que se estampa en un movimiento, siguen siendo c&eacute;ntimos: la precisi&oacute;n de
+         m&aacute;s vive s&oacute;lo en el n&uacute;mero que alimenta el c&aacute;lculo siguiente,
+         que es donde importaba. Y el coste de una salida se calcula con la media precisa
+         <i>antes</i> de redondear, as&iacute; que una l&iacute;nea de 1.000 unidades ya no se va un
+         d&oacute;lar a favor de la empresa.</p>
+      <p><b>Un inventario que no puede ser cierto ya no se esconde detr&aacute;s de un cero.</b> Si
+         ha salido m&aacute;s de algo de lo que entr&oacute; nunca &mdash;un movimiento mal metido,
+         un borrado a medias, una importaci&oacute;n que entr&oacute; dos veces&mdash; la pantalla
+         mostraba 0 y no dec&iacute;a nada. La app ya se hab&iacute;a dado cuenta; escrib&iacute;a la
+         prueba en un registro que nadie abre. Ahora lo dice en el Error Log, nombrando los
+         materiales, una vez al d&iacute;a y no en cada inicio de sesi&oacute;n.</p>
+      <p><b>Y la media deja rastro.</b> Cada entrada que la cambia apunta cu&aacute;nto val&iacute;a
+         y cu&aacute;nto pas&oacute; a valer, as&iacute; que una cifra que el mes que viene parezca
+         rara se puede seguir en vez de s&oacute;lo recalcularla desde cero.</p>
+    </div>
+
     <!-- W-01/02/03: EL ASISTENTE ES LA PRIMERA PANTALLA QUE VE UN CLIENTE. -->
     <div class="entry" id="v14-6">
       <span class="ver">v14.6</span>
