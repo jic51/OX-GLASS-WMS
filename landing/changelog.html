@@ -101,6 +101,27 @@
        window instead of a photograph, and the page itself got 300&nbsp;KB lighter over
        the wire.</p>
 
+    <!-- NADA SE MUEVE. Un botón que cambia de sitio porque el número creció
+         es la app diciendo que no tiene un plan para su propio espacio. -->
+    <div class="entry" id="v14-8">
+      <span class="ver">v14.8</span>
+      <span class="tag fix">Fix</span>
+      <h3>Nothing jumps when you tick a box</h3>
+      <p><b>The action bar rearranged itself as you selected things.</b> Going from 9 ticked to 10
+         &mdash; one digit to two &mdash; was enough to widen a button and shove everything beside
+         it. Every count now sits in a slot wide enough for two digits from the start, with all
+         digits the same width, so the number changes and nothing else does.</p>
+      <p><b>In Projects it was worse than untidy.</b> Ticking one made the rename box take the whole
+         bar, pushing the buttons onto a second line on top of the list. The bar reserved a minimum
+         height &mdash; which stopped it shrinking, but nothing stopped it growing. Measured: 44
+         pixels to 95.</p>
+      <p>The bar is now a fixed height with fixed slots. Rename and Merge are the same width because
+         they share one place; the buttons are anchored to the right edge, so what changes in the
+         middle no longer moves them. From nothing selected to twelve, <b>not one pixel moves</b>.</p>
+      <p>And that is measured rather than assumed: a test opens the bar with 0, 1, 2 &hellip; 12
+         selected and compares the position and size of every piece.</p>
+    </div>
+
     <!-- C-01: EL ERROR QUE NO SE COMPENSA. Un redondeo que entra en el
          cálculo siguiente no es un redondeo: es un sesgo. -->
     <div class="entry" id="v14-7">

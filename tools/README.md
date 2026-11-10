@@ -128,6 +128,7 @@ node tools/test-aviso-de-stock-bajo.js
 node tools/test-importar-elegir-y-corregir.js
 node tools/test-asistente-una-lista.js
 node tools/test-el-dinero-no-se-desvia.js
+node tools/test-nada-se-mueve.js
 node tools/test-url-de-la-app.js
 node tools/test-no-saltar-al-cargar.js
 node tools/test-config-escritura.js
