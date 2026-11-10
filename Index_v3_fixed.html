@@ -1497,8 +1497,6 @@
     .adj-delta.same{background:#E2E8F0;color:var(--steel)}
     .adj-delta.idle{background:#F1F5F9;color:var(--muted);font-weight:500}
     /* The header strip above the rows, same in all three. */
-    .loc-box-hdr{display:flex;gap:var(--sp-2);margin-bottom:var(--sp-1)}
-    .loc-box-hdr span{font-size:.68rem;font-weight:600;color:var(--muted);text-transform:uppercase}
     /* Freezes a modal while its save is in flight — blocks EVERY click anywhere in
        the overlay (header, X, click-outside-to-close, a second click on Save) and
        darkens the backdrop so the user knows to wait. The modal itself stays fully
@@ -1825,9 +1823,6 @@
     .lg-body li{margin:var(--sp-1) 0}
     .lg-body hr{border:none;border-top:1px solid var(--border);margin:var(--sp-6) 0}
     .lg-body a{color:var(--accent);word-break:break-word}
-    .lg-table{width:100%;border-collapse:collapse;margin:var(--sp-4) 0;font-size:var(--fs-md)}
-    .lg-table th,.lg-table td{border:1px solid var(--border);padding:var(--pad-celda-sm);text-align:left;vertical-align:top}
-    .lg-table th{background:var(--bg);font-weight:700}
     @media(max-width:640px){
       /* Jose: 3/4 of the screen, not nearly the whole thing (v9.89) — the
          bell panel and Rack Drawer went to 2/3 in v9.86; this one is
@@ -1899,7 +1894,6 @@
     .media-preview-body img{max-width:100%;max-height:80vh;object-fit:contain}
     .media-preview-body iframe,.media-preview-body embed{width:100%;height:80vh;border:none}
     /* ── RACK PHOTO GALLERY ── */
-    .rack-photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:var(--sp-5)}
     /* Compact rack photo chips — same footprint and rhythm as .doc-card, so the
        two columns of the expanded stock row read as one panel instead of a big
        4:3 photo box on the left and small chips on the right. */
@@ -2286,7 +2280,6 @@
     .cfg-item{display:flex;align-items:center;gap:var(--sp-3);padding:.45rem var(--sp-3);border-radius:6px;font-size:.85rem;border-bottom:1px solid var(--border)}
     .cfg-item:last-child{border-bottom:none}
     .cfg-item-name{flex:1;font-weight:500}
-    .cfg-item-input{flex:1;padding:.3rem var(--sp-3);border:1px solid var(--accent);border-radius:5px;font-size:.85rem;font-family:inherit}
     .cfg-btn{background:none;border:1px solid var(--border);border-radius:var(--r-btn);padding:2px 8px;font-size:var(--fs-sm);cursor:pointer;transition:.15s;white-space:nowrap}
     .cfg-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
     .cfg-btn-danger{border-color:var(--red);color:var(--red)}
@@ -3077,7 +3070,6 @@
     .submit-hint{flex:1;min-width:160px;font-size:.75rem;color:var(--orange);font-weight:600;text-align:left}
     .btn:disabled{opacity:.5;cursor:not-allowed}
     /* Settings → Company */
-    .co-form{max-width:460px}
     /* La pestaña Company pasó de una .co-form suelta a dos áreas con recuadro
        (v11.46). Conservan el ancho legible de la forma original — un campo de
        texto de 900px de ancho no se lee mejor, sólo se ve descuidado — y el
@@ -3361,11 +3353,8 @@
     .loc-group-archived .loc-group-hdr{background:var(--bg)}
     .loc-group-archived .loc-item{background:transparent;border-style:dashed;color:var(--muted)}
     .loc-arch-note{font-size:.66rem;color:var(--muted);margin-left:var(--sp-2)}
-    .loc-arch-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:var(--fs-base);padding:0 0 0 .2rem;line-height:1}
-    .loc-arch-btn:hover{color:var(--accent)}
     /* The bin is destructive, so it does not share the archive button's accent
        hover — a row with both must not read as two shades of the same action. */
-    .loc-del-btn:hover{color:var(--red)}
     .loc-pick{margin-right:.15rem;cursor:pointer}
     .loc-savebar{display:none;gap:var(--sp-3);align-items:center;flex-wrap:wrap;position:sticky;bottom:0;background:var(--navy);color:#fff;border-radius:8px;padding:.55rem var(--sp-5);margin-top:var(--sp-5);font-size:.8rem}
     .loc-savebar.show{display:flex}
@@ -3483,15 +3472,7 @@
     .btn-gallery{background:#fff;color:var(--navy);border:1.5px solid var(--border);border-radius:var(--r-btn);padding:.38rem var(--sp-5);font-size:var(--fs-md);font-weight:600;cursor:pointer;display:flex;align-items:center;gap:.3rem;flex-shrink:0;min-height:var(--h-btn-sm)}
     .btn-gallery:hover{border-color:var(--accent);color:var(--accent)}
     .doc-photo-count{font-size:.72rem;color:var(--muted);font-weight:500;margin-left:auto}
-    .doc-processing{font-size:.75rem;color:var(--purple);font-style:italic}
     /* ── AI Extract review panel ── */
-    .ai-review-panel{background:var(--purple-bg);border:1px solid #C4B5FD;border-radius:8px;padding:var(--sp-5) var(--sp-6);margin-bottom:var(--sp-5)}
-    .ai-review-panel h4{font-size:.8rem;font-weight:700;color:var(--purple);margin-bottom:var(--sp-3)}
-    .ai-field-row{display:flex;align-items:center;gap:var(--sp-3);padding:.2rem 0;font-size:.8rem}
-    .ai-field-row label{width:90px;color:var(--muted);font-size:.73rem;flex-shrink:0}
-    .ai-field-row input,.ai-field-row select{flex:1;padding:var(--sp-1) var(--sp-3);border:1px solid #C4B5FD;border-radius:4px;font-size:.8rem;background:#fff}
-    .ai-accept-btn{background:var(--purple);color:#fff;border:none;border-radius:var(--r-btn);padding:.35rem var(--sp-5);font-size:var(--fs-md);font-weight:600;cursor:pointer;margin-top:var(--sp-3)}
-    .ai-accept-btn:hover{filter:brightness(.9)}
     /* ── DARK MODE ── */
     [data-theme="dark"]{
       --bg:#0F172A;--card:#1E293B;--text:#E2E8F0;--muted:#94A3B8;
@@ -3522,7 +3503,6 @@
     [data-theme="dark"] .badge-purple{background:var(--purple-bg);color:var(--purple)}
     [data-theme="dark"] .badge-slate{background:#334155;color:#CBD5E1}
     [data-theme="dark"] .system-footer{background:#020617;border-color:var(--border)}
-    [data-theme="dark"] .col-toggle-bar{background:#0F172A}
     [data-theme="dark"] .expandable-row:hover{background:#243044 !important}
     [data-theme="dark"] .details-row{background:#1a2640}
     [data-theme="dark"] .stock-detail-row{background:#1a2640}
@@ -3538,8 +3518,6 @@
     [data-theme="dark"] .day-card.today{background:rgba(59,130,246,.12);border-color:var(--accent)}
     [data-theme="dark"] .similar-hint{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.3)}
     [data-theme="dark"] .cfg-add-row input,[data-theme="dark"] .cfg-item-input,[data-theme="dark"] .mat-search-row input{background:#0F172A;color:var(--text);border-color:var(--border)}
-    [data-theme="dark"] .ai-review-panel{background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.3)}
-    [data-theme="dark"] .ai-field-row input,[data-theme="dark"] .ai-field-row select{background:#0F172A;color:var(--text)}
     /* Dark mode toggle button */
     /* ── TOAST NOTIFICATIONS ── */
     #toastContainer{position:fixed;top:1.25rem;left:50%;transform:translateX(-50%);z-index:var(--z-toast);display:flex;flex-direction:column;align-items:center;gap:var(--sp-3);pointer-events:none}
@@ -6017,7 +5995,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '14.6';
+var APP_VERSION = '14.7';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -6029,7 +6007,7 @@ var APP_VERSION = '14.6';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '3325612c';
+var APP_BUILD = 'f7230cc0';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -20263,7 +20241,16 @@ function _preciosDeLaCategoria(cat){
       name: s.name,
       unit: s.unit || 'UNIT',
       enMano: Number(s.warehouseQty) || 0,
-      precio: (c && Number(c.avg)) ? Number(c.avg) : null
+      /* EN CÉNTIMOS PARA LA PANTALLA (C-01, v14.7). Desde esa versión la
+       * media se GUARDA con seis decimales, para que el redondeo no se
+       * acumule entrada tras entrada. Pero esto va a un recuadro donde alguien
+       * escribe un precio: enseñar «5.666667» sería ruido, y al guardarlo
+       * convertiría el número preciso en uno redondeado sin que nadie lo
+       * pidiera.
+       *
+       * El valor del inventario y la alerta de cambio de precio SÍ usan el
+       * número preciso, porque ahí nadie lo teclea y la precisión suma. */
+      precio: (c && Number(c.avg)) ? Math.round(Number(c.avg) * 100) / 100 : null
     });
   });
   return out.sort(function(a, b){ return a.name.localeCompare(b.name); });
@@ -32531,6 +32518,18 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '14.7',
+    titulo: 'The average cost stops drifting, and stock that cannot be true now says so',
+    puntos: [
+      '<b>The running average cost was drifting a few cents, and the drift compounded.</b> Each time material came in, the average was recalculated and <i>rounded to the cent</i> — and that rounded figure went into the next calculation. The error never cancelled out; it leaned the same way every time. Measured over 1,000 entries: the average came out <b>$0.029 per unit low</b>, which on 7,000 units is <b>$202.72</b> of inventory value that was never there.',
+      'The average is now kept to six decimals. What you see on the Prices screen, and what is stamped on a movement, is still cents — the extra precision is only in the number that feeds the next calculation, which is where it mattered.',
+      'And the cost of an outgoing movement is now worked out from the precise average before rounding, so a line of 1,000 units is no longer a dollar off in the company\u2019s favour.',
+      '<b>Stock that cannot be true no longer hides behind a zero.</b> If more of something has left than ever arrived — a movement entered wrongly, a half-finished delete, an import that went in twice — the screen showed 0 and said nothing. The app had already noticed; it just wrote the evidence somewhere nobody looks. It now reports it in the Error Log, naming the materials, once a day rather than on every single sign-in.',
+      '<b>And the average now leaves a trail.</b> Every entry that changes it records what it was and what it became, so a figure that looks wrong next month can be traced instead of only recalculated from scratch.'
+    ],
+    antes:  'A few cents off, compounding quietly, on every purchase',
+    ahora:  'The number that feeds the next sum keeps its precision' },
+
   { ver: '14.6',
     titulo: 'Setup: one list you type straight into, and a repeated name that says so',
     puntos: [
@@ -32567,16 +32566,6 @@ var NOVEDADES = [
     ],
     antes:  'Five ways to pick a row, and a mode you could not see',
     ahora:  'Tick it, and the bar tells you what you can do' },
-
-  { ver: '14.3',
-    titulo: 'The low-stock window points at the materials, and Save buttons work again',
-    puntos: [
-      '<b>The summary line counted; now the materials are marked.</b> It said <i>3 at zero · 7 below minimum</i> and stopped there, so turning that 3 into three names meant reading the warehouse figure on card after card. The cards that line is counting are now <b>red for at zero and orange for below minimum</b> — the same two colours the line itself uses, set by the same count, so they cannot disagree. Raise a minimum above the stock and the orange goes out as you type.',
-      '<b>And the Save buttons in Move, Edit movement and Attach are fixed.</b> For one version they did nothing visible: no spinner, no greying out, just a button that sat there while the save went ahead behind it.',
-      'That was ours, and it came from the fix before it. Reopening a window now clears a button left spinning by an interrupted save — but <i>opening</i> was being read as <i>being open</i>, and pressing Save changes the window too. So the button was reset the instant it started. It now tells the two apart, and both behave: the spinner stays while it saves, and a reopened window still comes back clean.'
-    ],
-    antes:  'A count you had to match against the shelves by hand',
-    ahora:  'The list is marked in the colours the count uses' },
 
 ];
 

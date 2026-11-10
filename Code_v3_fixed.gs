@@ -128,7 +128,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '14.6';
+var APP_VERSION = '14.7';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -140,7 +140,7 @@ var APP_VERSION = '14.6';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '3325612c';
+var APP_BUILD = 'f7230cc0';
 
 // ═══ ACOPIO BASIC — EL INTERRUPTOR DE LA VERSIÓN GRATIS ══════════════════════
 //
@@ -3236,6 +3236,38 @@ function round2_(n) {
   return Math.round((Number(n) || 0) * 100) / 100;
 }
 
+/* ═══ C-01 · LA MEDIA DE COSTE NO SE REDONDEA EN CADA PASO ══════════════════
+ *
+ * Medido el 10/11, simulando 1.000 entradas de 7 unidades a precios entre 3,00
+ * y 5,00:
+ *
+ *     media con redondeo por paso : 3.940000      ← lo que hacía la app
+ *     media exacta                : 3.968960
+ *     desvío                      : -$202,72 sobre 7.000 unidades
+ *
+ * La causa: `newAvg` se redondeaba a céntimos y **ese valor redondeado entraba
+ * en el cálculo siguiente**. El error no se quedaba quieto: se acumulaba, una
+ * entrada tras otra, siempre en la misma dirección.
+ *
+ * No era grave y por eso había que arreglarlo: nadie lo nota hasta que alguien
+ * cuadra el inventario con la contabilidad, y entonces son doscientos dólares
+ * que no se explican.
+ *
+ * ── POR QUÉ 6 DECIMALES Y NO «SIN REDONDEAR DEL TODO» ─────────────────────
+ *
+ * Porque el número viaja a una celda de Google Sheets y vuelve. Un flotante
+ * largo se guarda y se lee con los decimales que le quepan, y dos lecturas
+ * del mismo número podrían no ser iguales. Seis decimales entran enteros en
+ * una celda, y el error que dejan es de una millonésima por unidad: sobre
+ * 10.000 unidades, medio céntimo. Deja de acumularse de forma medible.
+ *
+ * El dinero que se ESTAMPA en una fila sigue en céntimos (`round2_`): eso es
+ * un importe, y un importe tiene dos decimales. Lo que gana precisión es la
+ * media que se guarda para el cálculo siguiente. */
+function round6_(n) {
+  return Math.round((Number(n) || 0) * 1e6) / 1e6;
+}
+
 function getMaterialId(cat, name) {
   return normalizeString(cat) + '|||' + normalizeString(name);
 }
@@ -3346,10 +3378,24 @@ function getInitialData(sessionToken) {
     if (refreshPending_()) derivadasAlDia = refreshDerivedSheetsSafely_(ss);
 
     var stock = derivadasAlDia ? buildStockFromDerivedSheets_(ss) : null;
+    var imposibles;
     if (stock) {
-      applyReservationsAndFinalize_(stock, locksMap);
+      imposibles = applyReservationsAndFinalize_(stock, locksMap);
     } else {
       stock = calculateStock(movements, locksMap);
+      imposibles = stock.__imposibles || [];
+    }
+    /* C-02 · UN INVENTARIO IMPOSIBLE SE DICE DONDE ALGUIEN MIRA.
+     *
+     * Hasta hoy acababa en `Logger.log`, que nadie abre. Ahora va al ERROR_LOG,
+     * que se ve en Ajustes, y de ahí sale el aviso al administrador.
+     *
+     * UNA VEZ AL DÍA Y NO EN CADA INICIO DE SESIÓN: esto corre cada vez que
+     * alguien abre la app, y cinco personas abriendo cuatro veces al día
+     * llenarían el registro con veinte copias del mismo problema. Un registro
+     * que se repite es un registro que se deja de leer. */
+    try { avisarDeStockImposible_(ss, imposibles, auth); } catch (eImp) {
+      Logger.log('avisarDeStockImposible_: ' + eImp.message);
     }
 
     // Register this user's presence and return active users list
@@ -3789,7 +3835,13 @@ function calculateStock(movements, locksMap) {
     }
   }
 
-  applyReservationsAndFinalize_(stock, locksMap);
+  /* La lista va colgada del propio stock, con un nombre que no puede chocar
+   * con un material: `calculateStock` devuelve un mapa de materiales y
+   * cambiarle la forma obligaría a tocar a todos sus llamantes. */
+  Object.defineProperty(stock, '__imposibles', {
+    value: applyReservationsAndFinalize_(stock, locksMap),
+    enumerable: false      // para que no aparezca al recorrer los materiales
+  });
   return stock;
 }
 
@@ -3852,6 +3904,9 @@ function reservedQtyFromRacks_(locksMap, matId, locs) {
 //
 // `locksMap` es el de getActiveLocksMap_: 'MATID|||ESTANTE' → {…}.
 function applyReservationsAndFinalize_(stock, locksMap) {
+  /* Los materiales cuyos números no pueden ser ciertos. Se devuelve, no se
+   * escribe: ver la nota de abajo. */
+  var imposibles = [];
 
   // Finalize every SKU
   for (var k in stock) {
@@ -3864,6 +3919,23 @@ function applyReservationsAndFinalize_(stock, locksMap) {
         delete item.warehouseLocs[loc];
       }
     }
+    /* ── C-02 · EL CERO YA NO SE TRAGA LA PRUEBA ─────────────────────────
+     *
+     * Estas tres líneas tapaban con un cero un inventario IMPOSIBLE: más
+     * salidas que entradas. Eso no pasa por casualidad — pasa cuando un
+     * movimiento se metió mal, un borrado se quedó a medias o una importación
+     * entró dos veces. O sea que es justo la señal de que algo se rompió.
+     *
+     * El cero se queda (enseñar «-14 en el estante» no ayuda a nadie), pero
+     * ahora se APUNTA antes de taparlo. Hasta hoy el negativo por estantería
+     * sí se apuntaba, en `_errors`… y acababa en `Logger.log`, que es el
+     * registro de ejecuciones de Apps Script: nadie lo abre, y menos un
+     * cliente, que según la regla de este proyecto no debe ir al Sheet jamás.
+     * Y estos tres totales ni siquiera eso: se perdían sin rastro. */
+    if (item.warehouseQty < 0) item._errors.push('NEG_TOTAL_WAREHOUSE=' + item.warehouseQty);
+    if (item.siteQty      < 0) item._errors.push('NEG_TOTAL_SITE='      + item.siteQty);
+    if ((item.wastedQty || 0) < 0) item._errors.push('NEG_TOTAL_WASTED=' + item.wastedQty);
+
     item.warehouseQty = Math.max(0, item.warehouseQty);
     item.siteQty      = Math.max(0, item.siteQty);
     item.wastedQty     = Math.max(0, item.wastedQty || 0);
@@ -3877,8 +3949,18 @@ function applyReservationsAndFinalize_(stock, locksMap) {
 
     if (item._errors && item._errors.length) {
       Logger.log('STOCK_ERR [' + k + ']: ' + item._errors.join(' | '));
+      /* Y se junta para que quien llamó pueda decirlo donde alguien mire. La
+       * función no escribe en ERROR_LOG ella misma a propósito: la llaman tres
+       * caminos distintos, uno de ellos en cada inicio de sesión, y escribir
+       * una fila por cada uno llenaría el registro con el mismo problema
+       * repetido. Quien llama decide. */
+      imposibles.push({ material: k, nombre: item.name || k, errores: item._errors.slice(0, 6) });
     }
   }
+
+  /* Lo que se devuelve: la lista de materiales cuyos números no pueden ser
+   * ciertos. Vacía casi siempre, que es lo normal y lo deseable. */
+  return imposibles;
 }
 
 function findFirstWarehouseLoc(locs, needed) {
@@ -4817,6 +4899,7 @@ function addMovementsBatch_(ss, archive, movements, auth, opciones) {
     var cfgAhora    = loadConfig();
     var avgCostMap  = cfgAhora.avgCost || {};
     var costTouched = {};   // matId -> true, for the ones this batch actually changes
+    var costAntes   = {};   // matId -> { antes, nombre } — D-01, para la auditoría
 
     /* Las ubicaciones que existen de verdad, de la misma lectura de CONFIG que
      * ya se hacía para los costes: ni un viaje más a Google.
@@ -5076,9 +5159,26 @@ function addMovementsBatch_(ss, archive, movements, auth, opciones) {
           unitCost  = round2_(enteredCost);
           totalCost = round2_(unitCost * qty);
           var priorCost = avgCostMap[matId];
+          /* D-01 · DE CUÁNTO A CUÁNTO, Y POR QUÉ.
+           *
+           * La media se pisaba en cada entrada y no dejaba rastro: si mañana
+           * sale rara, no había forma de saber qué valor tenía ayer ni qué
+           * entrada la movió. Sólo se podía recalcular desde cero.
+           *
+           * Se apunta aquí, en memoria, y se escribe en la auditoría DESPUÉS
+           * de que la escritura del archivo esté verificada — igual que la
+           * media misma. Apuntar una mezcla de costes de un movimiento que no
+           * llegó a guardarse sería peor que no apuntar nada. */
+          if (!costAntes[matId]) {
+            costAntes[matId] = { antes: priorCost ? priorCost.avg : null, nombre: d.name || '' };
+          }
+          /* C-01: `round6_`, no `round2_`. Este número NO se enseña: es el que
+           * entra en la mezcla de la entrada siguiente, así que redondearlo a
+           * céntimos metía un error que se acumulaba. Lo que se enseña y lo que
+           * se estampa en la fila siguen siendo céntimos. */
           var newAvg = (!priorCost || whBeforeThisRow <= 0)
             ? unitCost
-            : round2_((whBeforeThisRow * priorCost.avg + qty * unitCost) / (whBeforeThisRow + qty));
+            : round6_((whBeforeThisRow * priorCost.avg + qty * unitCost) / (whBeforeThisRow + qty));
           avgCostMap[matId] = { category: cleanDisplay_(d.category), name: cleanDisplay_(d.name), avg: newAvg };
           costTouched[matId] = true;
         }
@@ -5094,8 +5194,14 @@ function addMovementsBatch_(ss, archive, movements, auth, opciones) {
         // took. It also must not disturb the running average: the average is
         // about what material COSTS, and this row says nothing about that.
       } else if (avgCostMap[matId]) {
-        unitCost  = avgCostMap[matId].avg;
-        totalCost = round2_(unitCost * qty);
+        /* EL TOTAL SALE DE LA MEDIA PRECISA, y el unitario se enseña en
+         * céntimos. Si se redondeara el unitario ANTES de multiplicar, mil
+         * unidades a 3,9689 se estamparían como 3,97 × 1000 = 3.970 en vez de
+         * 3.968,96 — nueve dólares de más en una sola fila, y siempre hacia
+         * arriba. El total es lo que suma la contabilidad; el unitario es lo
+         * que lee una persona. */
+        totalCost = round2_(avgCostMap[matId].avg * qty);
+        unitCost  = round2_(avgCostMap[matId].avg);
       }
 
       // CRUDO, TODO. La comilla la pone UNA VEZ el textSafeRow_ de la escritura,
@@ -5263,6 +5369,19 @@ function addMovementsBatch_(ss, archive, movements, auth, opciones) {
     if (Object.keys(costTouched).length) {
       try { saveAvgCostUpdates_(ss, costTouched, avgCostMap); }
       catch (ce) { Logger.log('saveAvgCostUpdates_: ' + ce.message); }
+
+      /* D-01 · LA MEDIA DEJA RASTRO. En try aparte: un fallo escribiendo la
+       * auditoría no puede tumbar un guardado que ya está hecho y verificado. */
+      try {
+        Object.keys(costTouched).forEach(function (mid) {
+          var a = costAntes[mid];
+          if (!a) return;
+          auditLog_(ss, 'AVG_COST_BLEND', auth.email,
+            (a.nombre || mid) + ' — average cost after this entry',
+            a.antes === null ? '(none)' : String(a.antes),
+            String((avgCostMap[mid] || {}).avg));
+        });
+      } catch (ca) { Logger.log('AVG_COST_BLEND audit: ' + ca.message); }
     }
 
     // ── File / document uploads (per row carrying docs) ──────────────────────
@@ -11601,6 +11720,53 @@ function newRequestId_() {
 }
 
 // Never throws — logging failures must not mask the original error.
+/* ═══ C-02 · UN INVENTARIO IMPOSIBLE SE DICE UNA VEZ AL DÍA ═════════════════
+ *
+ * Más salidas que entradas no pasa por casualidad: pasa cuando un movimiento
+ * se metió mal, un borrado se quedó a medias o una importación entró dos
+ * veces. La app lo tapaba con un cero y mandaba la prueba a `Logger.log`.
+ *
+ * ── POR QUÉ UNA VEZ AL DÍA ────────────────────────────────────────────────
+ *
+ * El cálculo del inventario corre en CADA inicio de sesión. Cinco personas
+ * abriendo la app cuatro veces al día son veinte filas idénticas en el
+ * registro, todas sobre el mismo material. **Un registro que se repite es un
+ * registro que se deja de leer** — y éste ya tiene un precedente: el desastre
+ * del 26 de septiembre estuvo catorce horas escrito en ERROR_LOG sin que nadie
+ * lo viera.
+ *
+ * Así que se anota la huella de lo encontrado y la fecha. Mientras sea el
+ * mismo problema y el mismo día, no se repite. Si cambia —aparece otro
+ * material, o se arregla y vuelve— se vuelve a decir, porque ya es otra cosa.
+ *
+ * Severidad WARN y no ERROR, a propósito: ERROR manda un correo al
+ * administrador en el acto, y esto no es una urgencia de medianoche. Es algo
+ * que hay que mirar, y el sitio donde se mira es Ajustes → Error Log.
+ */
+function avisarDeStockImposible_(ss, imposibles, auth) {
+  if (!imposibles || !imposibles.length) return;
+
+  var detalle = imposibles.slice(0, 20).map(function (x) {
+    return x.nombre + ': ' + x.errores.join(', ');
+  }).join(' | ');
+
+  var huella = imposibles.map(function (x) { return x.material; }).sort().join(',');
+  var hoy    = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  var marca  = hoy + '#' + huella.length + '#' + huella.substring(0, 180);
+
+  var props  = PropertiesService.getScriptProperties();
+  if (props.getProperty('STOCK_IMPOSIBLE_VISTO') === marca) return;
+  props.setProperty('STOCK_IMPOSIBLE_VISTO', marca);
+
+  logError_(ss, 'WARN', 'stock', 'impossible_stock',
+    (auth && auth.email) || '',
+    imposibles.length + ' material(s) have numbers that cannot be true — more has ' +
+    'left than ever arrived. The screen shows 0 for these; the real figure is unknown. ' +
+    'Usually a movement entered wrongly, a half-finished delete, or an import that ' +
+    'went in twice.',
+    detalle, '');
+}
+
 function logError_(ss, severity, source, action, userEmail, message, context, requestId) {
   try {
     var sheet = ensureErrorLogSheet_(ss);

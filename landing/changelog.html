@@ -101,6 +101,35 @@
        window instead of a photograph, and the page itself got 300&nbsp;KB lighter over
        the wire.</p>
 
+    <!-- C-01: EL ERROR QUE NO SE COMPENSA. Un redondeo que entra en el
+         cálculo siguiente no es un redondeo: es un sesgo. -->
+    <div class="entry" id="v14-7">
+      <span class="ver">v14.7</span>
+      <span class="tag fix">Fix</span>
+      <h3>The average cost stops drifting</h3>
+      <p><b>The running average cost was drifting a few cents, and the drift compounded.</b> Each
+         time material came in, the average was recalculated and <i>rounded to the cent</i> &mdash;
+         and that rounded figure went into the next calculation. The error never cancelled out; it
+         leaned the same way every time.</p>
+      <p>Measured over 1,000 entries of 7 units: the stored average came out <b>$0.029 per unit
+         below</b> the true one, which across 7,000 units is <b>$202.72</b> of inventory value that
+         was never there. Nobody notices that until someone reconciles the inventory against the
+         books, and by then it is a mystery rather than a line of code.</p>
+      <p>The average is now kept to six decimals. What you see on the Prices screen, and what is
+         stamped on a movement, is still cents &mdash; the extra precision lives only in the number
+         that feeds the next calculation, which is where it mattered. The cost of an outgoing
+         movement is also worked out from the precise average <i>before</i> rounding, so a line of
+         1,000 units is no longer a dollar off in the company&rsquo;s favour.</p>
+      <p><b>Stock that cannot be true no longer hides behind a zero.</b> If more of something has
+         left than ever arrived &mdash; a movement entered wrongly, a half-finished delete, an import
+         that went in twice &mdash; the screen showed 0 and said nothing. The app had already
+         noticed; it wrote the evidence to a log nobody opens. It now reports it in the Error Log,
+         naming the materials, once a day rather than on every sign-in.</p>
+      <p><b>And the average leaves a trail.</b> Every entry that changes it records what it was and
+         what it became, so a figure that looks wrong next month can be traced instead of only
+         recalculated from scratch.</p>
+    </div>
+
     <!-- W-01/02/03: EL ASISTENTE ES LA PRIMERA PANTALLA QUE VE UN CLIENTE.
          Y estaba escrito dos veces, con el MISMO fallo en las dos copias sin
          que nadie lo hubiera notado en ninguna. -->
