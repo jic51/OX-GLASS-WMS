@@ -21,7 +21,26 @@
 <meta charset="utf-8">
 <style>
   *{box-sizing:border-box}
-  body{margin:0;padding:1.5rem;font-family:'Segoe UI',Roboto,Arial,sans-serif;background:#fff;color:#111827}
+  /* ── W-01 · EL BOTÓN QUE CONTINÚA NO SE PUEDE ESCONDER ────────────────────
+     Jose, 9/11, con captura del primer paso: *"la ventana de setup debe
+     siempre ser suficientemente grande para que no se tenga que hacer scroll;
+     si no se puede, entonces hay que mover el botón de Continue más arriba."*
+
+     La altura de esta ventana NO la decidimos nosotros: la pone
+     `showModalDialog`, y la recorta el navegador si la pantalla es más baja.
+     O sea que «hacerla más grande» no es una garantía que podamos dar — en un
+     portátil de 13 pulgadas vuelve a no caber.
+
+     Así que se hace lo segundo, que sí es una garantía: la ventana es una
+     columna de tres piezas. La cabecera arriba, el PIE ABAJO SIEMPRE, y sólo
+     el contenido del medio se desplaza. El botón que continúa la instalación
+     no puede quedar fuera de la pantalla, mida lo que mida la ventana. */
+  html,body{height:100%}
+  body{margin:0;padding:0;font-family:'Segoe UI',Roboto,Arial,sans-serif;background:#fff;color:#111827;
+       display:flex;flex-direction:column;overflow:hidden}
+  .wiz-head{padding:1.5rem 1.5rem .25rem;flex-shrink:0}
+  .wiz-scroll{flex:1 1 auto;overflow-y:auto;padding:0 1.5rem;min-height:0}
+  .wiz-foot{flex-shrink:0;padding:.75rem 1.5rem 1.1rem;border-top:1px solid #E5E7EB;background:#fff}
   .wiz-steps{display:flex;gap:6px;margin-bottom:1.25rem}
   .wiz-steps div{flex:1;height:4px;border-radius:2px;background:#E5E7EB;transition:background .25s}
   .wiz-steps div.done{background:#3B7DD8}
@@ -33,7 +52,7 @@
     width:100%;padding:.55rem .7rem;border:1px solid #E5E7EB;border-radius:8px;font-size:.87rem;font-family:inherit;background:#fff;color:#111827}
   input:focus,select:focus{outline:none;border-color:#3B7DD8}
   .hint{font-size:.73rem;color:#6B7280;margin-top:.3rem;line-height:1.45}
-  .nav{display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem;gap:.6rem}
+  .nav{display:flex;justify-content:space-between;align-items:center;gap:.6rem}
   .btn{border-radius:8px;padding:.55rem 1rem;font-size:.85rem;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid #E5E7EB;background:#fff;color:#374151}
   .btn:hover{background:#F8FAFC}
   .btn-primary{background:#3B7DD8;border-color:#3B7DD8;color:#fff}
@@ -48,6 +67,32 @@
   .chip{display:inline-flex;align-items:center;gap:.3rem;background:#DBEAFE;color:#2563EB;border-radius:14px;padding:2px 6px 2px 10px;font-size:.76rem;font-weight:600}
   .chip button{border:none;background:none;color:#2563EB;cursor:pointer;font-size:.85rem;line-height:1;padding:0 2px;opacity:.6}
   .chip button:hover{opacity:1;color:#EF4444}
+  /* ── W-02 · LA FICHA ES DONDE SE ESCRIBE ──────────────────────────────────
+     Jose, 9/11: *"un botón «+ Add» arriba a la derecha que añada una
+     categoría, ubicación, proveedor o proyecto VACÍO, y que el cursor aparezca
+     dentro para poder escribir… Así sólo tenemos un lugar donde se muestran
+     todas las cosas, en lugar de tener 2 lugares, uno que muestra y otro que
+     escribe."*
+
+     Había una caja de texto abajo y una lista de fichas arriba, y lo que
+     escribías saltaba de un sitio al otro al pulsar Enter. Dos sitios para una
+     cosa. Y encima no se podía CORREGIR una ficha ya puesta —ni una de la
+     plantilla— sin borrarla y volver a escribirla entera.
+
+     Ahora la ficha nace donde va a vivir. El recuadro de texto ES la ficha. */
+  .chip-inp{border:none;background:transparent;color:inherit;font-family:inherit;font-size:inherit;
+    font-weight:inherit;padding:0;margin:0;min-width:2ch;outline:none}
+  .chip-inp::placeholder{color:#93C5AE;opacity:1}
+  .chip:focus-within{box-shadow:0 0 0 2px #3B7DD8}
+  /* La repetida se enciende un momento y vuelve a su color: dice DÓNDE está la
+     que choca, que es lo que el mensaje de texto por sí solo no puede decir. */
+  .chip-dup{background:#FEE2E2 !important;color:#B91C1C !important;transition:background .2s,color .2s}
+  .chip-dup .chip-inp{color:#B91C1C !important}
+  .list-hd{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.3rem}
+  .list-hd label{margin:0}
+  .btn-add{border:1px dashed #3B7DD8;background:#fff;color:#3B7DD8;border-radius:8px;
+    padding:.25rem .6rem;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0}
+  .btn-add:hover{background:#EFF6FF}
   .gen{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem}
   .userrow{display:grid;grid-template-columns:1fr 115px 28px 24px;gap:.4rem;margin-bottom:.45rem;align-items:center}
   .uicon{border:none;background:none;cursor:pointer;font-size:.95rem;padding:0;line-height:1;color:#6B7280}
@@ -78,16 +123,20 @@
 </style>
 </head>
 <body>
-  <div class="wiz-steps" id="wSteps"></div>
-  <div class="wiz-title" id="wTitle"></div>
-  <div class="wiz-sub" id="wSub"></div>
-  <div id="wBody"></div>
-  <div class="err" id="wErr"></div>
-  <div class="nav">
-    <button class="btn btn-sm" id="wBack" onclick="wGo(-1)">← Back</button>
-    <div style="display:flex;gap:.5rem;align-items:center">
-      <button class="btn btn-sm" id="wSkip" onclick="wGo(1,true)">Skip for now</button>
-      <button class="btn btn-primary btn-sm" id="wNext" onclick="wGo(1)">Continue →</button>
+  <div class="wiz-head">
+    <div class="wiz-steps" id="wSteps"></div>
+    <div class="wiz-title" id="wTitle"></div>
+    <div class="wiz-sub" id="wSub"></div>
+  </div>
+  <div class="wiz-scroll"><div id="wBody"></div></div>
+  <div class="wiz-foot">
+    <div class="err" id="wErr"></div>
+    <div class="nav" style="margin-top:.35rem">
+      <button class="btn btn-sm" id="wBack" onclick="wGo(-1)">← Back</button>
+      <div style="display:flex;gap:.5rem;align-items:center">
+        <button class="btn btn-sm" id="wSkip" onclick="wGo(1,true)">Skip for now</button>
+        <button class="btn btn-primary btn-sm" id="wNext" onclick="wGo(1)">Continue →</button>
+      </div>
     </div>
   </div>
 
@@ -136,6 +185,10 @@ function go(dir, skip){
 function wGo(dir, skip){ go(dir, skip); }
 
 function collect(){
+  /* Las fichas que se quedaron en blanco se van aquí, que es el momento en que
+     el paso deja de estar a la vista. Jose: *"si se añade algo y no se escribe
+     nada, al pasar de página o salir simplemente se borra y ya."* */
+  purgaVacias();
   var k = STEPS[step].key, v = function(id){ var e=document.getElementById(id); return e ? e.value.trim() : ''; };
   if (k === 'company'){
     W.companyName = v('wCompany'); W.companyDomain = v('wDomain');
@@ -150,7 +203,13 @@ function collect(){
 function validate(){
   var k = STEPS[step].key;
   if (k === 'company' && !(document.getElementById('wCompany')||{}).value.trim()){ _err('Enter your company name.'); return false; }
-  if (k === 'locations' && !W.locations.length){ _err('Add at least one location.'); return false; }
+  if (k === 'locations'){
+    /* Se cuentan las que TIENEN NOMBRE, no las fichas: una ficha vacía recién
+       añadida no es una ubicación, y dejarla pasar como tal sería el mismo
+       engaño que esto viene a quitar. */
+    var conNombre = W.locations.filter(function(l){ return _normaliza(l && l.name) !== ''; }).length;
+    if (!conNombre){ _err('Add at least one location.'); return false; }
+  }
   return true;
 }
 
@@ -192,11 +251,9 @@ function render(){
         '<button onclick="preset(\'build\',this)">🏗 Construction<span>Lumber, Drywall, Paint, Electrical…</span></button>'+
         '<button onclick="preset(\'blank\',this)">⚪ Start empty<span>I will type my own</span></button>'+
       '</div>'+
-      '<div class="field"><label>Your categories</label>'+
-        '<div class="chip-box" id="wCatChips"></div>'+
-        '<input type="text" id="wCatInput" placeholder="Type a category and press Enter" style="margin-top:.5rem" '+
-        'onkeydown="if(event.key===\'Enter\'){event.preventDefault();addChip(\'categories\',this)}"></div>';
-    drawChips('categories','wCatChips');
+      '<div class="field">'+ hdLista('Your categories','categories') +
+        '<div class="chip-box" id="wCatChips"></div></div>';
+    dibujar('categories');
   }
 
   else if (s.key === 'locations'){
@@ -210,14 +267,21 @@ function render(){
         '</div>'+
         '<button class="btn btn-sm" style="margin-top:.55rem" onclick="genLocs()">Generate</button>'+
         '<div class="hint">Produces names like A1A, A1B, A1C, A2A… Or just type your own below.</div></div>'+
-      '<div class="field"><label>Locations (<span id="wLocCount">0</span>)</label>'+
-        '<div class="chip-box" id="wLocChips" style="max-height:160px;overflow-y:auto"></div>'+
-        '<input type="text" id="wLocInput" placeholder="Type a location and press Enter" style="margin-top:.5rem" '+
-        'onkeydown="if(event.key===\'Enter\'){event.preventDefault();addLoc(this)}"></div>'+
-      '<div class="field"><label>Trucks / job sites (optional)</label>'+
-        '<input type="text" id="wSiteInput" placeholder="e.g. TRUCK 1 — press Enter" '+
-        'onkeydown="if(event.key===\'Enter\'){event.preventDefault();addLoc(this,\'SITE\')}"></div>';
-    drawLocs();
+      /* UN SOLO RECUADRO para estantes y camiones. Antes los camiones tenían
+         su propia caja de texto abajo pero aparecían ARRIBA, en la misma lista
+         que los estantes: escribías en un sitio y salía en otro. Ahora los dos
+         botones añaden a la misma lista, cada uno con su tipo, y el camión se
+         distingue por el 🚚 y su color, que es como ya se dibujaba. */
+      '<div class="field">'+
+        '<div class="list-hd"><label>Locations (<span id="wLocCount">0</span>)</label>'+
+          '<div style="display:flex;gap:.4rem">'+
+            '<button type="button" class="btn-add" onclick="addEmpty(\'locations\')">+ Add rack</button>'+
+            '<button type="button" class="btn-add" style="border-color:#C2410C;color:#C2410C" '+
+              'onclick="addEmpty(\'locations\',\'SITE\')">+ Add truck / site</button>'+
+          '</div></div>'+
+        '<div class="chip-box" id="wLocChips" style="max-height:190px;overflow-y:auto"></div>'+
+        '<div class="hint">A truck or job site is a place material can sit too — it just is not a rack.</div></div>';
+    dibujar('locations');
   }
 
   else if (s.key === 'users'){
@@ -233,13 +297,11 @@ function render(){
   else if (s.key === 'extras'){
     next.textContent = 'Continue →'; next.onclick = function(){ go(1); };
     b.innerHTML =
-      '<div class="field"><label>Suppliers</label><div class="chip-box" id="wSupChips"></div>'+
-        '<input type="text" id="wSupInput" placeholder="Type a supplier and press Enter" style="margin-top:.5rem" '+
-        'onkeydown="if(event.key===\'Enter\'){event.preventDefault();addChip(\'suppliers\',this)}"></div>'+
-      '<div class="field"><label>Projects / clients</label><div class="chip-box" id="wProjChips"></div>'+
-        '<input type="text" id="wProjInput" placeholder="Type a project and press Enter" style="margin-top:.5rem" '+
-        'onkeydown="if(event.key===\'Enter\'){event.preventDefault();addChip(\'projects\',this)}"></div>';
-    drawChips('suppliers','wSupChips'); drawChips('projects','wProjChips');
+      '<div class="field">'+ hdLista('Suppliers','suppliers') +
+        '<div class="chip-box" id="wSupChips"></div></div>'+
+      '<div class="field">'+ hdLista('Projects / clients','projects') +
+        '<div class="chip-box" id="wProjChips"></div></div>';
+    dibujar('suppliers'); dibujar('projects');
   }
 
   else if (s.key === 'publish'){
@@ -291,23 +353,183 @@ function preset(kind, btn){
   W.categories = CATEGORY_PRESETS[kind].slice();
   Array.prototype.forEach.call(btn.parentNode.children, function(b){ b.classList.remove('sel'); });
   btn.classList.add('sel');
-  drawChips('categories','wCatChips');
+  _err('');
+  dibujar('categories');
 }
-function addChip(list, inp){
-  var v = (inp.value||'').trim().toUpperCase(); if (!v) return;
-  if (W[list].indexOf(v) === -1) W[list].push(v);
-  inp.value = '';
-  drawChips(list, list==='categories'?'wCatChips':list==='suppliers'?'wSupChips':'wProjChips');
+/* ═══ UNA SOLA LISTA, Y SE ESCRIBE DENTRO ══════════════════════════════════
+ *
+ * W-02 y W-03. Las cuatro listas del asistente —categorías, ubicaciones,
+ * proveedores y proyectos— pasan por aquí. Antes había dos mecanismos por
+ * lista (una caja que escribe y una lista que enseña) y cada uno escrito dos
+ * veces; ahora hay uno, escrito una vez.
+ *
+ * Las ubicaciones llevan tipo (estante o camión/obra) y las otras tres son
+ * texto suelto. Eso se resuelve en dos funciones de dos líneas —`_lee` y
+ * `_pone`— en vez de tener dos mecanismos paralelos.
+ */
+function _lee(lista, i){
+  return lista === 'locations' ? (W.locations[i] || {}).name || '' : W[lista][i] || '';
 }
-function rmChip(list, i){
-  W[list].splice(i,1);
-  drawChips(list, list==='categories'?'wCatChips':list==='suppliers'?'wSupChips':'wProjChips');
+function _pone(lista, i, v){
+  if (lista === 'locations') W.locations[i].name = v; else W[lista][i] = v;
 }
-function drawChips(list, boxId){
-  var box = document.getElementById(boxId); if (!box) return;
-  box.innerHTML = W[list].length
-    ? W[list].map(function(v,i){ return '<span class="chip">'+_he(v)+'<button onclick="rmChip(\''+list+'\','+i+')">×</button></span>'; }).join('')
-    : '<span style="color:#6B7280;font-size:.78rem">Nothing yet</span>';
+function _cajaDe(lista){
+  return lista === 'categories' ? 'wCatChips'
+       : lista === 'suppliers'  ? 'wSupChips'
+       : lista === 'projects'   ? 'wProjChips' : 'wLocChips';
+}
+
+/* ── UNA FICHA VACÍA, CON EL CURSOR DENTRO ────────────────────────────────
+ * Nace vacía a propósito. Si se deja sin escribir, se va sola al cambiar de
+ * paso (`purgaVacias`): pulsar «+ Add» sin querer no deja basura, y no hace
+ * falta un botón de cancelar para algo que todavía no es nada. */
+function addEmpty(lista, tipo){
+  if (lista === 'locations') W.locations.push({ name: '', type: tipo || 'RACK' });
+  else W[lista].push('');
+  dibujar(lista);
+  var box = document.getElementById(_cajaDe(lista));
+  if (!box) return;
+  var inps = box.querySelectorAll('.chip-inp');
+  var ult  = inps[inps.length - 1];
+  if (ult){ ult.focus(); ult.scrollIntoView({ block: 'nearest' }); }
+}
+
+function rmEntry(lista, i){
+  W[lista].splice(i, 1);
+  _err('');
+  dibujar(lista);
+}
+
+/* Lo que se escribe se guarda en MAYÚSCULAS y sin espacios sobrantes, igual
+ * que en la app: una categoría es una CLAVE, y `Flashing` y `FLASHING` tienen
+ * que ser la misma cosa. El recuadro enseña el resultado en el acto, para que
+ * no sea una sorpresa al guardar. */
+function _normaliza(v){ return String(v || '').trim().toUpperCase(); }
+
+/* ── W-03 · UN NOMBRE REPETIDO NO SE BORRA EN SILENCIO ────────────────────
+ *
+ * Jose, 9/11: *"si escribo una ubicación que ya existe, la app debe
+ * hacérmelo saber, no sólo no hacer nada. Actualmente doy Enter a una
+ * ubicación que ya existe y sólo se borra y no pasa nada."*
+ *
+ * Y era literal. El código decía:
+ *
+ *     if (!W.locations.some(x => x.name === v)) W.locations.push(...);
+ *     inp.value = '';          // ← esto se ejecutaba SIEMPRE
+ *
+ * La comprobación protegía el dato bien; lo que estaba mal es que después
+ * limpiaba la caja pasara lo que pasara. Desde fuera eso no se distingue de
+ * «se tragó lo que escribí», que es la peor forma de acertar: el dato está
+ * bien y la persona cree que la app está rota.
+ *
+ * Tres cosas, y las tres hacen falta:
+ *   · NO se borra lo escrito — se queda, con el cursor dentro
+ *   · se dice en rojo qué ha pasado
+ *   · y se enciende un momento LA QUE YA ESTABA, que es lo único que contesta
+ *     «¿dónde está la otra?» — con 53 ubicaciones, el mensaje solo no basta
+ */
+function _choca(lista, i, v){
+  for (var k = 0; k < W[lista].length; k++){
+    if (k !== i && _lee(lista, k) === v) return k;
+  }
+  return -1;
+}
+
+function _parpadea(lista, k){
+  var box = document.getElementById(_cajaDe(lista));
+  if (!box) return;
+  var ch = box.querySelectorAll('.chip')[k];
+  if (!ch) return;
+  ch.scrollIntoView({ block: 'nearest' });
+  ch.classList.add('chip-dup');
+  setTimeout(function(){ ch.classList.remove('chip-dup'); }, 1600);
+}
+
+var UNO = { categories:'category', locations:'location', suppliers:'supplier', projects:'project' };
+
+/* Al salir del recuadro. Vacío se deja estar —se irá solo al cambiar de paso—
+ * y repetido se queda escrito, con el aviso y el parpadeo. */
+function commitChip(lista, i, inp){
+  var v = _normaliza(inp.value);
+  if (!v){ _pone(lista, i, ''); return; }
+
+  var k = _choca(lista, i, v);
+  if (k !== -1){
+    _err('"' + v + '" is already on the list — try another ' + (UNO[lista] || 'name') + '.');
+    inp.value = v;          // NO se borra lo que escribió
+    _parpadea(lista, k);
+    return;
+  }
+
+  _err('');
+  _pone(lista, i, v);
+  inp.value = v;            // se ve el resultado: lo que se guarda y lo que se lee son lo mismo
+  inp.size  = Math.max(2, v.length);
+}
+
+/* Enter añade la siguiente, que es lo que la mano espera al escribir una
+ * lista. Escape deja la ficha vacía y por tanto la borra al salir del paso. */
+function teclaChip(ev, lista, i, inp){
+  if (ev.key === 'Enter'){
+    ev.preventDefault();
+    commitChip(lista, i, inp);
+    if (_lee(lista, i)) addEmpty(lista, lista === 'locations' ? W.locations[i].type : null);
+  } else if (ev.key === 'Escape'){
+    inp.value = '';
+    _pone(lista, i, '');
+    _err('');
+    inp.blur();
+  }
+}
+
+/* Las que quedaron vacías se van sin preguntar. Es lo que Jose pidió: *"si se
+ * añade algo y no se escribe nada, al pasar de página o salir simplemente se
+ * borra y ya."* */
+function purgaVacias(){
+  ['categories','suppliers','projects'].forEach(function(l){
+    W[l] = W[l].filter(function(v){ return _normaliza(v) !== ''; });
+  });
+  W.locations = W.locations.filter(function(l){ return _normaliza(l && l.name) !== ''; });
+}
+
+function dibujar(lista){
+  var box = document.getElementById(_cajaDe(lista));
+  if (!box) return;
+  var n = lista === 'locations' ? W.locations.length : W[lista].length;
+
+  var c = document.getElementById('wLocCount');
+  if (c && lista === 'locations') c.textContent = W.locations.length;
+
+  if (!n){
+    box.innerHTML = '<span style="color:#6B7280;font-size:.78rem">Nothing yet — press <b>+ Add</b></span>';
+    return;
+  }
+
+  var piezas = [];
+  for (var i = 0; i < n; i++){
+    var v    = _lee(lista, i);
+    var site = lista === 'locations' && W.locations[i].type === 'SITE';
+    var ph   = site ? 'TRUCK 1' : (UNO[lista] || 'name').toUpperCase();
+    piezas.push(
+      '<span class="chip"' + (site ? ' style="background:#FED7AA;color:#C2410C"' : '') + '>' +
+        (site ? '🚚 ' : '') +
+        '<input class="chip-inp" value="' + _escAttr(v) + '" placeholder="' + _escAttr(ph) + '"' +
+          ' size="' + Math.max(2, (v || ph).length) + '"' +
+          ' oninput="this.size=Math.max(2,this.value.length||2)"' +
+          ' onblur="commitChip(\'' + lista + '\',' + i + ',this)"' +
+          ' onkeydown="teclaChip(event,\'' + lista + '\',' + i + ',this)">' +
+        '<button type="button" onclick="rmEntry(\'' + lista + '\',' + i + ')">×</button>' +
+      '</span>');
+  }
+  box.innerHTML = piezas.join('');
+}
+
+/* La cabecera de cada lista: su nombre a la izquierda y «+ Add» a la derecha,
+ * que es donde Jose lo pidió y donde ya está en la app. */
+function hdLista(texto, lista, tipo, idExtra){
+  return '<div class="list-hd"><label>' + texto + '</label>' +
+    '<button type="button" class="btn-add" ' + (idExtra ? 'id="' + idExtra + '" ' : '') +
+      'onclick="addEmpty(\'' + lista + '\'' + (tipo ? ',\'' + tipo + '\'' : '') + ')">+ Add</button></div>';
 }
 
 function expand(spec){
@@ -326,28 +548,29 @@ function genLocs(){
   var sides = expand(document.getElementById('wSides').value);
   if (!rows.length || !lvls.length){ _err('Fill in at least rows and levels.'); return; }
   if (!sides.length) sides = [''];
-  rows.forEach(function(r){ lvls.forEach(function(l){ sides.forEach(function(s){
-    var name = r+l+s;
-    if (!W.locations.some(function(x){return x.name===name;})) W.locations.push({name:name,type:'RACK'});
+  /* Generar una rejilla SÍ se salta las repetidas sin decir nada, y aquí eso
+     es lo correcto: nadie teclea A1A..D4C a mano, se pide una rejilla entera y
+     lo que ya estaba simplemente ya está. Lo que sí se dice es CUÁNTAS se
+     quedaron fuera, para que un «Generate» que no cambia nada no parezca
+     roto. */
+  var puestas = 0, repes = 0;
+  rows.forEach(function(r){ lvls.forEach(function(l){ sides.forEach(function(s2){
+    var name = r+l+s2;
+    if (W.locations.some(function(x){ return x.name === name; })) { repes++; return; }
+    W.locations.push({ name: name, type: 'RACK' });
+    puestas++;
   }); }); });
-  drawLocs();
+  _err(repes && !puestas
+        ? 'Those ' + repes + ' are already on the list — nothing new to add.'
+        : '');
+  dibujar('locations');
 }
-function addLoc(inp, type){
-  var v = (inp.value||'').trim().toUpperCase(); if (!v) return;
-  if (!W.locations.some(function(x){return x.name===v;})) W.locations.push({name:v, type:type||'RACK'});
-  inp.value = ''; drawLocs();
-}
-function rmLoc(i){ W.locations.splice(i,1); drawLocs(); }
-function drawLocs(){
-  var box = document.getElementById('wLocChips'); if (!box) return;
-  var c = document.getElementById('wLocCount'); if (c) c.textContent = W.locations.length;
-  box.innerHTML = W.locations.length
-    ? W.locations.map(function(l,i){
-        var site = l.type==='SITE';
-        return '<span class="chip"'+(site?' style="background:#FED7AA;color:#C2410C"':'')+'>'+(site?'🚚 ':'')+_he(l.name)+'<button onclick="rmLoc('+i+')">×</button></span>';
-      }).join('')
-    : '<span style="color:#6B7280;font-size:.78rem">Nothing yet</span>';
-}
+/* `addLoc`, `rmLoc` y `drawLocs` se fueron con W-02. Eran la tercera y cuarta
+ * copia del mismo mecanismo —añadir, quitar y dibujar— escritas aparte sólo
+ * porque una ubicación lleva tipo y una categoría no. Ahora esa diferencia
+ * vive en dos funciones de dos líneas (`_lee` y `_pone`) y las cuatro listas
+ * comparten lo demás. */
+
 
 function addUserRow(){
   // Sync whatever's already typed in existing rows BEFORE pushing+redrawing —

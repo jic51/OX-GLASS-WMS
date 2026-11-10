@@ -310,6 +310,170 @@ es exactamente para esto.
 
 ---
 
+## 📋 LO DEL 9/11 — TRES DE LA DEMO DE LA PANADERÍA
+
+### 🔴 W-05 · La etiqueta sale con una ubicación QUE NO EXISTE
+
+Jose, 9/11, con tres capturas: *"al hacer un entry y poner la locación en
+minúscula sí me permite guardar y no se cambia a mayúscula hasta que se guarda,
+lo cual no está mal, PERO AL GUARDAR Y DAR CLIC EN IMPRIMIR LA ETIQUETA, ÉSTA
+SALE CON LA LOCACIÓN EN MINÚSCULA, LA CUAL NO EXISTE. Pero al salir y volver a
+entrar sí se cambia a mayúscula, lo cual significa que el cambio se hace después
+de crear el label."*
+
+**Es el peor de los tres y no es cosmético.** Una etiqueta es un objeto físico:
+sale de la impresora, se pega en un pallet y se queda ahí. Una que dice `d3b`
+cuando el estante se llama `D3B` manda a alguien a buscar un sitio que no
+existe, y el lector de códigos tampoco lo encontrará.
+
+**La causa, medida.** Hay DOS constructores de etiquetas:
+
+| | De dónde saca los datos |
+|---|---|
+| `_labelsFromMovements(movs)` | de los movimientos **ya guardados** — normalizados |
+| `_labelsFromEntry(materiales, compartido)` | **del formulario**, `l.loc` tal como se tecleó |
+
+El aviso de «Saved ✓ · 🏷 Print labels» usa el **segundo**. O sea que la
+etiqueta se construye con lo que había en la pantalla, no con lo que se guardó
+en la hoja — y el servidor normaliza al escribir. De ahí que al recargar sí
+aparezca en mayúsculas: la recarga trae la fila de verdad.
+
+**El arreglo que propongo, y no es poner un `toUpperCase()` ahí.** El servidor
+ya devuelve las filas recién guardadas en `res.movimientos`, ya normalizadas —
+se añadió para pintarlas sin recargar. La etiqueta debe salir **de ahí**, con
+`_labelsFromMovements`, que ya existe. Eso además **borra el segundo
+constructor**, que es el verdadero defecto: dos formas de fabricar la misma
+etiqueta, una de ellas con datos sin pasar por el servidor.
+
+(Si un servidor viejo no devolviera `res.movimientos`, se cae al camino de hoy.
+Pero entonces conviene que la ubicación vaya en mayúsculas igualmente.)
+
+### 🟠 W-06 · «Qty» y «Available» ocupan mal el sitio en la salida
+
+Jose, con captura: *"¿por qué la parte de QTY y AVAILABLE están así de feas? No
+estaban así en la versión anterior. QTY no debe ser tan grande, jamás tendremos
+un número de más de 2 cifras, máximo 3. Entonces la cantidad no debe ocupar
+mucho espacio y se debe ver bien el número verde, que es el número total en ese
+lugar."*
+
+Tiene razón en el reparto: la caja de la cantidad se lleva el ancho de un campo
+de texto para tres dígitos, mientras que **lo que hay disponible** —el dato que
+de verdad se consulta antes de teclear— queda apretado contra el borde, en dos
+líneas (`14` / `avail`).
+
+**Lo que haría:** la caja de cantidad al ancho de tres cifras más las flechas, y
+el disponible en una sola línea con sitio para leerse. Es una redistribución de
+anchos, no una pantalla nueva.
+
+### 🟡 W-07 · El nombre de la empresa y el de la persona, en minúsculas
+
+Jose: *"en el setup, nombre de la empresa y nombre del usuario deben hacerse las
+primeras con mayúscula aunque el usuario las escriba con minúscula, o
+simplemente todo con mayúsculas, pero no se vería bien. ¿Qué piensas?"*
+
+**Mi opinión: la primera de cada palabra, no todo en mayúsculas.** Y el motivo
+no es el gusto:
+
+- `cupcake empire` es una **marca**, y una marca en la cabecera de la app, en la
+  pestaña del navegador y en la firma de los correos se lee como la escribe su
+  dueño. `CUPCAKE EMPIRE` grita, y en un correo a un cliente suyo parece un
+  error nuestro.
+- **El resto de la app está en mayúsculas por un motivo distinto**: categorías,
+  ubicaciones y materiales son **claves** — se comparan entre sí, y `Flashing`
+  y `FLASHING` tienen que ser la misma cosa. Un nombre propio no se compara con
+  nada.
+
+Así que `cupcake empire` → **Cupcake Empire**, `jhon` → **Jhon**. Y con una
+excepción que hay que escribir: **no tocar lo que ya tenga mayúsculas dentro**
+(`McDonald`, `OX Glass`, `3M`), porque «arreglarlos» los estropea.
+
+---
+
+## 📋 LO DEL 9/11 — EL ASISTENTE DE INSTALACIÓN
+
+**Es la primera pantalla que ve un cliente nuevo**, y es la que va a ver la
+panadería. Eso la pone por delante de casi todo lo demás de esta lista: un
+fallo aquí pasa delante de alguien que todavía no ha decidido si la app le
+sirve.
+
+### 🟠 W-01 · La ventana obliga a hacer scroll para llegar a «Continue»
+
+Jose, 9/11: *"la ventana de setup, al empezar el Acopio, debe siempre ser
+suficientemente grande para que no se tenga que hacer scroll; si no se puede,
+entonces hay que mover el botón de Continue más arriba."*
+
+En la captura se ve la barra de desplazamiento a la derecha y «Continue» abajo
+del todo. **El primer paso de la instalación no puede esconder el botón que la
+continúa.** Y la salida que propone Jose es la correcta: si la ventana no puede
+crecer —la altura la manda Google Sheets, no nosotros—, entonces el pie se
+queda fijo abajo y sólo desplaza el contenido.
+
+### 🟠 W-02 · Dos sitios para lo mismo: uno que enseña y otro donde se escribe
+
+Jose: *"quiero aplicar las mismas reglas que tenemos en la app a este lugar:
+un botón «+ Add» arriba a la derecha que añada una categoría, ubicación,
+proveedor o proyecto **vacío**, y que el cursor aparezca dentro para poder
+escribir. Si se añade algo y no se escribe nada, al pasar de página o salir
+simplemente se borra… Así sólo tenemos un lugar donde se muestran todas las
+cosas, en lugar de tener 2 lugares, uno que muestra y otro que escribe."*
+
+Y tiene razón en el fondo, no sólo en la forma: hoy hay **una caja de texto
+abajo y una lista de fichas arriba**, y lo que escribes salta de un sitio a
+otro al pulsar Enter. Con el botón «+ Add» la ficha nace donde va a vivir y se
+escribe ahí.
+
+**Y es exactamente la dirección de P-02**, que acabamos de terminar en la app:
+un solo sitio donde está la cosa, y se actúa sobre ella ahí. El asistente se
+quedó fuera de aquella pasada porque vive en otro archivo
+(`SetupWizard.html`), que es justo cómo se separan dos pantallas que deberían
+parecerse.
+
+### 🔴 W-03 · Un nombre repetido se borra en silencio
+
+Jose: *"si escribo una ubicación que ya existe, la app debe hacérmelo saber, no
+sólo no hacer nada. Actualmente doy Enter a una ubicación que ya existe y sólo
+se borra y no pasa nada."*
+
+**Medido, y es literal.** En `SetupWizard.html`, tanto `addChip` como `addLoc`
+hacen lo mismo:
+
+```js
+if (!W.locations.some(function(x){return x.name===v;})) W.locations.push(...);
+inp.value = '';          // ← esto se ejecuta SIEMPRE
+```
+
+La comprobación del duplicado protege el dato, y después se limpia la caja
+pase lo que pase. Desde fuera eso no se distingue de «se tragó lo que escribí»,
+que es la peor forma de acertar: el dato está bien y la persona cree que la app
+está rota.
+
+**Lo que pidió Jose, que es lo correcto:** no borrar lo escrito, un texto en
+rojo —*«ya existe esta ubicación, intenta con otra»*— y **poner en rojo un
+segundo o dos la ficha que ya existe**, para que además se vea *dónde* está la
+que choca. Eso último es lo que convierte un error en una respuesta.
+
+### ✅ W-04 · Las mayúsculas: verificado, y está bien
+
+Jose: *"no sé cómo maneja el setup las mayúsculas y minúsculas; estoy
+verificando eso."* **No hace falta: está medido.**
+
+`addChip` y `addLoc` hacen los dos `.trim().toUpperCase()` antes de guardar, y
+`expand()` —el generador de la rejilla de estantes— también. O sea que
+categorías, ubicaciones, proveedores y proyectos entran **en mayúsculas y sin
+espacios sobrantes**, igual que `_cfgAdd` en la app. Escribir `flashing` o
+`Flashing` da `FLASHING` en los dos sitios.
+
+Lo que **no** se toca, y es correcto: el nombre de la empresa y el de la
+persona. `cupcake empire` se queda como se escribió, porque es un nombre
+propio y va en la cabecera de la app y en los correos.
+
+**La única pega real es que no se ve:** escribes `p` y aparece `P`, sin que
+nada lo haya avisado. No es un fallo —es la regla de toda la app— pero merece
+una línea de ayuda debajo de la caja. Anotado con W-02, que toca ese mismo
+sitio.
+
+---
+
 ## 📋 LO DEL 9/11
 
 ### ~~🔴 P-02 · La selección por fila, en una sola forma~~ ✅ **v14.4**

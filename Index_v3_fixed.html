@@ -832,6 +832,26 @@
     .chip{display:inline-flex;align-items:center;gap:.35rem;background:#DBEAFE;color:#2563EB;border-radius:var(--r-pildora);padding:3px 8px 3px 11px;font-size:.8rem;font-weight:600}
     .chip button{border:none;background:none;color:#2563EB;cursor:pointer;font-size:var(--fs-xl);line-height:1;padding:0 2px;opacity:.6}
     .chip button:hover{opacity:1;color:#EF4444}
+    /* ── W-02 · LA FICHA ES DONDE SE ESCRIBE ──────────────────────────────
+       Mismo mecanismo que en `SetupWizard.html`, por la duplicación
+       deliberada del asistente. Había una caja de texto abajo y una lista de
+       fichas arriba: dos sitios para una cosa, y ninguna forma de CORREGIR
+       una ficha ya puesta sin borrarla y reescribirla. */
+    .chip-inp{border:none;background:transparent;color:inherit;font-family:inherit;font-size:inherit;
+      font-weight:inherit;padding:0;margin:0;min-width:2ch;outline:none}
+    /* Un contorno, no una sombra: dice «aquí está el cursor» sin fingir
+       altura, y además es lo que ya usan los demás campos de la app. */
+    .chip:focus-within{outline:2px solid var(--accent);outline-offset:1px}
+    /* W-03 · la repetida se enciende un momento y vuelve a su color: dice
+       DÓNDE está la que choca, que el mensaje solo no puede. */
+    .chip-dup{background:var(--red-bg) !important;color:var(--red) !important;transition:background .2s,color .2s}
+    .chip-dup .chip-inp{color:var(--red) !important}
+    .list-hd{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);margin-bottom:var(--sp-1)}
+    .list-hd label{margin:0}
+    .btn-add{border:1px dashed var(--accent);background:var(--card);color:var(--accent);border-radius:var(--r-btn);
+      padding:var(--sp-1) var(--sp-3);font-size:var(--fs-sm);font-weight:700;cursor:pointer;
+      font-family:inherit;flex-shrink:0}
+    .btn-add:hover{background:var(--bg)}
     .wiz-gen{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-4)}
     .wiz-userrow{display:grid;grid-template-columns:1fr 130px 34px;gap:var(--sp-3);margin-bottom:var(--sp-3);align-items:center}
     .wiz-userrow .btn-icon{color:#EF4444}
@@ -5997,7 +6017,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '14.5';
+var APP_VERSION = '14.6';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -6009,7 +6029,7 @@ var APP_VERSION = '14.5';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '84311371';
+var APP_BUILD = '3325612c';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -7631,6 +7651,8 @@ function wizGo(dir, skip){
 // Reads the current step's inputs into _wiz. Called on every move so going Back
 // and forward again never loses what was typed.
 function wizCollect(){
+  /* Las fichas en blanco se van aquí, al dejar de estar a la vista. */
+  _wizPurga();
   var k = WIZ_STEPS[_wizStep].key, v = function(id){ var e=document.getElementById(id); return e ? e.value.trim() : ''; };
   if (k === 'company'){
     _wiz.companyName   = v('wizCompany');
@@ -7648,8 +7670,14 @@ function wizValidate(){
   if (k === 'company' && !(document.getElementById('wizCompany')||{}).value.trim()){
     showToast('Enter your company name.','warn'); return false;
   }
-  if (k === 'locations' && !_wiz.locations.length){
-    showToast('Add at least one location — the app cannot record a movement without one.','warn'); return false;
+  if (k === 'locations'){
+    /* Se cuentan las que TIENEN NOMBRE, no las fichas: una recién añadida y
+       todavía en blanco no es una ubicación. */
+    var conNombre = _wiz.locations.filter(function(l){ return _wizNorm(l && l.name) !== ''; }).length;
+    if (!conNombre){
+      showToast('Add at least one location — the app cannot record a movement without one.','warn');
+      return false;
+    }
   }
   return true;
 }
@@ -7694,11 +7722,9 @@ function wizRender(){
         '<button onclick="_wizPreset(\'build\',this)">🏗 Construction<span>Lumber, Drywall, Paint, Electrical…</span></button>' +
         '<button onclick="_wizPreset(\'blank\',this)">⚪ Start empty<span>I will type my own</span></button>' +
       '</div>' +
-      '<div class="field"><label>Your categories</label>' +
-        '<div class="chip-box" id="wizCatChips"></div>' +
-        '<input type="text" id="wizCatInput" placeholder="Type a category and press Enter" style="margin-top:.5rem" ' +
-        'onkeydown="if(event.key===\'Enter\'){event.preventDefault();_wizAddChip(\'categories\',this)}"></div>';
-    _wizDrawChips('categories','wizCatChips');
+      '<div class="field">' + _wizHd('Your categories','categories') +
+        '<div class="chip-box" id="wizCatChips"></div></div>';
+    _wizDibuja('categories');
   }
 
   else if (step.key === 'locations'){
@@ -7712,15 +7738,18 @@ function wizRender(){
         '<button class="btn btn-ghost btn-sm" style="margin-top:.6rem" onclick="_wizGenerate()">Generate</button>' +
         '<div class="wiz-hint">Produces names like A1A, A1B, A1C, A2A… Skip this and type your own below if your ' +
         'warehouse is named differently.</div></div>' +
-      '<div class="field"><label>Locations (<span id="wizLocCount">0</span>)</label>' +
+      /* UN SOLO RECUADRO para estantes y camiones: antes los camiones tenían
+         su caja de texto abajo pero aparecían ARRIBA, en la misma lista. */
+      '<div class="field">' +
+        '<div class="list-hd"><label>Locations (<span id="wizLocCount">0</span>)</label>' +
+          '<div style="display:flex;gap:.4rem">' +
+            '<button type="button" class="btn-add" onclick="_wizAddEmpty(\'locations\')">+ Add rack</button>' +
+            '<button type="button" class="btn-add" style="border-color:var(--orange);color:var(--orange)" ' +
+              'onclick="_wizAddEmpty(\'locations\',\'SITE\')">+ Add truck / site</button>' +
+          '</div></div>' +
         '<div class="chip-box" id="wizLocChips" style="max-height:190px;overflow-y:auto"></div>' +
-        '<input type="text" id="wizLocInput" placeholder="Type a location and press Enter" style="margin-top:.5rem" ' +
-        'onkeydown="if(event.key===\'Enter\'){event.preventDefault();_wizAddLoc(this)}"></div>' +
-      '<div class="field"><label>Trucks / job sites (optional)</label>' +
-        '<input type="text" id="wizSiteInput" placeholder="e.g. TRUCK 1 — press Enter" ' +
-        'onkeydown="if(event.key===\'Enter\'){event.preventDefault();_wizAddLoc(this,\'SITE\')}">' +
-        '<div class="wiz-hint">These are destinations material leaves to, not storage inside the warehouse.</div></div>';
-    _wizDrawLocs();
+        '<div class="wiz-hint">A truck or job site is a place material can sit too — it just is not a rack.</div></div>';
+    _wizDibuja('locations');
   }
 
   else if (step.key === 'users'){
@@ -7737,16 +7766,12 @@ function wizRender(){
 
   else if (step.key === 'extras'){
     b.innerHTML =
-      '<div class="field"><label>Suppliers</label>' +
-        '<div class="chip-box" id="wizSupChips"></div>' +
-        '<input type="text" id="wizSupInput" placeholder="Type a supplier and press Enter" style="margin-top:.5rem" ' +
-        'onkeydown="if(event.key===\'Enter\'){event.preventDefault();_wizAddChip(\'suppliers\',this)}"></div>' +
-      '<div class="field"><label>Projects / clients</label>' +
-        '<div class="chip-box" id="wizProjChips"></div>' +
-        '<input type="text" id="wizProjInput" placeholder="Type a project and press Enter" style="margin-top:.5rem" ' +
-        'onkeydown="if(event.key===\'Enter\'){event.preventDefault();_wizAddChip(\'projects\',this)}"></div>';
-    _wizDrawChips('suppliers','wizSupChips');
-    _wizDrawChips('projects','wizProjChips');
+      '<div class="field">' + _wizHd('Suppliers','suppliers') +
+        '<div class="chip-box" id="wizSupChips"></div></div>' +
+      '<div class="field">' + _wizHd('Projects / clients','projects') +
+        '<div class="chip-box" id="wizProjChips"></div></div>';
+    _wizDibuja('suppliers');
+    _wizDibuja('projects');
   }
 
   else if (step.key === 'done'){
@@ -7817,32 +7842,151 @@ function _wizPreset(kind, btn){
   _wiz.categories = CATEGORY_PRESETS[kind].slice();
   Array.prototype.forEach.call(btn.parentNode.children, function(b){ b.classList.remove('sel'); });
   btn.classList.add('sel');
-  _wizDrawChips('categories','wizCatChips');
+  _wizDibuja('categories');
 }
 
-function _wizAddChip(listName, inp){
-  var v = (inp.value || '').trim().toUpperCase();
-  if (!v) return;
-  if (_wiz[listName].indexOf(v) === -1) _wiz[listName].push(v);
-  inp.value = '';
-  _wizDrawChips(listName, listName === 'categories' ? 'wizCatChips'
-                        : listName === 'suppliers'  ? 'wizSupChips' : 'wizProjChips');
+/* ═══ UNA SOLA LISTA, Y SE ESCRIBE DENTRO (W-02 y W-03) ════════════════════
+ *
+ * ESTO ES UNA COPIA DELIBERADA de lo mismo en `SetupWizard.html`, y la nota de
+ * la cabecera de aquel archivo explica por qué: el asistente tiene que poder
+ * correr ANTES de que exista una app desplegada —desde el propio Sheet— y
+ * compartir el código necesitaría plantillas de HtmlService, que a su vez
+ * complican el pegado manual. La duplicación fue el trato.
+ *
+ * Pero un trato así hay que sostenerlo, porque es exactamente «dos cosas que
+ * tienen que coincidir sin que nada lo obligue»: hasta hoy las dos copias
+ * tenían el MISMO fallo (W-03, el nombre repetido que se borraba en silencio)
+ * y nadie lo había notado en ninguna de las dos.
+ *
+ * Lo que lo obliga ahora es `tools/test-asistente-una-lista.js`, que lee los
+ * dos archivos y exige que las dos copias se comporten igual.
+ */
+function _wizLee(lista, i){
+  return lista === 'locations' ? (_wiz.locations[i] || {}).name || '' : _wiz[lista][i] || '';
 }
-
-function _wizRemoveChip(listName, i){
-  _wiz[listName].splice(i,1);
-  _wizDrawChips(listName, listName === 'categories' ? 'wizCatChips'
-                        : listName === 'suppliers'  ? 'wizSupChips' : 'wizProjChips');
+function _wizPone(lista, i, v){
+  if (lista === 'locations') _wiz.locations[i].name = v; else _wiz[lista][i] = v;
 }
+function _wizCaja(lista){
+  return lista === 'categories' ? 'wizCatChips'
+       : lista === 'suppliers'  ? 'wizSupChips'
+       : lista === 'projects'   ? 'wizProjChips' : 'wizLocChips';
+}
+function _wizNorm(v){ return String(v || '').trim().toUpperCase(); }
 
-function _wizDrawChips(listName, boxId){
-  var box = document.getElementById(boxId);
+var WIZ_UNO = { categories:'category', locations:'location', suppliers:'supplier', projects:'project' };
+
+/* Nace vacía, con el cursor dentro. Si se deja en blanco se va sola al cambiar
+ * de paso — pulsar «+ Add» sin querer no deja basura. */
+function _wizAddEmpty(lista, tipo){
+  if (lista === 'locations') _wiz.locations.push({ name: '', type: tipo || 'RACK' });
+  else _wiz[lista].push('');
+  _wizDibuja(lista);
+  var box = document.getElementById(_wizCaja(lista));
   if (!box) return;
-  box.innerHTML = _wiz[listName].length
-    ? _wiz[listName].map(function(v,i){
-        return '<span class="chip">'+_he(v)+'<button onclick="_wizRemoveChip(\''+listName+'\','+i+')">×</button></span>';
-      }).join('')
-    : '<span style="color:#6B7280;font-size:.8rem">Nothing yet</span>';
+  var inps = box.querySelectorAll('.chip-inp');
+  var ult  = inps[inps.length - 1];
+  if (ult){ ult.focus(); ult.scrollIntoView({ block: 'nearest' }); }
+}
+
+function _wizQuita(lista, i){ _wiz[lista].splice(i, 1); _wizDibuja(lista); }
+
+function _wizChoca(lista, i, v){
+  for (var k = 0; k < _wiz[lista].length; k++){
+    if (k !== i && _wizLee(lista, k) === v) return k;
+  }
+  return -1;
+}
+
+/* La repetida se enciende un momento y vuelve a su color. Con 53 ubicaciones,
+ * decir «ya existe» sin señalar cuál deja el trabajo a medias. */
+function _wizParpadea(lista, k){
+  var box = document.getElementById(_wizCaja(lista));
+  if (!box) return;
+  var ch = box.querySelectorAll('.chip')[k];
+  if (!ch) return;
+  ch.scrollIntoView({ block: 'nearest' });
+  ch.classList.add('chip-dup');
+  setTimeout(function(){ ch.classList.remove('chip-dup'); }, 1600);
+}
+
+/* NO SE BORRA LO QUE SE ESCRIBIÓ. Ése era el fallo: la comprobación protegía
+ * el dato y después limpiaba la caja pasara lo que pasara, así que desde fuera
+ * no se distinguía de «se lo tragó». */
+function _wizCommit(lista, i, inp){
+  var v = _wizNorm(inp.value);
+  if (!v){ _wizPone(lista, i, ''); return; }
+
+  var k = _wizChoca(lista, i, v);
+  if (k !== -1){
+    showToast('"' + v + '" is already on the list — try another ' +
+              (WIZ_UNO[lista] || 'name') + '.', 'warn', 4000);
+    inp.value = v;
+    _wizParpadea(lista, k);
+    return;
+  }
+
+  _wizPone(lista, i, v);
+  inp.value = v;
+  inp.size  = Math.max(2, v.length);
+}
+
+function _wizTecla(ev, lista, i, inp){
+  if (ev.key === 'Enter'){
+    ev.preventDefault();
+    _wizCommit(lista, i, inp);
+    if (_wizLee(lista, i)) _wizAddEmpty(lista, lista === 'locations' ? _wiz.locations[i].type : null);
+  } else if (ev.key === 'Escape'){
+    inp.value = '';
+    _wizPone(lista, i, '');
+    inp.blur();
+  }
+}
+
+/* Lo que quedó en blanco se va sin preguntar, al cambiar de paso. */
+function _wizPurga(){
+  ['categories','suppliers','projects'].forEach(function(l){
+    _wiz[l] = _wiz[l].filter(function(v){ return _wizNorm(v) !== ''; });
+  });
+  _wiz.locations = _wiz.locations.filter(function(l){ return _wizNorm(l && l.name) !== ''; });
+}
+
+function _wizDibuja(lista){
+  var box = document.getElementById(_wizCaja(lista));
+  if (!box) return;
+  var n = lista === 'locations' ? _wiz.locations.length : _wiz[lista].length;
+
+  var c = document.getElementById('wizLocCount');
+  if (c && lista === 'locations') c.textContent = _wiz.locations.length;
+
+  if (!n){
+    box.innerHTML = '<span style="color:#6B7280;font-size:.8rem">Nothing yet — press <b>+ Add</b></span>';
+    return;
+  }
+
+  var piezas = [];
+  for (var i = 0; i < n; i++){
+    var v    = _wizLee(lista, i);
+    var site = lista === 'locations' && _wiz.locations[i].type === 'SITE';
+    var ph   = site ? 'TRUCK 1' : (WIZ_UNO[lista] || 'name').toUpperCase();
+    piezas.push(
+      '<span class="chip"' + (site ? ' style="background:var(--orange-bg);color:var(--orange)"' : '') + '>' +
+        (site ? '🚚 ' : '') +
+        '<input class="chip-inp" value="' + _escAttr(v) + '" placeholder="' + _escAttr(ph) + '"' +
+          ' size="' + Math.max(2, (v || ph).length) + '"' +
+          ' oninput="this.size=Math.max(2,this.value.length||2)"' +
+          ' onblur="_wizCommit(\'' + lista + '\',' + i + ',this)"' +
+          ' onkeydown="_wizTecla(event,\'' + lista + '\',' + i + ',this)">' +
+        '<button type="button" onclick="_wizQuita(\'' + lista + '\',' + i + ')">×</button>' +
+      '</span>');
+  }
+  box.innerHTML = piezas.join('');
+}
+
+function _wizHd(texto, lista, tipo){
+  return '<div class="list-hd"><label>' + texto + '</label>' +
+    '<button type="button" class="btn-add" onclick="_wizAddEmpty(\'' + lista + '\'' +
+      (tipo ? ',\'' + tipo + '\'' : '') + ')">+ Add</button></div>';
 }
 
 // "A-F" → [A..F];  "1-6" → [1..6];  "A,B,C" → [A,B,C]. Accepts either form for
@@ -7872,33 +8016,16 @@ function _wizGenerate(){
       _wiz.locations.push({ name:name, type:'RACK' }); made++;
     }
   }); }); });
-  _wizDrawLocs();
-  showToast(made + ' location(s) generated.','ok');
+  _wizDibuja('locations');
+  showToast(made
+    ? made + ' location(s) generated.'
+    : 'Those are already on the list — nothing new to add.', made ? 'ok' : 'warn');
 }
 
-function _wizAddLoc(inp, type){
-  var v = (inp.value||'').trim().toUpperCase();
-  if (!v) return;
-  if (!_wiz.locations.some(function(x){ return x.name === v; })) _wiz.locations.push({name:v, type:type||'RACK'});
-  inp.value = '';
-  _wizDrawLocs();
-}
-
-function _wizRemoveLoc(i){ _wiz.locations.splice(i,1); _wizDrawLocs(); }
-
-function _wizDrawLocs(){
-  var box = document.getElementById('wizLocChips');
-  if (!box) return;
-  var c = document.getElementById('wizLocCount');
-  if (c) c.textContent = _wiz.locations.length;
-  box.innerHTML = _wiz.locations.length
-    ? _wiz.locations.map(function(l,i){
-        var site = l.type === 'SITE';
-        return '<span class="chip"' + (site ? ' style="background:var(--orange-bg);color:var(--orange)"' : '') + '>' +
-          (site ? '🚚 ' : '') + _he(l.name) + '<button onclick="_wizRemoveLoc('+i+')">×</button></span>';
-      }).join('')
-    : '<span style="color:#6B7280;font-size:.8rem">Nothing yet</span>';
-}
+/* `_wizAddLoc`, `_wizRemoveLoc` y `_wizDrawLocs` se fueron con W-02: eran la
+ * tercera y cuarta copia de añadir, quitar y dibujar, escritas aparte sólo
+ * porque una ubicación lleva tipo y una categoría no. Esa diferencia vive
+ * ahora en `_wizLee` y `_wizPone`. */
 
 function _wizAddUserRow(){
   // Sync existing rows' DOM values into _wiz.users BEFORE pushing+redrawing —
@@ -32404,6 +32531,18 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '14.6',
+    titulo: 'Setup: one list you type straight into, and a repeated name that says so',
+    puntos: [
+      '<b>A name that was already on the list used to vanish without a word.</b> You typed a location that existed, pressed Enter, and the box simply emptied. The list was right \u2014 it refused to add it twice \u2014 but nothing said so, which from the outside is indistinguishable from the app swallowing what you typed. Now what you typed stays put, a line in red says it is already there, and <b>the one it clashes with lights up for a moment</b>, so you can see where it is among fifty.',
+      '<b>There is one list now, not two.</b> Every list in setup had a box underneath to type into and a row of chips above to look at \u2014 two places for one thing, and no way to correct an entry once it was in. There is a <b>+ Add</b> button on the right of each list: it drops an empty chip with the cursor already inside, and you type there. Add one by mistake and leave it blank \u2014 it removes itself when you move on.',
+      'Which also means the starting templates are now yours to edit. Pick <i>Glass &amp; windows</i> and rename one of its categories on the spot, instead of deleting and retyping it.',
+      'Trucks and job sites go in the same list as the racks, where they were always shown \u2014 they just used to be typed somewhere else.',
+      '<b>And the button that continues setup can no longer end up off the screen.</b> The window is as tall as the screen allows, which is not up to us; now only the middle scrolls, and the footer stays put whatever the height.'
+    ],
+    antes:  'A box that ate what you typed, and Continue below the fold',
+    ahora:  'Type in the list itself, and it answers you' },
+
   { ver: '14.5',
     titulo: 'Fix the bad rows of an import on the screen, instead of going back to Excel',
     puntos: [
@@ -32438,17 +32577,6 @@ var NOVEDADES = [
     ],
     antes:  'A count you had to match against the shelves by hand',
     ahora:  'The list is marked in the colours the count uses' },
-
-  { ver: '14.2',
-    titulo: 'Low-stock alerts: one button that told the truth, and a screen that answers while you use it',
-    puntos: [
-      '<b>There were two buttons and they did the same thing.</b> &ldquo;Watch everything&rdquo; and &ldquo;Clear all&rdquo; both ended up with no filter \u2014 which means <i>watch everything</i>. So the button that promised to stop watching switched the alerts for <b>every</b> material on. Clearing the ticks and still getting the same warnings was not the list failing: it was the button saying the opposite of what it did.',
-      'One button now, named after what actually happens.',
-      '<b>And the window answers while you use it.</b> Tick a material, type a minimum, and a line at the top says what it would mean right now \u2014 <i>Watching 12 of 48 \u00b7 right now: 3 at zero, 7 below minimum</i>. Before, nothing changed until you saved and closed, so the only way to see the effect was to go and look at the dashboard.',
-      'That line is worked out by <b>the same rule the alert panel uses</b>, so the two cannot disagree. And a minimum set on a material whose name ends in a space is found again \u2014 it used to be saved and then never matched, so the alert simply never arrived.'
-    ],
-    antes:  'A button that cleared the ticks and turned every alert on',
-    ahora:  'It says what it watches, and what that means right now' },
 
 ];
 
