@@ -310,6 +310,29 @@ es exactamente para esto.
 
 ---
 
+## 📋 LO DEL 10/11 — REVISIÓN COMPLETA
+
+Está entera en **`docs/REVISION-10-11.md`**, con los números medidos. Aquí sólo
+lo que entra en la cola:
+
+| | Qué | Medido |
+|---|---|---|
+| 🔴 **C-01** | La media de coste se redondea en cada paso y el error se acumula | **−$202,72** sobre 7.000 unidades tras 1.000 entradas |
+| 🟠 **C-02** | Un stock imposible se tapa con un cero. La app **sí lo detecta** y manda la prueba a `Logger.log`, que nadie abre | 2 `Math.max(0,…)` sin registro + 4 `_errors` que sólo van al log |
+| 🟡 **C-03** | `runDataQualityScan` revisa nombres, no aritmética | — |
+| 🟠 **D-01** | La media de coste se pisa en cada entrada y no deja historia | — |
+| 🟡 **D-03** | Una fila corregida al importar no queda marcada en el archivo | — |
+| 🔴 **O-01** | Cada inicio de sesión lee el archivo **entero** | 1,3 M de celdas con 50.000 movimientos |
+| 🟠 **O-02** | 750 KB de JS a cada navegador en cada carga | 238 KB comprimidos |
+| 🟡 **O-03** | 25 clases de CSS que no usa nadie | de 794 |
+
+**Y lo que NO está roto, que también se midió:** la inyección de fórmulas está
+cubierta (`textCell_`, 71 usos), no hay XSS encontrado, las 65 acciones pasan
+por una sola puerta que verifica sesión, y el borrado en tanda no repite
+barridos.
+
+---
+
 ## 📋 LO DEL 9/11 — TRES DE LA DEMO DE LA PANADERÍA
 
 ### 🔴 W-05 · La etiqueta sale con una ubicación QUE NO EXISTE
