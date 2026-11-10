@@ -103,6 +103,28 @@
        de ser una foto a ser una ventana, y la p&aacute;gina adelgaz&oacute;
        300&nbsp;KB por la red.</p>
 
+    <!-- NADA SE MUEVE. -->
+    <div class="entry" id="v14-8">
+      <span class="ver">v14.8</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Nada salta al marcar una casilla</h3>
+      <p><b>La barra de acciones se recolocaba sola a medida que ibas marcando.</b> Pasar de 9
+         marcados a 10 &mdash;de una cifra a dos&mdash; bastaba para ensanchar un bot&oacute;n y
+         empujar todo lo que ten&iacute;a al lado. Ahora cada contador ocupa un hueco con sitio para
+         dos cifras desde el principio, y todas las cifras miden igual: cambia el n&uacute;mero y no
+         cambia nada m&aacute;s.</p>
+      <p><b>En Projects era peor que desordenado.</b> Al marcar uno, el recuadro de renombrar se
+         com&iacute;a la barra entera y los botones bajaban a una segunda l&iacute;nea, encima de la
+         lista. La barra reservaba una altura m&iacute;nima &mdash;que imped&iacute;a encogerse, pero
+         nada imped&iacute;a crecer&mdash;. Medido: de 44 p&iacute;xeles a 95.</p>
+      <p>Ahora la barra tiene altura fija y huecos fijos. Renombrar y Fusionar miden lo mismo porque
+         comparten sitio, y los botones est&aacute;n anclados al borde derecho, as&iacute; que lo que
+         cambia en el medio ya no los mueve. De cero marcados a doce, <b>no se mueve ni un
+         p&iacute;xel</b>.</p>
+      <p>Y eso est&aacute; medido, no supuesto: una prueba abre la barra con 0, 1, 2 &hellip; 12
+         marcados y compara la posici&oacute;n y el tama&ntilde;o de cada pieza.</p>
+    </div>
+
     <!-- C-01: EL ERROR QUE NO SE COMPENSA. -->
     <div class="entry" id="v14-7">
       <span class="ver">v14.7</span>

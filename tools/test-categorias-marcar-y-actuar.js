@@ -148,7 +148,13 @@ check('con UNA: fusionar NO aparece — no hay con qué fusionar',
   !/catMergeBtn/.test(unaSola));
 check('con VARIAS: se puede borrar', /catDelBtn/.test(varias), varias);
 check('con VARIAS: y fusionar, que es lo que ya existía', /catMergeBtn/.test(varias));
-check('con VARIAS: borrar dice CUÁNTAS se lleva', /🗑 Delete 3/.test(varias));
+check('con VARIAS: borrar dice CUÁNTAS se lleva',
+  /🗑 Delete <span class="num">3<\/span>/.test(varias), varias);
+/* Y el hueco del número está desde el principio, VACÍO con una marcada: si
+ * apareciera al marcar la segunda, el botón crecería justo entonces — el salto
+ * que Jose grabó el 10/11, con otra cara. */
+check('...y con UNA el hueco ya está reservado, vacío',
+  /🗑 Delete <span class="num"><\/span>/.test(unaSola), unaSola);
 check('con VARIAS: hay que decir cuál nombre se queda',
   /catKeep/.test(varias) && /keep which name/.test(varias));
 
@@ -162,7 +168,8 @@ check('...y tampoco disfrazado de botón apagado', !/disabled/.test(varias));
 check('siempre se puede soltar lo marcado',
   /catClearBtn/.test(unaSola) && /catClearBtn/.test(varias));
 check('y la barra dice cuántas hay marcadas',
-  /1 selected/.test(unaSola) && /3 selected/.test(varias));
+  /<span class="num">1<\/span> selected/.test(unaSola) &&
+  /<span class="num">3<\/span> selected/.test(varias));
 
 console.log('\n═══ 3 · LO QUE LA PANTALLA NO DEBE VOLVER A HACER ═══\n');
 

@@ -3303,17 +3303,81 @@
      * hacer, que es sitio mejor empleado que un hueco en blanco. Al marcar
      * algo se le enciende el fondo y cambian los botones: **nada se mueve,
      * sólo cambia lo que hay dentro.** */
-    .cfg-pickbar{display:flex;gap:var(--sp-3);align-items:center;flex-wrap:wrap;
+    /* ── NADA SE MUEVE NI CAMBIA DE TAMAÑO (v14.8) ────────────────────────
+     *
+     * Jose, 10/11, con vídeo: *"al seleccionar y pasar de un número a otro, en
+     * especial de 9 a 10, de una cifra a 2, se mueve todo dentro de la franja
+     * azul: todos los botones y los textos se mueven y cambian de tamaño. No
+     * quiero eso. Quiero que todo tenga su espacio y todo se mueva dentro de
+     * su espacio."*
+     *
+     * Y encontró además un fallo mío de P-02: dentro de Ajustes hay una regla
+     * `.modal input{width:100%}`, así que el recuadro de renombrar se comía la
+     * franja entera y los botones bajaban a una segunda línea. **Medido: la
+     * franja pasaba de 44 px a 95 px al marcar uno.** El `min-height` evitaba
+     * que se encogiera, pero nada evitaba que creciera.
+     *
+     * Tres reglas, y las tres hacen falta:
+     *
+     *   · `flex-wrap:nowrap` + `height` fija (no `min-height`): la franja no
+     *     puede crecer, así que no puede empujar la lista ni meterse encima.
+     *   · el recuadro del medio toma el sitio que sobra y **se encoge** en vez
+     *     de saltar de línea (`flex:1 1 auto; min-width:0`).
+     *   · los botones no se encogen (`flex-shrink:0`) y los números van en un
+     *     hueco de ancho fijo — ver `.num`. */
+    .cfg-pickbar{display:flex;gap:var(--sp-3);align-items:center;flex-wrap:nowrap;
       background:transparent;color:var(--muted);border-radius:8px;
       padding:var(--sp-3) .7rem;margin-bottom:var(--sp-5);
-      min-height:var(--h-btn-lg);font-size:.78rem;
+      height:var(--h-btn-lg);font-size:.78rem;overflow:hidden;
       transition:background .12s ease}
     .cfg-pickbar.show{background:var(--navy);color:#fff}
+    .cfg-pickbar > *{flex-shrink:0}
+    /* El recuadro de renombrar y el desplegable de fusionar comparten el hueco
+       del medio: toman lo que sobra y se encogen, nunca saltan de línea.
+       `min-width:0` es lo que de verdad permite encoger un hijo flexible. */
+    /* ANCHO FIJO, NO ELÁSTICO. Si crecieran para llenar el hueco, su tamaño
+       dependería de cuánto ocupa todo lo demás — y entonces cualquier cambio
+       en el resto los movería. Con un ancho fijo, el sitio que sobra lo absorbe
+       el margen automático del grupo de botones, que es lo que los mantiene
+       pegados a la derecha. Se encogen sólo si la ventana es estrecha. */
+    .cfg-pickbar input[type=text],.cfg-pickbar select{flex:0 1 210px;width:210px;
+      min-width:110px;max-width:210px;font-size:.8rem;padding:var(--sp-1) var(--sp-2);
+      border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text)}
     /* El motivo por el que falta una acción. Va al final y en pequeño: es una
-       explicación, no un control. */
-    .cfg-pick-nota{font-size:.75rem;opacity:.85;margin-left:auto}
-    .cfg-pick-count{font-size:.78rem;font-weight:700}
-    .cfg-pickbar select{font-size:.8rem;padding:var(--sp-1) var(--sp-2);border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);max-width:220px}
+       explicación, no un control. Se encoge con puntos suspensivos antes de
+       empujar a nadie. */
+    .cfg-pick-nota{font-size:.75rem;opacity:.85;margin-left:auto;flex-shrink:1;
+      min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    /* «1 selected» y «12 selected» ocupan lo mismo: el número tiene su hueco. */
+    .cfg-pick-count{font-size:.78rem;font-weight:700;white-space:nowrap;
+      min-width:84px}
+    /* El hueco de «keep which name?». Está SIEMPRE, vacío cuando no aplica:
+       es lo que impide que aparecer empuje a nadie. */
+    /* En una ventana estrecha algo tiene que ceder, y éste es el primero: es
+       una explicación, no un control. Cede ANTES que el desplegable, que es
+       donde se elige el nombre que se queda. */
+    .cfg-pick-hint{font-size:.76rem;opacity:.85;white-space:nowrap;
+      width:116px;flex-shrink:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+    /* Los botones, anclados al borde derecho: lo que cambia en el medio ya no
+       los empuja. Sin esto, pasar de 1 a 2 marcados movía Borrar 19 px. */
+    .cfg-pick-acciones{display:flex;gap:var(--sp-3);align-items:center;
+      margin-left:auto;flex-shrink:0}
+    /* ── RENOMBRAR Y FUSIONAR COMPARTEN HUECO, ASÍ QUE MIDEN IGUAL ─────────
+       Nunca salen las dos: con una marcada va Renombrar, con varias Fusionar.
+       Ocupan el mismo sitio, y medían distinto —«Rename» 60 px, «🔀 Merge»
+       79 px—, así que al marcar la segunda todo lo que tenían a la derecha se
+       desplazaba 19 px. Medido. Con el mismo ancho mínimo, el hueco es el
+       mismo y lo de al lado no se entera de cuál de los dos está. */
+    .cfg-pick-primaria{min-width:92px}
+    /* ── UN NÚMERO QUE CAMBIA NO PUEDE MOVER LO QUE TIENE AL LADO ──────────
+       `tabular-nums` hace que todas las cifras midan igual —si no, un 1 es más
+       estrecho que un 8 y «11 selected» baila respecto a «88 selected»— y
+       `min-width:2ch` reserva sitio para dos cifras desde el principio, que es
+       donde estaba el salto que Jose vio: de 9 a 10.
+       Se ensancha solo a partir de tres cifras, y ahí ya no hay forma de
+       evitarlo sin mentir sobre el número. */
+    .num{display:inline-block;min-width:2ch;text-align:right;
+      font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
     /* Locations grouped by type, drag to reorder */
     .loc-toolbar{display:flex;align-items:flex-start;gap:var(--sp-5);margin-bottom:var(--sp-5)}
     .loc-plus-wrap{position:relative;flex-shrink:0}
@@ -5995,7 +6059,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '14.7';
+var APP_VERSION = '14.8';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -6007,7 +6071,7 @@ var APP_VERSION = '14.7';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'f7230cc0';
+var APP_BUILD = 'd67659db';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -18506,14 +18570,27 @@ function _barraMarcados(op){
   var una    = sel.length === 1;
   var trozos = [];
 
-  trozos.push('<span class="cfg-pick-count">' + sel.length + ' selected' +
-    (!una && op.fusionar ? ' — keep which name?' : '') + '</span>');
+  /* El número en su propio hueco de ancho fijo: de 9 a 10 no mueve nada.
+   * Y la pregunta de «¿cuál nombre se queda?» sólo aparece cuando hay un
+   * desplegable al lado al que se refiera. */
+  /* ── CADA COSA EN SU HUECO, Y EL HUECO NO DEPENDE DE LO QUE HAYA DENTRO ──
+   *
+   * El contador lleva sólo «N selected», con el número en su casilla fija. La
+   * pregunta de cuál nombre se queda va APARTE, en un hueco que está reservado
+   * también cuando no hay nada que preguntar.
+   *
+   * Reservar sitio vacío parece desperdicio y es lo contrario: era eso lo que
+   * ensanchaba el contador 132 px al marcar la segunda y empujaba todo lo
+   * demás. Un hueco vacío no se ve; un botón que se mueve, sí. */
+  trozos.push('<span class="cfg-pick-count"><span class="num">' + sel.length + '</span> selected</span>');
+  trozos.push('<span class="cfg-pick-hint">' +
+    (!una && op.fusionar ? 'keep which name?' : '') + '</span>');
 
   /* RENOMBRAR: sólo con una, y se escribe AQUÍ, en la barra. */
   if (una && op.renombrar){
     trozos.push('<input type="text" id="' + P + 'RenameInp" maxlength="' +
                 (op.renombrar.max || 40) + '" value="' + _escAttr(sel[0]) + '">');
-    trozos.push('<button class="btn btn-primary btn-sm" id="' + P + 'RenameBtn" disabled ' +
+    trozos.push('<button class="btn btn-primary btn-sm cfg-pick-primaria" id="' + P + 'RenameBtn" disabled ' +
                 'title="Type a different name first">Rename</button>');
   }
 
@@ -18522,19 +18599,37 @@ function _barraMarcados(op){
     trozos.push('<select id="' + P + 'Keep">' +
       sel.map(function(v){ return '<option value="' + _escAttr(v) + '">' + _he(v) + '</option>'; }).join('') +
       '</select>');
-    trozos.push('<button class="btn btn-primary btn-sm" id="' + P + 'MergeBtn">🔀 Merge</button>');
+    trozos.push('<button class="btn btn-primary btn-sm cfg-pick-primaria" id="' + P + 'MergeBtn">🔀 Merge</button>');
   }
 
   /* LO DEMÁS que cada pantalla quiera: mover de categoría en Materials, el ojo
    * de una ubicación… Cada una declara si vale para varias. */
+  /* ── LOS BOTONES, PEGADOS A LA DERECHA Y SIEMPRE EN EL MISMO SITIO ───────
+   *
+   * Van en su propio grupo con `margin-left:auto`, así que se anclan al borde
+   * derecho de la franja. Lo que cambia en el medio —el recuadro de renombrar
+   * con una marcada, el desplegable de fusionar con varias— ya no los empuja.
+   *
+   * Sin esto, pasar de 1 a 2 movía Borrar 19 píxeles, porque el medio cambia
+   * de contenido. Medido. Es el mismo salto que Jose grabó, en su versión
+   * pequeña. */
+  var acciones = [];
+
   (op.acciones || []).forEach(function(a){
     if (!una && !a.conVarias) return;
     /* El contador va en el botón —«🗑 Delete 3»— porque borrar y fusionar
      * cambian de peso con el número y conviene verlo ANTES de pulsar. Una
      * acción que no cambia de peso lo dice con `sinCuenta`: «🏷 Print labels 3»
      * no aclara nada que no diga ya «3 selected». */
-    trozos.push('<button class="btn btn-sm ' + (a.clase || 'btn-ghost') + '" id="' + P + a.id + '">' +
-      _he(a.texto) + (!una && a.conVarias && !a.sinCuenta ? ' ' + sel.length : '') + '</button>');
+    /* EL CONTADOR DEL BOTÓN TAMBIÉN TIENE SU HUECO, y además lo tiene SIEMPRE:
+     * con una marcada se reserva vacío. Si apareciera sólo al marcar dos, el
+     * botón crecería justo en el momento en que se marca la segunda — que es
+     * el salto que Jose grabó, con otra cara. */
+    var lleva = a.conVarias && !a.sinCuenta;
+    acciones.push('<button class="btn btn-sm ' + (a.clase || 'btn-ghost') + '" id="' + P + a.id + '">' +
+      _he(a.texto) +
+      (lleva ? ' <span class="num">' + (una ? '' : sel.length) + '</span>' : '') +
+      '</button>');
   });
 
   /* MARCARLAS TODAS. Sólo sale si queda algo por marcar — un botón que ya no
@@ -18542,10 +18637,10 @@ function _barraMarcados(op){
    * cliente quiere imprimir todas de una vez? ¿debe hacerlo una por una?"*;
    * con cincuenta y nueve estantes, marcarlas a mano es un castigo. */
   if (op.todo && op.todo.faltan > 0){
-    trozos.push('<button class="btn btn-ghost btn-sm" id="' + P + 'AllBtn">Select all</button>');
+    acciones.push('<button class="btn btn-ghost btn-sm" id="' + P + 'AllBtn">Select all</button>');
   }
 
-  trozos.push('<button class="btn btn-ghost btn-sm" id="' + P + 'ClearBtn">Clear</button>');
+  acciones.push('<button class="btn btn-ghost btn-sm" id="' + P + 'ClearBtn">Clear</button>');
 
   /* LA NOTA: por qué NO está una acción que cabría esperar. Un botón apagado
    * invita a la pulsación que hay que rechazar; uno ausente y sin explicación
@@ -18555,7 +18650,8 @@ function _barraMarcados(op){
    * que pasar por encima, así que un motivo escondido en un `title` no existe. */
   if (op.nota) trozos.push('<span class="cfg-pick-nota">' + _he(op.nota) + '</span>');
 
-  bar.innerHTML = trozos.join('');
+  bar.innerHTML = trozos.join('') +
+    '<span class="cfg-pick-acciones">' + acciones.join('') + '</span>';
 
   if (una && op.renombrar){
     var inp = document.getElementById(P + 'RenameInp');
@@ -32518,6 +32614,17 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '14.8',
+    titulo: 'Nothing jumps when you tick a box',
+    puntos: [
+      '<b>The action bar used to rearrange itself as you selected things.</b> Going from 9 ticked to 10 \u2014 one digit to two \u2014 was enough to widen a button and shove everything beside it. Every count now sits in a slot wide enough for two digits from the start, with all digits the same width, so the number changes and nothing else does.',
+      '<b>And in Projects it was worse than untidy.</b> Ticking one made the rename box take the whole bar, pushing the buttons onto a second line, on top of the list. The bar reserved a minimum height \u2014 which stopped it shrinking, but nothing stopped it growing. Measured: it went from 44 to 95 pixels.',
+      'The bar is now a fixed height with fixed slots. Rename and Merge are the same width because they share one place, the buttons are anchored to the right edge, and what changes in the middle no longer moves them. From nothing selected to twelve, <b>not one pixel moves.</b>',
+      'That is measured, not assumed: a test opens the bar with 0, 1, 2 \u2026 12 selected and compares the position and size of every piece.'
+    ],
+    antes:  'Buttons that shifted as the number grew',
+    ahora:  'Everything has its place, and stays in it' },
+
   { ver: '14.7',
     titulo: 'The average cost stops drifting, and stock that cannot be true now says so',
     puntos: [
@@ -32553,19 +32660,6 @@ var NOVEDADES = [
     ],
     antes:  'Three bad cells, and a round trip through Excel',
     ahora:  'Fix them here, and the row goes green' },
-
-  { ver: '14.4',
-    titulo: 'One way to pick a row, everywhere \u2014 and zero now means zero on the shelf',
-    puntos: [
-      '<b>Five screens asked you to select things in five different ways.</b> Projects, Suppliers, Locations, Directory and Materials each had a <i>mode</i>: you pressed Rename, the list quietly went into rename state, and the pencil on whichever row you touched next did something. Projects and Locations had the mode <i>and</i> a separate tick box for merging \u2014 two ways of choosing, in one list.',
-      'All five now work the way the Dashboard, Movements and Categories already did: <b>tick what you mean, and a bar says what can be done with it.</b> Tick one and Rename and Delete wake up; tick several and Rename is not offered at all, because renaming several things to one name is not renaming \u2014 it is merging, and Merge is right there.',
-      '<b>And the per-row buttons are gone with it.</b> Materials carried three on every row; with eighty materials on screen that was two hundred and forty buttons competing with the names. Nothing is lost: everything they did is in the bar, acting on what you ticked.',
-      '<b>Things that were not possible before, now are.</b> Remove several contacts from the Directory at once. Merge two materials by ticking them and saying which name stays, instead of typing the exact name of the survivor. Archive or delete several locations in one go \u2014 and Delete only appears when none of them is holding anything, with the reason shown instead of a button that refuses the click.',
-      '<b>Renaming a material no longer freezes the whole tab.</b> It used to grey out every button on the screen, search box included.',
-      '<b>And \u201cat zero\u201d now means the warehouse is empty.</b> It used to require the job sites to be empty too, so a material with nothing left on the shelf did not raise the alarm while a pallet sat at a job \u2014 which is exactly when you need to reorder. What has gone out cannot be taken off the shelf again.'
-    ],
-    antes:  'Five ways to pick a row, and a mode you could not see',
-    ahora:  'Tick it, and the bar tells you what you can do' },
 
 ];
 

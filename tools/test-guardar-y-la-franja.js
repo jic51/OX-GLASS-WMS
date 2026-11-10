@@ -171,8 +171,22 @@ console.log('\n═══ P-03 · LA FRANJA NO EMPUJA LA LISTA ═══\n');
 const css = (HTML.match(/\.cfg-pickbar\{[^}]*\}/) || [''])[0];
 check('la franja está SIEMPRE en el reparto', /display:flex/.test(css), css);
 check('...y ya no aparece de la nada', !/display:none/.test(css));
-check('...con una altura reservada, que es lo que impide el salto',
-  /min-height:var\(--h-btn-lg\)/.test(css));
+/* ── DE `min-height` A `height` (v14.8) ───────────────────────────────────
+ *
+ * `min-height` reservaba el sitio e impedía que la franja se ENCOGIERA, que
+ * era el salto de la v13.9. Pero no impedía que CRECIERA, y eso resultó ser un
+ * fallo real: dentro de Ajustes hay una regla `.modal input{width:100%}`, así
+ * que el recuadro de renombrar se comía la franja entera y los botones bajaban
+ * a una segunda línea, encima de la lista. Medido: de 44 px a 95 px.
+ *
+ * Con `height` y `flex-wrap:nowrap` la franja no puede hacer ninguna de las
+ * dos cosas. Quién lo comprueba de verdad es `test-nada-se-mueve.js`, que lo
+ * MIDE en un navegador con 0..12 marcados; esto sujeta la regla que lo hace
+ * posible. */
+check('...con una altura fija, que es lo que impide el salto en los dos sentidos',
+  /height:var\(--h-btn-lg\)/.test(css) && !/min-height/.test(css), css);
+check('...y sin salto de línea, que es por donde crecía',
+  /flex-wrap:nowrap/.test(css));
 
 const cssShow = (HTML.match(/\.cfg-pickbar\.show\{[^}]*\}/) || [''])[0];
 check('lo que cambia al marcar es el aspecto, no el sitio',
