@@ -310,6 +310,46 @@ es exactamente para esto.
 
 ---
 
+## 📋 LO DEL 11/11
+
+### ~~🔴 La casilla del teléfono~~ ✅ **v14.9**
+
+Jose, con capturas de dos teléfonos: *"no sé por qué el checkbox es tan
+grande."* Medido: **34 × 34 px dentro de una celda de 30**. Se salía cuatro
+píxeles y tapaba la fecha.
+
+**Y el error de fondo era mío, del arreglo de N-15.** Aquello pedía un **área de
+toque** de 44 px; yo agrandé **la casilla**. No es lo mismo: una casilla nativa
+estirada a 34 px no se lee como una casilla grande, se lee como un cuadro vacío.
+Ahora 20 px a la vista dentro de un área de 44 donde se puede tocar en cualquier
+punto — y 44 **sólo en el teléfono**, porque en el ordenador le robaba 14 px a
+la columna del material.
+
+### ~~🔴 W-05 · La etiqueta con un estante que no existe~~ ✅ **v14.9**
+### ~~🟠 W-06 · Qty se comía el sitio de Available~~ ✅ **v14.9**
+
+### 📈 CRECER — el plan, en `docs/CRECER.md`
+
+Del vídeo que mandó Jose (*«What's Actually Becoming Valuable In The AI Era?»*):
+560.000 apps nuevas en seis meses de 2026 contra 600.000 en todo 2025.
+**Construir dejó de ser el cuello de botella.** Dos camiones de tacos, los
+mismos tacos, uno con cola: *la cola es la parte valiosa*.
+
+**Dónde está Acopio en ese argumento, medido:** por delante en lo que el vídeo
+supone —un producto que funciona en producción, con quince versiones y 211
+pruebas— y **en cero en lo que llama valioso**: sin lista, sin audiencia, sin un
+sitio donde quien tiene el problema se tropiece con él. El hueco del vídeo de la
+landing lleva meses diciendo *«Needs your recording»*.
+
+**Y la reunión de la panadería es esa lección por las malas:** fue a enseñar la
+app a quien no había dicho que tuviera el problema.
+
+**La verdad incómoda, y queda escrita:** de la v13.5 a la v14.9 en dos semanas,
+el producto mucho mejor y **el negocio igual que al empezar**. Ningún arreglo de
+esta lista trae un segundo usuario.
+
+---
+
 ## 📋 LO DEL 10/11 — REVISIÓN COMPLETA
 
 > **Tres correcciones a mi propia revisión, hechas al ir a construirla:**
