@@ -1611,14 +1611,43 @@
     .exit-mat-grid .field label{font-size:.7rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;display:block;margin-bottom:.3rem}
     .exit-mat-grid .field input,.exit-mat-grid .field select{padding:.45rem var(--sp-4);border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:.84rem;width:100%}
     .exit-mat-grid .field input:focus,.exit-mat-grid .field select:focus{outline:none;border-color:var(--red);box-shadow:var(--ring-bad)}
+    /* La cabecera se reparte EXACTAMENTE igual que la fila, o los títulos
+       dejan de caer encima de su columna. Son dos cosas que tienen que
+       coincidir, así que comparten los mismos tres anchos. */
     .exit-loc-hdr{display:flex;gap:var(--sp-2);margin:0 0 var(--sp-1)}
     .exit-loc-hdr span{font-size:.67rem;font-weight:600;color:var(--muted);text-transform:uppercase}
+    .exit-loc-hdr span:nth-child(1){flex:1 1 auto;min-width:0}
+    .exit-loc-hdr span:nth-child(2){flex:0 0 76px;text-align:center}
+    .exit-loc-hdr span:nth-child(3){flex:0 0 96px}
     .exit-loc-row{display:flex;gap:var(--sp-2);align-items:center;margin-bottom:.3rem}
-    .exit-loc-row .el-rack{flex:2;padding:.38rem .55rem;border:1px solid var(--border);border-radius:5px;font-size:.82rem;font-family:inherit}
-    .exit-loc-row .el-qty{flex:1;padding:.38rem .55rem;border:1px solid var(--border);border-radius:5px;font-size:.82rem;font-family:inherit}
-    .exit-loc-row .el-avail{flex:1.4;font-size:.72rem;font-weight:600;min-width:0}
+    /* ── W-06 · EL REPARTO ENTRE CANTIDAD Y DISPONIBLE ────────────────────
+     *
+     * Jose, 9/11, con captura: *"¿por qué la parte de QTY y AVAILABLE están
+     * así de feas? QTY no debe ser tan grande, jamás tendremos un número de
+     * más de 2 cifras, máximo 3. Entonces la cantidad no debe ocupar mucho
+     * espacio y se debe ver bien el número verde, que es el número total en
+     * ese lugar."*
+     *
+     * Y tiene razón en el reparto, que es lo que importa: la caja de la
+     * cantidad se llevaba el ancho de un campo de texto para escribir TRES
+     * CIFRAS, mientras que **lo que hay disponible** —el dato que de verdad se
+     * consulta antes de teclear— quedaba apretado contra el borde y partido en
+     * dos líneas.
+     *
+     * Así que la cantidad pasa a ancho fijo: tres cifras más las flechas del
+     * selector. No crece ni se encoge, porque no hay nada más que escribir
+     * ahí. Y el disponible se queda con el sitio que sobra, en una sola línea.
+     *
+     * El estante sigue siendo el que manda —es el que lleva un nombre— y es el
+     * único de los tres que se estira con la ventana. */
+    .exit-loc-row .el-rack{flex:1 1 auto;min-width:0;padding:.38rem .55rem;border:1px solid var(--border);border-radius:5px;font-size:.82rem;font-family:inherit}
+    .exit-loc-row .el-qty{flex:0 0 76px;width:76px;padding:.38rem .4rem;border:1px solid var(--border);border-radius:5px;font-size:.82rem;font-family:inherit;text-align:center;font-variant-numeric:tabular-nums}
+    .exit-loc-row .el-avail{flex:0 0 96px;width:96px;font-size:.72rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .el-avail.ok{color:var(--green)}.el-avail.warn{color:var(--red)}.el-avail.neutral{color:var(--muted)}
-    .exit-loc-row .el-rm{background:none;border:none;color:var(--red);font-size:1rem;cursor:pointer;flex-shrink:0;line-height:1;padding:0 2px}
+    /* 24 px EXACTOS, los mismos que su hueco en la cabecera: con 17 los
+       títulos caían 7 px a la izquierda de su columna. Dos cosas que tienen
+       que medir igual, así que se escriben con el mismo número y juntas. */
+    .exit-loc-row .el-rm{background:none;border:none;color:var(--red);font-size:1rem;cursor:pointer;flex:0 0 24px;width:24px;line-height:1;padding:0}
     .exit-mat-foot{display:flex;gap:var(--sp-2);margin-top:.35rem}
     .exit-mat-foot button{flex:1;font-size:var(--fs-base);padding:.35rem .85rem;border-radius:var(--r-btn);cursor:pointer;font-family:inherit;border:1px dashed;font-weight:600;transition:.15s;background:none}
     .exit-mat-foot .btn-add-exit-loc{border-color:var(--red);color:var(--red);background:none}
@@ -2164,9 +2193,22 @@
     .mov-act-sep{display:inline-flex;align-items:center;gap:var(--sp-2);
       padding-left:.7rem;margin-left:.35rem;border-left:1px solid var(--border)}
     .mov-sel-count{font-size:var(--fs-sm);color:var(--muted);min-width:5.5rem}
-    .mov-sel-cell{width:32px;text-align:center}
+    /* 32 px en el ORDENADOR, 44 en el teléfono (ver el bloque de teléfono).
+     * Poner 44 en los dos le robaba 14 px a la columna del material, que es la
+     * que de verdad hay que leer — lo pilló `test-columnas.js`. El área de
+     * toque grande hace falta donde hay dedos; con un ratón, no. */
+    .mov-sel-cell{width:32px;min-width:32px;text-align:center;padding-left:0;padding-right:0}
     .mov-select-cb{cursor:pointer}
     .mov-select-cb:disabled{cursor:not-allowed;opacity:.35}
+    /* ── DONDE SE PUEDE TOCAR, QUE NO ES LO MISMO QUE LO QUE SE VE ─────────
+       Una etiqueta que envuelve la casilla y ocupa la celda entera: pulsar en
+       cualquier punto la marca, y eso lo hace el navegador solo, porque un
+       `<label>` alrededor de un `<input>` ya significa eso. En el ordenador se
+       agradece; en un teléfono y con guantes es la diferencia entre marcar y
+       no marcar. */
+    .sel-hit{display:flex;align-items:center;justify-content:center;
+      width:100%;min-height:var(--h-btn-tabla);margin:0;cursor:pointer}
+    .sel-hit input{margin:0}
     .settings-modal .sftr{flex-shrink:0;height:14px;background:var(--bg);
       border-top:1px solid var(--border);border-radius:0 0 14px 14px}
     /* Una fila esperando su turno en la cola de borrado. Sigue ahí porque
@@ -3792,51 +3834,37 @@
       td .btn-danger,td .rm-btn,td .btn-remove-loc,td .cfg-btn-danger
         {min-height:var(--h-btn-lg);min-width:var(--h-btn-lg)}
 
-      /* ── LAS CASILLAS DE MARCAR — 13 PÍXELES, MEDIDOS ────────────────────
+      /* ── EL DEDO Y EL OJO NO PIDEN LO MISMO. ERA MI ERROR ────────────────
        *
-       * Jose, 3/11: *"debemos trabajar en la vista de las ventanas en teléfono,
-       * la mayoría no está optimizada."* Corrí la cinta métrica
-       * (`tools/audit-responsive.js`) y la respuesta no fue la esperada: **el
-       * reparto está bien**. Las tablas que se salen lo hacen dentro de su
-       * propia caja, que es correcto, y la página entera sólo se va de lado en
-       * un sitio y por 4 px.
+       * Jose, 10/11, con capturas de dos teléfonos distintos: *"no sé por qué
+       * el checkbox es tan grande."*
        *
-       * Lo que estaba mal, en los tres tamaños de teléfono y en la tableta:
+       * Medido, era peor que grande: **34 × 34 px dentro de una celda de 30**.
+       * Se salía cuatro píxeles y se montaba encima de la fecha, que es
+       * exactamente lo que se ve en su captura.
        *
-       *     mov-select-cb    13 × 13 px
-       *     movSelAll        13 × 13 px
-       *     stock-select-cb  13 × 13 px
+       * ── EL ERROR DE FONDO ES MÍO, Y DE AQUÍ MISMO ───────────────────────
        *
-       * Trece píxeles — el tamaño por defecto del navegador, o sea el que sale
-       * cuando nadie decidió nada. Apple pide 44 y Android 48.
+       * Al arreglar N-15 —trece píxeles, el tamaño por defecto del navegador,
+       * donde Apple pide 44— agrandé **la casilla**. Pero lo que N-15 pedía
+       * era un ÁREA DE TOQUE, y no es lo mismo: una casilla nativa estirada a
+       * 34 px no se lee como una casilla grande, se lee como un cuadro vacío.
+       * El comentario que había aquí razonaba largo y tendido sobre 34 contra
+       * 44, y **la pregunta estaba mal planteada desde el principio**.
        *
-       * ── Y NO ES UNA CASILLA CUALQUIERA ───────────────────────────────────
+       * Lo correcto es lo que hace cualquier interfaz táctil: la casilla se ve
+       * pequeña y el sitio donde se puede tocar es grande. Veinte píxeles —que
+       * se lee como casilla— dentro de una etiqueta que ocupa la celda entera
+       * (`.sel-hit`). Pulsar en cualquier punto la marca, por comportamiento
+       * nativo del navegador y sin una línea de JavaScript.
        *
-       * Es la que ARMA el botón de borrar, en una bodega, muchas veces con
-       * guantes. Es exactamente el razonamiento que este bloque ya aplicó a
-       * los botones de borrar unas líneas más arriba —*"fallar un tap en Edit
-       * cuesta un toque más; fallarlo en Delete borra algo"*— y que a las
-       * casillas no se le aplicó porque un `<input>` no hereda nada de lo de
-       * arriba. El mismo descuido que dejó la ✕ del popup en 16×19.
-       *
-       * ── POR QUÉ 34 Y NO 44 ───────────────────────────────────────────────
-       *
-       * Porque es `--h-btn-tabla`, la altura que los botones de esa misma fila
-       * YA tienen. A 34 la casilla crece casi siete veces en área y la fila no
-       * crece ni un píxel. A 44 habría que estirar cada fila de la tabla por
-       * una columna de casillas, que es el reparto que este bloque rechazó
-       * con razón para los botones de tabla.
-       *
-       * `accent-color` para que se siga viendo como una casilla del sistema
-       * —no es un control nuevo, es el mismo más grande— y `margin:0` porque
-       * el navegador le pone un margen propio que descentraría la celda. */
+       * Y la celda pasa a 44, que era la otra mitad del fallo: el `<th>`
+       * llevaba 30 px escritos a mano y nada obligaba a que coincidieran. */
       .mov-select-cb,.stock-select-cb,#movSelAll{
-        width:var(--h-btn-tabla);height:var(--h-btn-tabla);margin:0;
+        width:20px;height:20px;margin:0;
         accent-color:var(--accent);cursor:pointer}
-      /* La celda que la contiene, para que la columna no la recorte. El Stock
-         no tiene clase propia aquí: su `<th>` lleva el ancho escrito en línea
-         y la tabla se ensancha sola cuando el contenido lo pide. */
-      .mov-sel-cell{width:var(--h-btn-tabla);text-align:center}
+      .sel-hit{min-height:44px}
+      .mov-sel-cell{width:44px;min-width:44px}
 
       .acct-btn{width:44px;height:44px;font-size:var(--fs-lg)}
       .cfg-bell{min-width:var(--h-btn-lg);min-height:var(--h-btn-lg)}
@@ -6059,7 +6087,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '14.8';
+var APP_VERSION = '14.9';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -6071,7 +6099,7 @@ var APP_VERSION = '14.8';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'd67659db';
+var APP_BUILD = 'cb9e4a1e';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -6935,7 +6963,7 @@ var COL_TABLES = {
     // el Dashboard repartiera por contenido y se moviera con cada filtro.
     minWhat: _STOCK_MIN_NAME,
     head: 'stockHeadRow',
-    lead: function(){ return '<th style="width:30px"></th>'; },        // row-select checkbox
+    lead: function(){ return '<th class="mov-sel-cell"></th>'; },      // row-select checkbox
     tail: function(){ return ''; },
     refresh: function(){ renderColHead('stock'); renderStock(); }
   },
@@ -6951,9 +6979,11 @@ var COL_TABLES = {
     // ofrece elegir para nada.
     lead: function(){
       if (!_movCanAct()) return '';
-      return '<th style="width:32px"><input type="checkbox" id="movSelAll" ' +
+      return '<th class="mov-sel-cell">' +
+             '<label class="sel-hit" onclick="event.stopPropagation()">' +
+             '<input type="checkbox" id="movSelAll" ' +
              'onclick="event.stopPropagation()" onchange="toggleMovSelectAll(this)" ' +
-             'title="Select everything you can see"></th>';
+             'title="Select everything you can see"></label></th>';
     },
     // La columna de acciones ya NO va y viene: aparecía y desaparecía con el
     // modo, y eso era justo lo que hacía saltar la tabla al pulsar un botón.
@@ -7271,9 +7301,28 @@ function _colHeadRowHtml(t){
  * de columnas. Recorrer la lista los habría dejado fuera —76px— y el material
  * habría vuelto a quedarse corto, que es EXACTAMENTE la forma del fallo que
  * esto arregla: dos listas que tienen que decir lo mismo y nada que lo obligue. */
+/* ── LA COLUMNA DE LAS CASILLAS SE CUENTA APARTE, Y AQUÍ ESTÁ EL PORQUÉ ─────
+ *
+ * Esto suma los anchos que las cabeceras llevan escritos en línea, para que la
+ * tabla tenga un mínimo y la columna del material no se estruje. Funciona
+ * leyendo el HTML con una expresión regular — o sea que **un ancho que no esté
+ * escrito como `width:NNpx` no existe para esta cuenta**.
+ *
+ * Al arreglar la casilla del teléfono (10/11) pasé el ancho de esa columna de
+ * un `style` en línea a una clase, porque en el teléfono mide 44 y en el
+ * ordenador 32. La cuenta perdió 32 píxeles sin avisar, la tabla se quedó corta
+ * de mínimo y la columna del material se encogió 14 px. Lo pilló
+ * `test-columnas.js`, que es exactamente para lo que está.
+ *
+ * Así que se suma aquí, con su nombre. 32 es el valor del ORDENADOR; en el
+ * teléfono la columna mide 44 y esta cuenta se queda doce píxeles corta, lo
+ * cual da igual: allí la tabla se desplaza de lado igualmente. */
+var MOV_SEL_COL_W = 32;
+
 function _anchoDeclarado(html){
   var suma = 0, re = /width:(\d+)px/g, m;
   while ((m = re.exec(html))) suma += Number(m[1]);
+  if (/class="mov-sel-cell"/.test(html)) suma += MOV_SEL_COL_W;
   return suma;
 }
 
@@ -9655,10 +9704,11 @@ function renderStock(){
     // already-exited (0 available) material can't be selected again.
     var selDisabled = !canSelect || s.availableQty <= 0;
     var selChecked  = !!_stockSelection[s.matId];
-    var selCell = '<input type="checkbox" class="stock-select-cb" data-matid="'+_he(s.matId)+'"'+
+    var selCell = '<label class="sel-hit" onclick="event.stopPropagation()">' +
+      '<input type="checkbox" class="stock-select-cb" data-matid="'+_he(s.matId)+'"'+
       (selChecked ? ' checked' : '') + (selDisabled ? ' disabled' : '') +
       ' onclick="event.stopPropagation()" onchange="toggleStockSelect(this)"' +
-      (selDisabled ? ' title="No available stock to exit"' : ' title="Select for Exit"') + '>';
+      (selDisabled ? ' title="No available stock to exit"' : ' title="Select for Exit"') + '></label>';
 
     // El candado va DELANTE del texto a propósito: la celda recorta con puntos
     // suspensivos, y un candado al final es un candado que desaparece justo en
@@ -10201,13 +10251,16 @@ function renderMovements(){
     // el segundo intento se encuentra con que ya no está y responde GONE|. Es
     // el error que Jose registró el 2026-09-15 a las 3:09:50 sobre un
     // movimiento que él mismo había borrado a las 3:08.
+    /* La casilla va DENTRO de una etiqueta que ocupa la celda: lo que se ve es
+     * pequeño y lo que se puede tocar es grande. Ver `.sel-hit`. */
     var selCell = isAdmin
       ? '<td class="mov-sel-cell">' + (m.archived ? '' :
+          '<label class="sel-hit" onclick="event.stopPropagation()">' +
           '<input type="checkbox" class="mov-select-cb" data-movid="' + _escAttr(m.movId || '') +
           '" data-rowidx="' + m.rowIdx + '"' + (m.movId && _movSelection[m.movId] ? ' checked' : '') +
           (esperando ? ' disabled title="This movement is being deleted"' :
            m.movId ? '' : ' disabled title="This movement has no ID yet — run Settings → System → Movement IDs"') +
-          ' onclick="event.stopPropagation()" onchange="toggleMovSelect(this)">') + '</td>'
+          ' onclick="event.stopPropagation()" onchange="toggleMovSelect(this)"></label>') + '</td>'
       : '';
     // data-mov: para poder encontrar ESTA fila y animar su salida sin repintar
     // la tabla. Va el movId y no el rowIdx a propósito — el rowIdx se mueve
@@ -14462,11 +14515,16 @@ function addExitMatLine(){
       // Where and how many, in a box of the movement's colour — the same shape
       // ENTRY uses. The material above it stays neutral.
       '<div class="exit-loc-box">'+
+        /* W-06: el reparto ya NO va escrito aquí. Lo llevaba en línea —y lo
+         * escrito en línea gana sobre el CSS— así que la cabecera y la fila
+         * tenían cada una su propio reparto, dos números que alguien tenía que
+         * mantener iguales a mano. Ahora los dos salen de `.exit-loc-hdr` y
+         * `.exit-loc-row`, que están escritos uno al lado del otro. */
         '<div class="exit-loc-hdr">'+
-          '<span style="flex:2">Rack / Location</span>'+
-          '<span style="flex:1">Qty to Take</span>'+
-          '<span style="flex:1.4">Available</span>'+
-          '<span style="width:24px"></span>'+
+          '<span>Rack / Location</span>'+
+          '<span>Qty</span>'+
+          '<span>Available</span>'+
+          '<span style="width:24px;flex:0 0 24px"></span>'+
         '</div>'+
         '<div class="exit-locs-container" id="exit-locs-'+n+'"></div>'+
         '<div class="exit-mat-foot">'+
@@ -15489,7 +15547,37 @@ function submitMultiEntry(){
              la v11.29: o se pulsa el botón del aviso —y entonces el cuadro de
              etiquetas encadena la pregunta de las entregas al cerrarse— o el
              aviso caduca y esa pregunta corre sola. Nunca las dos. */
-          var filasEtq = _labelsFromEntry(materials, payload);
+          /* ── W-05 · LA ETIQUETA SALE DE LO GUARDADO, NO DEL FORMULARIO ──
+           *
+           * Jose, 9/11, con tres capturas: *"al guardar y dar clic en imprimir
+           * la etiqueta, ésta sale con la locación en minúscula, LA CUAL NO
+           * EXISTE. Pero al salir y volver a entrar sí se cambia a mayúscula,
+           * lo cual significa que el cambio se hace después de crear el
+           * label."*
+           *
+           * Exacto. Había DOS constructores de etiquetas: uno que lee los
+           * movimientos ya guardados —normalizados por el servidor— y otro que
+           * leía el FORMULARIO, tal como se tecleó. Este aviso usaba el
+           * segundo.
+           *
+           * Y no es cosmético: una etiqueta es un objeto físico. Sale de la
+           * impresora, se pega en un pallet, y manda a alguien a buscar un
+           * estante que no existe. El lector de códigos tampoco lo encuentra.
+           *
+           * El arreglo no es un `toUpperCase()` aquí. El servidor YA devuelve
+           * las filas recién guardadas y normalizadas en `res.movimientos` —se
+           * añadió para pintarlas sin recargar—, así que la etiqueta sale de
+           * ahí, por el mismo camino que la que se imprime desde Movements.
+           * **Con eso desaparece el segundo constructor**, que era el defecto
+           * de fondo: dos formas de fabricar la misma etiqueta, una de ellas
+           * con datos que no han pasado por el servidor.
+           *
+           * Si un servidor viejo no devolviera las filas, se cae al camino de
+           * antes — pero normalizando la ubicación, porque el fallo estaba
+           * justo ahí. */
+          var filasEtq = (res && res.movimientos && res.movimientos.length)
+            ? _labelsFromMovements(res.movimientos)
+            : _labelsFromEntry(materials, payload);
           var luego    = function(){ _offerAlsoArrived(materials, dateRec, po, deLaEntrega); };
           if (filasEtq.length) {
             showToast('Saved ✓ — ' + count + ' material(s) received (' + rows + ' archive row' +
@@ -26930,7 +27018,10 @@ function _labelsFromEntry(materiales, compartido){
         category: mat.category || compartido.category || '',
         qty:      l.qty,
         unit:     mat.unit || 'UNIT',
-        loc:      l.loc || '',
+        /* EN MAYÚSCULAS, COMO LO GUARDA EL SERVIDOR (W-05). Este camino sólo
+         * se usa si el servidor no devolvió las filas guardadas; aun así la
+         * etiqueta no puede llevar un estante que no existe. */
+        loc:      String(l.loc || '').trim().toUpperCase(),
         po:       mat.po       || compartido.po       || '',
         supplier: mat.supplier || compartido.supplier || '',
         project:  mat.project  || compartido.project  || '',
@@ -32614,6 +32705,17 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '14.9',
+    titulo: 'A label that names a shelf you have, and a tick box your finger can hit',
+    puntos: [
+      '<b>A label printed straight after saving could name a shelf that does not exist.</b> Type the rack in lower case, save, print \u2014 and the sticker came out saying <i>d3b</i> while the shelf is <i>D3B</i>. Reopen the app and it read correctly, which is what gave it away: the correction happened after the label was made. A label is a physical thing: it goes on a pallet and sends somebody to look where there is nothing.',
+      'There were two label builders \u2014 one reading what was saved, one reading the form. The notice after saving used the second. It now uses what the server actually wrote, the same path as printing from Movements, and <b>the second builder is gone</b>.',
+      '<b>The tick box in the movements list was too big, and spilling over the date.</b> Measured: 34 pixels inside a 30-pixel cell. That was my own doing \u2014 an earlier fix asked for a 44-pixel <i>touch target</i> and I made the <i>box</i> bigger instead. They are not the same thing: a native tick box stretched to 34 reads as an empty square. It is 20 pixels now, inside a 44-pixel area you can tap anywhere in.',
+      '<b>And on the Exit screen, Qty was taking the room that Available needed.</b> A quantity is never more than three digits, so it now has exactly that much space \u2014 and the figure you actually check before typing fits on one line.'
+    ],
+    antes:  'A sticker naming a shelf you do not have',
+    ahora:  'It says what the app saved' },
+
   { ver: '14.8',
     titulo: 'Nothing jumps when you tick a box',
     puntos: [
@@ -32648,18 +32750,6 @@ var NOVEDADES = [
     ],
     antes:  'A box that ate what you typed, and Continue below the fold',
     ahora:  'Type in the list itself, and it answers you' },
-
-  { ver: '14.5',
-    titulo: 'Fix the bad rows of an import on the screen, instead of going back to Excel',
-    puntos: [
-      '<b>Three bad rows in a six-hundred-row file used to send you back to the spreadsheet.</b> The preview said <i>597 ready, 3 need fixing in the file</i> and stopped there \u2014 so you opened Excel, hunted for them, fixed them, exported again and uploaded again. All the while this screen already knew exactly which rows they were and what was wrong with each one.',
-      '<b>Now you fix them where they are.</b> The cell that is wrong is a box you type in, and the row turns green the moment it is right. Only the three fields that can make a row invalid are editable \u2014 Category, Name and Qty \u2014 because this is a preview, not a spreadsheet editor.',
-      '<b>And you can find them.</b> Three tabs above the table \u2014 <i>All</i>, <i>Ready</i>, <i>Needs fixing</i> \u2014 each with its count, so three bad rows out of six hundred take one click instead of a scroll. Rows that need fixing are all shown, wherever they sit in the file; before, one on line 480 of a 600-row file could not be displayed at all.',
-      '<b>You can also leave rows out.</b> Every row that is ready has a tick box, on by default. Untick what you do not want and the button counts down with you.',
-      'The fix never touches your file \u2014 it travels with the import and is applied where the rows are checked, so what you saw corrected is what gets saved, and the <i>you already imported this file</i> warning still recognises it.'
-    ],
-    antes:  'Three bad cells, and a round trip through Excel',
-    ahora:  'Fix them here, and the row goes green' },
 
 ];
 

@@ -90,19 +90,15 @@
 <main class="wrap">
 
   <section class="month">
-    <h2>October 2026</h2>
-    <p class="sub">A month spent on the things that lose work rather than the things
-       that look nice. Importing a file stopped at row 500 while the button promised
-       all of them; deleting 490 movements took half an hour and could not be stopped;
-       every merge of duplicate names refused; five &ldquo;are you sure?&rdquo; dialogs
-       crashed when you said yes; and a job site was being offered to you as a shelf in
-       your own warehouse. All of those are fixed below. Along the way the free edition
-       stopped pointing at menus and screens it does not have, the error log became a
-       window instead of a photograph, and the page itself got 300&nbsp;KB lighter over
-       the wire.</p>
-
-    <!-- NADA SE MUEVE. Un botón que cambia de sitio porque el número creció
-         es la app diciendo que no tiene un plan para su propio espacio. -->
+    <h2>November 2026</h2>
+    <p class="sub">A month of the things that are wrong without looking wrong. The average
+       cost of a material was drifting a few cents each time stock came in, and the drift
+       compounded &mdash; $202 on seven thousand units, invisible until somebody reconciles
+       the books. Stock that could not be true was being hidden behind a zero while the app
+       wrote the evidence to a log nobody opens. A printed label was carrying a shelf name
+       that does not exist. And five screens asked you to select things in five different
+       ways, with buttons that moved as you ticked. All of it fixed below, and all of it
+       measured rather than guessed.</p>
     <div class="entry" id="v14-8">
       <span class="ver">v14.8</span>
       <span class="tag fix">Fix</span>
@@ -313,6 +309,22 @@
          opens now clears a button left mid-save &mdash; one rule, for all of them.</p>
     </div>
 
+  </section>
+
+  <section class="month">
+    <h2>October 2026</h2>
+    <p class="sub">A month spent on the things that lose work rather than the things
+       that look nice. Importing a file stopped at row 500 while the button promised
+       all of them; deleting 490 movements took half an hour and could not be stopped;
+       every merge of duplicate names refused; five &ldquo;are you sure?&rdquo; dialogs
+       crashed when you said yes; and a job site was being offered to you as a shelf in
+       your own warehouse. All of those are fixed below. Along the way the free edition
+       stopped pointing at menus and screens it does not have, the error log became a
+       window instead of a photograph, and the page itself got 300&nbsp;KB lighter over
+       the wire.</p>
+
+    <!-- NADA SE MUEVE. Un botón que cambia de sitio porque el número creció
+         es la app diciendo que no tiene un plan para su propio espacio. -->
     <div class="entry" id="v14-0">
       <span class="ver">v14.0</span>
       <span class="tag new">Change</span>
@@ -4557,4 +4569,30 @@
   <p>Updates reach your installation as part of your support subscription.
      Older changes than the ones listed here exist; this page starts where the
      product became something worth handing to someone else.</p>
-</footer>
+</footer>    <!-- UNA ETIQUETA ES UN OBJETO FÍSICO. Sale, se pega, y manda a alguien
+         a un sitio. Por eso W-05 no era cosmético. -->
+    <div class="entry" id="v14-9">
+      <span class="ver">v14.9</span>
+      <span class="tag fix">Fix</span>
+      <h3>A label that names a shelf you actually have</h3>
+      <p><b>A label printed straight after saving could name a shelf that does not exist.</b> Type
+         the rack in lower case, save, print &mdash; and the sticker came out saying <i>d3b</i>
+         while the shelf is <i>D3B</i>. Reopen the app and it read correctly, which is what gave it
+         away: the correction was happening after the label was made.</p>
+      <p>A label is a physical thing. It goes on a pallet and stays there, and one naming a shelf
+         you do not have sends somebody to look where there is nothing &mdash; the scanner will not
+         find it either.</p>
+      <p>There were two label builders: one reading what was saved, one reading the form on screen.
+         The notice after saving used the second. It now uses the rows the server actually wrote,
+         the same path as printing from Movements, and <b>the second builder is gone</b>.</p>
+      <p><b>The tick box in the movements list was too big, and spilling over the date.</b> Measured:
+         34 pixels inside a 30-pixel cell. That was ours &mdash; an earlier fix asked for a 44-pixel
+         <i>touch target</i> and made the <i>box</i> bigger instead. They are not the same thing: a
+         native tick box stretched to 34 reads as an empty square. It is 20 pixels now, sitting
+         inside a 44-pixel area you can tap anywhere in.</p>
+      <p><b>And on the Exit screen, Qty was taking the room Available needed.</b> A quantity is never
+         more than three digits, so it now has exactly that much space, and the figure you check
+         before typing fits on one line.</p>
+    </div>
+
+
