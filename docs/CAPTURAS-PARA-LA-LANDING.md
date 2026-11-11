@@ -10,6 +10,35 @@ se hacen las dos primeras, la página ya funciona.
 
 ---
 
+## 🔄 ACTUALIZADO EL 11/11 — lee esto antes de usar la lista de abajo
+
+Entre el 22/09 y hoy la app pasó de la v12 a la **v14.9**, y esta lista se
+escribió contra pantallas que **ya no son las que hay**. Lo que cambia:
+
+**1 · Hay cinco pantallas nuevas que valen una captura, y no estaban.** Van
+abajo como **3.6 a 3.9** y la del asistente es la más importante de todas las
+fijas, porque es la única que contesta *«¿esto lo instalo yo?»* sin un vídeo de
+cuatro minutos.
+
+**2 · Dos capturas de la lista vieja hay que esperarlas, y por motivos
+distintos:**
+
+| | Por qué esperar |
+|---|---|
+| **3.2 · Stock Dashboard** | Decía *«rehacer tras los puntos B y C»*. **El punto B ya está** — el filtro conoce los cuatro estados desde entonces. **El C no**: los nombres y las categorías siguen sin altura fija, así que las filas aún crecen de alto cuando un nombre es largo. Se puede grabar hoy eligiendo materiales de nombre corto; si se quiere la tabla perfecta, esperar al C |
+| **3.4 · En el teléfono** | **No la grabes todavía.** Es la captura que más vende y hoy enseñaría una tabla a la que hay que arrastrar de lado para leer una fila. **M-01** (cada movimiento en una tarjeta, ver `HALLAZGOS.md`) cambia esa pantalla entera. Grabarla antes es tirar la toma |
+
+**3 · Los vídeos cortos ya no son dos listas.** `docs/CRECER.md` §4 pidió cuatro
+clips y este documento tenía otros cuatro (V1–V4). **Son siete, no ocho**, y
+estaban sin cruzar. La lista única está abajo, en *«LOS CLIPS CORTOS —
+LISTA ÚNICA»*, y es la que manda.
+
+**4 · Lo que no cambia:** la regla 0. Ninguna captura sale del almacén real con
+los datos reales, y la copia de demo con datos inventados **sigue sin existir**,
+así que sigue bloqueando todo lo demás.
+
+---
+
 ## ⛔ ANTES DE GRABAR NADA — LEE ESTO
 
 **Ninguna captura puede salir del almacén real de OX con los datos reales.**
@@ -137,9 +166,10 @@ por debajo doce o quince filas con **categorías variadas** y **las cuatro
 insignias de estado a la vista** (`In Stock`, `Reserved`, `All at Site`,
 `Zero Stock`). Que se vean las cuatro es lo que demuestra que el sistema sabe
 más que "hay o no hay".
-**Nota:** esta captura **hay que rehacerla después** de arreglar el filtro de
-estado y los nombres del dashboard (puntos B y C del backlog). No la des por
-buena hoy.
+**Nota, al día 11/11:** decía *«rehacer tras los puntos B y C»*. **El B está
+hecho** — el filtro ya conoce los cuatro estados, así que la captura puede
+enseñarlos todos de verdad. **El C no**: los nombres largos siguen partiendo la
+fila en dos renglones. Se puede grabar hoy eligiendo materiales de nombre corto.
 
 ### 3.3 — El historial de un material
 **Lo que tiene que verse:** un material con **al menos seis movimientos**
@@ -157,10 +187,74 @@ camión.
 enseña. Una sola foto contesta *"¿esto sirve en el almacén o sólo en la
 oficina?"*.
 
+> ### ⛔ 11/11 — ESTA NO SE GRABA TODAVÍA
+>
+> Hoy la lista de movimientos en el teléfono es **una tabla a la que hay que
+> arrastrar de lado** para leer una fila entera. Una captura de eso no contesta
+> *«¿sirve en el almacén?»* — contesta que no.
+>
+> **M-01** (cada movimiento como una tarjeta que entra en la pantalla) cambia
+> esa pantalla de arriba abajo. Esta captura se graba **después** de M-01, y
+> entonces vale el doble: es la diferencia entre «una web en un móvil» y «una
+> app». Mientras tanto, si hace falta una del teléfono ya mismo, que sea **la
+> pantalla de entrada** (el formulario), que no cambia con M-01.
+
 ### 3.5 — Incoming, con entregas esperadas
 **Lo que tiene que verse:** varias entregas con **estados distintos** —algo que
 ya llegó, algo pendiente, algo con fecha aproximada— y sus proveedores y PO
 (inventados). Enseña la parte que la competencia barata no tiene.
+
+---
+
+## 3-bis. LAS CINCO PANTALLAS NUEVAS — añadidas el 11/11
+
+Nada de esto existía cuando se escribió la lista de arriba. **Mismo formato:**
+PNG, 1600px de ancho, modo claro, navegador limpio, copia de demo.
+
+### 3.6 — El asistente de instalación ⭐ la más importante de las fijas
+**Lo que tiene que verse:** el paso *«Where do you store it?»* con **seis u ocho
+estantes ya escritos** como fichas, y el cursor a medio escribir el siguiente.
+Que se vea el pie fijo con *Back / Next* y el número de paso.
+
+**Por qué ésta primero, por delante incluso del mapa:** la objeción que mata
+esta venta no es el precio, es *«¿cuánto me va a costar tenerlo funcionando?»*.
+El vídeo V1 la contesta en cuatro minutos; **esta imagen la contesta en un
+segundo**, y la ve mucha más gente que la que le da al play. Enseña que la
+configuración son cuatro preguntas en castellano llano, no un manual.
+
+### 3.7 — El importador, con errores a la vista y uno corregido
+**Lo que tiene que verse:** el CSV ya cargado, el conteo arriba
+(*«600 rows · 12 cannot be imported»*), **las filas malas marcadas**, y el filtro
+puesto en las que fallan. Lo ideal es **un par**: la misma pantalla antes y
+después de arreglar una celda, para poder ponerlas una al lado de la otra.
+
+**Por qué:** es la respuesta visual a *«¿y mi Excel?»*, que es la primera
+pregunta de todo el que ya lleva inventario. Y enseña algo que casi ningún
+importador hace: **no te rechaza el archivo — te dice qué fila y te deja
+arreglarla ahí mismo**.
+
+### 3.8 — El aviso de stock bajo, con los colores
+**Lo que tiene que verse:** el panel con tarjetas **rojas** (en cero) y
+**naranjas** (por debajo del mínimo) mezcladas, cuatro o cinco de cada.
+
+**Por qué:** es la única captura de la lista entera que enseña a la app
+**haciendo algo sola**, sin que nadie la toque. Todo lo demás enseña a alguien
+escribiendo. Y el rojo y el naranja se leen de lejos, que es lo que hace que
+funcione también en una miniatura.
+
+### 3.9 — La etiqueta, impresa y pegada 📷 foto, no captura
+**Lo que tiene que verse:** una etiqueta de 4"×6" **salida de la impresora
+térmica y pegada en material de verdad**, con el teléfono al lado leyendo su
+código.
+
+**Por qué es foto y no captura, y por qué vale más que las otras cuatro:** una
+captura de pantalla la tiene cualquiera. **Una pegatina en un pallet no se puede
+fingir**, y es la prueba de que esto existe fuera de un navegador. Es la misma
+razón por la que V2 se graba con guantes puestos.
+
+> **Cuidado con ésta:** la etiqueta lleva material, cantidad, estante y PO. Si
+> sale del almacén real, lleva datos reales. **Imprime una de la copia de demo**
+> y pégala en lo que sea.
 
 ---
 
@@ -199,11 +293,16 @@ como mucho**, a **800px de ancho**, y aun así va a pesar más que el vídeo.
 | 1 | Vídeo principal | MP4 mudo + poster JPG | 60–90 s | Sí, es el hueco que ya existe |
 | 2 | ✅ Imagen para compartir | JPG ×2 (en/es) | 1200×630 | **Hecha el 06/10 — la genera un comando** |
 | 3.1 | Warehouse Map con estante abierto | PNG | 1600px | No |
-| 3.2 | Stock Dashboard | PNG | 1600px | No — y **rehacer tras los puntos B y C** |
+| 3.2 | Stock Dashboard | PNG | 1600px | No — **el punto B ya está; el C no** (11/11) |
 | 3.3 | Historial de un material | PNG | 1600px | No |
-| 3.4 | En el teléfono | PNG vertical | tal cual del móvil | No |
+| 3.4 | En el teléfono | PNG vertical | tal cual del móvil | ⛔ **esperar a M-01** (11/11) |
 | 3.5 | Incoming | PNG | 1600px | No |
+| **3.6** | **El asistente de instalación** ⭐ | PNG | 1600px | No — **la más importante de las fijas** |
+| **3.7** | **El importador, con errores y uno corregido** | PNG ×2 | 1600px | No |
+| **3.8** | **Aviso de stock bajo, rojas y naranjas** | PNG | 1600px | No |
+| **3.9** | **La etiqueta pegada en material** | 📷 foto | del móvil | No |
 | 4 | Bucle de cabecera | MP4 mudo | 6–10 s, ≤2 MB | No |
+| **5** | **Los siete clips** — lista única al final | MP4 mudo | ver la tabla | No |
 
 **Lo que sigue sin existir y NO se inventa:** los testimonios. Ese hueco de la
 landing se queda vacío y con su cartel hasta que haya clientes de verdad que
@@ -489,3 +588,58 @@ es verdad, no de que sea bonito.
 | 4º | **V4, el Excel** | El más valioso y el que más preparación necesita. No se apura |
 
 **Si sólo se graba uno este mes, que sea V1.**
+
+---
+
+# LOS CLIPS CORTOS — LISTA ÚNICA · 11/11
+
+El 10/11, en `docs/CRECER.md` §4, pedí **cuatro clips de 8–15 segundos**, uno
+por promesa. Aquí arriba ya había **cuatro vídeos (V1–V4)**. Nadie cruzó las dos
+listas, y eso es exactamente el fallo que este proyecto lleva repitiendo: **dos
+documentos que tienen que coincidir y nada lo obliga.** Esta sección es la que
+manda; si un día las dos vuelven a discrepar, gana ésta.
+
+**Cruzadas, no son ocho: son siete.** El clip 4 de `CRECER` y **V2 son el mismo
+vídeo** — una salida en el teléfono, con una mano, en la bodega. Se graba una
+vez y se usa en los dos sitios.
+
+| # | Qué se graba | Duración | Qué promete | De dónde salió |
+|---|---|---|---|---|
+| **1** | De `acopio.net` a un movimiento guardado, **con el reloj a la vista y sin un solo corte** | 3–4 min | *Lo instalas tú, y se tarda lo que dice el reloj* | V1 |
+| **2** | Pantalla partida: Acopio a la izquierda, la hoja de Google a la derecha. Se guarda y la fila **aparece sola**. Después se cierra Acopio y la hoja sigue ahí | 25–40 s | *El dato es tuyo y está en tu Drive* | V3 |
+| **3** | Una salida en el teléfono, **con una mano y con guantes**, y el número de la bodega cambiando | 20–30 s | *Se usa en la bodega, no en una oficina* | V2 **=** CRECER 4 |
+| **4** | El Excel real (con los nombres cambiados) recorrido en silencio, la pregunta *«¿cuánto hay en A1A?»*, y la misma pregunta contestada en Acopio | 40–60 s | *Tu Excel se puede dejar atrás* | V4 |
+| **5** | Leer con el teléfono la etiqueta de un estante y que salga lo que hay dentro | 8–15 s | *No hay que buscar nada* | CRECER 1 |
+| **6** | Subir el CSV de 600 filas: el conteo, las que fallan marcadas, **se corrige una y pasa a buena** | 8–15 s | *Tu Excel entra hoy* | CRECER 2 |
+| **7** | El panel de stock bajo, con las tarjetas rojas y naranjas | 8–15 s | *Te avisa antes de que te quedes sin* | CRECER 3 |
+
+### Las reglas comunes a los siete
+
+- **Sin voz.** Rótulos cortos. Se ven con el sonido apagado, que es como se ve
+  el 90 % del vídeo en un móvil.
+- **MP4 mudo**, no GIF — la razón está más arriba y no ha cambiado.
+- **Los cortos (5, 6, 7) van en bucle, sin controles**, al lado de la frase que
+  prometen. **Menos de 2 MB cada uno.**
+- **Vertical** el 3. **Horizontal** los demás.
+- **Datos inventados**, siempre. Los siete se graban contra la copia de demo —
+  salvo el 4, que es el Excel real **con los nombres reemplazados** y la
+  estructura intacta, porque la estructura es el argumento.
+
+### El orden, con los siete sobre la mesa
+
+**1º el 1 (el cronómetro)** y **2º el 2 (los datos tuyos)**, por lo que ya decía
+arriba: uno contesta la objeción que mata la venta y el otro es el argumento que
+ningún competidor puede grabar.
+
+**Y luego los tres cortos (5, 6, 7) antes que el 3 y el 4.** Esto sí cambia
+respecto a lo que decía el 21/10, y por una razón práctica: **los tres cortos se
+graban en una sola tarde, los tres seguidos, sentado**. No necesitan una segunda
+persona, ni estar en la bodega, ni preparar un Excel. Son los que convierten la
+landing de una página con un hueco en una página que enseña algo — y son la
+diferencia entre tener *un* vídeo y tener la página montada.
+
+El 3 necesita a alguien que grabe y estar en el almacén: se agenda.
+El 4 es el que más vale y el que más preparación pide: no se apura.
+
+> **Si sólo se graba una cosa este mes, sigue siendo el 1.**
+> **Si se graba una tarde, que sean el 5, el 6 y el 7.**

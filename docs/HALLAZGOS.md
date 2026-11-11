@@ -310,6 +310,177 @@ es exactamente para esto.
 
 ---
 
+## 📋 LO DEL 11/11 — CUATRO PARA LA SIGUIENTE VERSIÓN · M-01…M-04
+
+Jose, con un PDF adjunto que **es la prueba del tercero**: el Bill of Lading de
+Windsor del 3/11 guardado por la app, con las páginas a media hoja y la primera
+de lado. No hace falta reproducir nada — el fallo viene adjunto.
+
+> **Nada de esto está construido.** Son cuatro decisiones con su medida al lado,
+> para que Jose elija. M-03 (b) es un fallo; los otros tres son cambios de
+> comportamiento, y uno de ellos tiene un riesgo que hay que decidir antes.
+
+---
+
+### 🟠 M-01 · En el teléfono, cada movimiento tiene que ser una tarjeta
+
+Jose: *"en el teléfono, la app debe comportarse como una app; cada fila o
+movimiento debe mostrar sus propias opciones, y debe ser del tamaño de una
+tarjeta que entre en la pantalla con toda la información — nombre, cantidad,
+ubicación, usuario que lo ingresó y demás, si es posible, sin mover nada."*
+
+**Lo que hay hoy, medido.** Movements es una `<table>` con un ancho mínimo
+declarado que calcula `_anchoDeclarado` sumando los `width:NNpx` de las columnas
+más `MOV_SEL_COL_W`. El bloque de teléfono (`@media(max-width:768px)`, línea
+~3921) **sólo achica el relleno de las celdas** (`th,td{padding:var(--pad-celda-sm)}`).
+No hay nada que convierta una fila en tarjeta. En un teléfono de 360 px eso
+significa arrastrar de lado para leer **una sola fila** — justo lo que él dice.
+
+**Y no es sólo Movements.** Dijo *"cada fila o movimiento"*: la misma tabla con
+el mismo problema está en Stock, en Incoming y en la papelera.
+
+**La trampa, y es la de siempre.** Lo fácil es escribir un segundo pintador para
+el teléfono. Eso son **dos sitios que tienen que decir lo mismo sin que nada lo
+obligue** — el fallo que lleva todo el proyecto repitiéndose. La forma que no se
+parte: **un solo pintador** que recibe la fila y devuelve `<tr>` o tarjeta según
+el ancho, y las pruebas que ya miden columnas (`test-columnas.js`,
+`test-nada-se-mueve.js`) con su gemela de tarjeta.
+
+**Lo que hay que decidir, porque no es gratis:** una tarjeta con nombre,
+cantidad, ubicación, usuario, fecha y sus botones ocupa unos 4 renglones. En una
+pantalla de teléfono entran **tres o cuatro movimientos**, contra las diez filas
+de hoy. Se gana «se lee sin mover nada» y se pierde «veo diez de un vistazo».
+
+---
+
+### 🟡 M-02 · La cámara: varias fotos seguidas, y reordenarlas arrastrando
+
+Jose: *"la primera vez que el usuario toma la foto se le da la opción de tomar
+más, así que solo toma la foto y se suma un número con la cantidad de fotos, sin
+necesidad de revisar las fotos… también sería buena la opción de poder mover y
+cambiar el orden de las fotos solo arrastrándolas entre ellas."*
+
+**Lo que hay hoy.** `triggerCameraCapture(uid)` pulsa un
+`<input type="file" capture="environment">`. Cada disparo dispara `change`, la
+foto entra en la tira, **y la cámara se cierra**. Para la segunda hay que volver
+a tocar 📸. El aviso `— 📸 tap again to add a page` sólo sale cuando hay
+exactamente una foto.
+
+**Lo que NO se puede hacer, y hay que decirlo antes de prometer nada.** La
+pantalla de *«¿Usar foto? / Repetir»* **es de la cámara del teléfono, no
+nuestra**. Un `input` con `capture=` le entrega el trabajo a la cámara nativa, y
+una página web no puede saltarse esa confirmación. No hay forma. Lo que sí se
+puede es **reabrir la cámara sola después de cada foto**, de modo que la
+secuencia sea *disparar → Usar foto → cámara otra vez*, con el número subiendo,
+y un botón **Done** para parar.
+
+> **Y esto hay que medirlo en su teléfono antes de construirlo.** Volver a
+> pulsar el `input` desde el manejador de `change` puede que algunos navegadores
+> lo bloqueen por no venir de un gesto de la persona. Si se bloquea, el plan B
+> es dejar el botón 📸 enorme y pegado a la tira, que son dos toques en vez de
+> uno, y eso sí funciona siempre.
+
+**Arrastrar para reordenar: esto es más barato de lo que parece.** El orden de
+las fotos en la tira `#strip-<uid>` **ya es el orden de las páginas del PDF** —
+`_collectDocGroups` las recorre con `querySelectorAll`, que devuelve el orden del
+documento. Reordenar es mover un `<div>`, no tocar ningún dato. Un cuidado: los
+eventos `dragstart/drop` de HTML5 **no existen al tocar con el dedo**; en el
+teléfono hay que hacerlo con eventos de puntero, que es donde está el trabajo.
+
+---
+
+### 🔴 M-03 · El PDF de las fotos: a media hoja y de lado
+
+Jose: *"al guardar el PDF con las fotos, se ven peor que nunca; las fotos solo
+ocupan una parte de toda la hoja y también se guardan giradas."*
+
+**Son dos causas distintas, y conviene no confundirlas otra vez** — el 12/10 se
+arreglaron juntas, y por eso una se quedó a medias.
+
+#### (a) La hoja es siempre vertical. Y esto es aritmética, no un fallo
+
+`photosToDocPdf_` (`Code_v3_fixed.gs` ~9552) fija `PAGE_W = 612` y
+`PAGE_H = 792` — Carta **vertical** — y escala con
+`Math.min(PAGE_W/origW, PAGE_H/origH)`.
+
+Una foto apaisada de 4:3 entra a lo ancho de la caja (612) y queda en **612 ×
+459 puntos**: **el 58 % de la hoja**, y el resto en blanco. No hay manera de
+llenar una hoja vertical con una foto apaisada sin deformarla. **Las páginas del
+PDF que mandó son exactamente esto.**
+
+Tres salidas, y la tercera es la que yo tomaría:
+
+| | Qué | Qué cuesta |
+|---|---|---|
+| **i** | Poner la hoja en apaisado cuando las fotos lo son. En Google Docs el tamaño de página es **de todo el documento**, así que es una orientación por grupo de documento — lo cual está bien, porque las páginas de un mismo albarán se fotografían igual | barato; no resuelve un grupo mezclado |
+| **ii** | Girar 90° las fotos apaisadas en el teléfono para que llenen la hoja vertical | llena la hoja, pero quien lo lea tiene que torcer la cabeza |
+| **iii** | **Dejar de pasar por Google Docs.** Armar el PDF desde HTML (`Utilities.newBlob(html,'text/html').getAs('application/pdf')`): orientación por página, márgenes de verdad, la foto encajada como se quiera | el control entero **y de paso quita el Doc temporal y el permiso de Documentos — que es H-08**, un permiso que la versión gratis ni usa |
+
+> **(iii) hay que probarlo antes de prometerlo:** convertir HTML a PDF con
+> `getAs` funciona en Apps Script, pero Google no lo documenta como garantía.
+> Una prueba de media hora lo resuelve, y si falla, (i) sigue estando ahí.
+
+#### (b) Las fotos giradas: hay DOS puertas y sólo una endereza
+
+Esto sí es un fallo nuestro, y tiene la forma de siempre.
+
+```
+getBase64()      línea 7620 → llamada desde UN solo sitio (línea 8554)
+_compressImage() línea 22123 → llamada desde los grupos de documentos (22027)
+```
+
+`getBase64` lleva encima el bloque entero de comentarios del 12/10 explicando la
+marca EXIF: compara el tamaño que da el navegador respetando la marca con el
+crudo y **sólo reescribe si de verdad giró**. Es un arreglo cuidado.
+
+**Y las fotos del PDF no pasan por ahí.** Pasan por `_compressImage`, que dibuja
+en un canvas desde un `<img>` y **no comprueba la orientación en ningún
+momento**. El arreglo del 12/10 arregló la puerta de un solo archivo y dejó
+intacta **la puerta multifoto, que es justo la que construye el PDF**.
+
+**Dos funciones que tienen que estar de acuerdo sobre la orientación y nada las
+obliga.** El arreglo no es copiar el bloque EXIF a la segunda: es que haya **una
+sola puerta**, y que `_compressImage` la use.
+
+---
+
+### 🟡 M-04 · Cerrar la ventana al guardar y dejar sólo el aviso abajo a la izquierda
+
+Jose: *"implementemos el cerrar las ventanas o lo que el usuario guarda luego de
+dar clic en guardar, para que el usuario pueda seguir haciendo lo que necesita
+hacer, y solo dejamos el toast abajo a la izquierda."*
+
+**Lo que hay hoy, y por qué está así.** La ventana se queda abierta **todo el
+viaje al servidor**, y sólo cuando contesta llama a `_btnDone(btn, true, …)`,
+que enseña el ✓ **700 ms** y después cierra. El comentario de esa función dice
+por qué: *«un guardado que cierra su ventana al instante no se distingue de un
+guardado que no hizo nada»*. La espera que molesta **no son esos 700 ms** — es
+el viaje al servidor con la ventana congelada delante.
+
+**El aviso.** La regla base lo pone **arriba y al centro** en el ordenador
+(`#toastContainer`, línea 3629); en el teléfono ya baja y ocupa todo el ancho
+(línea 3979). «Abajo a la izquierda» es un renglón en el ordenador y poco más en
+el teléfono.
+
+**El riesgo que hay que decidir, y es la razón de no construirlo sin preguntar:**
+si la ventana se cierra antes de que el servidor conteste **y el guardado
+falla**, lo que escribió se perdió. Y una entrada es el formulario más largo de
+la app.
+
+| | Qué | Qué pasa si falla |
+|---|---|---|
+| **1 · recomendada** | Cerrar al instante, guardando el payload. Si falla, **se vuelve a abrir la ventana con todo dentro** y el aviso dice por qué | no se pierde nada; es un susto, no una pérdida |
+| 2 | Cerrar sólo cuando el servidor dice que sí, pero sin los 700 ms | ahorra menos de un segundo — no resuelve lo que pide |
+| 3 | Cerrar al instante y poner un botón **Reopen** en el aviso del fallo | igual de seguro, un toque más |
+
+**Mi recomendación: la 1, más el aviso abajo a la izquierda.** Y una condición
+—que vale la pena escribirla porque se va a olvidar—: **el ✓ de 700 ms no
+desaparece, se muda**. Pasa a ser lo que confirma el aviso de abajo, porque el
+argumento del comentario del 12/09 sigue siendo cierto: algo tiene que decir que
+ocurrió.
+
+---
+
 ## 📋 LO DEL 11/11
 
 ### ~~🔴 La casilla del teléfono~~ ✅ **v14.9**

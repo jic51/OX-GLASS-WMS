@@ -158,6 +158,13 @@ locución, en bucle, cortos. Se ven con el sonido apagado, que es como se ve el
 esta sesión. Esto sale de lo que describiste y de cómo está montada nuestra
 landing.)*
 
+> **11/11 — estos cuatro ya no son la lista de trabajo.** Se cruzaron con los
+> cuatro vídeos que había en `docs/CAPTURAS-PARA-LA-LANDING.md` (V1–V4) y
+> resultaron ser **siete, no ocho**: el clip 4 de aquí abajo y el V2 de allí son
+> el mismo vídeo. **La lista que manda es la de
+> `CAPTURAS-PARA-LA-LANDING.md`**, sección *«LOS CLIPS CORTOS — LISTA ÚNICA»*.
+> Lo de abajo se queda por el razonamiento, no para trabajar con ello.
+
 ### Lo que yo grabaría, en concreto
 
 **Uno principal, 60–90 s** — el hueco ya existe y lleva las instrucciones
