@@ -91,19 +91,16 @@
 <main class="wrap">
 
   <section class="month">
-    <h2>Octubre 2026</h2>
-    <p class="sub">Un mes dedicado a lo que hace perder trabajo, no a lo que se ve
-       bonito. Importar un archivo se paraba en la fila 500 mientras el bot&oacute;n
-       promet&iacute;a todas; borrar 490 movimientos tardaba media hora y no se pod&iacute;a
-       parar; todas las fusiones de nombres duplicados se negaban; cinco avisos de
-       &laquo;&iquest;seguro?&raquo; reventaban al decir que s&iacute;; y una obra se te
-       ofrec&iacute;a como estanter&iacute;a de tu propia bodega. Todo eso est&aacute;
-       arreglado aqu&iacute; abajo. Por el camino, la edici&oacute;n gratis dej&oacute; de
-       mandarte a men&uacute;s y pantallas que no tiene, el registro de errores pas&oacute;
-       de ser una foto a ser una ventana, y la p&aacute;gina adelgaz&oacute;
-       300&nbsp;KB por la red.</p>
-
-    <!-- NADA SE MUEVE. -->
+    <h2>Noviembre 2026</h2>
+    <p class="sub">Un mes de las cosas que est&aacute;n mal sin parecerlo. El coste medio de un
+       material se desviaba unos c&eacute;ntimos cada vez que entraba mercanc&iacute;a, y el
+       desv&iacute;o se acumulaba &mdash;$202 sobre siete mil unidades, invisible hasta que
+       alguien cuadra la contabilidad&mdash;. Un inventario que no pod&iacute;a ser cierto se
+       escond&iacute;a detr&aacute;s de un cero mientras la app escrib&iacute;a la prueba en un
+       registro que nadie abre. Una etiqueta impresa llevaba el nombre de un estante que no
+       existe. Y cinco pantallas ped&iacute;an elegir de cinco maneras distintas, con botones
+       que se mov&iacute;an al marcar. Todo arreglado aqu&iacute; abajo, y todo medido en vez
+       de supuesto.</p>
     <div class="entry" id="v14-8">
       <span class="ver">v14.8</span>
       <span class="tag fix">Arreglo</span>
@@ -323,6 +320,22 @@
          &mdash;una regla, para todas&mdash;.</p>
     </div>
 
+  </section>
+
+  <section class="month">
+    <h2>Octubre 2026</h2>
+    <p class="sub">Un mes dedicado a lo que hace perder trabajo, no a lo que se ve
+       bonito. Importar un archivo se paraba en la fila 500 mientras el bot&oacute;n
+       promet&iacute;a todas; borrar 490 movimientos tardaba media hora y no se pod&iacute;a
+       parar; todas las fusiones de nombres duplicados se negaban; cinco avisos de
+       &laquo;&iquest;seguro?&raquo; reventaban al decir que s&iacute;; y una obra se te
+       ofrec&iacute;a como estanter&iacute;a de tu propia bodega. Todo eso est&aacute;
+       arreglado aqu&iacute; abajo. Por el camino, la edici&oacute;n gratis dej&oacute; de
+       mandarte a men&uacute;s y pantallas que no tiene, el registro de errores pas&oacute;
+       de ser una foto a ser una ventana, y la p&aacute;gina adelgaz&oacute;
+       300&nbsp;KB por la red.</p>
+
+    <!-- NADA SE MUEVE. -->
     <div class="entry" id="v14-0">
       <span class="ver">v14.0</span>
       <span class="tag new">Cambio</span>
@@ -4746,4 +4759,32 @@
   <p>Las actualizaciones llegan a tu instalación como parte de tu suscripción
      de soporte. Hay cambios anteriores a los listados aquí; esta página empieza
      donde el producto se volvió algo digno de entregarle a alguien más.</p>
-</footer>
+</footer>    <!-- UNA ETIQUETA ES UN OBJETO FÍSICO. -->
+    <div class="entry" id="v14-9">
+      <span class="ver">v14.9</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Una etiqueta que nombra un estante que existe</h3>
+      <p><b>Una etiqueta impresa justo despu&eacute;s de guardar pod&iacute;a nombrar un estante que
+         no existe.</b> Escribes el estante en min&uacute;sculas, guardas, imprimes &mdash;y la
+         pegatina sal&iacute;a diciendo <i>d3b</i> cuando el estante se llama <i>D3B</i>&mdash;. Al
+         volver a entrar se le&iacute;a bien, que es lo que lo delat&oacute;: la correcci&oacute;n
+         pasaba despu&eacute;s de crear la etiqueta.</p>
+      <p>Una etiqueta es un objeto f&iacute;sico. Sale de la impresora, se pega en un pallet y se
+         queda ah&iacute;, y una que nombra un estante que no tienes manda a alguien a buscar donde
+         no hay nada &mdash;y el lector tampoco lo encuentra&mdash;.</p>
+      <p>Hab&iacute;a dos constructores de etiquetas: uno que le&iacute;a lo guardado y otro que
+         le&iacute;a el formulario. El aviso de despu&eacute;s de guardar usaba el segundo. Ahora usa
+         las filas que el servidor escribi&oacute; de verdad, el mismo camino que al imprimir desde
+         Movements, y <b>el segundo constructor ya no existe</b>.</p>
+      <p><b>La casilla de la lista de movimientos era demasiado grande y se montaba encima de la
+         fecha.</b> Medido: 34 p&iacute;xeles dentro de una celda de 30. Y fue cosa nuestra: un
+         arreglo anterior ped&iacute;a un &aacute;rea de toque de 44 y agrand&oacute; la casilla en
+         su lugar. No es lo mismo: una casilla nativa estirada a 34 se lee como un cuadro
+         vac&iacute;o. Ahora mide 20, dentro de un &aacute;rea de 44 donde se puede tocar en
+         cualquier punto.</p>
+      <p><b>Y en la pantalla de salida, Qty se com&iacute;a el sitio que necesitaba Available.</b>
+         Una cantidad nunca pasa de tres cifras, as&iacute; que tiene exactamente ese sitio &mdash;y
+         el n&uacute;mero que de verdad se consulta antes de teclear cabe en una l&iacute;nea.</p>
+    </div>
+
+

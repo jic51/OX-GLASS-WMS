@@ -116,19 +116,36 @@ console.log('\n═══ 3 · LAS CASILLAS EN EL TELÉFONO ═══\n');
  * en una bodega, muchas veces con guantes. */
 const coarse = (HTML.match(/@media \(pointer: coarse\)\{[\s\S]*?\n    \}/) || [])[0] || '';
 check('se encontró el bloque de pantalla táctil', coarse.length > 200);
-check('las casillas de movimientos y de stock tienen tamaño propio',
-  /\.mov-select-cb[^{]*\.stock-select-cb[^{]*\{[^}]*width:var\(--h-btn-tabla\)/.test(coarse),
+/* ── LA PREGUNTA ESTABA MAL PLANTEADA, Y ERA MÍA ───────────────────────────
+ *
+ * Esto exigía que la casilla midiera `--h-btn-tabla` (34 px) y razonaba por
+ * qué 34 y no 44. Jose, 10/11, con capturas de dos teléfonos: *"no sé por qué
+ * el checkbox es tan grande."* Y medido era peor: 34 × 34 dentro de una celda
+ * de 30, así que se salía cuatro píxeles y tapaba la fecha.
+ *
+ * N-15 pedía un ÁREA DE TOQUE de 44, y yo agrandé LA CASILLA. No es lo mismo:
+ * una casilla nativa estirada a 34 px no se lee como una casilla grande, se lee
+ * como un cuadro vacío. Lo que se ve y lo que se toca son dos cosas.
+ *
+ * Así que lo que se sujeta cambia: la casilla pequeña, el área de toque grande.
+ * Quien lo mide en tres teléfonos de verdad es `test-casilla-dedo-y-ojo.js`;
+ * esto fija las reglas que lo hacen posible. */
+check('la casilla se ve pequeña, como una casilla',
+  /\.mov-select-cb[^{]*\.stock-select-cb[^{]*\{[^}]*width:20px/.test(coarse),
   coarse.slice(coarse.indexOf('.mov-select-cb'), coarse.indexOf('.mov-select-cb') + 180));
 check('...la de «marcar todos» también', /#movSelAll/.test(coarse));
-check('...y la celda que las contiene, para que la columna no las recorte',
-  /\.mov-sel-cell\{width:var\(--h-btn-tabla\)/.test(coarse));
+check('...y el sitio donde se puede tocar llega a 44',
+  /\.sel-hit\{min-height:44px\}/.test(coarse));
+check('...en una celda que lo admite sin recortarlo',
+  /\.mov-sel-cell\{width:44px/.test(coarse));
 
-/* 34 y no 44 a propósito: es `--h-btn-tabla`, la altura que los botones de esa
- * misma fila YA tienen, así que la casilla crece casi siete veces en área y la
- * fila no crece ni un píxel. Esto fija que se use la variable y no un número
- * escrito a mano que luego se separe de la de los botones. */
-check('usa la variable de la fila, no un número suelto',
-  !/\.mov-select-cb[^{]*\{[^}]*width:\s*\d+px/.test(coarse));
+/* Y el área de toque existe también con ratón, sólo que más pequeña: es la
+ * misma pieza, no una del teléfono. Si viviera sólo en el bloque de teléfono,
+ * pulsar al lado de la casilla en el ordenador no haría nada, que es
+ * exactamente la clase de diferencia que nadie recuerda al escribir la pantalla
+ * siguiente. */
+check('el área de toque no es cosa sólo del teléfono',
+  /\.sel-hit\{display:flex/.test(HTML));
 check('y la variable sigue valiendo 34', /--h-btn-tabla:34px/.test(HTML));
 
 /* Que siga pareciendo una casilla del sistema. Una casilla grande dibujada a
