@@ -10,6 +10,60 @@ se hacen las dos primeras, la página ya funciona.
 
 ---
 
+## ✅ 12/11 — LAS CAPTURAS FIJAS YA NO HAY QUE HACERLAS A MANO
+
+**Las dibuja un comando**, contra un almacén inventado, con la app de verdad:
+
+```
+NODE_PATH="$(npm root -g)" CHROME_PATH=/opt/pw-browsers/chromium-1243/chrome-linux*/chrome \
+node tools/build-capturas.js            # las ocho
+node tools/build-capturas.js --solo mapa  # una sola
+```
+
+Salen en `landing/assets/capturas/`, a 1600 px y al doble de resolución:
+
+| Fichero | Qué enseña |
+|---|---|
+| `3.1-mapa-estante-abierto.png` | El mapa entero con A1A abierto y sus 14 materiales |
+| `3.2-stock-dashboard.png` | Las seis cifras y la tabla llena — 127 artículos, 20.560 unidades |
+| `3.2b-los-cuatro-estados.png` | **Las cuatro insignias en una pantalla**: In Stock, Reserved, All at Site, Zero Stock |
+| `3.3-movimientos.png` | Los cinco tipos de movimiento con su color, obra, responsable y comentario |
+| `3.5-incoming-semana.png` | La semana de entregas esperadas |
+| `3.5-incoming-lista.png` | La lista con *Expected / No date yet / Arrived* y la fecha aproximada `≈ 11-18` |
+| `3.6-asistente-instalacion.png` | El paso de ubicaciones, con las fichas azules y las naranjas de camión |
+| `3.7-importar.png` | 600 filas, 2 malas señaladas por motivos distintos, **1 corregida en verde** |
+| `3.8-stock-bajo.png` | El panel de avisos, rojos y naranjas |
+
+### Por qué esto importa más de lo que parece
+
+**Quita el bloqueo que llevaba desde el 22/09.** El punto 0 de la lista de
+abajo —*«copia de demo con datos inventados, bloquea todo lo demás»*— ya no
+bloquea las capturas fijas. Sigue haciendo falta **para los vídeos**, que
+necesitan la app viva.
+
+Y **la regla 0 se cumple sola**: no hay forma de que se cuele un cliente, un
+proveedor o un correo de OX, porque los datos no salen de ninguna hoja — los
+escribe el propio comando. `Cedarline Glass Co.`, `MAPLE STREET REMODEL`,
+`NORTHGATE SUPPLY`, `sam@cedarlineglass.com`. Nada de eso existe.
+
+Además se pueden **rehacer** cuando cambie el diseño: mismo comando, misma
+semilla, mismos datos. Una captura guardada a mano es un fichero que nadie sabe
+volver a hacer.
+
+### Las tres cosas que este comando NO puede dar
+
+1. **Las dos gráficas del Dashboard salen en blanco.** Las dibuja Google Charts
+   desde `www.gstatic.com`, y esa dirección está bloqueada en la red de esta
+   sesión. Por eso 3.2 se encuadra **por debajo** de ellas. Es un encuadre, no
+   un retoque. Si alguna vez hacen falta con gráficas, o se permite ese
+   dominio, o esa captura la saca Jose.
+2. **La del teléfono (3.4) sigue sin hacerse**, y a propósito: ver abajo, va
+   después de M-01.
+3. **La etiqueta pegada en material (3.9) es una foto**, no una captura. Ésa
+   sólo la puede hacer alguien con una impresora y un pallet delante.
+
+---
+
 ## 🔄 ACTUALIZADO EL 11/11 — lee esto antes de usar la lista de abajo
 
 Entre el 22/09 y hoy la app pasó de la v12 a la **v14.9**, y esta lista se
@@ -58,6 +112,11 @@ teórica. En las capturas que él mismo mandó esta semana se leen, sin esforzar
 Una landing la lee la competencia. **Publicar esto es regalar la lista de
 clientes y de proveedores de OX Glass**, y de paso poner los nombres de sus
 empleados en internet sin que ellos lo hayan decidido.
+
+> **12/11 — para las capturas fijas esto ya está resuelto**, y no con cuidado
+> sino por construcción: las dibuja `tools/build-capturas.js` con datos que
+> inventa el propio comando, así que no hay ninguna hoja de la que pueda
+> escaparse un nombre. Lo de abajo **sigue aplicando entero a los vídeos**.
 
 **Cómo evitarlo, y es una vez sola:** hacer **una copia de la app para demos**,
 vaciarla con *Advanced → Erase everything* (existe desde la v9.30) y cargarle
@@ -289,17 +348,18 @@ como mucho**, a **800px de ancho**, y aun así va a pesar más que el vídeo.
 
 | # | Qué | Formato | Duración / tamaño | ¿Bloquea? |
 |---|---|---|---|---|
-| 0 | **Copia de demo con datos inventados** | — | una tarde | **Sí — todo lo demás depende de esto** |
+| 0 | **Copia de demo con datos inventados** | — | una tarde | **Sólo para los VÍDEOS** — las capturas fijas ya no la necesitan (12/11) |
 | 1 | Vídeo principal | MP4 mudo + poster JPG | 60–90 s | Sí, es el hueco que ya existe |
 | 2 | ✅ Imagen para compartir | JPG ×2 (en/es) | 1200×630 | **Hecha el 06/10 — la genera un comando** |
-| 3.1 | Warehouse Map con estante abierto | PNG | 1600px | No |
-| 3.2 | Stock Dashboard | PNG | 1600px | No — **el punto B ya está; el C no** (11/11) |
-| 3.3 | Historial de un material | PNG | 1600px | No |
+| 3.1 | Warehouse Map con estante abierto | PNG | 1600px | ✅ **hecha** — `build-capturas.js` |
+| 3.2 | Stock Dashboard | PNG ×2 | 1600px | ✅ **hecha** (con las cuatro insignias) |
+| 3.3 | Movimientos, los cinco tipos | PNG | 1600px | ✅ **hecha** |
 | 3.4 | En el teléfono | PNG vertical | tal cual del móvil | ⛔ **esperar a M-01** (11/11) |
-| 3.5 | Incoming | PNG | 1600px | No |
-| **3.6** | **El asistente de instalación** ⭐ | PNG | 1600px | No — **la más importante de las fijas** |
-| **3.7** | **El importador, con errores y uno corregido** | PNG ×2 | 1600px | No |
-| **3.8** | **Aviso de stock bajo, rojas y naranjas** | PNG | 1600px | No |
+| 3.5 | Incoming | PNG ×2 | 1600px | ✅ **hecha** |
+| **3.6** | **El asistente de instalación** ⭐ | PNG | 720×560 | ✅ **hecha** — la más importante de las fijas |
+| **3.7** | **El importador, con errores y uno corregido** | PNG | 1600px | ✅ **hecha** |
+| **3.8** | **Aviso de stock bajo, rojas y naranjas** | PNG | 1600px | ✅ **hecha** |
+| **3.9** | **La etiqueta pegada en material** | 📷 foto | del móvil | ✋ **necesita tus manos** |
 | **3.9** | **La etiqueta pegada en material** | 📷 foto | del móvil | No |
 | 4 | Bucle de cabecera | MP4 mudo | 6–10 s, ≤2 MB | No |
 | **5** | **Los siete clips** — lista única al final | MP4 mudo | ver la tabla | No |

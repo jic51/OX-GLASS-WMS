@@ -310,6 +310,56 @@ es exactamente para esto.
 
 ---
 
+## 📋 LO DEL 12/11
+
+### 🟡 W-08 · Una entrega con rango de fechas se repite en cada día del rango
+
+**Encontrado montando las capturas, no buscándolo** — que es como se encuentran
+las cosas de verdad.
+
+Una entrega de Incoming puede tener `dateMode: 'window'`: *«entre el 16 y el
+20»*, que es lo que contesta un proveedor cuando no se compromete. La tira de
+**This Week's Expected Arrivals** la pinta **en los cinco días**, con su
+cantidad entera cada vez y sin nada que diga que es la misma.
+
+Medido con una sola entrega de 12 espejos del 16 al 20: la semana enseñaba
+**MON 12 UNIT · TUE 12 UNIT · WED 12 UNIT**, y los otros dos días caían fuera
+de la pantalla. Quien lo mire cuenta 36 espejos que no existen.
+
+**Y la intención es buena**, que es lo que lo hace una decisión y no un
+descuido: no se sabe qué día llega, así que aparece en todos los posibles. El
+fallo es que **no lo dice**. Una ficha idéntica repetida cinco veces no se lee
+como «uno de estos días», se lee como cinco entregas.
+
+**Lo que yo haría:** la misma ficha, pero marcada — `12 UNIT · one of Nov 16–20`
+en la ficha, y el color de fondo más flojo que el de una fecha firme. Es un
+cambio pequeño y no toca los datos.
+
+**Dónde:** la tira de la semana en Incoming; `dateMode` y `estDateEnd` vienen
+de `parseIncomingRow` (`Code_v3_fixed.gs` ~16338).
+
+### ✅ Las capturas fijas de la landing ya las dibuja un comando
+
+`tools/build-capturas.js`. Ocho capturas de la app de verdad contra un almacén
+**inventado por el propio comando** — 127 artículos, 420 movimientos, seis
+entregas. Detalle en `docs/CAPTURAS-PARA-LA-LANDING.md`.
+
+**Quita el bloqueo del 22/09:** la copia de demo ya sólo hace falta para los
+vídeos. Y la regla de no publicar datos de OX se cumple **por construcción**,
+no por cuidado: no hay hoja de la que se pueda escapar un nombre.
+
+Cinco cosas se arreglaron por el camino, y las cinco son del mismo tipo —
+**datos de mentira que no coincidían con lo que la app espera, y nada que lo
+obligara**: `serverVersion` inventado sacaba la franja naranja de «Version
+mismatch» en las cinco capturas; `config.minStock` va por nombre y no por
+matId, así que el panel de avisos salía vacío; el campo es `estDate`, no
+`expectedDate`, y la semana entera decía «Nothing scheduled»; las ubicaciones
+del asistente son objetos `{name,type}` y las fichas salían en blanco; y los
+movimientos se pintan al revés (`slice().reverse()`), así que generarlos del
+más nuevo al más viejo enseñaba el extremo equivocado.
+
+---
+
 ## 📋 LO DEL 11/11 — CUATRO PARA LA SIGUIENTE VERSIÓN · M-01…M-04
 
 Jose, con un PDF adjunto que **es la prueba del tercero**: el Bill of Lading de
