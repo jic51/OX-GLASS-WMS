@@ -310,6 +310,88 @@ es exactamente para esto.
 
 ---
 
+## 📋 LO DEL 13/11
+
+### 🔴 M-05 · Material que se usa en otra obra: hoy cambia de sitio, no de dueño
+
+Jose, 13/11, con una captura de tres movimientos (`PAT.SEI902` y `MH 145`):
+
+> *"Fueron transferidas desde un material reservado a una locación donde estaba
+> otro material. Eso lo hice yo porque el material reservado se debía usar en
+> otro proyecto y está bien, pero el problema es que en el sistema esas
+> ventanas transferidas aún aparecen con el otro nombre y no son parte completa
+> del otro proyecto nuevo que se les asignó. Al momento de transferir un
+> material y usar un material en otro proyecto deben pasar a ser parte de ese
+> proyecto, pero debemos poder tener trazabilidad para saber de dónde vinieron
+> esas ventanas, así se disminuyen de un lado y se suman en otro lado, y
+> también cambian de nombre."*
+
+**Lo que pasó de verdad, en el almacén:** unas ventanas pedidas y reservadas
+para una obra se montaron en otra. En el mundo físico eso es normal y pasa
+todas las semanas.
+
+**Lo que la app registró:** un `TRANSFER` de 4 unidades de `B2A` a `A3A`. Y eso
+es **todo lo que sabe**. Para el sistema esas ventanas siguen llamándose
+`PAT.SEI902` y siguen siendo de su obra; lo único que cambió es el estante.
+
+#### La distinción que lo explica, y es la que hay que hacer antes de construir
+
+**`TRANSFER` contesta «¿dónde está?». Esto contesta «¿de quién es?».** Son dos
+preguntas distintas y hoy sólo hay un botón, así que la segunda se está
+respondiendo con la herramienta de la primera. Por eso el resultado es correcto
+en el estante y falso en la obra.
+
+> Es el mismo patrón de siempre: **dos cosas que tienen que coincidir —lo que
+> hay en el pallet y lo que dice el sistema— y nada lo obliga.**
+
+#### Lo que yo construiría
+
+**No un `TRANSFER` mejorado: un movimiento nuevo**, porque lo que ocurre son
+dos cosas a la vez y una sola fila no puede contarlas.
+
+| | |
+|---|---|
+| **Nombre** | `REASSIGN` — «estas unidades pasan a ser aquellas» |
+| **Qué escribe** | **Dos filas atadas**: una que resta en el material de origen y otra que suma en el de destino, con el mismo `REASSIGN_ID` |
+| **Qué pregunta** | De qué material salen · a qué material entran · cuántas · a qué obra · por qué |
+| **Trazabilidad** | La fila de destino dice **«came from PAT.SEI902 · <obra vieja>»** y la de origen **«went to MH 145 · <obra nueva>»**. Las dos se leen solas, sin ir a buscar la otra |
+
+**Y cuatro cosas que no se pueden olvidar, cada una por un motivo concreto:**
+
+1. **El coste viaja con las unidades.** El coste va estampado por fila
+   (C-01), así que las unidades que se mueven tienen que llevar **su** coste al
+   material nuevo, no el coste medio del nuevo. Si no, mover material barato a
+   un material caro **inventa dinero**, y al revés lo destruye.
+2. **La reserva de origen tiene que soltarse.** Si esas 4 unidades estaban
+   reservadas para la obra vieja, seguir reservándolas después de montarlas en
+   otra casa es una mentira que va a hacer que alguien no pueda sacar material
+   que sí tiene.
+3. **La etiqueta del pallet sigue diciendo el nombre viejo.** Es W-05 otra vez
+   y es físico: hay que ofrecer **reimprimir la etiqueta** al terminar, o
+   alguien va a buscar `PAT.SEI902` donde ahora pone otra cosa.
+4. **No se borra nada, nunca.** Las tres filas de la captura de Jose se quedan
+   donde están. `REASSIGN` añade, no reescribe — igual que todo lo demás en
+   esta app.
+
+#### Lo que hay que decidir antes, y es una pregunta de almacén, no de código
+
+**¿Qué pasa con las que ya se movieron?** Las de la captura ya están en `A3A`
+con el nombre viejo. Hay dos caminos y no es mío elegir:
+
+- **Dejarlas.** El histórico queda como ocurrió y `REASSIGN` sólo rige de aquí
+  en adelante.
+- **Reasignarlas a mano**, una vez, con el movimiento nuevo — lo cual deja
+  constancia de la corrección y cuadra el inventario de las dos obras.
+
+Yo haría el segundo **sólo para estas tres**, y con Jose delante.
+
+**Tamaño:** es de los grandes. Toca el servidor (movimiento nuevo, costes,
+reservas), la pantalla (un formulario que pregunta por dos materiales), las
+etiquetas y las pruebas. **No es el siguiente que haría** — va después de las
+tres de `M-01…M-04`, salvo que esté pasando a menudo.
+
+---
+
 ## 📋 LO DEL 12/11
 
 ### 🟡 W-08 · Una entrega con rango de fechas se repite en cada día del rango
@@ -403,6 +485,31 @@ de hoy. Se gana «se lee sin mover nada» y se pierde «veo diez de un vistazo»
 
 ---
 
+### ~~🟡 M-02 · La cámara: varias fotos seguidas, y reordenarlas arrastrando~~ ✅ **v15.1**
+
+> **Hecho el 13/11.** La cámara **se vuelve a abrir sola** al volver una foto, y
+> se para cuando se sale de ella — salir de la cámara ES el botón de «ya está».
+> Ocho páginas pasan de dieciséis toques a ocho. Si un navegador bloquea el
+> reabrir por no venir de un gesto, no se reabre y queda el botón de antes: por
+> eso no hay ningún aviso prometiéndolo.
+>
+> **Arrastrar funciona con el dedo**, con eventos de puntero y no con el
+> `dragstart` de HTML5, que al tocar no existe. Umbral de 8 px para que un
+> temblor no reordene, la ✕ sigue siendo un botón, y `touch-action:none` sólo
+> mientras se arrastra para que la tira se pueda seguir desplazando.
+>
+> Prueba: `tools/test-fotos-en-rafaga.js` — arrastra de verdad y mira **lo que
+> se mandaría al servidor**, no cómo quedó la pantalla. Falla 2 veces contra el
+> código anterior.
+>
+> **Y la prueba tenía dos fallos propios, los dos de pasar en vacío:** el thumb
+> de mentira sólo llevaba la ✕, que cubre el centro, así que el `pointerdown`
+> caía en un botón; y el contenedor acababa en y=1312, fuera de una pantalla de
+> 700, de modo que el ratón no tocaba nada y `elementFromPoint` devolvía
+> `null`. **Tres comprobaciones decían «ok» sin haber llegado a mirar.**
+
+<details><summary>El diagnóstico original, 11/11</summary>
+
 ### 🟡 M-02 · La cámara: varias fotos seguidas, y reordenarlas arrastrando
 
 Jose: *"la primera vez que el usuario toma la foto se le da la opción de tomar
@@ -436,6 +543,8 @@ las fotos en la tira `#strip-<uid>` **ya es el orden de las páginas del PDF** �
 documento. Reordenar es mover un `<div>`, no tocar ningún dato. Un cuidado: los
 eventos `dragstart/drop` de HTML5 **no existen al tocar con el dedo**; en el
 teléfono hay que hacerlo con eventos de puntero, que es donde está el trabajo.
+
+</details>
 
 ---
 

@@ -2703,7 +2703,17 @@
     .doc-group-remove{background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:2px 6px;border-radius:4px;flex-shrink:0}
     .doc-group-remove:hover{background:var(--red-bg);color:var(--red)}
     .doc-photos-strip{display:flex;flex-wrap:wrap;gap:6px;min-height:44px;align-items:flex-start;margin-bottom:var(--sp-2)}
-    .doc-photo-thumb{position:relative;width:54px;height:54px;border-radius:6px;overflow:hidden;border:1px solid var(--border);flex-shrink:0;background:#e5e7eb}
+    .doc-photo-thumb{position:relative;width:54px;height:54px;border-radius:6px;overflow:hidden;border:1px solid var(--border);flex-shrink:0;background:#e5e7eb;
+      /* M-02: se puede arrastrar para cambiar el orden. El cursor lo dice en
+         el ordenador; en el teléfono lo dice el propio gesto. */
+      cursor:grab;user-select:none;-webkit-user-select:none}
+    /* Y mientras se arrastra: levantada y medio transparente, para que se vea
+       POR DEBAJO dónde va a caer. Sin eso se arrastra a ciegas. */
+    .doc-photo-thumb.arrastrando{opacity:.55;transform:scale(1.08);cursor:grabbing;
+      box-shadow:var(--sh-3);z-index:2}
+    /* La imagen no se arrastra por su cuenta: el navegador tiene su propio
+       arrastrar de imágenes y se pelea con el nuestro. */
+    .doc-photo-thumb img{-webkit-user-drag:none;user-drag:none;pointer-events:none}
     .doc-photo-thumb img{width:100%;height:100%;object-fit:cover;display:block}
     .doc-photo-thumb .remove-photo{position:absolute;top:1px;right:1px;background:rgba(0,0,0,.65);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:.65rem;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0}
     .doc-group-actions{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap}
@@ -6087,7 +6097,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '15.0';
+var APP_VERSION = '15.1';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -6099,7 +6109,7 @@ var APP_VERSION = '15.0';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '231cd0a8';
+var APP_BUILD = '9ed83a9f';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -21943,12 +21953,124 @@ function addDocGroup(suggestedName, containerId, idPrefix) {
     '<input type="file" class="doc-file-input" id="docFileInput-' + uid + '" accept="image/*,.pdf,video/*" style="display:none" multiple>';
 
   container.appendChild(group);
+
+  /* ── M-02 · LA CÁMARA VUELVE SOLA ──────────────────────────────────────────
+   *
+   * Jose, 11/11: *"si el usuario quiere subir más de una foto… sólo toma la
+   * foto y se suma un número con la cantidad de fotos, sin necesidad de
+   * revisar las fotos"*.
+   *
+   * LO QUE NO SE PUEDE, Y HAY QUE DECIRLO: la pantalla de «¿Usar foto? /
+   * Repetir» **es de la cámara del teléfono, no nuestra**. Un `input` con
+   * `capture=` le entrega el trabajo a la cámara nativa, y ninguna página web
+   * puede saltarse esa confirmación. No hay forma, y buscarla es perder el
+   * tiempo.
+   *
+   * LO QUE SÍ: no volver a pedirla. Antes, cada foto eran DOS toques —«Usar
+   * foto» y luego 📸 otra vez—. Ahora, al volver una foto, la cámara **se
+   * vuelve a abrir sola**, así que fotografiar ocho páginas de un albarán es
+   * disparar ocho veces y nada más. El contador sube solo y las fotos se
+   * revisan después, que es justo lo que pidió.
+   *
+   * CÓMO SE PARA: cancelando la cámara. Si la persona sale sin hacer foto, el
+   * navegador no manda fichero y aquí no se vuelve a abrir. No hace falta un
+   * botón de «ya está» — salir de la cámara ES el botón.
+   *
+   * Y SI EL NAVEGADOR LO BLOQUEA, no pasa nada: algunos exigen que abrir la
+   * cámara venga de un gesto de la persona, y volver a pulsarla desde aquí no
+   * lo es. En ese caso simplemente no se reabre y queda el comportamiento de
+   * antes, con el botón 📸 ahí. Por eso no hay ningún aviso prometiendo que
+   * esto va a ocurrir: lo que se promete es lo que funciona seguro. */
   document.getElementById('docCamInput-'  + uid).addEventListener('change', function(e) {
-    _handlePhotoFiles(uid, Array.from(e.target.files)); this.value = '';
+    var hubo = e.target.files && e.target.files.length;
+    _handlePhotoFiles(uid, Array.from(e.target.files));
+    this.value = '';
+    if (hubo) _camaraOtraVez(uid);
   });
   document.getElementById('docFileInput-' + uid).addEventListener('change', function(e) {
     _handlePhotoFiles(uid, Array.from(e.target.files)); this.value = '';
   });
+
+  _arrastrarParaOrdenar(document.getElementById('strip-' + uid));
+}
+
+/* El respiro es a propósito. Sin él, el `click` sale mientras el navegador aún
+ * está cerrando la cámara anterior y se pierde en la mitad de los teléfonos. */
+function _camaraOtraVez(uid) {
+  setTimeout(function () {
+    var inp = document.getElementById('docCamInput-' + uid);
+    if (inp && document.body.contains(inp)) { try { inp.click(); } catch (e) {} }
+  }, 350);
+}
+
+/* ── M-02 · ARRASTRAR PARA CAMBIAR EL ORDEN ────────────────────────────────
+ *
+ * Jose: *"sería buena la opción de poder mover y cambiar el orden de las fotos
+ * sólo arrastrándolas entre ellas"*.
+ *
+ * Y esto es más barato de lo que parece, porque **el orden de la tira YA ES el
+ * orden de las páginas del PDF**: `_collectDocGroups` las recorre con
+ * `querySelectorAll`, que devuelve el orden del documento. Así que reordenar
+ * es mover un `<div>` — no hay ningún dato que tocar, ni nada que guardar.
+ *
+ * CON EVENTOS DE PUNTERO Y NO CON `dragstart`. El arrastrar de HTML5 **no
+ * existe al tocar con el dedo**, y esto se usa sobre todo en un teléfono. Los
+ * eventos de puntero son los mismos para el dedo y para el ratón.
+ *
+ * LOS TRES CUIDADOS:
+ *  · La ✕ de quitar no arrastra. Empezar un arrastre encima de un botón hace
+ *    que el botón no se pueda pulsar.
+ *  · Hay que moverse unos píxeles antes de considerarlo un arrastre. Sin ese
+ *    umbral, un toque con un temblor se convierte en un reordenado que nadie
+ *    pidió.
+ *  · `touch-action:none` SÓLO mientras se arrastra. Puesto siempre, la tira no
+ *    se podría desplazar de lado con el dedo para ver las fotos de más allá.
+ */
+function _arrastrarParaOrdenar(tira) {
+  if (!tira || tira._ordenable) return;
+  tira._ordenable = true;
+
+  var cogido = null, x0 = 0, y0 = 0, activo = false;
+
+  tira.addEventListener('pointerdown', function (ev) {
+    var t = ev.target.closest ? ev.target.closest('.doc-photo-thumb') : null;
+    if (!t || !tira.contains(t)) return;
+    if (ev.target.closest('button')) return;      // la ✕ sigue siendo un botón
+    cogido = t; x0 = ev.clientX; y0 = ev.clientY; activo = false;
+  });
+
+  tira.addEventListener('pointermove', function (ev) {
+    if (!cogido) return;
+    if (!activo) {
+      if (Math.abs(ev.clientX - x0) + Math.abs(ev.clientY - y0) < 8) return;
+      activo = true;
+      cogido.classList.add('arrastrando');
+      tira.style.touchAction = 'none';
+      try { tira.setPointerCapture(ev.pointerId); } catch (e) {}
+    }
+    ev.preventDefault();
+
+    /* Con el puntero capturado, `ev.target` es siempre la tira, así que hay
+     * que preguntar qué hay DEBAJO del dedo. Y se compara contra el centro de
+     * cada foto: usar el borde hace que la foto salte adelante y atrás cuando
+     * el dedo queda justo encima de la frontera. */
+    var sobre = document.elementFromPoint(ev.clientX, ev.clientY);
+    var otra  = sobre && sobre.closest ? sobre.closest('.doc-photo-thumb') : null;
+    if (!otra || otra === cogido || !tira.contains(otra)) return;
+    var c = otra.getBoundingClientRect();
+    var antes = ev.clientX < c.left + c.width / 2;
+    tira.insertBefore(cogido, antes ? otra : otra.nextSibling);
+  });
+
+  function soltar(ev) {
+    if (!cogido) return;
+    cogido.classList.remove('arrastrando');
+    tira.style.touchAction = '';
+    try { tira.releasePointerCapture(ev.pointerId); } catch (e) {}
+    cogido = null; activo = false;
+  }
+  tira.addEventListener('pointerup', soltar);
+  tira.addEventListener('pointercancel', soltar);
 }
 
 function triggerCameraCapture(uid) {
