@@ -529,6 +529,30 @@ desaparece, se muda**. Pasa a ser lo que confirma el aviso de abajo, porque el
 argumento del comentario del 12/09 sigue siendo cierto: algo tiene que decir que
 ocurrió.
 
+> ### ✅ DECIDIDO EL 12/11 — y la idea es de Jose
+>
+> Jose: *"¿qué tal si mostramos una advertencia y en el mismo lugar del toast
+> de cargando aparece la opción de corregir lo que está mal en el movimiento?"*
+>
+> **Sí, y mejora la opción 1** — pero con una distinción que hay que hacer
+> antes de construirla, porque cambia el diseño:
+>
+> | Qué falló | Hay algo que corregir | Qué ofrece el aviso |
+> |---|---|---|
+> | **Un campo**: un estante que no existe, una cantidad mayor que lo disponible, un PO repetido | Sí, y es uno | **Se corrige dentro del aviso** y se reintenta. Sin abrir nada |
+> | **Varios campos** | Sí, pero no caben | **«Fix»** → reabre la ventana con todo dentro, el campo en rojo y enfocado |
+> | **Red, cuota, bloqueo, tiempo agotado** | **No hay nada que corregir** | **«Retry»** → reenvía lo mismo. Abrir la ventana sería un paso de más |
+>
+> **Por qué no siempre dentro del aviso:** una entrada lleva hasta ocho
+> materiales, y cada uno sus filas de ubicación. Eso no cabe en una franja
+> abajo a la izquierda, y una franja que crece hasta media pantalla deja de ser
+> un aviso y es otra ventana con peor sitio.
+>
+> **Y lo que no cambia en ninguno de los tres casos:** el payload se guarda al
+> cerrar. Ésa es la parte que impide perder lo escrito; lo de arriba es sólo
+> qué se hace con él. La idea de Jose no sustituye a guardarlo — dice qué
+> ofrecer después, y es mejor que reabrir siempre.
+
 ---
 
 ## 📋 LO DEL 11/11
