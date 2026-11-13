@@ -439,6 +439,31 @@ teléfono hay que hacerlo con eventos de puntero, que es donde está el trabajo.
 
 ---
 
+### ~~🔴 M-03 · El PDF de las fotos: a media hoja y de lado~~ ✅ **v15.0**
+
+> **Arreglado el 12/11, las dos mitades.**
+>
+> **(a) La hoja se pone del lado de la foto.** No se podía arreglar con la hoja
+> fija en vertical, porque era aritmética: una foto apaisada de 4:3 ocupa
+> 612×459 pt de una hoja de 612×792 — el 58 %. Lo que gira ahora es **la
+> hoja**, decidida una vez por documento según la mayoría de sus fotos. Medido:
+> **del 58 % al 97 %** de la hoja, entera y centrada. Y era más delicado de lo
+> que parece por el orden: para elegir la orientación hay que medir las fotos,
+> y para medirlas hay que insertarlas — así que se insertan todas, se miden, se
+> decide la hoja, y sólo entonces se escala cada una.
+>
+> **(b) Una sola puerta.** `_compressImage` ahora usa
+> `createImageBitmap(file,{imageOrientation:'from-image'})`, que devuelve el
+> mapa de bits ya enderezado, con el camino de antes como respaldo. Y **un
+> camino o el otro, nunca los dos**: la primera versión dejaba corriendo
+> también el `img.src`, así que cada foto se subía dos veces.
+>
+> Prueba: `tools/test-la-foto-llena-la-hoja.js`, 15 comprobaciones, que
+> **ejecuta** el armado del documento con un Google Docs de mentira y mide el
+> resultado. Falla 5 veces contra el código anterior — comprobado.
+
+<details><summary>El diagnóstico original, 11/11</summary>
+
 ### 🔴 M-03 · El PDF de las fotos: a media hoja y de lado
 
 Jose: *"al guardar el PDF con las fotos, se ven peor que nunca; las fotos solo
@@ -491,6 +516,8 @@ intacta **la puerta multifoto, que es justo la que construye el PDF**.
 **Dos funciones que tienen que estar de acuerdo sobre la orientación y nada las
 obliga.** El arreglo no es copiar el bloque EXIF a la segunda: es que haya **una
 sola puerta**, y que `_compressImage` la use.
+
+</details>
 
 ---
 

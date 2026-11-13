@@ -99,6 +99,27 @@
        that does not exist. And five screens asked you to select things in five different
        ways, with buttons that moved as you ticked. All of it fixed below, and all of it
        measured rather than guessed.</p>
+    <div class="entry" id="v15-0">
+      <span class="ver">v15.0</span>
+      <span class="tag fix">Fix</span>
+      <h3>Photos fill the page in the PDF &mdash; and come out the right way up</h3>
+      <p><b>Attach several photos to a movement and they become a PDF. That PDF was coming out
+         badly: each photo sideways, and taking up barely half the sheet.</b> They looked like one
+         problem. They were two.</p>
+      <p><b>The sheet now turns to match the photo.</b> The page was fixed to Letter portrait, so a
+         landscape photo filled the width and left the bottom half blank &mdash; 58&nbsp;% of the
+         sheet. Nothing could fix that while the page stayed upright: a landscape picture does not
+         fit an upright page without being stretched. So the page turns instead, chosen once per
+         document from the photos in it. The same photo now covers <b>97&nbsp;%</b> of the sheet,
+         whole and centred.</p>
+      <p><b>And the photos no longer arrive sideways.</b> A phone almost never turns the pixels
+         when you take a picture: it saves them as the sensor read them and adds a note saying
+         &ldquo;turn this&rdquo;. Acopio already honoured that note &mdash; on the single-file
+         path. The multi-photo path, the one that builds the PDF, did not. One door now, not two.</p>
+      <p class="meta">Tested by assembling a document from photos of known shape and measuring
+         what came out: how much of the sheet each one covers, that none spills over the edge, and
+         that a picture arriving on its side is stored upright.</p>
+    </div>
     <div class="entry" id="v14-8">
       <span class="ver">v14.8</span>
       <span class="tag fix">Fix</span>
@@ -4571,6 +4592,7 @@
      product became something worth handing to someone else.</p>
 </footer>    <!-- UNA ETIQUETA ES UN OBJETO FÍSICO. Sale, se pega, y manda a alguien
          a un sitio. Por eso W-05 no era cosmético. -->
+    <!-- M-03 · El PDF de las fotos: dos causas distintas en una sola queja. -->
     <div class="entry" id="v14-9">
       <span class="ver">v14.9</span>
       <span class="tag fix">Fix</span>

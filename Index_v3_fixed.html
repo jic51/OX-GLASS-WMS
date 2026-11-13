@@ -6087,7 +6087,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '14.9';
+var APP_VERSION = '15.0';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -6099,7 +6099,7 @@ var APP_VERSION = '14.9';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'cb9e4a1e';
+var APP_BUILD = '231cd0a8';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -22131,18 +22131,42 @@ function _compressImage(file, maxWidth, quality, callback) {
     reader.readAsDataURL(file);
     return;
   }
+  /* ── M-03(b) · LA SEGUNDA PUERTA, QUE NO ENDEREZABA ────────────────────────
+   *
+   * Jose, 11/11: *"al guardar el PDF con las fotos… también se guardan
+   * giradas"*, con el PDF de un Bill of Lading adjunto como prueba.
+   *
+   * El 12/10 se arregló exactamente esto — en `getBase64`, que lleva encima
+   * todo el razonamiento de la marca EXIF. Y `getBase64` **se llama desde un
+   * solo sitio**. Las fotos de los grupos de documentos, que son justo las
+   * que se convierten en PDF, pasan por AQUÍ, y aquí no se miraba la
+   * orientación en ningún momento.
+   *
+   * Dos funciones que tienen que estar de acuerdo sobre la orientación y nada
+   * las obliga: el fallo de siempre, esta vez en una función que arreglé yo
+   * dejando la otra mitad intacta.
+   *
+   * `createImageBitmap(file, {imageOrientation:'from-image'})` devuelve el
+   * mapa de bits YA GIRADO, así que dibujarlo en el canvas lo endereza y lo
+   * encoge en un solo paso. Si el navegador no lo conoce, o la imagen está
+   * rota, se cae al camino de antes: una foto torcida es un fastidio, una
+   * foto que no se sube es trabajo perdido. */
   var objectUrl = URL.createObjectURL(file);
-  var img = new Image();
-  img.onload = function() {
-    URL.revokeObjectURL(objectUrl);
-    var w = img.naturalWidth, h = img.naturalHeight;
-    // Only downscale if wider than maxWidth
+
+  function _alLienzo(fuente, w0, h0) {
+    var w = w0, h = h0;
     if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
     var canvas = document.createElement('canvas');
     canvas.width = w; canvas.height = h;
-    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    canvas.getContext('2d').drawImage(fuente, 0, 0, w, h);
     var dataUrl = canvas.toDataURL('image/jpeg', quality);
     callback(dataUrl.split(',')[1], 'image/jpeg');
+  }
+
+  var img = new Image();
+  img.onload = function() {
+    URL.revokeObjectURL(objectUrl);
+    _alLienzo(img, img.naturalWidth, img.naturalHeight);
   };
   img.onerror = function() {
     // Fallback: read raw
@@ -22151,7 +22175,20 @@ function _compressImage(file, maxWidth, quality, callback) {
     reader.onload = function(e) { callback(e.target.result.split(',')[1], file.type); };
     reader.readAsDataURL(file);
   };
-  img.src = objectUrl;
+
+  /* UN CAMINO O EL OTRO, NUNCA LOS DOS. La primera versión de esto llamaba a
+   * `createImageBitmap` Y dejaba el `img.src` de abajo corriendo, así que la
+   * foto se subía dos veces. `img.src` sólo se asigna si el camino que
+   * endereza no está disponible o falla. */
+  if (typeof createImageBitmap === 'function') {
+    createImageBitmap(file, { imageOrientation: 'from-image' }).then(function (bm) {
+      URL.revokeObjectURL(objectUrl);
+      _alLienzo(bm, bm.width, bm.height);
+      try { bm.close(); } catch (e) {}
+    }).catch(function () { img.src = objectUrl; });
+  } else {
+    img.src = objectUrl;
+  }
 }
 
 // Collect docGroups from a specific container (scoped to avoid cross-modal leakage)

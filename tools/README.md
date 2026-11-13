@@ -131,6 +131,7 @@ node tools/test-el-dinero-no-se-desvia.js
 node tools/test-nada-se-mueve.js
 node tools/test-casilla-dedo-y-ojo.js
 node tools/test-etiqueta-dice-lo-guardado.js
+node tools/test-la-foto-llena-la-hoja.js
 node tools/test-url-de-la-app.js
 node tools/test-no-saltar-al-cargar.js
 node tools/test-config-escritura.js

@@ -128,7 +128,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '14.9';
+var APP_VERSION = '15.0';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -140,7 +140,7 @@ var APP_VERSION = '14.9';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'cb9e4a1e';
+var APP_BUILD = '231cd0a8';
 
 // ═══ ACOPIO BASIC — EL INTERRUPTOR DE LA VERSIÓN GRATIS ══════════════════════
 //
@@ -9567,14 +9567,38 @@ function photosToDocPdf_(photos, docName, targetFolder) {
   body.setMarginLeft(0);
   body.setMarginRight(0);
 
-  // Full US Letter page in points (72 pt = 1 inch).
-  // We scale against the whole page, not a text-area sub-region.
-  var PAGE_W = 612;
-  var PAGE_H = 792;
-
-  // Remove the default blank paragraph so images start at the very top.
+  /* ── M-03(a) · LA HOJA SE PONE DEL LADO DE LA FOTO ──────────────────────────
+   *
+   * Jose, 12/11: *"hay que hacer que las imágenes ocupen el espacio de la hoja
+   * y se vean contenidas en la hoja y no sólo dentro; deben tener su mayor
+   * tamaño dentro de la hoja"*, con el PDF de un albarán adjunto donde se ve
+   * la imagen arriba y media hoja en blanco debajo.
+   *
+   * **Y no era un fallo: era aritmética.** La hoja estaba clavada en Carta
+   * VERTICAL (612×792) y se escala con `Math.min`. Una foto apaisada de 4:3
+   * entra a lo ancho y queda en 612×459 puntos — **el 58 % de la hoja**. No
+   * hay forma de llenar una hoja vertical con una foto apaisada sin
+   * deformarla, y deformar un documento que alguien va a leer no es una
+   * opción.
+   *
+   * Lo que sí se puede: **girar la hoja, no la foto.** En Google Docs el
+   * tamaño de página es de TODO el documento, así que la orientación se decide
+   * una vez, por mayoría de las fotos del grupo. Y eso encaja con cómo se usa:
+   * las páginas de un mismo albarán se fotografían igual.
+   *
+   *     antes   hoja vertical   una foto 4:3 apaisada → 612 × 459 pt =  58 %
+   *     ahora   hoja apaisada   la misma foto         → 792 × 594 pt =  97 %
+   *
+   * ── EL ORDEN IMPORTA, Y ES LO ÚNICO DELICADO ──────────────────────────────
+   *
+   * Para elegir la orientación hay que medir las fotos, y para medirlas hay
+   * que insertarlas. Así que se insertan todas, se miden, se decide la hoja, y
+   * SÓLO ENTONCES se escala cada una contra la hoja ya decidida. Escalar
+   * mientras se insertan —que es lo que hacía— obliga a conocer el tamaño de
+   * la página antes de tener los datos con los que se elige. */
   body.clear();
 
+  var metidas = [], apaisadas = 0;
   for (var i = 0; i < photos.length; i++) {
     if (i > 0) body.appendPageBreak();
 
@@ -9583,24 +9607,40 @@ function photosToDocPdf_(photos, docName, targetFolder) {
     var blob  = Utilities.newBlob(bytes, p.fileMimeType || 'image/jpeg');
     var img   = body.appendImage(blob);
 
-    // getWidth/getHeight return the auto-scaled display dimensions (in points).
-    var origW = img.getWidth();
-    var origH = img.getHeight();
+    // getWidth/getHeight devuelven el tamaño YA auto-escalado, en puntos: el
+    // número no es el del sensor, pero la PROPORCIÓN sí es la de verdad, y es
+    // lo único que hace falta para saber si está tumbada o de pie.
+    var w = img.getWidth(), h = img.getHeight();
+    if (w > h) apaisadas++;
+    metidas.push({ img: img, w: w, h: h });
+  }
 
-    // Scale image to fill the full page while preserving aspect ratio.
-    var scale = Math.min(PAGE_W / origW, PAGE_H / origH);
-    img.setWidth(Math.round(origW * scale));
-    img.setHeight(Math.round(origH * scale));
+  // Mayoría estricta: con empate se queda vertical, que es lo de siempre y lo
+  // que mejor se imprime.
+  var horizontal = apaisadas * 2 > photos.length;
+  var PAGE_W = horizontal ? 792 : 612;
+  var PAGE_H = horizontal ? 612 : 792;
+  body.setPageWidth(PAGE_W);
+  body.setPageHeight(PAGE_H);
 
-    // Remove paragraph spacing so the image sits flush with the page edge.
-    // (Default Google Docs paragraph has 10-12 pt spacing before/after which
-    //  creates a white gap at the top and bottom of each page.)
+  for (var k = 0; k < metidas.length; k++) {
+    var m = metidas[k];
+    /* `Math.min` y no `Math.max`: con max la foto se sale de la hoja y el PDF
+     * la recorta. Min la deja todo lo grande que cabe ENTERA — que es la
+     * diferencia entre «contenida en la hoja» y «dentro de la hoja». */
+    var escala = Math.min(PAGE_W / m.w, PAGE_H / m.h);
+    m.img.setWidth(Math.round(m.w * escala));
+    m.img.setHeight(Math.round(m.h * escala));
+
+    /* Y centrada. Antes iba a la izquierda, así que lo que sobraba se
+     * amontonaba todo a un lado y la página parecía mal cuadrada incluso
+     * cuando la foto ya era lo más grande posible. */
     try {
-      var para = img.getParent().asParagraph();
+      var para = m.img.getParent().asParagraph();
       para.setSpacingBefore(0);
       para.setSpacingAfter(0);
       para.setLineSpacing(1);
-      para.setAlignment(DocumentApp.HorizontalAlignment.LEFT);
+      para.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
     } catch(e) { /* no-op if paragraph cast fails */ }
   }
 
