@@ -630,6 +630,44 @@ sola puerta**, y que `_compressImage` la use.
 
 ---
 
+### ~~🟡 M-04 · Cerrar la ventana al guardar~~ ✅ **v15.2** *(dos de las tres ramas)*
+
+> **Hecho el 14/11.** La ventana se cierra **en cuanto se manda**, no cuando
+> contesta el servidor. El aviso pasa a **abajo a la izquierda**, con
+> `column-reverse` para que un aviso nuevo no empuje al que se está leyendo.
+>
+> **Lo que hace que cerrar antes de tiempo no sea una pérdida:** `closeModal`
+> **no vacía el formulario** — sólo le quita la clase `show`, y quien lo vacía
+> es el que lo abre. Así que todo sigue detrás, intacto. Reabrir con todo
+> dentro no hubo que construirlo: ya era así.
+>
+> | Cómo falla | Qué ofrece el aviso |
+> |---|---|
+> | Entorno (red, cuota, hoja ocupada) | **Retry** — reenvía lo mismo, no abre nada |
+> | Datos | **Fix** — reabre con todo dentro, y sin `busy`, que si no vuelve apagada |
+>
+> **Lo que FALTA de lo decidido:** la tercera rama — corregir **un solo campo
+> dentro del propio aviso**, sin reabrir. Hoy ese caso cae en «Fix». No está
+> construido porque el aviso aún no sabe llevar un campo de texto dentro, y eso
+> es trabajo aparte.
+>
+> **Y de momento sólo en la ventana de Entrada/Salida**, que es la larga y la
+> que Jose señaló. Adjuntar y las demás siguen como estaban.
+>
+> Prueba: `tools/test-cerrar-y-seguir.js` — **para al servidor a mitad de
+> respuesta** y mira la pantalla mientras la petición está en el aire. Falla 7
+> veces contra el código anterior.
+>
+> **Tres fallos de la prueba, los tres de medir lo que no era:** rellenaba un
+> `#mat-qty-1` que no existe —la cantidad vive en la fila de ubicación— así que
+> el formulario quedaba inválido y nunca se mandaba nada; usaba `SYSTEM_BUSY`
+> como fallo de entorno, que `_busyRetry` atrapa antes y reintenta solo, así
+> que buscaba un aviso que el producto con razón no enseña; y pulsaba el
+> **último** botón del aviso, que es la ✕ de cerrarlo, en vez del primero, que
+> es la acción.
+
+<details><summary>El diagnóstico original, 11/11</summary>
+
 ### 🟡 M-04 · Cerrar la ventana al guardar y dejar sólo el aviso abajo a la izquierda
 
 Jose: *"implementemos el cerrar las ventanas o lo que el usuario guarda luego de
@@ -658,6 +696,8 @@ la app.
 | **1 · recomendada** | Cerrar al instante, guardando el payload. Si falla, **se vuelve a abrir la ventana con todo dentro** y el aviso dice por qué | no se pierde nada; es un susto, no una pérdida |
 | 2 | Cerrar sólo cuando el servidor dice que sí, pero sin los 700 ms | ahorra menos de un segundo — no resuelve lo que pide |
 | 3 | Cerrar al instante y poner un botón **Reopen** en el aviso del fallo | igual de seguro, un toque más |
+
+</details>
 
 **Mi recomendación: la 1, más el aviso abajo a la izquierda.** Y una condición
 —que vale la pena escribirla porque se va a olvidar—: **el ✓ de 700 ms no

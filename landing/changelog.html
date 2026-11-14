@@ -100,6 +100,28 @@
        ways, with buttons that moved as you ticked. All of it fixed below, and all of it
        measured rather than guessed.</p>
     <!-- M-02 · Fotografiar ocho paginas no puede costar dieciseis toques. -->
+    <!-- M-04 · Guardar deja de ser una espera delante de una ventana congelada. -->
+    <div class="entry" id="v15-2">
+      <span class="ver">v15.2</span>
+      <span class="tag new">New</span>
+      <h3>The window closes the moment you save</h3>
+      <p><b>Press Save and the form goes away at once &mdash; you can carry on while the save
+         travels.</b> It used to sit there, frozen, until the server answered. The notice now
+         lives in the bottom-left corner and tells you how it went when it lands.</p>
+      <p><b>Nothing you typed is ever lost.</b> Closing a form before the answer comes back only
+         makes sense if a failure cannot take your work with it, so the form is kept exactly as
+         you left it, behind. If the save fails, the notice carries the way out:</p>
+      <ul>
+        <li><b>Retry</b> when the problem was not your doing &mdash; the connection, a busy
+            sheet. There is nothing to correct, so nothing reopens.</li>
+        <li><b>Fix</b> when the problem is in what was entered. The form comes back with every
+            field still filled in, ready to edit.</li>
+      </ul>
+      <p class="meta">Tested by holding the server mid-answer: the window is already gone while
+         the request is still in the air, the typed values are still in the form, and each kind
+         of failure offers the right way out &mdash; with the form coming back filled in, and not
+         greyed out.</p>
+    </div>
     <div class="entry" id="v15-1">
       <span class="ver">v15.1</span>
       <span class="tag new">New</span>

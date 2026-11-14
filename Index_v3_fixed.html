@@ -3636,7 +3636,15 @@
     [data-theme="dark"] .cfg-add-row input,[data-theme="dark"] .cfg-item-input,[data-theme="dark"] .mat-search-row input{background:#0F172A;color:var(--text);border-color:var(--border)}
     /* Dark mode toggle button */
     /* ── TOAST NOTIFICATIONS ── */
-    #toastContainer{position:fixed;top:1.25rem;left:50%;transform:translateX(-50%);z-index:var(--z-toast);display:flex;flex-direction:column;align-items:center;gap:var(--sp-3);pointer-events:none}
+    /* M-04 · EL AVISO VIVE ABAJO A LA IZQUIERDA. Jose: *"sólo dejamos el toast
+       abajo a la izquierda"*. Estaba arriba y al centro, que es justo donde
+       tapa la cabecera y las pestañas — y ahora que la ventana se cierra al
+       guardar, el aviso es lo único que queda hablando, así que no puede
+       estorbar lo que la persona ha vuelto a mirar.
+       `column-reverse` para que el más nuevo quede abajo, pegado a la esquina,
+       y los viejos suban: al revés, cada aviso nuevo empuja al anterior y el
+       que se está leyendo se mueve. */
+    #toastContainer{position:fixed;top:auto;bottom:1rem;left:1rem;transform:none;z-index:var(--z-toast);display:flex;flex-direction:column-reverse;align-items:flex-start;gap:var(--sp-3);pointer-events:none}
     .toast{background:var(--card);border-radius:10px;padding:var(--sp-5) var(--sp-7);font-size:.84rem;font-weight:500;display:flex;align-items:flex-start;gap:.55rem;box-shadow:var(--sh-3);border-top:4px solid #94A3B8;min-width:300px;max-width:520px;pointer-events:all;animation:toastIn .25s ease;color:var(--text)}
     .toast.ok  {border-top-color:var(--green)}
     .toast.err {border-top-color:var(--red)}
@@ -3986,6 +3994,9 @@
          reemplaza.
          La vez anterior se arregló `max-width`, que era el ancho, no la
          posición — el síntoma cambió de forma y siguió ahí. */
+      /* En el teléfono ocupa el ancho: una franja de 300px a la izquierda de
+         una pantalla de 360 deja un margen tonto a la derecha y recorta el
+         texto. `column-reverse` se hereda de la regla base. */
       #toastContainer{top:auto;transform:none;bottom:.75rem;right:.75rem;left:.75rem;align-items:stretch}
       /* Y el ancho mínimo de 300px no cabe en un teléfono de 320 con márgenes
          a los dos lados: se desbordaba aunque la posición fuera correcta. */
@@ -6097,7 +6108,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '15.1';
+var APP_VERSION = '15.2';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -6109,7 +6120,7 @@ var APP_VERSION = '15.1';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '9ed83a9f';
+var APP_BUILD = '59ad3a5b';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -15505,6 +15516,7 @@ function submitMultiEntry(){
     google.script.run
       .withSuccessHandler(function(res){
         _setModalBusy('moveOverlay', false);
+        _enVuelo = null;   // M-04: salió bien, no hay nada que reabrir
         // La entrada existe. Si este formulario venía de una tarjeta de "llegó
         // y falta su entrada", queda saldada aquí.
         //
@@ -15635,9 +15647,16 @@ function submitMultiEntry(){
          * `UNKNOWN_LOCATION|P|B`. La predicción estaba bien; lo que faltó fue
          * actuar sobre ella. Ver `_errorConocido`. */
         if (_errorConocido(err, function(){ _doMultiSubmit(force); })) return;
+        /* M-04: la ventana ya está cerrada, así que el aviso tiene que llevar
+         * la salida dentro — y nada de lo escrito se ha perdido. */
+        if (_fallóDespuésDeCerrar(err, 'moveOverlay', function(){ _doMultiSubmit(force); })) return;
         showToast('Error: ' + _stripTags(err), 'err', 6000);
       })
       .processMovement('addMultiEntry', _h(payload));
+
+    /* M-04 · AQUÍ SE CIERRA, y aquí y no antes: si construir la petición
+     * hubiera fallado, la ventana sigue abierta con el error delante. */
+    _cerrarYSeguir('moveOverlay', function(){ _doMultiSubmit(force); });
   }
 
   _doMultiSubmit(false);
@@ -21789,6 +21808,85 @@ function _flashModalHeader(overlayId){
   var ov = document.getElementById(overlayId); if (!ov) return;
   var h = ov.querySelector('.mhdr, .rack-drawer-hdr'); if (!h) return;
   h.classList.remove('flash-hdr'); void h.offsetWidth; h.classList.add('flash-hdr');
+}
+
+/* ══ M-04 · LA VENTANA SE CIERRA AL GUARDAR ═══════════════════════════════════
+ *
+ * Jose, 11/11: *"implementemos el cerrar las ventanas o lo que el usuario
+ * guarda luego de dar clic en guardar, para que el usuario pueda seguir
+ * haciendo lo que necesita hacer, y sólo dejamos el toast abajo a la
+ * izquierda"*.
+ *
+ * Antes la ventana se quedaba abierta **todo el viaje al servidor**, congelada
+ * delante. Los 700 ms del ✓ no eran el problema; el problema era esperar.
+ *
+ * ── LO QUE HACE QUE ESTO SEA SEGURO ────────────────────────────────────────
+ *
+ * Cerrar antes de que el servidor conteste tiene un riesgo evidente: si falla,
+ * lo escrito se perdió — y una entrada es el formulario más largo de la app.
+ *
+ * **Lo que lo salva es que `closeModal` NO borra el formulario.** Sólo le quita
+ * la clase `show`; quien lo vacía es el que lo ABRE. Así que todo sigue ahí,
+ * intacto, detrás. Reabrir con todo dentro no hay que construirlo: ya es así.
+ *
+ * ── LOS TRES FINALES, QUE LOS ELIGIÓ JOSE EL 12/11 ─────────────────────────
+ *
+ *   salió bien            → el aviso lo confirma y no se abre nada
+ *   falló el entorno      → **Retry**: se reenvía lo mismo, sin abrir nada.
+ *                           Red, cuota, hoja ocupada: no hay nada que corregir
+ *                           y abrir la ventana sería un paso de más
+ *   falló por los datos   → **Fix**: se reabre la ventana con todo dentro
+ *
+ * ── Y POR QUÉ EL BOTÓN DEL AVISO NO SE ELIGE AL AZAR ───────────────────────
+ *
+ * Ofrecer «Retry» cuando el problema son los datos reenvía exactamente lo que
+ * ya falló, y la persona lo pulsa dos o tres veces antes de entender que nunca
+ * va a funcionar. Ofrecer «Fix» cuando se cayó la red abre un formulario que
+ * no tiene nada malo. Por eso se mira el error primero. */
+var _enVuelo = null;   // { overlay, reintentar } mientras el servidor contesta
+
+/* Los fallos que NO son culpa de lo que se escribió. La lista sale de los
+ * errores que esta app ya nombra por su cuenta —`SYSTEM_BUSY`, los de cuota—
+ * más los del propio transporte, que llegan sin marca y con el texto que
+ * Google decida. */
+function _falloDeEntorno(err){
+  var m = String((err && err.message) || err || '');
+  return /SYSTEM_BUSY|QUOTA|LOCK|TIMEOUT|timed out|network|Network|Failed to fetch|internal error|Service invoked too many times/i.test(m);
+}
+
+/* Cerrar y seguir. Se llama JUSTO DESPUÉS de mandar, no antes: si algo
+ * revienta al construir la petición, la ventana sigue abierta con el error
+ * delante, que es donde hay que leerlo. */
+function _cerrarYSeguir(overlayId, reintentar){
+  _enVuelo = { overlay: overlayId, reintentar: reintentar };
+  closeModal(overlayId);
+}
+
+/* Reabrir con todo dentro. Hay que quitarle `busy`: se lo pusimos al mandar y
+ * una ventana que vuelve con los campos apagados no se puede corregir. */
+function _reabrirConLoEscrito(overlayId){
+  var ov = document.getElementById(overlayId);
+  if (!ov) return;
+  try { _setModalBusy(overlayId, false); } catch (e) {}
+  ov.classList.add('show');
+  _flashModalHeader(overlayId);
+}
+
+/* El final de un guardado que falló, en un solo sitio para que los distintos
+ * formularios no puedan contestar cosas distintas a lo mismo. Devuelve true si
+ * ya se ha encargado del aviso. */
+function _fallóDespuésDeCerrar(err, overlayId, reintentar){
+  if (!_enVuelo || _enVuelo.overlay !== overlayId) return false;   // seguía abierta
+  _enVuelo = null;
+  var texto = _stripTags(err);
+  if (_falloDeEntorno(err)) {
+    showToast('Not saved — ' + texto, 'err', 14000,
+      { texto: '↻ Retry', hacer: function(){ reintentar(); } });
+  } else {
+    showToast('Not saved — ' + texto + ' · nothing you typed was lost', 'err', 14000,
+      { texto: '✎ Fix', hacer: function(){ _reabrirConLoEscrito(overlayId); } });
+  }
+  return true;
 }
 
 // Close guard for the big Entry/Exit modal: if the form has data, confirm first.
