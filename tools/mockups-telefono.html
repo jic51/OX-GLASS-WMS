@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<title>Mockups — el teléfono</title>
+<!--
+  MOCKUPS DE LO QUE VIENE EN EL TELÉFONO, antes de construirlo.
+
+  Jose, 16/11: *"haz un plan para ver lo que vas a cambiar y mover, dame
+  mockups antes de empezar"*.
+
+  LOS COLORES Y LAS MEDIDAS SON LOS DE LA APP, copiados de los tokens de
+  `Index_v3_fixed.html` (línea ~56). Un mockup con otros colores enseña una
+  app que no es la suya y hace tomar decisiones sobre algo que no existe.
+
+  Lo que NO es: código de producción. Esto es un folio para mirar y decidir.
+  Se dibuja con `tools/build-mockups.js` y se tira cuando esté construido.
+-->
+<style>
+  :root{
+    --navy:#1B2A4A; --steel:#2C3E6B; --accent:#3B7DD8; --accent2:#2563EB;
+    --bg:#F0F2F5; --card:#FFFFFF; --text:#1a1a2e; --muted:#6B7280;
+    --green:#059669; --green-bg:#D1FAE5; --red:#DC2626; --red-bg:#FEE2E2;
+    --yellow:#D97706; --yellow-bg:#FEF3C7; --border:#E5E7EB;
+    --sh-1:0 2px 12px rgba(0,0,0,.12);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#C9CED6;color:var(--text);
+    font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+
+  .hoja{max-width:1180px;margin:0 auto;padding:22px 16px 60px}
+  h1{font-size:1.45rem;margin:.2rem 0 .1rem}
+  .sub{color:#3a4252;margin:0 0 1.6rem;font-size:.9rem}
+
+  .bloque{background:var(--card);border-radius:14px;padding:18px 18px 22px;
+    margin-bottom:22px;box-shadow:var(--sh-1)}
+  .bloque h2{font-size:1.02rem;margin:0 0 .15rem}
+  .bloque .por{color:var(--muted);font-size:.82rem;margin:0 0 1rem}
+
+  .par{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start}
+  .col{flex:1 1 300px;min-width:300px}
+  .col h3{font-size:.74rem;text-transform:uppercase;letter-spacing:.06em;
+    margin:0 0 .5rem;color:var(--muted)}
+  .col h3 b{color:var(--red)}
+  .col h3 i{color:var(--green);font-style:normal}
+
+  /* El teléfono: 360 px, que es el ancho real de un móvil normal. */
+  .tel{width:360px;max-width:100%;background:var(--bg);border:10px solid #2b3140;
+    border-radius:26px;overflow:hidden}
+  .tel .barra{background:var(--navy);color:#fff;padding:8px 12px;font-size:.8rem;
+    display:flex;justify-content:space-between;align-items:center}
+  .tel .cuerpo{padding:10px;min-height:190px}
+
+  /* ── piezas que imitan las de la app ───────────────────────────────── */
+  .inp{background:var(--card);border:1px solid var(--border);border-radius:6px;
+    padding:9px 10px;color:var(--muted);font-size:.82rem;margin-bottom:7px}
+  .btn{border-radius:6px;padding:10px;text-align:center;font-weight:700;
+    font-size:.86rem;margin-bottom:7px;color:#fff}
+  .btn.in{background:var(--accent)} .btn.out{background:var(--red)}
+  .btn.gh{background:var(--card);border:1px solid var(--border);color:var(--accent)}
+  .chip{display:inline-block;border:1px solid var(--border);background:var(--card);
+    border-radius:20px;padding:5px 11px;font-size:.76rem;color:var(--text);
+    margin:0 5px 5px 0}
+  .chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+  .tarj{background:var(--card);border:1px solid var(--border);border-radius:10px;
+    padding:11px 12px 16px;margin-bottom:9px;position:relative;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .tarj::after{content:'';position:absolute;left:0;right:0;top:0;height:4px;
+    border-radius:10px 10px 0 0}
+  .tarj.e::after{background:var(--green)} .tarj.s::after{background:var(--red)}
+  .tarj.t::after{background:var(--accent)} .tarj.n::after{background:var(--muted)}
+  .tarj .mas{position:absolute;right:9px;bottom:5px;font-size:.62rem;color:var(--muted)}
+  .cb{position:absolute;top:7px;right:7px;width:19px;height:19px;border:1px solid #9aa3b2;
+    border-radius:4px;background:var(--card)}
+  .pill{display:inline-block;border-radius:20px;padding:2px 8px;font-size:.66rem;
+    font-weight:700;margin-right:5px}
+  .pill.ent{background:var(--green-bg);color:var(--green)}
+  .pill.cat{background:#DBEAFE;color:var(--accent2)}
+  .pill.ok {background:var(--green-bg);color:var(--green)}
+  .pill.lo {background:var(--yellow-bg);color:var(--yellow)}
+  .pill.ze {background:#F3F4F6;color:var(--muted)}
+  .pill.pe {background:var(--yellow-bg);color:var(--yellow)}
+  .nom{font-weight:700;font-size:.92rem;margin:.28rem 0 .4rem;line-height:1.22}
+  .dato{display:flex;justify-content:space-between;gap:10px;padding:1px 0;font-size:.8rem}
+  .dato span:first-child{color:var(--muted);font-size:.66rem;text-transform:uppercase;
+    letter-spacing:.04em;font-weight:700;white-space:nowrap}
+  .fecha{color:var(--muted);font-size:.74rem}
+  .barraprog{height:5px;border-radius:3px;background:var(--border);margin-top:5px;overflow:hidden}
+  .barraprog i{display:block;height:100%;background:var(--green)}
+  .acc{display:flex;gap:10px;margin-top:9px;padding-top:9px;border-top:1px solid var(--border)}
+  .acc b{flex:0 0 auto;width:44px;height:44px;border:1px solid var(--border);
+    border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.05rem}
+
+  .tabla{background:var(--card);border:1px solid var(--border);border-radius:6px;
+    font-size:.68rem;overflow:hidden}
+  .tabla div{display:flex;border-bottom:1px solid var(--border);white-space:nowrap}
+  .tabla div:last-child{border-bottom:none}
+  .tabla s{flex:0 0 auto;padding:6px 7px;border-right:1px solid var(--border);
+    text-decoration:none;color:var(--muted)}
+  .corte{position:absolute;right:0;top:0;bottom:0;width:34px;
+    background:linear-gradient(90deg,rgba(255,255,255,0),#C9CED6)}
+
+  .nota{background:#FFFBEA;border:1px solid #FDE68A;border-radius:8px;
+    padding:10px 12px;font-size:.82rem;margin-top:14px}
+  .nota b{color:#92400E}
+</style></head>
+<body><div class="hoja">
+
+<h1>El teléfono — lo que cambia y lo que se mueve</h1>
+<p class="sub">Mockups antes de construir. Colores y medidas: los de Acopio. Teléfono de 360&nbsp;px.</p>
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<div class="bloque">
+  <h2>1 · M-06 — llegar a los movimientos sin bajar una pantalla entera</h2>
+  <p class="por">Hoy, antes de ver un solo movimiento hay que pasar siete controles puestos uno debajo de otro.</p>
+
+  <div class="par">
+    <div class="col">
+      <h3><b>Hoy</b> — la barra ocupa toda la pantalla</h3>
+      <div class="tel"><div class="barra"><span>Movements &amp; History</span><span>SO</span></div>
+        <div class="cuerpo">
+          <div class="inp">Name, PO#, GC, Supplier, Project…</div>
+          <div class="inp">All Types ⌄</div>
+          <div class="inp">All Categories ⌄</div>
+          <div class="btn gh">⬇ CSV</div>
+          <div class="btn gh">📜 Load Older History</div>
+          <div class="btn in">+ Entry (IN)</div>
+          <div class="btn out">− Exit (OUT)</div>
+          <div style="text-align:center;color:var(--muted);font-size:.72rem;padding-top:4px">
+            ↓ los movimientos empiezan aquí abajo</div>
+        </div></div>
+    </div>
+
+    <div class="col">
+      <h3><i>Propuesta</i> — dos botones, un buscador y el resto plegado</h3>
+      <div class="tel"><div class="barra"><span>Movements &amp; History</span><span>SO</span></div>
+        <div class="cuerpo">
+          <div style="display:flex;gap:7px">
+            <div class="btn in" style="flex:1;margin:0">+ Entry</div>
+            <div class="btn out" style="flex:1;margin:0">− Exit</div>
+          </div>
+          <div style="display:flex;gap:7px;margin-top:7px">
+            <div class="inp" style="flex:1;margin:0">🔍 Buscar…</div>
+            <div class="inp" style="flex:0 0 94px;margin:0;text-align:center">⚙ Filters</div>
+          </div>
+          <div style="height:9px"></div>
+          <div class="tarj e"><div class="cb"></div>
+            <span class="pill ent">↓ ENTRY</span><span class="fecha">2026-11-12</span>
+            <div><span class="pill cat">WINDOW</span></div>
+            <div class="nom">SH 2440 BLACK</div>
+            <div class="dato"><span>Qty / Unit</span><b style="color:var(--accent2)">+25 UNIT</b></div>
+            <div class="dato"><span>Src → Dest</span><span>A2A</span></div>
+            <div class="mas">More ▾</div>
+          </div>
+          <div class="tarj s"><div class="cb"></div>
+            <span class="pill ze" style="background:var(--red-bg);color:var(--red)">↑ EXIT</span>
+            <span class="fecha">2026-11-12</span>
+            <div class="nom" style="margin-top:.4rem">SHOWER DOOR 34X76</div>
+          </div>
+        </div></div>
+    </div>
+  </div>
+
+  <div class="nota"><b>Lo que se mueve:</b> Entry y Exit suben del fondo al primer renglón y se
+    ponen uno al lado del otro. El buscador se queda, estrecho. <b>Lo que se pliega:</b> los dos
+    filtros, CSV y «Load Older History» pasan detrás de <b>⚙ Filters</b>, que los abre desplegados
+    debajo. <b>Lo que no cambia:</b> en el ordenador, nada — la barra sigue igual.</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<div class="bloque">
+  <h2>2 · Stock Dashboard en tarjetas</h2>
+  <p class="por">La misma idea de Movements, con lo que esta tabla tiene de propio: la barra de existencia y la insignia de estado.</p>
+
+  <div class="par">
+    <div class="col">
+      <h3><b>Hoy</b> — hay que arrastrar de lado</h3>
+      <div class="tel"><div class="barra"><span>Stock Dashboard</span><span>SO</span></div>
+        <div class="cuerpo" style="position:relative">
+          <div class="tabla">
+            <div><s style="width:28px"></s><s style="width:84px">CATEGORY</s><s style="width:150px">NAME / DESCRIPTION</s><s style="width:90px">STOCK</s><s>LOCAT…</s></div>
+            <div><s style="width:28px">☐</s><s style="width:84px">WINDOW</s><s style="width:150px">SH 3048 WHITE</s><s style="width:90px">399 of 399</s><s>C2A…</s></div>
+            <div><s style="width:28px">☐</s><s style="width:84px">MIRROR</s><s style="width:150px">MIRROR 30X40 BEV…</s><s style="width:90px">395 of 409</s><s>B2C…</s></div>
+            <div><s style="width:28px">☐</s><s style="width:84px">SHOWER</s><s style="width:150px">SHOWER PANEL 30X…</s><s style="width:90px">384 of 387</s><s>A2B…</s></div>
+          </div>
+          <div class="corte"></div>
+        </div></div>
+    </div>
+
+    <div class="col">
+      <h3><i>Propuesta</i> — una tarjeta por material</h3>
+      <div class="tel"><div class="barra"><span>Stock Dashboard</span><span>SO</span></div>
+        <div class="cuerpo">
+          <div class="tarj n" style="--x:0"><div class="cb"></div>
+            <span class="pill cat">WINDOW</span><span class="pill ok">In Stock</span>
+            <div class="nom">SH 3048 WHITE</div>
+            <div class="dato"><span>Existencia</span><b>399 <span style="color:var(--muted);font-weight:400">de 399</span></b></div>
+            <div class="barraprog"><i style="width:100%"></i></div>
+            <div class="dato" style="margin-top:6px"><span>Ubicación</span><span>C2A (239), MIRRORS…</span></div>
+            <div class="mas">More ▾</div>
+          </div>
+          <div class="tarj n"><div class="cb"></div>
+            <span class="pill cat">IGU</span><span class="pill lo">Reserved</span>
+            <div class="nom">IGU 42X72 OBSCURE</div>
+            <div class="dato"><span>Existencia</span><b style="color:var(--red)">0 <span style="color:var(--muted);font-weight:400">de 7</span></b></div>
+            <div class="barraprog"><i style="width:4%;background:var(--yellow)"></i></div>
+            <div class="dato" style="margin-top:6px"><span>Ubicación</span><span>A2B (7)</span></div>
+            <div class="mas">More ▾</div>
+          </div>
+        </div></div>
+    </div>
+  </div>
+
+  <div class="nota"><b>De frente:</b> categoría, estado, nombre, existencia con su barra y la
+    ubicación. <b>Al tocar:</b> fecha de entrada, última nota, documentos, y los botones de la
+    fila. <b>Lo propio de esta tabla</b> es que la barra de existencia y la insignia dicen de un
+    vistazo si hay problema — por eso van arriba y no escondidas.</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<div class="bloque">
+  <h2>3 · Incoming y la papelera</h2>
+  <p class="por">Las dos salen del mismo pintador. Cambia qué se pone de frente.</p>
+
+  <div class="par">
+    <div class="col">
+      <h3><i>Incoming</i> — manda la fecha y el estado</h3>
+      <div class="tel"><div class="barra"><span>📦 Incoming</span><span>SO</span></div>
+        <div class="cuerpo">
+          <div class="tarj n">
+            <span class="pill pe">Pending</span><span class="fecha">2026-11-14</span>
+            <div><span class="pill cat">IGU</span></div>
+            <div class="nom">IGU 24X60 TEMPERED CLEAR</div>
+            <div class="dato"><span>Cantidad</span><b>24 UNIT</b></div>
+            <div class="dato"><span>Proveedor</span><span>NORTHGATE SUPPLY</span></div>
+            <div class="acc"><b>✓</b><b>✎</b><b>🗑</b></div>
+          </div>
+          <div class="tarj n">
+            <span class="pill pe">Pending</span><span class="fecha">≈ 11-18 (sobre el 18)</span>
+            <div class="nom" style="margin-top:.4rem">SHOWER DOOR 28X72</div>
+            <div class="mas">More ▾</div>
+          </div>
+        </div></div>
+    </div>
+
+    <div class="col">
+      <h3><i>Papelera</i> — manda quién y cuándo lo borró</h3>
+      <div class="tel"><div class="barra"><span>🗑 Trash</span><span>SO</span></div>
+        <div class="cuerpo">
+          <div class="tarj n" style="opacity:.92">
+            <div class="cb"></div>
+            <span class="pill ze">Borrado</span><span class="fecha">2026-11-10 · Dana Reyes</span>
+            <div class="nom">FULL SCREEN 2436 BLACK</div>
+            <div class="dato"><span>Era</span><span>EXIT · −12 UNIT</span></div>
+            <div class="acc"><b>↩</b><b>🗑</b></div>
+          </div>
+        </div></div>
+    </div>
+  </div>
+
+  <div class="nota"><b>En Incoming, «Mark arrived» (✓) va a la vista</b> y no escondido tras un
+    toque: es lo que se pulsa de pie junto al camión. <b>En la papelera manda quién y cuándo</b>,
+    porque la pregunta que se hace ahí es «¿quién borró esto?», no «¿cuánto era?».</div>
+</div>
+
+<div class="bloque">
+  <h2>El orden en que lo haría</h2>
+  <p class="por">De lo que más se nota a lo que menos, y de lo más barato a lo más caro.</p>
+  <ol style="margin:0;padding-left:1.15rem;font-size:.9rem;line-height:1.75">
+    <li><b>M-06, la barra.</b> Es el que más se nota con menos código, y lo tocas cada vez que abres la pestaña.</li>
+    <li><b>Stock en tarjetas.</b> La segunda pantalla más mirada, y la que tiene lo propio (barra e insignia) que hay que decidir bien.</li>
+    <li><b>Incoming y papelera.</b> Salen casi solas una vez hecho Stock.</li>
+  </ol>
+</div>
+
+</div></body></html>
