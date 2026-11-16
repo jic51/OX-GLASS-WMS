@@ -4003,6 +4003,69 @@
       .toast{max-width:100%;min-width:0}
     }
 
+    /* ── M-06 · EN EL ORDENADOR, LA BARRA NO SE ENTERA ──────────────────────
+     * `display:contents` hace que la caja desaparezca del reparto y sus hijos
+     * se coloquen como si colgaran directamente de la barra. Es lo que permite
+     * agrupar para el teléfono **sin mover un píxel** en el escritorio. */
+    #movFiltros{display:contents}
+    #btnMovFiltros{display:none}
+
+    /* ══ M-06 · LA BARRA DE MOVEMENTS EN EL TELÉFONO ════════════════════════════
+     *
+     * Medido en un Pixel 5 al hacer la captura de M-01: antes de ver el primer
+     * movimiento hay que bajar **una pantalla completa**. Son siete controles,
+     * cada uno a ancho completo y uno debajo de otro, porque el bloque de
+     * teléfono pone `.toolbar` en columna.
+     *
+     * Y el arreglo de M-01 lo empeoró en relativo: ahora que las tarjetas se
+     * leen bien, lo que estorba es llegar a ellas.
+     *
+     * LO QUE SUBE: `+ Entry` y `− Exit`, del fondo al primer renglón y uno al
+     * lado del otro — son lo que se pulsa de pie en la bodega.
+     * LO QUE SE QUEDA: el buscador, estrecho, en el segundo renglón.
+     * LO QUE SE PLIEGA: los dos filtros, CSV y el historial antiguo.
+     */
+    @media (max-width:768px){
+      /* Gana a la regla de columna que `.toolbar` tiene en su bloque de
+         teléfono — y sólo para esta barra. */
+      #movToolbar{display:flex;flex-direction:row;flex-wrap:wrap;
+        gap:var(--sp-3);align-items:stretch}
+      /* `.toolbar input,select,button{width:100%}` del bloque general
+         empujaría cada hijo a ocupar la fila entera. */
+      #movToolbar > *{width:auto}
+
+      #movToolbar > #btnEntry,
+      #movToolbar > #btnExit{order:1;flex:1 1 calc(50% - var(--sp-3));
+        min-width:0;min-height:var(--h-btn-lg);font-size:.92rem}
+      /* EL BUSCADOR NO ES HIJO DIRECTO DE LA BARRA. `_ponerEquis` lo envuelve
+         en un `<span class="tiene-x">` en cuanto arranca la app, para ponerle
+         la ✕ de borrar. Apuntando al `<input>` el selector no llegaba: el que
+         se reparte en la barra es el envoltorio, y el buscador se quedaba
+         arriba del todo con `order:0` mientras Entry y Exit bajaban.
+         Se apunta a los dos: al envoltorio, y al input suelto por si esto se
+         dibuja antes de que `_ponerEquis` haya pasado. */
+      #movToolbar > .tiene-x,
+      #movToolbar > #movSearch{order:2;flex:1 1 58%;min-width:0}
+      #movToolbar > .tiene-x > #movSearch{width:100%;min-width:0}
+      #movToolbar > #btnMovFiltros{order:2;display:inline-flex;flex:0 0 auto;
+        align-items:center;justify-content:center;min-height:var(--h-btn-md)}
+      #movToolbar > #btnEscanearMov{order:3;flex:1 1 100%}
+
+      /* La caja vuelve a existir para poder esconderla: `display:contents` no
+         se puede ocultar, porque la caja no se dibuja y sus hijos sí. */
+      #movToolbar > #movFiltros{order:4;flex:1 1 100%;display:none}
+      #movToolbar.filtros-abiertos > #movFiltros{display:flex;
+        flex-direction:column;gap:var(--sp-3);
+        padding-top:var(--sp-3);border-top:1px solid var(--border)}
+      #movToolbar.filtros-abiertos > #movFiltros > *{width:100%}
+
+      /* Puesto significa puesto: con un filtro activo el botón se enciende y
+         lleva el número. Un filtro escondido que nadie recuerda haber puesto
+         es una tabla que miente sin avisar. */
+      #btnMovFiltros.con-filtros{background:var(--accent);color:#fff;
+        border-color:var(--accent)}
+    }
+
     /* ══ M-01 · EN EL TELÉFONO, CADA MOVIMIENTO ES UNA TARJETA ══════════════════
      *
      * Jose, 11/11: *"en el teléfono la app debe comportarse como una app;
@@ -5012,8 +5075,20 @@
     <div class="card">
       <div class="card-header">
         <h2>Movement History</h2>
-        <div class="toolbar">
+        <!-- M-06 · LA BARRA DE MOVEMENTS TIENE SU PROPIO NOMBRE.
+             `.toolbar` la comparten Stock, Incoming y Projects. Las reglas de
+             teléfono de esta barra cuelgan de `#movToolbar` y no de `.toolbar`
+             a secas: si colgaran de la clase, cambiarían las cuatro a la vez y
+             tres de ellas no se han mirado. -->
+        <div class="toolbar" id="movToolbar">
           <input type="text" id="movSearch" placeholder="Name, PO#, GC, Supplier, Project..." style="min-width:230px">
+          <!-- M-06 · LO QUE SE PLIEGA EN EL TELÉFONO.
+               Los dos filtros, CSV y el historial antiguo van dentro de esta
+               caja. En el ordenador la caja **no existe** para el reparto
+               (`display:contents`), así que la barra se dibuja exactamente
+               igual que antes, hasta el píxel. En el teléfono es lo que se
+               esconde tras «⚙ Filters». -->
+          <div id="movFiltros">
           <select id="movTypeFilter">
             <option value="">All Types</option>
             <option value="ENTRY">Entry (IN)</option>
@@ -5026,6 +5101,12 @@
           <select id="movCatFilter"><option value="">All Categories</option></select>
           <button id="btnExportCSV" class="btn btn-ghost btn-sm">⬇ CSV</button>
           <button id="btnLoadOlderHistory" class="btn btn-ghost btn-sm">📜 Load Older History</button>
+          </div><!-- /movFiltros -->
+          <!-- Sólo se ve en el teléfono. Dice cuántos filtros hay puestos,
+               porque un filtro escondido que nadie recuerda haber puesto es
+               una tabla que miente sin avisar. -->
+          <button id="btnMovFiltros" class="btn btn-ghost btn-sm" type="button"
+                  onclick="_toggleMovFiltros()">⚙ Filters</button>
           <!-- ESCANEAR VIVE AQUÍ, JUNTO A LO QUE HACE.
                Jose, 15/10: *"sería mucho más útil, práctico y fácil para el
                usuario que utiliza celular... así sólo el usuario entra y
@@ -6293,7 +6374,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '15.3';
+var APP_VERSION = '15.4';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -6305,7 +6386,7 @@ var APP_VERSION = '15.3';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'ffed7ebb';
+var APP_BUILD = '23e696aa';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -10216,6 +10297,47 @@ function _movsMasNuevoPrimero(lista){
   return conClave.map(function(x){ return x.m; });
 }
 
+/* ── M-06 · ABRIR Y CERRAR LOS FILTROS ─────────────────────────────────────
+ *
+ * Plegarlos sólo es aceptable si se puede ver, sin abrirlos, que hay alguno
+ * puesto. Un filtro escondido que nadie recuerda haber puesto es una tabla que
+ * **miente sin avisar**: enseña tres movimientos de ciento ochenta y parece
+ * que el almacén está vacío.
+ *
+ * Por eso el botón se enciende y lleva el número. Y por eso esto se llama
+ * desde `renderMovements`, que es el único sitio que sabe de verdad qué
+ * filtros están aplicados — no desde el `onchange` de cada control, que serían
+ * tres sitios que tienen que coincidir.
+ */
+function _toggleMovFiltros(){
+  var tb = document.getElementById('movToolbar');
+  if (tb) tb.classList.toggle('filtros-abiertos');
+}
+
+function _sincronizarBotonFiltros(){
+  var btn = document.getElementById('btnMovFiltros');
+  if (!btn) return;
+  var n = 0;
+  var t = document.getElementById('movTypeFilter');
+  var c = document.getElementById('movCatFilter');
+  var q = document.getElementById('movSearch');
+  if (t && t.value) n++;
+  if (c && c.value) n++;
+  /* El buscador NO cuenta: se ve, está en su renglón y lo que escribió se lee
+   * dentro. Contarlo haría que el botón se encendiera por algo que no está
+   * escondido. */
+  btn.classList.toggle('con-filtros', n > 0);
+  btn.textContent = n ? ('⚙ Filters · ' + n) : '⚙ Filters';
+  /* Con un filtro puesto se abre solo. Si alguien filtra por EXIT, cierra la
+   * caja y mañana vuelve, lo que tiene que encontrarse es el filtro a la
+   * vista, no una tabla corta y un botón azul que hay que saber pulsar. */
+  if (n > 0) {
+    var tb = document.getElementById('movToolbar');
+    if (tb) tb.classList.add('filtros-abiertos');
+  }
+  void q;
+}
+
 /* ── M-01 · EL INTERRUPTOR ENTRE TABLA Y TARJETAS ───────────────────────────
  *
  * El ancho manda, no el aparato: una tableta en vertical tiene el mismo
@@ -10654,6 +10776,7 @@ function renderMovements(){
   // enseña todas) y con el filtro de categoría (que esconde la suya).
   _fijarMinTabla('mov', headHtml);
   _sincronizarTarjetasMov();   // M-01: en el teléfono, esta tabla son tarjetas
+  _sincronizarBotonFiltros();  // M-06: el botón dice si hay filtros puestos
 
   // The header is rebuilt with the table, so its drag/hide/rename handlers have
   // to be attached again each time.

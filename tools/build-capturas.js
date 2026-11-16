@@ -711,7 +711,12 @@ Object.assign(window.google,{script:{run:new Proxy({},{get:function(t,k){return 
      * teléfono la barra de Movements —buscador, dos listas, CSV, historial y
      * los dos botones grandes— ocupa **la pantalla entera** antes de que se
      * vea un solo movimiento. Queda anotado como M-06. */
-    await recorteDesde(p, '#tableContainer', '3.4-telefono-movimientos', 6);
+    /* Desde arriba del todo: con M-06 (v15.4) la barra cabe en dos renglones
+     * y los primeros movimientos entran en la misma pantalla. Antes esta
+     * captura habría salido con siete controles y ni un movimiento. */
+    await p.evaluate(() => window.scrollTo(0, 0));
+    await p.waitForTimeout(250);
+    await p.screenshot({ path: salida('3.4-telefono-movimientos') });
 
     await p.evaluate(() => {
       var f = document.querySelectorAll('#tableContainer tbody tr')[1];

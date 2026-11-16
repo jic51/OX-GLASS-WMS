@@ -495,6 +495,50 @@ de lado. No hace falta reproducir nada — el fallo viene adjunto.
 > **Falta:** Stock, Incoming y la papelera. El pintador está escrito una vez,
 > así que las tres son ahora un rato y no otro proyecto.
 
+### ~~🟡 M-06 · En el teléfono, la barra de Movements se come la pantalla entera~~ ✅ **v15.4**
+
+> **Hecho el 16/11.** Entry y Exit suben al primer renglón, uno al lado del
+> otro; el buscador comparte el segundo con **⚙ Filters**; los dos filtros, CSV
+> y el historial antiguo se pliegan detrás.
+>
+> **Y plegar sólo es aceptable con esta condición:** un filtro escondido que
+> nadie recuerda haber puesto es **una lista que miente sin avisar** — tres
+> movimientos de ciento ochenta parecen un almacén vacío. Así que con un filtro
+> puesto el botón se enciende, lleva el número y el panel **se abre solo**.
+>
+> **En el ordenador no se movió un píxel**, y eso es la mitad del trabajo:
+> agrupar controles para el teléfono es la forma más fácil de estropear el
+> escritorio sin enterarse. La caja que los agrupa lleva `display:contents`, así
+> que no existe para el reparto y sus hijos se colocan como si no estuviera.
+>
+> **Dos cosas que costaron una vuelta:**
+>
+> 1. **El buscador no es hijo directo de la barra.** `_ponerEquis` lo envuelve
+>    en un `span.tiene-x` al arrancar, para ponerle la ✕ de borrar. El selector
+>    apuntaba al `<input>`, no llegaba, y el buscador se quedaba arriba del todo
+>    con `order:0` mientras Entry y Exit bajaban.
+> 2. **La regla cuelga de `#movToolbar`, no de `.toolbar`.** Esa clase la
+>    comparten Stock, Incoming y Projects: colgarla de la clase habría cambiado
+>    las cuatro barras a la vez.
+>
+> Prueba: `tools/test-barra-que-cabe.js` — mide **la distancia desde arriba
+> hasta el primer movimiento** en dos teléfonos, y que en el ordenador la barra
+> siga en un solo renglón con el mismo orden. 20 comprobaciones; falla 5 veces
+> contra el código anterior.
+>
+> **Y la prueba tuvo dos fallos propios, los dos de medir mal:** agrupaba los
+> renglones por `top/10` redondeado, y tres controles de la **misma** fila
+> —116, 115 y 114— caían en dos cubos por dos píxeles; y contaba los hijos de
+> la barra, dejando fuera los cuatro que viven dentro de la caja con
+> `display:contents`.
+>
+> **Lo que queda de esta pantalla:** la fila de `⚙ Columns` y
+> `Edit · Delete · Labels` sigue entre la barra y las tarjetas, ocupando dos
+> renglones. Edit y Delete sólo sirven con algo marcado — en el teléfono
+> deberían aparecer **cuando se marca**, no antes. No es urgente.
+
+<details><summary>El diagnóstico original, 16/11</summary>
+
 ### 🟡 M-06 · En el teléfono, la barra de Movements se come la pantalla entera
 
 **Encontrado al hacer la captura de M-01, no buscándolo.**
@@ -511,6 +555,8 @@ bien, lo que estorba es llegar a ellas.
 que se usa de pie en la bodega, y plegar el resto —filtros, CSV, historial
 antiguo— detrás de un botón de «Filters». No es urgente; es el siguiente paso
 natural del teléfono.
+
+</details>
 
 <details><summary>El diagnóstico original, 11/11</summary>
 
