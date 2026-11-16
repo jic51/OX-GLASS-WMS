@@ -136,6 +136,7 @@ node tools/test-fotos-en-rafaga.js
 node tools/test-cerrar-y-seguir.js
 node tools/test-tarjetas-en-el-telefono.js
 node tools/test-barra-que-cabe.js
+node tools/test-lo-del-16-11.js
 node tools/test-url-de-la-app.js
 node tools/test-no-saltar-al-cargar.js
 node tools/test-config-escritura.js

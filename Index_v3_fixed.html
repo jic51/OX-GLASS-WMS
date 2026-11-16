@@ -1668,6 +1668,20 @@
     .edit-mov-grid .field.full{grid-column:1/-1}
     .edit-mov-grid .field label{font-size:.7rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:var(--sp-1)}
     .edit-mov-grid .field input,.edit-mov-grid .field select,.edit-mov-grid .field textarea{width:100%;padding:.42rem .65rem;border:1px solid var(--border);border-radius:6px;font-size:.84rem;font-family:inherit}
+    /* ── N-03 · EL COMENTARIO AL EDITAR CABÍA EN UN RENGLÓN ──────────────────
+     *
+     * Jose, 16/11: *"el área de comentarios al editar es muy pequeña, tiene
+     * mucho tiempo así"*. Y es verdad que llevaba tiempo: `rows="2"` con el
+     * relleno apretado de esta rejilla deja unos 34 px de alto útil — una
+     * línea y media. Un comentario de movimiento es justo donde se escribe
+     * *«dos cristales venían rayados, el transportista lo firmó»*, y escribir
+     * eso mirando por una rendija hace que no se escriba.
+     *
+     * `rows` por sí solo no bastaba: esta rejilla fija el relleno y la letra
+     * para todos sus campos, así que el alto se pone aquí, donde está la regla
+     * que lo apretaba. Y `resize:vertical` para que quepa lo que haga falta
+     * sin que la ventana se descuadre a lo ancho. */
+    .edit-mov-grid .field textarea#em_comments{min-height:108px;resize:vertical;line-height:1.4}
     .edit-mov-grid .field input:focus,.edit-mov-grid .field select:focus,.edit-mov-grid .field textarea:focus{outline:none;border-color:var(--accent);box-shadow:var(--ring-accent)}
     .edit-reason-box{margin-top:var(--sp-5);padding:var(--sp-5);background:var(--yellow-bg);border:1px solid #FDE68A;border-radius:8px}
     .edit-reason-box label{font-size:.78rem;font-weight:700;color:var(--yellow);display:block;margin-bottom:.35rem}
@@ -5698,7 +5712,7 @@
       </div>
       <div class="field full">
         <label>Comments</label>
-        <textarea id="em_comments" rows="2"></textarea>
+        <textarea id="em_comments" rows="5"></textarea>
       </div>
     </div>
 
@@ -6374,7 +6388,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '15.4';
+var APP_VERSION = '15.5';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -6386,7 +6400,7 @@ var APP_VERSION = '15.4';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '23e696aa';
+var APP_BUILD = '4feab779';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -8651,6 +8665,39 @@ function applyCompanyBranding(c){
   // the app's own folder, so it resolves through the same throttled fetch as
   // every other private image rather than a public <img src>.
   var logo = document.getElementById('appLogo');
+
+  /* ── N-04 · EL LOGO LLEGABA TARDE Y LA CABECERA CRECÍA AL LLEGAR ──────────
+   *
+   * Jose, 16/11, con vídeo: *"al guardar el edit, cambia el fondo de la app,
+   * el header, ¿por qué?"*. Y lo que se ve en el vídeo es exacto: antes de
+   * guardar la cabecera no tiene logo, y después sí — así que crece, y con
+   * ella se mueve todo lo que hay debajo.
+   *
+   * LA CAUSA NO ESTÁ EN GUARDAR. Está dos líneas más abajo: el logo se pide
+   * con `_fetchPrivateFile`, **la misma cola estrangulada por la que pasan las
+   * miniaturas de documentos**. En una pantalla con movimientos con adjuntos,
+   * el logo —que es la cabecera de la app— espera su turno detrás de ellas. Al
+   * guardar, la recarga silenciosa vuelve a pedirlo y esa vez la cola está
+   * vacía: llega, y la cabecera da el salto que Jose filmó. Guardar no lo
+   * causó; sólo coincidió.
+   *
+   * EL ARREGLO ES PINTARLO DE MEMORIA, Y LA MEMORIA YA EXISTÍA. Unas líneas
+   * más abajo el logo ya se guarda en `localStorage` para la pantalla de
+   * bienvenida de la siguiente carga. Se estaba guardando y no se estaba
+   * usando aquí. Ahora se pinta ese de entrada, y la petición de verdad lo
+   * sustituye cuando llegue — si es que cambió.
+   *
+   * Lo que esto NO arregla, y conviene saberlo: la PRIMERA vez que alguien
+   * abre la app en un navegador no hay nada recordado, así que ahí el logo
+   * sigue llegando cuando llega. Para eso hace falta reservarle el sitio
+   * aunque no esté, o sacarlo de esa cola. Queda anotado. */
+  if (logo && c.logoId && !logo.src){
+    try {
+      var recordado = localStorage.getItem('acopio_brand_logo');
+      if (recordado) { logo.src = recordado; logo.alt = name; logo.style.display = ''; _fitAppLogo(logo); }
+    } catch (e) {}
+  }
+
   if (logo && c.logoId && logo.dataset.loadedId !== c.logoId){
     logo.dataset.loadedId = c.logoId;
     _fetchPrivateFile(c.logoId, function(dataUrl){
@@ -15923,6 +15970,24 @@ function submitMultiEntry(){
         // marcó — ver _entryFromIncId.
         var deLaEntrega = _entryFromIncId;
         closeModal('moveOverlay');
+        /* ── N-02 · VOLVER A DONDE SE EMPEZÓ ──────────────────────────────
+         *
+         * Jose, 16/11: *"al recibir un incoming y hacer el entry desde
+         * incomings, se regresa a movements y no se queda en incomings"*.
+         *
+         * El formulario de entrada vive en Movements, así que abrirlo desde
+         * Incoming cambia de pestaña — y al guardar, la app se quedaba donde
+         * estaba el formulario y no donde estaba la persona. Quien recibe un
+         * camión descarga varias entregas seguidas: cada una le devolvía a
+         * Movements y tenía que volver a Incoming a mano.
+         *
+         * `_entryFromIncId` ya existía —se usa para no volver a ofrecer marcar
+         * la entrega que ya se marcó— y dice exactamente lo que hace falta
+         * saber: **este formulario venía de una entrega**. Si venía de ahí, se
+         * vuelve ahí. */
+        if (deLaEntrega) {
+          try { showTab('incoming', 'btn-incoming'); } catch (e) {}
+        }
         // Las cifras REALES de después, que el servidor acaba de mandar, y la
         // foto completa detrás en silencio. Ver _aplicarStockDelServidor.
         _aplicarStockDelServidor(res);
@@ -26324,6 +26389,17 @@ function openIncomingModal(id) {
   // Una sola llamada, aquí, en vez de una detrás de cada sitio que escribe el
   // estado — hay tres, y el cuarto que se añada la heredaría en vez de tener
   // que acordarse. Mismo razonamiento que _btnReset en closeModal.
+  /* N-01 · Si esta entrega YA estaba en Arrived, su entrada ya se hizo (o se
+   * descartó a propósito), así que ofrecerla otra vez es ofrecer un duplicado.
+   * Se recuerda aquí, en la apertura, porque al guardar la ventana ya se
+   * cerró y el dato de antes ya no está en pantalla. */
+  var _filaOferta = document.getElementById('entryOfferRow');
+  if (_filaOferta) {
+    if (isEdit && item && String(item.status || '').toUpperCase() === 'ARRIVED')
+      _filaOferta.dataset.yaLlego = '1';
+    else
+      delete _filaOferta.dataset.yaLlego;
+  }
   _syncEntryOffer();
   var mk = document.getElementById('incMakeEntry');
   if (mk) mk.checked = true;   // cada apertura empieza donde la anterior no la dejó
@@ -26386,11 +26462,27 @@ function _incIsOverdue(item, today){
  * Arrived — ofrecerla sobre algo que todavía no ha llegado sería ofrecer
  * registrar una entrada falsa.
  */
+/* El dato de «esta entrega ya venía llegada» vive **en la propia fila**, en
+ * `data-ya-llego`, y no en una variable global.
+ *
+ * No es gusto: la primera versión usaba una global y rompió
+ * `test-arrived-to-entry`, que levanta estas funciones sueltas para
+ * ejecutarlas — allí la global no existe y `_syncEntryOffer` reventaba con
+ * `_incYaHabiaLlegado is not defined`. Una función que depende de una variable
+ * suelta sólo funciona dentro del archivo entero; guardado en el elemento,
+ * funciona en cualquier sitio donde ese elemento exista, que es exactamente
+ * donde la función tiene algo que hacer. */
+
 function _syncEntryOffer(){
   var row = document.getElementById('entryOfferRow');
   var sel = document.getElementById('incStatus');
   if (!row || !sel) return;
-  row.style.display = (sel.value === 'Arrived') ? 'flex' : 'none';
+  /* No se ofrece hacer la entrada de algo que ya había llegado. Antes se
+   * ofrecía, no hacía nada al guardar —y eso ya sería malo— pero además
+   * creaba otra tarjeta de «falta su entrada» y desde ahí sí se podía
+   * duplicar el movimiento. Decirlo antes vale más que impedirlo después. */
+  var ofrecer = sel.value === 'Arrived' && !row.dataset.yaLlego;
+  row.style.display = ofrecer ? 'flex' : 'none';
 }
 
 /** Abre el formulario de movimiento en ENTRY con lo que la app ya sabía. */
@@ -26781,7 +26873,34 @@ function saveIncomingItem() {
   var btn = document.getElementById('incomingOverlay').querySelector('.btn-primary');
   // Se decide ANTES de mandar: después de guardar, la ventana se cierra y sus
   // campos dejan de existir.
-  var arrived   = payload.status === 'Arrived';
+  /* ── N-01 · LLEGAR NO ES LO MISMO QUE YA HABER LLEGADO ────────────────────
+   *
+   * Jose, 16/11: *"al editar un incoming que ya llegó, aparece otra vez la
+   * opción de hacer el entry, y se puede volver a hacer un entry que ya se
+   * hizo"*.
+   *
+   * Y tenía razón, con una causa de una línea: esto preguntaba *«¿está en
+   * Arrived?»* cuando lo que hay que preguntar es *«¿acaba de PASAR a
+   * Arrived?»*. Son cosas distintas y sólo una justifica crear la tarjeta de
+   * «llegó y falta su entrada».
+   *
+   * Con la pregunta mal hecha, **cada vez que se guardaba una entrega ya
+   * llegada —aunque sólo se corrigiera una nota— nacía otra tarjeta pidiendo
+   * la entrada**, y hacerla creaba un movimiento duplicado de material que ya
+   * estaba en la bodega. Un duplicado de entrada no es un fallo de pantalla:
+   * son unidades que el almacén cree tener y no tiene.
+   *
+   * El estado de ANTES se lee de la lista que ya está en memoria, por id. Una
+   * entrega nueva no está en la lista, así que `antes` queda vacío y cualquier
+   * alta en Arrived sigue creando su tarjeta, como hasta ahora. */
+  var antes = '';
+  if (id) {
+    for (var _i = 0; _i < incoming.length; _i++) {
+      if (String(incoming[_i].id) === String(id)) { antes = String(incoming[_i].status || ''); break; }
+    }
+  }
+  var yaHabiaLlegado = antes.toUpperCase() === 'ARRIVED';
+  var arrived   = payload.status === 'Arrived' && !yaHabiaLlegado;
   var wantEntry = arrived && !!(document.getElementById('incMakeEntry') || {}).checked;
 
   // Las tres acciones de entregas esperadas toman el candado del script desde

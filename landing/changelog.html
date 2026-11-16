@@ -103,6 +103,31 @@
     <!-- M-04 · Guardar deja de ser una espera delante de una ventana congelada. -->
     <!-- M-01 · En el telefono, Movements deja de ser una tabla. -->
     <!-- M-06 · Llegar a los movimientos sin bajar una pantalla entera. -->
+    <!-- Las cuatro del 16/11. N-01 es la unica que podia costar dinero. -->
+    <div class="entry" id="v15-5">
+      <span class="ver">v15.5</span>
+      <span class="tag fix">Fix</span>
+      <h3>A delivery that already arrived stops asking for its entry</h3>
+      <p><b>Editing an expected delivery that had already arrived &mdash; even just to correct a
+         note &mdash; offered to make its entry again, and making it created a second movement for
+         material that was already on the shelf.</b> The screen was asking &ldquo;is this
+         Arrived?&rdquo; when the question that matters is &ldquo;has it <i>just become</i>
+         Arrived?&rdquo;. Now the offer only appears on the change, and a duplicate entry cannot
+         be started from an edit.</p>
+      <p><b>Receiving a delivery and entering it now returns you to Incoming</b>, not to
+         Movements. Unloading a truck is several deliveries in a row, and each one used to leave
+         you on the wrong screen.</p>
+      <p><b>The comment box when editing a movement was 47 pixels tall</b> &mdash; a line and a
+         half. It is now five lines and can be dragged taller.</p>
+      <p><b>And the header no longer grows mid-session.</b> The company logo was queued behind
+         every document thumbnail on screen, so it often arrived minutes later and pushed the
+         whole page down when it did. It is now painted from what the browser already remembers,
+         and the real one replaces it quietly.</p>
+      <p class="meta">Each of the four is covered by a check that runs them: a delivery saved
+         twice must not produce a second entry card, the entry must land back on Incoming, the
+         comment box must clear 100 pixels, and the header must not change height when a late
+         logo arrives.</p>
+    </div>
     <div class="entry" id="v15-4">
       <span class="ver">v15.4</span>
       <span class="tag new">New</span>

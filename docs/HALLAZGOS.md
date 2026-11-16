@@ -310,6 +310,77 @@ es exactamente para esto.
 
 ---
 
+## 📋 LO DEL 16/11 — LAS CUATRO DEL VÍDEO · N-01…N-04 ✅ **v15.5**
+
+### 🔴 N-01 · Una entrega que ya llegó volvía a pedir su entrada — y se podía duplicar
+
+Jose, con vídeo: *"al editar un incoming que ya llegó, aparece otra vez la
+opción de hacer el entry, y se puede volver a hacer un entry que ya se hizo."*
+
+**La causa cabe en una línea:** `saveIncomingItem` preguntaba
+`payload.status === 'Arrived'` cuando lo que hay que preguntar es **si acaba de
+pasar a Arrived**. Son cosas distintas y sólo una justifica crear la tarjeta de
+«llegó y falta su entrada».
+
+Con la pregunta mal hecha, **cada guardado de una entrega ya llegada —aunque
+sólo se corrigiera una nota— creaba otra tarjeta**, y desde ella un movimiento
+duplicado. Medido contra el código anterior: `{antes: 0, despues: 1}` y el
+formulario de entrada abriéndose solo.
+
+**Esto no es un fallo de pantalla: son unidades que el almacén cree tener y no
+tiene.** Es el único de los cuatro que puede costar dinero.
+
+**Arreglado en dos sitios, y los dos hacen falta:** el estado de antes se lee de
+la lista en memoria y la tarjeta sólo nace en la transición; y el ofrecimiento
+se esconde al abrir, porque *decirlo antes vale más que impedirlo después*.
+
+> **Y la primera versión del arreglo rompió `test-arrived-to-entry`**, que
+> levanta estas funciones sueltas para ejecutarlas: usé una variable global y
+> allí no existe. El dato vive ahora **en la propia fila** (`data-ya-llego`).
+> Una función que depende de una variable suelta sólo funciona dentro del
+> archivo entero.
+
+### 🟡 N-02 · Hacer la entrada desde Incoming devolvía a Movements
+
+El formulario de entrada vive en Movements, así que abrirlo desde Incoming
+cambia de pestaña — y al guardar, la app se quedaba donde estaba el formulario
+y no donde estaba la persona. Descargar un camión son varias entregas seguidas.
+
+`_entryFromIncId` ya existía y dice exactamente lo que hacía falta saber: este
+formulario venía de una entrega.
+
+### 🟡 N-03 · El comentario al editar medía 47 píxeles
+
+Línea y media, y lleva así mucho tiempo. Es donde se escribe *«dos cristales
+venían rayados, el transportista lo firmó»*, y escribir eso por una rendija
+hace que no se escriba. Ahora 108 px y estirable.
+
+### 🟡 N-04 · La cabecera crecía a mitad de sesión
+
+Jose: *"al guardar el edit cambia el fondo de la app, el header, ¿por qué?"*.
+
+**Y guardar no lo causó; sólo coincidió.** El logo de la empresa se pide con
+`_fetchPrivateFile`, **la misma cola estrangulada por la que pasan las
+miniaturas de documentos**. En una pantalla con adjuntos, el logo —que es la
+cabecera— espera su turno detrás de ellas. Al guardar, la recarga silenciosa lo
+vuelve a pedir y esa vez la cola está vacía: llega, y la cabecera da el salto.
+
+**El arreglo usa algo que ya existía y no se estaba usando:** el logo ya se
+guardaba en `localStorage` para la pantalla de bienvenida. Ahora se pinta ése de
+entrada y la petición de verdad lo sustituye en silencio.
+
+**Lo que NO arregla, y queda dicho:** la primera vez en un navegador nuevo no
+hay nada recordado, así que ahí el logo sigue llegando cuando llega. Para eso
+hace falta reservarle el sitio o sacarlo de esa cola.
+
+### 📋 Y desde hoy, `docs/QUE-REVISAR.md`
+
+Jose: *"de aquí en adelante dame lo que tengo que revisar cada vez que hagas un
+cambio o arreglo."* Un documento por versión con qué hacer, qué tiene que pasar
+y qué sería el fallo — **y sólo lo que no puedo comprobar yo**.
+
+---
+
 ## 📋 LO DEL 13/11
 
 ### 🔴 M-05 · Material que se usa en otra obra: hoy cambia de sitio, no de dueño
