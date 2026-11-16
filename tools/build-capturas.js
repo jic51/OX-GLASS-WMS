@@ -403,8 +403,28 @@ async function abrir(browser, viewport) {
   page.on('pageerror', e => fallos.push(e.message));
   await page.goto('file://' + paginaDemo(), { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(1100);
+  await _cerrarElBuenosDias(page);
   page._fallos = fallos;
   return page;
+}
+
+/* ── EL «GOOD MORNING» TAPA LA PANTALLA ────────────────────────────────────
+ * La app saluda con la agenda de la semana la primera vez que se abre en el
+ * día, y en un teléfono ocupa la pantalla entera. En las capturas de escritorio
+ * no se vio porque el panel cabe arriba; en la del teléfono se comió la
+ * captura entera. Se cierra como lo cerraría una persona: pulsando «Got it».
+ */
+async function _cerrarElBuenosDias(page) {
+  try {
+    await page.evaluate(() => {
+      const ov = document.querySelector('.morning-overlay');
+      if (!ov) return;
+      const b = Array.from(ov.querySelectorAll('button'))
+        .find(x => /Got it/i.test(x.textContent));
+      if (b) b.click(); else ov.remove();
+    });
+    await page.waitForTimeout(300);
+  } catch (e) {}
 }
 
 function salida(nombre) {
@@ -667,6 +687,38 @@ Object.assign(window.google,{script:{run:new Proxy({},{get:function(t,k){return 
     }, [CATS, SITIOS, OBRAS, PROVEEDORES]);
     await p.waitForTimeout(500);
     await p.screenshot({ path: salida('3.7-importar') });
+    return p;
+  },
+
+  /* 3.4 — EN EL TELÉFONO. La que el documento marcaba «⛔ esperar a M-01»,
+   * porque hasta la v15.3 enseñaba una tabla que había que arrastrar de lado
+   * — justo lo contrario de lo que esta captura promete.
+   *
+   * Dos: la lista de tarjetas cerradas, y una abierta con sus datos y sus
+   * botones. La segunda es la que contesta *"¿esto sirve en el almacén o sólo
+   * en una oficina?"*. */
+  'telefono': async (b) => {
+    const { devices } = require('playwright');
+    const p = await b.newPage(Object.assign({}, devices['Pixel 5'], { colorScheme: 'light' }));
+    p._fallos = [];
+    p.on('pageerror', e => p._fallos.push(e.message));
+    await p.goto('file://' + paginaDemo(), { waitUntil: 'domcontentloaded' });
+    await p.waitForTimeout(1100);
+    await _cerrarElBuenosDias(p);
+    await p.evaluate(() => showTab('movements', 'btn-movements'));
+    await p.waitForTimeout(700);
+    /* HAY QUE BAJAR HASTA LAS TARJETAS, y eso mismo es un hallazgo: en un
+     * teléfono la barra de Movements —buscador, dos listas, CSV, historial y
+     * los dos botones grandes— ocupa **la pantalla entera** antes de que se
+     * vea un solo movimiento. Queda anotado como M-06. */
+    await recorteDesde(p, '#tableContainer', '3.4-telefono-movimientos', 6);
+
+    await p.evaluate(() => {
+      var f = document.querySelectorAll('#tableContainer tbody tr')[1];
+      if (f) f.querySelector('td.mc-what').click();
+    });
+    await p.waitForTimeout(400);
+    await recorteDesde(p, '#tableContainer', '3.4b-telefono-tarjeta-abierta', 6);
     return p;
   },
 

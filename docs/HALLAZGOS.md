@@ -454,6 +454,66 @@ de lado. No hace falta reproducir nada — el fallo viene adjunto.
 
 ---
 
+### ~~🟠 M-01 · En el teléfono, cada movimiento tiene que ser una tarjeta~~ ✅ **v15.3** *(Movements)*
+
+> **Hecho el 16/11, con tres decisiones de Jose por delante:** Movements
+> primero; lo esencial a la vista y el resto al tocar; y tocar la tarjeta abre
+> sus opciones.
+>
+> **Las dos últimas chocaban** —el mismo gesto para dos cosas— y se resolvieron
+> juntándolas: **tocar una tarjeta la abre entera, datos y botones**. Usar el
+> toque para una y dejar la otra a un gesto inventado habría sido decidir por
+> él.
+>
+> **Y no hay segundo pintador.** Es la misma `<tr>` con los mismos `<td>`; lo
+> único que cambia es que dejan de comportarse como tabla. El nombre de cada
+> dato sale de `_colLabel` —el mismo sitio que el encabezado de la columna,
+> incluido el nombre que Jose le haya puesto a mano— inyectado como
+> `data-label` y dibujado con `::before`. Escribir los nombres otra vez en una
+> tarjeta serían dos sitios que tienen que coincidir sin que nada lo obligue.
+>
+> **Dos cosas que salieron por el camino y no eran de las tarjetas:**
+>
+> 1. **La barra de selección no cabía en 320 px.** Medido en un Galaxy S9+: la
+>    página se iba a 364 y había que arrastrar **aunque la tarjeta cupiera**.
+>    La culpa era de la barra de la v14.8, con huecos de ancho fijo y `nowrap`
+>    para que no se moviera al pasar de 9 a 10 marcados. Eso sigue siendo
+>    correcto en el ordenador —y su prueba lo mide ahí—; en un teléfono de 320
+>    px **caber importa más que no moverse**.
+> 2. **El ✏️ y el 🗑 de cada fila están escondidos a propósito** hasta entrar
+>    en «modo editar» desde la barra. Tiene sentido en una tabla de veinte
+>    filas; es exactamente lo que Jose pidió quitar en el teléfono. En una
+>    tarjeta abierta a propósito no hay campo de minas, así que ahí se ven.
+>
+> Prueba: `tools/test-tarjetas-en-el-telefono.js` — **tres teléfonos de
+> verdad**, midiendo el desbordamiento real, no leyendo el CSS. 28
+> comprobaciones; falla 11 veces contra el código anterior.
+>
+> **Esto desbloquea la captura 3.4** de `CAPTURAS-PARA-LA-LANDING.md`, que
+> estaba marcada «⛔ esperar a M-01». Ya la genera el comando.
+>
+> **Falta:** Stock, Incoming y la papelera. El pintador está escrito una vez,
+> así que las tres son ahora un rato y no otro proyecto.
+
+### 🟡 M-06 · En el teléfono, la barra de Movements se come la pantalla entera
+
+**Encontrado al hacer la captura de M-01, no buscándolo.**
+
+Para ver el primer movimiento en un Pixel 5 hay que **bajar una pantalla
+completa**: buscador, dos listas desplegables, CSV, «Load Older History» y los
+dos botones grandes de Entry/Exit, cada uno a ancho completo y uno debajo de
+otro, porque el bloque de teléfono los pone en columna.
+
+**Y el arreglo de M-01 lo empeora en relativo:** ahora que las tarjetas se leen
+bien, lo que estorba es llegar a ellas.
+
+**Lo que yo haría:** dejar a la vista **Entry, Exit y el buscador**, que son lo
+que se usa de pie en la bodega, y plegar el resto —filtros, CSV, historial
+antiguo— detrás de un botón de «Filters». No es urgente; es el siguiente paso
+natural del teléfono.
+
+<details><summary>El diagnóstico original, 11/11</summary>
+
 ### 🟠 M-01 · En el teléfono, cada movimiento tiene que ser una tarjeta
 
 Jose: *"en el teléfono, la app debe comportarse como una app; cada fila o
@@ -482,6 +542,8 @@ el ancho, y las pruebas que ya miden columnas (`test-columnas.js`,
 cantidad, ubicación, usuario, fecha y sus botones ocupa unos 4 renglones. En una
 pantalla de teléfono entran **tres o cuatro movimientos**, contra las diez filas
 de hoy. Se gana «se lee sin mover nada» y se pierde «veo diez de un vistazo».
+
+</details>
 
 ---
 

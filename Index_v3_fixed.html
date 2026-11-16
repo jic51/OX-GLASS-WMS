@@ -4003,6 +4003,191 @@
       .toast{max-width:100%;min-width:0}
     }
 
+    /* ══ M-01 · EN EL TELÉFONO, CADA MOVIMIENTO ES UNA TARJETA ══════════════════
+     *
+     * Jose, 11/11: *"en el teléfono la app debe comportarse como una app;
+     * cada fila o movimiento debe mostrar sus propias opciones, y debe ser del
+     * tamaño de una tarjeta que entre en la pantalla con toda la información…
+     * si es posible, sin mover nada"*.
+     *
+     * Medido antes de tocar nada: la tabla declara un ancho mínimo que suma el
+     * de sus columnas. En un teléfono de 360 px eso es **arrastrar de lado para
+     * leer una sola fila**. No es una tabla estrecha; es una tabla que no cabe.
+     *
+     * ── POR QUÉ ESTO ES CSS Y NO UN SEGUNDO PINTADOR ───────────────────────
+     *
+     * Lo fácil era escribir `renderMovementCards()` al lado de
+     * `renderMovements()`. Eso son **dos sitios que tienen que decir lo mismo
+     * sin que nada lo obligue** — el fallo que este proyecto lleva repitiendo
+     * desde el principio. El día que alguien añada una columna, la tarjeta se
+     * queda sin ella y nadie se entera.
+     *
+     * Así que la fila es **la misma**: los mismos `<tr>` y `<td>`, con el mismo
+     * `data-label` que sale de `_colLabel`. Lo único que cambia es que dejan de
+     * comportarse como tabla. Una sola fila, dos formas de mirarla.
+     *
+     * ── QUÉ SE VE Y QUÉ ESPERA (decisión de Jose, 16/11) ───────────────────
+     *
+     * De frente: **tipo y fecha · categoría y nombre · cantidad · de dónde a
+     * dónde**. Es lo que se busca desde la bodega.
+     *
+     * Al tocar: se despliega **el resto de los datos Y sus opciones**, en el
+     * mismo gesto. Jose eligió las dos cosas por separado —«lo esencial y el
+     * resto al tocar» y «tocar la tarjeta abre sus opciones»— y usar el mismo
+     * toque para dos cosas distintas sería adivinar cuál quiere. Van juntas:
+     * tocar una tarjeta la abre entera, datos y botones.
+     *
+     * ── LOS CUIDADOS ──────────────────────────────────────────────────────
+     *
+     *  · `min-width` fuera. Lo pone `_fijarMinTabla` para que las columnas no
+     *    se muevan, y aquí es justo lo que hace que no quepa.
+     *  · La cabecera se va. Cada dato lleva su nombre encima.
+     *  · La casilla de marcar se queda, arriba a la derecha: borrar diez de
+     *    golpe sigue haciendo falta y ya tiene sus 44 px de toque (v14.9).
+     *  · El color del tipo pasa del borde izquierdo de la fila a una banda
+     *    arriba de la tarjeta, donde se ve de un vistazo en vertical.
+     */
+    @media (max-width:768px){
+      #tableContainer.mov-tarjetas table,
+      #tableContainer.mov-tarjetas tbody,
+      #tableContainer.mov-tarjetas tr,
+      #tableContainer.mov-tarjetas td{display:block;width:auto}
+      #tableContainer.mov-tarjetas table{min-width:0 !important;border-collapse:separate}
+      #tableContainer.mov-tarjetas thead{display:none}
+      #tableContainer.mov-tarjetas{overflow-x:visible}
+
+      #tableContainer.mov-tarjetas tr{
+        position:relative;background:var(--card);border:1px solid var(--border);
+        border-left-width:1px;border-radius:10px;margin:0 0 var(--sp-4);
+        padding:var(--sp-5) var(--sp-5) var(--sp-4);box-shadow:var(--sh-1);
+        /* Sitio para la casilla, que va encima a la derecha. */
+        padding-right:46px}
+
+      /* La banda de color del tipo de movimiento. `rowClass` ya pone la clase
+         en el `<tr>`; aquí se le da forma de banda en vez de borde lateral. */
+      /* El color sale de la MISMA lista que el borde de la fila (línea ~536).
+         `currentColor` no servía: coge el color del texto, no el del tipo, y
+         las bandas salían todas grises — que es peor que no tenerlas, porque
+         ocupan sitio y no dicen nada. */
+      #tableContainer.mov-tarjetas tr::after{content:'';position:absolute;
+        left:0;right:0;top:0;height:4px;border-radius:10px 10px 0 0;
+        background:var(--border)}
+      #tableContainer.mov-tarjetas tr.row-entry::after   {background:var(--green)}
+      #tableContainer.mov-tarjetas tr.row-exit::after    {background:var(--red)}
+      #tableContainer.mov-tarjetas tr.row-transfer::after{background:var(--accent)}
+      #tableContainer.mov-tarjetas tr.row-return::after  {background:#9CA3AF}
+      #tableContainer.mov-tarjetas tr.row-waste::after   {background:#111827}
+      #tableContainer.mov-tarjetas tr.row-adjust::after  {background:var(--steel)}
+      /* Y el borde izquierdo de la tabla no pinta nada en una tarjeta. */
+      #tableContainer.mov-tarjetas tr td:first-child{border-left:none}
+
+      #tableContainer.mov-tarjetas td{
+        border:none;padding:.18rem 0;display:flex;gap:var(--sp-4);
+        align-items:baseline;justify-content:space-between;text-align:left;
+        /* `!important` porque el comentario trae `max-width:220px`,
+           `white-space:nowrap` y `overflow:hidden` **en el atributo style**,
+           que gana a cualquier regla. En una tabla eso evita que un comentario
+           largo estire la columna; en una tarjeta lo que hace es cortarlo a
+           media palabra — se leía «Customer pickup, do no». */
+        max-width:none !important;white-space:normal !important;
+        overflow:visible !important;text-overflow:clip !important}
+      /* El texto largo baja a su propio renglón en vez de pelearse con su
+         nombre por el ancho. */
+      #tableContainer.mov-tarjetas td.mc-comment{flex-wrap:wrap;row-gap:.1rem}
+      #tableContainer.mov-tarjetas td.mc-comment::before{flex-basis:100%}
+      /* El nombre del dato, sacado de `data-label` — nunca escrito aquí. */
+      #tableContainer.mov-tarjetas td::before{
+        content:attr(data-label);flex:0 0 auto;font-size:.68rem;
+        text-transform:uppercase;letter-spacing:.04em;color:var(--muted);
+        font-weight:600;white-space:nowrap}
+
+      /* LAS DOS DE ARRIBA NO LLEVAN NOMBRE: el tipo se lee por su insignia y
+         el material por su nombre. Poner «Type / Date» encima de una insignia
+         que ya dice ENTRY es gastar un renglón en repetirse. */
+      #tableContainer.mov-tarjetas td.mc-when::before,
+      #tableContainer.mov-tarjetas td.mc-what::before{content:none}
+      #tableContainer.mov-tarjetas td.mc-when,
+      #tableContainer.mov-tarjetas td.mc-what{display:block;padding:0}
+      #tableContainer.mov-tarjetas td.mc-what{margin:.2rem 0 .45rem}
+      #tableContainer.mov-tarjetas td.mc-what .mc-main{
+        font-size:.95rem;font-weight:700;line-height:1.25}
+      #tableContainer.mov-tarjetas td.mc-when .mc-sub{
+        display:inline;margin-left:.4rem;font-size:.74rem}
+
+      /* LO QUE ESPERA AL TOQUE. Todo lo que no sea esencial se guarda hasta
+         que la tarjeta se abre. */
+      #tableContainer.mov-tarjetas tr:not(.abierta) td.mc-po,
+      #tableContainer.mov-tarjetas tr:not(.abierta) td.mc-rawLoc,
+      #tableContainer.mov-tarjetas tr:not(.abierta) td.mc-gc,
+      #tableContainer.mov-tarjetas tr:not(.abierta) td.mc-project,
+      #tableContainer.mov-tarjetas tr:not(.abierta) td.mc-supplier,
+      #tableContainer.mov-tarjetas tr:not(.abierta) td.mc-resp,
+      #tableContainer.mov-tarjetas tr:not(.abierta) td.mc-comment,
+      #tableContainer.mov-tarjetas tr:not(.abierta) td.mc-pm,
+      #tableContainer.mov-tarjetas tr:not(.abierta) td.mc-sysDate,
+      #tableContainer.mov-tarjetas tr:not(.abierta) td.mc-user,
+      #tableContainer.mov-tarjetas tr:not(.abierta) td.mc-doc,
+      #tableContainer.mov-tarjetas tr:not(.abierta) td:last-child{display:none}
+
+      /* Y LA PISTA DE QUE HAY MÁS. Sin esto, la mitad de los datos existe y
+         nadie lo sabe: una tarjeta cerrada no se distingue de una completa. */
+      #tableContainer.mov-tarjetas tr:not(.abierta)::before{
+        content:'More ▾';position:absolute;right:10px;bottom:6px;
+        font-size:.64rem;color:var(--muted);letter-spacing:.03em}
+      #tableContainer.mov-tarjetas tr.abierta::before{
+        content:'Less ▴';position:absolute;right:10px;bottom:6px;
+        font-size:.64rem;color:var(--muted);letter-spacing:.03em}
+      #tableContainer.mov-tarjetas tr{padding-bottom:1.1rem}
+
+      /* La última celda es la de Editar/Borrar. Abierta la tarjeta, se ve como
+         una fila de botones de verdad y no como una celda apretada. */
+      #tableContainer.mov-tarjetas td:last-child{
+        margin-top:var(--sp-4);padding-top:var(--sp-4);
+        border-top:1px solid var(--border);justify-content:flex-start;gap:var(--sp-5)}
+      #tableContainer.mov-tarjetas td:last-child::before{content:none}
+      #tableContainer.mov-tarjetas td:last-child .btn-icon{
+        min-width:44px;min-height:44px;font-size:1.05rem}
+
+      /* La casilla, arriba a la derecha y fuera del flujo de la tarjeta. */
+      #tableContainer.mov-tarjetas td.mov-sel-cell{
+        position:absolute;top:6px;right:4px;width:44px;min-width:44px;padding:0}
+
+      /* Un movimiento en cola de borrado se ve apagado, igual que en la tabla. */
+      #tableContainer.mov-tarjetas tr.row-deleting{opacity:.5}
+
+      /* ── LOS BOTONES DE LA TARJETA SE VEN SIEMPRE ───────────────────────
+       *
+       * En la tabla, el ✏️ y el 🗑 de cada fila están escondidos a propósito
+       * hasta que se entra en «modo editar» o «modo borrar» desde la barra de
+       * arriba (ver `[data-rowscope]:not(.mode-edit)`). Eso tiene sentido en
+       * una tabla de veinte filas: veinte papeleras a la vista es un campo de
+       * minas.
+       *
+       * **Pero es exactamente lo que Jose pidió quitar en el teléfono:** *"cada
+       * fila o movimiento debe mostrar sus propias opciones"*. En una tarjeta
+       * que hay que abrir a propósito no hay campo de minas: hay una tarjeta,
+       * la que se abrió, con sus dos botones.
+       *
+       * Sólo dentro de `.abierta`, y sólo en modo tarjeta. La tabla del
+       * ordenador no se entera de esto. */
+      #tableContainer.mov-tarjetas tr.abierta [data-rowact]{display:inline-flex!important}
+
+      /* ── Y LA BARRA DE SELECCIÓN CABE ───────────────────────────────────
+       *
+       * Medido en un Galaxy S9+ (320 px de ancho CSS): la página se iba a 364
+       * y había que arrastrar de lado **aunque la tarjeta cupiera**. El
+       * culpable no eran las tarjetas sino esta barra, construida en la v14.8
+       * con huecos de ancho fijo y `nowrap` para que no se moviera al pasar de
+       * 9 a 10 marcados.
+       *
+       * Aquello sigue siendo correcto en el ordenador, y su prueba
+       * (`test-nada-se-mueve.js`) lo mide ahí. En un teléfono de 320 px la
+       * prioridad se invierte: que no se mueva importa menos que caber. */
+      .mov-act-sep{flex-wrap:wrap;padding-left:0;margin-left:0;border-left:none;
+        row-gap:var(--sp-3)}
+      .mov-sel-count{min-width:0}
+    }
+
     /* ══ ETIQUETAS DE 4"×6" ═══════════════════════════════════════════════════
        Jose, 2026-09-11: imprime en una Jadens JD-268BT, térmica, papel de
        4"×6" (101.6 × 152.4 mm). "Nombre del material, cantidad, locación, PO y
@@ -6108,7 +6293,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '15.2';
+var APP_VERSION = '15.3';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -6120,7 +6305,7 @@ var APP_VERSION = '15.2';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '59ad3a5b';
+var APP_BUILD = 'ffed7ebb';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -10031,6 +10216,68 @@ function _movsMasNuevoPrimero(lista){
   return conClave.map(function(x){ return x.m; });
 }
 
+/* ── M-01 · EL INTERRUPTOR ENTRE TABLA Y TARJETAS ───────────────────────────
+ *
+ * El ancho manda, no el aparato: una tableta en vertical tiene el mismo
+ * problema que un teléfono, y preguntar por el "móvil" dejaría fuera la mitad
+ * de los casos. **El número vive aquí y en el `@media` de arriba**, que son dos
+ * sitios — así que esto lo lee del propio navegador con `matchMedia` y la misma
+ * cadena, en vez de escribir `768` otra vez en JavaScript.
+ */
+var MOV_TARJETAS_MQ = '(max-width:768px)';
+function _enModoTarjeta(){
+  try { return window.matchMedia(MOV_TARJETAS_MQ).matches; } catch (e) { return false; }
+}
+function _sincronizarTarjetasMov(){
+  var tc = document.getElementById('tableContainer');
+  if (!tc) return;
+  tc.classList.toggle('mov-tarjetas', _enModoTarjeta());
+}
+
+/* Tocar una tarjeta la abre: enseña el resto de los datos **y** sus botones.
+ *
+ * Jose eligió por separado «lo esencial y el resto al tocar» y «tocar la
+ * tarjeta abre sus opciones». Son el mismo gesto, así que hacen la misma cosa:
+ * abrir la tarjeta entera. Usar el toque para una de las dos y dejar la otra a
+ * un gesto inventado sería decidir por él.
+ *
+ * NO SE ABRE AL PULSAR ALGO QUE YA HACE ALGO. La casilla, los botones de
+ * editar/borrar, el clip de adjuntar y los enlaces de documento ya tienen su
+ * trabajo; si además abrieran la tarjeta, cada acción vendría con un
+ * desplegado que nadie pidió.
+ *
+ * Y SÓLO EN MODO TARJETA. En el ordenador una fila de tabla no se despliega:
+ * ahí están todas las columnas a la vista y no hay nada que abrir.
+ */
+function _wireTarjetasMov(){
+  var tc = document.getElementById('tableContainer');
+  if (!tc || tc._tarjetasWired) return;
+  tc._tarjetasWired = true;
+
+  tc.addEventListener('click', function(ev){
+    if (!_enModoTarjeta()) return;
+    if (!tc.classList.contains('mov-tarjetas')) return;
+    if (ev.target.closest('button, a, input, label, select')) return;
+    var fila = ev.target.closest('tr');
+    if (!fila || !tc.contains(fila) || !fila.parentElement ||
+        fila.parentElement.tagName !== 'TBODY') return;
+    fila.classList.toggle('abierta');
+  });
+
+  /* Al girar el teléfono o cambiar el ancho hay que volver a decidir. Y las
+   * tarjetas abiertas se cierran al pasar a tabla: una `tr.abierta` en el
+   * ordenador no estorba, pero volver al teléfono con seis tarjetas abiertas
+   * de una sesión anterior es una pantalla que nadie dejó así. */
+  window.addEventListener('resize', function(){
+    var antes = tc.classList.contains('mov-tarjetas');
+    _sincronizarTarjetasMov();
+    if (antes && !tc.classList.contains('mov-tarjetas')) {
+      Array.prototype.forEach.call(tc.querySelectorAll('tr.abierta'),
+        function(f){ f.classList.remove('abierta'); });
+    }
+  });
+}
+
 function renderMovements(){
   var q    = (document.getElementById('movSearch').value || '').toLowerCase();
   var tf   = document.getElementById('movTypeFilter').value;
@@ -10246,9 +10493,25 @@ function renderMovements(){
       doc:      '<td class="mc-doc" style="min-width:44px"><div style="display:flex;align-items:center;gap:3px">'+docBtn+attachBtn+'</div></td>'
     };
 
+    /* ── M-01 · LA MISMA CELDA LLEVA SU NOMBRE ENCIMA ─────────────────────
+     *
+     * En el teléfono esta tabla se convierte en tarjetas (ver `.mov-tarjetas`),
+     * y una tarjeta no tiene cabecera: cada dato tiene que decir qué es.
+     *
+     * **El nombre NO se escribe aquí.** Sale de `_colLabel`, que es el mismo
+     * sitio del que sale el encabezado de la columna — incluido el nombre que
+     * Jose le haya puesto a mano. Escribirlo otra vez en la tarjeta serían
+     * **dos sitios que tienen que decir lo mismo sin que nada lo obligue**, y
+     * el día que renombre una columna la tarjeta seguiría con el nombre viejo.
+     *
+     * Y por eso esto no es un segundo pintador: es `data-label` inyectado en
+     * la celda que ya existe. En el ordenador no se ve; en el teléfono lo
+     * dibuja el CSS con `::before`. Una sola fila, dos formas de mirarla. */
     var body = order.map(function(k){
       if (hiddenNow[k] && !_colEdit.mov) return '';
-      return cells[k] || '';
+      var celda = cells[k] || '';
+      if (!celda) return '';
+      return celda.replace('<td', '<td data-label="' + _escAttr(_colLabel('mov', k)) + '"');
     }).join('');
 
     // Siempre, para quien puede actuar. Antes venía y se iba con el modo de
@@ -10390,6 +10653,7 @@ function renderMovements(){
   // en cada dibujado: con el ojo de "⚙ Columns", con el editor abierto (que las
   // enseña todas) y con el filtro de categoría (que esconde la suya).
   _fijarMinTabla('mov', headHtml);
+  _sincronizarTarjetasMov();   // M-01: en el teléfono, esta tabla son tarjetas
 
   // The header is rebuilt with the table, so its drag/hide/rename handlers have
   // to be attached again each time.
@@ -31651,6 +31915,9 @@ document.addEventListener('DOMContentLoaded', function(){
   _safeOn('monitorOverlay','click',  function(e){ closeIfOutside(e,'monitorOverlay'); });
   _safeOn('usersOverlay','click',    function(e){ closeIfOutside(e,'usersOverlay'); });
   _safeOn('editMovOverlay','click',  function(e){ closeIfOutside(e,'editMovOverlay'); });
+  // M-01: una sola vez, sobre el contenedor — las filas se repintan y un
+  // manejador por fila se perdería en cada dibujado.
+  try { _wireTarjetasMov(); } catch (e) { Logger && 0; }
   _safeOn('morningOverlay','click',  function(e){ if (e.target===document.getElementById('morningOverlay')) closeMorningPopup(); });
 
   // Open modal buttons

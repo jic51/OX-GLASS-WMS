@@ -246,6 +246,13 @@ camión.
 enseña. Una sola foto contesta *"¿esto sirve en el almacén o sólo en la
 oficina?"*.
 
+> ### ✅ 16/11 — YA SE PUEDE, Y YA ESTÁ HECHA
+>
+> **M-01 llegó en la v15.3**, así que la pantalla que esta captura promete ya
+> existe: `3.4-telefono-movimientos.png` (la lista de tarjetas) y
+> `3.4b-telefono-tarjeta-abierta.png` (una abierta, con sus datos y sus
+> botones). Las dibuja el mismo comando. Lo de abajo queda por el razonamiento.
+>
 > ### ⛔ 11/11 — ESTA NO SE GRABA TODAVÍA
 >
 > Hoy la lista de movimientos en el teléfono es **una tabla a la que hay que
@@ -354,7 +361,7 @@ como mucho**, a **800px de ancho**, y aun así va a pesar más que el vídeo.
 | 3.1 | Warehouse Map con estante abierto | PNG | 1600px | ✅ **hecha** — `build-capturas.js` |
 | 3.2 | Stock Dashboard | PNG ×2 | 1600px | ✅ **hecha** (con las cuatro insignias) |
 | 3.3 | Movimientos, los cinco tipos | PNG | 1600px | ✅ **hecha** |
-| 3.4 | En el teléfono | PNG vertical | tal cual del móvil | ⛔ **esperar a M-01** (11/11) |
+| 3.4 | En el teléfono | PNG ×2 | Pixel 5 | ✅ **hecha** — M-01 la desbloqueó (16/11) |
 | 3.5 | Incoming | PNG ×2 | 1600px | ✅ **hecha** |
 | **3.6** | **El asistente de instalación** ⭐ | PNG | 720×560 | ✅ **hecha** — la más importante de las fijas |
 | **3.7** | **El importador, con errores y uno corregido** | PNG | 1600px | ✅ **hecha** |
