@@ -104,6 +104,27 @@
     <!-- M-01 · En el telefono, Movements deja de ser una tabla. -->
     <!-- M-06 · Llegar a los movimientos sin bajar una pantalla entera. -->
     <!-- Las cuatro del 16/11. N-01 es la unica que podia costar dinero. -->
+    <!-- N-05 era mio, de la v15.2. N-06 es el mismo patron que M-06. -->
+    <div class="entry" id="v15-6">
+      <span class="ver">v15.6</span>
+      <span class="tag fix">Fix</span>
+      <h3>An error you have to fix brings the form back</h3>
+      <p><b>If a save failed because of something in the form &mdash; a shelf that does not
+         exist, more units than there are &mdash; the message said to change it and there was
+         nothing left to change it in.</b> Since v15.2 the window closes the moment you save, and
+         the handlers that correct a bad location were written when it stayed open. The entry was
+         simply lost: the delivery showed as arrived and the material was in neither the
+         movements nor the stock.</p>
+      <p>Now the rule is plain. <b>An error about the data brings the window straight back</b>,
+         with everything still in it and the field ready to correct. An error about the
+         connection leaves it closed with <b>Retry</b>, because there is nothing to correct.</p>
+      <p><b>And the &ldquo;reason for modification&rdquo; box is the width of its panel</b>
+         instead of 203 pixels of the 689 available. Every field gets a small clear (&times;)
+         button wrapped around it, and the wrapper only learns how wide to be once it can be
+         measured &mdash; which never happened for a window that starts hidden.</p>
+      <p class="meta">The exact failure is now run end to end: an entry saved against a shelf
+         that does not exist must bring the form back with its 55 units still typed in.</p>
+    </div>
     <div class="entry" id="v15-5">
       <span class="ver">v15.5</span>
       <span class="tag fix">Fix</span>

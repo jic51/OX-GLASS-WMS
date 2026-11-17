@@ -106,6 +106,29 @@
     <!-- M-01 · En el telefono, Movements deja de ser una tabla. -->
     <!-- M-06 · Llegar a los movimientos sin bajar una pantalla entera. -->
     <!-- Las cuatro del 16/11. N-01 es la unica que podia costar dinero. -->
+    <!-- N-05 era mio, de la v15.2. N-06 es el mismo patron que M-06. -->
+    <div class="entry" id="v15-6">
+      <span class="ver">v15.6</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Un error que hay que corregir devuelve el formulario</h3>
+      <p><b>Si un guardado fallaba por algo del formulario &mdash;un estante que no existe, m&aacute;s
+         unidades de las que hay&mdash; el mensaje ped&iacute;a cambiarlo y no quedaba d&oacute;nde
+         hacerlo.</b> Desde la v15.2 la ventana se cierra en cuanto se guarda, y los manejadores que
+         corrigen una ubicaci&oacute;n mala se escribieron cuando se quedaba abierta. La entrada se
+         perd&iacute;a: la entrega figuraba como llegada y el material no estaba ni en los
+         movimientos ni en el stock.</p>
+      <p>Ahora la regla es clara. <b>Un error de los datos devuelve la ventana al momento</b>, con
+         todo dentro y el campo listo para corregir. Un error de la conexi&oacute;n la deja cerrada
+         con <b>Retry</b>, porque ah&iacute; no hay nada que corregir.</p>
+      <p><b>Y el cuadro de &laquo;motivo de la modificaci&oacute;n&raquo; ocupa el ancho de su
+         recuadro</b> en vez de 203 p&iacute;xeles de los 689 que hab&iacute;a. Cada campo se
+         envuelve para ponerle su &times; de borrar, y ese envoltorio s&oacute;lo aprende
+         cu&aacute;nto medir cuando se le puede medir &mdash; cosa que nunca pasaba en una ventana
+         que empieza escondida.</p>
+      <p class="meta">El fallo exacto se ejecuta ahora de principio a fin: una entrada guardada
+         contra un estante que no existe tiene que devolver el formulario con sus 55 unidades
+         todav&iacute;a escritas.</p>
+    </div>
     <div class="entry" id="v15-5">
       <span class="ver">v15.5</span>
       <span class="tag fix">Arreglo</span>

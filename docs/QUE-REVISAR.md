@@ -16,6 +16,38 @@ Esto es ese documento, y se actualiza **con cada versión**. Lo de arriba es lo
 
 ---
 
+## v15.6 — lo que salió al probar la v15.5
+
+### 1 · El estante que no existe  🔴 *era un fallo mío de la v15.2*
+
+1. Haz una **entrada** poniendo un estante **que no exista** (invéntate uno).
+2. Guarda.
+3. **Tiene que pasar:** la ventana **vuelve sola**, con todo lo que escribiste
+   dentro, y el aviso dice qué pasa. Corriges el estante y guardas otra vez.
+4. **Sería el fallo:** que salga el mensaje y no vuelva la ventana. Eso es lo
+   que te pasó, y es lo que hizo que `LGI-DE-TOWNHOME2` figure como llegada y
+   no exista ni en Movements ni en el stock.
+
+Y la otra mitad, que tiene que seguir como estaba:
+
+5. Si lo que falla es la **conexión**, la ventana **no** vuelve: el aviso trae
+   **Retry** y reenvía. Ahí no hay nada que corregir.
+
+### 2 · El motivo de la edición
+
+1. **Movements → Edit** en cualquier movimiento.
+2. **Tiene que pasar:** el cuadro de *«Reason for modification»* ocupa **todo
+   el ancho** de su recuadro amarillo. Antes medía 203 px de los 689 que hay.
+
+### 3 · Y de paso, mira esto cuando puedas
+
+`LGI-DE-TOWNHOME2` sigue sin su entrada: 55 unidades que llegaron el 21/10 y
+que el sistema no tiene. Esto no lo arregla una versión — **hay que hacer esa
+entrada a mano**. Si hubo más entradas que se perdieron igual, salen buscando
+en Incoming las que estén en *Arrived* y no aparezcan en Movements.
+
+---
+
 ## v15.5 — las cuatro del 16/11
 
 ### 1 · La entrega que ya llegó  🔴 *la importante*

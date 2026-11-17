@@ -310,6 +310,60 @@ es exactamente para esto.
 
 ---
 
+## 📋 LO DEL 17/11 · N-05 y N-06 ✅ **v15.6**
+
+### 🔴 N-05 · Un error del formulario sin formulario — y una entrada perdida
+
+Jose, probando la v15.5: *"salió un mensaje que decía que la locación no existe
+y que la cambie, pero no apareció la ventana para hacerlo."*
+
+**Es un fallo que metí yo en la v15.2 con M-04**, y es el riesgo exacto que
+había escrito al proponerlo. Desde entonces la ventana se cierra al mandar —
+pero `_errorConocido` y el aviso de posible duplicado **fueron escritos
+suponiendo que sigue abierta**: corrigen campos, bajan cantidades y ofrecen
+reintentar sobre un formulario que ya no se ve.
+
+**Y no quedó en un estorbo.** En sus capturas, `LGI-DE-TOWNHOME2` figura en
+Incoming como llegada el 21/10 con 55 unidades, y **no existe ni en Movements
+—ni en el archivo, que también se buscó— ni en el stock**. El material está en
+el almacén y el sistema no lo sabe. Eso es lo que cuesta cerrar una ventana
+antes de saber si hay algo que corregir en ella.
+
+**La regla que faltaba, y ahora está escrita en un solo sitio:**
+
+| | |
+|---|---|
+| Error **de los datos** | La ventana **vuelve sin preguntar**, con todo dentro |
+| Error **del entorno** | Se queda cerrada, con **Retry** en el aviso |
+
+**Y se quita la rama de «Fix»** que M-04 había puesto en el aviso: lo que
+ofrecía ahora ocurre solo. Código muerto que ofrece algo ya hecho es peor que
+no tener nada.
+
+> **La prueba también estaba mal, y lo estuvo un rato:** mi primera versión
+> repetía la regla nueva a mano dentro del navegador, así que habría dicho «ok»
+> con el producto roto — comprobaba mi copia de la regla, no la regla. Ahora
+> rellena el formulario, lo manda y el servidor contesta `UNKNOWN_LOCATION`,
+> que es lo que le contestó a Jose.
+
+### 🟡 N-06 · El motivo de la edición medía 203 px de los 689 que había
+
+**Y es el mismo patrón que M-06, dos versiones atrás.** `_ponerEquis` envuelve
+cada campo en un `span.tiene-x` para ponerle su ✕, y `_equisAncho` decide si
+ese envoltorio ocupa todo el ancho **midiéndolo**. Un campo escondido no se
+puede medir, así que queda apuntado como pendiente y el envoltorio se queda
+encogido — y `.edit-reason-box textarea{width:100%}` sí se aplicaba: el 100 %
+era de un envoltorio de 203 px.
+
+El re-medido ya existía y se llamaba en **dos sitios**: al cambiar de pestaña y
+al abrir la ventana de movimientos. **La de editar no estaba en la lista**, ni
+ninguna otra, y cada ventana nueva habría heredado el olvido.
+
+Ahora cuelga del observador que ya vigila cuándo se abre una ventana — **ahí no
+hay lista que mantener**: abrirse es abrirse.
+
+---
+
 ## 📋 LO DEL 16/11 — LAS CUATRO DEL VÍDEO · N-01…N-04 ✅ **v15.5**
 
 ### 🔴 N-01 · Una entrega que ya llegó volvía a pedir su entrada — y se podía duplicar

@@ -69,6 +69,10 @@ Object.assign(window.google,{script:{run:new Proxy({},{get:function(t,k){return 
  window.__llamadas.push(String(arguments[0]||k));
  var a0=String(arguments[0]||'');
  if(/^getPrivateFile|^getFile/i.test(String(k))){return;}           // el logo no llega nunca
+ /* La entrada se queda EN EL AIRE a propósito: N-05 necesita contestarle a
+    mano con el error que le salió a Jose. Sólo ésa — las demás contestan
+    normal, porque N-01 necesita que su guardado termine de verdad. */
+ if(k==='processMovement'&&a0==='addMultiEntry'){window.__pend={ok:t._ok,no:t._no};return;}
  if(k==='processMovement'&&/^list/i.test(a0)){setTimeout(function(){o&&o([]);},5);return;}
  setTimeout(function(){o&&o({});},5);};}})}});
 window.__DATA=${JSON.stringify(DATA)};
@@ -257,6 +261,93 @@ window.__DATA=${JSON.stringify(DATA)};
     });
     check('...y cuando llega el de verdad, la cabecera no cambia de alto',
       Math.abs(r2.despues - r2.antes) <= 2, r2);
+    await p.close();
+  }
+
+
+  // ════════════════════════════════════════════════════════════════════════
+  console.log('\n═══ N-05 · UN ESTANTE QUE NO EXISTE DEVUELVE EL FORMULARIO ═══\n');
+
+  {
+    /* EL CASO EXACTO DE JOSE, 17/11: *"salió un mensaje que decía que la
+     * locación no existe y que la cambie, pero no apareció la ventana para
+     * hacerlo"*. Lo metí yo en la v15.2: la ventana se cierra al mandar, y los
+     * manejadores que corrigen la ubicación suponen que sigue abierta.
+     *
+     * Y esto lo EJECUTA por el camino de verdad — rellenar, mandar, y que el
+     * servidor conteste `UNKNOWN_LOCATION`. La primera versión de esta prueba
+     * repetía la regla nueva a mano dentro del navegador, así que habría dicho
+     * «ok» con el producto roto: comprobaba mi copia de la regla, no la regla. */
+    const p = await abrir();
+    await p.evaluate(() => {
+      openMoveModal('ENTRY');
+      setTimeout(function(){
+        const q = (x) => document.querySelector(x);
+        const cat = q('#mat-cat-1'), nom = q('#mat-name-1');
+        if (cat) { cat.value = 'WINDOW'; cat.dispatchEvent(new Event('change')); }
+        if (nom) { nom.value = 'LGI-DE-TOWNHOME2'; nom.dispatchEvent(new Event('input')); }
+        const fila = q('#mat-locs-1 .loc-row');
+        if (fila) {
+          const r = fila.querySelector('.loc-rack'), c = fila.querySelector('.loc-qty');
+          r.value = 'NO-EXISTE'; r.dispatchEvent(new Event('input'));
+          c.value = '55';        c.dispatchEvent(new Event('input'));
+        }
+        if (typeof syncMatLineQty === 'function') syncMatLineQty(1);
+      }, 60);
+    });
+    await p.waitForTimeout(450);
+    await p.evaluate(() => { window.__pend = null; submitMultiEntry(); });
+    await p.waitForTimeout(300);
+
+    const mandado = await p.evaluate(() => ({
+      enVuelo: !!window.__pend,
+      abierta: document.getElementById('moveOverlay').classList.contains('show')
+    }));
+    check('la entrada se manda y la ventana se cierra', mandado.enVuelo && !mandado.abierta, mandado);
+
+    // El servidor contesta lo que le contestó a Jose.
+    await p.evaluate(() => window.__pend.no({ message: 'UNKNOWN_LOCATION|NO-EXISTE|WINDOW' }));
+    await p.waitForTimeout(500);
+    const tras = await p.evaluate(() => {
+      const ov = document.getElementById('moveOverlay');
+      return { abierta: ov.classList.contains('show'), ocupada: ov.classList.contains('busy'),
+               nombre: (document.getElementById('mat-name-1') || {}).value,
+               estante: (document.querySelector('#mat-locs-1 .loc-rack') || {}).value,
+               cantidad: (document.querySelector('#mat-locs-1 .loc-qty') || {}).value };
+    });
+    check('un estante que no existe DEVUELVE la ventana', tras.abierta, tras);
+    check('...con lo escrito todavía dentro, para poder corregirlo',
+      tras.nombre === 'LGI-DE-TOWNHOME2' && tras.cantidad === '55', tras);
+    check('...y se puede escribir en ella', !tras.ocupada, tras);
+    await p.close();
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  console.log('\n═══ N-06 · EL MOTIVO DE LA EDICIÓN OCUPA SU ANCHO ═══\n');
+
+  {
+    const p = await abrir();
+    const r = await p.evaluate(async () => {
+      /* Se abre poniéndole `show`, que es EXACTAMENTE lo que hace abrir una
+       * ventana — y es lo que el observador escucha. `openEditMovModal` haría
+       * lo mismo y además rellenaría los campos, pero necesita un movimiento
+       * de verdad y aquí lo que se mide es el ancho, no el contenido. */
+      document.getElementById('editMovOverlay').classList.add('show');
+      await new Promise(r => setTimeout(r, 450));
+      const ta = document.getElementById('em_reason');
+      const caja = ta.parentElement;
+      const campo = ta.closest('.edit-reason-box') || ta.parentElement.parentElement;
+      return { ta: Math.round(ta.getBoundingClientRect().width),
+               caja: Math.round(campo.getBoundingClientRect().width),
+               envuelto: caja.classList.contains('tiene-x'),
+               pendiente: caja.dataset ? !!caja.dataset.medir : false };
+    });
+    /* Lo que se mide es la proporción, no un número: el motivo tiene que ocupar
+     * el ancho de su recuadro, sea cual sea la ventana. Antes eran ~220 px de
+     * los ~860 disponibles. */
+    check('el motivo de la edición ocupa el ancho de su recuadro',
+      r.ta > r.caja * 0.8, r);
+    check('...y ya no queda ningún campo sin medir', !r.pendiente, r);
     await p.close();
   }
 

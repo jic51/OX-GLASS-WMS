@@ -6388,7 +6388,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '15.5';
+var APP_VERSION = '15.6';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -6400,7 +6400,7 @@ var APP_VERSION = '15.5';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '4feab779';
+var APP_BUILD = '715d4ced';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -16074,6 +16074,35 @@ function submitMultiEntry(){
         var msg = err.message || String(err);
         _btnLabel(btn, 'Save to System');
         _setModalBusy('moveOverlay', false);
+
+        /* ── N-05 · UN ERROR QUE SE ARREGLA EN EL FORMULARIO NECESITA EL
+         *           FORMULARIO DELANTE ────────────────────────────────────
+         *
+         * Jose, 17/11, probando la v15.5: *"salió un mensaje que decía que la
+         * locación no existe y que la cambie, pero no apareció la ventana para
+         * hacerlo."*
+         *
+         * **Es un fallo que metí yo en la v15.2 con M-04.** Desde entonces la
+         * ventana se cierra en cuanto se manda — y los manejadores de abajo
+         * (`_errorConocido`, el aviso de posible duplicado) fueron escritos
+         * suponiendo que sigue abierta: corrigen campos, bajan cantidades y
+         * ofrecen reintentar **sobre un formulario que ya no se ve**. El
+         * resultado es exactamente lo que describe: un mensaje que pide
+         * arreglar algo que no está en ninguna parte, y la entrada perdida.
+         *
+         * Y no es sólo un estorbo. En sus capturas, `LGI-DE-TOWNHOME2` figura
+         * como llegada con 55 unidades en Incoming y **no existe ni en
+         * Movements ni en el stock**: el material está en el almacén y el
+         * sistema no lo sabe.
+         *
+         * LA REGLA, que es la que faltaba: **si el error es de los datos, la
+         * ventana vuelve ANTES de que nadie intente arreglarlos.** Si es del
+         * entorno —red, cuota, hoja ocupada— no hay nada que corregir y se
+         * queda cerrada con su «Retry», que es lo decidido el 12/11. */
+        if (_enVuelo && _enVuelo.overlay === 'moveOverlay' && !_falloDeEntorno(err)) {
+          _reabrirConLoEscrito('moveOverlay');
+          _enVuelo = null;
+        }
         // Same "possible duplicate" confirmation submitMovement() already has for
         // single movements — addMultiEntry() never got it wired up, so it was
         // showing the raw DUPLICATE_MOVEMENT|rowIdx|minutesAgo error text instead.
@@ -22331,13 +22360,21 @@ function _fallóDespuésDeCerrar(err, overlayId, reintentar){
   if (!_enVuelo || _enVuelo.overlay !== overlayId) return false;   // seguía abierta
   _enVuelo = null;
   var texto = _stripTags(err);
-  if (_falloDeEntorno(err)) {
-    showToast('Not saved — ' + texto, 'err', 14000,
-      { texto: '↻ Retry', hacer: function(){ reintentar(); } });
-  } else {
-    showToast('Not saved — ' + texto + ' · nothing you typed was lost', 'err', 14000,
-      { texto: '✎ Fix', hacer: function(){ _reabrirConLoEscrito(overlayId); } });
-  }
+  /* AQUÍ SÓLO LLEGA LO QUE NO SE ARREGLA EN EL FORMULARIO.
+   *
+   * Hasta la v15.5 esto tenía dos salidas: «Retry» para los fallos de entorno
+   * y «Fix» para los de datos. El 17/11 Jose encontró lo que faltaba — *"salió
+   * un mensaje que decía que la locación no existe y que la cambie, pero no
+   * apareció la ventana para hacerlo"*— y la respuesta correcta no era un
+   * botón mejor: **es que un error de datos devuelva la ventana sin
+   * preguntar**, porque lo primero que hace falta es ver lo que está mal.
+   *
+   * Eso ocurre ahora antes, en el propio manejador del guardado, y cuando
+   * ocurre `_enVuelo` queda vacío, así que esto ni se llama. La rama de «Fix»
+   * se quita en vez de dejarla ahí: código muerto que ofrece algo que ya
+   * sucedió solo es peor que no tener nada. */
+  showToast('Not saved — ' + texto, 'err', 14000,
+    { texto: '↻ Retry', hacer: function(){ reintentar(); } });
   return true;
 }
 
@@ -31502,6 +31539,29 @@ function _vigilarVentanasQueSeAbren(){
 
       var ocupados = el.querySelectorAll('.is-busy');
       for (var j = 0; j < ocupados.length; j++) _btnReset(ocupados[j]);
+
+      /* ── N-06 · Y SE MIDEN LOS CAMPOS QUE NO SE PODÍAN MEDIR ─────────────
+       *
+       * Jose, 17/11, con captura: *"el cuadro del comentario por la edición es
+       * muy pequeño… es muy angosto"*. Y lo era: unos 220 px en una ventana de
+       * 900.
+       *
+       * La causa es la misma que la del buscador en M-06, dos versiones atrás.
+       * `_ponerEquis` envuelve cada campo en un `span.tiene-x` para ponerle su
+       * ✕, y `_equisAncho` decide si ese envoltorio ocupa todo el ancho
+       * **midiéndolo**. Si el campo está escondido cuando se envuelve —y los de
+       * una ventana lo están— no se puede medir, así que queda apuntado como
+       * pendiente y el envoltorio se queda encogido. La regla
+       * `.edit-reason-box textarea{width:100%}` sí se aplicaba: el 100 % era de
+       * un envoltorio de 220 px.
+       *
+       * El re-medido ya existía (`_equisMedir`) y se llamaba en dos sitios: al
+       * cambiar de pestaña y al abrir la ventana de movimientos. **La de editar
+       * no estaba en la lista**, ni ninguna otra — y cada ventana nueva habría
+       * heredado el mismo olvido.
+       *
+       * Aquí no hay lista: abrirse es abrirse, y esto corre para la que sea. */
+      try { _equisMedir(el); } catch (e) {}
     }
   });
   var ventanas = document.querySelectorAll('.overlay');

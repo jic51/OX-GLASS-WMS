@@ -195,11 +195,17 @@ window.__DATA={userRole:'ADMIN',userEmail:'a@b.c',userName:'A',serverVersion:'x'
                texto: t ? t.textContent : '',
                abierta: document.getElementById('moveOverlay').classList.contains('show') };
     });
-    check('un fallo de datos ofrece corregir', /Fix/.test(r.boton || ''), r);
-    check('...y el aviso dice que no se perdió nada', /nothing you typed was lost/.test(r.texto), r);
+    /* CAMBIÓ EL 17/11, Y A MEJOR. Hasta la v15.5 un fallo de datos dejaba la
+     * ventana cerrada y ponía un botón «Fix» en el aviso. Jose encontró lo que
+     * eso significaba de verdad: *"salió un mensaje que decía que la locación
+     * no existe y que la cambie, pero no apareció la ventana para hacerlo"*.
+     * Ahora un error de datos **devuelve la ventana sin preguntar**, porque lo
+     * primero que hace falta es ver lo que está mal. El aviso ya no necesita
+     * ofrecer nada: lo que ofrecía ya pasó. */
+    check('un fallo de datos devuelve la ventana sin preguntar', r.abierta, r);
+    check('...y el aviso dice qué fue', /more than you have/.test(r.texto), r);
 
-    await p.evaluate(() => [].slice.call(document.querySelectorAll('#toastContainer .toast')).pop().querySelector('button').click());
-    await p.waitForTimeout(300);
+    await p.waitForTimeout(100);
     const r2 = await p.evaluate(() => {
       const ov = document.getElementById('moveOverlay');
       return { abierta: ov.classList.contains('show'),
@@ -209,7 +215,7 @@ window.__DATA={userRole:'ADMIN',userEmail:'a@b.c',userName:'A',serverVersion:'x'
                cantidad: (document.querySelector('#mat-locs-1 .loc-qty') || {}).value,
                estante: (document.querySelector('#mat-locs-1 .loc-rack') || {}).value };
     });
-    check('«Fix» reabre la ventana', r2.abierta, r2);
+    check('la ventana está de vuelta', r2.abierta, r2);
     /* LO QUE HACE QUE «Fix» SIRVA DE ALGO. Una ventana que vuelve vacía es
      * peor que no haberla cerrado. */
     check('...con lo escrito todavía dentro',
