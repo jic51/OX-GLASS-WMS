@@ -108,6 +108,10 @@ se lo permite. Ya estaba escrito así en `CAPTURAS-PARA-LA-LANDING.md` (el clip
 >
 > Si alguno sirve para las dos cosas, se dice en su ficha.
 
+> **Los guiones completos, plano a plano y con la pantalla preparada, están en
+> `docs/GUIONES-DE-LOS-VIDEOS.md`.** Aquí está el porqué de cada uno; allí está
+> qué grabar.
+
 ## Las reglas que valen para todos
 
 - **Vertical, 15–45 segundos, sin voz, con rótulos.** Se ve con el sonido
