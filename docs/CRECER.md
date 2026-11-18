@@ -143,6 +143,13 @@ ahora, lo haces conmigo y lo tienes primero.»*
 
 ---
 
+> **18/11 — y hay una lista más, que es otra cosa.** `docs/LOYVERSE-Y-LOS-VIDEOS.md`
+> lleva **nueve vídeos para redes**, que no es lo mismo que los de la landing:
+> éstos tienen que funcionar para alguien que **no te buscaba**. La landing
+> explica el producto a quien ya llegó; las redes tienen que hacer que llegue.
+> Ahí está también el análisis de Loyverse, que es de donde sale la cita para
+> el vídeo de los datos.
+
 ## 4 · Los vídeos de la landing
 
 Dijiste: **grabados, y sólo en la landing.**
