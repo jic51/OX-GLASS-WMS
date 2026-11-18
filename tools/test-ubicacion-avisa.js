@@ -60,8 +60,20 @@ const llamadas = (sinComentarios.match(/(?:^|[^\w.])_errorConocido\s*\(/gm) || [
 const definicion = (sinComentarios.match(/^function _errorConocido\s*\(/gm) || []).length;
 
 check('`_errorConocido` está definida una sola vez', definicion === 1, { definicion });
-check('y la llaman los tres caminos de guardado (' + (llamadas - definicion) + ' llamadas)',
-  llamadas - definicion === 3, { llamadas, definicion });
+/* ── 18/11 · DE «EXACTAMENTE TRES» A «AL MENOS LOS TRES» ────────────────────
+ *
+ * Este número era un sustituto de lo que de verdad importa, y lo que de verdad
+ * importa se comprueba tres líneas más abajo: **que cada camino de guardado
+ * pase por `_errorConocido`**. Eso sigue intacto.
+ *
+ * Lo que cambió: la entrada ahora comprueba el estante **antes de mandar**
+ * —para no cerrar la ventana y esperar un viaje por algo que esta pantalla ya
+ * sabe— y esa comprobación entra por la misma puerta. Es un cuarto sitio que
+ * USA la cadena, no un cuarto sitio que la copia. Clavar el número a tres
+ * habría castigado precisamente lo que esta prueba quiere: que todo pase por
+ * ahí. */
+check('y la llaman al menos los tres caminos de guardado (' + (llamadas - definicion) + ' llamadas)',
+  llamadas - definicion >= 3, { llamadas, definicion });
 
 /* Y ninguno de los tres puede volver a tener su propia copia de la lista. */
 for (const accion of ['addMovement', 'addMultiEntry', 'addMultiExit']) {

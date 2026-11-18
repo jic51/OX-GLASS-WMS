@@ -179,6 +179,37 @@ function mundo(opciones){
     '  withFailureHandler: function(f){ this._no = f; return this; },' +
     '  processMovement: function(accion, p){ __capturar(accion, p, this._ok, this._no); }' +
     '};', ctx);
+  /* `_primeraUbicacionMala`, DOBLADA, y con la razón escrita.
+   *
+   * Desde la v15.7 `submitMultiEntry` comprueba el estante **antes de mandar**,
+   * para no cerrar la ventana y esperar un viaje por algo que la pantalla ya
+   * sabe. Esa comprobación necesita `_esCampoDeUbicacion`, `_esSitioDeFuera` y
+   * la lista de ubicaciones, y nada de eso es asunto de esta prueba: lo que
+   * aquí se mide es que la tarjeta de «llegó y falta su entrada» se salde
+   * cuando la entrada se guarda.
+   *
+   * Devuelve `null` —«todos los estantes existen»— que es el caso normal y el
+   * único que deja llegar al camino que esta prueba sí mide. La comprobación
+   * de verdad tiene la suya en `test-lo-del-16-11.js`. */
+  vm.runInContext('function _primeraUbicacionMala(){ return null; }', ctx);
+
+  /* Y LO QUE M-04 (v15.2) AÑADIÓ AL CAMINO DE GUARDADO.
+   *
+   * Esta prueba lleva roja desde aquella versión y no me di cuenta: al cerrar
+   * la ventana en cuanto se manda, `submitMultiEntry` pasó a depender de
+   * `_cerrarYSeguir`, `_enVuelo` y `_fallóDespuésDeCerrar`, y aquí no existe
+   * ninguno. Doblados, porque esta prueba mide otra cosa — cerrar la ventana
+   * tiene la suya en `test-cerrar-y-seguir.js`.
+   *
+   * `_fallóDespuésDeCerrar` devuelve `false` a propósito: así el camino de
+   * fallo sigue hasta donde esta prueba lo mira, en vez de cortarse antes. */
+  vm.runInContext(
+    'var _enVuelo = null;' +
+    'function _cerrarYSeguir(){ }' +
+    'function _reabrirConLoEscrito(){ }' +
+    'function _falloDeEntorno(){ return false; }' +
+    'function _fallóDespuésDeCerrar(){ return false; }', ctx);
+
   // _h de verdad: es quien cuelga el token de sesión del payload. Doblarla
   // habría dejado sin comprobar que el token viaja.
   vm.runInContext(fnSrc('_h'), ctx);

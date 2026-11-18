@@ -289,8 +289,14 @@ window.__DATA=${JSON.stringify(DATA)};
         const fila = q('#mat-locs-1 .loc-row');
         if (fila) {
           const r = fila.querySelector('.loc-rack'), c = fila.querySelector('.loc-qty');
-          r.value = 'NO-EXISTE'; r.dispatchEvent(new Event('input'));
-          c.value = '55';        c.dispatchEvent(new Event('input'));
+          /* UN ESTANTE QUE ESTA PANTALLA SÍ CONOCE. Desde N-07 el formulario
+           * comprueba la lista en memoria antes de mandar, así que un estante
+           * inventado ya no llega al servidor — y este caso dejaría de
+           * ejercitarse. Lo que queda, y sigue siendo real, es que el servidor
+           * rechace uno que aquí constaba: alguien lo borró entre que esta
+           * pantalla cargó su lista y se pulsó Guardar. */
+          r.value = 'C4A'; r.dispatchEvent(new Event('input'));
+          c.value = '55';  c.dispatchEvent(new Event('input'));
         }
         if (typeof syncMatLineQty === 'function') syncMatLineQty(1);
       }, 60);
@@ -306,7 +312,7 @@ window.__DATA=${JSON.stringify(DATA)};
     check('la entrada se manda y la ventana se cierra', mandado.enVuelo && !mandado.abierta, mandado);
 
     // El servidor contesta lo que le contestó a Jose.
-    await p.evaluate(() => window.__pend.no({ message: 'UNKNOWN_LOCATION|NO-EXISTE|WINDOW' }));
+    await p.evaluate(() => window.__pend.no({ message: 'UNKNOWN_LOCATION|C4A|' }));
     await p.waitForTimeout(500);
     const tras = await p.evaluate(() => {
       const ov = document.getElementById('moveOverlay');
@@ -348,6 +354,72 @@ window.__DATA=${JSON.stringify(DATA)};
     check('el motivo de la edición ocupa el ancho de su recuadro',
       r.ta > r.caja * 0.8, r);
     check('...y ya no queda ningún campo sin medir', !r.pendiente, r);
+    await p.close();
+  }
+
+
+  // ════════════════════════════════════════════════════════════════════════
+  console.log('\n═══ N-07 · EL ESTANTE MALO SE VE ANTES DE MANDAR ═══\n');
+
+  {
+    /* Jose, 18/11: *"debemos mejor hacer que no se cierre la ventana si no hay
+     * una locación real; la ventana se cierra y por varios segundos no pasa
+     * nada hasta que aparece un popup"*. Y: *"al seleccionar la otra locación
+     * sólo vuelve a abrir la ventana y me dice que cambie la locación, lo que
+     * no tiene sentido si ya me hizo elegir otra."* */
+    const p = await abrir();
+    await p.evaluate(() => {
+      openMoveModal('ENTRY');
+      setTimeout(function(){
+        const q = (x) => document.querySelector(x);
+        const cat = q('#mat-cat-1'), nom = q('#mat-name-1');
+        if (cat) { cat.value = 'WINDOW'; cat.dispatchEvent(new Event('change')); }
+        if (nom) { nom.value = 'SH 3048 WHITE'; nom.dispatchEvent(new Event('input')); }
+        const fila = q('#mat-locs-1 .loc-row');
+        if (fila) {
+          /* `c 4 a` en minúscula y con espacios: el mismo estante que `C4A`
+           * para una persona, y lo que teclea quien va con prisa. */
+          const r = fila.querySelector('.loc-rack'), c = fila.querySelector('.loc-qty');
+          r.value = 'c 4 a'; r.dispatchEvent(new Event('input'));
+          c.value = '55';    c.dispatchEvent(new Event('input'));
+        }
+        if (typeof syncMatLineQty === 'function') syncMatLineQty(1);
+      }, 60);
+    });
+    await p.waitForTimeout(450);
+    await p.evaluate(() => { window.__pend = null; submitMultiEntry(); });
+    await p.waitForTimeout(350);
+
+    const r = await p.evaluate(() => ({
+      viajo:   !!window.__pend,
+      abierta: document.getElementById('moveOverlay').classList.contains('show'),
+      /* Se lee el título del diálogo de verdad, por su id, en vez de buscar
+       * el texto suelto en la página: `document.body.textContent` encuentra
+       * cualquier rastro, también escondido, y la comprobación habría dicho
+       * «ok» con el diálogo cerrado. */
+      pregunta: (document.getElementById('confirmTitle') || {}).textContent || '',
+      boton:    (document.getElementById('confirmOkBtn') || {}).textContent || ''
+    }));
+    /* LAS DOS QUE CONTESTAN LA QUEJA: no se manda nada, y la ventana no se
+     * cierra. Sin viaje no hay «varios segundos de nada». */
+    check('un estante que no existe NO se manda al servidor', !r.viajo, r);
+    check('...y la ventana del formulario no se cierra', r.abierta, r);
+    check('...y se pregunta por el parecido',
+      /No such location/.test(r.pregunta) && /Use C4A/.test(r.boton), r);
+
+    /* Y AL ELEGIR, SE ACTÚA. Antes ponía el estante bueno en el campo y se
+     * quedaba esperando otro clic en Guardar — pedir una decisión y no actuar
+     * sobre ella es pedirla dos veces. */
+    await p.evaluate(() => {
+      document.getElementById('confirmOkBtn').click();
+    });
+    await p.waitForTimeout(600);
+    const r2 = await p.evaluate(() => ({
+      estante: (document.querySelector('#mat-locs-1 .loc-rack') || {}).value,
+      viajo:   !!window.__pend
+    }));
+    check('elegir el parecido lo pone en el campo', r2.estante === 'C4A', r2);
+    check('...y manda la entrada sin pedir otro clic', r2.viajo, r2);
     await p.close();
   }
 

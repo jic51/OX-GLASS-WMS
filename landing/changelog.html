@@ -105,6 +105,27 @@
     <!-- M-06 · Llegar a los movimientos sin bajar una pantalla entera. -->
     <!-- Las cuatro del 16/11. N-01 es la unica que podia costar dinero. -->
     <!-- N-05 era mio, de la v15.2. N-06 es el mismo patron que M-06. -->
+    <!-- N-07 · El estante malo se ve antes de mandar, y elegir ya es contestar. -->
+    <div class="entry" id="v15-7">
+      <span class="ver">v15.7</span>
+      <span class="tag fix">Fix</span>
+      <h3>A shelf that does not exist is caught before anything is sent</h3>
+      <p><b>Typing a rack the warehouse does not have used to close the window, go quiet for
+         several seconds, and only then ask about it.</b> The only one who knew the rack was wrong
+         was the server &mdash; so the question had to travel there and back. But the screen
+         already holds the list of locations. It is asked here now: nothing closes, nothing
+         waits, nothing travels.</p>
+      <p><b>And choosing an answer now counts as answering.</b> When the app offered
+         &ldquo;did you mean A5A?&rdquo;, picking it put A5A in the box and then asked you to save
+         again &mdash; and on the multi-material entry form it could not even find the box, so it
+         fell back to telling you to type it yourself. Picking the shelf now fills it in and saves.</p>
+      <p>The check here is a courtesy, not a replacement: the server still has the last word,
+         because a rack can be deleted by someone else between the moment this screen loaded its
+         list and the moment you press save.</p>
+      <p class="meta">Typing a rack in lower case with spaces must offer the real one, must not
+         send anything, must not close the window &mdash; and picking it must save without a
+         second click.</p>
+    </div>
     <div class="entry" id="v15-6">
       <span class="ver">v15.6</span>
       <span class="tag fix">Fix</span>

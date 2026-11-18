@@ -310,6 +310,69 @@ es exactamente para esto.
 
 ---
 
+## 📋 LO DEL 18/11 · N-07 ✅ **v15.7**
+
+### 🟠 N-07 · El estante malo: preguntado tarde, y la respuesta tirada
+
+Jose, probando la v15.6: *"debemos mejor hacer que no se cierre la ventana si
+no hay una locación real; la ventana se cierra y por varios segundos no pasa
+nada hasta que aparece un popup. Y al seleccionar la otra locación, sólo vuelve
+a abrir la ventana y me dice a mí que cambie la locación, lo que no tiene
+sentido si ya me hizo elegir otra."*
+
+**Dos fallos distintos en la misma frase, y los dos míos.**
+
+**(a) Se preguntaba tarde.** El único que sabía que el estante no existía era el
+servidor, así que el camino era: cerrar → viajar → volver → preguntar. Varios
+segundos por algo que **esta pantalla ya sabía**: la lista de ubicaciones está
+en memoria desde que la app abre. Ahora se comprueba antes de mandar.
+
+> **Y entra por `_errorConocido`, no por `_ubicacionDesconocida` a pelo.**
+> `test-ubicacion-avisa` lo prohíbe expresamente —*«la copia de la lista es lo
+> que falló y no debe volver»*— y su motivo sigue siendo válido. Que la
+> comprobación sea local no la autoriza a saltarse la única puerta; al
+> contrario. Lo que sí hubo que relajar es el `=== 3` de esa prueba: era un
+> sustituto de lo que de verdad importa —que **cada** camino de guardado pase
+> por la cadena, que se comprueba aparte— y clavado a tres castigaba justo lo
+> que esa prueba quiere.
+
+**(b) Elegir no contaba como contestar.** `_ponerUbicacion` conocía **cuatro
+campos por su id**: los de la ventana simple y los de editar. El formulario de
+entrada con varios materiales no usa ninguno — sus estantes son `.loc-rack`
+dentro de `#mat-locs-N`. Así que para la pantalla donde más se usa no encontraba
+nada y caía a su última línea: *«Type A5A in the location box and save again»*.
+**Eso es literalmente lo que Jose leyó.** Ahora busca el campo que de verdad
+tiene el valor rechazado, y al ponerlo, guarda.
+
+**Una lista de ids es una lista que hay que acordarse de ampliar.** Es el mismo
+patrón que `_equisMedir` el 17/11 y que `.toolbar` el 16/11: tres versiones
+seguidas, tres listas que había que mantener a mano.
+
+### 🔴 Y una prueba llevaba roja desde la v15.2 sin que yo lo supiera
+
+`test-entry-todo-corre` monta `submitMultiEntry` en su propio contexto. M-04 le
+añadió dependencias —`_cerrarYSeguir`, `_enVuelo`, `_fallóDespuésDeCerrar`— y
+**no la corrí al publicar aquella versión**. Ha estado en rojo cinco versiones.
+
+**Lo que esto dice de mi forma de trabajar, y queda escrito:** corro los
+vecinos que se me ocurren, y los que se me ocurren son los que tocan la misma
+pantalla. Ésta toca la misma *función*, que es un vecindario distinto y más
+difícil de ver. Para las versiones que cambian un camino de guardado, el barrido
+tiene que ser por nombre de función, no por pantalla.
+
+### 📋 Y una corrección a lo que le dije a Jose
+
+Le dije que las 55 unidades de `LGI-DE-TOWNHOME2` había que meterlas a mano. Él
+avisó: *"el inventario ya cuenta los 55"*. **El consejo estaba mal.** En Acopio
+el stock es la suma de los movimientos, así que si los cuenta, la entrada
+existe. Hacer otra habría sumado 55 que no llegaron.
+
+Los pasos correctos, en `docs/LAS-55-UNIDADES.md`. Y la regla: una cuenta que no
+cuadra se corrige con **ADJUST**, nunca con una entrada nueva — una entrada dice
+«llegó material», y eso sería mentira sobre lo que pasó.
+
+---
+
 ## 📋 LO DEL 17/11 · N-05 y N-06 ✅ **v15.6**
 
 ### 🔴 N-05 · Un error del formulario sin formulario — y una entrada perdida

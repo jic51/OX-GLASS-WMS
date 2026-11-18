@@ -16,6 +16,32 @@ Esto es ese documento, y se actualiza **con cada versión**. Lo de arriba es lo
 
 ---
 
+## v15.7 — el estante que no existe, bien hecho
+
+### 1 · No se cierra, no espera, no viaja
+
+1. Haz una **entrada** y escribe un estante que **sí exista pero mal**: en
+   minúscula y con espacios, por ejemplo `c 4 a` en vez de `C4A`.
+2. Guarda.
+3. **Tiene que pasar:** la pregunta sale **al instante**, la ventana **no se
+   cierra**, y no hay varios segundos de nada.
+4. Pulsa **«Use C4A»**.
+5. **Tiene que pasar:** lo pone en el campo **y guarda**. Sin pedirte otro clic
+   y sin decirte que lo escribas tú.
+
+### 2 · Un estante que de verdad no existe
+
+1. Lo mismo, con un nombre inventado (`ZZZ9`).
+2. **Tiene que pasar:** te ofrece **crearlo**. Si aceptas, lo crea y guarda.
+
+### 3 · Y lo de antes sigue en pie
+
+Si el servidor rechaza un estante que esta pantalla sí conocía —porque alguien
+lo borró mientras tanto— la ventana vuelve con todo dentro. Eso es la v15.6 y
+no cambia.
+
+---
+
 ## v15.6 — lo que salió al probar la v15.5
 
 ### 1 · El estante que no existe  🔴 *era un fallo mío de la v15.2*
@@ -41,10 +67,15 @@ Y la otra mitad, que tiene que seguir como estaba:
 
 ### 3 · Y de paso, mira esto cuando puedas
 
-`LGI-DE-TOWNHOME2` sigue sin su entrada: 55 unidades que llegaron el 21/10 y
-que el sistema no tiene. Esto no lo arregla una versión — **hay que hacer esa
-entrada a mano**. Si hubo más entradas que se perdieron igual, salen buscando
-en Incoming las que estén en *Arrived* y no aparezcan en Movements.
+> **CORREGIDO EL 18/11.** Aquí decía que había que hacer esa entrada a mano, y
+> **era un consejo equivocado**: Jose avisó de que el inventario ya cuenta los
+> 55. En Acopio el stock **es la suma de los movimientos**, así que si los
+> cuenta, la entrada existe — lo que falló fue encontrarla. Hacer otra habría
+> sumado 55 que no llegaron.
+>
+> **Los pasos correctos están en `docs/LAS-55-UNIDADES.md`.** Y la regla que no
+> hay que olvidar: para corregir una cuenta se usa **ADJUST**, nunca una entrada
+> nueva.
 
 ---
 

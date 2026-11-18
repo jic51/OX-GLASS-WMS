@@ -6388,7 +6388,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '15.6';
+var APP_VERSION = '15.7';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -6400,7 +6400,7 @@ var APP_VERSION = '15.6';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '715d4ced';
+var APP_BUILD = '37b0c077';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -13105,6 +13105,63 @@ function _stripTags(err){
  *     mirando una puerta cerrada.
  *
  * Devuelve true si se ha hecho cargo del error. */
+/* ── N-07 · UN ESTANTE QUE NO EXISTE SE VE ANTES DE MANDAR ─────────────────
+ *
+ * Jose, 18/11: *"debemos mejor hacer que no se cierre la ventana si no hay una
+ * locación real; además la ventana del entry se cierra, y por varios segundos
+ * no pasa nada hasta que aparece un popup."*
+ *
+ * Y es la respuesta correcta. Hasta la v15.6 el único que sabía que el estante
+ * no existía era el servidor, así que el camino era: cerrar la ventana →
+ * esperar el viaje de ida y vuelta → traerla de vuelta → preguntar. Varios
+ * segundos de nada por algo que **esta pantalla ya sabía**: la lista de
+ * ubicaciones está en memoria desde que la app abre.
+ *
+ * Preguntado aquí, no se cierra nada, no se espera nada y no viaja nada.
+ *
+ * LO QUE NO HACE, Y ES DELIBERADO: no sustituye la comprobación del servidor.
+ * Ésta es una cortesía para que no haya que esperar; la que manda sigue siendo
+ * la de allí, porque entre que esta pantalla cargó su lista y alguien pulsa
+ * Guardar, otra persona pudo borrar ese estante. Dos comprobaciones, una
+ * rápida y una de verdad — no dos verdades.
+ */
+function _ubicacionNoExiste(valor){
+  var v = String(valor || '').trim();
+  if (!v) return null;
+  /* Se compara ignorando mayúsculas, espacios y guiones: `a 5 a`, `A-5-A` y
+   * `A5A` son el mismo estante para una persona, y quien lo teclea con prisa
+   * y un guante puesto no está equivocándose de sitio. */
+  var norm = function(x){ return String(x || '').toUpperCase().replace(/[\s\-_.]/g, ''); };
+  var n = norm(v);
+  var lista = (typeof config === 'object' && config && config.locations) || [];
+  var parecida = '';
+  for (var i = 0; i < lista.length; i++) {
+    var nm = String((lista[i] && lista[i].name) || lista[i] || '');
+    if (nm.trim().toUpperCase() === v.toUpperCase()) return null;   // existe
+    if (!parecida && norm(nm) === n) parecida = nm;
+  }
+  return { tecleada: v, parecida: parecida };
+}
+
+/* El primer estante del formulario que no existe, o null.
+ *
+ * Qué es «un campo de ubicación» no se decide aquí: lo contesta
+ * `_esCampoDeUbicacion`, que ya existe y ya sabe que un sitio de FUERA de la
+ * bodega —una obra, una dirección— no es un estante del almacén. Repetir esa
+ * regla aquí serían dos sitios que tienen que coincidir sin que nada lo
+ * obligue. */
+function _primeraUbicacionMala(raiz){
+  var campos = (raiz || document).querySelectorAll('input');
+  for (var i = 0; i < campos.length; i++) {
+    var el = campos[i];
+    if (!_esCampoDeUbicacion(el)) continue;
+    if (!el.offsetParent) continue;            // escondido: no es parte de esto
+    var mala = _ubicacionNoExiste(el.value);
+    if (mala) return mala;
+  }
+  return null;
+}
+
 function _ubicacionDesconocida(err, reintentar){
   var msg = (err && err.message) || String(err || '');
   var i = msg.indexOf('UNKNOWN_LOCATION|');
@@ -13123,7 +13180,19 @@ function _ubicacionDesconocida(err, reintentar){
       message: 'There is no "' + tecleada + '" in your warehouse.\n\n' +
                'Did you mean ' + parecida + '?',
       confirmText: 'Use ' + parecida,
-      onConfirm: function(){ _ponerUbicacion(parecida); }
+      /* ── N-07 · ELEGIR YA ES CONTESTAR ────────────────────────────────────
+       * Jose, 18/11: *"al seleccionar la otra locación, sólo vuelve a abrir la
+       * ventana del entry y me dice a mí que cambie la locación, lo que no
+       * tiene sentido si ya me hizo elegir otra."*
+       * Tenía razón: esto ponía el estante correcto en el campo y **ahí se
+       * quedaba**, esperando que volviera a pulsar Guardar. Pedir una decisión
+       * y luego no actuar sobre ella es pedirla dos veces. */
+      onConfirm: function(){
+        /* Sólo se reintenta si de verdad se pudo poner. Si no se encontró el
+         * campo, reintentar mandaría otra vez exactamente lo mismo que acaba
+         * de fallar, y la persona vería el mismo diálogo en bucle. */
+        if (_ponerUbicacion(parecida, tecleada) && typeof reintentar === 'function') reintentar();
+      }
     });
     return true;
   }
@@ -13201,17 +13270,46 @@ function _categoriaDesconocida(err){
 /* Deja la ubicación corregida donde estaba la mala. Qué casilla es depende del
  * tipo de movimiento, y es la misma regla que usa el servidor: el destino,
  * salvo cuando el movimiento sólo tiene origen. */
-function _ponerUbicacion(valor){
-  var ids = ['destLoc', 'em_destLoc', 'sourceLoc', 'em_sourceLoc'];
-  for (var i = 0; i < ids.length; i++){
-    var el = document.getElementById(ids[i]);
-    if (el && el.offsetParent !== null && String(el.value || '').trim()){
-      el.value = valor;
-      el.focus();
-      return;
-    }
+/* ── N-07 · PONER EL ESTANTE DONDE ESTABA EL MALO ──────────────────────────
+ *
+ * Jose, 18/11: *"al seleccionar la otra locación… me dice a mí que cambie la
+ * locación, lo que no tiene sentido si ya me hizo elegir otra."*
+ *
+ * **Y el mensaje que leyó es literalmente la última línea de esta función.**
+ * Conocía CUATRO campos, por su id: los de la ventana simple de movimiento y
+ * los de editar. El formulario de entrada con varios materiales no usa
+ * ninguno de ellos — sus estantes son `.loc-rack` dentro de `#mat-locs-N`, y
+ * los de salida son `.el-rack`. Así que para la pantalla donde más se usa,
+ * esto no encontraba nada y caía al *«escríbelo tú y guarda otra vez»*.
+ *
+ * Una lista de ids es una lista que hay que acordarse de ampliar. Ahora se
+ * busca **el campo que de verdad tiene el valor rechazado**, y qué cuenta como
+ * campo de ubicación lo sigue contestando `_esCampoDeUbicacion`, que es donde
+ * ya vivía esa regla.
+ *
+ * `tecleada` es opcional a propósito: cuando el servidor dice cuál rechazó, se
+ * sustituye ése y no otro — en un formulario de ocho materiales eso importa. */
+function _ponerUbicacion(valor, tecleada){
+  var norm = function(x){ return String(x || '').toUpperCase().replace(/[\s\-_.]/g, ''); };
+  var buscado = norm(tecleada || '');
+
+  var campos = document.querySelectorAll('input');
+  var primero = null;
+  for (var i = 0; i < campos.length; i++){
+    var el = campos[i];
+    if (!_esCampoDeUbicacion(el)) continue;
+    if (el.offsetParent === null) continue;
+    var v = String(el.value || '').trim();
+    if (!v) continue;
+    if (buscado && norm(v) === buscado){ el.value = valor; el.focus(); return true; }
+    if (!primero) primero = el;
   }
+  /* Sin saber cuál era, el primero con algo escrito: es lo que había antes y
+   * en una ventana de un solo estante acierta siempre. */
+  if (primero){ primero.value = valor; primero.focus(); return true; }
+
   showToast('Type ' + valor + ' in the location box and save again', 'info', 6000);
+  return false;
 }
 
 /* ── UN SOLO SITIO QUE DECIDE QUÉ HACER CON UN ERROR MARCADO ────────────────
@@ -15939,6 +16037,23 @@ function submitMultiEntry(){
     notifyRecipients: notifyPayload,
     forceSubmit:      false
   };
+
+  /* N-07 · Antes de cerrar nada y antes de viajar: si un estante no existe,
+   * se pregunta aquí mismo, con el formulario delante. Se reutiliza el MISMO
+   * diálogo que atiende la respuesta del servidor —«¿querías decir A5A?» o
+   * «¿la creo?»— fabricando el error que ese diálogo espera. Una sola forma de
+   * preguntarlo, dos sitios desde los que llega. */
+  /* **Y entra por `_errorConocido`, no por `_ubicacionDesconocida` a pelo.**
+   * `test-ubicacion-avisa` prohíbe lo segundo, y su motivo sigue siendo
+   * válido: lo que falló una vez fue que cada camino de guardado tuviera su
+   * propia idea de qué hacer con un error marcado. Que esta comprobación sea
+   * local no la autoriza a saltarse la única puerta — al contrario, es más
+   * razón para usarla: el día que un error marcado cambie de forma, cambia en
+   * un sitio y esto lo hereda. */
+  var _mala = _primeraUbicacionMala(document.getElementById('moveOverlay'));
+  if (_mala && _errorConocido(
+        { message: 'UNKNOWN_LOCATION|' + _mala.tecleada + '|' + _mala.parecida },
+        function(){ submitMultiEntry(); })) return;
 
   var btn = document.getElementById('moveSubmit');
   var _busyState = { tries: 0 };
