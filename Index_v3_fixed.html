@@ -4017,6 +4017,23 @@
       .toast{max-width:100%;min-width:0}
     }
 
+    /* ── N-08 · LA FILA QUE AÚN NO EXISTE ───────────────────────────────────
+     * Gris, sin bordes de fila normal y latiendo despacio. Tiene que leerse
+     * como «esto todavía no es un movimiento», no como uno que no se puede
+     * tocar: por eso no lleva ni casilla, ni botones, ni la banda de color del
+     * tipo, que son las tres cosas que hacen que una fila parezca de verdad. */
+    .fila-fantasma td{color:var(--muted);font-style:italic;font-size:.82rem;
+      background:repeating-linear-gradient(90deg,transparent,transparent 8px,
+        rgba(0,0,0,.025) 8px,rgba(0,0,0,.025) 16px);
+      animation:fantasmaLatido 1.4s ease-in-out infinite}
+    .fantasma-pt{display:inline-block;width:9px;height:9px;border-radius:50%;
+      background:var(--accent);margin-right:var(--sp-3);vertical-align:middle;
+      animation:fantasmaLatido 1.4s ease-in-out infinite}
+    @keyframes fantasmaLatido{0%,100%{opacity:.35}50%{opacity:.85}}
+    @media (prefers-reduced-motion:reduce){
+      .fila-fantasma td,.fantasma-pt{animation:none;opacity:.6}
+    }
+
     /* ── M-06 · EN EL ORDENADOR, LA BARRA NO SE ENTERA ──────────────────────
      * `display:contents` hace que la caja desaparezca del reparto y sus hijos
      * se coloquen como si colgaran directamente de la barra. Es lo que permite
@@ -6388,7 +6405,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '15.7';
+var APP_VERSION = '15.8';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -6400,7 +6417,7 @@ var APP_VERSION = '15.7';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '37b0c077';
+var APP_BUILD = '9e544f2d';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -9432,6 +9449,10 @@ function renderStats(){
 
   var banner    = document.getElementById('alertBanner');
   var alertText = document.getElementById('alertText');
+
+  /* En Básico esta franja y su panel se ven apagados y contestan la oferta de
+     los mínimos. No se hace aquí: se hace una vez en `_aplicarBasic`, que es
+     donde está la lista de zonas. Ver N-11 allí. */
 
   if (zeroItems.length || belowMin.length){
     // Title + counter only — the full breakdown (names, quantities) lives one
@@ -13162,6 +13183,30 @@ function _primeraUbicacionMala(raiz){
   return null;
 }
 
+/* Crear el estante y seguir con lo que se estaba haciendo.
+ *
+ * Estaba escrito dentro del diálogo de «no existe y puedes crearla». Desde
+ * N-10 también lo ofrece el diálogo de «¿querías decir A?», así que vive
+ * aparte: si estuviera copiado en los dos, serían dos sitios que tienen que
+ * crear la ubicación igual sin que nada lo obligue — y uno de ellos se
+ * olvidaría de actualizar la lista local, que es el detalle que hace que el
+ * siguiente movimiento no vuelva a chocar con lo mismo. */
+function _crearUbicacionYSeguir(nombre, reintentar){
+  _cfgAddValue('locations', nombre, function(ok, e2){
+    if (!ok){ showToast('Could not create it: ' + e2, 'err', 6000); return; }
+    if (typeof config === 'object' && config && Array.isArray(config.locations) &&
+        !config.locations.some(function(l){ return String(l.name).toUpperCase() === nombre.toUpperCase(); })) {
+      config.locations.push({ name: nombre, type: 'RACK' });
+      var dlDest = document.getElementById('rackListDest');
+      if (dlDest) { var op = document.createElement('option'); op.value = nombre; dlDest.appendChild(op); }
+      var dl = document.getElementById('rackList');
+      if (dl) { var op2 = document.createElement('option'); op2.value = nombre; dl.appendChild(op2); }
+    }
+    showToast('Location ' + nombre + ' created', 'ok');
+    if (typeof reintentar === 'function') reintentar();
+  });
+}
+
 function _ubicacionDesconocida(err, reintentar){
   var msg = (err && err.message) || String(err || '');
   var i = msg.indexOf('UNKNOWN_LOCATION|');
@@ -13174,11 +13219,28 @@ function _ubicacionDesconocida(err, reintentar){
                  (userRole === 'WAREHOUSE' && !!(rolePerms || {}).canManageCatalog);
 
   if (parecida) {
+    /* ── N-10 · LAS DOS SALIDAS, NO UNA ───────────────────────────────────
+     *
+     * Jose, 18/11: *"si la ubicación que se ingresa no está creada (y me da la
+     * opción para crearla antes de guardar), ¿por qué no puede darme la opción
+     * de crearla al intentar guardar?"*
+     *
+     * Tenía razón y era una incoherencia nuestra: el aviso que sale **al
+     * escribir** ofrece las dos —«Use A» y «+ Create M»— y este diálogo, para
+     * el mismo caso, ofrecía sólo una. Que haya un estante parecido no
+     * significa que sea el que la persona quería; a lo mejor `M` es un pasillo
+     * nuevo de verdad.
+     *
+     * `onCancel` existe justo para esto desde la v12.48 — *«hay avisos donde
+     * las DOS respuestas son acciones»*. Y crear sólo se ofrece a quien puede:
+     * un botón que va a ser rechazado es peor que no tenerlo. */
     _showConfirm({
       icon: '📍',
       title: 'No such location: ' + tecleada,
       message: 'There is no "' + tecleada + '" in your warehouse.\n\n' +
                'Did you mean ' + parecida + '?',
+      cancelText: puede ? ('Create ' + tecleada) : undefined,
+      onCancel:   puede ? function(){ _crearUbicacionYSeguir(tecleada, reintentar); } : undefined,
       confirmText: 'Use ' + parecida,
       /* ── N-07 · ELEGIR YA ES CONTESTAR ────────────────────────────────────
        * Jose, 18/11: *"al seleccionar la otra locación, sólo vuelve a abrir la
@@ -13203,22 +13265,7 @@ function _ubicacionDesconocida(err, reintentar){
       message: 'There is no "' + tecleada + '" in your warehouse yet.\n\n' +
                'Create it as a new location and save this movement?',
       confirmText: 'Create ' + tecleada,
-      onConfirm: function(){
-        _cfgAddValue('locations', tecleada, function(ok, e2){
-          if (!ok){ showToast('Could not create it: ' + e2, 'err', 6000); return; }
-          /* La lista local se actualiza antes de reintentar: si no, el
-           * desplegable seguiría sin ofrecerla y el siguiente movimiento
-           * volvería a chocar con lo mismo que acabamos de arreglar. */
-          if (config && Array.isArray(config.locations) &&
-              !config.locations.some(function(l){ return String(l.name).toUpperCase() === tecleada.toUpperCase(); })) {
-            config.locations.push({ name: tecleada, type: 'RACK' });
-            var dlDest = document.getElementById('rackListDest');
-            if (dlDest) { var op = document.createElement('option'); op.value = tecleada; dlDest.appendChild(op); }
-          }
-          showToast('Location ' + tecleada + ' created', 'ok');
-          if (typeof reintentar === 'function') reintentar();
-        });
-      }
+      onConfirm: function(){ _crearUbicacionYSeguir(tecleada, reintentar); }
     });
     return true;
   }
@@ -16066,6 +16113,7 @@ function submitMultiEntry(){
       .withSuccessHandler(function(res){
         _setModalBusy('moveOverlay', false);
         _enVuelo = null;   // M-04: salió bien, no hay nada que reabrir
+        _limpiarGuardando();   // N-08: la fila de verdad viene detrás
         // La entrada existe. Si este formulario venía de una tarjeta de "llegó
         // y falta su entrada", queda saldada aquí.
         //
@@ -16189,6 +16237,7 @@ function submitMultiEntry(){
         var msg = err.message || String(err);
         _btnLabel(btn, 'Save to System');
         _setModalBusy('moveOverlay', false);
+        _limpiarGuardando();   // N-08: no se guardó, así que la sombra se va
 
         /* ── N-05 · UN ERROR QUE SE ARREGLA EN EL FORMULARIO NECESITA EL
          *           FORMULARIO DELANTE ────────────────────────────────────
@@ -16252,7 +16301,12 @@ function submitMultiEntry(){
 
     /* M-04 · AQUÍ SE CIERRA, y aquí y no antes: si construir la petición
      * hubiera fallado, la ventana sigue abierta con el error delante. */
-    _cerrarYSeguir('moveOverlay', function(){ _doMultiSubmit(force); });
+    /* El resumen es lo que la persona reconoce como SUYO: el material si es
+     * uno, y cuántos si son varios. «1 movement» no le dice a nadie cuál. */
+    _cerrarYSeguir('moveOverlay', function(){ _doMultiSubmit(force); },
+      materials.length === 1
+        ? ((materials[0].name || 'material') + ' · ' + (materials[0].qty || ''))
+        : (materials.length + ' materials'));
   }
 
   _doMultiSubmit(false);
@@ -22450,12 +22504,78 @@ function _falloDeEntorno(err){
   return /SYSTEM_BUSY|QUOTA|LOCK|TIMEOUT|timed out|network|Network|Failed to fetch|internal error|Service invoked too many times/i.test(m);
 }
 
+/* ── N-08 · MIENTRAS VIAJA, SE VE QUE VIAJA ────────────────────────────────
+ *
+ * Jose, 18/11: *"al guardar un entry la ventana se cierra, lo que yo quería,
+ * pero por casi 6 o 7 segundos no hay feedback de lo que pasó: no se sabe si
+ * se guardó o simplemente se perdió el movimiento… luego de estos segundos
+ * aparece el toast de imprimir labels, desaparece la tarjeta naranja y aparece
+ * la fila."*
+ *
+ * **Y es la mitad que le faltaba a M-04.** Cerrar la ventana devolvió la
+ * pantalla, y al hacerlo se llevó la única señal que había de que algo estaba
+ * pasando: la rueda del botón, que vivía dentro de la ventana. Siete segundos
+ * de silencio después de pulsar Guardar no se leen como «está trabajando»: se
+ * leen como «no pasó nada», y lo que hace una persona entonces es volver a
+ * guardar.
+ *
+ * ── Y LA IDEA DE LA FILA FANTASMA ES SUYA, Y ES LA BUENA ───────────────────
+ *
+ * *"¿es posible crear una sombra o un loading de un movimiento en la lista
+ * hasta que el movimiento real aparezca? Y si no se crea el movimiento,
+ * simplemente ese loading desaparece."*
+ *
+ * Sí, y es mejor que un aviso: **pone la espera donde la persona está
+ * mirando**. Un aviso en una esquina dice «algo pasa»; una fila gris en el
+ * sitio exacto donde va a aparecer la de verdad dice **qué** pasa y **dónde**
+ * va a terminar. Y al desaparecer sin dejar nada, dice que no se guardó, sin
+ * que nadie tenga que leer un error.
+ *
+ * Las dos cosas van juntas porque contestan preguntas distintas: la fila dice
+ * «tu movimiento está en camino», el aviso dice «la app está ocupada». Si el
+ * guardado se lanzó desde Incoming, la lista ni se ve — y entonces el aviso es
+ * lo único que queda. Por eso no basta con una.
+ */
+var _guardando = null;
+
+function _filaFantasma(texto){
+  var tb = document.getElementById('movBody');
+  if (!tb) return null;
+  var primera = tb.querySelector('tr');
+  var cols = primera ? primera.children.length : 8;
+  var tr = document.createElement('tr');
+  tr.className = 'fila-fantasma';
+  tr.innerHTML = '<td colspan="' + cols + '">' +
+    '<span class="fantasma-pt"></span>' + _he(texto) + ' — saving…</td>';
+  tb.insertBefore(tr, tb.firstChild);
+  return tr;
+}
+
+function _marcarGuardando(resumen){
+  _limpiarGuardando();
+  _guardando = {
+    aviso: showToast('Saving — ' + resumen, 'info', 120000),
+    fila:  _filaFantasma(resumen)
+  };
+}
+
+/* Se llama SIEMPRE que la petición termina, salga bien o mal. Una fila
+ * fantasma que se queda es peor que no haberla puesto: parece un movimiento
+ * de verdad que no se puede tocar. */
+function _limpiarGuardando(){
+  if (!_guardando) return;
+  try { dismissToast(_guardando.aviso); } catch (e) {}
+  try { if (_guardando.fila && _guardando.fila.parentNode) _guardando.fila.remove(); } catch (e) {}
+  _guardando = null;
+}
+
 /* Cerrar y seguir. Se llama JUSTO DESPUÉS de mandar, no antes: si algo
  * revienta al construir la petición, la ventana sigue abierta con el error
  * delante, que es donde hay que leerlo. */
-function _cerrarYSeguir(overlayId, reintentar){
+function _cerrarYSeguir(overlayId, reintentar, resumen){
   _enVuelo = { overlay: overlayId, reintentar: reintentar };
   closeModal(overlayId);
+  if (resumen) _marcarGuardando(resumen);
 }
 
 /* Reabrir con todo dentro. Hay que quitarle `busy`: se lo pusimos al mandar y
@@ -26640,7 +26760,20 @@ function _syncEntryOffer(){
 /** Abre el formulario de movimiento en ENTRY con lo que la app ya sabía. */
 function _entryFromIncoming(item, todoId){
   if (!item) return;
-  showTab('movements', 'btn-movements');
+  /* ── N-09 · LA VENTANA SE ABRE DONDE ESTÁS ────────────────────────────────
+   *
+   * Jose, 18/11: *"al recibir un material y abrirse la ventana de entry, aún
+   * se cambia a la pestaña de Movements. Y al cerrar se queda ahí. La ventana
+   * de entry debería aparecer sobre la pestaña de Incoming y luego sólo
+   * cerrarse para continuar."*
+   *
+   * Y no hacía falta cambiar de pestaña para nada: **el formulario es una
+   * ventana flotante**, no vive dentro de Movements. Cambiar de pestaña era
+   * mover a la persona de sitio para enseñarle algo que se ve igual desde
+   * donde estaba — y dejarla allí al cerrar.
+   *
+   * El salto de vuelta tras guardar (N-02) se queda: si alguien llegó aquí
+   * desde otra pantalla, al terminar tiene que acabar en Incoming igual. */
   openMoveModal('ENTRY');
   // DESPUÉS de openMoveModal, que lo pone a null. La tarjeta que hay detrás de
   // este formulario, para poder borrarla si la entrada llega a guardarse — y
@@ -32496,7 +32629,8 @@ var BASIC_FUERA = {
  */
 var BASIC_PRO_ZONAS = {
   fileSection:   'fotos',    // adjuntar documentos a una entrada
-  notifySection: 'avisarcorreo'   // avisar por correo al guardar — MANDAR, no leer
+  notifySection: 'avisarcorreo',  // avisar por correo al guardar — MANDAR, no leer
+  stockDetailPanel: 'minimos'     // el detalle de stock bajo — ver N-11 abajo
 };
 
 /* Las pestañas de ajustes se pintan cada vez que se entra en ellas, así que no
@@ -32659,6 +32793,12 @@ var BASIC_PRO = {
                que: 'Record what is coming before it arrives, and see at a glance what landed and what is late.' },
   respaldo:  { titulo: '🌙 Automatic backup',
                que: 'A copy of everything, made on its own every night and kept in your own Drive.' },
+  /* ── N-11 · EL AVISO DE STOCK BAJO ───────────────────────────────────────
+   * Jose, 18/11: en Básico el panel enseñaba la lista entera. Aquí escribí una
+   * oferta nueva, `stockbajo`, y era un DUPLICADO de `minimos` —mismo título,
+   * palabra por palabra—. La franja y el panel se cuelgan de `minimos`, que
+   * existe desde hace versiones y es la misma función: elegir qué materiales
+   * vigilar y con qué mínimo. Ver `BASIC_PRO_ZONAS`. */
   /* ── DOS QUE SALIERON AL ABRIR LA PESTAÑA DE SISTEMA POR SECCIONES ───────
    * Las tres cosas de esa pestaña que la gratis no lleva necesitan el mismo
    * permiso que falta (`script.scriptapp`, los disparadores, y
@@ -33124,6 +33264,34 @@ function _basicPintar(){
   Object.keys(BASIC_PRO_ZONAS).forEach(function(id){
     _basicApagarZona(document.getElementById(id), BASIC_PRO_ZONAS[id]);
   });
+  /* ── N-11 · EN BÁSICO, EL AVISO DE STOCK BAJO SE VE APAGADO ───────────────
+   *
+   * Jose, 18/11, con captura de **Acopio Básico**: *"se muestran todos los
+   * materiales en la ventana de low stock; no debería mostrarse nada. Quiero
+   * que lo pongas todo en gris y que, al dar clic, el usuario vea el popup de
+   * que es sólo en PRO."*
+   *
+   * **Y hay una razón de fondo por la que esconderlo del todo no basta.** Su
+   * copia de Básico salió de la hoja del almacén, así que **trae los mínimos
+   * ya guardados** — y con ellos los avisos. Esconder el panel dejaría los
+   * datos dentro, invisibles, y el día que alguien pase a Pro reaparecerían
+   * sin que nadie los haya puesto. Apagado y a la vista es lo honesto: se ve
+   * que existe, se ve que no es tuyo todavía, y se dice qué es.
+   *
+   * LA FRANJA NO ESTÁ EN EL MAPA DE ARRIBA, y es a propósito. Su texto se
+   * escribe al pintar las estadísticas, así que en el archivo el `<div>` está
+   * vacío — y la prueba que comprueba que cada zona apagada «hable de lo
+   * mismo» que su oferta lee el archivo. Una zona sin texto que leer no se
+   * puede comprobar. Así que la franja toma la clave DEL MAPA, la de su
+   * propio panel: es la misma función —tocarla abre ese panel— y así no hay
+   * dos sitios donde escribir el nombre de la oferta.
+   *
+   * Y la oferta es `minimos`, la que ya existía. La primera vez escribí una
+   * nueva, `stockbajo`, con el mismo título que `minimos` palabra por palabra:
+   * dos ofertas para una función, que es el fallo de siempre de este
+   * repositorio. Dos pruebas la cazaron el mismo día. */
+  _basicApagarZona(document.getElementById('alertBanner'),
+                   BASIC_PRO_ZONAS.stockDetailPanel);
   _basicCandado();
 }
 
@@ -33646,51 +33814,50 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
-  { ver: '14.9',
-    titulo: 'A label that names a shelf you have, and a tick box your finger can hit',
+  { ver: '15.8',
+    titulo: 'You can see it saving now, and the window no longer drags you elsewhere',
     puntos: [
-      '<b>A label printed straight after saving could name a shelf that does not exist.</b> Type the rack in lower case, save, print \u2014 and the sticker came out saying <i>d3b</i> while the shelf is <i>D3B</i>. Reopen the app and it read correctly, which is what gave it away: the correction happened after the label was made. A label is a physical thing: it goes on a pallet and sends somebody to look where there is nothing.',
-      'There were two label builders \u2014 one reading what was saved, one reading the form. The notice after saving used the second. It now uses what the server actually wrote, the same path as printing from Movements, and <b>the second builder is gone</b>.',
-      '<b>The tick box in the movements list was too big, and spilling over the date.</b> Measured: 34 pixels inside a 30-pixel cell. That was my own doing \u2014 an earlier fix asked for a 44-pixel <i>touch target</i> and I made the <i>box</i> bigger instead. They are not the same thing: a native tick box stretched to 34 reads as an empty square. It is 20 pixels now, inside a 44-pixel area you can tap anywhere in.',
-      '<b>And on the Exit screen, Qty was taking the room that Available needed.</b> A quantity is never more than three digits, so it now has exactly that much space \u2014 and the figure you actually check before typing fits on one line.'
+      '<b>Saving an entry went quiet for six or seven seconds.</b> The window closing the instant you press Save was the right thing — but it took the only sign of life with it: the spinner lived inside the window. Six seconds of nothing does not read as <i>working</i>, it reads as <i>nothing happened</i>, and what a person does then is save it again.',
+      'Now a <b>grey row appears at the top of the movements list</b>, with the material and the quantity, pulsing in the exact place the real one will land — and a notice in the corner says the app is busy. They answer different questions: the row says your movement is on its way, the notice says the app is working. When the server answers, the real row replaces the grey one.',
+      '<b>Opening the entry form from a delivery no longer switches you to another tab.</b> The form is a floating window; it never needed the tab underneath to change. Mark a delivery as arrived, make its entry, and you are still in Incoming when you close it.',
+      '<b>A shelf typed wrong now offers both ways out.</b> Type <i>c 4 a</i> when the shelf is <i>C4A</i> and you get both: use the one you have, or create what you typed. Before, only one of the two was on offer.',
+      '<b>And in the free edition the low-stock strip is shown switched off, not filled in.</b> It used to list the materials. Now the strip and its panel are greyed out and say what they are — which is honest in a way that hiding them would not be: a free copy made from a working sheet already has the minimums in it, and hiding the panel would have left that data inside, invisible, to reappear later.'
     ],
-    antes:  'A sticker naming a shelf you do not have',
-    ahora:  'It says what the app saved' },
+    antes:  'Six seconds of silence after Save',
+    ahora:  'A grey row exactly where the real one will land' },
 
-  { ver: '14.8',
-    titulo: 'Nothing jumps when you tick a box',
+  { ver: '15.7',
+    titulo: 'A shelf that does not exist is caught before anything is sent',
     puntos: [
-      '<b>The action bar used to rearrange itself as you selected things.</b> Going from 9 ticked to 10 \u2014 one digit to two \u2014 was enough to widen a button and shove everything beside it. Every count now sits in a slot wide enough for two digits from the start, with all digits the same width, so the number changes and nothing else does.',
-      '<b>And in Projects it was worse than untidy.</b> Ticking one made the rename box take the whole bar, pushing the buttons onto a second line, on top of the list. The bar reserved a minimum height \u2014 which stopped it shrinking, but nothing stopped it growing. Measured: it went from 44 to 95 pixels.',
-      'The bar is now a fixed height with fixed slots. Rename and Merge are the same width because they share one place, the buttons are anchored to the right edge, and what changes in the middle no longer moves them. From nothing selected to twelve, <b>not one pixel moves.</b>',
-      'That is measured, not assumed: a test opens the bar with 0, 1, 2 \u2026 12 selected and compares the position and size of every piece.'
+      '<b>A rack written in lower case or with spaces used to make the whole trip.</b> Type <i>c 4 a</i> instead of <i>C4A</i>, save, and the window closed, several seconds passed, and then a message came back. The name was checked on the server when this screen already knew every shelf you have.',
+      'Now <b>the question comes up instantly, the window stays open, and nothing was sent.</b>',
+      '<b>And choosing the right shelf IS the answer.</b> Press <i>Use C4A</i> and it goes into the field and saves. Before, it told you to type it yourself — which is asking a person to do the thing the app had just worked out.',
+      'A rack that genuinely does not exist offers to <b>create it</b>, if your sign-in is allowed to.'
     ],
-    antes:  'Buttons that shifted as the number grew',
-    ahora:  'Everything has its place, and stays in it' },
+    antes:  'Closed the window, waited, then asked',
+    ahora:  'Asks before it sends, and your answer is enough' },
 
-  { ver: '14.7',
-    titulo: 'The average cost stops drifting, and stock that cannot be true now says so',
+  { ver: '15.6',
+    titulo: 'The window comes back with everything you had written',
     puntos: [
-      '<b>The running average cost was drifting a few cents, and the drift compounded.</b> Each time material came in, the average was recalculated and <i>rounded to the cent</i> — and that rounded figure went into the next calculation. The error never cancelled out; it leaned the same way every time. Measured over 1,000 entries: the average came out <b>$0.029 per unit low</b>, which on 7,000 units is <b>$202.72</b> of inventory value that was never there.',
-      'The average is now kept to six decimals. What you see on the Prices screen, and what is stamped on a movement, is still cents — the extra precision is only in the number that feeds the next calculation, which is where it mattered.',
-      'And the cost of an outgoing movement is now worked out from the precise average before rounding, so a line of 1,000 units is no longer a dollar off in the company\u2019s favour.',
-      '<b>Stock that cannot be true no longer hides behind a zero.</b> If more of something has left than ever arrived — a movement entered wrongly, a half-finished delete, an import that went in twice — the screen showed 0 and said nothing. The app had already noticed; it just wrote the evidence somewhere nobody looks. It now reports it in the Error Log, naming the materials, once a day rather than on every single sign-in.',
-      '<b>And the average now leaves a trail.</b> Every entry that changes it records what it was and what it became, so a figure that looks wrong next month can be traced instead of only recalculated from scratch.'
+      '<b>When the server refused an entry, what you had typed was gone.</b> An unknown shelf, not enough stock — the message appeared and the window did not come back. And it had a worse consequence than the retyping: a delivery could sit marked as arrived with no movement behind it, which is how one went missing from both the movements list and the stock.',
+      'Now <b>the window reopens with every field as you left it</b>, you correct the one that was wrong, and you save.',
+      '<b>And if what failed was the connection, the window does not come back</b> — the notice carries <i>Retry</i> and sends it again. There is nothing to correct in that case, and reopening the form would only suggest there was.',
+      '<b>The reason box when editing a movement was 203 pixels wide inside a 689-pixel panel.</b> It fills its panel now.'
     ],
-    antes:  'A few cents off, compounding quietly, on every purchase',
-    ahora:  'The number that feeds the next sum keeps its precision' },
+    antes:  'A message, and your typing gone',
+    ahora:  'The window returns with your work still in it' },
 
-  { ver: '14.6',
-    titulo: 'Setup: one list you type straight into, and a repeated name that says so',
+  { ver: '15.5',
+    titulo: 'A delivery that already arrived stops offering its entry again',
     puntos: [
-      '<b>A name that was already on the list used to vanish without a word.</b> You typed a location that existed, pressed Enter, and the box simply emptied. The list was right \u2014 it refused to add it twice \u2014 but nothing said so, which from the outside is indistinguishable from the app swallowing what you typed. Now what you typed stays put, a line in red says it is already there, and <b>the one it clashes with lights up for a moment</b>, so you can see where it is among fifty.',
-      '<b>There is one list now, not two.</b> Every list in setup had a box underneath to type into and a row of chips above to look at \u2014 two places for one thing, and no way to correct an entry once it was in. There is a <b>+ Add</b> button on the right of each list: it drops an empty chip with the cursor already inside, and you type there. Add one by mistake and leave it blank \u2014 it removes itself when you move on.',
-      'Which also means the starting templates are now yours to edit. Pick <i>Glass &amp; windows</i> and rename one of its categories on the spot, instead of deleting and retyping it.',
-      'Trucks and job sites go in the same list as the racks, where they were always shown \u2014 they just used to be typed somewhere else.',
-      '<b>And the button that continues setup can no longer end up off the screen.</b> The window is as tall as the screen allows, which is not up to us; now only the middle scrolls, and the footer stays put whatever the height.'
+      '<b>Editing a delivery that was already marked as arrived offered to make its entry again.</b> Change a note on it, save, and the entry form opened as if the material had just turned up — which is how the same delivery gets entered twice. It no longer does. A delivery still waiting does, exactly as before.',
+      '<b>Making the entry from Incoming leaves you in Incoming.</b> It used to drop you in Movements, which meant finding your way back to carry on with the next delivery.',
+      '<b>The Comments box when editing a movement was 47 pixels tall.</b> It is about five lines now, and you can drag the corner to make it taller.',
+      '<b>And the header no longer jumps.</b> The logo was fetched through the same queue as document thumbnails, so it arrived late and the bar changed height with it. The remembered copy is painted immediately — from the second visit on, nothing moves.'
     ],
-    antes:  'A box that ate what you typed, and Continue below the fold',
-    ahora:  'Type in the list itself, and it answers you' },
+    antes:  'The same delivery could be entered twice',
+    ahora:  'Once it has arrived, it is done' },
 
 ];
 

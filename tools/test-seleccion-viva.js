@@ -154,6 +154,16 @@ function mundo(nMovs){
   // El mínimo de la tabla es reparto de anchos, y eso sólo existe con un
   // navegador delante. Lo mide tools/test-columnas.js, que abre uno.
   trozo = quitar(trozo, "_fijarMinTabla('mov', headHtml);");
+  // Las tarjetas del teléfono, por lo mismo: `_sincronizarTarjetasMov` lee la
+  // tabla YA PINTADA y le cuelga una tarjeta a cada fila, y eso necesita un
+  // navegador delante. Lo mide tools/test-tarjetas-en-el-telefono.js, que abre
+  // uno. Se quita EXIGIENDO que esté, igual que todo lo de arriba: el día que
+  // esa llamada cambie de nombre, esta caja lo dice en vez de reventar más
+  // tarde por otra cosa. (Llegó en la v15.3 y dejó esta prueba roja: la caja no
+  // la tenía definida y `_pintar` moría al llamarla.)
+  trozo = quitar(trozo, "_sincronizarTarjetasMov();");
+  // Y el botón de filtros de la v15.4, por la misma razón y con la misma regla.
+  trozo = quitar(trozo, "_sincronizarBotonFiltros();");
 
   const caja = A.montar(ctx, HTML, ['_syncMovSelectAll', '_updateMovActionBar',
                                     '_selectedMovements', '_movCanAct',

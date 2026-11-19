@@ -225,8 +225,22 @@ console.log('\n═══ 6. Lo que ve quien está en la bodega ═══\n');
   check('la pantalla reconoce el rechazo', /UNKNOWN_LOCATION\|/.test(fn));
   check('...y ofrece la parecida primero, que es el caso de verdad',
         /Did you mean/.test(fn));
+  /* 18/11 · CREAR SE MUDÓ A SU PROPIA FUNCIÓN, y por un motivo: desde N-10 lo
+   * ofrecen DOS diálogos —el de «¿querías decir A?» y el de «no existe»— y
+   * copiarlo en los dos serían dos sitios que tienen que crear la ubicación
+   * igual sin que nada lo obligue. Así que esta comprobación sigue el camino
+   * en vez de exigir que el código esté en un sitio concreto: la pantalla
+   * ofrece crearla, mira el permiso, y quien crea de verdad es una sola
+   * función. */
+  const crear = (H.match(/function _crearUbicacionYSeguir[\s\S]*?\n}/) || [''])[0];
   check('...o crearla, si la persona tiene permiso de catálogo',
-        /canManageCatalog/.test(fn) && /_cfgAddValue\('locations'/.test(fn));
+        /canManageCatalog/.test(fn) && /_crearUbicacionYSeguir\(/.test(fn));
+  /* Sólo que QUIEN CREA desde este diálogo es esa función. Contar cuántas
+   * veces aparece `_cfgAddValue('locations'` en todo el archivo fue una
+   * pasada de rosca mía: el aviso que sale al escribir también crea
+   * ubicaciones, y con razón. */
+  check('...y crearla de verdad vive en esa función',
+        /_cfgAddValue\('locations'/.test(crear));
   /* Y si no tiene permiso, se le dice A QUIÉN pedírselo. Dejar a alguien
    * delante de una puerta cerrada sin decirle quién tiene la llave es la forma
    * de que abandone el movimiento — y entonces el material se mueve sin que

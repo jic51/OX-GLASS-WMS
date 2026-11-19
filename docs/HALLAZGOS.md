@@ -310,6 +310,169 @@ es exactamente para esto.
 
 ---
 
+## 📋 LO DEL 18/11 · N-08…N-13 ✅ **v15.8** *(N-12 y N-13 pendientes de una respuesta)*
+
+### 🔴 N-08 · Siete segundos de silencio después de guardar — y la idea del arreglo es de Jose
+
+Jose: *"al guardar un entry la ventana se cierra, lo que yo quería, pero por
+casi 6 o 7 segundos no hay feedback… no se sabe si se guardó o simplemente se
+perdió el movimiento."*
+
+**Es la mitad que le faltaba a M-04.** Cerrar la ventana devolvió la pantalla y
+se llevó la única señal que había: la rueda del botón, que vivía dentro de la
+ventana. **Siete segundos de silencio no se leen como «está trabajando», se
+leen como «no pasó nada»** — y lo que hace una persona entonces es guardar otra
+vez.
+
+**Y la solución la propuso él:** *"¿es posible crear una sombra o un loading de
+un movimiento en la lista hasta que el movimiento real aparezca?"* Sí, y es
+mejor que un aviso: **pone la espera donde la persona está mirando**. Un aviso
+en una esquina dice «algo pasa»; una fila gris en el sitio exacto donde va a
+aparecer la de verdad dice **qué** pasa y **dónde** va a terminar.
+
+Van las dos cosas, porque contestan preguntas distintas: la fila dice «tu
+movimiento está en camino», el aviso dice «la app está ocupada». Y si el
+guardado se lanzó desde Incoming, la lista ni se ve — ahí el aviso es lo único.
+
+### 🟡 N-09 · La ventana de entrada arrastraba a otra pestaña
+
+*"La ventana de entry debería aparecer sobre la pestaña de Incoming y luego
+sólo cerrarse para continuar."* Y no hacía falta cambiar de pestaña para nada:
+**el formulario es una ventana flotante**, no vive dentro de Movements.
+
+### 🟡 N-10 · El diálogo ofrecía una salida y el aviso ofrecía dos
+
+*"Si la ubicación que se ingresa no está creada (y me da la opción para crearla
+antes de guardar), ¿por qué no puede darme la opción de crearla al intentar
+guardar?"* **Incoherencia nuestra:** el aviso de mientras se escribe ofrece
+«Use A» y «+ Create M»; el diálogo del guardado ofrecía sólo la primera. Que
+haya un estante parecido no significa que sea el que se quería.
+
+Y crear **se extrajo a `_crearUbicacionYSeguir`**: ahora lo ofrecen dos
+diálogos, y copiarlo serían dos sitios que tienen que crear igual sin que nada
+lo obligue — uno se olvidaría de actualizar la lista local, que es el detalle
+que evita chocar otra vez con lo mismo.
+
+### 🟠 N-11 · Básico enseñaba el panel de stock bajo entero
+
+Con captura: en **Acopio Básico** la ventana de stock bajo listaba los 99
+materiales en cero.
+
+**Y hay una razón por la que esconderlo no basta, que Jose mismo señaló:** su
+copia de Básico salió de la hoja del almacén, así que **trae los mínimos ya
+guardados**. Esconder el panel dejaría los datos dentro, invisibles, y
+reaparecerían el día que alguien pase a Pro. **Apagado y a la vista es lo
+honesto:** se ve que existe, se ve que no es suyo todavía, y se dice qué es.
+
+Con la maquinaria que ya existía (`_basicApagarZona`).
+
+**Y aquí me equivoqué, y lo cazaron dos pruebas el mismo día.** Le escribí una
+oferta nueva, `stockbajo`, con el título **palabra por palabra** igual que el de
+`minimos`, que existía desde hacía versiones y es la misma función: elegir qué
+materiales vigilar y con qué mínimo. **Dos ofertas para una cosa es el fallo de
+siempre de este repositorio** — dos sitios que tienen que decir lo mismo sin que
+nada lo obligue. `test-candados-hablan-de-lo-mismo` avisó de que la oferta nueva
+no la enseñaba ningún candado y `test-ediciones-coinciden` de que no estaba en
+la landing. Las dos tenían razón por el mismo motivo: no había que añadirla.
+
+El arreglo deja **una sola lista**: el panel entró en `BASIC_PRO_ZONAS`
+(`stockDetailPanel: 'minimos'`) y la franja de aviso toma la clave **de ese
+mapa**, no escrita otra vez. La franja no está en el mapa a propósito: su texto
+se escribe al pintar, así que en el archivo su `<div>` está vacío y la prueba
+que comprueba que cada zona «hable de lo mismo» que su oferta no tendría nada
+que leer.
+
+### 🟡 N-12 · Borrar un material no refresca la ventana de Materiales — PENDIENTE
+
+*"Al eliminar un material que está solo en una locación, la ventana de
+Materiales en Settings no se actualiza en tiempo real, lo que no permite
+eliminar la locación inmediatamente."*
+
+**No lo he arreglado porque no sé por qué camino lo borró.** No hay en la
+pestaña de Materiales ninguna acción de borrar un material entero — lo que hay
+es borrar sus movimientos. Preguntado.
+
+### 🟡 N-13 · «El icono y botón de las notificaciones desapareció» — NO LO BORRÓ NADIE
+
+Jose, 19/11: *"algo para anotar, el icono y botón de las notificaciones
+desapareció, ¿qué pasó?"*
+
+**Lo miré en el historial: esa campana no ha cambiado desde la v9.22**, y las
+dos reglas que la esconden son de entonces y son a propósito:
+
+1. **Sólo existe en pantallas de 900 px o menos** — teléfono y tableta. En el
+   ordenador lo mismo se enseña como **el montón de tarjetas de la esquina de
+   abajo a la derecha**, que se abre al pasar el ratón. La campana nació porque
+   el montón necesita ratón y el dedo no lo tiene.
+2. **Y aun en el teléfono, se esconde sola cuando no hay nada que contar**
+   (`_syncCfgBell` → `visibility:hidden` si el total es 0). La cuenta son tres
+   cosas sumadas: proveedores u obras que no están en tus listas, avisos del
+   sistema, y entradas pendientes de una entrega que ya llegó.
+
+**Así que lo más probable es que no haya desaparecido, sino que no haya nada
+dentro** — y eso es correcto: una campana con un 0 enseña a no mirarla.
+
+**Pero hay una tercera posibilidad que no puedo descartar yo**, y es la que
+convierte esto en un fallo: si lo que falta es el cuadro de *«Send notification
+email»* **dentro de la ventana de entrada**, eso es otra cosa — ese cuadro sólo
+sale en las entradas, y en Básico se ve apagado a propósito. Preguntado cuál de
+las dos es.
+
+**Lo que NO es:** nada de la v15.5 a la v15.8 toca la campana ni el montón.
+
+### 📋 Y el análisis que pidió: `docs/LO-QUE-TIENE-QUE-CUADRAR.md`
+
+*"¿Cómo podemos manejar la edición entre cosas que están interconectadas? Busca
+qué otras cosas así hay en la app."* Siete parejas, ordenadas por lo que duele.
+La respuesta corta: **atarlas primero (una columna que diga de dónde vino), que
+la app lo note después, y propagar sólo entonces** — propagar ahora obligaría a
+adivinar qué movimiento corresponde a qué entrega, y adivinar mal ahí es editar
+el movimiento equivocado.
+
+### Y tres pruebas afirmaban el comportamiento anterior
+
+`test-arrived-to-entry` y `test-lo-del-16-11` exigían que abrir la entrada
+**cambiara** a Movements — justo lo que Jose pidió quitar. Y
+`test-ubicacion-que-no-existe` exigía que crear la ubicación estuviera escrito
+**dentro** de `_ubicacionDesconocida`, que es exigir un sitio y no un
+comportamiento. Las tres actualizadas con el motivo escrito.
+
+### 🔴 Y cuatro pruebas llevaban rojas sin que nadie lo supiera — y una era un dato mal
+
+Antes de cerrar la v15.8 corrí **las 211**, no las de la tanda. Salieron cuatro
+rojas, y ninguna la había roto esta versión:
+
+**1 · `test-novedades` — la ventana de novedades anunciaba la v14.9.** Nueve
+versiones atrás. Esa lista **viaja dentro del archivo** para que funcione sin
+internet, y eso mismo es lo que la deja atrás: sólo cambia cuando alguien
+escribe la entrada nueva. La prueba que comprueba que la primera entrada sea la
+versión que el cliente tiene puesta **llevaba roja desde la v15.0**. No es un
+detalle: es lo que la app le cuenta al cliente de sí misma al abrirla. Reescrita
+la ventana con las cuatro últimas de verdad (15.8, 15.7, 15.6, 15.5).
+
+**2 · `test-seleccion-viva` — reventaba, no fallaba.** La caja de pruebas monta
+un trozo de `renderMovements` y le pasa un DOM de mentira; la v15.3 y la v15.4
+le añadieron dos llamadas que necesitan un navegador
+(`_sincronizarTarjetasMov`, `_sincronizarBotonFiltros`) y la caja no las tenía.
+Arreglado como ya hacía el propio archivo con `_fijarMinTabla`: se quitan del
+trozo **exigiendo que estén**, para que el día que cambien de nombre la prueba
+lo diga en vez de morir por otra cosa.
+
+**3 y 4 · `test-escala` y `test-espaciado` — los dos contadores de deriva.**
+Éstos no los he tocado, y te lo cuento aparte porque **es una decisión tuya**:
+cuentan cuántos tamaños de letra y cuántas distancias quedan escritos a pelo en
+vez de por token, con un tope que es *el número real del día que se ordenó*.
+Hoy: **41 tamaños con tope 40**, y **48 distancias con tope 46**. Se pasaron
+solos, un valor cada pocas versiones, que es exactamente el fallo que esas dos
+pruebas existen para impedir — sólo que nadie las estaba corriendo.
+
+> **Lo que de verdad enseña esto, y es lo peor del día:** tener 211 pruebas no
+> sirve de nada si lo que se corre son las de la tanda. Las cuatro llevaban
+> rotas entre una y nueve versiones. **Desde esta versión el barrido completo va
+> antes de cada commit de versión**, no las de la tanda.
+
+---
+
 ## 📋 LO DEL 18/11 · N-07 ✅ **v15.7**
 
 ### 🟠 N-07 · El estante malo: preguntado tarde, y la respuesta tirada

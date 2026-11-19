@@ -208,7 +208,14 @@ function mundo(opciones){
     'function _cerrarYSeguir(){ }' +
     'function _reabrirConLoEscrito(){ }' +
     'function _falloDeEntorno(){ return false; }' +
-    'function _fallóDespuésDeCerrar(){ return false; }', ctx);
+    'function _fallóDespuésDeCerrar(){ return false; }' +
+    /* N-08 (v15.8): el aviso de «guardando» y la fila fantasma. Dobladas por
+     * lo mismo que las de arriba — esta prueba mide la tarjeta de pendientes,
+     * no el aviso. Y van en ESTE bloque, con las de M-04, para que el día que
+     * el camino de guardado gane otra dependencia se añada aquí y no en cinco
+     * sitios. */
+    'function _marcarGuardando(){ }' +
+    'function _limpiarGuardando(){ }', ctx);
 
   // _h de verdad: es quien cuelga el token de sesión del payload. Doblarla
   // habría dejado sin comprobar que el token viaja.

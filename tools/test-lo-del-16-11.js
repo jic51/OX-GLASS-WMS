@@ -173,8 +173,12 @@ window.__DATA=${JSON.stringify(DATA)};
         (document.querySelector('#incoming.section.active') ? 'incoming' : '?');
       return { enElFormulario, marca: _entryFromIncId };
     });
-    check('abrir la entrada desde una entrega lleva a Movements (es donde vive)',
-      r.enElFormulario === 'movements' && r.marca === 'I1', r);
+    /* 18/11 · CAMBIÓ, Y A PETICIÓN DE JOSE. El formulario es una ventana
+     * flotante, así que ya no arrastra a nadie a Movements: se abre encima de
+     * donde estabas. Lo que sí se guarda es de dónde venía, que es lo que
+     * hace que al terminar se vuelva ahí. */
+    check('abrir la entrada desde una entrega NO te saca de Incoming',
+      r.enElFormulario === 'incoming' && r.marca === 'I1', r);
 
     // Y al guardar bien, vuelve a Incoming.
     const r2 = await p.evaluate(async () => {

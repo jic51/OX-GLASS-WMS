@@ -16,6 +16,80 @@ Esto es ese documento, y se actualiza **con cada versión**. Lo de arriba es lo
 
 ---
 
+## v15.8 — que se vea lo que está pasando
+
+### 1 · Guardar una entrada  🔴 *lo que más molestaba*
+
+1. Haz una **entrada** y pulsa **Save to System**.
+2. **Tiene que pasar, al instante:** la ventana se cierra, **aparece una fila
+   gris latiendo** arriba de la lista con el material y la cantidad, y un aviso
+   abajo a la izquierda dice *Saving*.
+3. Cuando el servidor contesta, **la fila gris la sustituye la de verdad** y el
+   aviso cambia al de imprimir etiquetas.
+4. **Sería el fallo:** seis segundos sin nada, como antes.
+
+> **Si lo lanzas desde Incoming**, la lista de movimientos no se ve — ahí el
+> aviso de la esquina es lo único que queda, y es a propósito.
+
+### 2 · Abrir la entrada desde una entrega
+
+1. En **Incoming**, marca una entrega como llegada con *Make the entry*.
+2. **Tiene que pasar:** la ventana se abre **sin sacarte de Incoming**, y al
+   cerrarla sigues en Incoming.
+
+### 3 · El estante que no existe, las dos salidas
+
+1. Entrada con un estante parecido a uno real pero mal (`c 4 a`).
+2. **Tiene que pasar:** te ofrece **las dos** — *Use C4A* y *Create c 4 a*.
+3. *Create* sólo debe salir si tu usuario puede crear ubicaciones.
+
+### 4 · Acopio Básico
+
+1. Abre la copia **Básica** → Stock Dashboard.
+2. **Tiene que pasar:** la franja de stock bajo y su panel se ven **en gris**,
+   con el candado de Pro, y al pulsarlos sale la oferta — **no la lista de
+   materiales**.
+3. **Y la oferta que sale es la de los mínimos** (*Low-stock alerts*), la misma
+   que contesta el botón **⚙ Monitor**. Si contestara otra cosa sería un fallo:
+   son la misma función, y desde esta versión cuelgan de la misma oferta a
+   propósito — antes le había escrito una segunda, idéntica, y eso es lo que
+   dos pruebas me tiraron abajo.
+
+### 5 · La ventana de novedades  🔴 *llevaba nueve versiones mal*
+
+1. Abre la app después de poner la v15.8 (la ventana sale sola al cambiar de
+   versión; si ya la cerraste, está en el **menú de la cuenta → What's new**).
+2. **Tiene que pasar:** dice **Version 15.8** y cuenta lo de la fila gris. El
+   enlace de abajo lleva al changelog **de la 15.8**, no al principio.
+3. **Sería el fallo:** que diga 14.9. Eso es lo que decía hasta hoy — y es lo
+   que la app le cuenta al cliente de sí misma al abrirla.
+4. Y hacia atrás: la ventana lleva las cuatro últimas (15.8, 15.7, 15.6, 15.5).
+
+### 6 · Lo de la campana — esto no es un cambio, es tu pregunta
+
+Me preguntaste qué pasó con el icono y el botón de las notificaciones. **No lo
+quitó ninguna versión:** esa campana no se ha tocado desde la v9.22, y tiene dos
+reglas, las dos a propósito.
+
+1. **Sólo existe en pantallas de 900 px o menos** — teléfono y tableta. En el
+   ordenador lo mismo se enseña como el **montón de tarjetas de la esquina de
+   abajo a la derecha**, que se abre al pasar el ratón. La campana nació
+   precisamente porque el montón necesita ratón y el dedo no lo tiene.
+2. **Y aun en el teléfono se esconde sola cuando no hay nada que contar.** La
+   cuenta son tres cosas sumadas: proveedores u obras que no están en tus
+   listas, avisos del sistema, y entradas pendientes de una entrega que llegó.
+
+**La comprobación de un paso:** en el teléfono, marca una entrega como llegada y
+**no** hagas su entrada. La campana tiene que aparecer con un **1**. Si con eso
+tampoco aparece, es un fallo de verdad y lo persigo.
+
+Y si lo que echabas en falta era el cuadro de *«Send notification email»* de
+dentro de la ventana de entrada, dímelo: ése es otro asunto — sólo sale en las
+entradas, y en Básico se ve apagado a propósito porque la gratis no puede
+mandar correo.
+
+---
+
 ## v15.7 — el estante que no existe, bien hecho
 
 ### 1 · No se cierra, no espera, no viaja

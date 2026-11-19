@@ -292,9 +292,18 @@ const ENTREGA = {
     };
   }, ENTREGA);
 
-  check('se abre la pestaña de movimientos y el formulario en ENTRY (' +
-        r.abierto.join(', ') + ')',
-    r.abierto.indexOf('tab:movements') !== -1 && r.abierto.indexOf('move:ENTRY') !== -1);
+  /* ── 18/11 · YA NO SE CAMBIA DE PESTAÑA, Y ES A PETICIÓN ─────────────────
+   * Jose: *"al recibir un material y abrirse la ventana de entry, aún se
+   * cambia a la pestaña de Movements. Y al cerrar se queda ahí. La ventana de
+   * entry debería aparecer sobre la pestaña de Incoming."*
+   * El formulario es una ventana flotante: no necesitaba la pestaña para
+   * nada. Lo que esta prueba vigila sigue siendo lo importante —que se abra
+   * en ENTRY con los datos de la entrega— y ahora también que **no** arrastre
+   * a nadie de pantalla. */
+  check('se abre el formulario en ENTRY (' + r.abierto.join(', ') + ')',
+    r.abierto.indexOf('move:ENTRY') !== -1);
+  check('...y SIN cambiar de pestaña: la ventana se abre donde estabas',
+    r.abierto.indexOf('tab:movements') === -1, r.abierto);
   check('categoría', r.cat === 'MIRROR');
   check('nombre del material', r.name === ENTREGA.name);
   check('unidad', r.unit === 'UNIT');
