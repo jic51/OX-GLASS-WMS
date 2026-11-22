@@ -128,7 +128,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '15.8';
+var APP_VERSION = '15.9';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -140,7 +140,7 @@ var APP_VERSION = '15.8';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '9e544f2d';
+var APP_BUILD = '13a20292';
 
 // ═══ ACOPIO BASIC — EL INTERRUPTOR DE LA VERSIÓN GRATIS ══════════════════════
 //
@@ -4273,6 +4273,7 @@ function processMovementInner_(ss, action, data, auth) {
   if (action === 'getPmDirectory')        return getPmDirectory();
   if (action === 'managePmDirectory')     return managePmDirectory(data, auth);
   if (action === 'uploadRackPhoto')       return uploadRackPhoto(data, auth);
+  if (action === 'deleteRackPhoto')       return deleteRackPhoto(data, auth);
   if (action === 'lockMaterial')          return lockMaterial(data, auth);
   if (action === 'unlockMaterial')        return unlockMaterial(data, auth);
   if (action === 'unlockMaterials')       return unlockMaterials(data, auth);
@@ -9127,6 +9128,166 @@ function unlockMaterials(data, auth) {
            yaSoltadasPorTi: porTi, yaSoltadasPorOtros: porOtros };
 }
 
+/* ── H-09 · QUITAR UN DOCUMENTO LO QUITA DE VERDAD ───────────────────────────
+ *
+ * Jose, 26/10: *"podemos cambiar esos documentos y fotos pero nunca eliminarlos
+ * por completo, no hay opción."*
+ *
+ * Tenía razón y era peor de lo que parecía. La ✕ de un documento adjunto
+ * marcaba la fila y escribía la lista que sobrevive en `DOC_LINKS`. **Y nada
+ * más.** No había una sola llamada a Drive en ese camino: el fichero seguía en
+ * la carpeta del administrador, entero, para siempre.
+ *
+ * Y lo grave no es el espacio, es lo que la persona cree que hizo. Pulsa ✕, el
+ * documento desaparece de la pantalla, y concluye que lo borró. Si ese PDF
+ * llevaba el precio de un proveedor, o la foto de algo que no debía
+ * fotografiarse, sigue ahí — y la app le dijo que no.
+ *
+ * TRES DECISIONES, Y LAS TRES SON LO QUE HACE QUE ESTO SE PUEDA PULSAR SIN
+ * MIEDO:
+ *
+ * 1. **A la papelera de Drive, no destruido.** `setTrashed(true)` deja 30 días
+ *    para recuperarlo desde el Drive de la empresa, que es lo que cualquiera
+ *    espera de un borrado. Destruirlo del todo sería irreversible y no hace
+ *    falta para resolver el problema.
+ * 2. **La misma frontera que para LEER un fichero.** Un `DOC_LINKS` puede
+ *    llevar cualquier cosa escrita a mano en la hoja; sin la comprobación de
+ *    carpeta, quitar un documento sería una forma de mandar a la papelera
+ *    cualquier fichero del Drive del dueño. Es la razón por la que existe
+ *    `isFileWithinAppFolder_`, y aquí vale igual.
+ * 3. **No se tira un fichero al que todavía apunta otra fila.** Y la fila que
+ *    importa es la de la PAPELERA de movimientos: restaurar un movimiento
+ *    borrado tiene que devolver sus documentos. Un borrado que deja la mitad
+ *    de la pareja es el fallo que este repositorio se encuentra una y otra vez.
+ *
+ * Nada de esto puede tumbar el guardado: la celda se escribe PRIMERO —es la
+ * fuente de verdad— y lo de Drive va después. Si Drive falla, lo peor que pasa
+ * es que volvemos al comportamiento viejo para ese fichero, y queda escrito en
+ * el registro de errores en vez de en silencio.
+ */
+
+/* El id de Drive de una línea de `DOC_LINKS`, venga como venga.
+ *
+ * Hoy `uploadDocGroups_` guarda "Nombre||ID" —el id pelado— porque el navegador
+ * se arma el enlace al proxy él solo. Pero hay filas de antes con la URL
+ * entera, y hay tres formas distintas de URL de Drive en este archivo. Todas
+ * tienen que funcionar: si esto devuelve vacío, el fichero NO se tira, y
+ * habríamos vuelto al fallo original sin avisar. */
+function docLinkFileId_(linea) {
+  var s = String(linea || '');
+  var sep = s.indexOf('||');
+  var v = (sep !== -1 ? s.substring(sep + 2) : s).trim();
+  if (!v) return '';
+  if (/^[A-Za-z0-9_-]{20,}$/.test(v)) return v;          // el id pelado
+  var m = /\/d\/([A-Za-z0-9_-]{20,})/.exec(v)            // …/file/d/ID, lh3…/d/ID
+       || /[?&]id=([A-Za-z0-9_-]{20,})/.exec(v);         // …uc?export=view&id=ID
+  return m ? m[1] : '';
+}
+
+/* ¿Queda alguna otra fila —en cualquiera de las tres hojas que guardan
+ * movimientos— apuntando a este fichero?
+ *
+ * MOVEMENT_TRASH cuenta, y es la que de verdad importa: un movimiento borrado
+ * se puede restaurar, y restaurarlo sin sus documentos sería devolver media
+ * cosa. */
+function docIdSigueEnUso_(ss, id, hojaEditada, filaEditada) {
+  if (!id) return true;                                  // sin id no se toca nada
+  var hojas = [SHEETS.ARCHIVE, SHEETS.ARCHIVE_HISTORY, SHEETS.TRASH];
+  for (var h = 0; h < hojas.length; h++) {
+    var sh;
+    try { sh = ss.getSheetByName(hojas[h]); } catch (e) { sh = null; }
+    if (!sh) continue;
+    var ultima = sh.getLastRow();
+    if (ultima < 2) continue;
+    var col;
+    try { col = sh.getRange(2, AC.DOC_LINKS + 1, ultima - 1, 1).getValues(); }
+    catch (e) { continue; }
+    for (var i = 0; i < col.length; i++) {
+      var fila = i + 2;
+      if (hojaEditada && sh.getName() === hojaEditada && fila === filaEditada) continue;
+      var txt = String(col[i][0] || '');
+      if (!txt) continue;
+      var lineas = txt.split('\n');
+      for (var j = 0; j < lineas.length; j++) {
+        if (docLinkFileId_(lineas[j]) === id) return true;
+      }
+    }
+  }
+  return false;
+}
+
+/* Un fichero a la papelera de Drive, con la frontera puesta.
+ *
+ * ES LA ÚNICA PUERTA. Tres sitios tiran ficheros —quitar un documento,
+ * reemplazar la foto de un estante y quitarla— y los tres tienen que
+ * comprobar lo mismo. Tres copias de la misma comprobación es que una se
+ * quede sin ella, que es cómo nacen los agujeros de este tipo.
+ *
+ * Devuelve 'ok', 'fuera' (estaba fuera de nuestras carpetas: no se toca),
+ * 'nada' (ya no existe) o 'fallo'. Nunca lanza. */
+function tirarALaPapeleraDeDrive_(ss, id, auth, deDonde) {
+  if (!id) return 'nada';
+  // La básica no tiene permiso de Drive: no hay fichero que tirar, y pedirlo
+  // sería un error de Google en la cara de alguien que no hizo nada mal.
+  if (basicApagado_()) return 'nada';
+  var quien = (auth && auth.email) || '';
+  var reqId = null;
+  try { reqId = newRequestId_(); } catch (e) {}
+
+  var file;
+  try { file = DriveApp.getFileById(id); }
+  catch (e) { return 'nada'; }              // ya no está: no es un fallo
+
+  if (!isFileWithinAppFolder_(file)) {
+    try {
+      logError_(ss, 'WARN', 'backend', deDonde || 'tirarALaPapeleraDeDrive_', quien,
+        'Refused to trash a file outside the app folder: ' + id, null, reqId);
+    } catch (e) {}
+    return 'fuera';
+  }
+
+  try { file.setTrashed(true); return 'ok'; }
+  catch (e) {
+    try {
+      logError_(ss, 'WARN', 'backend', deDonde || 'tirarALaPapeleraDeDrive_', quien,
+        'Could not trash ' + id + ': ' + e.message, null, reqId);
+    } catch (e2) {}
+    return 'fallo';
+  }
+}
+
+/* Manda a la papelera de Drive los ficheros cuyas líneas desaparecieron.
+ *
+ * Nunca lanza: devuelve la cuenta de lo que pasó para que el navegador pueda
+ * decirlo, y lo que no se pudo tirar queda en el registro de errores. */
+function trashDroppedDocs_(ss, antes, keepLinks, hojaEditada, filaEditada, auth) {
+  var out = { trashed: 0, failed: 0, outside: 0 };
+  var previas = String(antes || '').split('\n').filter(function (l) { return l.trim(); });
+  if (!previas.length) return out;
+
+  var quedan = {};
+  (keepLinks || []).forEach(function (l) {
+    var k = docLinkFileId_(l);
+    if (k) quedan[k] = true;
+  });
+
+  var vistos = {};
+  previas.forEach(function (linea) {
+    var id = docLinkFileId_(linea);
+    if (!id || quedan[id] || vistos[id]) return;
+    vistos[id] = true;
+
+    if (docIdSigueEnUso_(ss, id, hojaEditada, filaEditada)) return;
+
+    var r = tirarALaPapeleraDeDrive_(ss, id, auth, 'trashDroppedDocs_');
+    if (r === 'ok') out.trashed++;
+    else if (r === 'fuera') out.outside++;
+    else if (r === 'fallo') out.failed++;
+  });
+
+  return out;
+}
+
 // ─── DOCUMENT UPLOAD ─────────────────────────────────────────────────────────
 function updateDocument_(ss, archive, data, auth) {
   var hasDocGroups = data.docGroups && data.docGroups.length > 0;
@@ -9175,21 +9336,41 @@ function updateDocument_(ss, archive, data, auth) {
   //
   // No cuesta nada: el texto ya estaba calculado para escribirlo en la celda.
   var finalText = null;
+  var basura = null;
   if (data.rowIdx && (links || hasKeepLinks)) {
+    // SE LEE SIEMPRE LO QUE HABÍA, aunque no haga falta para armar el texto.
+    // Es lo único que dice qué líneas desaparecieron, y sin eso H-09 no se
+    // puede arreglar: el navegador manda las que SOBREVIVEN, no las que quitó.
+    var antes = String(archive.getRange(data.rowIdx, AC.DOC_LINKS + 1).getValue() || '');
     if (hasKeepLinks) {
       finalText = data.keepLinks.concat(links ? [links] : []).join('\n');
     } else {
-      var existing = archive.getRange(data.rowIdx, AC.DOC_LINKS + 1).getValue();
-      finalText = existing ? existing + '\n' + links : links;
+      finalText = antes ? antes + '\n' + links : links;
     }
     var docLinksCell = archive.getRange(data.rowIdx, AC.DOC_LINKS + 1);
     if (finalText) docLinksCell.setRichTextValue(richTextForDocLinks_(finalText));
     else docLinksCell.setValue(''); // all documents removed, nothing to replace with
+
+    // Y AHORA, con la celda ya escrita, los ficheros. Este orden es a
+    // propósito: la hoja es la fuente de verdad, y si Drive falla lo peor que
+    // pasa es que ese fichero se queda donde estaba, escrito en el registro.
+    // Al revés —tirar primero— un fallo al escribir la celda dejaría un enlace
+    // apuntando a algo que ya está en la papelera.
+    if (hasKeepLinks) {
+      try {
+        basura = trashDroppedDocs_(ss, antes, data.keepLinks,
+                                   archive.getName(), data.rowIdx, auth);
+      } catch (e) { basura = null; }
+    }
   }
   // null cuando NO se tocó la celda; '' cuando se quitaron todos. Son cosas
   // distintas y el navegador tiene que poder diferenciarlas: '' vacía la
   // columna, null la deja como estaba.
-  return { status: 'success', docLinks: finalText };
+  return { status: 'success', docLinks: finalText,
+           // Cuántos ficheros fueron a la papelera de Drive, para que el aviso
+           // pueda decir la verdad en vez de prometer un borrado a ciegas.
+           trashed: basura ? basura.trashed : 0,
+           trashFailed: basura ? (basura.failed + basura.outside) : 0 };
 }
 
 // Legacy single-file upload (kept for backward compatibility with older clients / attach modal)
@@ -9266,6 +9447,13 @@ function uploadRackPhoto(data, auth) {
   var found = false;
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][0] || '').trim().toUpperCase() === loc) {
+      // H-09, la otra mitad: REEMPLAZAR una foto dejaba la vieja en Drive para
+      // siempre, sin un solo enlace que llevara a ella. Una foto por estante
+      // significa que la anterior no la necesita nadie.
+      var vieja = docLinkFileId_(String(rows[i][1] || ''));
+      if (vieja && vieja !== url) {
+        try { tirarALaPapeleraDeDrive_(ss, vieja, auth, 'uploadRackPhoto'); } catch (e) {}
+      }
       sheet.getRange(i + 1, 1, 1, 4).setValues([[textCell_(loc), url, auth.email, now]]);
       found = true;
       break;
@@ -9285,6 +9473,43 @@ function uploadRackPhoto(data, auth) {
       uploadedAt: Utilities.formatDate(now, Session.getScriptTimeZone(), 'MM/dd/yyyy HH:mm')
     }
   };
+}
+
+/* Quita la foto de un estante — H-09, la mitad que no existía.
+ *
+ * Se podía reemplazar una foto; quitarla, no. Y el caso que lo hace necesario
+ * no es la limpieza: es una foto en la que sale algo que no debía salir.
+ *
+ * Mismo permiso que subirla (quien puede poner puede quitar) y mismo camino
+ * para el fichero: a la papelera de Drive, con la frontera puesta. La fila se
+ * borra DESPUÉS, por lo mismo que en los documentos: si falla lo de Drive,
+ * queda el enlace y el registro lo dice; al revés quedaría una foto sin fila
+ * que nadie podría volver a encontrar. */
+function deleteRackPhoto(data, auth) {
+  basicNiega_('Rack photos');
+  auth = requireAuth_('WRITE');
+  var loc = String((data && data.location) || '').trim().toUpperCase();
+  if (!loc) throw new Error('Location is required.');
+
+  var ss    = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('RACK_PHOTOS');
+  if (!sheet) return { status: 'success', location: loc, removed: false };
+
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0] || '').trim().toUpperCase() !== loc) continue;
+
+    var id = docLinkFileId_(String(rows[i][1] || ''));
+    var r  = id ? tirarALaPapeleraDeDrive_(ss, id, auth, 'deleteRackPhoto') : 'nada';
+    sheet.deleteRow(i + 1);
+
+    auditLog_(ss, 'DELETE_RACK_PHOTO', auth.email, loc, String(rows[i][1] || ''), '');
+    CacheService.getScriptCache().remove('rackPhotosV1');
+    return { status: 'success', location: loc, removed: true,
+             trashed: r === 'ok', trashFailed: (r === 'fallo' || r === 'fuera') };
+  }
+  // No había foto. No es un error: la pantalla puede ir un paso por detrás.
+  return { status: 'success', location: loc, removed: false };
 }
 
 // Turns a DOC_LINKS string ("Name||https://...\nName2||https://...") into a
@@ -15112,6 +15337,18 @@ function saveCompanyProfile(data, auth) {
 // An old logo that cannot be trashed (already deleted by hand, or owned by
 // somebody else after a transfer) is not a reason to fail the save — the new
 // one is already in place by then.
+/* LA PUERTA SIN COMPROBAR, Y POR QUÉ HAY DOS.
+ *
+ * Ésta tira un fichero sin mirar en qué carpeta está. Vale SÓLO para ids que
+ * guardó la app en sus Script Properties y que nadie puede editar — hoy, el
+ * logo de la empresa, que además vive en la carpeta maestra y no en la de
+ * documentos, así que la frontera de `isFileWithinAppFolder_` lo rechazaría.
+ *
+ * Para cualquier id que venga de una CELDA —`DOC_LINKS`, `RACK_PHOTOS`— va
+ * `tirarALaPapeleraDeDrive_`, que comprueba la carpeta y deja registro. La
+ * diferencia no es de estilo: una celda la puede escribir una persona, y sin
+ * la comprobación «quitar un documento» sería una forma de mandar a la
+ * papelera cualquier fichero del Drive del dueño. */
 function trashFileQuietly_(fileId) {
   if (!fileId) return;
   try { DriveApp.getFileById(fileId).setTrashed(true); } catch (e) {}
@@ -15285,7 +15522,10 @@ function forgetRackPhotos_(ss, names) {
   // Bottom-up: deleting a row shifts everything below it.
   for (var i = rows.length - 1; i >= 1; i--) {
     if (!gone[String(rows[i][0] || '').trim().toUpperCase()]) continue;
-    trashFileQuietly_(String(rows[i][1] || '').trim());
+    // La puerta COMPROBADA: este id sale de una celda, y una celda la puede
+    // escribir una persona. Ver tirarALaPapeleraDeDrive_ y trashFileQuietly_.
+    tirarALaPapeleraDeDrive_(ss, docLinkFileId_(String(rows[i][1] || '')),
+                             null, 'forgetRackPhotos_');
     sheet.deleteRow(i + 1);
     dropped++;
   }

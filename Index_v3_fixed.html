@@ -1947,6 +1947,10 @@
     .rack-photo-card .rpc-name{font-size:.63rem;font-weight:600;color:var(--text);text-align:center;word-break:break-word;line-height:1.2;max-width:72px}
     .rack-photo-card .rpc-qty{font-size:.58rem;font-weight:600;color:var(--accent2)}
     .rack-photo-card .rpc-btn{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--navy);color:#fff;border:2px solid var(--card);font-size:var(--fs-2xs);cursor:pointer;line-height:1;padding:0;opacity:0;transition:.15s}
+    /* H-09: el de quitar va al OTRO lado, no al lado del de reemplazar. Dos
+       botones de 20 px pegados en la misma esquina son un acierto a medias con
+       el dedo, y uno de los dos borra. */
+    .rack-photo-card .rpc-btn.quitar{right:auto;left:-6px;background:var(--red)}
     .rack-photo-card:hover .rpc-btn,.rack-photo-card .rpc-btn:focus{opacity:1}
     .rack-photo-card .rpc-btn:hover{background:var(--accent)}
     @media (hover:none){.rack-photo-card .rpc-btn{opacity:1}}
@@ -6405,7 +6409,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '15.8';
+var APP_VERSION = '15.9';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -6417,7 +6421,7 @@ var APP_VERSION = '15.8';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '9e544f2d';
+var APP_BUILD = '13a20292';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -10022,6 +10026,13 @@ function renderStock(){
             ? '<button class="rpc-btn" data-action="rack-photo-upload" data-rack="'+_he(rack)+'" title="' +
               (photo ? 'Replace photo' : 'Add photo') + '">' + (photo ? '🔄' : '+') + '</button>'
             : '';
+          // H-09: hasta ahora una foto se podía reemplazar pero NO quitar. Y el
+          // caso que lo hace necesario no es la limpieza: es una foto en la que
+          // sale algo que no debía salir.
+          if (canUpload && photo) {
+            action += '<button class="rpc-btn quitar" data-action="rack-photo-remove" ' +
+                      'data-rack="'+_he(rack)+'" title="Remove photo">✕</button>';
+          }
           return '<div class="rack-photo-card" title="' + _he(rack) + ' — ' + s.warehouseLocs[rack] + ' unit(s)">' +
             img +
             '<span class="rpc-name">' + _he(rack) + '</span>' +
@@ -22192,6 +22203,8 @@ document.addEventListener('keydown', function(e){ if (e.key === 'Escape') _perso
       _applyExitMatSuggest(parseInt(el.getAttribute('data-n'),10), el.getAttribute('data-name'), el.getAttribute('data-cat'));
     } else if (a === 'rack-photo-upload') {
       _triggerRackPhotoUpload(el.getAttribute('data-rack'));
+    } else if (a === 'rack-photo-remove') {
+      _quitarFotoDeEstante(el.getAttribute('data-rack'));
     } else if (a === 'toggle-stock-detail') {
       toggleStockDetail(el.getAttribute('data-row-id'));
     } else if (a === 'preview-media') {
@@ -22239,8 +22252,19 @@ function _settingMsg(txt, type) {
 }
 
 // ── Attachment Upload ─────────────────────────────────────────────────────────
+
+/* ── H-09 · LA ✕ AHORA BORRA DE VERDAD, Y HAY QUE DECIRLO ────────────────────
+ *
+ * Jose, 26/10: *"podemos cambiar esos documentos y fotos pero nunca eliminarlos
+ * por completo, no hay opción."* Hasta ahora la ✕ quitaba el enlace y el
+ * fichero se quedaba en el Drive de la empresa para siempre.
+ *
+ * Desde esta versión se va a la papelera de Drive. Y eso cambia lo que hay que
+ * preguntar: **antes no hacía falta avisar porque no pasaba nada**; ahora sí
+ * pasa, así que se dice antes de hacerlo y se dice QUÉ pasa — a la papelera,
+ * 30 días para recuperarlo. Avisar y no hacer nada sería asustar por gusto;
+ * hacerlo y no avisar es lo que estaba mal al revés. */
 function submitAttachment() {
-  var btn  = document.getElementById('attachSubmit');
   var docs = _collectDocGroups('aDocGroupsContainer');
   var keepLinks = _attachExistingDocs.filter(function(d,i){ return !_attachRemovedIdx[i]; }).map(function(d){ return d.raw; });
 
@@ -22249,6 +22273,27 @@ function submitAttachment() {
     return;
   }
 
+  var quitados = _attachExistingDocs.length - keepLinks.length;
+  if (quitados > 0) {
+    _showConfirm({
+      icon: '🗑',
+      title: quitados === 1 ? 'Remove this document?' : 'Remove ' + quitados + ' documents?',
+      message: (quitados === 1 ? 'The file also goes' : 'The files also go') +
+               ' to your Google Drive trash, where you can get ' +
+               (quitados === 1 ? 'it' : 'them') + ' back for 30 days. ' +
+               'Until now removing a document left the file in Drive for good.',
+      confirmText: quitados === 1 ? 'Remove it' : 'Remove them',
+      cancelText:  'Keep them',
+      danger: true,
+      onConfirm: function(){ _submitAttachmentYa(docs, keepLinks); }
+    });
+    return;
+  }
+  _submitAttachmentYa(docs, keepLinks);
+}
+
+function _submitAttachmentYa(docs, keepLinks) {
+  var btn  = document.getElementById('attachSubmit');
   var fila = parseInt(document.getElementById('aRowIdx').value);
 
   _btnBusy(btn, 'Saving…');
@@ -22274,7 +22319,16 @@ function submitAttachment() {
       }
       _setModalBusy('attachOverlay', false);
       _btnDone(btn, true, function(){ closeModal('attachOverlay'); });
-      showToast('Documents updated ✓', 'ok', TOAST_QUICK);
+      // Se dice CUÁNTOS fueron a la papelera, no «hecho». Prometer un borrado
+      // y no contarlo es exactamente lo que estaba mal antes de la v15.9.
+      var extra = '';
+      if (res && res.trashed) extra = ' · ' + res.trashed + ' sent to Drive trash';
+      showToast('Documents updated ✓' + extra, 'ok', TOAST_QUICK);
+      if (res && res.trashFailed) {
+        showToast(res.trashFailed + (res.trashFailed === 1 ? ' file' : ' files') +
+                  ' could not be removed from Drive — it is in the error log',
+                  'warn', 7000);
+      }
       _reloadWhenIdle();
     })
     .withFailureHandler(function(err) {
@@ -25843,6 +25897,52 @@ function _handleRackPhotoFileChange(){
         showToast('Error uploading photo: ' + _stripTags(err), 'err', 6000);
       })
       .processMovement('uploadRackPhoto', _h({ location: rack, fileData: b64, fileMimeType: mime }));
+  });
+}
+
+/* ── H-09 · QUITAR LA FOTO DE UN ESTANTE ─────────────────────────────────────
+ *
+ * No existía. Se podía reemplazar una foto, nunca quitarla — y la razón por la
+ * que hace falta no es el orden: es una foto en la que sale algo que no debía
+ * salir.
+ *
+ * Se pinta en cuanto el servidor dice sí, como todo lo demás de esta pantalla,
+ * y se vuelve a pintar manteniendo abiertas las filas que el usuario tenía
+ * abiertas — igual que al subir. Lo que NO se hace es quitarla de la pantalla
+ * antes de saber si se pudo: una foto que reaparece al recargar es peor que
+ * medio segundo de espera. */
+function _quitarFotoDeEstante(rack){
+  if (!rack) return;
+  _showConfirm({
+    icon: '🗑',
+    title: 'Remove the photo of ' + rack + '?',
+    message: 'The file also goes to your Google Drive trash, where you can get it ' +
+             'back for 30 days.',
+    confirmText: 'Remove it',
+    cancelText:  'Keep it',
+    danger: true,
+    onConfirm: function(){
+      _progStart(1, 'Removing photo');
+      google.script.run
+        .withSuccessHandler(function(res){
+          if (!res || res.status !== 'success') { _progEnd('The photo was not removed.', true); return; }
+          delete rackPhotos[rack.toUpperCase()];
+          var openIds = Array.prototype.map.call(
+            document.querySelectorAll('.stock-detail-row.open'), function(el){ return el.id; });
+          renderStock();
+          openIds.forEach(function(id){ var el = document.getElementById(id); if (el) el.classList.add('open'); });
+          renderWarehouseMap();
+          _progEnd(res.trashFailed
+            ? 'Photo removed — but the file stayed in Drive. It is in the error log.'
+            : 'Photo removed from ' + rack + ' and sent to Drive trash.',
+            !!res.trashFailed);
+        })
+        .withFailureHandler(function(err){
+          _progEnd('The photo was not removed.', true);
+          showToast('Error removing photo: ' + _stripTags(err), 'err', 6000);
+        })
+        .processMovement('deleteRackPhoto', _h({ location: rack }));
+    }
   });
 }
 
@@ -33814,6 +33914,19 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '15.9',
+    titulo: 'Removing a document now removes the file, not just the link',
+    puntos: [
+      '<b>Pressing \u2715 on an attached document took it off the screen and left the file in your Drive.</b> For good. Nothing in that path ever touched Drive: the app wrote the surviving list of links into the row and stopped there.',
+      'The space was never the point. <b>What matters is what you believed you had done.</b> If that PDF carried a supplier price, or a photo showed something that should not have been photographed, it was still there \u2014 and the app had told you it was not. Worse, with no link left pointing at it, nobody was ever going to find it again.',
+      '<b>Now the file goes to your Google Drive trash</b>, where you can get it back for 30 days. The app says so before it does it, and afterwards it tells you how many files went \u2014 a promise it can keep, instead of a silent one it could not.',
+      '<b>And a rack photo can be removed.</b> You could replace one; you could never take one down \u2014 and the reason you need to is not tidiness, it is a photo with something in it that should not be there. There is a \u2715 on the photo card now, next to the replace button but on the other side, because two 20-pixel buttons in the same corner is a coin flip and one of them deletes.',
+      'Replacing a rack photo used to leave the old file in Drive too. It does not any more.',
+      '<b>What the app refuses to do:</b> throw away a file that is not in its own folders \u2014 a link cell can be typed in by hand, and without that check \u201cremove a document\u201d would be a way to bin anything in the owner\u2019s Drive \u2014 and throw away a file that a movement in the <i>trash</i> still points at, because restoring a deleted movement has to bring its documents back with it.'
+    ],
+    antes:  'The file stayed in Drive for good',
+    ahora:  'To the Drive trash, and it says how many' },
+
   { ver: '15.8',
     titulo: 'You can see it saving now, and the window no longer drags you elsewhere',
     puntos: [
@@ -33847,17 +33960,6 @@ var NOVEDADES = [
     ],
     antes:  'A message, and your typing gone',
     ahora:  'The window returns with your work still in it' },
-
-  { ver: '15.5',
-    titulo: 'A delivery that already arrived stops offering its entry again',
-    puntos: [
-      '<b>Editing a delivery that was already marked as arrived offered to make its entry again.</b> Change a note on it, save, and the entry form opened as if the material had just turned up — which is how the same delivery gets entered twice. It no longer does. A delivery still waiting does, exactly as before.',
-      '<b>Making the entry from Incoming leaves you in Incoming.</b> It used to drop you in Movements, which meant finding your way back to carry on with the next delivery.',
-      '<b>The Comments box when editing a movement was 47 pixels tall.</b> It is about five lines now, and you can drag the corner to make it taller.',
-      '<b>And the header no longer jumps.</b> The logo was fetched through the same queue as document thumbnails, so it arrived late and the bar changed height with it. The remembered copy is painted immediately — from the second visit on, nothing moves.'
-    ],
-    antes:  'The same delivery could be entered twice',
-    ahora:  'Once it has arrived, it is done' },
 
 ];
 

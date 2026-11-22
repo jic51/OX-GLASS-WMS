@@ -45,6 +45,7 @@ node tools/test-respaldo-parado.js
 node tools/test-se-ve-al-guardar.js
 node tools/test-borrar-y-editar-se-ven.js
 node tools/test-borrar-usuario.js
+node tools/test-borrar-de-verdad.js
 node tools/test-vuelta-del-login.js
 node tools/test-cinco-sin-riesgo.js
 node tools/test-escala.js
@@ -499,6 +500,7 @@ come back from — is invisible to both. Those get a browser test.
 - `test-se-ve-al-guardar.js` — lo guardado se ve en el mismo segundo: el servidor devuelve las filas que escribió y las tres pantallas las pintan sin volver a preguntar
 - `test-borrar-y-editar-se-ven.js` — lo mismo para borrar y editar: las cifras de después cuando el refresco de verdad ocurrió, y la fila editada tal como quedó en la hoja
 - `test-borrar-usuario.js` — borrar de verdad una fila de usuario, con el rastro escrito antes y la lista vieja de CONFIG limpiada para que no vuelva sola
+- `test-borrar-de-verdad.js` — H-09: la ✕ de un documento manda el fichero a la papelera de Drive, no sólo quita el enlace. EJECUTA `updateDocument_` sobre un Drive de mentira que apunta quién fue a la papelera, porque comprobar que el archivo «contiene setTrashed» pasaría igual con la llamada detrás de un `if` que nunca se cumple. Defiende las tres cosas que serían peores que no borrar: tirar un fichero de FUERA de nuestras carpetas (un `DOC_LINKS` es una celda y una celda la escribe una persona), tirar uno al que todavía apunta la PAPELERA de movimientos —restaurar un movimiento tiene que devolver sus documentos— y que un fallo de Drive tumbe el guardado. Cubre también las fotos de estante por sus dos lados: reemplazar ya no deja la vieja tirada, y quitarla, que no existía
 - `test-vuelta-del-login.js` — que la dirección de vuelta del inicio de sesión apunte a ESTA app y no a otra, y que si no, se diga antes de abrir una ventana que va a morir
 - `test-cinco-sin-riesgo.js` — los cinco arreglos sin riesgo de la auditoría de columnas, y sobre todo el lado por el que cada uno falla: el total sólo se recalcula cuando se puede saber cuál debe ser, las tres hojas calculadas pierden cinco columnas sin que su único lector pierda un número, el aviso de CONFIG vigila exactamente las columnas que `loadConfig` lee de la fila 2, la nota de RESERVATIONS es la suya y la pestaña no se borra, y el renombrado de `AUDIT_LOG` no toca una cabecera que el cliente escribió
 - `test-escala.js` — la escala de letra y la forma de los botones no se deshacen solas: los trece escalones de la opción A existen y están ordenados, los tres tamaños más usados no se movieron, ningún botón lleva un tamaño ni una altura a pelo, y lo que BORRA algo se MIDE en un navegador táctil —no se busca en el CSS— porque buscarlo en el CSS pasaba en verde con un botón de 34 px en pantalla

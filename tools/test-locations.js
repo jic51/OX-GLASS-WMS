@@ -45,6 +45,13 @@
 //
 // Uso:  node tools/test-locations.js
 
+/* IDS DE DRIVE DE VERDAD. Tienen de 25 a 44 caracteres, y `docLinkFileId_`
+   exige 20 o más para no tomar por un id cualquier resto que haya quedado en la
+   celda. Con 'FILE-A1A' —ocho— el extractor devuelve vacío y no se tira nada:
+   la prueba diría en rojo lo que parece un fallo del producto y es del dato. */
+const ID_A1A = '1aAaBbCcDdEeFfGgHhIiJjK01';
+const ID_A1B = '1zZzYyXxWwVvUuTtSsRrQqP02';
+
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const A    = require(require('path').join(__dirname, 'andamio.js'));
 const ROOT = path.join(__dirname, '..');
@@ -176,7 +183,14 @@ function mundo(opts){
     sheetSafe_: (v) => v,
     auditLog_: function(){ auditadas.push(Array.prototype.slice.call(arguments, 1)); },
     requireAuth_: () => ({ email: 'jose@ox.com', role: 'ADMIN' }),
-    trashFileQuietly_: (id) => { if (id) basura.push(id); },
+    /* LA PUERTA CAMBIÓ EN LA v15.9, Y EL DOBLE CON ELLA.
+       `forgetRackPhotos_` tiraba el fichero por `trashFileQuietly_`, que no
+       comprueba en qué carpeta está. Pero el id sale de una CELDA, y una celda
+       la puede escribir una persona, así que pasó a la puerta comprobada
+       —`tirarALaPapeleraDeDrive_`— que es la misma que usa H-09. Lo que esta
+       prueba mide no cambia: que borrar una locación se lleve SU foto y sólo la
+       suya. */
+    tirarALaPapeleraDeDrive_: (ss, id) => { if (id) basura.push(id); },
     CacheService: { getScriptCache: () => ({ remove: (k) => cacheBorrado.push(k) }) },
     SpreadsheetApp: { getActiveSpreadsheet: () => c.ss },
     ss: { getSheetByName: (n) => hojas[n] || null }
@@ -194,7 +208,7 @@ function mundo(opts){
   vm.runInContext(A.levantar(GS,
     ['saveLocationLayout', 'locationUsage_', 'locationBlockReason_',
      'forgetRackPhotos_'], {
-      dobles: ['requireAuth_', 'auditLog_', 'sheetSafe_', 'trashFileQuietly_']
+      dobles: ['requireAuth_', 'auditLog_', 'sheetSafe_', 'tirarALaPapeleraDeDrive_']
     }), c);
 
   return { c, hojas, auditadas, basura, cacheBorrado,
@@ -322,11 +336,11 @@ console.log('\n── EL SERVIDOR: qué se deja escribir ───────�
 console.log('\n── LA FOTO SE VA CON LA LOCACIÓN ──────────────────────────────\n');
 
 {
-  const m = mundo({ photos: [{ loc:'A1A', id:'FILE-A1A' }, { loc:'A1B', id:'FILE-A1B' }] });
+  const m = mundo({ photos: [{ loc:'A1A', id:ID_A1A }, { loc:'A1B', id:ID_A1B }] });
   const err = fallo(() => guardar(m, [{ name:'A1B' }, { name:'A1C' }]));
   check('borrar la locación vacía funcionó',            err === null);
-  check('su foto se tiró a la papelera de Drive',       m.basura.indexOf('FILE-A1A') !== -1);
-  check('la foto de otra locación NO se tocó',          m.basura.indexOf('FILE-A1B') === -1);
+  check('su foto se tiró a la papelera de Drive',       m.basura.indexOf(ID_A1A) !== -1);
+  check('la foto de otra locación NO se tocó',          m.basura.indexOf(ID_A1B) === -1);
   check('la fila de la foto se quitó de la hoja',
         columna(m.hojas.RACK_PHOTOS, 1).join(',') === 'A1B');
   check('y la caché de fotos se invalidó',              m.cacheBorrado.indexOf('rackPhotosV1') !== -1);
@@ -335,7 +349,7 @@ console.log('\n── LA FOTO SE VA CON LA LOCACIÓN ─────────
 {
   // Si el guardado se rechaza, la foto tiene que seguir ahí: una foto borrada
   // por un guardado que falló sería una pérdida por una operación que no pasó.
-  const m = mundo({ stock: [{ loc:'A1A', qty: 3 }], photos: [{ loc:'A1A', id:'FILE-A1A' }] });
+  const m = mundo({ stock: [{ loc:'A1A', qty: 3 }], photos: [{ loc:'A1A', id:ID_A1A }] });
   fallo(() => guardar(m, [{ name:'A1B' }, { name:'A1C' }]));
   check('un guardado rechazado no borra ninguna foto',  m.basura.length === 0);
 }

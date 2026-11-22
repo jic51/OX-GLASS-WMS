@@ -682,7 +682,12 @@ m.seccion('los que se quedan, pero cortos');
     ['traer una tanda más del histórico',   "'ok', TOAST_QUICK);"],
     ['...y decir que ya están todas',       "nothing older left.', 'ok', TOAST_QUICK)"],
     ['autorrellenar estantes',              "auto-filled — enter quantities.','ok',TOAST_QUICK)"],
-    ['guardar documentos',                  "showToast('Documents updated ✓', 'ok', TOAST_QUICK)"],
+    /* El de los documentos ganó una cola en la v15.9 —«· 2 sent to Drive
+     * trash»— porque desde entonces quitar un documento tira el fichero de
+     * verdad y hay que decir cuántos fueron. Lo que esta lista defiende no es
+     * el texto: es que siga durando lo poco que dura, porque no hay nada que
+     * pulsar en él. Por eso la marca es el final de la llamada y no la frase. */
+    ['guardar documentos',                  "updated ✓' + extra, 'ok', TOAST_QUICK)"],
     ['la semana sin entregas',              "rest of this week.', 'ok', TOAST_QUICK)"]
   ];
   RAPIDOS.forEach(([que, marca]) => {

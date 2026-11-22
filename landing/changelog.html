@@ -107,6 +107,34 @@
     <!-- N-05 era mio, de la v15.2. N-06 es el mismo patron que M-06. -->
     <!-- N-07 · El estante malo se ve antes de mandar, y elegir ya es contestar. -->
     <!-- N-08 · La idea de la fila fantasma es de Jose. N-09/10/11 vienen del mismo repaso. -->
+    <!-- H-09 · La X de un documento borraba el enlace y dejaba el fichero. -->
+    <div class="entry" id="v15-9">
+      <span class="ver">v15.9</span>
+      <span class="tag fix">Fix</span>
+      <h3>Removing a document removes the file, not just the link</h3>
+      <p><b>Pressing &#10005; on an attached document took it off the screen and left the file
+         in your Drive. For good.</b> Nothing in that path ever touched Drive: the app wrote the
+         surviving list of links into the row and stopped there.</p>
+      <p>The space was never the point. <b>What matters is what you believed you had done.</b>
+         If that PDF carried a supplier price, or a photo showed something that should not have
+         been photographed, it was still there &mdash; and the app had told you it was not. With
+         no link left pointing at it, nobody was ever going to find it again either.</p>
+      <p><b>The file now goes to your Google Drive trash</b>, where you can get it back for 30
+         days. The app says so before it does it, and afterwards it tells you how many files
+         went. Trashed, not destroyed: a delete you cannot undo is not a better delete.</p>
+      <p><b>And a rack photo can be removed.</b> You could replace one; you could never take one
+         down &mdash; and the reason you need to is not tidiness, it is a photo with something in
+         it that should not be there. Replacing one used to leave the old file in Drive as well.
+         It does not any more.</p>
+      <p><b>Two things the app refuses to do.</b> It will not bin a file that is not inside its
+         own folders: a link cell can be typed in by hand, and without that check &ldquo;remove a
+         document&rdquo; would be a way to throw away anything in the owner&rsquo;s Drive. And it
+         will not bin a file that a movement in the <i>trash</i> still points at, because
+         restoring a deleted movement has to bring its documents back with it.</p>
+      <p class="meta">Removing one of two documents must bin exactly one file; a file outside the
+         app folders must survive and be logged; a Drive failure must not lose the save, which is
+         why the row is written first and the file second.</p>
+    </div>
     <div class="entry" id="v15-8">
       <span class="ver">v15.8</span>
       <span class="tag new">New</span>

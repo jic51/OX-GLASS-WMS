@@ -355,6 +355,19 @@ Hoja.prototype.getRange = function(r, c, nr, nc){
       self.pedidos.push('setValue');
       return this;
     },
+    /* EL TEXTO ENRIQUECIDO GUARDA EL MISMO VALOR, que es justo lo que hace
+       Sheets: el formato va ENCIMA del valor, no en su lugar, y getValues()
+       devuelve después la misma cadena de siempre. Una hoja falsa que no
+       guardara nada aquí dejaría la celda vacía y haría pasar en verde a
+       cualquiera que escriba DOC_LINKS — que es la única columna de la app
+       que se escribe así. */
+    setRichTextValue(rt){
+      while (self.rows.length < r) self.rows.push([]);
+      self.rows[r - 1][c - 1] =
+        (rt && typeof rt.getText === 'function') ? rt.getText() : rt;
+      self.pedidos.push('setRichTextValue');
+      return this;
+    },
     getValues(){
       self.pedidos.push('getValues');
       const out = [];

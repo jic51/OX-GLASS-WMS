@@ -2417,7 +2417,7 @@ permiso debería irse con ella. Hoy no hay nada que lo vigile.
 
 ---
 
-## 🔴 H-09 · Quitar un documento sólo quita el ENLACE. El archivo se queda en Drive para siempre
+## ✅ H-09 · Quitar un documento sólo quitaba el ENLACE — **ARREGLADO en la v15.9**
 
 **Dónde:** `Code_v3_fixed.gs` `updateDocument_` (~8729). Lo encontró Jose el
 26/10: *"podemos cambiar esos documentos y fotos pero nunca eliminarlos por
@@ -2453,6 +2453,51 @@ cualquiera espera. Destruirlo del todo sería irreversible y no hace falta.
 **Decisión de Jose:** si al pulsar ✕ se avisa («esto también lo quita de tu
 Drive») o se hace callando. Yo avisaría, porque hoy la gente cree que ya lo
 hace.
+
+---
+
+### ✅ CÓMO QUEDÓ, v15.9
+
+**Se avisa.** Jose dijo *"haz lo tuyo, todo, en el orden que quieras"*, así que
+la decisión la tomé por la razón que ya estaba escrita arriba: hasta ahora no
+hacía falta avisar porque **no pasaba nada**; ahora sí pasa. El aviso dice qué
+pasa —a la papelera de Drive, 30 días para recuperarlo— y después se dice
+**cuántos** ficheros fueron, que es una promesa que la app puede cumplir.
+
+**Y las tres decisiones de fondo:**
+
+1. **`setTrashed(true)`, no destruir.** Un borrado que no se puede deshacer no
+   es un borrado mejor.
+2. **La misma frontera que para LEER un fichero** (`isFileWithinAppFolder_`). Un
+   `DOC_LINKS` es una celda, y una celda la puede escribir una persona: sin la
+   comprobación, «quitar un documento» sería una forma de mandar a la papelera
+   cualquier fichero del Drive del dueño. Lo que queda fuera no se toca y queda
+   **en el registro de errores**, no en silencio.
+3. **No se tira un fichero al que apunta otra fila** — y la que importa es la de
+   `MOVEMENT_TRASH`: restaurar un movimiento borrado tiene que devolver sus
+   documentos. Se miran las tres hojas que guardan movimientos.
+
+**La celda se escribe PRIMERO y el fichero después.** La hoja es la fuente de
+verdad: si Drive falla, lo peor que pasa es que ese fichero se queda donde
+estaba y queda escrito. Al revés, un fallo al escribir la celda dejaría un
+enlace apuntando a algo que ya está en la papelera.
+
+**Las fotos de estante, las dos mitades.** No existía ninguna forma de quitar
+una —se podía reemplazar y nada más— y **reemplazar dejaba la vieja suelta para
+siempre**. Ahora hay una ✕ en la tarjeta, al otro lado del botón de reemplazar
+a propósito, y reemplazar tira la anterior.
+
+**Y una puerta que ya existía y no comprobaba nada.** `trashFileQuietly_` tira
+un fichero sin mirar en qué carpeta está; vale para el logo de la empresa, cuyo
+id guarda la app en sus Script Properties y que además vive en la carpeta
+maestra. Pero `forgetRackPhotos_` la usaba con un id **sacado de una celda**. Ésa
+pasó a la puerta comprobada. Las dos tienen ahora escrito arriba cuál es cuál y
+por qué hay dos.
+
+`tools/test-borrar-de-verdad.js` (37) lo ejecuta sobre un Drive de mentira que
+apunta quién fue a la papelera — no comprueba que el archivo «contenga
+setTrashed», que pasaría igual con la llamada detrás de un `if` que nunca se
+cumple.
 
 ---
 

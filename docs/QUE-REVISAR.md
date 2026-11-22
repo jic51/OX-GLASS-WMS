@@ -16,6 +16,42 @@ Esto es ese documento, y se actualiza **con cada versión**. Lo de arriba es lo
 
 ---
 
+## v15.9 — quitar un documento lo quita de verdad
+
+### 1 · La ✕ de un documento  🔴 *lo que encontraste el 26/10*
+
+1. En un movimiento con **dos documentos**, abre *Manage Documents* y quita
+   **uno**. Guarda.
+2. **Tiene que pasar:** antes de hacer nada te pregunta, y dice que el fichero
+   va a la papelera de tu Drive y que lo puedes recuperar 30 días. Al guardar,
+   el aviso dice **cuántos** fueron.
+3. **Abre tu Google Drive → Papelera.** El fichero que quitaste **tiene que
+   estar ahí**. El que dejaste, **no**.
+4. **Sería el fallo:** que la papelera de Drive esté vacía. Eso es lo que pasaba
+   hasta hoy, y es el motivo de todo esto.
+
+### 2 · La foto de un estante, que no se podía quitar
+
+1. En **Stock**, abre un material y pasa el ratón por la tarjeta de un estante
+   **que tenga foto** (en el teléfono se ve sin pasar nada).
+2. **Tiene que pasar:** hay **dos** botones, el de reemplazar (🔄) a la derecha
+   y el de quitar (✕, rojo) **a la izquierda**. Están separados a propósito:
+   dos botones de 20 px en la misma esquina es un acierto a medias con el dedo,
+   y uno de los dos borra.
+3. Pulsa la ✕, confirma. La foto desaparece de la pantalla y el fichero aparece
+   en la papelera de tu Drive.
+4. **Y el otro lado:** **reemplaza** una foto y mira la papelera de Drive. La
+   vieja tiene que estar ahí. Antes se quedaba suelta para siempre.
+
+### 3 · Lo que NO tiene que pasar, y vale la pena comprobarlo una vez
+
+1. **Borra un movimiento** que tenga un documento (va a la papelera de la app).
+2. **Tiene que pasar:** el fichero **sigue en tu Drive**, no en la papelera.
+   Porque restaurar ese movimiento tiene que devolverle sus documentos.
+3. Restáuralo y comprueba que el documento sigue abriéndose.
+
+---
+
 ## v15.8 — que se vea lo que está pasando
 
 ### 1 · Guardar una entrada  🔴 *lo que más molestaba*

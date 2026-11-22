@@ -407,8 +407,29 @@ check('NO queda ni una recarga cacheada en toda la app', cacheadas === 0, cachea
 // Y NINGUNA en los tres caminos arreglados. Esta es la comprobación que impide
 // que vuelvan: el recuento de arriba seguiría en 3 si alguien cambiara una por
 // otra.
+/* DÓNDE VIVE EL TRABAJO, QUE NO ES SIEMPRE LA FUNCIÓN QUE SE PULSA.
+ *
+ * En la v15.9 `submitAttachment` se partió en dos: la de arriba pregunta
+ * —quitar un documento ahora manda el fichero a la papelera de Drive, así que
+ * hay que avisar antes— y `_submitAttachmentYa` guarda. El repintado se fue con
+ * la segunda, y esta comprobación, que leía sólo la primera, se puso roja sin
+ * que el producto hubiera cambiado de comportamiento.
+ *
+ * Así que se mira la función Y aquello en lo que delega. Exigir que el
+ * repintado esté escrito en una función CONCRETA es exigir un sitio; lo que
+ * esta prueba promete es un COMPORTAMIENTO. Es el mismo arreglo que se le hizo
+ * a test-ubicacion-que-no-existe. */
+const DELEGA = { submitAttachment: ['_submitAttachmentYa'] };
+
 ['saveIncomingItem', 'submitAttachment', 'saveEditMov'].forEach(function(fn){
-  const cuerpo = sinComentarios(A.fnSrc(HTML, fn));
+  const cuerpo = [fn].concat(DELEGA[fn] || [])
+    .map(function(n){
+      const src = A.fnSrc(HTML, n);
+      if (!src) throw new Error('test-pintar-al-confirmar: no existe ' + n +
+        '. Si se renombró, hay que decirlo aquí: una prueba que mira una ' +
+        'función que ya no está dejó de medir el producto.');
+      return sinComentarios(src);
+    }).join('\n');
   check(fn + ' no usa la recarga cacheada',
         cuerpo.indexOf('loadDataFromGoogle(false)') === -1);
   check(fn + ' parcha la copia local y repinta',
