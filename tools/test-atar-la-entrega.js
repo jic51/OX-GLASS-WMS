@@ -349,19 +349,66 @@ m.seccion('en el navegador: el enlace se ve, y no propaga nada');
   check('al corregir una entrega que ya tiene entrada, se DICE',
     /already has[\s\S]{0,120}correcting the delivery does not change the movement/.test(sin));
 
-  /* LA COMPROBACIÓN QUE DEFIENDE LO QUE **NO** SE HACE.
+  /* ── LO QUE CAMBIÓ EL 23/11, Y POR QUÉ ESTA COMPROBACIÓN SE REESCRIBE ──────
    *
-   * Propagar la corrección a su movimiento es la cosa que parece obvia y
-   * sorprende: si la entrega decía 24 y el movimiento guardó 22 porque llegaron
-   * dos rotas, poner 25 en la entrega no debe poner 25 en el movimiento. Y esa
-   * cantidad YA cambió el inventario. Así que en todo el camino de guardar una
-   * entrega no puede aparecer una llamada que modifique un movimiento. */
+   * Aquí decía: *"en todo el camino de guardar una entrega no puede aparecer
+   * una llamada que modifique un movimiento"*. Y seguía pasando en verde
+   * después de que la app empezara a propagar — porque la llamada se fue a
+   * `_propagarALaEntrada`, que es otra función. **Una prueba que pasa por
+   * dónde está escrito el código y no por lo que el código hace**, que es el
+   * fallo que este repositorio lleva meses cazando, esta vez en mí.
+   *
+   * Jose, 23/11: *"quiero que cada vez que se corrija un incoming que ya tiene
+   * entry, la app le dé al usuario la opción… y el usuario debe decir sí o
+   * no."* Así que la regla ya no es «no se propaga»: es **no se propaga sin que
+   * alguien diga que sí**. Eso es lo que hay que medir. */
   const guardar = A.fnSrc(HTML, 'saveIncomingItem') || '';
   check('se pudo leer el camino de guardar una entrega', guardar.length > 400,
     guardar.length);
-  check('...y NO modifica ningún movimiento: la app avisa y deja decidir a ' +
-        'quien sabe si llegaron 22 o 25',
-    !/modifyMovement/.test(A.sinComentarios(guardar)));
+  check('guardar una entrega NO escribe en un movimiento por su cuenta: todo ' +
+        'pasa por la oferta', !/modifyMovement/.test(A.sinComentarios(guardar)) &&
+    /_ofrecerCorregirLaEntrada\(/.test(A.sinComentarios(guardar)));
+
+  const oferta = A.sinComentarios(A.fnSrc(HTML, '_ofrecerCorregirLaEntrada') || '');
+  const propaga = A.sinComentarios(A.fnSrc(HTML, '_propagarALaEntrada') || '');
+  check('la oferta existe y se pudo leer', oferta.length > 600, oferta.length);
+  check('...y pregunta, con dos respuestas de verdad — sí y no',
+    /_showConfirm\(/.test(oferta) && /confirmText/.test(oferta) && /cancelText/.test(oferta));
+  check('...y nombra el dato que cambió, de qué a qué: «se cambió X dato» ' +
+        'escrito como lo pidió Jose',
+    /etiqueta \+ ': ' \+ _valorLegible\(antes/.test(oferta));
+  /* LA ESCRITURA SÓLO CUELGA DEL SÍ. Se mira que la ÚNICA mención de
+     `_propagarALaEntrada` en la oferta esté detrás de `onConfirm`: si apareciera
+     en otro sitio —un atajo, un «si sólo cambió el PO hazlo solo»— habría un
+     camino que propaga sin preguntar, que es exactamente lo que Jose pidió que
+     no pasara. */
+  const menciones = (oferta.match(/_propagarALaEntrada/g) || []).length;
+  check('`_propagarALaEntrada` se nombra UNA vez en la oferta', menciones === 1,
+    menciones);
+  check('...y es detrás de `onConfirm`: no hay camino que propague sin un sí',
+    /onConfirm[^}]*_propagarALaEntrada\(/.test(oferta.replace(/\s+/g, ' ')));
+
+  /* Y LAS DOS COSAS QUE NO SE OFRECEN. Son las que impiden que «propagar» se
+     coma el único número correcto de los tres. */
+  check('un campo que el movimiento YA tenía distinto no se ofrece: lo corrigió ' +
+        'una persona y tiene razón — es el caso de las dos que llegaron rotas',
+    /enPaso/.test(oferta) && /corrected by hand/.test(oferta));
+  check('la CANTIDAD no se ofrece si la entrega se repartió en varios ' +
+        'movimientos: «pon 25» no tiene una respuesta única',
+    /mueveStock && suyas\.length > 1/.test(oferta));
+  check('...y cuando algo no se ofrece, se DICE por qué en vez de callarse',
+    /bloqueados/.test(oferta) && /masLabel/.test(oferta));
+  check('y se avisa sin adornos de que cambiar la cantidad mueve el inventario',
+    /moves your stock/.test(oferta));
+
+  check('la escritura pasa por `modifyMovement`, la misma puerta que el ' +
+        'formulario de editar — ahí viven la comprobación de fila movida, el ' +
+        'recálculo del MatID y la auditoría',
+    /processMovement\('modifyMovement'/.test(propaga) &&
+    /expectedCategory/.test(propaga) && /expectedName/.test(propaga));
+  check('...con un motivo que NOMBRA la entrega, porque «se cambió porque sí» ' +
+        'no se puede comprobar dentro de un año',
+    /reason: 'Delivery ' \+ id \+ ' was corrected/.test(propaga));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

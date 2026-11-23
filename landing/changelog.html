@@ -108,6 +108,40 @@
     <!-- N-07 · El estante malo se ve antes de mandar, y elegir ya es contestar. -->
     <!-- N-08 · La idea de la fila fantasma es de Jose. N-09/10/11 vienen del mismo repaso. -->
     <!-- H-09 · La X de un documento borraba el enlace y dejaba el fichero. -->
+    <!-- Jose, 23/11: la app ofrece corregir la entrada, y el usuario dice si o no. -->
+    <div class="entry" id="v16-2">
+      <span class="ver">v16.2</span>
+      <span class="tag new">New</span>
+      <h3>Correcting a delivery offers to correct its entry &mdash; and the Dashboard fits a phone</h3>
+      <p><b>When you correct a delivery that already has its entry, the app now asks whether to
+         correct the entry too</b>, naming the material and <b>what changed, from what to
+         what</b>, with two real answers: yes and no. It never does it on its own. The last
+         version linked the two and only <i>said</i> so; saying it was not enough.</p>
+      <p><b>And there are two things it will not offer, which is the whole point.</b> If the entry
+         already says something different, somebody corrected it by hand and <b>they were
+         right</b>: a delivery that said 24, an entry that recorded 22 because two arrived broken,
+         and a delivery now changed to 25 &mdash; the warehouse has 22. Offering to put 25 there
+         would be offering to break the only correct number of the three. And the quantity is not
+         offered at all when the delivery became several movements, one per rack: &ldquo;make it
+         25&rdquo; has no single answer there. When something is not offered, the app says so and
+         says why.</p>
+      <p><b>Changing a quantity moves your stock, and the dialog says that in those words.</b> It
+         is not a text correction. The reason written into the audit log names the delivery, too:
+         a year from now &ldquo;changed because&rdquo; and &ldquo;changed when delivery INC-77 was
+         corrected&rdquo; are different things, and only the second can be checked.</p>
+      <p><b>The Stock Dashboard is cards on a phone now</b>, like Movements. What matters stays in
+         front without touching anything &mdash; the status badge and the stock bar, because they
+         are what tells you at a glance whether there is a problem; hiding them behind a tap would
+         leave the card pretty and mute. The date it came in, the last note and the documents wait
+         for the tap, and that same tap also opens the rack photos: one gesture, one thing. On a
+         computer it is exactly the same table, with the same columns.</p>
+      <p class="meta">The card rules are now one shared set rather than one per screen, and what a
+         closed card shows is said the other way round: instead of a list of what to hide &mdash;
+         a list that had to agree with the renderer, so a new column would have shown up on a
+         closed card &mdash; each screen declares what matters, in the same place its columns come
+         from. The stock bar is drawn in pixels, so a test opens three real phones and measures
+         that it does not overflow.</p>
+    </div>
     <!-- M-05 · TRANSFER contesta donde esta; esto contesta de quien es. -->
     <div class="entry" id="v16-1">
       <span class="ver">v16.1</span>

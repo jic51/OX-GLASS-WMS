@@ -310,6 +310,89 @@ es exactamente para esto.
 
 ---
 
+## 📋 LO DEL 23/11 — tres cosas de Jose · v16.2
+
+### ✅ 1 · «La app debe OFRECER corregir la entrada» — la decisión que faltaba
+
+Jose, 23/11: *"quiero que cada vez que se corrija un incoming que ya tiene entry,
+la app le dé al usuario la opción que diga ¿quieres corregir también la
+entrada/entrada realizada de este material xxxx (se cambió x dato)? y el usuario
+debe decir sí o no."*
+
+**La v16.0 ató las dos cosas y se limitó a decirlo.** Mi razonamiento era que
+propagar en cascada es la clase de cosa que parece obvia y luego sorprende, y
+eso sigue siendo verdad — pero la conclusión que saqué era la mitad: no
+propagar **sola**. Jose puso la otra mitad: **preguntar**. Decirlo y no ofrecer
+nada deja el trabajo a medias en la pantalla de quien lo tiene que hacer dos
+veces.
+
+Hecho tal como lo pidió: el cuadro nombra el material y **qué cambió, de qué a
+qué**, y tiene dos respuestas de verdad. Y **dos cosas que no se ofrecen**, que
+es donde está el cuidado:
+
+1. **Un dato que el movimiento YA tenía distinto.** Es su propio ejemplo: la
+   entrega decía 24, la entrada guardó 22 porque llegaron dos rotas, y la
+   entrega pasa a 25. El movimiento sigue diciendo 22 y **tiene razón**:
+   ofrecer «ponlo a 25» sería ofrecer romper el único número correcto de los
+   tres. Se dice que no se ofrece y por qué, que es distinto de callarse.
+2. **La cantidad de una entrega repartida en varios movimientos.** Veinticuatro
+   en tres estantes son tres filas y «pon 25» no tiene respuesta única.
+   Repartirlo a ojo movería stock a un estante que nadie contó.
+
+Y la escritura pasa por `modifyMovement`, la misma puerta que el formulario de
+editar: ahí viven la comprobación de que la fila no se haya movido, el
+recálculo del `MatID` y la línea de auditoría — con un motivo que **nombra la
+entrega**.
+
+> **Y una prueba mía que pasaba sin medir nada.** `test-atar-la-entrega`
+> afirmaba *"en todo el camino de guardar una entrega no puede aparecer una
+> llamada que modifique un movimiento"*, y siguió en verde después de que la app
+> empezara a propagar — porque la llamada se fue a otra función. **Una prueba
+> que mide dónde está escrito el código y no lo que el código hace**, que es el
+> fallo que llevo meses cazando, esta vez en mí. Reescrita: ahora exige que
+> `_propagarALaEntrada` se nombre **una sola vez** en la oferta y **detrás de
+> `onConfirm`**, para que no pueda existir un camino que propague sin un sí.
+
+### ✅ 2 · M-01, el resto: el Stock Dashboard en tarjetas
+
+Con la refactorización que el plan pedía por escrito: **las reglas comunes a una
+clase compartida**, no copiadas. Y lo que se ve con la tarjeta cerrada se dice
+**al revés**: antes era una lista de once clases que esconder —una lista que
+tenía que coincidir con el pintador, así que **una columna nueva habría
+aparecido en una tarjeta cerrada**— y ahora cada pantalla declara qué manda en
+`COL_TABLES`, el mismo registro del que salen sus columnas.
+
+El riesgo estaba apuntado antes de escribir una línea: la barra de existencias
+se dibuja con anchos en píxeles. `tools/test-tarjetas-de-stock.js` (36) abre
+**tres teléfonos de verdad** y mide que no se desborde.
+
+**Quedan Incoming y la papelera**, que son las pequeñas.
+
+> **Y una prueba que medía a 760 px.** `test-stock-cat-column` comprueba que
+> esconder la columna de categoría haga que la tabla **necesite** menos ancho
+> —o sea, menos arrastre lateral— y abría el navegador a 760. Por debajo de 768
+> el Dashboard es ahora tarjetas: la tabla pasa a `display:block` y **deja de
+> haber columnas que repartan ancho**, así que `scrollWidth` dejó de medir lo
+> que esa prueba promete. Se la movió a 1100, que es donde vive lo que mide. No
+> se bajó el punto de corte para que la prueba cupiera.
+
+### 📋 3 · Las cuatro ventanas de la captura — preparado, no hecho
+
+Jose: *"hazlo"*. **Yo no puedo pulsar el botón en su hoja**, y decir «hecho»
+habría sido mentir sobre lo único que importa: si su inventario quedó cuadrado.
+Lo que hay es `docs/LAS-CUATRO-VENTANAS.md`: los números de la captura, qué
+escribir en cada campo, el motivo redactado, y **qué tiene que salir después
+para que lo compruebe él**.
+
+### ❓ Y su pregunta sobre el reassign — contestada, sin tocar código
+
+*"¿Debo hacer primero el return a una locación y luego el reassign?"* La
+respuesta corta es **no, si el material está en la bodega** — que es el caso de
+lo que recibe. La larga, y la propuesta, van en la respuesta del chat: no se
+construye nada hasta que él decida.
+
+---
+
 ## 📋 LO DEL 22/11 — «haz lo tuyo, todo» · v15.9 y v16.0
 
 Jose, 22/11: *"Haz lo tuyo, todo, en el orden que quieras."* Lo mío era la lista

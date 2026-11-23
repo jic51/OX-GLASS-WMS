@@ -16,6 +16,41 @@ Esto es ese documento, y se actualiza **con cada versión**. Lo de arriba es lo
 
 ---
 
+## v16.2 — corregir una entrega ofrece corregir su entrada
+
+### 1 · La oferta que pediste  🔴
+
+1. Coge una entrega **que ya tenga su entrada** (lleva su ✓ entry al lado) y
+   **cámbiale un dato** — el PO, el proveedor, la cantidad. Guarda.
+2. **Tiene que pasar:** sale un cuadro que dice **el material** y **qué
+   cambió, de qué a qué**, y pregunta si quieres corregir también la entrada.
+   Dos botones de verdad: **Yes, change the entry** y **No, leave the entry**.
+3. Pulsa **No**: la entrega queda corregida y el movimiento **no se toca**.
+4. Hazlo otra vez y pulsa **Sí**: el movimiento queda corregido, el aviso
+   ofrece **enseñártelo**, y en la auditoría el motivo dice
+   *«Delivery INC-… was corrected (PO #)»* — no «se cambió porque sí».
+
+### 2 · Las dos cosas que la app se niega a ofrecer, y hay que verlas
+
+Esto es lo que impide que «propagar» se coma el único número correcto:
+
+1. **Un dato que el movimiento ya tenía distinto.** Prueba tu propio ejemplo:
+   coge una entrega de 24, edita **su entrada a mano** y ponle 22 (llegaron dos
+   rotas). Ahora vuelve a la entrega y ponla en 25.
+   **Tiene que pasar:** la cantidad **no se ofrece**. El aviso dice que la
+   entrada se dejó como está, y al pulsar *Why* explica que alguien la corrigió
+   a mano. **Sería el fallo** que te ofreciera poner 25: el almacén tiene 22.
+2. **La cantidad de una entrega repartida en varios estantes.** Si la entrega
+   se convirtió en tres movimientos, «pon 25» no tiene una respuesta única.
+   Tampoco se ofrece, y lo dice.
+
+### 3 · Y lo que no cambia
+
+Cambiar la cantidad **mueve el inventario**, y el cuadro lo dice con esas
+palabras y se pone en rojo. No es una corrección de texto.
+
+---
+
 ## v16.1 — el material que se usa en otra obra  🔴 *lo que viste el 13/11*
 
 ### 1 · Reasignar, el caso de tu captura
@@ -63,18 +98,17 @@ Esto es ese documento, y se actualiza **con cada versión**. Lo de arriba es lo
    el estante donde están. La pegada en el pallet sigue diciendo el nombre
    viejo, y eso manda a alguien a buscar lo que no está.
 
-### 5 · Y una pregunta que es tuya, no mía
+### 5 · Las cuatro ventanas de tu captura — **preparado, paso a paso**
 
-**Las tres filas de tu captura ya están hechas** —las 4 unidades están en A3A
-con el nombre viejo— y hay dos caminos:
+Dijiste «hazlo». **Yo no puedo pulsar el botón en tu hoja** —no tengo acceso a
+tu Sheet; escribo el código, lo ejecutas tú— así que lo dejé todo preparado con
+los números de la captura, qué escribir en cada campo, el motivo redactado, y
+**qué tiene que salir después para que lo compruebes**:
+**`docs/LAS-CUATRO-VENTANAS.md`**.
 
-- **Dejarlas.** El histórico queda como ocurrió y `REASSIGN` rige de aquí en
-  adelante.
-- **Reasignarlas a mano una vez** con el botón nuevo, lo cual deja constancia
-  de la corrección y cuadra el inventario de las dos obras.
-
-**Yo haría el segundo, sólo para ésas, y contigo delante.** Dime cuál y lo
-hacemos.
+Lo único que la app no puede saber de la imagen es el nombre de las dos obras, y
+no hace falta que me lo digas: el de origen lo rellena ella sola leyéndolo del
+stock, y el de destino es el único que tecleas.
 
 ---
 

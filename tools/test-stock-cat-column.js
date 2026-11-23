@@ -93,7 +93,18 @@ fs.writeFileSync(f, html);
    * Lo que Jose pidió es "que la pantalla no se haga muy larga
    * horizontalmente", o sea: menos scroll lateral. Eso sólo se puede medir
    * donde HAY scroll lateral. */
-  const page = await browser.newPage({ viewport: { width: 760, height: 900 } });
+  /* ── 1100 px, Y EL PORQUÉ IMPORTA (v16.2) ─────────────────────────────────
+   *
+   * Estaba en 760, y se puso en rojo al convertirse el Dashboard en tarjetas:
+   * por debajo de 768 la tabla pasa a `display:block`, así que **deja de haber
+   * columnas que repartan ancho** y `scrollWidth` ya no mide nada de lo que
+   * esta prueba promete.
+   *
+   * Y lo que promete es de ESCRITORIO: que esconder la columna de categoría
+   * haga que la tabla NECESITE menos ancho, o sea menos arrastre lateral. En
+   * una tarjeta no hay arrastre lateral que quitar. No se bajó el punto de
+   * corte para que la prueba cupiera: se la puso donde vive lo que mide. */
+  const page = await browser.newPage({ viewport: { width: 1100, height: 900 } });
   const errores = [];
   page.on('pageerror', e => errores.push(e.message));
   await page.goto('file://' + f);

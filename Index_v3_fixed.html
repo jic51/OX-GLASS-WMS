@@ -4165,15 +4165,15 @@
      *    arriba de la tarjeta, donde se ve de un vistazo en vertical.
      */
     @media (max-width:768px){
-      #tableContainer.mov-tarjetas table,
-      #tableContainer.mov-tarjetas tbody,
-      #tableContainer.mov-tarjetas tr,
-      #tableContainer.mov-tarjetas td{display:block;width:auto}
-      #tableContainer.mov-tarjetas table{min-width:0 !important;border-collapse:separate}
-      #tableContainer.mov-tarjetas thead{display:none}
-      #tableContainer.mov-tarjetas{overflow-x:visible}
+      .tarjetas table,
+      .tarjetas tbody,
+      .tarjetas tr,
+      .tarjetas td{display:block;width:auto}
+      .tarjetas table{min-width:0 !important;border-collapse:separate}
+      .tarjetas thead{display:none}
+      .tarjetas{overflow-x:visible}
 
-      #tableContainer.mov-tarjetas tr{
+      .tarjetas tr{
         position:relative;background:var(--card);border:1px solid var(--border);
         border-left-width:1px;border-radius:10px;margin:0 0 var(--sp-4);
         padding:var(--sp-5) var(--sp-5) var(--sp-4);box-shadow:var(--sh-1);
@@ -4186,19 +4186,19 @@
          `currentColor` no servía: coge el color del texto, no el del tipo, y
          las bandas salían todas grises — que es peor que no tenerlas, porque
          ocupan sitio y no dicen nada. */
-      #tableContainer.mov-tarjetas tr::after{content:'';position:absolute;
+      .tarjetas tr::after{content:'';position:absolute;
         left:0;right:0;top:0;height:4px;border-radius:10px 10px 0 0;
         background:var(--border)}
-      #tableContainer.mov-tarjetas tr.row-entry::after   {background:var(--green)}
-      #tableContainer.mov-tarjetas tr.row-exit::after    {background:var(--red)}
-      #tableContainer.mov-tarjetas tr.row-transfer::after{background:var(--accent)}
-      #tableContainer.mov-tarjetas tr.row-return::after  {background:#9CA3AF}
-      #tableContainer.mov-tarjetas tr.row-waste::after   {background:#111827}
-      #tableContainer.mov-tarjetas tr.row-adjust::after  {background:var(--steel)}
+      .tarjetas tr.row-entry::after   {background:var(--green)}
+      .tarjetas tr.row-exit::after    {background:var(--red)}
+      .tarjetas tr.row-transfer::after{background:var(--accent)}
+      .tarjetas tr.row-return::after  {background:#9CA3AF}
+      .tarjetas tr.row-waste::after   {background:#111827}
+      .tarjetas tr.row-adjust::after  {background:var(--steel)}
       /* Y el borde izquierdo de la tabla no pinta nada en una tarjeta. */
-      #tableContainer.mov-tarjetas tr td:first-child{border-left:none}
+      .tarjetas tr td:first-child{border-left:none}
 
-      #tableContainer.mov-tarjetas td{
+      .tarjetas td{
         border:none;padding:.18rem 0;display:flex;gap:var(--sp-4);
         align-items:baseline;justify-content:space-between;text-align:left;
         /* `!important` porque el comentario trae `max-width:220px`,
@@ -4210,67 +4210,114 @@
         overflow:visible !important;text-overflow:clip !important}
       /* El texto largo baja a su propio renglón en vez de pelearse con su
          nombre por el ancho. */
-      #tableContainer.mov-tarjetas td.mc-comment{flex-wrap:wrap;row-gap:.1rem}
-      #tableContainer.mov-tarjetas td.mc-comment::before{flex-basis:100%}
+      .tarjetas td.mc-comment,
+      .tarjetas td.tc-largo{flex-wrap:wrap;row-gap:.1rem}
+      .tarjetas td.mc-comment::before,
+      .tarjetas td.tc-largo::before{flex-basis:100%}
       /* El nombre del dato, sacado de `data-label` — nunca escrito aquí. */
-      #tableContainer.mov-tarjetas td::before{
+      .tarjetas td::before{
         content:attr(data-label);flex:0 0 auto;font-size:.68rem;
         text-transform:uppercase;letter-spacing:.04em;color:var(--muted);
         font-weight:600;white-space:nowrap}
 
       /* LAS DOS DE ARRIBA NO LLEVAN NOMBRE: el tipo se lee por su insignia y
          el material por su nombre. Poner «Type / Date» encima de una insignia
-         que ya dice ENTRY es gastar un renglón en repetirse. */
-      #tableContainer.mov-tarjetas td.mc-when::before,
-      #tableContainer.mov-tarjetas td.mc-what::before{content:none}
-      #tableContainer.mov-tarjetas td.mc-when,
-      #tableContainer.mov-tarjetas td.mc-what{display:block;padding:0}
-      #tableContainer.mov-tarjetas td.mc-what{margin:.2rem 0 .45rem}
-      #tableContainer.mov-tarjetas td.mc-what .mc-main{
+         que ya dice ENTRY es gastar un renglón en repetirse.
+         `tc-sobre` y `tc-cabeza` son los nombres COMPARTIDOS del papel que
+         hacen —la línea pequeña de arriba y el titular—, para que las otras
+         tres tablas lo pidan sin copiar la regla. */
+      .tarjetas td.tc-sobre::before,
+      .tarjetas td.tc-cabeza::before,
+      .tarjetas td.mc-when::before,
+      .tarjetas td.mc-what::before{content:none}
+      .tarjetas td.tc-sobre,
+      .tarjetas td.tc-cabeza,
+      .tarjetas td.mc-when,
+      .tarjetas td.mc-what{display:block;padding:0}
+      .tarjetas td.tc-cabeza,
+      .tarjetas td.mc-what{margin:.2rem 0 .45rem}
+      .tarjetas td.tc-cabeza strong,
+      .tarjetas td.mc-what .mc-main{
         font-size:.95rem;font-weight:700;line-height:1.25}
-      #tableContainer.mov-tarjetas td.mc-when .mc-sub{
+      .tarjetas td.tc-sobre .mc-sub,
+      .tarjetas td.mc-when .mc-sub{
         display:inline;margin-left:.4rem;font-size:.74rem}
 
-      /* LO QUE ESPERA AL TOQUE. Todo lo que no sea esencial se guarda hasta
-         que la tarjeta se abre. */
-      #tableContainer.mov-tarjetas tr:not(.abierta) td.mc-po,
-      #tableContainer.mov-tarjetas tr:not(.abierta) td.mc-rawLoc,
-      #tableContainer.mov-tarjetas tr:not(.abierta) td.mc-gc,
-      #tableContainer.mov-tarjetas tr:not(.abierta) td.mc-project,
-      #tableContainer.mov-tarjetas tr:not(.abierta) td.mc-supplier,
-      #tableContainer.mov-tarjetas tr:not(.abierta) td.mc-resp,
-      #tableContainer.mov-tarjetas tr:not(.abierta) td.mc-comment,
-      #tableContainer.mov-tarjetas tr:not(.abierta) td.mc-pm,
-      #tableContainer.mov-tarjetas tr:not(.abierta) td.mc-sysDate,
-      #tableContainer.mov-tarjetas tr:not(.abierta) td.mc-user,
-      #tableContainer.mov-tarjetas tr:not(.abierta) td.mc-doc,
-      #tableContainer.mov-tarjetas tr:not(.abierta) td:last-child{display:none}
+      /* ── LO QUE ESPERA AL TOQUE, DICHO AL REVÉS (v16.2) ─────────────────
+       *
+       * Aquí había una lista de ONCE clases que se esconden —`mc-po`,
+       * `mc-rawLoc`, `mc-gc`…— y era una lista que tenía que coincidir con el
+       * pintador sin que nada lo obligara: **una columna nueva en Movements
+       * aparecería en la tarjeta cerrada**, porque no estaría en la lista. El
+       * fallo de siempre, esperando su turno.
+       *
+       * Ahora se dice al revés: se esconde todo lo que NO esté marcado como
+       * clave. Cada pantalla declara sus claves en UN sitio —`COL_TABLES`, el
+       * mismo registro del que salen las columnas— y esta regla vale para las
+       * cuatro tablas sin saber nada de ninguna.
+       *
+       * La casilla de marcar se queda siempre: va fuera del flujo, arriba a la
+       * derecha, y borrar diez de golpe sigue haciendo falta.
+       *
+       * Se marca con un ATRIBUTO y no con una clase a propósito: estas celdas
+       * ya llegan con la suya (`mc-qty`, `sc-levels`…) y añadir otra obligaría
+       * a tocar la cadena de clases de cada una. El atributo se añade sin
+       * mirar lo que había. */
+      .tarjetas tr:not(.abierta) td:not([data-clave]):not(.mov-sel-cell){display:none}
 
       /* Y LA PISTA DE QUE HAY MÁS. Sin esto, la mitad de los datos existe y
          nadie lo sabe: una tarjeta cerrada no se distingue de una completa. */
-      #tableContainer.mov-tarjetas tr:not(.abierta)::before{
+      .tarjetas tr:not(.abierta)::before{
         content:'More ▾';position:absolute;right:10px;bottom:6px;
         font-size:.64rem;color:var(--muted);letter-spacing:.03em}
-      #tableContainer.mov-tarjetas tr.abierta::before{
+      .tarjetas tr.abierta::before{
         content:'Less ▴';position:absolute;right:10px;bottom:6px;
         font-size:.64rem;color:var(--muted);letter-spacing:.03em}
-      #tableContainer.mov-tarjetas tr{padding-bottom:1.1rem}
+      .tarjetas tr{padding-bottom:1.1rem}
 
       /* La última celda es la de Editar/Borrar. Abierta la tarjeta, se ve como
          una fila de botones de verdad y no como una celda apretada. */
-      #tableContainer.mov-tarjetas td:last-child{
+      .tarjetas td.tc-acciones,
+      .tarjetas td:last-child{
         margin-top:var(--sp-4);padding-top:var(--sp-4);
         border-top:1px solid var(--border);justify-content:flex-start;gap:var(--sp-5)}
-      #tableContainer.mov-tarjetas td:last-child::before{content:none}
-      #tableContainer.mov-tarjetas td:last-child .btn-icon{
+      .tarjetas td.tc-acciones::before,
+      .tarjetas td:last-child::before{content:none}
+      .tarjetas td.tc-acciones .btn-icon,
+      .tarjetas td:last-child .btn-icon{
         min-width:44px;min-height:44px;font-size:1.05rem}
 
       /* La casilla, arriba a la derecha y fuera del flujo de la tarjeta. */
-      #tableContainer.mov-tarjetas td.mov-sel-cell{
+      .tarjetas td.mov-sel-cell{
         position:absolute;top:6px;right:4px;width:44px;min-width:44px;padding:0}
 
       /* Un movimiento en cola de borrado se ve apagado, igual que en la tabla. */
-      #tableContainer.mov-tarjetas tr.row-deleting{opacity:.5}
+      .tarjetas tr.row-deleting{opacity:.5}
+
+      /* ── EL PANEL DE DETALLE DEL DASHBOARD NO ES UNA TARJETA ────────────
+       *
+       * En Stock cada fila trae detrás una SEGUNDA fila con las fotos de sus
+       * estantes y sus documentos. Sin esto se dibujaría como una tarjeta más
+       * —con su borde, su sombra y su banda— y la lista se leería como el
+       * doble de materiales de los que hay. Se pega a la suya como una
+       * continuación. */
+      .tarjetas tr.stock-detail-row{
+        border:none;box-shadow:none;background:transparent;
+        margin:-.9rem 0 var(--sp-4);padding:0 var(--sp-3)}
+      .tarjetas tr.stock-detail-row::before,
+      .tarjetas tr.stock-detail-row::after{content:none}
+      .tarjetas tr.stock-detail-row td{padding:0}
+      /* Y cerrada no ocupa nada: su contenido ya se esconde solo con `.open`,
+         pero la celda seguía dejando su renglón. */
+      .tarjetas tr.stock-detail-row:not(.open){display:none}
+
+      /* La barra de existencias de Stock se dibuja con anchos en píxeles. En
+         una tarjeta del ancho de la pantalla hay que dejarla encogerse, o
+         empuja la página de lado — que es el fallo que salió en M-01 con la
+         barra de selección en 320 px. */
+      .tarjetas td.sc-levels{display:block;padding:.18rem 0}
+      .tarjetas td.sc-levels .lvl-wrap,
+      .tarjetas td.sc-levels .lvl-bar{max-width:100%}
 
       /* ── LOS BOTONES DE LA TARJETA SE VEN SIEMPRE ───────────────────────
        *
@@ -4287,7 +4334,7 @@
        *
        * Sólo dentro de `.abierta`, y sólo en modo tarjeta. La tabla del
        * ordenador no se entera de esto. */
-      #tableContainer.mov-tarjetas tr.abierta [data-rowact]{display:inline-flex!important}
+      .tarjetas tr.abierta [data-rowact]{display:inline-flex!important}
 
       /* ── Y LA BARRA DE SELECCIÓN CABE ───────────────────────────────────
        *
@@ -5115,7 +5162,11 @@
         <button class="btn btn-danger btn-sm" onclick="exitSelectedStock()">↑ Exit Selected</button>
         <button class="btn btn-ghost btn-sm" onclick="clearStockSelection()">Clear</button>
       </div>
-      <div class="table-wrapper">
+      <!-- CON ID desde la v16.2: es el elemento que recibe la clase `tarjetas`
+           en el teléfono. La clase va en el ENVOLTORIO y no en la tabla porque
+           las reglas tienen que poder apagar el `overflow-x` que lo hace
+           arrastrable de lado, y ése vive aquí. -->
+      <div class="table-wrapper" id="stockTableWrap">
         <table id="stockTable">
           <thead><tr id="stockHeadRow"></tr></thead>
           <tbody id="stockBody"></tbody>
@@ -6492,7 +6543,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '16.1';
+var APP_VERSION = '16.2';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -6504,7 +6555,7 @@ var APP_VERSION = '16.1';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '3480ee95';
+var APP_BUILD = '5190ca03';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -7361,6 +7412,10 @@ var MOV_COL_TIPS = {
 var COL_TABLES = {
   stock: {
     cols: STOCK_COLS, tips: STOCK_COL_TIPS, prefix: 'sc-',
+    /* Lo que manda en el Dashboard: la insignia y la barra de existencias son
+     * lo que dice de un vistazo si hay un problema, así que van de frente.
+     * Esconderlas tras un toque dejaría la tarjeta bonita y muda. */
+    claves: ['category', 'status', 'name', 'levels', 'location'],
     orderKey: 'acopio_stock_col_order', hiddenKey: 'acopio_stock_col_hidden',
     defaultHidden: [],
     // Desde la v12.22. Antes no estaba, y por eso `_fijarMinTabla` se salía por
@@ -7374,6 +7429,14 @@ var COL_TABLES = {
   },
   mov: {
     cols: MOV_COLS, tips: MOV_COL_TIPS, prefix: 'mc-',
+    /* ── QUÉ SE VE EN LA TARJETA CERRADA (v16.2) ─────────────────────────
+     *
+     * Antes esto era una lista de ONCE clases en el CSS diciendo qué
+     * ESCONDER, y era una lista que tenía que coincidir con el pintador sin
+     * que nada lo obligue: una columna nueva habría aparecido en la tarjeta
+     * cerrada por no estar en ella. Dicho al revés, y aquí —en el mismo
+     * registro del que salen las columnas— hay UN sitio por pantalla. */
+    claves: ['when', 'what', 'qty', 'locFlow'],
     orderKey: 'acopio_mov_col_order', hiddenKey: 'acopio_mov_col_hidden',
     // What Movements showed before it had an editor, so no table changes shape
     // on upgrade for someone who never touched the old checkboxes.
@@ -7618,6 +7681,29 @@ function _colDef(t, key){
 function _labelKey(t, key){ return t === 'stock' ? key : t + '.' + key; }
 function _ownsLabelKey(t, k){
   return t === 'stock' ? (String(k).indexOf('.') === -1) : (String(k).indexOf(t + '.') === 0);
+}
+
+/* ── UNA CELDA LISTA PARA LAS DOS FORMAS DE MIRARLA (v16.2) ──────────────────
+ *
+ * La misma `<td>` sirve de celda en el ordenador y de renglón de tarjeta en el
+ * teléfono, y lo que la convierte son dos atributos:
+ *
+ *  · `data-label`, el nombre del dato, que sale de `_colLabel` — el MISMO sitio
+ *    del que sale el encabezado de la columna, incluido el nombre que Jose le
+ *    haya puesto a mano. Escribirlo otra vez en la tarjeta serían dos sitios
+ *    que tienen que decir lo mismo sin que nada lo obligue.
+ *  · `tc-clave`, si es de las que se ven con la tarjeta cerrada. La lista vive
+ *    en `COL_TABLES`, una por pantalla.
+ *
+ * Lo usan las dos tablas, y por eso existe: la alternativa era la misma línea
+ * copiada en `renderMovements` y en `renderStock`. */
+function _celdaDeTarjeta(tabla, key, celda){
+  if (!celda) return '';
+  var cfg = COL_TABLES[tabla] || {};
+  var esClave = (cfg.claves || []).indexOf(key) !== -1;
+  return celda.replace('<td',
+    '<td data-label="' + _escAttr(_colLabel(tabla, key)) + '"' +
+    (esClave ? ' data-clave="1"' : ''));
 }
 
 function _colLabel(t, key){
@@ -10194,17 +10280,23 @@ function renderStock(){
     // row can never drift out of step with the header it sits under.
     var cells = {
       category:     '<td class="sc-category">'+catBadge(s.category)+'</td>',
-      name:         '<td class="sc-name"><strong>'+_he(s.name)+'</strong>'+(s.project&&s.project!=='GENERIC'?'<br><span style="font-size:.72rem;color:var(--muted)">'+_he(s.project)+'</span>':'')+_boneyardMarca(s)+'</td>',
+      /* `tc-cabeza` es el papel de TITULAR, el mismo que `mc-what` hace en
+         Movements: sin nombre encima y en grande. El nombre del material es lo
+         que se busca en una lista de tarjetas. */
+      name:         '<td class="sc-name tc-cabeza"><strong>'+_he(s.name)+'</strong>'+(s.project&&s.project!=='GENERIC'?'<br><span style="font-size:.72rem;color:var(--muted)">'+_he(s.project)+'</span>':'')+_boneyardMarca(s)+'</td>',
       levels:       _levelsCell(s),
       location:     '<td class="sc-location" style="color:var(--muted);font-size:.78rem;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+_escAttr(locTip)+'">'+lockMark+_he(locTxt)+'</td>',
       status:       '<td class="sc-status">'+stockBadge(s)+'</td>',
       dateReceived: '<td class="sc-dateReceived">'+dateCell+'</td>',
-      lastNote:     '<td class="sc-lastNote">'+noteCell+'</td>',
+      lastNote:     '<td class="sc-lastNote tc-largo">'+noteCell+'</td>',
       docs:         '<td class="sc-docs" style="text-align:center">'+summaryCell+'</td>'
     };
     var body = _colOrder('stock').map(function(k){
       if (hiddenNow[k] && !_colEdit.stock) return '';
-      return cells[k] || '';
+      // M-01, el resto: la misma celda sirve de columna y de renglón de
+      // tarjeta. Ver `_celdaDeTarjeta` — y es la MISMA llamada que Movements,
+      // no una copia con otro prefijo.
+      return _celdaDeTarjeta('stock', k, cells[k]);
     }).join('');
 
     return '<tr class="'+(zero?'row-zero':'')+'" data-action="toggle-stock-detail" data-row-id="'+detailRowId+'" style="cursor:pointer" title="Click to view location photos and documents">'+
@@ -10212,6 +10304,9 @@ function renderStock(){
       detailPanel;
   }).join('');
   _updateStockSelectBar();
+  // M-01, el resto: en el teléfono esta tabla son tarjetas. La misma llamada
+  // que hace Movements al final de su pintado, con su propia clase.
+  _sincronizarTarjetas('stockTableWrap', 'stock-tarjetas');
 }
 
 // ── Feature C: Doc / Photo thumbnail helpers ──────────────────────────────────
@@ -10531,10 +10626,24 @@ var MOV_TARJETAS_MQ = '(max-width:768px)';
 function _enModoTarjeta(){
   try { return window.matchMedia(MOV_TARJETAS_MQ).matches; } catch (e) { return false; }
 }
+/* ── v16.2 · LA CLASE COMPARTIDA Y LA PROPIA ─────────────────────────────────
+ *
+ * `tarjetas` lleva las reglas que valen para CUALQUIER tabla que se convierta
+ * en tarjetas; `mov-tarjetas` queda para lo que es sólo de Movements (las
+ * bandas de color por tipo de movimiento). Antes todo el bloque colgaba de
+ * `#tableContainer.mov-tarjetas`, y copiarlo para el Dashboard habrían sido dos
+ * sitios que tienen que coincidir sin que nada lo obligue — el día que cambie
+ * el radio de la esquina cambiaría uno solo. */
 function _sincronizarTarjetasMov(){
-  var tc = document.getElementById('tableContainer');
+  _sincronizarTarjetas('tableContainer', 'mov-tarjetas');
+}
+
+function _sincronizarTarjetas(id, propia){
+  var tc = document.getElementById(id);
   if (!tc) return;
-  tc.classList.toggle('mov-tarjetas', _enModoTarjeta());
+  var on = _enModoTarjeta();
+  tc.classList.toggle('tarjetas', on);
+  if (propia) tc.classList.toggle(propia, on);
 }
 
 /* Tocar una tarjeta la abre: enseña el resto de los datos **y** sus botones.
@@ -10552,18 +10661,28 @@ function _sincronizarTarjetasMov(){
  * Y SÓLO EN MODO TARJETA. En el ordenador una fila de tabla no se despliega:
  * ahí están todas las columnas a la vista y no hay nada que abrir.
  */
-function _wireTarjetasMov(){
-  var tc = document.getElementById('tableContainer');
+function _wireTarjetasMov(){ _wireTarjetas('tableContainer', 'mov-tarjetas'); }
+function _wireTarjetasStock(){ _wireTarjetas('stockTableWrap', 'stock-tarjetas'); }
+
+/* El toque, para cualquiera de las tablas. Era de Movements y ahora no sabe de
+ * qué tabla es: recibe el id y la clase propia. Dos copias de este cableado
+ * habrían sido dos sitios donde arreglar el próximo «se abría al pulsar el
+ * clip». */
+function _wireTarjetas(id, propia){
+  var tc = document.getElementById(id);
   if (!tc || tc._tarjetasWired) return;
   tc._tarjetasWired = true;
 
   tc.addEventListener('click', function(ev){
     if (!_enModoTarjeta()) return;
-    if (!tc.classList.contains('mov-tarjetas')) return;
+    if (!tc.classList.contains('tarjetas')) return;
     if (ev.target.closest('button, a, input, label, select')) return;
     var fila = ev.target.closest('tr');
     if (!fila || !tc.contains(fila) || !fila.parentElement ||
         fila.parentElement.tagName !== 'TBODY') return;
+    /* La fila del panel de detalle del Dashboard NO es una tarjeta: es la
+       continuación de la de arriba. Tocarla no abre ni cierra nada. */
+    if (fila.classList.contains('stock-detail-row')) return;
     fila.classList.toggle('abierta');
   });
 
@@ -10572,9 +10691,9 @@ function _wireTarjetasMov(){
    * ordenador no estorba, pero volver al teléfono con seis tarjetas abiertas
    * de una sesión anterior es una pantalla que nadie dejó así. */
   window.addEventListener('resize', function(){
-    var antes = tc.classList.contains('mov-tarjetas');
-    _sincronizarTarjetasMov();
-    if (antes && !tc.classList.contains('mov-tarjetas')) {
+    var antes = tc.classList.contains('tarjetas');
+    _sincronizarTarjetas(id, propia);
+    if (antes && !tc.classList.contains('tarjetas')) {
       Array.prototype.forEach.call(tc.querySelectorAll('tr.abierta'),
         function(f){ f.classList.remove('abierta'); });
     }
@@ -10820,9 +10939,7 @@ function renderMovements(){
      * dibuja el CSS con `::before`. Una sola fila, dos formas de mirarla. */
     var body = order.map(function(k){
       if (hiddenNow[k] && !_colEdit.mov) return '';
-      var celda = cells[k] || '';
-      if (!celda) return '';
-      return celda.replace('<td', '<td data-label="' + _escAttr(_colLabel('mov', k)) + '"');
+      return _celdaDeTarjeta('mov', k, cells[k]);
     }).join('');
 
     // Siempre, para quien puede actuar. Antes venía y se iba con el modo de
@@ -17058,6 +17175,187 @@ function _sysActRefHtml(a){
  * enciende las filas pedidas durante unos segundos. Se escribió para la tarjeta
  * de reenganche y vale igual aquí — escribir un segundo «llévame a esa fila»
  * sería tener dos formas de hacer lo mismo, que es el fallo de siempre. */
+/* ── LOS DATOS QUE UNA ENTREGA Y SU ENTRADA COMPARTEN ────────────────────────
+ *
+ * Sólo éstos. Lo que NO está aquí, y por qué:
+ *
+ *  · Las NOTAS de la entrega no son los comentarios del movimiento. La nota
+ *    dice lo que el proveedor prometió; el comentario, lo que pasó al
+ *    recibirlo («llegaron dos rotas»). Propagar una encima de la otra borraría
+ *    justo el dato que explica por qué los números no coinciden.
+ *  · La FECHA estimada no es la fecha de recepción. Una es cuándo dijeron que
+ *    vendría; la otra, cuándo llegó.
+ *  · El ESTADO de la entrega no existe en el movimiento.
+ *
+ * Es una lista corta a propósito: cada campo de más es una forma nueva de que
+ * la app escriba algo que nadie comprobó. */
+var CAMPOS_ENTREGA_ENTRADA = [
+  { inc: 'category', mov: 'category', etiqueta: 'Category' },
+  { inc: 'name',     mov: 'name',     etiqueta: 'Material' },
+  { inc: 'qty',      mov: 'qty',      etiqueta: 'Quantity', numero: true, mueveStock: true },
+  { inc: 'unit',     mov: 'unit',     etiqueta: 'Unit' },
+  { inc: 'supplier', mov: 'supplier', etiqueta: 'Supplier' },
+  { inc: 'po',       mov: 'po',       etiqueta: 'PO #' },
+  { inc: 'pm',       mov: 'pm',       etiqueta: 'PM' }
+];
+
+function _mismoValor(a, b, numero){
+  if (numero) return Number(a || 0) === Number(b || 0);
+  return String(a == null ? '' : a).trim().toUpperCase() ===
+         String(b == null ? '' : b).trim().toUpperCase();
+}
+function _valorLegible(v, numero){
+  if (numero) return String(Number(v || 0));
+  var t = String(v == null ? '' : v).trim();
+  return t || '(empty)';
+}
+
+/* ── ¿CORREGIR TAMBIÉN LA ENTRADA? (v16.2, pedido por Jose el 23/11) ─────────
+ *
+ * Se ofrece, no se hace. Y hay DOS COSAS QUE NO SE OFRECEN, cada una por un
+ * motivo que ya costó una discusión:
+ *
+ * 1. **Un campo que el movimiento YA tenía distinto no se toca ni se ofrece.**
+ *    Si la entrega decía 24, la entrada guardó 22 porque llegaron dos rotas, y
+ *    ahora la entrega pasa a 25 — el movimiento sigue diciendo 22 y **tiene
+ *    razón**: el almacén tiene 22. Ofrecer «ponlo a 25» sería ofrecer romper lo
+ *    único correcto de los tres números. Se dice en el detalle que no se
+ *    ofrece y por qué, que es distinto de callarse.
+ * 2. **La cantidad no se ofrece si la entrega se repartió en VARIOS
+ *    movimientos.** Veinticuatro ventanas en tres estantes son tres filas, y
+ *    «pon 25» no tiene una respuesta única: ¿en cuál de las tres? Repartirlo a
+ *    ojo movería stock a un estante que nadie contó.
+ *
+ * Y lo que sí se dice sin adornos: **cambiar la cantidad mueve el inventario.**
+ * No es una corrección de texto. */
+function _ofrecerCorregirLaEntrada(id, antes, ahora){
+  if (!antes || !id) return;
+  var suyas = _entradasDeLaEntrega(id);
+  if (!suyas.length) return;
+
+  var ofrecibles = [], bloqueados = [];
+  CAMPOS_ENTREGA_ENTRADA.forEach(function(c){
+    if (_mismoValor(antes[c.inc], ahora[c.inc], c.numero)) return;   // no cambió
+    // ¿Siguen en paso las dos? Se mira en TODAS las filas de la entrega: si una
+    // sola se apartó, propagar dejaría la pareja peor de lo que estaba.
+    var enPaso = suyas.every(function(m){
+      return _mismoValor(m[c.mov], antes[c.inc], c.numero);
+    });
+    if (!enPaso) {
+      bloqueados.push(c.etiqueta + ': the entry says ' +
+        _valorLegible(suyas[0][c.mov], c.numero) +
+        ', which is not what the delivery said before — it was corrected by hand, ' +
+        'so the app leaves it alone.');
+      return;
+    }
+    if (c.mueveStock && suyas.length > 1) {
+      bloqueados.push(c.etiqueta + ': this delivery became ' + suyas.length +
+        ' movements (one per rack), so there is no single row to put the new ' +
+        'quantity on. Correct the one you counted.');
+      return;
+    }
+    ofrecibles.push(c);
+  });
+
+  if (!ofrecibles.length) {
+    if (bloqueados.length) {
+      showToast('The delivery was saved. Its entry was left as it is — open it to see why.',
+        'info', 8000, { texto: 'Why', hacer: function(){
+          _showConfirm({ icon: 'ℹ️', soloAviso: true,
+            title: 'The entry was not changed',
+            message: 'What you corrected on the delivery does not match what the entry says, ' +
+                     'so changing it automatically would overwrite something somebody ' +
+                     'entered on purpose.',
+            confirmText: 'Got it', mas: bloqueados.join('\n\n'),
+            masLabel: 'What was left alone, and why' });
+        }});
+    }
+    return;
+  }
+
+  var material = (suyas[0].name || ahora.name || 'this material');
+  var lista = ofrecibles.map(function(c){
+    return c.etiqueta + ': ' + _valorLegible(antes[c.inc], c.numero) +
+           '  →  ' + _valorLegible(ahora[c.inc], c.numero);
+  });
+  var mueve = ofrecibles.some(function(c){ return c.mueveStock; });
+
+  _showConfirm({
+    icon: mueve ? '⚠️' : '✏️',
+    title: 'Change the entry for ' + material + ' too?',
+    message: 'You changed ' +
+      ofrecibles.map(function(c){ return c.etiqueta.toLowerCase(); }).join(', ') +
+      ' on this delivery. Its entry' +
+      (suyas.length > 1 ? ' (' + suyas.length + ' movements)' : '') +
+      ' still says the old value.' +
+      (mueve ? ' Changing the quantity moves your stock — it is not a text correction.' : ''),
+    confirmText: 'Yes, change the entry',
+    cancelText:  'No, leave the entry',
+    danger: mueve,
+    mas: lista.join('\n') + (bloqueados.length ? '\n\nNot offered:\n' + bloqueados.join('\n\n') : ''),
+    masLabel: 'What would change',
+    onConfirm: function(){ _propagarALaEntrada(id, suyas, ofrecibles, ahora); }
+  });
+}
+
+/* Escribe en el movimiento lo que la persona acabó de decir que sí.
+ *
+ * Pasa por `modifyMovement`, la misma puerta que el formulario de editar, y por
+ * tres razones que no son de comodidad: ahí viven la comprobación de que la
+ * fila no se ha movido (`expectedCategory`/`expectedName`), el recálculo del
+ * `MatID` si cambia el nombre, y la línea de auditoría con el motivo. Escribir
+ * la celda por un camino propio se saltaría las tres.
+ *
+ * Y el MOTIVO lo escribe la app, nombrando la entrega: dentro de un año, «se
+ * cambió porque sí» y «se cambió al corregir la entrega INC-77» son dos cosas
+ * distintas, y sólo la segunda se puede comprobar. */
+function _propagarALaEntrada(id, suyas, campos, ahora){
+  var pendientes = suyas.length, fallos = [];
+  suyas.forEach(function(m){
+    var payload = {
+      rowIdx: m.rowIdx,
+      expectedCategory: m.category,
+      expectedName:     m.name,
+      reason: 'Delivery ' + id + ' was corrected (' +
+              campos.map(function(c){ return c.etiqueta; }).join(', ') + ')'
+    };
+    campos.forEach(function(c){ payload[c.mov] = ahora[c.inc]; });
+
+    google.script.run
+      .withSuccessHandler(function(res){
+        if (res && res.movimiento && typeof movements !== 'undefined' && movements){
+          for (var i = 0; i < movements.length; i++){
+            if (movements[i].rowIdx === m.rowIdx){ movements[i] = res.movimiento; break; }
+          }
+        }
+        if (res) { try { _aplicarStockDelServidor(res); } catch (e) {} }
+        if (--pendientes === 0) _terminarPropagacion(fallos, id);
+      })
+      .withFailureHandler(function(err){
+        fallos.push(_stripTags(err));
+        if (--pendientes === 0) _terminarPropagacion(fallos, id);
+      })
+      .processMovement('modifyMovement', _h(payload));
+  });
+  showToast('Changing the entry…', 'info', 4000);
+}
+
+function _terminarPropagacion(fallos, id){
+  try { renderAll(); } catch (e) {}
+  _reloadWhenIdle();
+  if (fallos.length) {
+    /* SE DICE QUE LA ENTREGA SÍ SE GUARDÓ. El fallo es de la segunda mitad, y
+     * sin decirlo quien lo lea no sabe si tiene que volver a escribir las dos
+     * cosas o sólo una. */
+    showToast('The delivery was saved, but the entry was not changed: ' +
+              fallos[0], 'err', 9000);
+    return;
+  }
+  showToast('The entry was changed too.', 'ok', 5000, {
+    texto: 'Show it', hacer: function(){ _verLaEntradaDeLaEntrega(id); }
+  });
+}
+
 function _verLaEntradaDeLaEntrega(id){
   var suyas = _entradasDeLaEntrega(id);
   if (!suyas.length){
@@ -27681,6 +27979,25 @@ function saveIncomingItem() {
   // visible, y eso no es un arreglo.
   var _busyState = { tries: 0 };
 
+  /* ── LA FOTO DE ANTES, Y SE TOMA AQUÍ POR UNA RAZÓN ──────────────────────
+   *
+   * `_incAplicarLocal` pisa la entrega de la lista local en cuanto el servidor
+   * dice sí — eso es lo que hace que la pantalla no parpadee. Así que si los
+   * valores viejos se buscaran DESPUÉS, ya estarían sustituidos por los
+   * nuevos y la comparación saldría siempre vacía: la app no ofrecería nunca
+   * corregir nada y nadie sabría por qué. */
+  var antesDeEditar = null;
+  if (id) {
+    for (var _pi = 0; _pi < incoming.length; _pi++){
+      if (String(incoming[_pi].id) === String(id)) {
+        var _p = incoming[_pi];
+        antesDeEditar = { category: _p.category, name: _p.name, qty: _p.qty,
+                          unit: _p.unit, supplier: _p.supplier, po: _p.po, pm: _p.pm };
+        break;
+      }
+    }
+  }
+
   function _send(){
     var action = id ? 'updateIncoming' : 'addIncoming';
     _btnBusy(btn, 'Saving…');
@@ -27717,32 +28034,22 @@ function saveIncomingItem() {
           /* ── LA ENTREGA QUE YA TIENE SU ENTRADA ────────────────────────────
            *
            * Jose, 18/11: *"al corregir o editar un incoming, no se edita el
-           * entry que utilizó los mismos datos, ¿por qué?"*
+           * entry que utilizó los mismos datos, ¿por qué?"* La v16.0 ató las
+           * dos y se limitó a DECIRLO, por miedo a propagar de más.
            *
-           * Ya está contestado: no están unidos, y desde esta versión sí lo
-           * están. Lo que NO se hace es propagar la corrección, y la razón hay
-           * que decirla aquí porque es donde se nota: si la entrega decía 24 y
-           * el movimiento guardó 22 porque llegaron dos rotas, cambiar la
-           * entrega a 25 **no debe** poner 25 en el movimiento — el almacén
-           * tiene 22. Y la cantidad del movimiento ya cambió el inventario, así
-           * que editarla sola movería stock sin que nadie lo haya pedido.
+           * Jose, 23/11, decidiendo: *"quiero que cada vez que se corrija un
+           * incoming que ya tiene entry, la app le dé al usuario la opción que
+           * diga ¿quieres corregir también la entrada realizada de este
+           * material xxxx (se cambió x dato)? y el usuario debe decir sí o
+           * no."*
            *
-           * Así que la app dice lo que sabe y deja decidir a quien sabe si
-           * llegaron 22 o 25. Es la recomendación escrita en
-           * docs/LO-QUE-TIENE-QUE-CUADRAR.md, y es lo contrario de adivinar. */
-          if (id) {
-            var yaTiene = _entradasDeLaEntrega(id);
-            if (yaTiene.length) {
-              var cual = yaTiene.length === 1
-                ? 'its entry of ' + _he(String(yaTiene[0].dateRec || yaTiene[0].date || '').substring(0, 10))
-                : yaTiene.length + ' entries';
-              showToast('This delivery already has ' + cual +
-                        ' — correcting the delivery does not change the movement.',
-                        'info', 9000,
-                        { texto: 'Show ' + (yaTiene.length === 1 ? 'it' : 'them'),
-                          hacer: function(){ _verLaEntradaDeLaEntrega(id); } });
-            }
-          }
+           * Eso es exactamente la forma correcta y es lo que faltaba: la app no
+           * adivina y tampoco se calla — pone delante QUÉ cambió, de qué a qué,
+           * y espera una respuesta. Lo que NUNCA hace es propagar sola.
+           *
+           * Ver `_ofrecerCorregirLaEntrada`, donde están las dos cosas que no
+           * se ofrecen y por qué. */
+          if (id) _ofrecerCorregirLaEntrada(id, antesDeEditar, payload);
         });
         // La recarga pasa a ser CONFIRMACIÓN, no la fuente de la verdad: ya no
         // hay nada que esperar de ella. Y silenciosa y sin caché —_reloadWhenIdle
@@ -32983,6 +33290,7 @@ document.addEventListener('DOMContentLoaded', function(){
   // M-01: una sola vez, sobre el contenedor — las filas se repintan y un
   // manejador por fila se perdería en cada dibujado.
   try { _wireTarjetasMov(); } catch (e) { Logger && 0; }
+  try { _wireTarjetasStock(); } catch (e) { Logger && 0; }
   _safeOn('morningOverlay','click',  function(e){ if (e.target===document.getElementById('morningOverlay')) closeMorningPopup(); });
 
   // Open modal buttons
@@ -34329,6 +34637,18 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '16.2',
+    titulo: 'Correcting a delivery offers to correct its entry, and the Dashboard fits a phone',
+    puntos: [
+      '<b>When you correct a delivery that already has its entry, the app now asks whether to correct the entry too</b> \u2014 naming the material and <b>what changed, from what to what</b> \u2014 with two real answers: yes and no. It never does it on its own.',
+      '<b>And there are two things it will not offer, which is the whole point.</b> If the entry already says something different, somebody corrected it by hand and <b>they were right</b>: a delivery that said 24, an entry that recorded 22 because two arrived broken, and a delivery now changed to 25 \u2014 the warehouse has 22. Offering to put 25 there would be offering to break the only correct number of the three. And the quantity is not offered at all when the delivery became several movements, one per rack: \u201cmake it 25\u201d has no single answer there. When something is not offered, the app says so and says why.',
+      '<b>Changing a quantity moves your stock, and the dialog says that in those words.</b> It is not a text correction.',
+      '<b>The Stock Dashboard is cards on a phone now</b>, like Movements. What matters stays in front without touching anything \u2014 the status badge and the stock bar, because they are what tells you at a glance whether there is a problem; hiding them behind a tap would leave the card pretty and mute. The date it came in, the last note and the documents wait for the tap, and that same tap also opens the rack photos: one gesture, one thing.',
+      'On a computer it is exactly the same table it always was, with the same columns.'
+    ],
+    antes:  'A delivery and its entry drifted apart in silence',
+    ahora:  'It asks, naming what changed, and waits for an answer' },
+
   { ver: '16.1',
     titulo: 'Material used on another job changes hands, not just shelves',
     puntos: [
@@ -34368,18 +34688,6 @@ var NOVEDADES = [
     ],
     antes:  'The file stayed in Drive for good',
     ahora:  'To the Drive trash, and it says how many' },
-
-  { ver: '15.8',
-    titulo: 'You can see it saving now, and the window no longer drags you elsewhere',
-    puntos: [
-      '<b>Saving an entry went quiet for six or seven seconds.</b> The window closing the instant you press Save was the right thing — but it took the only sign of life with it: the spinner lived inside the window. Six seconds of nothing does not read as <i>working</i>, it reads as <i>nothing happened</i>, and what a person does then is save it again.',
-      'Now a <b>grey row appears at the top of the movements list</b>, with the material and the quantity, pulsing in the exact place the real one will land — and a notice in the corner says the app is busy. They answer different questions: the row says your movement is on its way, the notice says the app is working. When the server answers, the real row replaces the grey one.',
-      '<b>Opening the entry form from a delivery no longer switches you to another tab.</b> The form is a floating window; it never needed the tab underneath to change. Mark a delivery as arrived, make its entry, and you are still in Incoming when you close it.',
-      '<b>A shelf typed wrong now offers both ways out.</b> Type <i>c 4 a</i> when the shelf is <i>C4A</i> and you get both: use the one you have, or create what you typed. Before, only one of the two was on offer.',
-      '<b>And in the free edition the low-stock strip is shown switched off, not filled in.</b> It used to list the materials. Now the strip and its panel are greyed out and say what they are — which is honest in a way that hiding them would not be: a free copy made from a working sheet already has the minimums in it, and hiding the panel would have left that data inside, invisible, to reappear later.'
-    ],
-    antes:  'Six seconds of silence after Save',
-    ahora:  'A grey row exactly where the real one will land' },
 
 ];
 
