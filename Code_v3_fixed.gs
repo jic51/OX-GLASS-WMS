@@ -128,7 +128,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '16.0';
+var APP_VERSION = '16.1';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -140,7 +140,7 @@ var APP_VERSION = '16.0';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'e6450754';
+var APP_BUILD = '3480ee95';
 
 // ═══ ACOPIO BASIC — EL INTERRUPTOR DE LA VERSIÓN GRATIS ══════════════════════
 //
@@ -3864,7 +3864,9 @@ function calculateStock(movements, locksMap) {
       s.warehouseQty = Math.max(0, s.warehouseQty - qty);
       s.wastedQty   += qty;
 
-    } else if (mt === 'ADJUST') {
+    } else if (cuentaComoAjuste_(mt)) {
+      // A correction to the count at ONE rack, or a REASSIGN moving units from
+      // one material to another — see cuentaComoAjuste_.
       // A correction to the count at ONE rack. Direction is which column the
       // rack sits in — see adjustDirection_. Nothing moves to a site and
       // nothing is wasted, so siteQty and wastedQty are untouched on purpose:
@@ -4299,6 +4301,7 @@ function processMovementInner_(ss, action, data, auth) {
     };
   }
   if (action === 'addMultiEntry')         return addMultiEntry(ss, archive, data, auth);
+  if (action === 'reassignMaterial')      return reassignMaterial(ss, archive, data, auth);
   if (action === 'addMultiExit')          return addMultiExit(ss, archive, data, auth);
   if (action === 'updateDocument')        return updateDocument_(ss, archive, data, auth);
   // EL CIERRE DE LA TANDA. El navegador la manda cuando su cola se vacía, y es
@@ -4852,7 +4855,7 @@ function ubicacionDeLlegada_(mt, src, dest) {
   if (mt === 'ENTRY')    return dest || src;
   if (mt === 'RETURN')   return dest;
   if (mt === 'TRANSFER') return dest;
-  if (mt === 'ADJUST')   return (dest && !src) ? dest : '';
+  if (cuentaComoAjuste_(mt)) return (dest && !src) ? dest : '';
   return '';
 }
 
@@ -4979,7 +4982,7 @@ function addMovementsBatch_(ss, archive, movements, auth, opciones) {
       var d  = movements[i];
       var mt = String(d.moveType || '').toUpperCase().trim();
       if (mt === 'DISPATCH') mt = 'EXIT';
-      if (['ENTRY','EXIT','TRANSFER','RETURN','WASTE','ADJUST'].indexOf(mt) === -1) {
+      if (['ENTRY','EXIT','TRANSFER','RETURN','WASTE','ADJUST','REASSIGN'].indexOf(mt) === -1) {
         throw new Error('Invalid move type: ' + mt);
       }
 
@@ -5140,11 +5143,15 @@ function addMovementsBatch_(ss, archive, movements, auth, opciones) {
       // direction — see adjustDirection_ for why the direction is stored that
       // way instead of as a negative quantity.
       var adjDir = 0;
-      if (mt === 'ADJUST') {
+      if (cuentaComoAjuste_(mt)) {
         adjDir = adjustDirection_(srcKey, destKey);
-        if (!adjDir) throw new Error('An adjustment needs exactly one rack — the one you counted.');
+        if (!adjDir) throw new Error(mt === 'REASSIGN'
+          ? 'A reassignment needs exactly one rack — the one the material is on.'
+          : 'An adjustment needs exactly one rack — the one you counted.');
         if (!String(d.comments || '').trim()) {
-          throw new Error('ADJUST movements require a reason — say why the count was off.');
+          throw new Error(mt === 'REASSIGN'
+            ? 'REASSIGN movements require a reason — say which job it went to and why.'
+            : 'ADJUST movements require a reason — say why the count was off.');
         }
         // Only downward adjustments can fail this way, and the failure is
         // worth its own message: "insufficient stock" would be nonsense for a
@@ -5203,7 +5210,25 @@ function addMovementsBatch_(ss, archive, movements, auth, opciones) {
       // honest dollar figure to give it, so it gets none, not a zero that
       // would misread as "this cost nothing."
       var unitCost = null, totalCost = null;
-      if (mt === 'ENTRY') {
+      /* ── EL COSTE EN UNA REASIGNACIÓN VIAJA CON LAS UNIDADES (M-05) ───────
+       *
+       * Y no es un adorno contable: si no viaja, mover material barato a un
+       * material caro **inventa dinero**, y al revés lo destruye.
+       *
+       * LA FILA QUE SUBE se trata EXACTAMENTE como una entrada: el coste que
+       * trae de su origen se mezcla en la media del material nuevo. Comparte
+       * la rama de ENTRY en vez de copiarla — veinte líneas de mezcla de
+       * medias duplicadas serían dos sitios donde arreglar el próximo
+       * redondeo, y uno se quedaría sin arreglar.
+       *
+       * LA FILA QUE BAJA cae en la rama genérica de abajo, que estampa la media
+       * del material viejo y NO la toca. Eso es lo correcto por aritmética, no
+       * por comodidad: quitar unidades a su propia media deja la media igual.
+       *
+       * Y si el material de origen nunca tuvo precio, no se estampa nada en
+       * ninguna de las dos. Un cero se leería como «esto no costó nada». */
+      var esSubidaDeReasignacion = (mt === 'REASSIGN' && destKey && !srcKey);
+      if (mt === 'ENTRY' || esSubidaDeReasignacion) {
         var enteredCost = (d.unitCost !== undefined && d.unitCost !== null && String(d.unitCost).trim() !== '')
           ? Number(d.unitCost) : NaN;
         if (!isNaN(enteredCost) && enteredCost >= 0) {
@@ -5673,8 +5698,9 @@ function applyMovementToSnapshot_(s, mt, qty, srcKey, destKey) {
     var wSrc = srcKey || findFirstWarehouseLoc(s.locs, qty);
     if (wSrc && s.locs[wSrc]) s.locs[wSrc] -= qty;
     s.wh = Math.max(0, s.wh - qty);
-  } else if (mt === 'ADJUST') {
+  } else if (cuentaComoAjuste_(mt)) {
     // Direction lives in which rack column is filled — see adjustDirection_.
+    // REASSIGN shares this branch on purpose — see cuentaComoAjuste_.
     // Never touches site stock or wasted: nothing physically went anywhere.
     if (srcKey && !destKey) {
       if (s.locs[srcKey]) s.locs[srcKey] -= qty;
@@ -5880,6 +5906,211 @@ function addMultiEntry(ss, archive, data, auth) {
     movimientos:    res.movimientos    || [],
     message:    totalMats + ' material(s), ' + res.rowCount + ' row(s) recorded.'
   };
+}
+
+/* ═══ M-05 · REASIGNAR: ESTAS UNIDADES PASAN A SER AQUELLAS ══════════════════
+ *
+ * Jose, 13/11, con una captura de tres movimientos:
+ *
+ *   *"Fueron transferidas desde un material reservado a una locación donde
+ *   estaba otro material. Eso lo hice yo porque el material reservado se debía
+ *   usar en otro proyecto y está bien, pero el problema es que en el sistema
+ *   esas ventanas transferidas aún aparecen con el otro nombre y no son parte
+ *   completa del otro proyecto nuevo. Al momento de transferir un material y
+ *   usar un material en otro proyecto deben pasar a ser parte de ese proyecto,
+ *   pero debemos poder tener trazabilidad para saber de dónde vinieron."*
+ *
+ * ── LA DISTINCIÓN QUE LO EXPLICA ────────────────────────────────────────────
+ *
+ * **`TRANSFER` contesta «¿dónde está?». Esto contesta «¿de quién es?».** Eran
+ * dos preguntas distintas con un solo botón, así que la segunda se respondía
+ * con la herramienta de la primera — y el resultado salía correcto en el
+ * estante y falso en la obra. Lo que la app registró de aquel día fue un
+ * traslado de 4 unidades de B2A a A3A, y eso es TODO lo que sabía: para el
+ * sistema esas ventanas seguían llamándose PAT.SEI902 y seguían siendo de su
+ * obra.
+ *
+ * ── DOS FILAS, NO UNA ───────────────────────────────────────────────────────
+ *
+ * Pasan dos cosas a la vez y una sola fila no puede contarlas: una resta en el
+ * material de origen y la otra suma en el de destino. Van en UNA escritura, así
+ * que o están las dos o no está ninguna — media reasignación haría desaparecer
+ * material de los dos lados a la vez.
+ *
+ * ── Y LAS CUATRO COSAS QUE NO SE PUEDEN OLVIDAR ─────────────────────────────
+ *
+ * 1. **El coste viaja con las unidades.** Ver `esSubidaDeReasignacion`: si no
+ *    viaja, mover material barato a un material caro inventa dinero.
+ * 2. **La reserva de origen se suelta, y queda dicho quién la soltó.** Seguir
+ *    reservando para la obra vieja algo que ya se montó en otra casa es una
+ *    mentira que hará que alguien no pueda sacar material que sí tiene. Y por
+ *    eso esto pide ADMIN cuando hay reserva: soltar una reserva lo decide
+ *    quien lleva la obra, no quien mueve el pallet.
+ * 3. **La etiqueta del pallet sigue diciendo el nombre viejo.** Es física. La
+ *    pantalla ofrece reimprimirla al terminar.
+ * 4. **No se borra nada, nunca.** Las filas de aquel día se quedan donde
+ *    están. Esto añade; no reescribe.
+ *
+ * ── LAS UNIDADES NO SE MUEVEN DE ESTANTE, Y ES LO QUE LO HACE HONESTO ───────
+ *
+ * Las dos filas llevan el MISMO estante. Nada se ha movido físicamente: las
+ * ventanas están donde estaban. Por eso la aritmética es la del ajuste y no la
+ * de una salida — ver `cuentaComoAjuste_`. Si alguien además quiere cambiarlas
+ * de sitio, eso es un `TRANSFER`, que es otra pregunta y tiene su botón.
+ */
+function reassignMaterial(ss, archive, data, auth) {
+  auth = requireAuth_('WRITE');   // ignores any caller-supplied `auth`
+
+  var srcCat  = normalizeString(data.category);
+  var srcName = normalizeString(data.name);
+  var dstCat  = normalizeString(data.toCategory);
+  var dstName = normalizeString(data.toName);
+  var rack    = String(data.rack || '').trim().toUpperCase();
+  var qty     = Math.abs(Number(data.qty || 0));
+  var project = String(data.toProject || '').trim();
+  var reason  = String(data.reason || '').trim();
+
+  if (!srcCat || !srcName) throw new Error('Pick the material the units are leaving.');
+  if (!dstCat || !dstName) throw new Error('Pick the material the units become.');
+  if (!rack)    throw new Error('Pick the rack the material is on.');
+  if (qty <= 0) throw new Error('Quantity must be greater than 0.');
+  if (!project) throw new Error('A reassignment needs the job the material now belongs to.');
+  if (!reason)  throw new Error('Say why these units changed hands — it is the trace.');
+
+  var srcId = getMaterialId(srcCat, srcName);
+  var dstId = getMaterialId(dstCat, dstName);
+  if (srcId === dstId) {
+    throw new Error('That is the same material. To change only the job, edit the movement; ' +
+                    'to move it to another rack, use Transfer.');
+  }
+
+  /* LA RESERVA, ANTES DE ESCRIBIR NADA. Y en este orden a propósito: si se
+   * escribiera primero y soltar fallara, quedaría material reasignado con una
+   * reserva encima apuntando a una obra que ya no lo tiene. Al revés, lo peor
+   * que pasa es una reserva soltada y una reasignación que no se guardó — se
+   * vuelve a poner, y queda dicho en la auditoría quién la soltó. */
+  var soltada = null;
+  var candados = getActiveLocksMap_(ss);
+  var lock = candados && candados[srcId + '|||' + rack];
+  if (lock) {
+    if (auth.role !== 'ADMIN') {
+      throw new Error('RESERVED: this material is reserved at ' + rack + ' — ' + lock.reason +
+        ' (by ' + lock.lockedBy + '). Reassigning reserved material is an admin decision: ' +
+        'ask an admin to do it, or to release the hold first.');
+    }
+    soltada = _soltarCandadoPorReasignacion_(ss, lock, auth, dstName, project);
+  }
+
+  // El coste de origen, que es el que viaja. Si nunca tuvo precio, no viaja
+  // ninguno — y eso es la verdad, no un cero.
+  var cfg = loadConfig();
+  var media = (cfg.avgCost && cfg.avgCost[srcId]) ? Number(cfg.avgCost[srcId].avg) : NaN;
+  if (!isFinite(media) || media <= 0) media = null;
+
+  var deOrigen = cleanDisplay_(data.name);
+  var aDestino = cleanDisplay_(data.toName);
+
+  /* EL MOTIVO DE CADA FILA SE NOMBRA LA OTRA. Es la trazabilidad que no
+   * depende de ningún puntero: las dos filas se leen solas, sin ir a buscar a
+   * la otra, y siguen legibles si una se archiva o alguien edita un comentario
+   * — que es justo el fallo que enseñó H-22. El puntero (`FROM_MOV`) se añade
+   * además, para la máquina. */
+  var filas = [
+    {
+      moveType: 'REASSIGN',
+      category: data.category, name: data.name,
+      qty: qty, unit: String(data.unit || 'UNIT'),
+      sourceLoc: rack, destLoc: '',                   // baja: un solo estante
+      project: String(data.fromProject || ''),
+      comments: 'Reassigned to ' + aDestino + ' \u00b7 ' + project + ' \u2014 ' + reason,
+      responsible: String(data.responsible || ''),
+      dateRec: data.dateRec || '',
+      originProject: String(data.fromProject || ''),
+      forceSubmit: true                               // el par no es un duplicado de sí mismo
+    },
+    {
+      moveType: 'REASSIGN',
+      category: data.toCategory, name: data.toName,
+      qty: qty, unit: String(data.unit || 'UNIT'),
+      sourceLoc: '', destLoc: rack,                   // sube: el MISMO estante
+      project: project,
+      comments: 'Reassigned from ' + deOrigen +
+                (data.fromProject ? ' \u00b7 ' + String(data.fromProject) : '') +
+                ' \u2014 ' + reason,
+      responsible: String(data.responsible || ''),
+      dateRec: data.dateRec || '',
+      /* DE QUÉ OBRA VENÍA, en la columna que ya significa eso. `ORIGIN_PROJECT`
+       * se hizo para el boneyard y dice exactamente esto: de dónde salió la
+       * cantidad, al lado de a dónde va. */
+      originProject: String(data.fromProject || ''),
+      unitCost: media,                                // el coste que viaja
+      forceSubmit: true
+    }
+  ];
+
+  var res = addMovementsBatch_(ss, archive, filas, auth);
+
+  /* Y EL PUNTERO, DESPUÉS DE LA ESCRITURA. `addMovementsBatch_` reparte los
+   * nombres de movimiento dentro, así que el id de la fila de origen no existe
+   * hasta que vuelve. Se escribe aparte, y si eso falla no se pierde nada
+   * importante: las dos filas están, el stock está bien, y el rastro legible
+   * —el motivo de cada fila nombrando a la otra— sigue ahí. El orden del fallo
+   * va en la dirección segura. */
+  var movs = res.movimientos || [];
+  var linkError = null;
+  if (movs.length === 2 && movs[0].movId && movs[1].rowIdx) {
+    try {
+      archive.getRange(movs[1].rowIdx, AC.FROM_MOV + 1).setValue(movs[0].movId);
+    } catch (e) {
+      linkError = 'The two rows were saved, but the link between them was not: ' + e.message;
+      try {
+        logError_(ss, 'WARN', 'backend', 'reassignMaterial', auth.email,
+          'Could not write FROM_MOV on the reassign pair: ' + e.message, null, newRequestId_());
+      } catch (e2) {}
+    }
+  }
+
+  auditLog_(ss, 'REASSIGN', auth.email,
+    qty + ' ' + deOrigen + ' \u2192 ' + aDestino + ' \u00b7 ' + project,
+    String(data.fromProject || ''), reason);
+
+  return {
+    status: 'success',
+    rowCount: res.rowCount,
+    movimientos: movs,
+    stockAfter: res.stockAfter || null,
+    availableByMat: res.availableByMat || null,
+    releasedLock: soltada,
+    linkError: linkError,
+    /* La etiqueta la arma el navegador CON `movimientos`, o sea con lo que esta
+     * función acabó de escribir en la hoja. No se devuelve un objeto de
+     * etiqueta hecho aquí a mano: ésa es la lección de la v14.9, donde una
+     * etiqueta impresa desde los datos del formulario salía diciendo un estante
+     * que no existía porque el servidor había normalizado el nombre. */
+    message: qty + ' ' + deOrigen + ' reassigned to ' + aDestino + '.'
+  };
+}
+
+/* Suelta la reserva del material de origen porque se está reasignando, y lo
+ * deja escrito con esas palabras. No reusa `unlockMaterial` porque esa función
+ * es un endpoint —vuelve a pedir ADMIN, vuelve a leer la hoja y escribe su
+ * propia línea de auditoría— y lo que hace falta aquí es la escritura, dentro
+ * de una operación que ya comprobó el permiso. */
+function _soltarCandadoPorReasignacion_(ss, lock, auth, aDestino, project) {
+  var sheet = ss.getSheetByName('MATERIAL_LOCKS');
+  if (!sheet) return null;
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) !== String(lock.id)) continue;
+    if (String(rows[i][9] || '').toUpperCase() !== 'ACTIVE') return null;
+    sheet.getRange(i + 1, 10, 1, 3).setValues([['Removed', auth.email, new Date()]]);
+    auditLog_(ss, 'UNLOCK_MATERIAL', auth.email,
+      String(rows[i][3]) + ' @ ' + String(rows[i][4]),
+      'released by REASSIGN', 'to ' + aDestino + ' \u00b7 ' + project);
+    CacheService.getScriptCache().remove('materialLocksV1');
+    return { id: lock.id, reason: lock.reason, rack: String(rows[i][4] || '') };
+  }
+  return null;
 }
 
 // ─── MULTI-MATERIAL EXIT ─────────────────────────────────────────────────────
@@ -6138,8 +6369,9 @@ function getCurrentStockForItem(ss, matId) {
       if (wSrc && locs[wSrc]) locs[wSrc] -= qty;
       wh = Math.max(0, wh - qty);
 
-    } else if (mt === 'ADJUST') {
-      // Same rule as the other three stock readers — see adjustDirection_.
+    } else if (cuentaComoAjuste_(mt)) {
+      // Same rule as the other three stock readers — see adjustDirection_,
+      // and REASSIGN rides with it — see cuentaComoAjuste_.
       if (src && !dst) {
         if (locs[src]) locs[src] -= qty;
         wh = Math.max(0, wh - qty);
@@ -8582,7 +8814,7 @@ function refreshDerivedSheets_(ss) {
       s.locs[s2] = (s.locs[s2] || 0) - qty;
       s.wasted  += qty;
 
-    } else if (m.moveType === 'ADJUST') {
+    } else if (cuentaComoAjuste_(m.moveType)) {
       // The fourth and last place that turns movements into stock. All four
       // have to agree or LIVE_STOCK drifts away from what the full scan says,
       // and the drift only shows up as a rack drawer quietly reading wrong.
@@ -8973,6 +9205,14 @@ function getActiveLocksMap_(ss) {
     if (!matId || !rack) continue;
     var destRaw = String(rows[i][5] || '').trim();
     map[matId + '|||' + rack] = {
+      /* EL ID DE LA RESERVA VIAJA EN EL MAPA desde la v16.1. Hasta entonces no
+       * hacía falta: el mapa sólo servía para NEGAR, y para negar basta el
+       * motivo y quién la puso. `reassignMaterial` es el primero que necesita
+       * SOLTARLA, y soltar una fila sin su id obliga a volver a recorrer la
+       * hoja buscándola por material y estante — dos formas de identificar la
+       * misma reserva, y una de ellas adivinando. */
+      id:          String(rows[i][0] || ''),
+      rack:        rack,
       allowedDest: destRaw ? destRaw.split(',').map(function(s){ return normalizeString(s); }).filter(Boolean) : [],
       reason:      String(rows[i][6] || ''),
       lockedBy:    String(rows[i][7] || '')
@@ -8993,7 +9233,14 @@ function enforceMaterialLock_(locksMap, mt, matId, srcKey, destKey) {
   // reaches this branch — it writes DEST_LOC and leaves SRC_LOC empty, and
   // this function returns early when there is no source — which is right:
   // finding MORE than the record said takes nothing away from anybody.
-  if (mt === 'EXIT' || mt === 'WASTE' || mt === 'ADJUST') {
+  /* Y REASSIGN TAMBIÉN, aunque sea justo la operación que Jose describió sobre
+   * material reservado. El guardia se queda en pie: lo que hace
+   * `reassignMaterial` es SOLTAR la reserva antes de escribir nada, con nombre
+   * y motivo, y sólo si quien lo pide es admin. Dejar que la reasignación se
+   * cuele por delante del candado sería un camino que apaga una reserva sin
+   * que quede dicho quién la apagó, que es lo que un candado existe para
+   * impedir. */
+  if (mt === 'EXIT' || mt === 'WASTE' || mt === 'ADJUST' || mt === 'REASSIGN') {
     throw new Error('RESERVED: This material is reserved at ' + srcKey + ' — ' + lock.reason +
       ' (by ' + lock.lockedBy + '). Cannot ' + mt + '. Ask an admin to release it first.');
   }
@@ -14479,7 +14726,12 @@ function statusForMoveType_(mt) {
   if (mt === 'EXIT')   return 'Dispatched';
   if (mt === 'WASTE')  return 'Damaged';
   if (mt === 'ADJUST') return 'Adjusted';
-  return 'In Stock';   // ENTRY, RETURN, TRANSFER
+  /* REASSIGN dice «In Stock» y no «Reassigned», a propósito. Esta columna no
+   * cuenta qué PASÓ —eso es MoveType— sino DÓNDE ESTÁ el material, y las
+   * unidades reasignadas siguen en el almacén, en el mismo estante. Un estado
+   * propio aquí haría que los filtros de «qué tengo en stock» se dejaran fuera
+   * material que sí está. */
+  return 'In Stock';   // ENTRY, RETURN, TRANSFER, REASSIGN
 }
 
 // ─── WHICH WAY AN ADJUSTMENT WENT ────────────────────────────────────────────
@@ -14505,6 +14757,37 @@ function adjustDirection_(srcKey, destKey) {
   if (srcKey  && !destKey) return -1;
   if (destKey && !srcKey)  return 1;
   return 0;
+}
+
+/* ── LOS TIPOS CUYA ARITMÉTICA DE STOCK ES LA DEL AJUSTE ─────────────────────
+ *
+ * HAY CUATRO LECTORES DE STOCK EN ESTE ARCHIVO, y uno de ellos lo dice por
+ * escrito: *"el cuarto y último sitio que convierte movimientos en stock; los
+ * cuatro tienen que coincidir o LIVE_STOCK se separa de lo que dice el barrido
+ * completo, y la diferencia sólo aparece como un cajón de estante que lee mal
+ * y en silencio."*
+ *
+ * Así que el tipo nuevo —`REASSIGN`, M-05— no se añade cuatro veces: se añade
+ * AQUÍ. Un `mt === 'ADJUST' || mt === 'REASSIGN'` repetido en cuatro sitios es
+ * literalmente el fallo que este proyecto se encuentra una y otra vez: cuatro
+ * cosas que tienen que coincidir sin que nada lo obligue.
+ *
+ * ¿Y POR QUÉ LA DEL AJUSTE? Porque en una reasignación **nada salió
+ * físicamente del almacén**. Las ventanas siguen en el mismo estante; lo que
+ * cambia es de qué material y de qué obra son. Una fila baja la cuenta del
+ * material viejo y la otra la sube en el nuevo, que es exactamente lo que hace
+ * un ajuste: tocar la cuenta de UN estante sin que nada vaya a una obra ni se
+ * desperdicie. Si usara la aritmética de EXIT, las unidades aparecerían como
+ * instaladas en una obra; si usara la de WASTE, como tiradas. Las dos serían
+ * mentira.
+ *
+ * LO QUE **NO** HEREDA DEL AJUSTE, y va escrito en su sitio: el proyecto (un
+ * ajuste lo borra porque corregir una cuenta no es de ninguna obra; una
+ * reasignación es justamente CAMBIAR de obra) y el coste (un ajuste no lleva
+ * ninguno; en una reasignación el coste viaja con las unidades o se inventa
+ * dinero). */
+function cuentaComoAjuste_(mt) {
+  return mt === 'ADJUST' || mt === 'REASSIGN';
 }
 
 // One-time cleanup for those legacy rows. Rewrites nothing but the Status cell,
@@ -17850,7 +18133,7 @@ function modifyMovementLocked_(data, auth) {
   // toward stock, and no rebuild could recover what was meant, because the
   // intent was only ever in the shape of the row. Refuse it here, while the
   // person is still looking at the form and can say which way it went.
-  if (String(rowVals[AC.MOVETYPE] || '').toUpperCase() === 'ADJUST') {
+  if (cuentaComoAjuste_(String(rowVals[AC.MOVETYPE] || '').toUpperCase())) {
     var eSrc = normalizeString(String(rowVals[AC.SRC_LOC]  || ''));
     var eDst = normalizeString(String(rowVals[AC.DEST_LOC] || ''));
     if (!adjustDirection_(eSrc, eDst)) {

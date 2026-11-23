@@ -62,6 +62,13 @@ vm.runInContext(
   extractFn('nt') + '\n' +
   extractFn('displayName') + '\n' +
   extractFn('normMT') + '\n' +
+  /* v16.1: `renderProjectView` ya no pregunta por el tipo, pregunta por la
+   * FORMA de la fila — `signoPorLaForma` — porque desde M-05 el ajuste no es el
+   * único cuyo signo depende de qué columna de estante está llena. Se saca del
+   * archivo como todo lo demás: una copia aquí sería otra segunda versión de la
+   * verdad. */
+  extractFn('signoPorLaForma') + '\n' +
+  extractFn('adjustIsDown') + '\n' +
   /* `stockBadge` ya no decide el estado: lo pide a `_stockState`, que lee
    * `STOCK_STATES`. Las dos se SACAN del archivo —no se copian— porque son
    * justo la lista que dejó de estar duplicada: una copia aquí volvería a ser

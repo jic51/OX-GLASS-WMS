@@ -203,7 +203,21 @@ console.log('\n═══ ALL FOUR stock readers have to agree ═══\n');
     { name: 'refreshDerivedSheets_ (LIVE_STOCK et al.)', src: extractFn('refreshDerivedSheets_') }
   ];
   readers.forEach(function(r){
-    check(r.name + ' knows what an ADJUST is', /=== 'ADJUST'/.test(r.src));
+    /* ── CÓMO SE PREGUNTA ESTO DESDE LA v16.1 ────────────────────────────────
+     *
+     * Decía `/=== 'ADJUST'/`, y se puso rojo al llegar `REASSIGN`: los cuatro
+     * lectores ya no nombran el tipo, preguntan a `cuentaComoAjuste_`. Y eso es
+     * mejor, no peor — es justo lo que el comentario de arriba teme («si uno de
+     * ellos nunca ha oído hablar de ADJUST, sus totales se separan»). Con un
+     * solo predicado no pueden separarse: o lo usan los cuatro o el que no lo
+     * use se ve aquí.
+     *
+     * Así que lo que se exige ahora es MÁS fuerte: que pasen por el predicado.
+     * Un lector que volviera a escribir el tipo a mano —aunque acertara hoy—
+     * sería el quinto sitio que hay que acordarse de tocar mañana. */
+    check(r.name + ' pregunta al predicado, no nombra el tipo a mano',
+      /cuentaComoAjuste_\(/.test(r.src),
+      (/=== 'ADJUST'/.test(r.src) ? 'nombra ADJUST a mano' : 'no lo mira'));
     // Both directions, or the reader is half-deaf: it would apply the shorts
     // and ignore the longs, which is worse than ignoring both because the
     // total looks plausible.
@@ -279,8 +293,11 @@ console.log('\n═══ what the writer refuses ═══\n');
 
 {
   const upd = GS.slice(GS.indexOf('var NORMALIZE_ON_WRITE'), GS.indexOf('// Write updated row back'));
+  /* Por el predicado desde la v16.1, igual que los lectores de stock: la regla
+     —exactamente UN estante— vale para el ajuste y para la reasignación, y una
+     fila con los dos llenos o los dos vacíos no la cuenta ningún lector. */
   check('editing an adjust cannot leave it with two racks, or none',
-    /=== 'ADJUST'/.test(upd) && /adjustDirection_\(eSrc, eDst\)/.test(upd));
+    /cuentaComoAjuste_\(/.test(upd) && /adjustDirection_\(eSrc, eDst\)/.test(upd));
 }
 
 console.log('\n═══ the screen ═══\n');
@@ -318,10 +335,14 @@ console.log('\n═══ the screen ═══\n');
     /sourceLoc = adjust\.delta < 0 \? adjust\.rack : '';/.test(submit) &&
     /destLoc   = adjust\.delta > 0 \? adjust\.rack : '';/.test(submit));
 
+  /* `signoPorLaForma` desde la v16.1 — el ajuste ya no es el único tipo cuyo
+     signo depende de la forma de la fila; la reasignación también. Lo que esta
+     comprobación defiende no cambia: que la pantalla lea el signo DE LA FILA y
+     no del tipo. */
   check('history shows the sign per row, because an adjust points either way',
-    /norm === 'ADJUST' && adjustIsDown\(m\)/.test(HTML));
+    /signoPorLaForma\(norm\) && adjustIsDown\(m\)/.test(HTML));
   check('the project view uses the same rule, so a hand-edited row cannot inflate "Total Received"',
-    (HTML.match(/norm === 'ADJUST' && adjustIsDown\(m\)/g) || []).length >= 2);
+    (HTML.match(/signoPorLaForma\(norm\) && adjustIsDown\(m\)/g) || []).length >= 2);
   check('the type filter can find them', /<option value="ADJUST">/.test(HTML));
 }
 

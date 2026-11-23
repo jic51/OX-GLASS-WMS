@@ -138,8 +138,14 @@ console.log('\n═══ 4. Y el navegador deja de hacer la cuenta por su lado �
    * y lo dejo escrito porque medir la letra en vez de la intención es
    * exactamente el fallo que este archivo lleva meses cazando en el producto. */
   const veces = (HTML.match(/^\s*_aplicarStockDelServidor\(res\);/gm) || []).length;
-  check('las CINCO operaciones que mueven existencias aplican las cifras del servidor — ' +
-        'guardar (×3), borrar y editar', veces === 5, veces);
+  /* SEIS DESDE LA v16.1: entró `reassignMaterial`, que es la sexta operación
+     que mueve existencias. El número se sube A PROPÓSITO y con la razón escrita
+     —que es toda la diferencia entre crecer y desbordarse—: si se dejara en
+     cinco, esta comprobación estaría prohibiendo que la app tuviera una
+     operación más, y si se pusiera en `>= 5` dejaría de avisar el día que una
+     de ellas se olvide de aplicar las cifras. */
+  check('las SEIS operaciones que mueven existencias aplican las cifras del servidor — ' +
+        'guardar (×3), borrar, editar y reasignar', veces === 6, veces);
 }
 
 console.log('\n' + (fail ? '✗ ' + fail + ' fallo(s), ' : '✓ ') + ok + ' comprobaciones\n');

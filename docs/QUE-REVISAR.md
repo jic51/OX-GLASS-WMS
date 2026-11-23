@@ -16,6 +16,68 @@ Esto es ese documento, y se actualiza **con cada versión**. Lo de arriba es lo
 
 ---
 
+## v16.1 — el material que se usa en otra obra  🔴 *lo que viste el 13/11*
+
+### 1 · Reasignar, el caso de tu captura
+
+1. **Stock Dashboard →** toca un estante para abrir su cajón, y toca un
+   material para abrir sus opciones.
+2. **Tiene que haber un quinto botón: ⇅ Reassign.**
+3. Pulsa, pon **cuántas**, en qué material se convierten, **para qué obra** y
+   por qué. Guarda.
+4. **Tiene que pasar, y esto es lo que hay que comprobar número a número:**
+   - el material viejo baja esa cantidad;
+   - el nuevo la sube;
+   - **los dos en el MISMO estante** — no se ha movido nada de sitio;
+   - el total de la bodega **no cambia**;
+   - y en Movements salen **dos filas** con la insignia ámbar **⇅ REASSIGN**,
+     cada una nombrando a la otra: *«Reassigned to …»* y *«Reassigned from …»*.
+5. **Sería el fallo:** que algo apareciera como salido a una obra o como
+   desperdiciado. No salió nada: sigue en el almacén.
+
+### 2 · El coste, que es donde se inventa dinero
+
+1. Hazlo con un material que **tenga precio** y mira la fila que sube.
+2. **Tiene que pasar:** lleva el **coste del material de origen**, no el del
+   destino. Si el material viejo valía 12,50 y el nuevo 40, las unidades que
+   pasan valen 12,50 — si llevaran 40, la app habría inventado dinero.
+3. Y si el material viejo **nunca tuvo precio**, la fila va **sin coste**, no
+   con un cero.
+
+### 3 · La reserva, que es el caso que tú tenías
+
+1. **Reserva** un material en un estante (🔒 Reserve) y luego intenta
+   reasignarlo.
+2. **Tiene que pasar:** antes de pulsar, el aviso amarillo dice que está
+   reservado y que **reasignarlo suelta la reserva**.
+3. Al guardar, la reserva queda soltada y en **Ajustes → Sistema → Auditoría**
+   aparece que la soltó una reasignación — no una mano anónima.
+4. **Y con un usuario que no sea admin:** se niega, y el mensaje dice que es
+   una decisión de admin. Eso es a propósito: soltar una reserva lo decide
+   quien lleva la obra, no quien mueve el pallet.
+
+### 4 · La etiqueta del pallet
+
+1. Al terminar, el aviso trae **🏷 Print new label**.
+2. **Tiene que pasar:** la etiqueta sale con el **nombre y la obra nuevos** y
+   el estante donde están. La pegada en el pallet sigue diciendo el nombre
+   viejo, y eso manda a alguien a buscar lo que no está.
+
+### 5 · Y una pregunta que es tuya, no mía
+
+**Las tres filas de tu captura ya están hechas** —las 4 unidades están en A3A
+con el nombre viejo— y hay dos caminos:
+
+- **Dejarlas.** El histórico queda como ocurrió y `REASSIGN` rige de aquí en
+  adelante.
+- **Reasignarlas a mano una vez** con el botón nuevo, lo cual deja constancia
+  de la corrección y cuadra el inventario de las dos obras.
+
+**Yo haría el segundo, sólo para ésas, y contigo delante.** Dime cuál y lo
+hacemos.
+
+---
+
 ## v16.0 — la entrega y su entrada, atadas
 
 ### 1 · El enlace, en las dos direcciones  🔴 *lo que preguntaste el 18/11*

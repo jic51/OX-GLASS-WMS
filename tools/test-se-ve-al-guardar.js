@@ -134,12 +134,17 @@ console.log('\n═══ 4. Y las tres pantallas lo usan ═══\n');
   // intento de esta prueba, y falló por eso — medir la letra en vez de la
   // intención, que es el error que más veces hemos cazado este mes.
   const veces = (HTML.match(/^\s*_pintarGuardado\(res\);/gm) || []).length;
-  check('las TRES pantallas que guardan lo llaman — entrada, salida y movimiento suelto; ' +
-        'una que se olvidara volvería a tardar dieciséis segundos y nadie lo notaría',
-    veces === 3, veces);
+  /* CUATRO DESDE LA v16.1, con la reasignación. El número se sube a propósito y
+     con la razón escrita: dejarlo en tres prohibiría que la app tuviera una
+     pantalla más que guarde, y ponerlo en `>= 3` dejaría de avisar el día que
+     una se olvide de pintar lo guardado. */
+  check('las CUATRO pantallas que guardan lo llaman — entrada, salida, movimiento ' +
+        'suelto y reasignación; una que se olvidara volvería a tardar dieciséis ' +
+        'segundos y nadie lo notaría',
+    veces === 4, veces);
   check('...y la recarga silenciosa SIGUE detrás, porque esto adelanta lo que ya se sabe y ' +
         'no sustituye a la foto completa',
-    (HTML.match(/_pintarGuardado\(res\);\s*\n\s*_reloadWhenIdle\(\)/g) || []).length === 3);
+    (HTML.match(/_pintarGuardado\(res\);\s*\n\s*_reloadWhenIdle\(\)/g) || []).length === 4);
 }
 
 console.log('\n' + (fail ? '✗ ' + fail + ' fallo(s), ' : '✓ ') + ok + ' comprobaciones\n');

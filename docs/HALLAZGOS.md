@@ -323,6 +323,33 @@ basura y dejaba el fichero en el Drive del cliente para siempre; ahora va a la
 papelera de Drive, se avisa antes y se dice cuántos fueron. Y las fotos de
 estante, que no se podían quitar y cuyo reemplazo dejaba la vieja suelta.
 
+### ✅ v16.1 · M-05 — reasignar: estas unidades pasan a ser aquellas
+
+Ficha entera en **M-05**, más abajo. En una línea: `TRANSFER` contesta «¿dónde
+está?» y hacía falta algo que contestara «¿de quién es?». Dos filas atadas, el
+coste viajando con las unidades, la reserva soltándose con nombre y motivo, y la
+etiqueta ofrecida al terminar.
+
+### Y cuatro pruebas que el tipo nuevo puso en rojo, las cuatro con razón
+
+Ninguna era un fallo del producto, y vale la pena distinguirlas porque son dos
+clases distintas:
+
+**Dos medían la LETRA y ahora miden la intención.** `test-adjust` exigía
+`=== 'ADJUST'` en los cuatro lectores de stock, y `test-project-cost` montaba
+`renderProjectView` sin el ayudante nuevo. Lo que las dos defendían sigue en
+pie —y más fuerte: ahora `test-adjust` exige que los cuatro lectores **pasen por
+el predicado**, así que un quinto que volviera a escribir el tipo a mano se ve
+aquí aunque acertara hoy.
+
+**Y dos eran CUENTAS que tenían que subir.** `test-se-ve-al-guardar` cuenta las
+pantallas que pintan lo guardado (tres → cuatro) y
+`test-borrar-y-editar-se-ven` las operaciones que aplican las cifras del
+servidor (cinco → seis). Las dos subidas van **con la razón escrita**, que es
+toda la diferencia entre crecer y desbordarse: dejarlas como estaban
+prohibiría que la app tuviera una operación más, y ponerlas en `>=` dejaría de
+avisar el día que una se olvide.
+
 ### ✅ v16.0 · La entrega y su entrada, atadas — niveles 2 y 3
 
 Es la propuesta de `docs/LO-QUE-TIENE-QUE-CUADRAR.md`, ejecutada en el orden que
@@ -759,7 +786,7 @@ y qué sería el fallo — **y sólo lo que no puedo comprobar yo**.
 
 ## 📋 LO DEL 13/11
 
-### 🔴 M-05 · Material que se usa en otra obra: hoy cambia de sitio, no de dueño
+### ✅ M-05 · Material que se usa en otra obra — **HECHO en la v16.1**
 
 Jose, 13/11, con una captura de tres movimientos (`PAT.SEI902` y `MH 145`):
 
@@ -834,8 +861,54 @@ Yo haría el segundo **sólo para estas tres**, y con Jose delante.
 
 **Tamaño:** es de los grandes. Toca el servidor (movimiento nuevo, costes,
 reservas), la pantalla (un formulario que pregunta por dos materiales), las
-etiquetas y las pruebas. **No es el siguiente que haría** — va después de las
-tres de `M-01…M-04`, salvo que esté pasando a menudo.
+etiquetas y las pruebas.
+
+---
+
+### ✅ CÓMO QUEDÓ, v16.1
+
+Se construyó tal como está escrito arriba: `REASSIGN`, dos filas atadas, el
+coste viajando, la reserva soltándose y la etiqueta ofrecida. Y tres decisiones
+que no estaban en el plan y merecen quedar:
+
+**1 · Su aritmética de stock es la del AJUSTE, y vive en un solo sitio.** Hay
+cuatro lectores de stock en el archivo, y uno lo dice por escrito: *"los cuatro
+tienen que coincidir o LIVE_STOCK se separa de lo que dice el barrido completo,
+y la diferencia sólo aparece como un cajón de estante que lee mal y en
+silencio."* Así que el tipo nuevo no se añadió cuatro veces: se añadió en
+`cuentaComoAjuste_`, y los cuatro preguntan ahí. Un `mt === 'ADJUST' || mt ===
+'REASSIGN'` repetido cuatro veces es literalmente el fallo de siempre de este
+repositorio.
+
+**¿Y por qué la del ajuste?** Porque en una reasignación **nada salió
+físicamente del almacén**: las ventanas siguen en el mismo estante. Con la
+aritmética de `EXIT` aparecerían montadas en una obra; con la de `WASTE`,
+tiradas. Las dos serían mentira, y las dos las vigila la prueba.
+
+**2 · Pero en la pantalla es un tipo PROPIO**, con su insignia ámbar y su
+opción en el filtro. Lo que el tipo de movimiento cuenta es **qué pasó**, y
+registrar «estas unidades pasaron a ser de otra obra» como «se corrigió una
+cuenta» sería la app mintiendo sobre lo que pasó — y la auditoría es justo lo
+que Jose pidió.
+
+**3 · La trazabilidad no depende de ningún puntero.** Cada fila **nombra a la
+otra en su motivo** (*«Reassigned to MH 145 · LAKESHORE»* / *«Reassigned from
+PAT.SEI902 · TOWNHOME 2»*), así que las dos se leen solas. El puntero
+(`FROM_MOV`) se escribe además, para la máquina, **después** de la escritura
+—porque los nombres de movimiento se reparten dentro del guardado— y si eso
+falla no se pierde nada importante: las dos filas están, el stock está bien y el
+rastro legible sigue ahí. **El orden del fallo va en la dirección segura.**
+
+Y la reserva se suelta **antes** de escribir nada, por lo mismo al revés: si se
+escribiera primero y soltar fallara, quedaría material reasignado con una
+reserva encima apuntando a una obra que ya no lo tiene.
+
+**Sigue abierto, y es pregunta de almacén:** qué hacer con las tres filas de la
+captura, que ya están hechas. Preguntado en `docs/QUE-REVISAR.md`.
+
+`tools/test-reasignar.js` (67) **corre el motor de stock de verdad** con los
+números de la captura: 10 → 6, 6 → 10, las dos en el mismo estante, 16 en la
+bodega antes y 16 después, nada en obra y nada desperdiciado.
 
 ---
 

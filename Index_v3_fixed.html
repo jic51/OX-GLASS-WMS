@@ -563,6 +563,12 @@
       color:#b45309;font-weight:600}
     :root[data-theme="dark"] .bone-marca{color:#fbbf24}
     .badge-slate{background:#E2E8F0;color:var(--steel)}
+    /* M-05 · REASSIGN. Ámbar: ni verde (no entró material nuevo en la empresa)
+       ni rojo (no salió nada), que son los dos extremos ya ocupados. Lo que
+       pasó es que cambió de dueño, y eso merece su propio color o se lee como
+       otra cosa. */
+    .badge-amber{background:#FEF3C7;color:#92400E}
+    :root[data-theme="dark"] .badge-amber{background:#78350F;color:#FDE68A}
     .badge-teal{background:#CCFBF1;color:#0F766E}
     .badge-pink{background:#FCE7F3;color:#BE185D}
     .badge-navy{background:#DBEAFE;color:#1E3A8A}
@@ -5145,6 +5151,7 @@
             <option value="RETURN">Return</option>
             <option value="WASTE">Waste</option>
             <option value="ADJUST">Adjust (count fix)</option>
+            <option value="REASSIGN">Reassign (changed job)</option>
           </select>
           <select id="movCatFilter"><option value="">All Categories</option></select>
           <button id="btnExportCSV" class="btn btn-ghost btn-sm">⬇ CSV</button>
@@ -6350,6 +6357,69 @@
   </div>
 </div>
 
+<!-- ══ M-05 · REASSIGN ══════════════════════════════════════════════════════
+     «Estas unidades pasan a ser aquellas.» TRANSFER contesta «¿dónde está?»;
+     esto contesta «¿de quién es?». Tiene su propia ventana y no comparte la de
+     los movimientos por una razón de fondo: es la única que pregunta por DOS
+     materiales, y meter un segundo material en la ventana de siempre haría que
+     las otras cinco pantallas tuvieran un campo que no usan. -->
+<div class="overlay" id="reassignOverlay">
+  <div class="modal modal-sm">
+    <div class="mhdr">
+      <h3>⇅ Reassign to another job</h3>
+      <button class="modal-x" onclick="closeModal('reassignOverlay')" title="Close">✕</button>
+    </div>
+    <p style="font-size:.8rem;color:var(--muted);margin:.1rem 0 1rem;line-height:1.5">
+      These units stop being <strong id="raFrom"></strong> and become another material, on the
+      same rack. <strong>Nothing moves</strong> — if you also need to put them somewhere else,
+      that is a Transfer.
+    </p>
+    <input type="hidden" id="raCat">
+    <input type="hidden" id="raName">
+    <input type="hidden" id="raRack">
+    <input type="hidden" id="raFromProject">
+    <input type="hidden" id="raUnit">
+    <div class="form-grid">
+      <div class="field">
+        <label>How many <span id="raAvail" style="font-weight:400;color:var(--muted)"></span></label>
+        <input type="number" id="raQty" min="1" step="1" inputmode="numeric">
+      </div>
+      <div class="field">
+        <label>On rack</label>
+        <input type="text" id="raRackShow" disabled>
+      </div>
+    </div>
+    <div class="form-grid" style="margin-top:.6rem">
+      <div class="field">
+        <label>They become — category</label>
+        <select id="raToCat"></select>
+      </div>
+      <div class="field">
+        <label>They become — material</label>
+        <input type="text" id="raToName" list="matNameList" placeholder="Type or select…">
+      </div>
+    </div>
+    <div class="field" style="margin-top:.6rem">
+      <label>For which job</label>
+      <input type="text" id="raToProject" list="projList" data-cfg-new="projects"
+             placeholder="The job they now belong to">
+    </div>
+    <div class="field" style="margin-top:.6rem">
+      <label>Why (required)</label>
+      <textarea id="raReason" rows="2"
+        placeholder="e.g. ordered for TOWNHOME 2 but fitted on LAKESHORE"></textarea>
+    </div>
+    <!-- La reserva, dicha ANTES de pulsar. Soltarla es parte de la operación,
+         así que no puede ser una sorpresa posterior. -->
+    <p id="raLockWarn" style="display:none;font-size:.78rem;color:var(--yellow);
+       background:var(--yellow-bg);border-radius:8px;padding:.5rem .65rem;margin:.75rem 0 0"></p>
+    <div class="modal-actions" style="margin-top:1.25rem">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('reassignOverlay')">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="raSubmit" onclick="submitReassign()">⇅ Reassign</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ SETUP WIZARD ═════════════════════════════════════════════════════════ -->
 <div class="wiz-overlay" id="wizOverlay">
   <div class="wiz-box">
@@ -6422,7 +6492,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '16.0';
+var APP_VERSION = '16.1';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -6434,7 +6504,7 @@ var APP_VERSION = '16.0';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = 'e6450754';
+var APP_BUILD = '3480ee95';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -9110,7 +9180,12 @@ function moveBadge(mt){
     'TRANSFER': '<span class="badge badge-purple">⇄ TRANSFER</span>',
     'RETURN':   '<span class="badge badge-gray">↩ RETURN</span>',
     'WASTE':    '<span class="badge badge-dark">✕ WASTE</span>',
-    'ADJUST':   '<span class="badge badge-slate">⚖ ADJUST</span>'
+    'ADJUST':   '<span class="badge badge-slate">⚖ ADJUST</span>',
+    /* M-05. Su propia insignia y no la del ajuste, aunque su aritmética de
+       stock sea la misma: lo que el tipo de movimiento cuenta es QUÉ PASÓ, y
+       registrar «estas unidades pasaron a ser de otra obra» como «se corrigió
+       una cuenta» sería la app mintiendo sobre lo que pasó. */
+    'REASSIGN': '<span class="badge badge-amber">⇅ REASSIGN</span>'
   };
   return map[norm] || '<span class="badge badge-gray">'+mt+'</span>';
 }
@@ -9120,8 +9195,22 @@ function moveBadge(mt){
 // the count came up SHORT and in Destination when it came up LONG. Every screen
 // that shows a + or a − has to ask, because an ADJUST is the one type that is
 // not always the same sign.
+/* HACIA DÓNDE FUE, leído de la forma del propio movimiento.
+ *
+ * Vale para el ajuste y para la reasignación, que es el otro tipo cuyo signo no
+ * está fijo: una fila con estante de origen y sin destino BAJA la cuenta, y al
+ * revés la sube. Es la misma regla que `adjustDirection_` en el servidor, y el
+ * nombre se queda como estaba porque lo usan nueve sitios — lo que cambió es
+ * que ahora también contesta por REASSIGN, que es lo que esta función ya
+ * medía: la forma, no el tipo. */
 function adjustIsDown(m){
   return !!(m && m.sourceLoc && !m.destLoc);
+}
+
+/* ¿Es de los tipos cuyo signo depende de la forma de la fila? Los demás apuntan
+ * siempre al mismo lado, que es por lo que se pueden listar. */
+function signoPorLaForma(norm){
+  return norm === 'ADJUST' || norm === 'REASSIGN';
 }
 
 // Category badge: each material type has its own color
@@ -10608,7 +10697,7 @@ function renderMovements(){
     // short takes units away, a count that came up long adds them. Every other
     // type always points the same direction, which is why they can be listed.
     var isOut = (norm === 'EXIT' || norm === 'WASTE' ||
-                 (norm === 'ADJUST' && adjustIsDown(m)));
+                 (signoPorLaForma(norm) && adjustIsDown(m)));
     // Src→Dest display rules:
     //   ENTRY    → just the destination rack (no source — came from outside)
     //   EXIT     → "Rack → Site/Project"
@@ -10635,6 +10724,14 @@ function renderMovements(){
       locDisplay = adjustIsDown(m)
         ? (m.sourceLoc || '—') + ' → COUNT'
         : 'COUNT → ' + (m.destLoc || '—');
+    } else if (norm === 'REASSIGN') {
+      /* El estante es EL MISMO en las dos filas, y eso es lo que hay que
+         contar: no se movió nada de sitio, cambió de dueño. Enseñar
+         «A3A → A3A» se leería como un traslado que no hizo nada, así que se
+         dice el estante y la dirección del cambio de dueño. */
+      locDisplay = adjustIsDown(m)
+        ? (m.sourceLoc || '—') + ' → OTHER MATERIAL'
+        : 'OTHER MATERIAL → ' + (m.destLoc || '—');
     } else {
       locDisplay = m.sourceLoc || m.destLoc || '—';
     }
@@ -11193,7 +11290,12 @@ function _updateMovActionBar(){
  *  una etiqueta que miente sobre cuándo entró. */
 function _labelsFromMovements(movs){
   return (movs || []).map(function(m){
-    var entra = m.moveType === 'ENTRY' || m.moveType === 'RETURN';
+    /* ¿Esta fila PONE material en un estante? Entonces la etiqueta lleva ese
+       estante. La fila que sube de una reasignación también lo hace: su estante
+       está en `destLoc`, y antes sólo acertaba por el `||` de más abajo —
+       acertar de rebote es acertar hasta que alguien toque esa línea. */
+    var entra = m.moveType === 'ENTRY' || m.moveType === 'RETURN' ||
+                (m.moveType === 'REASSIGN' && m.destLoc && !m.sourceLoc);
     return {
       name:     m.name || '',
       category: m.category || '',
@@ -11723,7 +11825,7 @@ function renderProjectView(){
     // onto an old row by hand, "Total Received" must not quietly gain two units
     // that were never received.
     var isOut = (norm === 'EXIT' || norm === 'WASTE' ||
-                 (norm === 'ADJUST' && adjustIsDown(m)));
+                 (signoPorLaForma(norm) && adjustIsDown(m)));
     if (isOut){ summary[name].out += q; totalOut += q; }
     else       { summary[name].in  += q; totalIn  += q; }
     // What this project actually consumed, in dollars: sum of what left for it
@@ -22298,6 +22400,8 @@ document.addEventListener('keydown', function(e){ if (e.key === 'Escape') _perso
       _toggleRdwActions(parseInt(el.getAttribute('data-idx'), 10));
     } else if (a === 'rdw-move') {
       _rdwMoveFromDrawer(el.getAttribute('data-type'), parseInt(el.getAttribute('data-idx'), 10));
+    } else if (a === 'rdw-reassign') {
+      _rdwReassignFromDrawer(parseInt(el.getAttribute('data-idx'), 10));
     }
   }
   document.addEventListener('click', function(e){
@@ -25369,6 +25473,9 @@ function openRackDrawer(rackName) {
             '<button type="button" class="btn btn-ghost btn-sm" data-action="rdw-move" data-type="TRANSFER" data-idx="'+idx+'">⇄ Transfer</button>'+
             '<button type="button" class="btn btn-ghost btn-sm" data-action="rdw-move" data-type="WASTE" data-idx="'+idx+'">✕ Waste</button>'+
             '<button type="button" class="btn btn-ghost btn-sm" data-action="rdw-move" data-type="ADJUST" data-idx="'+idx+'">⚖ Adjust</button>'+
+            /* M-05. Va AQUÍ y no en la barra de arriba porque es donde estaba
+               Jose cuando le pasó: mirando el material en su estante. */
+            '<button type="button" class="btn btn-ghost btn-sm" data-action="rdw-reassign" data-idx="'+idx+'">⇅ Reassign</button>'+
           '</div>'+
         '</div>';
       }).join('');
@@ -25438,6 +25545,146 @@ function _toggleRdwActions(idx){
 // second type just showed empty. openMoveModal() clears this back to null on
 // every fresh, non-Rack-Drawer open.
 var _rdwPrefillActive = null;
+
+/* ── M-05 · ABRIR LA REASIGNACIÓN DESDE EL ESTANTE ───────────────────────────
+ *
+ * No pasa por `openMoveModal`: la ventana de movimientos tiene un material y
+ * esto tiene dos. Lo que sí comparte es de dónde saca los datos —el mismo
+ * `_rdwItems` que los otros cuatro botones— para que no haya dos formas de
+ * saber qué material se tocó. */
+function _rdwReassignFromDrawer(idx){
+  var item = _rdwItems[idx];
+  if (!item) return;
+  closeRackDrawer();
+  openReassignModal(item.category, item.name, item.rack);
+}
+
+function openReassignModal(cat, name, rack){
+  var key  = _normKey(cat) + '|||' + _normKey(name);
+  var s    = stockData[key] || null;
+  var enEsteEstante = (s && s.warehouseLocs && s.warehouseLocs[String(rack).toUpperCase()]) || 0;
+
+  document.getElementById('raCat').value   = cat;
+  document.getElementById('raName').value  = name;
+  document.getElementById('raRack').value  = rack;
+  document.getElementById('raUnit').value  = (s && s.unit) || 'UNIT';
+  /* LA OBRA DE LA QUE VIENE SALE DEL STOCK, no de un campo que alguien teclee.
+     Es la mitad de la trazabilidad: si se pidiera a mano, la fila diría la obra
+     que escribió quien movió el pallet y no la que tenía el material. */
+  document.getElementById('raFromProject').value = (s && s.project) || '';
+
+  document.getElementById('raFrom').textContent =
+    name + ((s && s.project) ? ' · ' + s.project : '');
+  document.getElementById('raRackShow').value = rack;
+  document.getElementById('raQty').value = '';
+  document.getElementById('raQty').max = enEsteEstante || '';
+  document.getElementById('raAvail').textContent =
+    enEsteEstante ? '(' + enEsteEstante + ' on this rack)' : '';
+  document.getElementById('raToName').value = '';
+  document.getElementById('raToProject').value = '';
+  document.getElementById('raReason').value = '';
+  var sel = document.getElementById('raToCat');
+  if (sel) { sel.innerHTML = _catOptions(); sel.value = nt(cat); }
+
+  /* Y LA RESERVA, DICHA ANTES. Soltarla es parte de la operación: enterarse
+     después de pulsar sería enterarse de que la app deshizo algo que alguien
+     había decidido. */
+  var lock = (typeof _findLock === 'function') ? _findLock(s && s.matId, rack) : null;
+  var warn = document.getElementById('raLockWarn');
+  if (warn) {
+    if (lock) {
+      warn.style.display = '';
+      warn.innerHTML = '🔒 This material is reserved at ' + _he(rack) + ' — ' +
+        _he(lock.reason || '') + (lock.lockedBy ? ' (by ' + _he(lock.lockedBy) + ')' : '') +
+        '. <strong>Reassigning it releases that hold</strong>, and only an admin can do it.';
+    } else {
+      warn.style.display = 'none';
+      warn.innerHTML = '';
+    }
+  }
+  document.getElementById('reassignOverlay').classList.add('show');
+}
+
+function submitReassign(){
+  var btn  = document.getElementById('raSubmit');
+  var qty  = Number(document.getElementById('raQty').value);
+  var toCat  = document.getElementById('raToCat').value;
+  var toName = document.getElementById('raToName').value.trim();
+  var proj   = document.getElementById('raToProject').value.trim();
+  var reason = document.getElementById('raReason').value.trim();
+  var max    = Number(document.getElementById('raQty').max);
+
+  if (!isFinite(qty) || qty <= 0){ showToast('How many units?', 'warn'); return; }
+  if (max && qty > max){
+    showToast('There are only ' + max + ' on that rack.', 'warn', 5000); return;
+  }
+  if (!toCat || !toName){ showToast('Which material do they become?', 'warn'); return; }
+  if (!proj){ showToast('Which job do they now belong to?', 'warn'); return; }
+  if (!reason){ showToast('Say why — it is the trace that explains the two rows.', 'warn', 5000); return; }
+
+  var payload = {
+    category:    document.getElementById('raCat').value,
+    name:        document.getElementById('raName').value,
+    rack:        document.getElementById('raRack').value,
+    unit:        document.getElementById('raUnit').value,
+    fromProject: document.getElementById('raFromProject').value,
+    toCategory:  toCat,
+    toName:      toName,
+    toProject:   proj,
+    qty:         qty,
+    reason:      reason,
+    responsible: (typeof userName === 'string' && userName) ? userName : '',
+    dateRec:     _isoDate(new Date())
+  };
+
+  _btnBusy(btn, 'Saving…');
+  _setModalBusy('reassignOverlay', true);
+  google.script.run
+    .withSuccessHandler(function(res){
+      _setModalBusy('reassignOverlay', false);
+      _btnDone(btn, true, function(){ closeModal('reassignOverlay'); });
+      _aplicarStockDelServidor(res);
+      _pintarGuardado(res);
+      _reloadWhenIdle();
+      if (res && res.releasedLock){
+        showToast('The hold on ' + payload.name + ' was released — it is in the audit log.',
+                  'info', 7000);
+      }
+      if (res && res.linkError) showToast(res.linkError, 'warn', 8000);
+      /* LA ETIQUETA PEGADA EN EL PALLET SIGUE DICIENDO EL NOMBRE VIEJO, y eso
+         es físico: alguien va a ir a buscar el material viejo y va a encontrar
+         otro nombre. Se ofrece reimprimir, no se hace solo — imprimir sin que
+         nadie lo pida gasta papel y una impresora que no siempre está puesta. */
+      showToast(qty + ' now belong to ' + toName + ' · ' + proj, 'ok', 12000,
+        (res && res.movimientos && res.movimientos.length) ? {
+          texto: '🏷 Print new label',
+          hacer: function(){
+            try {
+              /* La etiqueta se arma con `_labelsFromMovements` a partir de la
+                 fila que SUBE —la del material nuevo—, no con un objeto hecho
+                 a mano aquí: lo que se imprime tiene que salir de lo que el
+                 servidor escribió, que es la lección de la v14.9 (una etiqueta
+                 impresa desde el formulario decía un estante que no existía). */
+              var suben = (res.movimientos || []).filter(function(m){
+                return m.destLoc && !m.sourceLoc;
+              });
+              var filas = _labelsFromMovements(suben.length ? suben : res.movimientos || []);
+              if (!filas.length){ showToast('Nothing to put on a label.', 'warn'); return; }
+              _openLabels(filas, null);
+            } catch (e) {
+              showToast('Could not open the label: ' + _stripTags(e), 'err', 5000);
+            }
+          }
+        } : undefined);
+    })
+    .withFailureHandler(function(err){
+      _setModalBusy('reassignOverlay', false);
+      _btnReset(btn);
+      if (_errorConocido(err, function(){ submitReassign(); })) return;
+      showToast('Error: ' + _stripTags(err), 'err', 7000);
+    })
+    .processMovement('reassignMaterial', _h(payload));
+}
 
 function _rdwMoveFromDrawer(type, idx){
   var item = _rdwItems[idx];
@@ -34082,6 +34329,20 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '16.1',
+    titulo: 'Material used on another job changes hands, not just shelves',
+    puntos: [
+      '<b>When material bought for one job gets fitted on another, the app had one button for it: Transfer.</b> So that is what everybody used \u2014 and a transfer answers a different question. <b>Transfer answers \u201cwhere is it?\u201d. This answers \u201cwhose is it?\u201d</b> The result came out right on the shelf and wrong on the job: the units kept the old material\u2019s name and stayed on the old job\u2019s books, and all the app knew was that four units moved from one rack to another.',
+      '<b>There is a <i>Reassign</i> button now</b>, on the material in its rack, which is where you are standing when it happens. It asks what they become, for which job, and why.',
+      '<b>Two rows, written together.</b> One takes the units off the old material and one puts them on the new one, and each says the other\u2019s name: <i>\u201cReassigned to MH 145 \u00b7 LAKESHORE\u201d</i> and <i>\u201cReassigned from PAT.SEI902 \u00b7 TOWNHOME 2\u201d</i>. They read on their own, without going to look for the other one. They also go in one write, so either both are there or neither is \u2014 half a reassignment would make material vanish from both sides at once.',
+      '<b>Nothing moves.</b> Both rows carry the same rack, because the windows are where they always were. Nothing shows as fitted on a site and nothing as wasted, and the warehouse total does not change \u2014 only which material holds it. If you also want them somewhere else, that is still a Transfer.',
+      '<b>The cost travels with the units.</b> The price the old material paid is what the new one takes on. Without that, moving cheap material onto an expensive one <i>invents money</i>, and the other way round destroys it.',
+      '<b>If the material was on hold, the hold is released</b> \u2014 and only an admin can do it, because keeping a hold on something already fitted in another house makes somebody unable to take out material they do have. The app says so before you press, and the audit log records that a reassignment released it, not an anonymous hand.',
+      '<b>And it offers to print the new label.</b> The sticker on the pallet still says the old name, and that is a physical object that sends somebody looking for the wrong thing.'
+    ],
+    antes:  'A transfer, and the units kept the old name',
+    ahora:  'They belong to the new job, and say where they came from' },
+
   { ver: '16.0',
     titulo: 'A delivery and its entry finally know about each other',
     puntos: [
@@ -34119,17 +34380,6 @@ var NOVEDADES = [
     ],
     antes:  'Six seconds of silence after Save',
     ahora:  'A grey row exactly where the real one will land' },
-
-  { ver: '15.7',
-    titulo: 'A shelf that does not exist is caught before anything is sent',
-    puntos: [
-      '<b>A rack written in lower case or with spaces used to make the whole trip.</b> Type <i>c 4 a</i> instead of <i>C4A</i>, save, and the window closed, several seconds passed, and then a message came back. The name was checked on the server when this screen already knew every shelf you have.',
-      'Now <b>the question comes up instantly, the window stays open, and nothing was sent.</b>',
-      '<b>And choosing the right shelf IS the answer.</b> Press <i>Use C4A</i> and it goes into the field and saves. Before, it told you to type it yourself — which is asking a person to do the thing the app had just worked out.',
-      'A rack that genuinely does not exist offers to <b>create it</b>, if your sign-in is allowed to.'
-    ],
-    antes:  'Closed the window, waited, then asked',
-    ahora:  'Asks before it sends, and your answer is enough' },
 
 ];
 
