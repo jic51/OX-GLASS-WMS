@@ -234,11 +234,37 @@ function levantarPara(src, fragmento, opciones) {
 
 /** Constantes del archivo, por su nombre. Se leen DEL ARCHIVO, nunca se copian
  *  a mano: una copia se queda vieja sin avisar y la prueba mide otra cosa. */
+/* UNA CONSTANTE DEL MÓDULO, Y DOS COSAS QUE COSTARON ENCONTRAR.
+ *
+ * 1. EL COMENTARIO DE AL LADO. El regex pedía que la línea TERMINARA en `;`,
+ *    y media docena de constantes de este proyecto se declaran así:
+ *
+ *        var DQ_MAX_FINDINGS = 150;    // un primer barrido daría miles
+ *
+ *    Esa línea no termina en `;`, así que la búsqueda perezosa seguía adelante
+ *    hasta la siguiente línea que SÍ terminaba en `;` — dentro de otra función,
+ *    200 líneas más abajo. Y no fallaba aquí: devolvía un trozo de código
+ *    cortado por la mitad, y lo que reventaba era el `vm.runInContext` de la
+ *    prueba con un «Unexpected end of input» que no señalaba a nada.
+ *
+ * 2. Y POR ESO AHORA SE COMPRUEBA QUE LO EXTRAÍDO SEA CÓDIGO ENTERO. Una
+ *    extracción que se queda a medias es la peor clase de fallo de un andamio:
+ *    no miente sobre el producto, miente sobre sí misma, y el error aparece en
+ *    otro sitio. Que se queje aquí, nombrando la constante, cuesta tres líneas.
+ */
 function constantes(src, nombres) {
   return (nombres || []).map(n => {
-    const re = new RegExp('^var ' + n + '\\s*=[\\s\\S]*?;\\s*$', 'm');
+    // `;` seguido, como mucho, de un comentario de línea hasta el final.
+    const re = new RegExp('^var ' + n + '\\s*=[\\s\\S]*?;[ \\t]*(?://[^\\n]*)?$', 'm');
     const m = re.exec(src);
     if (!m) throw new Error('andamio: no existe la constante "' + n + '"');
+    try {
+      new (require('vm').Script)(m[0]);
+    } catch (e) {
+      throw new Error('andamio: la constante "' + n + '" se extrajo a medias (' +
+        e.message + '). Pasa cuando su declaración no acaba donde el buscador ' +
+        'cree: mira si lleva algo detrás del punto y coma.');
+    }
     return m[0];
   }).join('\n');
 }

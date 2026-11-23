@@ -1,5 +1,35 @@
 # Lo que tiene que cuadrar siempre — 18 de noviembre de 2026
 
+> **ACTUALIZADO EL 22/11 — los pasos 1 y 2 de la propuesta están hechos, en la
+> v16.0.** Lo que sigue abajo es el análisis tal como se escribió; esta nota dice
+> qué cambió desde entonces.
+>
+> - ✅ **La columna `FROM_INCOMING`** (nivel 2). Un movimiento guarda de qué
+>   entrega vino, y el enlace se ve en las dos direcciones: en Incoming cada
+>   entrega llegada dice *✓ entry* y lleva a su fila, o *⚠ no entry*.
+> - ✅ **`runDataQualityScan` ampliado** (nivel 3) con dos familias nuevas: las
+>   entregas que llegaron sin entrada (la **A** de abajo) y las reservas que
+>   apartan un material que ya no existe (la **C**).
+> - 🚫 **Y NO se propaga nada**, que era la recomendación. Al corregir una
+>   entrega que ya tiene entrada, la app lo dice y ofrece abrirla. Decide la
+>   persona.
+> - **Y una decisión que el análisis no tenía:** la revisión **se calla del todo
+>   sobre entregas** mientras ningún movimiento lleve la columna. Una entrega
+>   marcada como llegada antes de la v16.0 no tiene a nadie apuntándola, y eso
+>   no es «le falta la entrada», es «no se puede saber desde aquí». Sin ese
+>   silencio, el primer barrido habría acusado a Jose de cien entradas que sí
+>   hizo — y una revisión que miente cien veces la primera vez no se vuelve a
+>   abrir.
+>
+> **Sigue abierto:** la B (el coste medio ↔ los costes estampados), la D (el
+> material ↔ la ubicación, que es N-12 y espera una respuesta), la E, la F y la
+> G. Y el tercer chequeo que propuse —«promedios que no cuadran con sus filas»—
+> **no está**, a propósito: comparar el promedio estampado contra una repetición
+> de toda la historia de costes es caro y da falsos positivos en cuanto alguien
+> corrigió una fila a mano con su motivo escrito, que es algo que la app
+> **obliga** a hacer. Un aviso que salta por lo que la app te pidió hacer enseña
+> a ignorar los avisos.
+
 Jose, 18/11: *"al corregir o editar un incoming, no se edita el entry que
 utilizó los mismos datos, ¿por qué? ¿Y cómo podemos hacer para manejar la
 edición entre cosas que están interconectadas? Busca qué otras cosas así hay en

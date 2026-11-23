@@ -137,7 +137,12 @@ console.log('\n═══ lo que falta se rellena; lo que hay no se toca ══�
 console.log('\n═══ cuando no falta nada, no se escribe nada ═══\n');
 {
   const m = mundo();
-  const h = new Hoja(cabArchivo.slice(), 26);
+  /* EL ANCHO SALE DE LA CABECERA, NO DE UN 26 ESCRITO A MANO. Lo estaba, y la
+     v16.0 —que añadió `From Delivery`— puso esta comprobación en rojo: la hoja
+     de mentira tenía 26 columnas, la cabecera 27, así que la reparación la
+     ensanchaba con razón y la prueba lo llamaba fallo. Un número clavado aquí
+     es otra cosa que tiene que coincidir sin que nada lo obligue. */
+  const h = new Hoja(cabArchivo.slice(), cabArchivo.length);
   const n = m.llamar(h, cabArchivo);
   check('no cuenta ninguna que rellenar',   n === 0, n);
   check('Y NO ESCRIBE. Una escritura por arranque que no cambia nada es cuota ' +

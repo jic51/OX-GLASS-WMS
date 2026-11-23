@@ -108,6 +108,45 @@
     <!-- N-07 · El estante malo se ve antes de mandar, y elegir ya es contestar. -->
     <!-- N-08 · La idea de la fila fantasma es de Jose. N-09/10/11 vienen del mismo repaso. -->
     <!-- H-09 · La X de un documento borraba el enlace y dejaba el fichero. -->
+    <!-- La columna FROM_INCOMING: atar primero, notar despues, propagar nunca por ahora. -->
+    <div class="entry" id="v16-0">
+      <span class="ver">v16.0</span>
+      <span class="tag new">New</span>
+      <h3>A delivery and its entry finally know about each other</h3>
+      <p><b>Marking a delivery as arrived and making its entry copied the delivery&rsquo;s details
+         into the form &mdash; and that was the whole relationship.</b> From that moment they were
+         two rows in two different sheets that happened to say the same thing. Correcting one
+         never touched the other, because neither knew the other existed.</p>
+      <p><b>And the half that cost a missing delivery:</b> there was no way to ask which
+         deliveries marked as arrived never got their entry. The only reminder was a card living
+         in <i>one</i> browser &mdash; mark the delivery on the phone and the desktop never shows
+         it; clear your site data and the reminder goes with nothing left behind. That is exactly
+         how one delivery ended up marked as arrived while existing neither in Movements nor in
+         the stock.</p>
+      <p><b>A movement now records which delivery it came from</b>, in a column of its own at the
+         end of the sheet. In Incoming, every arrived delivery says <b>&#10003; entry</b> &mdash;
+         click it and the app goes to the movement and lights it up &mdash; or
+         <b>&#9888; no entry</b> if nothing claims it.</p>
+      <p><b>The data check reads it.</b> Settings &rarr; System &rarr; Check data now lists every
+         delivery that arrived with no entry behind it, and every hold reserving a material with
+         no movements left at all &mdash; which was quietly subtracting from an availability that
+         was not there.</p>
+      <p><b>What it will not do is correct the movement for you.</b> If the delivery said 24 and
+         the entry recorded 22 because two arrived broken, changing the delivery to 25 must not
+         put 25 in the warehouse: the warehouse has 22. And that quantity has already moved the
+         stock, so editing it in a cascade would move stock nobody asked to move. The app says
+         what it knows and offers to show the movement; the person who knows whether 22 or 25
+         arrived decides.</p>
+      <p><b>And it will not accuse you.</b> A delivery marked as arrived before this version has
+         nobody pointing at it, and that does not mean its entry is missing &mdash; it means the
+         link did not exist yet. So until at least one entry carries the link, the check says
+         nothing at all about deliveries. A check that is wrong a hundred times on its first run
+         is a check nobody opens twice.</p>
+      <p class="meta">Three levels, in order: make it impossible to drift, write the relationship
+         down, then have the app notice and say so. This is the second and the third. The first
+         is already how stock works &mdash; it is the sum of the movements, with no stored number
+         that can lie.</p>
+    </div>
     <div class="entry" id="v15-9">
       <span class="ver">v15.9</span>
       <span class="tag fix">Fix</span>

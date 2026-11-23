@@ -310,6 +310,102 @@ es exactamente para esto.
 
 ---
 
+## 📋 LO DEL 22/11 — «haz lo tuyo, todo» · v15.9 y v16.0
+
+Jose, 22/11: *"Haz lo tuyo, todo, en el orden que quieras."* Lo mío era la lista
+C del repaso del 19/11: H-09, la columna que ata la entrega con su entrada,
+M-05, el resto de M-01, la tercera rama de M-04, y H-15 con H-11.
+
+### ✅ v15.9 · H-09 — quitar un documento quita el fichero
+
+Ficha entera en **H-09**, más abajo. En una línea: la ✕ mandaba el enlace a la
+basura y dejaba el fichero en el Drive del cliente para siempre; ahora va a la
+papelera de Drive, se avisa antes y se dice cuántos fueron. Y las fotos de
+estante, que no se podían quitar y cuyo reemplazo dejaba la vieja suelta.
+
+### ✅ v16.0 · La entrega y su entrada, atadas — niveles 2 y 3
+
+Es la propuesta de `docs/LO-QUE-TIENE-QUE-CUADRAR.md`, ejecutada en el orden que
+decía: **atar primero, notar después, propagar nunca por ahora.**
+
+**Lo que se ató.** Un movimiento guarda de qué entrega vino, en una columna al
+final de la hoja (`FROM_INCOMING`, «From Delivery»), por el mismo patrón y el
+mismo motivo que `IMPORT_ID`: cada índice de `AC` es una posición en la que
+alguna hoja ya tiene datos, así que una columna nueva se añade al final o le
+corre los datos a todos los clientes.
+
+**Y va en TODAS las filas de la tanda, no sólo en la primera.** Una entrega de 24
+ventanas repartida en tres estantes son tres movimientos, y los tres vienen de
+ella. Los documentos y el aviso por correo sí van sólo en la primera —son cosas
+que pasan una vez—; la procedencia no es un suceso, es un hecho de cada fila.
+Ponerla sólo en la primera habría hecho que «¿tiene esta entrega su entrada?»
+dependiera de cuál de las tres se mire.
+
+**Lo que se nota.** `runDataQualityScan` tiene dos familias nuevas: entregas
+llegadas sin entrada detrás, y reservas que apartan un material sin un solo
+movimiento. Y van **delante** de las de ortografía en la lista: una es stock sin
+contar, la otra un informe algo más feo.
+
+**Lo que NO se propaga, y es la mitad del trabajo.** Corregir una entrega no
+toca su movimiento. `FROM_INCOMING` tampoco está en la lista blanca de campos de
+`modifyMovement`, que es la garantía que enseñó a pedir H-22. Al guardar una
+entrega que ya tiene entrada, la app lo dice y ofrece enseñarla.
+
+> **Si la entrega decía 24 y el movimiento guardó 22 porque llegaron dos rotas,
+> cambiar la entrega a 25 no debe poner 25 en el movimiento: el almacén tiene
+> 22.** Y esa cantidad ya movió el inventario. Decide quien sabe si llegaron 22
+> o 25.
+
+### 🔴 Y una decisión que el análisis no tenía: el silencio
+
+La revisión **no dice una palabra de entregas** mientras ningún movimiento lleve
+la columna.
+
+Una entrega marcada como llegada antes de la v16.0 no tiene a nadie
+apuntándola, y eso **no** es «le falta la entrada»: es «no se puede saber desde
+aquí». Sin ese silencio, el primer barrido de Jose le habría listado cien
+entregas viejas como pendientes — y **una revisión que miente cien veces la
+primera vez no se vuelve a abrir.** Es la comprobación más importante de
+`test-atar-la-entrega.js`, y es un silencio.
+
+Cuando ya hay algo atado, una entrega sin dueño se busca además por parecido
+—mismo material y misma cantidad, **y sólo entre las entradas que no son ya de
+otra entrega**— para poder decir «probablemente se entró a mano, míralo» en vez
+de empujar a nadie a meter una segunda entrada de lo mismo.
+
+### 🔴 Y un fallo mío que cazó una prueba de hace semanas
+
+La familia nueva de reservas huérfanas leía la hoja **`RESERVATIONS`**. Está
+muerta desde la v10 —las reservas de verdad viven en `MATERIAL_LOCKS`— y sólo se
+sigue creando por si algún cliente escribió filas a mano. O sea: habría listado
+huérfanas de una hoja que nadie usa y **no habría mirado una sola reserva
+real**, dando la impresión tranquilizadora de que no hay ninguna.
+
+Lo cazó `test-reservas`, que cuenta **cuántos sitios del servidor nombran esa
+hoja**, con esta razón escrita encima: *"nadie vuelve a LEER esa hoja para
+calcular nada; es lo que impide que dentro de un año haya otra vez dos fuentes
+para el mismo número"*. La cuenta subió de uno a dos y la prueba se puso en
+rojo. Es exactamente el trabajo que esa comprobación existe para hacer.
+
+### 🔧 Y un fallo del andamio que llevaba ahí desde siempre
+
+`A.constantes` pedía que la declaración **terminara** en `;`. Media docena de
+constantes de este proyecto llevan un comentario al lado:
+
+```
+var DQ_MAX_FINDINGS = 150;    // un primer barrido daría miles
+```
+
+Esa línea no termina en `;`, así que la búsqueda perezosa seguía hasta la
+siguiente que sí, **dentro de otra función 200 líneas más abajo**. Devolvía un
+trozo de código cortado por la mitad y lo que reventaba era el
+`vm.runInContext` de la prueba, con un «Unexpected end of input» que no señalaba
+a nada. Arreglado, y ahora **comprueba que lo extraído sea código entero** antes
+de devolverlo: una extracción a medias es la peor clase de fallo de un andamio,
+porque no miente sobre el producto, miente sobre sí misma.
+
+---
+
 ## 📋 LO DEL 18/11 · N-08…N-13 ✅ **v15.8** *(N-12 y N-13 pendientes de una respuesta)*
 
 ### 🔴 N-08 · Siete segundos de silencio después de guardar — y la idea del arreglo es de Jose

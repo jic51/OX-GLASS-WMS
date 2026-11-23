@@ -16,6 +16,55 @@ Esto es ese documento, y se actualiza **con cada versión**. Lo de arriba es lo
 
 ---
 
+## v16.0 — la entrega y su entrada, atadas
+
+### 1 · El enlace, en las dos direcciones  🔴 *lo que preguntaste el 18/11*
+
+1. Coge una entrega **Pending**, pásala a **Arrived** y haz su entrada.
+2. Vuelve a **Incoming**. **Tiene que pasar:** esa entrega lleva al lado un
+   **✓ entry** verde.
+3. **Púlsalo.** La app te lleva a Movements y **enciende la fila** unos
+   segundos. Si la entrega se repartió en varios estantes, el ✓ dice **×3** y
+   enciende las tres.
+4. **Sería el fallo:** que no aparezca nada, o que te lleve a la fila
+   equivocada.
+
+### 2 · Corregir una entrega que ya tiene su entrada
+
+1. Edita esa misma entrega — cambia la nota, por ejemplo — y guarda.
+2. **Tiene que pasar:** sale un aviso que dice que **ya tiene su entrada** y que
+   corregir la entrega **no cambia el movimiento**, con un botón para
+   enseñártelo.
+3. **Y tiene que pasar lo que NO pasa:** el movimiento **no se toca**. Compruébalo:
+   mira la cantidad del movimiento antes y después. Es a propósito — si la
+   entrega decía 24 y la entrada guardó 22 porque llegaron dos rotas, poner 25
+   en la entrega no puede poner 25 en el almacén.
+
+### 3 · Lo que la revisión de datos dice ahora  🟠
+
+1. **Ajustes → Sistema → Check data.**
+2. **Tiene que pasar, y es lo primero que quiero que mires:** mientras no
+   hayas hecho **ninguna** entrada desde una entrega con esta versión, la
+   revisión **no debe decir una palabra de entregas**. Ni una.
+3. **Sería el fallo** —y el gordo— que te liste cien entregas viejas como «sin
+   entrada». Esas entregas no tienen a nadie apuntándolas porque la columna
+   acaba de nacer, no porque les falte la entrada. Si eso sale, dímelo y lo
+   apago.
+4. Después de hacer **una** entrada desde una entrega, vuelve a pasar la
+   revisión. Ahí sí debe empezar a hablar: si tienes alguna entrega marcada como
+   llegada sin entrada, sale con su material, su cantidad y su PO.
+5. Y si aparece una **reserva** que aparta un material sin movimientos, también
+   sale. Eso llevaba restando de un disponible que no existía.
+
+### 4 · La columna nueva en la hoja *(sólo si quieres mirarla)*
+
+1. La hoja de movimientos tiene una columna más al final: **From Delivery**.
+2. **Tiene que pasar:** los movimientos de siempre la llevan **vacía**, y eso
+   está bien — no vienen de ninguna entrega. Y la papelera y el archivo de
+   movimientos viejos siguen abriéndose con normalidad.
+
+---
+
 ## v15.9 — quitar un documento lo quita de verdad
 
 ### 1 · La ✕ de un documento  🔴 *lo que encontraste el 26/10*

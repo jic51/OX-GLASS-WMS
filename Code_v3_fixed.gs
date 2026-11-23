@@ -128,7 +128,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '15.9';
+var APP_VERSION = '16.0';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -140,7 +140,7 @@ var APP_VERSION = '15.9';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '13a20292';
+var APP_BUILD = 'e6450754';
 
 // ═══ ACOPIO BASIC — EL INTERRUPTOR DE LA VERSIÓN GRATIS ══════════════════════
 //
@@ -502,14 +502,58 @@ var AC = {
   // papelera aparcaba sus tres columnas en AC_WIDTH, así que mover el ancho le
   // corría los datos a todos los clientes. Eso se desató primero — ver
   // `alinearPapelera_`. Primero se quita el riesgo, después se añade la columna.
-  IMPORT_ID:25
+  IMPORT_ID:25,
+
+  // ── DE QUÉ ENTREGA SALIÓ ESTA ENTRADA ─────────────────────────────────────
+  //
+  // Jose, 18/11: *"al corregir o editar un incoming, no se edita el entry que
+  // utilizó los mismos datos, ¿por qué? ¿Y cómo podemos manejar la edición
+  // entre cosas que están interconectadas?"*
+  //
+  // La respuesta a la primera mitad era: **porque no están unidos, y nunca lo
+  // estuvieron.** Marcar una entrega como llegada COPIA sus datos al
+  // formulario —categoría, nombre, cantidad, unidad, proveedor, PO— y ahí se
+  // acaba la relación. A partir de ese momento son dos filas en dos hojas
+  // distintas que casualmente dicen lo mismo, y corregir una no toca la otra
+  // porque ninguna sabe que la otra existe.
+  //
+  // Y lo que sí quedaba atado era la mitad peor: el navegador guardaba de qué
+  // entrega venía el formulario en `_entryFromIncId`, **pero sólo mientras la
+  // ventana estaba abierta**. Al guardar, ese dato servía para saldar la
+  // tarjeta de pendientes y se tiraba. No quedaba escrito en ninguna fila.
+  //
+  // LA CONSECUENCIA QUE DUELE NO ES LA EDICIÓN. Es que no había forma de saber
+  // qué entregas marcadas como `Arrived` se quedaron **sin su movimiento**. La
+  // tarjeta naranja de «falta su entrada» vive en `localStorage`, o sea en UN
+  // navegador: quien marca la llegada en el teléfono no ve la tarjeta en el
+  // escritorio, y si borra los datos del navegador desaparece el recordatorio y
+  // nadie se entera. Ésa es exactamente la situación de LGI-DE-TOWNHOME2, que
+  // figuraba como llegada y no existía ni en Movements ni en el stock.
+  //
+  // CON ESTA COLUMNA SE PUEDEN LISTAR. Es el nivel 2 de los tres de
+  // docs/LO-QUE-TIENE-QUE-CUADRAR.md —«que la relación quede escrita»— y es el
+  // mismo patrón que `IMPORT_ID`, por el mismo motivo: una columna al final,
+  // sobre datos que ya existen, es la operación más segura de esta app.
+  //
+  // LO QUE NO HACE, Y ES A PROPÓSITO: no propaga nada. Corregir la entrega no
+  // toca el movimiento. Si la entrega decía 24 y el movimiento guardó 22 porque
+  // llegaron dos rotas, cambiar la entrega a 25 no debe poner 25 en el
+  // movimiento: el almacén tiene 22. Y la cantidad del movimiento YA cambió el
+  // inventario, así que editarla en cascada movería stock sin que nadie lo haya
+  // pedido. Primero se ata, después la app lo nota y lo dice, y sólo entonces
+  // se decide qué se propaga solo.
+  //
+  // VACÍA EN CASI TODAS. Sólo la llevan las entradas que salieron de una
+  // entrega esperada. Para lo demás la respuesta honesta es que no vienen de
+  // ninguna.
+  FROM_INCOMING:26
 };
 // The archive row's true width. Every fixed-size read or write of the whole
 // row uses this constant, not a literal — four different places in this file
 // used to each spell out `20` by hand, which is exactly the kind of duplicated
 // magic number that gets fixed in three places and shipped broken in the
 // fourth. One constant, so adding a column here again means changing ONE line.
-var AC_WIDTH = 26;
+var AC_WIDTH = 27;
 
 // A deleted movement is the movement's OWN row, unchanged, with three columns
 // added on the end saying what happened to it. The row is copied verbatim so a
@@ -843,7 +887,7 @@ function ensureCoreSheets_(ss) {
         'System Date','Type','Name','GC','PO#','Qty','Unit','Date Received','Source Location',
         'Supplier','Comments','Status','Received By','Project','Mat ID','Doc Links','User Email',
         'Destination Location','MoveType','PM','Unit Cost','Total Cost','Movement ID',
-        'Left Over From','From Movement','Import ID'] },
+        'Left Over From','From Movement','Import ID','From Delivery'] },
     { name: SHEETS.CONFIG, header: [
         'Projects','Categories','Suppliers','Locations','Location Type','User Email','User Role',
         'Admin Email','Truck','Truck Person','Truck Status','Min Stock Material','Min Stock Qty',
@@ -3678,7 +3722,13 @@ function parseArchiveRow(row, rowIdx) {
     /* El boneyard. Vacío en toda la historia anterior, y eso está bien: una
      * fila sin origen es material normal, que es lo que era. */
     originProject: String(row[AC.ORIGIN_PROJECT] || '').trim(),
-    fromMov:       String(row[AC.FROM_MOV]       || '').trim()
+    fromMov:       String(row[AC.FROM_MOV]       || '').trim(),
+    /* De qué entrega esperada salió esta entrada. Vacío en todo lo demás, que
+     * es la verdad. Va al navegador porque es lo que le permite enseñar el
+     * enlace en las DOS direcciones sin preguntar nada más: desde un
+     * movimiento, de qué entrega vino; y en la lista de entregas, cuáles ya
+     * tienen su entrada y cuáles no. */
+    fromIncoming:  String(row[AC.FROM_INCOMING]  || '').trim()
   };
 }
 
@@ -5316,6 +5366,18 @@ function addMovementsBatch_(ss, archive, movements, auth, opciones) {
        * de ninguna importación. */
       row[AC.IMPORT_ID] = String(d.importId || '').trim();
 
+      /* ── Y DE QUÉ ENTREGA ESPERADA, SI SALIÓ DE UNA ───────────────────────
+       *
+       * Sólo en una ENTRADA: una salida, un traslado o un ajuste no vienen de
+       * una entrega, y escribirlo ahí sería ruido con cara de dato — la misma
+       * regla que el boneyard de arriba.
+       *
+       * Lo manda el navegador, que es el único que lo sabe: es el id que ya
+       * guardaba en `_entryFromIncId` para no volver a ofrecer marcar la
+       * entrega que acababa de marcar. Antes se tiraba al cerrar la ventana;
+       * ahora queda escrito. */
+      row[AC.FROM_INCOMING] = (mt === 'ENTRY') ? String(d.fromIncoming || '').trim() : '';
+
       newRows.push(row);
       rowMeta.push({
         mt: mt, name: name, matId: matId, proj: proj, qty: qty, unit: row[AC.UNIT],
@@ -5770,7 +5832,15 @@ function addMultiEntry(ss, archive, data, auth) {
         docGroups:        isFirstRow ? (data.docGroups       || []) : [],
         notifyRecipients: isFirstRow ? data.notifyRecipients : null,
         // Only dup-check the first row of the whole submission.
-        forceSubmit:      !isFirstRow || !!data.forceSubmit
+        forceSubmit:      !isFirstRow || !!data.forceSubmit,
+        /* De qué entrega esperada salió esta tanda, en TODAS sus filas y no
+         * sólo en la primera — al contrario que los documentos y el aviso por
+         * correo, que son una cosa que pasa una vez. Esto es un HECHO de cada
+         * fila: una entrega de 24 ventanas repartida en tres estantes son tres
+         * movimientos, y los tres vienen de esa entrega. Ponerlo sólo en el
+         * primero haría que «¿tiene esta entrega su entrada?» dependiera de
+         * cuál de los tres se mire. */
+        fromIncoming:     String(data.fromIncoming || '').trim()
       });
     }
   }
@@ -17098,6 +17168,146 @@ function runDataQualityScan(data) {
     });
   });
 
+  /* ── Family 5: llegó y nadie hizo su entrada ───────────────────────────────
+   *
+   * Jose, 18/11: *"busca qué otras cosas así hay en la app que deben cuadrar
+   * siempre sin utilizar el rebuild stock"*. Ésta es la primera de la lista de
+   * `docs/LO-QUE-TIENE-QUE-CUADRAR.md`, y la que ya costó un disgusto:
+   * `LGI-DE-TOWNHOME2` figuraba como llegada y no existía ni en Movements ni en
+   * el stock.
+   *
+   * Hasta la v16.0 no se podía preguntar. El único recordatorio de «llegó y
+   * falta su entrada» era una tarjeta que vive en el `localStorage` de UN
+   * navegador: quien marca la llegada en el teléfono no la ve en el escritorio,
+   * y borrar los datos del sitio se la lleva sin dejar rastro. Ahora el
+   * movimiento guarda de qué entrega vino, así que la pregunta tiene respuesta
+   * en la hoja.
+   *
+   * ── LO QUE NO SE PUEDE SABER, Y POR QUÉ ESO MANDA ────────────────────────
+   *
+   * Una entrega marcada como llegada ANTES de que existiera la columna no tiene
+   * a nadie apuntándola, y eso NO significa que le falte la entrada: significa
+   * que no se puede saber desde aquí. Si esto las listara, el primer barrido de
+   * Jose le acusaría de cien entradas que sí hizo — y una revisión que miente
+   * cien veces la primera vez no se vuelve a abrir.
+   *
+   * Así que sólo se mira hacia atrás hasta donde la columna puede contestar: si
+   * NINGÚN movimiento del archivo lleva `FROM_INCOMING`, esta familia **no dice
+   * nada en absoluto**. Y en cuanto los hay, una entrega sin dueño se busca
+   * también por parecido —mismo material y misma cantidad— y lo que se cuenta
+   * es eso: «ninguna entrada la reclama; hay una que encaja por material y
+   * cantidad», o «ninguna, y tampoco encaja ninguna». Lo segundo es un aviso.
+   * Lo primero es un dato, y se dice como lo que es: una coincidencia, no una
+   * certeza. Esta pantalla enseña; no arregla. */
+  var atadas = {};      // id de entrega → cuántos movimientos la reclaman
+  var hayAlguna = false;
+  rows.forEach(function (row) {
+    var de = String(row[AC.FROM_INCOMING] || '').trim();
+    if (!de) return;
+    hayAlguna = true;
+    atadas[de] = (atadas[de] || 0) + 1;
+  });
+
+  if (hayAlguna) {
+    /* Un índice de las entradas SIN DUEÑO, para la coincidencia por parecido.
+     *
+     * Y sin dueño es la mitad que importa: una entrada que ya dice que vino de
+     * OTRA entrega no puede ser también la de ésta. Contarla diría «esto
+     * probablemente ya está entrado» justo cuando no lo está, que es el error
+     * en la dirección peor — el que hace que nadie vaya a mirar. */
+    var sinDuenoPorMatYCantidad = {};
+    rows.forEach(function (row) {
+      if (String(row[AC.FROM_INCOMING] || '').trim()) return;   // ya es de alguien
+      var mt = tipoDeMovimiento_(row[AC.MOVETYPE], row[AC.QTY], row[AC.STATUS]);
+      if (mt !== 'ENTRY') return;
+      var k = getMaterialId(normalizeString(row[AC.CATEGORY]), normalizeString(row[AC.NAME])) +
+              '|||' + Math.abs(Number(row[AC.QTY] || 0));
+      sinDuenoPorMatYCantidad[k] = (sinDuenoPorMatYCantidad[k] || 0) + 1;
+    });
+
+    var hojaInc = ss.getSheetByName('INCOMING_V3');
+    if (hojaInc && hojaInc.getLastRow() > 1) {
+      var inc = hojaInc.getRange(2, 1, hojaInc.getLastRow() - 1,
+                                 Math.min(17, hojaInc.getMaxColumns())).getValues();
+      inc.forEach(function (r) {
+        var id = String(r[0] || '').trim();
+        if (!id) return;
+        var est = String(r[9] || '').trim().toLowerCase();
+        if (est !== 'arrived' && est !== 'received') return;   // sólo las que llegaron
+        if (atadas[id]) return;                                // tiene su entrada: nada que decir
+
+        var cat  = String(r[2] || '').trim();
+        var nom  = String(r[3] || '').trim();
+        var cant = Math.abs(Number(r[4] || 0));
+        var k    = getMaterialId(normalizeString(cat), normalizeString(nom)) + '|||' + cant;
+        findings.push({
+          id: dqId_(['sinentrada', id]),
+          kind: 'sinentrada',
+          incId: id, category: cat, name: nom, qty: cant,
+          unit: String(r[5] || ''), supplier: String(r[6] || ''),
+          po: String(r[7] || ''),
+          fecha: (r[1] instanceof Date)
+            ? Utilities.formatDate(r[1], Session.getScriptTimeZone(), 'MM/dd/yyyy')
+            : String(r[1] || ''),
+          // Cuántas entradas encajan por material y cantidad. 0 es el aviso de
+          // verdad; 1 o más es «probablemente es ésta, míralo».
+          encajan: sinDuenoPorMatYCantidad[k] || 0,
+          rows: 0
+        });
+      });
+    }
+  }
+
+  /* ── Family 6: una reserva que aparta algo que ya no existe ────────────────
+   *
+   * La C de `docs/LO-QUE-TIENE-QUE-CUADRAR.md`. Una reserva dice «esto es de la
+   * obra X». Si ese material se borra, o sus movimientos se van a la papelera,
+   * **la reserva sigue ahí** apuntando a algo que no existe — y este archivo ya
+   * tenía escrito por qué eso es peor que no tener reserva: *"reservas que no
+   * protegen nada, porque alguien cuenta con ella"*. Nadie se entera, porque el
+   * material desaparecido no sale en ninguna lista.
+   *
+   * SE LEE `MATERIAL_LOCKS`, QUE ES DONDE VIVEN LAS RESERVAS DE VERDAD. La
+   * primera versión de esto leía la hoja `RESERVATIONS`, y estaba mal: esa hoja
+   * está muerta desde la v10 y sólo se sigue creando por si algún cliente
+   * escribió filas a mano. Habría listado huérfanas de una hoja que nadie usa y
+   * no habría mirado una sola reserva real. Lo cazó `test-reservas`, que cuenta
+   * cuántos sitios nombran esa hoja justamente para que no vuelva a haber dos
+   * fuentes del mismo número — y la cuenta subió a dos.
+   *
+   * Sin botón, como el resto de lo que no tiene respuesta automática: soltar una
+   * reserva es una decisión sobre material de una obra, y la toma quien lleva la
+   * obra. */
+  var hojaRes = ss.getSheetByName('MATERIAL_LOCKS');
+  if (hojaRes && hojaRes.getLastRow() > 1) {
+    var existe = {};
+    rows.forEach(function (row) {
+      existe[getMaterialId(normalizeString(row[AC.CATEGORY]), normalizeString(row[AC.NAME]))] = 1;
+    });
+    var res = hojaRes.getRange(2, 1, hojaRes.getLastRow() - 1,
+                               Math.min(12, hojaRes.getMaxColumns())).getValues();
+    res.forEach(function (r) {
+      var est = String(r[9] || '').trim().toUpperCase();
+      if (est !== 'ACTIVE') return;        // ya soltada: no está apartando nada
+      var cat = String(r[2] || '').trim();
+      var nom = String(r[3] || '').trim();
+      if (!cat && !nom) return;
+      /* El id guardado MANDA sobre categoría+nombre cuando está: es el que usa
+       * el resto de la app para cruzar la reserva con el stock, así que mirar
+       * otro aquí sería contestar sobre una pareja distinta de la que falla. */
+      var matId = String(r[1] || '').trim() ||
+                  getMaterialId(normalizeString(cat), normalizeString(nom));
+      if (existe[matId]) return;
+      findings.push({
+        id: dqId_(['reservahuerfana', String(r[0] || ''), matId]),
+        kind: 'reservahuerfana',
+        resId: String(r[0] || ''), category: cat, name: nom,
+        rack: String(r[4] || ''), motivo: String(r[6] || ''),
+        quien: String(r[7] || ''), rows: 0
+      });
+    });
+  }
+
   // ── Family 3: one of these two is probably a typo ─────────────────────────
   // Jose also asked for "palabras mal escritas". This is that, and it is a
   // GUESS — labelled as one, with no Apply button anywhere on the family.
@@ -17165,9 +17375,18 @@ function runDataQualityScan(data) {
 
   // Biggest first: a spelling used across 40 rows matters more than one used
   // twice, and an admin who only has ten minutes should spend them at the top.
+  /* EL ORDEN, Y LAS DOS NUEVAS VAN DELANTE DE LAS DE ORTOGRAFÍA.
+   *
+   * Una entrega que llegó y no tiene entrada es stock que no está contado; un
+   * nombre escrito de dos maneras es un informe algo más feo. No son la misma
+   * urgencia, y quien sólo tenga diez minutos tiene que gastarlos arriba. */
   findings.sort(function (x, y) {
-    var order = { spelling: 0, gap: 1, similar: 2 };
-    return (order[x.kind] - order[y.kind]) || ((y.rows || 0) - (x.rows || 0));
+    var order = { negative: 0, sinentrada: 1, reservahuerfana: 2,
+                  spelling: 3, gap: 4, similar: 5 };
+    var ox = order[x.kind], oy = order[y.kind];
+    if (ox === undefined) ox = 9;
+    if (oy === undefined) oy = 9;
+    return (ox - oy) || ((y.rows || 0) - (x.rows || 0));
   });
 
   var total = findings.length;

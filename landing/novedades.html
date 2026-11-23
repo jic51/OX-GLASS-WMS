@@ -110,6 +110,46 @@
     <!-- N-07 · El estante malo se ve antes de mandar, y elegir ya es contestar. -->
     <!-- N-08 · La idea de la fila fantasma es de Jose. N-09/10/11 vienen del mismo repaso. -->
     <!-- H-09 · La X de un documento borraba el enlace y dejaba el fichero. -->
+    <!-- La columna FROM_INCOMING: atar primero, notar despues, propagar nunca por ahora. -->
+    <div class="entry" id="v16-0">
+      <span class="ver">v16.0</span>
+      <span class="tag new">Nuevo</span>
+      <h3>Una entrega y su entrada por fin saben la una de la otra</h3>
+      <p><b>Marcar una entrega como llegada y hacer su entrada copiaba los datos de la entrega al
+         formulario &mdash; y ah&iacute; se acababa la relaci&oacute;n.</b> A partir de ese
+         momento eran dos filas en dos hojas distintas que casualmente dec&iacute;an lo mismo.
+         Corregir una no tocaba la otra, porque ninguna sab&iacute;a que la otra exist&iacute;a.</p>
+      <p><b>Y la mitad que cost&oacute; una entrega perdida:</b> no hab&iacute;a forma de
+         preguntar qu&eacute; entregas marcadas como llegadas se quedaron sin su entrada. El
+         &uacute;nico recordatorio era una tarjeta que viv&iacute;a en <i>un</i> navegador &mdash;
+         marca la entrega en el tel&eacute;fono y en el escritorio no aparece; borra los datos del
+         sitio y el recordatorio se va sin dejar rastro. As&iacute; fue como una entrega
+         qued&oacute; marcada como llegada sin existir ni en Movements ni en el stock.</p>
+      <p><b>Ahora el movimiento guarda de qu&eacute; entrega vino</b>, en una columna propia al
+         final de la hoja. En Incoming, cada entrega llegada dice <b>&#10003; entry</b> &mdash;
+         al pulsarlo la app lleva al movimiento y lo enciende &mdash; o <b>&#9888; no entry</b> si
+         nadie la reclama.</p>
+      <p><b>Y la revisi&oacute;n de datos lo lee.</b> Ajustes &rarr; Sistema &rarr; Check data
+         lista ahora cada entrega que lleg&oacute; sin entrada detr&aacute;s, y cada reserva que
+         aparta un material sin un solo movimiento &mdash; que estaba restando de un disponible
+         que no exist&iacute;a.</p>
+      <p><b>Lo que no hace es corregirte el movimiento.</b> Si la entrega dec&iacute;a 24 y la
+         entrada guard&oacute; 22 porque llegaron dos rotas, cambiar la entrega a 25 no debe poner
+         25 en el almac&eacute;n: el almac&eacute;n tiene 22. Y esa cantidad ya movi&oacute; el
+         inventario, as&iacute; que editarla en cascada mover&iacute;a stock que nadie pidi&oacute;
+         mover. La app dice lo que sabe y ofrece ense&ntilde;ar el movimiento; decide quien sabe si
+         llegaron 22 o 25.</p>
+      <p><b>Y no te acusa.</b> Una entrega marcada como llegada antes de esta versi&oacute;n no
+         tiene a nadie apunt&aacute;ndola, y eso no significa que le falte la entrada &mdash;
+         significa que el enlace no exist&iacute;a. As&iacute; que hasta que al menos una entrada
+         lleve el enlace, la revisi&oacute;n no dice nada en absoluto de entregas. Una
+         revisi&oacute;n que se equivoca cien veces en su primer barrido es una revisi&oacute;n que
+         nadie vuelve a abrir.</p>
+      <p class="meta">Tres niveles, en orden: que no se pueda desalinear, que la relaci&oacute;n
+         quede escrita, y que la app lo note y lo diga. Esto es el segundo y el tercero. El primero
+         ya es c&oacute;mo funciona el stock &mdash; es la suma de los movimientos, sin un
+         n&uacute;mero guardado que pueda mentir.</p>
+    </div>
     <div class="entry" id="v15-9">
       <span class="ver">v15.9</span>
       <span class="tag fix">Arreglo</span>

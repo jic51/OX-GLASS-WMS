@@ -75,9 +75,27 @@ check('la cabecera del archivo dice «Import ID»', /'Import ID'/.test(cab));
  * motivo tonto y vale la pena dejarlo escrito: también quita el espacio de
  * dentro de 'From Movement'. Se tolera el espaciado entre las comillas y la
  * coma, que es lo que de verdad varía, y no se toca el contenido. */
-check('y va LA ÚLTIMA — añadida al final, no insertada en medio',
-  /'From Movement'\s*,\s*'Import ID'\s*\]/.test(cab),
-  cab.slice(-120).replace(/\s+/g, ' '));
+/* ── Y VA DONDE `AC` DICE QUE VA ──────────────────────────────────────────
+ *
+ * Esta comprobación decía «y va LA ÚLTIMA», comparando contra el final literal
+ * de la cabecera. Era verdad el día que se escribió y dejó de serlo en la
+ * v16.0, cuando se añadió `From Delivery` detrás — y lo que salió en rojo no
+ * fue ningún fallo: fue esta prueba exigiendo que nunca más se añadiera una
+ * columna.
+ *
+ * Lo que de verdad hay que defender no es que sea la última para siempre; es
+ * que su TÍTULO esté en la misma posición que su DATO. Un desfase ahí pone los
+ * títulos encima de la columna de al lado en la hoja de Jose, que es el fallo
+ * que esto existe para impedir. Y eso se mide contra `AC`, no contra el final
+ * del array. */
+const titulos = (cab.match(/'[^']*'/g) || []).map(t => t.slice(1, -1));
+check('«Import ID» está en la posición que dice AC.IMPORT_ID — el título ' +
+      'encima de su propio dato',
+  titulos[AC.IMPORT_ID] === 'Import ID',
+  { enEsaPosicion: titulos[AC.IMPORT_ID], indice: AC.IMPORT_ID });
+check('...y viene detrás de «From Movement», que es lo que significa ' +
+      '«añadida al final y no insertada en medio»',
+  titulos[AC.IMPORT_ID - 1] === 'From Movement', titulos[AC.IMPORT_ID - 1]);
 
 console.log('\n═══ 2. y el usuario NO la puede editar ═══\n');
 

@@ -1449,10 +1449,16 @@
     .dq-kind.dq-spelling{background:#DBEAFE;color:var(--accent2)}
     .dq-kind.dq-gap{background:var(--green-bg);color:var(--green)}
     .dq-kind.dq-similar{background:var(--yellow-bg);color:var(--yellow)}
-    /* Rojo, y es el único de los cuatro que lo lleva. Los otros tres son
-     * "esto se puede mejorar"; éste es "esto no puede haber pasado", y una
-     * lista donde todo tiene el mismo color no deja verlo. */
-    .dq-kind.dq-negative{background:var(--red-bg);color:var(--red)}
+    /* Rojo, y de seis son tres los que lo llevan. Los otros son "esto se puede
+     * mejorar"; éstos son "esto no cuadra", y una lista donde todo tiene el
+     * mismo color no deja verlo.
+     *
+     * `sinentrada` es rojo aunque suene administrativo: una entrega que llegó y
+     * no tiene entrada es material que está en el almacén y no está contado, y
+     * eso es exactamente lo que pasó con LGI-DE-TOWNHOME2. `reservahuerfana` va
+     * en ámbar: resta de un disponible, no de una cuenta. */
+    .dq-kind.dq-negative,.dq-kind.dq-sinentrada{background:var(--red-bg);color:var(--red)}
+    .dq-kind.dq-reservahuerfana{background:var(--yellow-bg);color:var(--yellow)}
     .dq-head{font-size:.86rem;margin-bottom:.2rem;word-break:break-word}
     .dq-body{font-size:.78rem;color:var(--muted);line-height:1.45}
     .dq-act{margin-top:var(--sp-3)}
@@ -2569,6 +2575,13 @@
     .inc-group-lbl{font-size:var(--fs-md);font-weight:800;color:var(--text);letter-spacing:.01em}
     .inc-group-count{font-size:var(--fs-xs);font-weight:800;background:var(--border);color:var(--muted);border-radius:var(--r-pildora);padding:var(--pad-pildora);margin-left:.45rem}
     .inc-group-note{font-size:var(--fs-xs);color:var(--muted);margin-left:var(--sp-4);font-weight:400}
+    /* La liga entre una entrega y su entrada. Verde cuando existe y se puede
+       abrir; ámbar cuando llegó y nadie la reclama. No rojo: no es un error del
+       que la mira, es algo que falta por hacer. */
+    .inc-liga{border-radius:var(--r-pildora);padding:var(--pad-pildora);font-size:var(--fs-2xs);font-weight:700;white-space:nowrap}
+    .inc-liga.ok{background:var(--green-bg);color:var(--green);cursor:pointer}
+    .inc-liga.ok:hover{text-decoration:underline}
+    .inc-liga.falta{background:var(--yellow-bg);color:var(--yellow)}
     .inc-status-cancelled{background:#F3F4F6;color:#6B7280;border-radius:var(--r-pildora);padding:var(--pad-pildora);font-size:var(--fs-xs);font-weight:700;text-decoration:line-through}
     /* ── MORNING POPUP ── */
     /* z-index 540 IS THE WHOLE FIX, and the number is not arbitrary.
@@ -6409,7 +6422,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '15.9';
+var APP_VERSION = '16.0';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -6421,7 +6434,7 @@ var APP_VERSION = '15.9';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '13a20292';
+var APP_BUILD = 'e6450754';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -16093,7 +16106,17 @@ function submitMultiEntry(){
     truck:            truck,
     docGroups:        docGroups,
     notifyRecipients: notifyPayload,
-    forceSubmit:      false
+    forceSubmit:      false,
+    /* DE QUÉ ENTREGA VIENE ESTA ENTRADA, y ésta es la línea que ata las dos
+     * cosas que Jose vio sueltas el 18/11.
+     *
+     * `_entryFromIncId` ya existía y ya sabía lo que hacía falta saber. Lo que
+     * no hacía era llegar a ninguna parte: se usaba para saldar la tarjeta de
+     * pendientes y se tiraba al cerrar la ventana. Ahora viaja y se escribe en
+     * la fila, así que la relación deja de vivir en la memoria de un navegador.
+     *
+     * Vacío si la entrada se escribió a mano, que es la verdad. */
+    fromIncoming:     (typeof _entryFromIncId !== 'undefined' && _entryFromIncId) || ''
   };
 
   /* N-07 · Antes de cerrar nada y antes de viajar: si un estante no existe,
@@ -16928,6 +16951,20 @@ function _sysActRefHtml(a){
 // The retry runs once. If the rows are still not there after the archive is
 // loaded, that is a different problem and it says so plainly rather than
 // looping.
+/* Del lado de la entrega al lado del movimiento, con la maquinaria que ya
+ * existe: `_showMovementRows` lleva a Movements, limpia la búsqueda, repinta y
+ * enciende las filas pedidas durante unos segundos. Se escribió para la tarjeta
+ * de reenganche y vale igual aquí — escribir un segundo «llévame a esa fila»
+ * sería tener dos formas de hacer lo mismo, que es el fallo de siempre. */
+function _verLaEntradaDeLaEntrega(id){
+  var suyas = _entradasDeLaEntrega(id);
+  if (!suyas.length){
+    showToast('No movement says it came from this delivery.', 'warn', 4000);
+    return;
+  }
+  _showMovementRows(suyas.map(function(m){ return m.rowIdx; }).join(','));
+}
+
 function _showMovementRows(csv){
   var want = {};
   String(csv).split(',').forEach(function(n){ want[String(n).trim()] = 1; });
@@ -17775,6 +17812,42 @@ function _dqCard(f, i){
            'Search its name in Movement History and compare the entries against the exits. ' +
            'Also worth a look: Settings → System → Deleted movements.';
 
+  } else if (f.kind === 'sinentrada'){
+    /* LLEGÓ Y NADIE HIZO SU ENTRADA. Sin botón: hacer la entrada es escribir en
+     * qué estante se puso y cuánto llegó de verdad, y eso no lo sabe la app.
+     * Lo que puede hacer es llevar al formulario con los datos de la entrega
+     * dentro, que es exactamente lo que ya hace el botón de Incoming. */
+    head = '<strong>' + _he(f.name) + '</strong> <span style="color:var(--muted);font-size:.78rem">' +
+           _he(f.category) + (f.qty ? ' · ' + f.qty + ' ' + _he(f.unit || '') : '') + '</span>';
+    body = 'This delivery is marked <strong>Arrived</strong>' +
+           (f.fecha ? ' (' + _he(f.fecha) + ')' : '') +
+           (f.supplier ? ' from ' + _he(f.supplier) : '') +
+           (f.po ? ', PO ' + _he(f.po) : '') +
+           ', but <strong>no movement says it came from it</strong> — so none of it is in the stock.' +
+           (f.encajan
+             ? '<br><br><em>There ' + (f.encajan === 1 ? 'is one entry' : 'are ' + f.encajan + ' entries') +
+               ' of the same material and the same quantity, so this was probably entered by hand ' +
+               'before the two were linked. Worth a look rather than a second entry.</em>'
+             : '<br><br><em>No entry of this material and quantity exists either.</em> ' +
+               'Open it in Incoming and use <strong>Make the entry</strong>. ' +
+               'If the material did arrive and was entered with a different quantity, ' +
+               'correct it with ADJUST — never with a second entry.');
+
+  } else if (f.kind === 'reservahuerfana'){
+    /* UNA RESERVA QUE APARTA ALGO QUE YA NO EXISTE. Sin botón por la misma
+     * razón que las otras dos sin botón: soltarla es una decisión sobre
+     * material de una obra. */
+    head = '<strong>' + _he(f.name) + '</strong> <span style="color:var(--muted);font-size:.78rem">' +
+           _he(f.category) + '</span>';
+    body = 'Held' + (f.rack ? ' at <strong>' + _he(f.rack) + '</strong>' : '') +
+           (f.quien ? ' by ' + _he(f.quien) : '') +
+           (f.motivo ? ' &mdash; &ldquo;' + _he(f.motivo) + '&rdquo;' : '') +
+           ', but this material has no movements left at all: it was deleted, or they all went ' +
+           'to the trash. <strong>The hold is protecting nothing, which is worse than no hold ' +
+           'at all, because somebody is counting on it.</strong>' +
+           '<br><br>Release it from the material\u2019s own row if the job no longer needs it, ' +
+           'or find out where its movements went: Settings &rarr; System &rarr; Deleted movements.';
+
   } else {
     // No Apply button, on purpose. The app is not confident enough to offer
     // one, and saying so is worth more than a button that is wrong one time in
@@ -17790,6 +17863,8 @@ function _dqCard(f, i){
         (f.kind === 'spelling' ? 'Written two ways'
           : f.kind === 'gap'      ? 'Missing a value'
           : f.kind === 'negative' ? 'Less than nothing'
+          : f.kind === 'sinentrada' ? 'Arrived, never entered'
+          : f.kind === 'reservahuerfana' ? 'Holding nothing'
           : 'Have a look') +
       '</div>' +
       '<div class="dq-head">' + head + '</div>' +
@@ -22205,6 +22280,8 @@ document.addEventListener('keydown', function(e){ if (e.key === 'Escape') _perso
       _triggerRackPhotoUpload(el.getAttribute('data-rack'));
     } else if (a === 'rack-photo-remove') {
       _quitarFotoDeEstante(el.getAttribute('data-rack'));
+    } else if (a === 'ver-su-entrada') {
+      _verLaEntradaDeLaEntrega(el.getAttribute('data-id'));
     } else if (a === 'toggle-stock-detail') {
       toggleStockDetail(el.getAttribute('data-row-id'));
     } else if (a === 'preview-media') {
@@ -26670,6 +26747,52 @@ function renderIncomingTable() {
   container.innerHTML = html;
 }
 
+/* ── EL ENLACE ENTRE UNA ENTREGA Y SU ENTRADA, EN LAS DOS DIRECCIONES ────────
+ *
+ * Jose, 18/11: *"al corregir o editar un incoming, no se edita el entry que
+ * utilizó los mismos datos, ¿por qué?"* Porque no estaban unidos. Desde la
+ * v16.0 el movimiento guarda de qué entrega vino (`FROM_INCOMING`), y esto es
+ * lo que lo hace VISIBLE — que es la mitad que convierte una columna en algo
+ * que sirve a alguien.
+ *
+ * Se resuelve EN EL NAVEGADOR, con los movimientos que ya están cargados, y no
+ * con una pregunta más al servidor. No es por ahorrar: es que la respuesta tiene
+ * que estar lista mientras se pinta la lista, y una lista que pinta primero y
+ * se corrige después enseña un dato equivocado durante medio segundo en cada
+ * repintado.
+ *
+ * LO QUE NO SE PUEDE SABER, Y SE DICE: una entrega marcada como llegada ANTES
+ * de la v16.0 no tiene a nadie apuntándola, porque la columna no existía. Eso
+ * no es «le falta la entrada», es «no se puede saber desde aquí» — y confundir
+ * las dos sería acusar a Jose de cien entradas que sí hizo. Por eso hay tres
+ * respuestas y no dos. */
+/* DEVUELVE UNA LISTA, NO UNA FILA, y eso no es un detalle: una entrega de 24
+ * ventanas repartida en tres estantes son TRES movimientos, y los tres vienen
+ * de ella. Una función que devolviera «el movimiento» obligaría a quien la usa
+ * a acordarse de que puede haber más, y el primero que se olvidara enseñaría un
+ * tercio de la verdad. */
+function _entradasDeLaEntrega(id){
+  var out = [];
+  if (!id || typeof movements === 'undefined' || !movements) return out;
+  for (var i = 0; i < movements.length; i++) {
+    if (String(movements[i].fromIncoming || '') === String(id)) out.push(movements[i]);
+  }
+  return out;
+}
+
+/* ¿Hay en la app ALGUNA entrada que diga de qué entrega vino?
+ *
+ * Es lo que separa «esta entrega no tiene entrada» de «aquí todavía no se ata
+ * nada». Mientras la respuesta sea no, la lista no acusa a ninguna entrega:
+ * callar es lo honesto cuando no hay con qué comparar. */
+function _hayEntregasAtadas(){
+  if (typeof movements === 'undefined' || !movements) return false;
+  for (var i = 0; i < movements.length; i++) {
+    if (movements[i].fromIncoming) return true;
+  }
+  return false;
+}
+
 // One row of the incoming table. Pulled out of renderIncomingTable so the
 // grouped sections can each emit their own rows without duplicating it.
 function _incRowHtml(item){
@@ -26678,6 +26801,22 @@ function _incRowHtml(item){
   var isOverdue = _incIsOverdue(item, today);
     var statusBadge = '<span class="inc-status-' + (item.status||'pending').toLowerCase() + '">' + (item.status||'Pending') + '</span>';
     if (isOverdue) statusBadge += ' <span class="badge badge-red" style="font-size:.65rem">overdue</span>';
+    /* Y SI YA LLEGÓ, SI TIENE SU ENTRADA O NO. Sólo en las que llegaron: en una
+       entrega que todavía viene, «sin entrada» no es un aviso, es lo normal. */
+    var st0 = String(item.status || '').toLowerCase();
+    if (st0 === 'arrived' || st0 === 'received') {
+      var suyas = _entradasDeLaEntrega(item.id);
+      if (suyas.length) {
+        statusBadge += ' <span class="inc-liga ok" data-action="ver-su-entrada" ' +
+          'data-id="' + _he(item.id) + '" title="Show the movement' +
+          (suyas.length > 1 ? 's' : '') + ' this delivery became">' +
+          '\u2713 entry' + (suyas.length > 1 ? ' \u00d7' + suyas.length : '') + '</span>';
+      } else if (_hayEntregasAtadas()) {
+        statusBadge += ' <span class="inc-liga falta" title="Marked as arrived, but no movement says it came from this delivery">' +
+          '\u26a0 no entry</span>';
+      }
+      /* Y si NADA está atado todavía, no se dice nada. Ver _hayEntregasAtadas. */
+    }
     var soft = (item.dateMode && item.dateMode !== 'exact');
     return '<tr>' +
       '<td style="white-space:nowrap;font-weight:600' + (isOverdue?';color:var(--red)':'') +
@@ -27327,6 +27466,35 @@ function saveIncomingItem() {
             // está justo delante. Sólo estorba.
             var todoId = _todoAdd(payload, wantEntry);
             if (wantEntry) _entryFromIncoming(payload, todoId);
+          }
+          /* ── LA ENTREGA QUE YA TIENE SU ENTRADA ────────────────────────────
+           *
+           * Jose, 18/11: *"al corregir o editar un incoming, no se edita el
+           * entry que utilizó los mismos datos, ¿por qué?"*
+           *
+           * Ya está contestado: no están unidos, y desde esta versión sí lo
+           * están. Lo que NO se hace es propagar la corrección, y la razón hay
+           * que decirla aquí porque es donde se nota: si la entrega decía 24 y
+           * el movimiento guardó 22 porque llegaron dos rotas, cambiar la
+           * entrega a 25 **no debe** poner 25 en el movimiento — el almacén
+           * tiene 22. Y la cantidad del movimiento ya cambió el inventario, así
+           * que editarla sola movería stock sin que nadie lo haya pedido.
+           *
+           * Así que la app dice lo que sabe y deja decidir a quien sabe si
+           * llegaron 22 o 25. Es la recomendación escrita en
+           * docs/LO-QUE-TIENE-QUE-CUADRAR.md, y es lo contrario de adivinar. */
+          if (id) {
+            var yaTiene = _entradasDeLaEntrega(id);
+            if (yaTiene.length) {
+              var cual = yaTiene.length === 1
+                ? 'its entry of ' + _he(String(yaTiene[0].dateRec || yaTiene[0].date || '').substring(0, 10))
+                : yaTiene.length + ' entries';
+              showToast('This delivery already has ' + cual +
+                        ' — correcting the delivery does not change the movement.',
+                        'info', 9000,
+                        { texto: 'Show ' + (yaTiene.length === 1 ? 'it' : 'them'),
+                          hacer: function(){ _verLaEntradaDeLaEntrega(id); } });
+            }
           }
         });
         // La recarga pasa a ser CONFIRMACIÓN, no la fuente de la verdad: ya no
@@ -33914,6 +34082,19 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '16.0',
+    titulo: 'A delivery and its entry finally know about each other',
+    puntos: [
+      '<b>When you mark a delivery as arrived and make its entry, the app copies the delivery\u2019s details into the form \u2014 and that was the whole relationship.</b> From that moment they were two rows in two different sheets that happened to say the same thing, and correcting one never touched the other, because neither knew the other existed.',
+      '<b>And the half that cost us a missing delivery:</b> there was no way to ask which deliveries marked as arrived never got their entry. The only reminder was an orange card living in <i>one</i> browser \u2014 mark the delivery on the phone and the desktop never shows it; clear your site data and the reminder is gone with nothing left behind. That is exactly how one delivery ended up marked as arrived while existing neither in Movements nor in the stock.',
+      '<b>A movement now records which delivery it came from.</b> In Incoming, every arrived delivery says <b>\u2713 entry</b> \u2014 click it and the app takes you to the movement and lights it up \u2014 or <b>\u26a0 no entry</b> if nothing claims it.',
+      '<b>And the data check now looks for it.</b> Settings &rarr; System &rarr; Check data lists every delivery that arrived with no entry behind it, and every hold that is reserving a material with no movements left at all \u2014 which was quietly subtracting from an availability that was not there.',
+      '<b>What it will not do is correct the movement for you</b>, and that is deliberate. If the delivery said 24 and the entry recorded 22 because two arrived broken, changing the delivery to 25 must not put 25 in the warehouse: the warehouse has 22. And that quantity has already moved your stock. So the app says what it knows \u2014 <i>this delivery already has its entry; correcting the delivery does not change the movement</i> \u2014 and offers to show it. The person who knows whether 22 or 25 arrived decides.',
+      '<b>One more thing it will not do: accuse you.</b> A delivery marked as arrived before this version has nobody pointing at it, and that does not mean its entry is missing \u2014 it means the link did not exist yet. So until at least one entry carries the link, the data check says nothing at all about deliveries. A check that is wrong a hundred times on its first run is a check nobody opens twice.'
+    ],
+    antes:  'Nothing knew which entry a delivery became',
+    ahora:  'The row says it, and the check reads it' },
+
   { ver: '15.9',
     titulo: 'Removing a document now removes the file, not just the link',
     puntos: [
@@ -33949,17 +34130,6 @@ var NOVEDADES = [
     ],
     antes:  'Closed the window, waited, then asked',
     ahora:  'Asks before it sends, and your answer is enough' },
-
-  { ver: '15.6',
-    titulo: 'The window comes back with everything you had written',
-    puntos: [
-      '<b>When the server refused an entry, what you had typed was gone.</b> An unknown shelf, not enough stock — the message appeared and the window did not come back. And it had a worse consequence than the retyping: a delivery could sit marked as arrived with no movement behind it, which is how one went missing from both the movements list and the stock.',
-      'Now <b>the window reopens with every field as you left it</b>, you correct the one that was wrong, and you save.',
-      '<b>And if what failed was the connection, the window does not come back</b> — the notice carries <i>Retry</i> and sends it again. There is nothing to correct in that case, and reopening the form would only suggest there was.',
-      '<b>The reason box when editing a movement was 203 pixels wide inside a 689-pixel panel.</b> It fills its panel now.'
-    ],
-    antes:  'A message, and your typing gone',
-    ahora:  'The window returns with your work still in it' },
 
 ];
 
