@@ -3448,3 +3448,232 @@ segundo intento. El atajo la desactivó justo en el caso que la necesitaba.
 por sentado que lo único que puede fallar es la clave. Y es el ejemplo vivo de
 la Parte 4 del análisis de seguridad — *lo que Google puede cambiar debajo*—
 ocurriendo el mismo día en que se escribió.
+
+---
+
+# 📦 LA MUDANZA — lo del 24/11, cinco cosas
+
+Jose va a mover **todos los estantes de una bodega a otra**: bajar y sacar todo
+de A, B, C, P, O, X, y reinstalarlos en otro orden. Los estantes se quedan con
+las mismas letras —A, B, C, D y O— pero **A tendrá 10 bays y las demás 5 cada
+una**. Nada de esto está arreglado todavía. Está **anotado y verificado**, con
+una sugerencia cada uno, y la decisión es suya.
+
+---
+
+## 🟠 MU-01 · Los topes de deriva: elegimos la tanda. **No se ha hecho nada**
+
+**Dónde:** `tools/test-escala.js`, `tools/test-espaciado.js`.
+
+Son dos pruebas que cuentan cuántas medidas sueltas hay escritas a mano en el
+CSS en vez de salir de la escala (`--esp-1`, `--esp-2`…) y del tamaño de letra.
+Tienen un número máximo escrito dentro, y la v16.4 lo pasó: **están rojas por
+contar, no porque nada se vea mal.**
+
+**Hay dos formas de cerrarlas** y Jose eligió:
+
+> *«OK ANOTA QUE ELEGIMOS LA TANDA, PERO NO HAGAS NADA AUN.»*
+
+- **Subir el tope** (lo rápido): dos números, un minuto, y la prueba vuelve a
+  verde sin que nada mejore. Es renunciar a la prueba.
+- **La tanda** (lo elegido): pasar las medidas sueltas a la escala de verdad,
+  en una sola versión dedicada a eso, y dejar el tope como está.
+
+**Lo que hace falta antes de empezarla:** las dos pruebas tienen que correr en
+un navegador de verdad sobre `_site/`, porque el riesgo de la tanda no es
+romper una prueba — es **mover un pixel en una pantalla que nadie vuelve a
+mirar**. Primero las capturas de antes, luego el cambio, luego las de después.
+
+**Estado: esperando su «hazlo».**
+
+---
+
+## 🔴 MU-02 · Un cambio en Ajustes no repinta las otras pestañas de Ajustes
+
+> *«SI ELIMINO UN MATERIAL EN SETTINGS, Y LUEGO VOY A LOCATIONS ESA LOCACION AUN
+> NO ACTUALIZA, DEBEMOS ACTUALIZAR TODO PERO, UNA CORRECCION, DEBEMOS ACTUALIZAR
+> TODO, PRIMERO LO QUE EL USUARIO ESTA VIENDO, LUEGO LO DEMAS, ASI TODO SE
+> ACTUALIZA SIN TENER QUE SALIR Y VOLVER A ENTRAR.»*
+
+**Encontrado, y la causa es de una línea.** `Index_v3_fixed.html` ~9458:
+
+```js
+var _TAB_RENDERS = {
+  dashboard: …, movements: …, projects: …, warehouse: …, incoming: …
+};
+```
+
+**Son cinco. `settings` no está.** Y `renderAll()` hace exactamente esto:
+marca sucias **las pestañas del mapa** y repinta la activa. Las de Ajustes
+—Locations, Materials, Packs, Users, PMs, System— **no están en el mapa, así
+que ni se marcan sucias ni se repintan nunca.** La única cosa que las pone al
+día es recargar la página entera.
+
+Y los datos **sí llegan**: `_matCall` termina con
+`loadDataFromGoogle(true, true)`, que se trae el almacén nuevo. Lo que no pasa
+es el repintado. Es otra vez **dos cosas que tienen que coincidir sin que nada
+lo obligue**: una lista de cinco pestañas escrita a mano, y once pantallas que
+deberían estar en ella.
+
+**Un detalle que corregir de lo que yo le dije dos veces:** en Ajustes →
+Materials **no hay botón de borrar un material entero** — hay *Rename*,
+*Category* y *Merge* (`_matCall`, ~22231), y aparte *Forget this pack*. Pero eso
+no cambia nada del hallazgo: **los tres cambian lo que hay en una locación**, y
+ninguno repinta Locations. Lo que él vio es real; lo que no existe es el botón
+que él creía haber pulsado.
+
+**Su corrección es la parte importante, y es una regla, no un arreglo:**
+*primero lo que el usuario está viendo, luego lo demás.* Eso ya es la mitad de
+lo que hace `renderAll` (repinta la activa, marca sucias las otras). Lo que
+falta es que **las de Ajustes entren en ese reparto**.
+
+**Sugerencia (una versión pequeña, sin tocar ninguna pantalla):** meter los
+paneles de Ajustes en `_TAB_RENDERS` con su propia función de repintado, y que
+entrar en un panel compruebe su marca de sucio igual que lo hace una pestaña.
+Es un registro más y seis funciones de una línea. **Y la prueba que lo ata:**
+una que recorra los paneles de Ajustes y falle si alguno no está en el mapa —
+porque si no, el panel número doce volverá a quedarse fuera.
+
+---
+
+## 🔴 MU-03 · El movimiento masivo tiene que ser de CUALQUIER locación a CUALQUIER locación
+
+> *«AQUI DEBES RECORDAR QUE NO NECESARIAMENTE ES P EN D SINO TAMBIEN PUEDE SER
+> A1A EN B1A, O P1C EN C3B, O ASI, DEBEMOS MANEJAR CUALQUIER MOVIMIENTO ENTRE
+> LOCACIONES.»*
+
+Anotado, y me corrige bien: yo lo había descrito como *«vaciar el estante P en
+el D»*, de estante a estante. **No es eso.** La unidad real es el **bay**:
+`A1A → B1A`, `P1C → C3B`, y cualquier par.
+
+**Hoy la app lo puede hacer** —es lo que hace REASSIGN, uno por uno— y por eso
+esto no es un fallo, es trabajo a mano: cada material de cada bay es un
+formulario. En su bodega de hoy eso son **~48 formularios**, y con la mudanza
+serán muchos más, porque cada pallet se toca dos veces (ver MU-05).
+
+**Sugerencia (sigue siendo la misma, con el alcance corregido):** un «Move
+everything» que tome **un origen y un destino, ambos a nivel de bay**, enseñe la
+lista de lo que hay dentro con sus cantidades, deje **quitar líneas** de la lista
+antes de confirmar, y escriba **un REASSIGN por línea** en una sola llamada. El
+origen y el destino salen del mismo desplegable de locaciones, sin reglas sobre
+qué letra puede ir a qué letra.
+
+**Lo que la prueba tiene que ejecutar es el motor, no un doble:** `A1A → B1A` y
+`P1C → C3B`, no sólo «origen → destino». Y tiene que comprobar que **las
+reservas del origen se sueltan** (`_soltarCandadoPorReasignacion_`) y que el
+coste viaja con las unidades, igual que en el REASSIGN de uno.
+
+**Estado: propuesto, esperando su «hazlo».**
+
+---
+
+## 🟠 MU-04 · Las fotos: hoy son fotos DEL ESTANTE, y sólo cabe una
+
+> *«LO DE LAS FOTOS DE LOS ESTANTES NO ES TAN EXACTA… QUIERO PODER PONER UNA
+> FOTO EN UNA LOCACION PERO QUE NO NECESARIAMENTE ES UNA FOTO DE LA LOCACION
+> SINO UNA FOTO DEL MATERIAL… CUANDO PONES 3 OPCIONES PARA LAS FOTOS PORQUE HAY
+> 3 LUGARES ESTAS CERRANDO LAS POSIBILIDADES, NO QUIERO QUE APAREZCAN ESAS COSAS
+> SINO SOLO UN ICONO DONDE PODAMOS VER TODAS LAS FOTOS DE LO QUE HAY.»*
+
+Se entiende perfectamente, y **hay un fallo detrás de su queja que él todavía no
+ha visto.** `Index_v3_fixed.html` ~6707:
+
+```js
+var rackPhotos = {}; // { LOCATION_UPPER: { url, uploadedBy, uploadedAt } }
+```
+
+**La foto está colgada de la LOCACIÓN, y cabe UNA.** De ahí salen las dos cosas
+que le molestan:
+
+- **Las tres tarjetas** (su captura: WINDOW SCREEN con A5C·117, A6C·110,
+  C1B·8) no son tres sitios para fotos. Son **una tarjeta por estante en el que
+  hay ese material** (~10213: `racks.map(…)`). Si el material está en seis
+  estantes, salen seis tarjetas.
+- **Y lo grave:** si sube la foto de esos WINDOW SCREEN sobre A5C, esa foto
+  pasa a ser **«la foto del estante A5C»** — y aparecerá en la ficha de
+  **cualquier otro material que esté en A5C**, con el nombre de A5C debajo.
+  Hoy la app no tiene dónde guardar «foto de este material en este estante».
+
+**Sugerencia:** cambiar la forma del dato antes que la pantalla. `RACK_PHOTOS`
+pasa de **una fila por locación** a **una fila por foto**, con locación,
+material (vacío = foto del estante, como hoy) y quién y cuándo. Con eso:
+
+- caben **varias** fotos en una locación;
+- una foto puede ser **del material** y no del estante, que es lo que pide;
+- y la pantalla se vuelve lo que él describe: **un solo icono** `📷 n` en la
+  fila, y al pulsarlo **todas** las fotos de ese material en un visor, sin
+  tarjetas por estante.
+
+Las fotos de hoy entran sin tocarlas: una fila por locación, con el material
+vacío, es exactamente el caso de hoy.
+
+**Y hay que mirar `forgetRackPhotos_`** (`Code_v3_fixed.gs` ~15944) antes de
+hacerlo: borra las fotos de una locación que se va. Con fotos de material
+dentro, hay que decidir si una foto del material se tira con el estante o
+sobrevive. **Mi opinión: sobrevive y se queda sin locación** — es una foto de
+un material, y el estante ya no existe.
+
+**Estado: propuesto, esperando su «hazlo».**
+
+---
+
+## 🔴 MU-05 · «¿Cómo creo otras locaciones si llevan los mismos nombres en otro lugar?»
+
+> *«COMO PUEDO CREAR OTRAS LOCACIONES SI LLEVAN LOS MISMOS NOMBRES EN OTRO
+> LUGAR?»*
+
+Pregunta buena, y **deja ver que mi consejo anterior estaba mal.** Yo le dije
+*«crea los bays nuevos ANTES de bajar un solo pallet»*, y eso no se puede hacer
+cuando el nombre nuevo es el mismo que el viejo. Lo que verifiqué en el código:
+
+1. **La app no sabe dónde está un estante físicamente. Sólo sabe su nombre.**
+   La lista de locaciones es una columna de texto en CONFIG
+   (`saveLocationLayout`, ~15794) y cada movimiento guarda su locación **como
+   texto**, no como un enlace.
+2. **No puede haber dos locaciones con el mismo nombre a la vez.** El nombre es
+   la clave: `seen[key]` compara en mayúsculas y **se come la segunda sin
+   avisar** (~15804). No hay «A1A de la bodega vieja» y «A1A de la nueva».
+3. **No se puede borrar ni renombrar un bay que todavía tiene material.**
+   `locationBlockReason_` lo para con tres motivos: tiene unidades, tiene una
+   reserva, o una reserva lo nombra como destino permitido. Y **renombrar entra
+   por la misma puerta**: el nombre viejo desaparece de la lista, así que
+   `removedLocations_` lo cuenta como borrado y lo bloquea igual.
+4. **Renombrar NO reescribe los movimientos.** El dicho del propio código:
+   *«existing movements keep the name they were recorded with».* Por eso el
+   bloqueo de (3) existe: sin él, el material se quedaría contado bajo un
+   nombre que ya no ofrece ningún desplegable.
+
+**La respuesta, entonces: el choque de nombres sólo existe donde el nombre viejo
+y el nuevo tienen que vivir A LA VEZ.** Y eso pasa únicamente mientras el
+material está en el bay viejo y el nuevo ya hace falta.
+
+**Lo que NO hace falta tocar:** un bay que se queda con su nombre —A1A antes,
+A1A después— **no necesita ningún movimiento**, aunque el acero haya cruzado la
+ciudad. La app no se enteró de la mudanza y no tiene por qué.
+
+**Sugerencia — se puede hacer HOY, sin ninguna función nueva, con un nombre de
+paso:**
+
+1. Crear **una** locación de paso, nombre nuevo que no choque: `FLOOR`,
+   `STAGING`, `TRUCK`. Sale en el desplegable como cualquier otra.
+2. **Bajar sólo UN estante al suelo** —el A, que es el que cambia de 5 a 10
+   bays— moviendo su material a `FLOOR`.
+3. Ahora todos los bays de A están vacíos, así que **se pueden borrar los que
+   sobran y crear los nuevos** (A1A…A10C). Sin choque: los viejos se van en el
+   mismo guardado en que entran los nuevos.
+4. Reinstalar los estantes de verdad.
+5. **Todo lo demás se mueve bay a bay, UNA sola vez:** B1A → A3C, P1C → C3B, lo
+   que toque. El destino ya existe con su nombre final.
+6. Vaciar `FLOOR` hacia los bays nuevos y borrarla — está vacía, así que la
+   puerta la deja ir.
+
+**Por qué ese orden y no otro:** bajar un solo estante al suelo es lo que hace
+que **sólo ese** material se toque dos veces. Si baja los seis al suelo, paga
+dos movimientos por pallet en toda la bodega.
+
+**Y aquí es donde MU-03 se paga solo:** los pasos 2, 5 y 6 son, hoy, un
+formulario por material. Con el «Move everything» son un origen, un destino y
+un botón.
+
+**Estado: la ruta está verificada y se puede empezar cuando quiera. Si quiere
+MU-03 antes de la mudanza, eso cambia el orden del trabajo, y es su decisión.**

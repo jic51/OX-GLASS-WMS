@@ -14,8 +14,16 @@ locaciones? ¿O hace falta algo más para hacerlo?"*
 **No. Hoy hay que hacerlo material por material, y falta una cosa concreta.**
 
 Lo que la app tiene es un traslado **de un material** con varios pares
-«estante de origen → estante de destino». Lo que tu mudanza necesita es el
-revés: **un estante entero → otro estante**, con todo lo que haya dentro.
+«locación de origen → locación de destino». Lo que tu mudanza necesita es el
+revés: **una locación entera → otra locación**, con todo lo que haya dentro, y
+con **cualquier par de bays** — `A1A → B1A`, `P1C → C3B` — no sólo estante a
+estante.
+
+**Y hay una segunda pregunta tuya que cambia el orden del trabajo:** *«¿cómo
+creo otras locaciones si llevan los mismos nombres en otro lugar?»*. No se
+puede: **en la app no pueden existir dos locaciones con el mismo nombre a la
+vez.** La ruta que sí funciona está en el paso 2 de más abajo, y se puede hacer
+hoy sin ninguna función nueva.
 
 **Pero hay una buena noticia y conviene decirla primero: la app no te va a
 dejar romper nada.** Borrar o renombrar un estante que todavía tiene material
@@ -48,9 +56,14 @@ teléfono, mientras bajas pallets.
 
 ## Lo que falta, y es una sola cosa
 
-### «Vaciar un estante en otro»
+### «Vaciar una locación en otra» — de CUALQUIERA a CUALQUIERA
 
-Eliges **estante de origen** y **estante de destino**. La app lista **todo lo
+Lo había escrito como *«vaciar el estante P en el D»*, de estante a estante, y
+Jose lo corrigió: **la unidad es el bay, y el par puede ser cualquiera.**
+`A1A → B1A`, `P1C → C3B`, `D2B → A7C`. Sin reglas sobre qué letra puede ir a
+qué letra: el origen y el destino salen del **mismo desplegable de locaciones**.
+
+Eliges **locación de origen** y **locación de destino**. La app lista **todo lo
 que hay en el origen** con su cantidad **ya puesta**, y tú:
 
 - **Destildas** lo que no se mueve (o lo que va a otro sitio).
@@ -70,8 +83,11 @@ todos o no se guarda ninguno. Media mudanza registrada es peor que ninguna.
 | El bloqueo de las reservas | `enforceMaterialLock_`, que ya se aplica a cada fila |
 
 **Tamaño: mediano.** Un día con su prueba — y la prueba tiene que **ejecutar el
-motor de stock** y comprobar que después de vaciar P en D, P queda a cero y D
-tiene exactamente lo que tenía P. Ni una unidad de diferencia.
+motor de stock**, no un doble, con **pares de bays de verdad** (`A1A → B1A` y
+`P1C → C3B`, no sólo «origen → destino»): después de vaciar, el origen queda a
+cero y el destino tiene exactamente lo que tenía el origen. Ni una unidad de
+diferencia. Y tiene que comprobar que **las reservas del origen se sueltan** y
+que el coste viaja con las unidades, igual que en el REASSIGN de uno.
 
 ### Y dos cosas que hay que decidir dentro, porque son de almacén
 
@@ -92,18 +108,44 @@ tiene exactamente lo que tenía P. Ni una unidad de diferencia.
 
 Esto es sobre el almacén, no sobre el código, y es lo que haría yo en tu sitio:
 
-### 1 · Antes de bajar un solo pallet: crea los estantes nuevos
+### 1 · Lo que yo te dije antes estaba mal, y tú lo viste
 
-En **Ajustes → Locations**, añade los bays nuevos: `A1`…`A10` y los cinco de
-cada uno de los demás, con los nombres que vayan a tener de verdad. **No borres
-nada todavía.** Durante la mudanza van a existir los viejos y los nuevos a la
-vez, y eso está bien: es lo que de verdad está pasando.
+Te dije *«crea los bays nuevos antes de bajar un solo pallet»*. **No se puede**,
+y tu pregunta es exactamente por qué: *«¿cómo creo otras locaciones si llevan
+los mismos nombres en otro lugar?»*. Tus estantes nuevos se llaman **A, B, C, D
+y O** — las mismas letras de ahora. Y en la app **no pueden existir dos
+locaciones con el mismo nombre a la vez**: el nombre ES la clave, y al guardar
+la lista la segunda se descarta sin avisar.
 
-### 2 · Mueve estante por estante, y en el mismo orden en que bajes los pallets
+Lo que sí es verdad, y es la parte que te ahorra trabajo: **la app no sabe dónde
+está un estante. Sólo sabe su nombre.** Así que **un bay que se queda con su
+nombre —A1A antes, A1A después— no necesita ningún movimiento**, aunque el acero
+haya cruzado la ciudad. El choque de nombres sólo existe donde el nombre viejo y
+el nuevo tienen que vivir **a la vez**, y eso pasa únicamente mientras el
+material está en el bay viejo y el nuevo ya hace falta.
 
-Vaciar **un estante entero de una vez** y comprobarlo antes de pasar al
-siguiente. Si algo no cuadra, el error está en un estante, no repartido entre
-seis.
+### 2 · El orden que sí funciona: UN nombre de paso, y UN solo estante al suelo
+
+1. En **Ajustes → Locations**, crea **una** locación de paso con un nombre que no
+   choque con nada: `FLOOR`, `STAGING` o `TRUCK`. Sale en el desplegable como
+   cualquier otra.
+2. **Baja al suelo SÓLO el estante A** —el que cambia de 5 bays a 10— moviendo
+   su material a `FLOOR`.
+3. Con los bays de A vacíos, ya **puedes borrar los que sobran y crear los
+   nuevos** (A1A…A10C) en el mismo guardado. Sin choque: los viejos salen de la
+   lista en el momento en que entran los nuevos.
+4. Reinstala los estantes de verdad.
+5. **Todo lo demás se mueve bay a bay, UNA sola vez:** `B1A → A3C`, `P1C → C3B`,
+   lo que toque. El destino ya existe con su nombre final.
+6. Vacía `FLOOR` hacia los bays nuevos y bórrala. Está vacía, así que la app te
+   deja.
+
+**Por qué un solo estante al suelo:** así **sólo ese** material se toca dos
+veces. Si bajas los seis al suelo, pagas dos traslados por pallet en toda la
+bodega.
+
+Y vacía **un bay entero de una vez**, comprobándolo antes de pasar al siguiente.
+Si algo no cuadra, el error está en un bay, no repartido entre seis.
 
 ### 3 · Y lo que NO hay que hacer, que es lo importante
 
