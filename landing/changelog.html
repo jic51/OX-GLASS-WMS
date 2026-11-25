@@ -108,6 +108,28 @@
     <!-- N-07 · El estante malo se ve antes de mandar, y elegir ya es contestar. -->
     <!-- N-08 · La idea de la fila fantasma es de Jose. N-09/10/11 vienen del mismo repaso. -->
     <!-- H-09 · La X de un documento borraba el enlace y dejaba el fichero. -->
+    <!-- La fila gris pedia movBody, que no existe. Roto desde la v15.8. -->
+    <div class="entry" id="v16-4">
+      <span class="ver">v16.4</span>
+      <span class="tag fix">Fix</span>
+      <h3>The grey row really appears now, and the saving notice has a spinner</h3>
+      <p><b>The grey placeholder row never appeared.</b> It was announced in v15.8 and it was
+         broken from the first day: the code looked for a part of the page that does not exist,
+         found nothing, and gave up quietly &mdash; so all you got was the corner notice and then,
+         several seconds later, the real row. One line.</p>
+      <p><b>What matters is why no test caught it for three versions.</b> The test that exercises
+         this path passed every time, because its stand-in page answers &ldquo;yes, here it
+         is&rdquo; to any part of the page you ask for. It was measuring that a function had been
+         called, not that anything had appeared. The new test <b>opens a browser, saves, and looks
+         at the screen</b> &mdash; the row, its size, and whether its pulse is actually running.
+         A stand-in cannot answer that.</p>
+      <p><b>And the saving notice has a spinning ring.</b> A still icon reads as a label, not as
+         motion, and moving is the one thing a &ldquo;working on it&rdquo; state has to do. It is
+         the same ring the buttons use, not a second one &mdash; two different spinners in one app
+         would be two things that have to look alike with nothing making them.</p>
+      <p class="meta">Nothing else changed in this version. If the silent seconds come back after
+         it, the cause is elsewhere and worth reporting.</p>
+    </div>
     <!-- Jose: "siempre vuelven a la bodega, haz el atajo pequeno". -->
     <div class="entry" id="v16-3">
       <span class="ver">v16.3</span>

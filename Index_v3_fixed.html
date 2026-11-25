@@ -3687,6 +3687,10 @@
     .toast.err {border-top-color:var(--red)}
     .toast.warn{border-top-color:var(--yellow)}
     .toast.info{border-top-color:var(--accent)}
+    /* El aviso que trabaja: mismo color que un aviso informativo, porque es lo
+       que es, y su icono es el anillo que gira. */
+    .toast.cargando{border-top-color:var(--accent)}
+    .toast.cargando .toast-icon{display:inline-flex;align-items:center;color:var(--accent)}
     .toast-icon{font-size:1rem;flex-shrink:0;margin-top:.05rem}
     .toast-msg{flex:1;line-height:1.4}
     /* «× 4» cuando el mismo aviso vuelve a pasar. Discreto a propósito: lo que
@@ -6559,7 +6563,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '16.3';
+var APP_VERSION = '16.4';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -6571,7 +6575,7 @@ var APP_VERSION = '16.3';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '2d401f63';
+var APP_BUILD = '05c42a57';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -23087,8 +23091,34 @@ function _falloDeEntorno(err){
  */
 var _guardando = null;
 
+/* ── N-08, EL FALLO QUE JOSE VIO EL 25/11 ────────────────────────────────────
+ *
+ * *"No aparece. Al guardar el entry la ventana se cierra, aparece el toast de
+ * guardando y luego de varios segundos aparece la fila de movimiento junto con
+ * el toast de los label. Nunca aparece la fila gris de carga."*
+ *
+ * **Y la causa es de una línea: pedía `movBody`, y ese elemento no existe.**
+ * La tabla de movimientos se pinta dentro de `#tableContainer` y su `<tbody>`
+ * **no tiene id** — nunca lo tuvo. Así que esto devolvía `null` en cada
+ * guardado, se salía por la primera línea, y lo único que quedaba era el aviso
+ * de la esquina. Exactamente lo que él describe.
+ *
+ * ── Y LO QUE DE VERDAD HAY QUE APRENDER AQUÍ, QUE NO ES EL ID ───────────────
+ *
+ * La prueba de esto (`test-cerrar-y-seguir`) **pasó en verde las dos
+ * versiones**, porque su DOM de mentira contesta a `getElementById` con un
+ * elemento para CUALQUIER id que se le pida. El doble contestaba lo que la
+ * prueba quería oír mientras el producto no encontraba nada.
+ *
+ * Es la cuarta vez este mes, y la primera que llega a sus manos. Así que el
+ * arreglo de verdad no es esta línea: es que la prueba **abra un navegador y
+ * mire si la fila aparece en la pantalla**. Ver `test-fila-fantasma.js`.
+ *
+ * Se busca por el `<tbody>` DENTRO del contenedor, que es lo que de verdad
+ * existe — y no se le pone un id para que nadie más tenga que acordarse de
+ * mantener dos cosas en paz. */
 function _filaFantasma(texto){
-  var tb = document.getElementById('movBody');
+  var tb = document.querySelector('#tableContainer tbody');
   if (!tb) return null;
   var primera = tb.querySelector('tr');
   var cols = primera ? primera.children.length : 8;
@@ -23103,7 +23133,9 @@ function _filaFantasma(texto){
 function _marcarGuardando(resumen){
   _limpiarGuardando();
   _guardando = {
-    aviso: showToast('Saving — ' + resumen, 'info', 120000),
+    // `cargando`, no `info`: el anillo que gira es lo que dice que está
+    // trabajando. Ver el mapa de iconos en showToast.
+    aviso: showToast('Saving — ' + resumen, 'cargando', 120000),
     fila:  _filaFantasma(resumen)
   };
 }
@@ -33053,7 +33085,22 @@ function _toastIgual(msg, type){
 function showToast(msg, type, duration, accion) {
   type     = type     || 'ok';
   duration = duration || 3500;
-  var icons = { ok:'✅', err:'❌', warn:'⚠️', info:'ℹ️' };
+  /* ── EL ANILLO DE CARGA, PEDIDO POR JOSE EL 25/11 ─────────────────────────
+   *
+   * *"El toast de guardando se vería mejor con un anillo de carga mientras se
+   * está creando el entry."*
+   *
+   * Tiene razón y el motivo es el mismo por el que el ⏳ de los botones se
+   * cambió por un anillo de verdad: **un icono quieto se lee como una etiqueta,
+   * no como movimiento**, y lo único que un estado de «estoy trabajando» tiene
+   * que hacer es moverse.
+   *
+   * Es `.btn-spin`, el MISMO anillo de los botones, no uno nuevo: se dibuja del
+   * color del texto que tenga al lado, así que vale igual en el aviso. Dos
+   * anillos distintos en la misma app serían dos cosas que tienen que
+   * parecerse sin que nada lo obligue. */
+  var icons = { ok:'✅', err:'❌', warn:'⚠️', info:'ℹ️',
+                cargando:'<span class="btn-spin" aria-hidden="true"></span>' };
 
   if (!(accion && accion.texto)) {
     var ya = _toastIgual(String(msg), type);
@@ -34714,6 +34761,16 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '16.4',
+    titulo: 'The grey row really appears now, and the saving notice has a spinner',
+    puntos: [
+      '<b>The grey placeholder row never appeared.</b> It was announced in v15.8 and it was broken from the first day: the code looked for a part of the page that does not exist, found nothing, and gave up quietly \u2014 so all you got was the corner notice and then, several seconds later, the real row. Fixed, and now a test <b>opens a browser and checks the row is on the screen</b>, with its size and its pulse, instead of trusting a stand-in that answered yes to everything.',
+      '<b>And the saving notice has a spinning ring</b>, because a still icon reads as a label and not as motion \u2014 and moving is the one thing a \u201cworking on it\u201d state has to do. It is the same ring the buttons use, not a second one.',
+      'Nothing else changed. If the six silent seconds come back after this, the problem is somewhere else and worth reporting.'
+    ],
+    antes:  'Announced, and broken from day one',
+    ahora:  'On the screen, and measured there' },
+
   { ver: '16.3',
     titulo: 'Material coming back from a job and changing hands is one action, not two',
     puntos: [
@@ -34751,19 +34808,6 @@ var NOVEDADES = [
     ],
     antes:  'A transfer, and the units kept the old name',
     ahora:  'They belong to the new job, and say where they came from' },
-
-  { ver: '16.0',
-    titulo: 'A delivery and its entry finally know about each other',
-    puntos: [
-      '<b>When you mark a delivery as arrived and make its entry, the app copies the delivery\u2019s details into the form \u2014 and that was the whole relationship.</b> From that moment they were two rows in two different sheets that happened to say the same thing, and correcting one never touched the other, because neither knew the other existed.',
-      '<b>And the half that cost us a missing delivery:</b> there was no way to ask which deliveries marked as arrived never got their entry. The only reminder was an orange card living in <i>one</i> browser \u2014 mark the delivery on the phone and the desktop never shows it; clear your site data and the reminder is gone with nothing left behind. That is exactly how one delivery ended up marked as arrived while existing neither in Movements nor in the stock.',
-      '<b>A movement now records which delivery it came from.</b> In Incoming, every arrived delivery says <b>\u2713 entry</b> \u2014 click it and the app takes you to the movement and lights it up \u2014 or <b>\u26a0 no entry</b> if nothing claims it.',
-      '<b>And the data check now looks for it.</b> Settings &rarr; System &rarr; Check data lists every delivery that arrived with no entry behind it, and every hold that is reserving a material with no movements left at all \u2014 which was quietly subtracting from an availability that was not there.',
-      '<b>What it will not do is correct the movement for you</b>, and that is deliberate. If the delivery said 24 and the entry recorded 22 because two arrived broken, changing the delivery to 25 must not put 25 in the warehouse: the warehouse has 22. And that quantity has already moved your stock. So the app says what it knows \u2014 <i>this delivery already has its entry; correcting the delivery does not change the movement</i> \u2014 and offers to show it. The person who knows whether 22 or 25 arrived decides.',
-      '<b>One more thing it will not do: accuse you.</b> A delivery marked as arrived before this version has nobody pointing at it, and that does not mean its entry is missing \u2014 it means the link did not exist yet. So until at least one entry carries the link, the data check says nothing at all about deliveries. A check that is wrong a hundred times on its first run is a check nobody opens twice.'
-    ],
-    antes:  'Nothing knew which entry a delivery became',
-    ahora:  'The row says it, and the check reads it' },
 
 ];
 

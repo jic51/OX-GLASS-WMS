@@ -346,8 +346,21 @@ m.seccion('en el navegador: el enlace se ve, y no propaga nada');
   check('el clic reutiliza la maquinaria que ya llevaba a una fila y la ' +
         'encendía, en vez de escribir una segunda',
     /_verLaEntradaDeLaEntrega[\s\S]{0,500}_showMovementRows\(/.test(sin));
-  check('al corregir una entrega que ya tiene entrada, se DICE',
-    /already has[\s\S]{0,120}correcting the delivery does not change the movement/.test(sin));
+  /* ── ESTA COMPROBACIÓN SE QUEDÓ HUÉRFANA EN LA v16.2 ──────────────────────
+   *
+   * Buscaba el texto del AVISO de la v16.0 —«this delivery already has its
+   * entry; correcting the delivery does not change the movement»— y la v16.2
+   * sustituyó ese aviso por el cuadro que pregunta. O sea: desde entonces
+   * buscaba una frase que la app ya no dice.
+   *
+   * Lo que se defiende sigue siendo lo mismo —que la app DIGA algo, en vez de
+   * dejar las dos cosas desalineadas en silencio— sólo que ahora lo dice
+   * preguntando. Así que se mide eso: que al guardar una entrega que ya tiene
+   * entrada se llame a la oferta. Las dos respuestas, el texto y lo que no se
+   * ofrece están medidos en el bloque de abajo. */
+  check('al corregir una entrega que ya tiene entrada, la app DICE algo — ' +
+        'preguntando, desde la v16.2',
+    /if \(id\) _ofrecerCorregirLaEntrada\(id, antesDeEditar, payload\);/.test(sin));
 
   /* ── LO QUE CAMBIÓ EL 23/11, Y POR QUÉ ESTA COMPROBACIÓN SE REESCRIBE ──────
    *

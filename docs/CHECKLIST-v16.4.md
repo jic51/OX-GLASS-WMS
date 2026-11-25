@@ -1,4 +1,9 @@
-# Lo que hay que revisar — una sola pasada, v16.3
+# Lo que hay que revisar — una sola pasada, v16.4
+
+> **Actualizado el 25/11.** La **v16.3** anunciaba la fila gris y **estaba
+> rota**: el código buscaba una parte de la página que no existe. Lo encontró
+> Jose probándola. En la **v16.4** aparece de verdad, y el aviso lleva anillo.
+> El punto 1 de abajo es lo que hay que volver a probar.
 
 Jose: *"al final dame lo que checkar."*
 
@@ -15,7 +20,7 @@ más duele si está roto.
 ## Antes de tocar nada — dos minutos que hacen comprobable el resto
 
 1. **Pega los dos archivos** (`Index_v3_fixed.html` y `Code_v3_fixed.gs`) y
-   abre la app. Abajo tiene que decir **v16.3**. Si dice otra cosa, lo demás no
+   abre la app. Abajo tiene que decir **v16.4**. Si dice otra cosa, lo demás no
    mide nada.
 2. **Apunta en un papel** el stock de **dos materiales** que vayas a tocar: lo
    disponible, lo que hay fuera, y en qué estantes. **El después no se puede
@@ -32,7 +37,10 @@ más duele si está roto.
 1. Haz una **entrada** y pulsa **Save to System**.
 2. **Al instante:** la ventana se cierra, **aparece una fila gris latiendo**
    arriba de la lista con el material y la cantidad, y abajo a la izquierda un
-   aviso dice *Saving*.
+   aviso dice *Saving* **con un anillo girando** al lado.
+   *(Esto es lo que estaba roto en la v16.3 y lo que encontraste. Si sigue sin
+   aparecer la fila, dímelo: significa que la causa es otra y la prueba nueva
+   no la está viendo.)*
 3. Cuando el servidor contesta, **la fila gris la sustituye la de verdad**.
 4. **Sería el fallo:** los seis segundos de silencio otra vez.
 

@@ -16,15 +16,32 @@ Esto es ese documento, y se actualiza **con cada versión**. Lo de arriba es lo
 
 ---
 
-> ## 👉 Si acabas de instalar la v16.3, empieza por `docs/CHECKLIST-v16.3.md`
+> ## 👉 Si acabas de instalar la v16.4, empieza por `docs/CHECKLIST-v16.4.md`
 >
-> Jose, 25/11: *"al final dame lo que checkar."* De la v15.8 a la v16.3 son seis
+> Jose, 25/11: *"al final dame lo que checkar."* De la v15.8 a la v16.4 son siete
 > versiones **y un solo archivo**, así que leer seis bloques es repetir trabajo.
 > Ese documento es **una sola pasada**, sin repetir nada, en el orden que yo
 > seguiría: primero lo que más duele si está roto.
 >
 > Lo de abajo se queda versión por versión, que es lo que sirve cuando algo
 > falla y hace falta saber de dónde viene.
+
+---
+
+## v16.4 — la fila gris, de verdad  🔴 *estaba rota desde la v15.8*
+
+1. Haz una **entrada** y pulsa Save.
+2. **Tiene que pasar:** la fila gris latiendo **al instante**, arriba de la
+   lista, con el material y la cantidad; y el aviso de *Saving* **con un anillo
+   girando**.
+3. **Lo que pasaba:** la fila no aparecía nunca. El código buscaba una parte de
+   la página que **no existe** (`movBody`) y se callaba. Lo anunciamos en la
+   v15.8 y estuvo roto tres versiones — y la prueba que recorre ese camino
+   pasaba en verde porque su página de mentira contesta «sí, aquí está» a
+   cualquier cosa que se le pida.
+4. **Si sigue sin aparecer, dímelo.** La prueba nueva abre un navegador de
+   verdad y mira la pantalla, así que si la fila no está, la causa es otra y
+   quiero saberla.
 
 ---
 

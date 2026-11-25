@@ -310,6 +310,97 @@ es exactamente para esto.
 
 ---
 
+## 📋 LO DEL 25/11 (tarde) — EL FALLO QUE LLEGÓ A SUS MANOS · v16.4
+
+### 🔴 N-08 · La fila gris nunca apareció, y la prueba decía que sí
+
+Jose, probando la v16.3: *"Pues no aparece. Al guardar el entry la ventana se
+cierra, aparece el toast de guardando… y luego de varios segundos aparece la
+fila de movimiento junto con el toast de los label en el mismo lugar que el
+toast de guardando. **Nunca aparece la fila gris de carga.**"*
+
+**La causa es de una línea.** `_filaFantasma` pedía
+`document.getElementById('movBody')`, y **ese elemento no existe ni existió
+nunca**: la tabla de movimientos se pinta dentro de `#tableContainer` y su
+`<tbody>` no tiene id. Así que devolvía `null` en cada guardado, se salía por la
+primera línea, y lo único que quedaba era el aviso de la esquina. Exactamente lo
+que él describe, y durante **tres versiones** (v15.8, v16.0 → v16.3).
+
+### 🔴 Y lo que de verdad hay que aprender, que no es el id
+
+`test-cerrar-y-seguir` ejercita este mismo camino y **pasó en verde las tres
+versiones**. Su DOM de mentira contesta a `getElementById` con un elemento para
+**cualquier** id que se le pida. El doble contestaba lo que la prueba quería oír
+mientras el producto no encontraba nada.
+
+> **Es la cuarta vez este mes que un doble tapa un fallo del lado que no se
+> ejecuta** —y la primera que llega a sus manos. Las otras tres las cacé yo
+> (`originProject` que el escritor tiraba, la hoja `RESERVATIONS` muerta, el
+> `movBody` de hoy). Esta no.
+>
+> **El arreglo de verdad no es la línea: es `tools/test-fila-fantasma.js`**, que
+> **abre un navegador, guarda, y mira si la fila está en la pantalla** — con su
+> alto, su ancho y su animación resuelta. Un DOM de mentira no puede decir si
+> una fila apareció; sólo si se llamó a una función. Y eso es lo que llevaba
+> midiendo.
+>
+> Su primera comprobación es, a propósito, que **`movBody` NO exista**: si
+> alguien lo crea mañana, esta prueba lo dice en vez de dejar dos caminos
+> posibles.
+
+### ✅ Y el anillo de carga, que lo pidió en el mismo mensaje
+
+*"El toast de guardando se vería mejor con un anillo de carga mientras se está
+creando el entry."* Tiene razón, y el motivo ya estaba escrito en este archivo
+cuando se cambió el ⏳ de los botones: **un icono quieto se lee como una
+etiqueta, no como movimiento**, y moverse es lo único que un estado de «estoy
+trabajando» tiene que hacer.
+
+Es `.btn-spin`, **el mismo anillo de los botones**, no uno nuevo: se dibuja del
+color del texto que tenga al lado. Dos anillos distintos en la misma app serían
+dos cosas que tienen que parecerse sin que nada lo obligue.
+
+### 🔧 Y tres rojas del BARRIDO que no eran del producto — el contenedor cambió
+
+El contenedor de trabajo se reconstruyó a mitad de la sesión y se llevó por
+delante tres cosas. Vale la pena dejarlo escrito porque **las tres parecían
+fallos del producto y ninguna lo era**, y distinguirlo es la mitad del trabajo
+de un barrido:
+
+1. **Faltaban dos dependencias** (`acorn` y `jsqr`) y la carpeta `_site/`, que
+   es un artefacto de compilación y no va en el repositorio. Cinco pruebas en
+   rojo por eso. Reinstaladas y reconstruida; nada que arreglar en el código.
+2. **El Chromium nuevo escribe el mismo valor con otro nombre.**
+   `test-responsive-polish` exigía `alignItems === 'flex-start'` y la versión
+   nueva serializa eso como **`flow-start`** — la escritura de la especificación
+   moderna. La CSS no cambió, la alineación no cambió, cambió cómo la escribe
+   el navegador.
+
+   > Y el arreglo **no** fue un `!== 'center'`, que era el atajo fácil y el
+   > equivocado: dejaría pasar un `stretch` o un `baseline`, que tampoco son lo
+   > que Jose pidió. Se aceptan las dos escrituras de **ese** valor y nada más.
+
+3. **Y una comprobación mía que se quedó huérfana en la v16.2.**
+   `test-atar-la-entrega` buscaba el texto del AVISO de la v16.0 —*«this
+   delivery already has its entry…»*— y la v16.2 sustituyó ese aviso por el
+   cuadro que pregunta. O sea: llevaba dos versiones buscando una frase que la
+   app ya no dice. Lo que defiende sigue igual —que la app DIGA algo en vez de
+   dejarlo en silencio— sólo que ahora lo dice preguntando, y eso es lo que mide.
+
+### 📋 Y la mudanza: `docs/LA-MUDANZA.md`
+
+*"¿La app actualmente puede manejar el movimiento masivo de materiales entre
+locaciones?"* **No** — hoy es un traslado por material y por estante, y la
+cantidad se escribe a mano. Lo que falta es una cosa concreta, «vaciar un
+estante en otro», y es mediana. **La buena noticia va primera en ese documento:
+la app no le va a dejar romper nada**, porque borrar o renombrar un estante con
+material dentro está bloqueado **en el servidor**.
+
+Con el orden que yo seguiría para la mudanza de verdad, y las dos cosas que hay
+que decidir dentro (qué pasa con las reservas y con las fotos de los estantes).
+
+---
+
 ## 📋 LO DEL 25/11 — lo que Jose decidió, y lo que hay que hablar
 
 ### ✅ 1 · «Siempre vuelven a la bodega, haz el atajo pequeño» — v16.3
@@ -608,7 +699,7 @@ porque no miente sobre el producto, miente sobre sí misma.
 
 ---
 
-## 📋 LO DEL 18/11 · N-08…N-13 ✅ **v15.8** *(N-12 y N-13 pendientes de una respuesta)*
+## 📋 LO DEL 18/11 · N-08…N-13 ✅ **v15.8** *(N-13 cerrada el 25/11; N-12 sigue esperando)*
 
 ### 🔴 N-08 · Siete segundos de silencio después de guardar — y la idea del arreglo es de Jose
 
@@ -686,11 +777,38 @@ que leer.
 Materiales en Settings no se actualiza en tiempo real, lo que no permite
 eliminar la locación inmediatamente."*
 
-**No lo he arreglado porque no sé por qué camino lo borró.** No hay en la
-pestaña de Materiales ninguna acción de borrar un material entero — lo que hay
-es borrar sus movimientos. Preguntado.
+**No lo he arreglado porque no sé por qué camino lo borró**, y el 25/11 dijo que
+**ya no se acuerda**. Así que lo reformulo para que se pueda contestar sin
+recordar aquel día — o se cierra.
 
-### 🟡 N-13 · «El icono y botón de las notificaciones desapareció» — NO LO BORRÓ NADIE
+**Por qué hace falta saber el camino.** En la pestaña de Materiales **no hay
+ninguna acción de borrar un material entero**. Lo que hay es:
+
+| Camino | Qué hace |
+|---|---|
+| **Materiales → borrar sus movimientos** | Los manda a la papelera. El material deja de tener stock pero **sigue en la lista** |
+| **Movements → 🗑 en una fila** | Lo mismo, de uno en uno |
+| **Ajustes → Locations → borrar la locación** | **Bloqueado** si todavía tiene material |
+
+Y la queja era que **la ventana de Materiales no se refresca**, lo que no deja
+borrar la locación a continuación. Eso encaja con el primer camino: borras los
+movimientos, el stock baja a cero, y la lista de Materiales sigue enseñando el
+material con su estante — así que al ir a borrar la locación, la app dice que
+todavía tiene material.
+
+**Si fue eso, es el patrón D de `docs/LO-QUE-TIENE-QUE-CUADRAR.md`:** dos
+pantallas que leen lo mismo y sólo una se repinta. Y el arreglo es pequeño.
+
+**Lo que hace falta para arreglarlo con seguridad:** que vuelva a pasar una vez
+y me diga qué botón pulsó. **Si no vuelve a pasar en la mudanza —donde va a
+borrar estantes de verdad— se cierra**, porque arreglar a ciegas una pantalla
+que se repinta es la forma de romper la que sí funcionaba.
+
+### ✅ N-13 · «El icono y botón de las notificaciones desapareció» — **CERRADA**
+
+> **Jose, 25/11: *"con una entrega llegada sin entry sí aparece, entonces creo
+> que está bien."*** Era lo que dije: la campana se esconde sola cuando no hay
+> nada que contar, y aparece en cuanto lo hay. Nada que arreglar.
 
 Jose, 19/11: *"algo para anotar, el icono y botón de las notificaciones
 desapareció, ¿qué pasó?"*

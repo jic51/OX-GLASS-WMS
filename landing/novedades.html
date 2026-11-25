@@ -110,6 +110,33 @@
     <!-- N-07 · El estante malo se ve antes de mandar, y elegir ya es contestar. -->
     <!-- N-08 · La idea de la fila fantasma es de Jose. N-09/10/11 vienen del mismo repaso. -->
     <!-- H-09 · La X de un documento borraba el enlace y dejaba el fichero. -->
+    <!-- La fila gris pedia movBody, que no existe. Roto desde la v15.8. -->
+    <div class="entry" id="v16-4">
+      <span class="ver">v16.4</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>La fila gris aparece de verdad, y el aviso de guardando lleva anillo</h3>
+      <p><b>La fila gris no apareci&oacute; nunca.</b> Se anunci&oacute; en la v15.8 y estaba
+         rota desde el primer d&iacute;a: el c&oacute;digo buscaba una parte de la p&aacute;gina
+         que no existe, no encontraba nada y se callaba &mdash; as&iacute; que lo &uacute;nico que
+         quedaba era el aviso de la esquina y, varios segundos despu&eacute;s, la fila de verdad.
+         Una l&iacute;nea.</p>
+      <p><b>Lo que importa es por qu&eacute; ninguna prueba lo cogi&oacute; en tres
+         versiones.</b> La prueba que recorre este camino pas&oacute; todas las veces, porque su
+         p&aacute;gina de mentira contesta &laquo;s&iacute;, aqu&iacute; est&aacute;&raquo; a
+         cualquier parte de la p&aacute;gina que se le pida. Med&iacute;a que se hab&iacute;a
+         llamado a una funci&oacute;n, no que algo hubiera aparecido. La prueba nueva <b>abre un
+         navegador, guarda y mira la pantalla</b>: la fila, su tama&ntilde;o y si su latido
+         est&aacute; corriendo de verdad. Eso una p&aacute;gina de mentira no lo puede
+         contestar.</p>
+      <p><b>Y el aviso de guardando lleva un anillo que gira.</b> Un icono quieto se lee como una
+         etiqueta y no como movimiento, y moverse es lo &uacute;nico que un estado de &laquo;estoy
+         trabajando&raquo; tiene que hacer. Es el mismo anillo de los botones, no uno nuevo
+         &mdash; dos anillos distintos en una app ser&iacute;an dos cosas que tienen que parecerse
+         sin que nada lo obligue.</p>
+      <p class="meta">En esta versi&oacute;n no cambi&oacute; nada m&aacute;s. Si los segundos de
+         silencio vuelven despu&eacute;s de esto, la causa est&aacute; en otro sitio y merece la
+         pena contarlo.</p>
+    </div>
     <!-- Jose: "siempre vuelven a la bodega, haz el atajo pequeno". -->
     <div class="entry" id="v16-3">
       <span class="ver">v16.3</span>

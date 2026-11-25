@@ -67,8 +67,23 @@ function check(label, cond) {
     await page.waitForTimeout(700);
     check('topbar-brand is a column, not a row', await page.evaluate(() =>
       getComputedStyle(document.querySelector('.topbar-brand')).flexDirection) === 'column');
-    check('left-aligned, not centred', await page.evaluate(() =>
-      getComputedStyle(document.querySelector('.topbar-brand')).alignItems) === 'flex-start');
+    /* ── DOS NOMBRES PARA EL MISMO VALOR, Y NO ES UN ATAJO ────────────────────
+     *
+     * Estaba clavado en `'flex-start'` y se puso rojo al cambiar el Chromium
+     * del contenedor: la versión nueva **serializa el mismo valor como
+     * `flow-start`**, que es la escritura de la especificación moderna de
+     * alineación. La CSS no cambió, el producto no cambió, y la alineación es
+     * la misma — cambió cómo la escribe el navegador.
+     *
+     * Así que se aceptan las dos escrituras, y **no se afloja la
+     * comprobación**: lo que esto promete es «a la izquierda, NO centrado», y
+     * `center` sigue fallando igual. Un `!== 'center'` habría sido el atajo
+     * fácil y el equivocado: dejaría pasar un `stretch` o un `baseline`, que
+     * tampoco son lo que Jose pidió. */
+    const alin = await page.evaluate(() =>
+      getComputedStyle(document.querySelector('.topbar-brand')).alignItems);
+    check('left-aligned, not centred (' + alin + ')',
+      alin === 'flex-start' || alin === 'flow-start');
     check('the version tag is hidden, not showing v9.xx in the topbar', await page.evaluate(() =>
       getComputedStyle(document.getElementById('jsVersionTag')).display) === 'none');
     check('the version is still available one click away, in the account menu', await page.evaluate(() =>
