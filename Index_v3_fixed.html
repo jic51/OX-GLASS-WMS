@@ -6430,14 +6430,28 @@
     <input type="hidden" id="raRack">
     <input type="hidden" id="raFromProject">
     <input type="hidden" id="raUnit">
+    <!-- DE DÓNDE VIENEN. Jose, 23/11: «¿hay una forma de hacer el reassign sin
+         tener que hacer return primero?» — sí, ésta: se dice que vienen de una
+         obra y la app escribe la devolución y la reasignación en una sola
+         acción. La devolución se escribe DE VERDAD, porque esas ventanas
+         volvieron y eso es un hecho del almacén. -->
+    <div class="field" id="raDesdeField" style="display:none">
+      <label>Where they are now</label>
+      <select id="raDesde" onchange="_raSyncDesde()">
+        <option value="rack">On the rack (in the warehouse)</option>
+        <option value="site">Coming back from a job</option>
+      </select>
+    </div>
     <div class="form-grid">
       <div class="field">
         <label>How many <span id="raAvail" style="font-weight:400;color:var(--muted)"></span></label>
         <input type="number" id="raQty" min="1" step="1" inputmode="numeric">
       </div>
       <div class="field">
-        <label>On rack</label>
-        <input type="text" id="raRackShow" disabled>
+        <label id="raRackLbl">On rack</label>
+        <!-- Con la obra de origen, el estante se puede ELEGIR: es a dónde
+             vuelven. Sin ella no, porque es donde ya están. -->
+        <input type="text" id="raRackShow" list="rackListDest" disabled>
       </div>
     </div>
     <div class="form-grid" style="margin-top:.6rem">
@@ -6462,6 +6476,8 @@
     </div>
     <!-- La reserva, dicha ANTES de pulsar. Soltarla es parte de la operación,
          así que no puede ser una sorpresa posterior. -->
+    <p id="raNota" style="display:none;font-size:.78rem;color:var(--muted);
+       background:var(--bg);border-radius:8px;padding:.5rem .65rem;margin:.75rem 0 0"></p>
     <p id="raLockWarn" style="display:none;font-size:.78rem;color:var(--yellow);
        background:var(--yellow-bg);border-radius:8px;padding:.5rem .65rem;margin:.75rem 0 0"></p>
     <div class="modal-actions" style="margin-top:1.25rem">
@@ -6543,7 +6559,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '16.2';
+var APP_VERSION = '16.3';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -6555,7 +6571,7 @@ var APP_VERSION = '16.2';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '5190ca03';
+var APP_BUILD = '2d401f63';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -25875,9 +25891,20 @@ function openReassignModal(cat, name, rack){
     name + ((s && s.project) ? ' · ' + s.project : '');
   document.getElementById('raRackShow').value = rack;
   document.getElementById('raQty').value = '';
-  document.getElementById('raQty').max = enEsteEstante || '';
-  document.getElementById('raAvail').textContent =
-    enEsteEstante ? '(' + enEsteEstante + ' on this rack)' : '';
+
+  /* ── LA OPCIÓN SÓLO EXISTE SI HAY MATERIAL FUERA ──────────────────────────
+   *
+   * Ofrecer «vienen de una obra» cuando no hay nada en ninguna obra es ofrecer
+   * una respuesta que la app va a rechazar un segundo después. Y al revés: si
+   * hay unidades fuera, la opción tiene que estar ahí sin que haya que
+   * buscarla, porque es el caso que Jose hace todas las semanas. */
+  _raFuera = Math.max(0, Number(s && s.siteQty) || 0);
+  var campo = document.getElementById('raDesdeField');
+  var sel   = document.getElementById('raDesde');
+  if (sel) sel.value = 'rack';
+  if (campo) campo.style.display = _raFuera > 0 ? '' : 'none';
+  _raEnEstante = enEsteEstante;
+  _raSyncDesde();
   document.getElementById('raToName').value = '';
   document.getElementById('raToProject').value = '';
   document.getElementById('raReason').value = '';
@@ -25903,6 +25930,42 @@ function openReassignModal(cat, name, rack){
   document.getElementById('reassignOverlay').classList.add('show');
 }
 
+/* Cuánto hay en el estante y cuánto hay fuera, apuntados al abrir la ventana:
+ * los dos topes que la pantalla puede comprobar sin preguntar al servidor. El
+ * servidor comprueba igual —es el que manda— pero decirlo antes de mandar es la
+ * diferencia entre «no se puede» y «no se pudo». */
+var _raEnEstante = 0, _raFuera = 0;
+
+function _raSyncDesde(){
+  var deObra = (document.getElementById('raDesde') || {}).value === 'site';
+  var rackInp = document.getElementById('raRackShow');
+  var lbl     = document.getElementById('raRackLbl');
+  var qty     = document.getElementById('raQty');
+  var avail   = document.getElementById('raAvail');
+  var tope    = deObra ? _raFuera : _raEnEstante;
+
+  if (rackInp) rackInp.disabled = !deObra;   // viniendo de una obra, se elige
+  if (lbl) lbl.textContent = deObra ? 'They come back to rack' : 'On rack';
+  if (qty) qty.max = tope || '';
+  if (avail) {
+    avail.textContent = deObra
+      ? (_raFuera ? '(' + _raFuera + ' out on a job)' : '')
+      : (_raEnEstante ? '(' + _raEnEstante + ' on this rack)' : '');
+  }
+  /* Y SE DICE QUÉ VA A ESCRIBIR. Tres filas en vez de dos no es un detalle
+     interno: es lo que va a aparecer en el histórico, y enterarse después de
+     pulsar es enterarse de que la app hizo algo que no se pidió. */
+  var nota = document.getElementById('raNota');
+  if (nota) {
+    nota.style.display = deObra ? '' : 'none';
+    nota.textContent = deObra
+      ? 'The app will record the return to the rack and the reassignment ' +
+        'together — three rows, in one go. Nothing is invented: those units ' +
+        'did come back.'
+      : '';
+  }
+}
+
 function submitReassign(){
   var btn  = document.getElementById('raSubmit');
   var qty  = Number(document.getElementById('raQty').value);
@@ -25914,16 +25977,26 @@ function submitReassign(){
 
   if (!isFinite(qty) || qty <= 0){ showToast('How many units?', 'warn'); return; }
   if (max && qty > max){
-    showToast('There are only ' + max + ' on that rack.', 'warn', 5000); return;
+    showToast('There are only ' + max +
+      ((document.getElementById('raDesde') || {}).value === 'site'
+        ? ' out on a job.' : ' on that rack.'), 'warn', 5000);
+    return;
   }
   if (!toCat || !toName){ showToast('Which material do they become?', 'warn'); return; }
   if (!proj){ showToast('Which job do they now belong to?', 'warn'); return; }
   if (!reason){ showToast('Say why — it is the trace that explains the two rows.', 'warn', 5000); return; }
 
+  var deObra = (document.getElementById('raDesde') || {}).value === 'site';
+  var rack   = deObra
+    ? (document.getElementById('raRackShow').value || '').trim().toUpperCase()
+    : document.getElementById('raRack').value;
+  if (deObra && !rack){ showToast('Which rack do they come back to?', 'warn'); return; }
+
   var payload = {
     category:    document.getElementById('raCat').value,
     name:        document.getElementById('raName').value,
-    rack:        document.getElementById('raRack').value,
+    rack:        rack,
+    fromSite:    deObra,
     unit:        document.getElementById('raUnit').value,
     fromProject: document.getElementById('raFromProject').value,
     toCategory:  toCat,
@@ -25944,6 +26017,10 @@ function submitReassign(){
       _aplicarStockDelServidor(res);
       _pintarGuardado(res);
       _reloadWhenIdle();
+      if (res && res.cameBack){
+        showToast('The return to ' + rack + ' was recorded too — three rows in one go.',
+                  'info', 7000);
+      }
       if (res && res.releasedLock){
         showToast('The hold on ' + payload.name + ' was released — it is in the audit log.',
                   'info', 7000);
@@ -34637,6 +34714,18 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '16.3',
+    titulo: 'Material coming back from a job and changing hands is one action, not two',
+    puntos: [
+      '<b>Windows, IGUs, mirrors and showers get moved between jobs constantly</b>, and until now that took two trips to the screen: record the return to a rack, then reassign them. Two actions for one thing that happened once.',
+      '<b>Now the reassign window asks where they are right now.</b> Say they are coming back from a job, pick the rack they land on, and the app records <b>the return and the reassignment together</b> \u2014 three rows, one go, either all of them or none.',
+      '<b>The return is really written, not skipped.</b> Those units did come back: that is a fact about the warehouse, and it is what makes them count in the left-over reports that already exist. What goes away is the second trip to the screen, not the record.',
+      'The option only appears when there <i>is</i> material out on a job. Offering it with none out would be offering an answer the app is about to refuse.',
+      '<b>And a fix:</b> a reassignment was not recording which job the units came from. It passed the value and the row writer dropped it \u2014 its list of movement types had not been told about reassignments. The readable trail was never lost (each row names the other and the job), but the column reports group by was empty.'
+    ],
+    antes:  'A return, then a reassignment, in two trips',
+    ahora:  'One action, three rows, and the return still on the record' },
+
   { ver: '16.2',
     titulo: 'Correcting a delivery offers to correct its entry, and the Dashboard fits a phone',
     puntos: [
@@ -34675,19 +34764,6 @@ var NOVEDADES = [
     ],
     antes:  'Nothing knew which entry a delivery became',
     ahora:  'The row says it, and the check reads it' },
-
-  { ver: '15.9',
-    titulo: 'Removing a document now removes the file, not just the link',
-    puntos: [
-      '<b>Pressing \u2715 on an attached document took it off the screen and left the file in your Drive.</b> For good. Nothing in that path ever touched Drive: the app wrote the surviving list of links into the row and stopped there.',
-      'The space was never the point. <b>What matters is what you believed you had done.</b> If that PDF carried a supplier price, or a photo showed something that should not have been photographed, it was still there \u2014 and the app had told you it was not. Worse, with no link left pointing at it, nobody was ever going to find it again.',
-      '<b>Now the file goes to your Google Drive trash</b>, where you can get it back for 30 days. The app says so before it does it, and afterwards it tells you how many files went \u2014 a promise it can keep, instead of a silent one it could not.',
-      '<b>And a rack photo can be removed.</b> You could replace one; you could never take one down \u2014 and the reason you need to is not tidiness, it is a photo with something in it that should not be there. There is a \u2715 on the photo card now, next to the replace button but on the other side, because two 20-pixel buttons in the same corner is a coin flip and one of them deletes.',
-      'Replacing a rack photo used to leave the old file in Drive too. It does not any more.',
-      '<b>What the app refuses to do:</b> throw away a file that is not in its own folders \u2014 a link cell can be typed in by hand, and without that check \u201cremove a document\u201d would be a way to bin anything in the owner\u2019s Drive \u2014 and throw away a file that a movement in the <i>trash</i> still points at, because restoring a deleted movement has to bring its documents back with it.'
-    ],
-    antes:  'The file stayed in Drive for good',
-    ahora:  'To the Drive trash, and it says how many' },
 
 ];
 

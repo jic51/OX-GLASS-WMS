@@ -128,7 +128,7 @@
 // Version handshake — bump this whenever Code.gs and Index.html change together.
 // getInitialData() returns it; the frontend compares against its own APP_VERSION
 // and warns if they differ (i.e. one file was deployed without the other).
-var APP_VERSION = '16.2';
+var APP_VERSION = '16.3';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -140,7 +140,7 @@ var APP_VERSION = '16.2';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '5190ca03';
+var APP_BUILD = '2d401f63';
 
 // ═══ ACOPIO BASIC — EL INTERRUPTOR DE LA VERSIÓN GRATIS ══════════════════════
 //
@@ -5372,7 +5372,24 @@ function addMovementsBatch_(ss, archive, movements, auth, opciones) {
        * ellos. Dos normalizaciones distintas sobre la misma clase de dato son
        * dos cosas que tienen que coincidir sin que nada lo obligue, y eso en
        * este proyecto ya ha salido caro once veces. */
-      if (mt === 'RETURN' || mt === 'EXIT') {
+      /* ── Y `REASSIGN` TAMBIÉN, QUE SE ME ESCAPÓ EN LA v16.1 ───────────────
+       *
+       * `reassignMaterial` pasaba `originProject` en sus dos filas —de qué obra
+       * venían las unidades— y **este `else` lo tiraba**, porque la lista decía
+       * sólo RETURN y EXIT. La fila se escribía con la columna vacía.
+       *
+       * Y lo peor: `test-reasignar` comprobaba `sube.originProject` sobre el
+       * OBJETO QUE SE LE PASA a `addMovementsBatch_`, no sobre la fila que
+       * acaba en la hoja. El doble de la prueba contestaba lo que la prueba
+       * quería oír mientras el producto tiraba el dato. Es la tercera vez este
+       * mes que un doble tapa un fallo del lado que no se ejecuta, y lo dejo
+       * escrito aquí porque el arreglo de la prueba —medir la FILA— es más
+       * importante que el de esta línea.
+       *
+       * De todas formas el rastro legible no se perdió nunca: el motivo de cada
+       * fila nombra a la otra y la obra. Pero la columna es la que sirve para
+       * agrupar, y estaba vacía. */
+      if (mt === 'RETURN' || mt === 'EXIT' || mt === 'REASSIGN') {
         row[AC.ORIGIN_PROJECT] = d.originProject ? normalizeString(d.originProject) : '';
         row[AC.FROM_MOV]       = String(d.fromMov || '').trim();
       } else {
@@ -5970,9 +5987,31 @@ function reassignMaterial(ss, archive, data, auth) {
   var project = String(data.toProject || '').trim();
   var reason  = String(data.reason || '').trim();
 
+  /* ── EL ATAJO: VIENEN DE UNA OBRA (v16.3) ─────────────────────────────────
+   *
+   * Jose, 23/11: *"cuando recibo unas ventanas… que son los que siempre se
+   * cambian de proyecto, ¿debo hacer primero el return a una locación y luego
+   * el reassign? ¿Hay una forma de hacer el reassign sin tener que hacer return
+   * primero? (como lo que te dije que me parece mal tener que hacer un
+   * receiving y luego un entry si es el mismo proceso pero en 2 estados)."*
+   *
+   * Y después: *"siempre vuelven a la bodega, haz el atajo pequeño."*
+   *
+   * Así que la vuelta y el cambio de dueño son UNA acción. Lo que NO se hizo es
+   * inventarse que las unidades cambian de obra en el aire: **la devolución se
+   * escribe de verdad**, con su fila y su obra de origen, porque es un hecho
+   * del almacén —esas ventanas volvieron— y porque es lo que deja el `RETURN`
+   * contando en los informes de boneyard que ya existen.
+   *
+   * Tres filas en UNA escritura: vuelven, dejan de ser del material viejo,
+   * pasan a ser del nuevo. O están las tres o no está ninguna. */
+  var desdeObra = !!data.fromSite;
+
   if (!srcCat || !srcName) throw new Error('Pick the material the units are leaving.');
   if (!dstCat || !dstName) throw new Error('Pick the material the units become.');
-  if (!rack)    throw new Error('Pick the rack the material is on.');
+  if (!rack)    throw new Error(desdeObra
+    ? 'Pick the rack they come back to.'
+    : 'Pick the rack the material is on.');
   if (qty <= 0) throw new Error('Quantity must be greater than 0.');
   if (!project) throw new Error('A reassignment needs the job the material now belongs to.');
   if (!reason)  throw new Error('Say why these units changed hands — it is the trace.');
@@ -5990,7 +6029,9 @@ function reassignMaterial(ss, archive, data, auth) {
    * que pasa es una reserva soltada y una reasignación que no se guardó — se
    * vuelve a poner, y queda dicho en la auditoría quién la soltó. */
   var soltada = null;
-  var candados = getActiveLocksMap_(ss);
+  /* Si vienen de una obra no hay candado que mirar: una reserva aparta material
+   * EN UN ESTANTE, y esto todavía no está en ninguno. */
+  var candados = desdeObra ? null : getActiveLocksMap_(ss);
   var lock = candados && candados[srcId + '|||' + rack];
   if (lock) {
     if (auth.role !== 'ADMIN') {
@@ -6015,7 +6056,33 @@ function reassignMaterial(ss, archive, data, auth) {
    * la otra, y siguen legibles si una se archiva o alguien edita un comentario
    * — que es justo el fallo que enseñó H-22. El puntero (`FROM_MOV`) se añade
    * además, para la máquina. */
-  var filas = [
+  var filas = [];
+
+  /* LA DEVOLUCIÓN VA PRIMERA, y el orden no es estético: las filas de una tanda
+   * se validan contra el stock EN ORDEN, y cada una ve el efecto de la
+   * anterior. Si la reasignación fuera primero, el almacén todavía no tendría
+   * esas unidades y la propia app la rechazaría por falta de existencias —
+   * tendría razón. */
+  if (desdeObra) {
+    filas.push({
+      moveType: 'RETURN',
+      category: data.category, name: data.name,
+      qty: qty, unit: String(data.unit || 'UNIT'),
+      sourceLoc: '', destLoc: rack,
+      project: String(data.fromProject || ''),
+      /* DE QUÉ OBRA VOLVIERON, en la columna que se hizo para esto. Es lo que
+       * hace que la devolución cuente en los informes de sobras que ya
+       * existen, en vez de ser una entrada más sin procedencia. */
+      originProject: String(data.fromProject || ''),
+      comments: 'Came back from ' + (String(data.fromProject || '') || 'a job') +
+                ' and reassigned to ' + aDestino + ' \u00b7 ' + project + ' \u2014 ' + reason,
+      responsible: String(data.responsible || ''),
+      dateRec: data.dateRec || '',
+      forceSubmit: true
+    });
+  }
+
+  filas = filas.concat([
     {
       moveType: 'REASSIGN',
       category: data.category, name: data.name,
@@ -6046,7 +6113,7 @@ function reassignMaterial(ss, archive, data, auth) {
       unitCost: media,                                // el coste que viaja
       forceSubmit: true
     }
-  ];
+  ]);
 
   var res = addMovementsBatch_(ss, archive, filas, auth);
 
@@ -6058,9 +6125,14 @@ function reassignMaterial(ss, archive, data, auth) {
    * va en la dirección segura. */
   var movs = res.movimientos || [];
   var linkError = null;
-  if (movs.length === 2 && movs[0].movId && movs[1].rowIdx) {
+  /* EL PAR SON LAS DOS ÚLTIMAS, no la primera y la segunda. Con el atajo, la
+   * primera fila es la devolución — y apuntar el «vengo de» de la fila que sube
+   * a la devolución en vez de a su pareja sería un rastro que lleva al sitio
+   * equivocado. Se cuenta desde el final, que es donde el par está siempre. */
+  var iBaja = movs.length - 2, iSube = movs.length - 1;
+  if (movs.length >= 2 && movs[iBaja] && movs[iBaja].movId && movs[iSube] && movs[iSube].rowIdx) {
     try {
-      archive.getRange(movs[1].rowIdx, AC.FROM_MOV + 1).setValue(movs[0].movId);
+      archive.getRange(movs[iSube].rowIdx, AC.FROM_MOV + 1).setValue(movs[iBaja].movId);
     } catch (e) {
       linkError = 'The two rows were saved, but the link between them was not: ' + e.message;
       try {
@@ -6071,7 +6143,8 @@ function reassignMaterial(ss, archive, data, auth) {
   }
 
   auditLog_(ss, 'REASSIGN', auth.email,
-    qty + ' ' + deOrigen + ' \u2192 ' + aDestino + ' \u00b7 ' + project,
+    qty + ' ' + deOrigen + (desdeObra ? ' (back from a job)' : '') +
+      ' \u2192 ' + aDestino + ' \u00b7 ' + project,
     String(data.fromProject || ''), reason);
 
   return {
@@ -6081,6 +6154,7 @@ function reassignMaterial(ss, archive, data, auth) {
     stockAfter: res.stockAfter || null,
     availableByMat: res.availableByMat || null,
     releasedLock: soltada,
+    cameBack: desdeObra,
     linkError: linkError,
     /* La etiqueta la arma el navegador CON `movimientos`, o sea con lo que esta
      * función acabó de escribir en la hoja. No se devuelve un objeto de

@@ -237,10 +237,25 @@ console.log('\n═══ 5. EL ESQUEMA: DOS COLUMNAS, AÑADIDAS AL FINAL ══�
         'desplegar', /function ensureArchiveWidth_/.test(src));
 }
 
-console.log('\n═══ 6. SÓLO RETURN Y EXIT GUARDAN ORIGEN ═══\n');
+console.log('\n═══ 6. QUIÉN GUARDA ORIGEN, Y QUIÉN NO ═══\n');
 {
-  const bloque = (src.match(/if \(mt === 'RETURN' \|\| mt === 'EXIT'\) \{[\s\S]{0,400}?\n      \}/) || [''])[0];
-  check('el escritor sólo pone origen en RETURN y EXIT', !!bloque, bloque.slice(0, 80));
+  /* ── ERA «SÓLO RETURN Y EXIT», Y EN LA v16.3 SON TRES ─────────────────────
+   *
+   * `REASSIGN` entró en la lista, y entró **arreglando un fallo**: la v16.1
+   * pasaba `originProject` en sus dos filas y este `else` lo tiraba, así que la
+   * columna salía vacía. Lo tapó un doble de `test-reasignar` que comprobaba el
+   * objeto de entrada en vez de la fila escrita.
+   *
+   * Lo que esta sección defiende no cambia: que el origen lo lleven SÓLO los
+   * tipos a los que significa algo, y que en los demás quede VACÍO en vez de
+   * heredado. Una reasignación sí tiene origen —de qué obra venían esas
+   * unidades— y es justo la pregunta que la hizo existir. */
+  const bloque = (src.match(/if \(mt === 'RETURN' \|\| mt === 'EXIT' \|\| mt === 'REASSIGN'\) \{[\s\S]{0,400}?\n      \}/) || [''])[0];
+  check('el escritor pone origen en RETURN, EXIT y REASSIGN', !!bloque, bloque.slice(0, 80));
+  /* Y LA OTRA MITAD: que no se haya colado un cuarto tipo sin pensarlo. Esta
+     lista crece a propósito o no crece. */
+  const tipos = (bloque.match(/mt === '[A-Z]+'/g) || []).length;
+  check('...y son exactamente TRES, no cuatro por descuido', tipos === 3, tipos);
   check('...y lo deja VACÍO en los demás, en vez de no tocarlo — una celda ' +
         'heredada de otro tipo sería un dato que nadie escribió',
     /else \{\s*row\[AC\.ORIGIN_PROJECT\] = '';/.test(src));

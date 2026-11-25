@@ -108,6 +108,32 @@
     <!-- N-07 · El estante malo se ve antes de mandar, y elegir ya es contestar. -->
     <!-- N-08 · La idea de la fila fantasma es de Jose. N-09/10/11 vienen del mismo repaso. -->
     <!-- H-09 · La X de un documento borraba el enlace y dejaba el fichero. -->
+    <!-- Jose: "siempre vuelven a la bodega, haz el atajo pequeno". -->
+    <div class="entry" id="v16-3">
+      <span class="ver">v16.3</span>
+      <span class="tag new">New</span>
+      <h3>Material coming back from a job and changing hands is one action, not two</h3>
+      <p><b>Windows, IGUs, mirrors and showers get moved between jobs constantly</b>, and until
+         now that took two trips to the screen: record the return to a rack, then reassign them.
+         Two actions for one thing that happened once.</p>
+      <p><b>The reassign window now asks where they are right now.</b> Say they are coming back
+         from a job, pick the rack they land on, and the app records <b>the return and the
+         reassignment together</b> &mdash; three rows, one go, either all of them or none. Half a
+         reassignment would make material vanish from both sides at once.</p>
+      <p><b>The return is really written, not skipped.</b> Those units did come back: that is a
+         fact about the warehouse, and it is what makes them count in the left-over reports that
+         already exist. What goes away is the second trip to the screen, not the record. The
+         option only appears when there <i>is</i> material out on a job &mdash; offering it with
+         none out would be offering an answer the app is about to refuse.</p>
+      <p><b>And a fix:</b> a reassignment was not recording which job the units came from. It
+         passed the value and the row writer dropped it, because its list of movement types had
+         not been told about reassignments. The readable trail was never lost &mdash; each row
+         names the other and the job &mdash; but the column reports group by was empty.</p>
+      <p class="meta">The return goes first, and that is not cosmetic: the rows of one write are
+         checked against stock in order, each seeing the one before it. With the reassignment
+         first, the warehouse would not hold those units yet and the app would refuse it for lack
+         of stock &mdash; correctly.</p>
+    </div>
     <!-- Jose, 23/11: la app ofrece corregir la entrada, y el usuario dice si o no. -->
     <div class="entry" id="v16-2">
       <span class="ver">v16.2</span>

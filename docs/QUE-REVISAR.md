@@ -16,6 +16,58 @@ Esto es ese documento, y se actualiza **con cada versión**. Lo de arriba es lo
 
 ---
 
+> ## 👉 Si acabas de instalar la v16.3, empieza por `docs/CHECKLIST-v16.3.md`
+>
+> Jose, 25/11: *"al final dame lo que checkar."* De la v15.8 a la v16.3 son seis
+> versiones **y un solo archivo**, así que leer seis bloques es repetir trabajo.
+> Ese documento es **una sola pasada**, sin repetir nada, en el orden que yo
+> seguiría: primero lo que más duele si está roto.
+>
+> Lo de abajo se queda versión por versión, que es lo que sirve cuando algo
+> falla y hace falta saber de dónde viene.
+
+---
+
+## v16.3 — volver de la obra y reasignar, en una acción
+
+### 1 · El atajo que pediste  🔴
+
+1. Coge un material que **tenga unidades fuera, en una obra** (que su barra
+   muestre algo en *Out on a job*).
+2. Ábrelo desde su estante y pulsa **⇅ Reassign**.
+3. **Tiene que pasar:** arriba hay un desplegable nuevo, **Where they are now**,
+   con dos opciones. Elige **Coming back from a job**.
+4. **Tiene que pasar:** el campo del estante **se puede escribir** —ahora es *a
+   dónde vuelven*— el tope de la cantidad pasa a ser **lo que hay fuera**, y sale
+   una nota que dice que va a escribir **tres filas**.
+5. Rellena y guarda.
+6. **Comprueba los tres números:** lo que había **fuera** baja esa cantidad; el
+   material **nuevo** sube esa cantidad en ese estante; y el material viejo
+   queda igual que estaba en la bodega (entró y salió en el mismo acto).
+7. En **Movements** tienen que estar **tres filas**: un **RETURN** al estante y
+   las **dos de REASSIGN**. La del return dice de qué obra volvieron.
+
+### 2 · Que el atajo no se cuele donde no toca
+
+1. Coge un material **sin nada fuera** y pulsa Reassign.
+2. **Tiene que pasar:** el desplegable **no aparece**. Ofrecerlo con cero fuera
+   sería ofrecerte una respuesta que la app va a rechazar un segundo después.
+3. Y reasignando normal (material en su estante) siguen siendo **dos filas**,
+   sin ninguna devolución inventada.
+
+### 3 · Y una columna que estaba vacía  🟠 *fallo mío de la v16.1*
+
+1. Mira una reasignación **de las que hiciste con la v16.1 o la v16.2**, en la
+   hoja, columna **Left Over From**.
+2. Estaba **vacía**: la app pasaba el dato y el escritor de filas lo tiraba. El
+   rastro legible nunca se perdió —el motivo de cada fila nombra a la otra y la
+   obra— pero la columna por la que agrupan los informes sí.
+3. **De la v16.3 en adelante se escribe.** Las de antes se quedan vacías: no voy
+   a reescribir tu histórico por una columna. Si alguna te hace falta agrupada,
+   dímelo y vemos.
+
+---
+
 ## v16.2 — corregir una entrega ofrece corregir su entrada
 
 ### 1 · La oferta que pediste  🔴

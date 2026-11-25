@@ -310,6 +310,98 @@ es exactamente para esto.
 
 ---
 
+## 📋 LO DEL 25/11 — lo que Jose decidió, y lo que hay que hablar
+
+### ✅ 1 · «Siempre vuelven a la bodega, haz el atajo pequeño» — v16.3
+
+Su pregunta era si hay forma de reasignar sin hacer el return primero, *"como lo
+que te dije que me parece mal tener que hacer un receiving y luego un entry si
+es el mismo proceso pero en 2 estados"*. Contesté que para lo que **recibe** no
+hace falta ningún return —el material está en un estante— y que el return sólo
+hace falta si ya salió a una obra, porque la app lleva el «fuera» como **un
+solo saco por material**, no por obra. Y ofrecí dos caminos. Eligió el pequeño.
+
+**Hecho:** la ventana de reasignar pregunta **dónde están ahora**, y si vienen
+de una obra escribe **tres filas en una escritura** — la devolución al estante
+que se elija, y la pareja de la reasignación.
+
+**Y la devolución se escribe DE VERDAD, no se salta.** Esas ventanas volvieron:
+es un hecho del almacén, y es lo que hace que cuenten en los informes de sobras
+que ya existen (`ORIGIN_PROJECT`). Lo que se quita es el **segundo viaje a la
+pantalla**, no el dato.
+
+**La devolución va primera, y el orden no es estético:** las filas de una tanda
+se validan contra el stock en orden y cada una ve el efecto de la anterior. Si
+la reasignación fuera primero, el almacén todavía no tendría esas unidades y la
+propia app la rechazaría por falta de existencias — con razón.
+
+### 🔴 2 · Y un fallo mío de la v16.1 que el barrido no vio
+
+`reassignMaterial` pasaba `originProject` en sus dos filas —de qué obra venían
+las unidades— y **el escritor de filas lo tiraba**: su lista decía sólo `RETURN`
+y `EXIT`. La columna salía vacía.
+
+**Lo tapó un doble mío.** `test-reasignar` comprobaba `sube.originProject` sobre
+el **objeto que se le pasa** a `addMovementsBatch_`, no sobre la fila que acaba
+en la hoja. El doble contestaba lo que la prueba quería oír mientras el producto
+tiraba el dato.
+
+> Es la tercera vez este mes que un doble tapa un fallo del lado que no se
+> ejecuta. **El arreglo de la prueba importa más que el de la línea:** ahora
+> levanta el escritor de verdad y mira la fila. `test-boneyard` también se
+> actualizó, y de paso gana una comprobación nueva: que esa lista tenga
+> **exactamente tres** tipos, para que no entre un cuarto por descuido.
+
+El rastro legible nunca se perdió —el motivo de cada fila nombra a la otra y la
+obra— pero la columna es la que sirve para agrupar, y estaba vacía.
+
+### 📋 3 · M-04, la tercera rama: **no se va a hacer**
+
+Jose, 25/11: *"esto lo dejamos como pendiente pero no creo que lo haremos."*
+Queda escrito aquí y se sale de la lista de lo siguiente. Corregir un solo campo
+desde el propio aviso era un atajo sobre algo que ya funciona: el aviso trae
+**Fix**, la ventana vuelve con todo dentro, y eso ya resuelve el caso.
+
+### 🔴 4 · PENDIENTE DE HABLAR · El incoming y su entrada como UNA sola cosa
+
+Jose, 25/11: *"también anota que debemos hablar del incoming con entry como
+parte de una sola cosa."*
+
+**Es la misma queja que la del reassign y el return, y no es casualidad.** Lo
+dijo así el 23/11: *"como lo que te dije que me parece mal tener que hacer un
+receiving y luego un entry si es el mismo proceso pero en 2 estados."*
+
+**Lo que hay hoy**, después de la v16.0 y la v16.2:
+
+- El movimiento guarda **de qué entrega vino** y el enlace se ve en las dos
+  direcciones.
+- Corregir la entrega **ofrece** corregir la entrada, nombrando qué cambió.
+- La revisión de datos lista las entregas que llegaron **sin** su entrada.
+
+**O sea: ya no se pierden, ya no se desalinean en silencio, y ya se pueden
+corregir las dos.** Lo que sigue siendo **dos pasos** es el momento de recibir.
+
+**Lo que hay que hablar, y son preguntas de almacén, no de código:**
+
+1. **¿Marcar una entrega como llegada debería CREAR la entrada directamente**,
+   sin abrir el formulario? Hoy lo abre relleno y hay que guardarlo.
+2. **Si sí: ¿qué pasa con lo que la entrega no sabe?** Una entrada necesita **en
+   qué estante se puso** y **cuánto llegó de verdad**, y una entrega esperada no
+   tiene ninguno de los dos. Si la app los inventa, inventa inventario.
+3. **¿O al revés — una entrega esperada no debería existir como cosa aparte**,
+   y ser un **estado** del material («pedido», «llegado», «en stock»)? Eso es un
+   cambio grande y es la respuesta de fondo a lo que él está diciendo.
+
+> **Mi lectura, para empezar la conversación:** lo que le molesta no son los dos
+> pasos, es tener que **escribir lo mismo dos veces**. Y eso ya casi no pasa —el
+> formulario viene relleno de la entrega. Lo que queda de verdad es el estante y
+> la cantidad real, que son justo los dos datos que **sólo se saben delante del
+> camión**. Si eso es así, el arreglo no es juntar las dos cosas: es que **el
+> formulario pregunte sólo esos dos** y nada más, y se guarde de una. Pero esto
+> lo decide él, y por eso está escrito como pendiente de hablar y no como plan.
+
+---
+
 ## 📋 LO DEL 23/11 — tres cosas de Jose · v16.2
 
 ### ✅ 1 · «La app debe OFRECER corregir la entrada» — la decisión que faltaba

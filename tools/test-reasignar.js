@@ -432,4 +432,138 @@ m.seccion('en la pantalla');
     /m\.moveType === 'REASSIGN' && m\.destLoc && !m\.sourceLoc/.test(sin));
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+m.seccion('LA FILA DE VERDAD, no el objeto que recibe el doble');
+{
+  /* ── POR QUÉ ESTA SECCIÓN EXISTE, Y ES UN FALLO MÍO ────────────────────────
+   *
+   * Arriba se comprueba `sube.originProject === 'TOWNHOME 2'` sobre el objeto
+   * que `reassignMaterial` le PASA a `addMovementsBatch_`. Y eso pasaba en
+   * verde mientras el producto **tiraba el dato**: el escritor de filas sólo
+   * escribía `ORIGIN_PROJECT` para RETURN y EXIT, así que la columna de las
+   * filas de reasignación salía vacía.
+   *
+   * El doble contestaba lo que la prueba quería oír. Así que aquí se levanta el
+   * ESCRITOR DE VERDAD y se mira la fila que acaba en la hoja — que es lo
+   * único que un informe puede leer dentro de un año. */
+  const ctx = {
+    console, Math, Number, String, Object, Array, isFinite, JSON, Date,
+    normalizeString: s => String(s || '').trim().toUpperCase().replace(/\s+/g, ' '),
+    cleanDisplay_: v => String(v || '').trim()
+  };
+  vm.createContext(ctx);
+  vm.runInContext(A.constantes(GS, ['AC', 'AC_WIDTH']), ctx);
+
+  /* Se saca el TROZO del escritor que decide estas dos columnas, con la misma
+     técnica que usa test-seleccion-viva: exigiendo que la marca esté, para que
+     el día que cambie de nombre esto lo diga en vez de medir otra cosa. */
+  const fuente = A.sinComentariosMismasLineas
+    ? A.sinComentariosMismasLineas(GS) : A.sinComentarios(GS);
+  const marca = "if (mt === 'RETURN' || mt === 'EXIT' || mt === 'REASSIGN') {";
+  check('el escritor de filas sigue teniendo su rama de procedencia',
+    fuente.indexOf(marca) !== -1);
+  const desde = fuente.indexOf(marca);
+  const hasta = fuente.indexOf('}', fuente.indexOf("row[AC.FROM_MOV]       = '';", desde));
+  const trozo = fuente.slice(desde, hasta + 1);
+
+  vm.runInContext('function _procedencia(mt, d){ var row = new Array(AC_WIDTH).fill("");\n' +
+                  trozo + '\nreturn row; }', ctx);
+
+  const sube = ctx._procedencia('REASSIGN', { originProject: 'townhome 2', fromMov: 'MOV-0' });
+  check('UNA FILA DE REASIGNACIÓN ESCRIBE de qué obra venía — el fallo que el ' +
+        'doble tapaba', sube[ctx.AC.ORIGIN_PROJECT] === 'TOWNHOME 2',
+    sube[ctx.AC.ORIGIN_PROJECT]);
+  check('...y su puntero al movimiento del que viene',
+    sube[ctx.AC.FROM_MOV] === 'MOV-0', sube[ctx.AC.FROM_MOV]);
+  const transfer = ctx._procedencia('TRANSFER', { originProject: 'townhome 2' });
+  check('y un traslado sigue sin procedencia: no viene de ninguna obra, y ' +
+        'escribirlo ahí sería ruido con cara de dato',
+    transfer[ctx.AC.ORIGIN_PROJECT] === '', transfer[ctx.AC.ORIGIN_PROJECT]);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+m.seccion('EL ATAJO: vuelven de una obra y se reasignan de una vez');
+{
+  /* Jose, 23/11: *"¿hay una forma de hacer el reassign sin tener que hacer
+     return primero? (como lo que te dije que me parece mal tener que hacer un
+     receiving y luego un entry si es el mismo proceso pero en 2 estados)"* —
+     y luego: *"siempre vuelven a la bodega, haz el atajo pequeño."* */
+  const w = mundo({ costes: { 'WINDOW|||PAT.SEI902': { avg: 12.5 } } });
+  const peticion = Object.assign({}, PETICION, { fromSite: true, rack: 'c3c' });
+  const res = w.ctx.reassignMaterial(w.ctx.ss, w.archive, peticion, null);
+
+  check('se escriben TRES filas en UNA escritura, no dos acciones',
+    w.escritas.length === 3, w.escritas.length);
+
+  const vuelta = w.escritas[0], baja = w.escritas[1], sube = w.escritas[2];
+  check('LA DEVOLUCIÓN VA PRIMERA — si no, el almacén todavía no tendría esas ' +
+        'unidades y la propia app rechazaría la reasignación por falta de ' +
+        'existencias, con razón',
+    vuelta.moveType === 'RETURN', w.escritas.map(f => f.moveType));
+  check('la devolución entra al estante que se eligió',
+    vuelta.destLoc === 'C3C' && vuelta.sourceLoc === '',
+    { d: vuelta.destLoc, s: vuelta.sourceLoc });
+  check('...y dice de qué obra volvieron, en la columna que se hizo para eso — ' +
+        'es lo que la hace contar en los informes de sobras',
+    vuelta.originProject === 'TOWNHOME 2', vuelta.originProject);
+  check('la devolución se explica sola: de dónde vino Y a dónde va',
+    /Came back from TOWNHOME 2/.test(vuelta.comments) &&
+    /reassigned to MH 145 · LAKESHORE/.test(vuelta.comments), vuelta.comments);
+
+  check('después baja en el material viejo, en ESE estante',
+    baja.moveType === 'REASSIGN' && baja.sourceLoc === 'C3C', baja);
+  check('y sube en el nuevo, en el mismo',
+    sube.moveType === 'REASSIGN' && sube.destLoc === 'C3C', sube);
+  check('el coste sigue viajando', sube.unitCost === 12.5, sube.unitCost);
+
+  /* EL PUNTERO APUNTA A SU PAREJA, NO A LA DEVOLUCIÓN. Es el fallo fácil de
+     este atajo: contando desde el principio, la fila que sube habría quedado
+     apuntando al RETURN — un rastro que lleva al sitio equivocado. */
+  check('el puntero de la fila que sube apunta a la que BAJA, no a la ' +
+        'devolución', w.escritas.link === 'MOV-1', w.escritas.link);
+
+  check('y se le dice al navegador, para que lo pueda contar',
+    res.cameBack === true, res.cameBack);
+}
+
+{
+  /* Y SIN LA BANDERA, NADA CAMBIA. El atajo no se puede colar en el camino
+     normal: quien reasigna material que está en su estante no quiere una
+     devolución inventada. */
+  const w = mundo({ costes: {} });
+  w.ctx.reassignMaterial(w.ctx.ss, w.archive, PETICION, null);
+  check('sin «vienen de una obra» siguen siendo DOS filas y ninguna devolución',
+    w.escritas.length === 2 && !w.escritas.some(f => f.moveType === 'RETURN'),
+    w.escritas.map(f => f.moveType));
+}
+
+{
+  const w = mundo({ costes: {} });
+  const peticion = Object.assign({}, PETICION, { fromSite: true, rack: '' });
+  let err = null;
+  try { w.ctx.reassignMaterial(w.ctx.ss, w.archive, peticion, null); }
+  catch (e) { err = e.message; }
+  check('viniendo de una obra hay que decir a qué estante vuelven, y el ' +
+        'mensaje lo dice así — no «falta el estante donde está»',
+    !!err && /come back to/.test(err), err);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+m.seccion('y la pantalla sólo ofrece el atajo cuando tiene sentido');
+{
+  const sin = A.sinComentarios(HTML);
+  check('la opción existe', /id="raDesde"/.test(sin));
+  check('...y sólo se enseña si hay unidades FUERA — ofrecerla con cero sería ' +
+        'ofrecer una respuesta que la app va a rechazar un segundo después',
+    /_raFuera > 0 \? '' : 'none'/.test(sin));
+  check('viniendo de una obra el estante se puede ELEGIR, porque es a dónde ' +
+        'vuelven', /rackInp\.disabled = !deObra/.test(sin));
+  check('y la etiqueta lo dice: «They come back to rack»',
+    /They come back to rack/.test(sin));
+  check('se avisa de que van a ser TRES filas antes de pulsar, no después',
+    /three rows, in one go/.test(sin));
+  check('el tope de la cantidad es el de fuera, no el del estante',
+    /tope    = deObra \? _raFuera : _raEnEstante/.test(sin));
+}
+
 m.fin();
