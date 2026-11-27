@@ -3608,12 +3608,60 @@ Las fotos de hoy entran sin tocarlas: una fila por locación, con el material
 vacío, es exactamente el caso de hoy.
 
 **Y hay que mirar `forgetRackPhotos_`** (`Code_v3_fixed.gs` ~15944) antes de
-hacerlo: borra las fotos de una locación que se va. Con fotos de material
-dentro, hay que decidir si una foto del material se tira con el estante o
-sobrevive. **Mi opinión: sobrevive y se queda sin locación** — es una foto de
-un material, y el estante ya no existe.
+hacerlo: borra las fotos de una locación que se va.
 
-**Estado: propuesto, esperando su «hazlo».**
+### Las cuatro decisiones, contestadas por Jose el 27/11
+
+**1 · El tope: 10, no 20.** *«EL TOPE DE 20 ME PARECE INCLUSO MUCHO, 10 ESTA
+BIEN.»* Decidido.
+
+**2 · Al borrar la locación: la foto va a la PAPELERA, no desaparece.**
+*«MI RESPUESTA ES QUE SE VAYA A LA PAPELERA»* — y de ahí sale MU-06, que es la
+pieza grande. Mi opinión de antes («sobrevive y se queda sin locación») queda
+**descartada por él**, y con razón: una foto sin locación es un huérfano que
+nadie vuelve a encontrar. A la papelera, con su locación escrita al lado, para
+poder devolverla.
+
+**3 · La foto sigue al material, y depende de a dónde va.** Palabras suyas:
+
+> *«CUANDO EL MATERIAL SE VA TAMBIEN SE VA LA FOTO CON EL, PERO DEPENDE DE A
+> DONDE SE VA EL MATERIAL, SI EL MATERIAL SALE DE LA BODEGA SE BORRA LA FOTO
+> (PAPELERA) PERO SI SE CAMBIA DE LOCACION SE VAN A ESA NUEVA LOCACION.»*
+
+Y el recordatorio que lo justifica: *«EN EL DASHBOARD LAS FOTOS APARECEN SON EL
+MATERIAL NO NECESARIAMENTE CON LA LOCACION NI EL MOVIMIENTO»*. O sea: **la foto
+es del material; la locación es dónde se tomó, no su dueña.**
+
+**Pero hay un caso que su regla no cubre, y es el normal: las cantidades se
+parten.** 117 pantallas en A5C, salen 50, quedan 67. ¿Se va la foto? ¿Cuál de
+las tres? La app no lo puede saber. **Regla propuesta, que cubre sus dos casos
+sin adivinar:**
+
+- **La foto se mueve sola cuando el movimiento DEJA LA LOCACIÓN A CERO de ese
+  material y hay UN solo destino.** Es el caso sin ambigüedad — y es
+  exactamente el de la mudanza, donde un bay se vacía entero en otro.
+- **Si el movimiento parte el material entre dos sitios, o deja unidades
+  atrás, la app NO mueve nada y lo dice.** Pregunta: *«Estas 3 fotos están en
+  A5C. ¿Se van con las 50 a B1A?»*, y él contesta — que es su propia regla del
+  v16.2, la del incoming corregido: *«el usuario debe decir si o no»*.
+- **La salida de la bodega sigue la misma forma:** la foto va a la papelera
+  **sólo cuando la última unidad de ese material sale de esa locación.** Un
+  EXIT parcial no toca ninguna foto.
+
+**4 · Al fusionar dos locaciones las fotos se juntan, y puede pasar de 10.**
+Él: *«HAY QUE HACER QUE LA APP DIGA CUANDO LA SUMA DE LAS FOTOS ES MAS DE 10,
+EN ESE CASO PODRIAMOS DEJAR QUE SUBA LA CANTIDAD PERO NO SE QUE PIENSAS TU?»*
+
+**Mi respuesta: el tope es para AÑADIR, no para TENER.** Un tope existe para
+que nadie se apoye en la cámara; una fusión no es eso — son dos juegos de fotos
+de verdad. Tirar una para cumplir un número sería perder un dato para proteger
+una cuenta. Así que: **la fusión pasa entera, la app dice «A1B tiene ahora 14
+fotos, por encima de 10: no se pueden añadir más hasta quitar algunas»**, y el
+botón de añadir explica por qué está apagado. Es lo mismo que un estante que
+queda por encima de su capacidad después de una mudanza: no se tiran pallets,
+simplemente no entra uno más.
+
+**Estado: las cuatro decididas. Esperando su «hazlo» para la v16.6.**
 
 ---
 
@@ -3677,3 +3725,156 @@ un botón.
 
 **Estado: la ruta está verificada y se puede empezar cuando quiera. Si quiere
 MU-03 antes de la mudanza, eso cambia el orden del trabajo, y es su decisión.**
+
+---
+
+## 🔴 MU-06 · La papelera que guarda TODO y sabe en qué orden devolverlo
+
+> *«DEBEMOS ANALIZAR LA OPCION QUE PEDI HACE ALGUNAS SESSIONES, QUE LA PAPELERA
+> GUARDE TODO LO QUE BORRAMOS, Y QUE SE PUEDA DEVOLVER SI SE NECESITA, EL
+> PROBLEMA ES CUANDO BORRAMOS UNA FOTO Y LUEGO SU LOCACION, SI QUEREMOS DEVOLVER
+> LA FOTO PERO NO SE HA DEVUELTO LA LOCACION, NO SE PODRA Y LA APP DEBE DECIRLO,
+> Y DAR LA OPCION DE DEVOLVER LA LOCACION TAMBIEN PARA LUEGO DEVOLVER LA FOTO,
+> ¿QUE PIENSAS?»*  — Jose, 27/11
+
+**Lo que pienso: que tiene razón, y que el principio ya está escrito en el
+código — en un solo sitio y con estas palabras.** `docIdSigueEnUso_`
+(`Code_v3_fixed.gs` ~9578) existe para no tirar un fichero de Drive al que
+todavía apunta una fila de la papelera, y su comentario dice:
+
+> *«restaurar un movimiento borrado tiene que devolver sus documentos. **Un
+> borrado que deja la mitad de la pareja es el fallo que este repositorio se
+> encuentra una y otra vez.**»*
+
+Jose está pidiendo **convertir eso en la regla** en vez de una excepción para
+una pareja. Es el mismo diagnóstico de siempre visto desde el otro lado.
+
+### Hoy hay DOS papeleras y él sólo puede ver una
+
+| Qué se borra | Dónde va | ¿Puede devolverlo desde la app? |
+|---|---|---|
+| Un movimiento | `MOVEMENT_TRASH`, **para siempre** (ver H-02) | **Sí** |
+| Un documento | su fila se queda; el fichero a la papelera de Drive | parcialmente |
+| **Una foto** | **la fila se BORRA**; el fichero a la papelera de Drive (30 días) | **No** |
+| Una locación, un proyecto, un proveedor, un PM, un pack | la celda se vacía | **No** |
+
+**Y el detalle que decide el diseño entero:** de una foto borrada, el fichero
+sigue existiendo en Drive 30 días, pero **la fila que decía de qué locación y
+de qué material era se borra**. Sin esa fila no hay nada que devolver, aunque el
+fichero esté. **Para poder restaurar algo hay que guardar la FILA, no el
+fichero.**
+
+### La forma que tiene que tener
+
+**Nada se borra: se marca borrado.** Una papelera única con, por cada cosa:
+qué era, de qué tipo, **de qué cosas cuelga**, quién la borró y cuándo. La
+dependencia es lo que contesta la pregunta de Jose: una foto cuelga de una
+**locación** y de un **material**; un movimiento cuelga de un material, una
+locación y sus documentos.
+
+**Su caso, resuelto:** al devolver la foto, la app ve que su locación está
+borrada y **no bloquea — ofrece**: *«Esta foto estaba en A1B, que ya no existe.
+¿Devuelvo A1B también?»*, con los dos botones. **Y una tercera salida que él no
+pidió pero va a querer:** *«ponerla en otra locación»* — porque después de una
+mudanza A1B puede no volver nunca, y la foto pertenece a A7C ahora.
+
+### Por qué NO ahora, y qué sí ahora
+
+**Esto no es una versión, es un proyecto.** Toca **todos** los caminos de
+borrado: movimientos, fotos, documentos, locaciones, materiales, proyectos,
+proveedores, PMs, packs, usuarios, incomings. Y la mudanza es en días.
+
+**Lo que sí propongo hacer ya, dentro de MU-04 y sin coste extra:** que **la
+fila de una foto no se borre nunca — se marque borrada**, guardando su locación
+y su material, y el fichero a la papelera de Drive como hoy. Con eso:
+
+- las fotos pasan a ser **lo primero que de verdad se puede devolver**;
+- es **el primer ladrillo de la papelera universal, puesto en la forma
+  correcta** — no un parche que luego haya que deshacer;
+- y la papelera universal se convierte en *«hacer lo mismo con las otras ocho
+  cosas»*: trabajo, sí, pero ya no diseño.
+
+**Estado: analizado. La pieza grande esperando su decisión; el primer ladrillo
+propuesto como parte de la v16.6.**
+
+---
+
+## 🟠 MU-07 · La mudanza de verdad, con los números reales de Jose
+
+> *«LO DE 2 LOCACIONES IGUALES EN LUGARES DIFERENTES ES UN HECHO. ACTUALMENTE
+> TENEMOS RACKS A, B Y C PARA VENTANAS TODOS CON BAYS DEL 1 AL 5 Y NIVELES DEL
+> 1 AL 3, PERO EN LA MUDANZA TENDREMOS RACKS A, B, C Y D PARA VENTANAS Y SOLO
+> EL RACK A TENDRA 10 BAYS CON 3 NIVELES CADA UNO, LOS RACKS B Y C TENDRAN SOLO
+> 4 BAYS CON 3 NIVELES Y EL D SOLO 3 BAYS CON 3 NIVELES, ENTONCES SE ME HACE
+> COMPLICADO MOVER LOS SCREENS DE A1B AL RACK A1B DEL OTRO LUGAR.»*
+
+**Con nombres, deja de ser complicado.** Las cuentas (sólo los estantes de
+ventanas; P, O y X van aparte):
+
+| | Antes | Después |
+|---|---|---|
+| A | 5 bays × 3 niveles = **15** | 10 × 3 = **30** |
+| B | 5 × 3 = **15** | 4 × 3 = **12** |
+| C | 5 × 3 = **15** | 4 × 3 = **12** |
+| D | — | 3 × 3 = **9** |
+| **Total** | **45** | **63** |
+
+Y cruzando los nombres:
+
+- **39 nombres existen ANTES Y DESPUÉS** — A1A…A5C, B1A…B4C, C1A…C4C. **No hay
+  que crearlos ni borrarlos. Ya existen y van a seguir existiendo.**
+- **24 nombres son NUEVOS y no choca ninguno** — A6A…A10C (15) y D1A…D3C (9).
+  **Se pueden crear hoy mismo, antes de bajar un pallet.**
+- **6 nombres desaparecen** — B5A/B/C y C5A/B/C. Se borran cuando queden a cero.
+
+### Las dos cosas que esto cambia
+
+**1 · Si las pantallas de A1B acaban en el A1B nuevo, NO HAY NADA QUE
+REGISTRAR.** La app no sabe dónde está el acero: sólo conoce el nombre, y A1B
+antes y A1B después son **la misma fila de CONFIG**. El movimiento sólo hace
+falta **cuando cambia el NOMBRE**. De los 45 bays de hoy, los que vayan al bay
+del mismo nombre son cero trabajo en la app.
+
+*La contrapartida, dicha para que la sepa antes de apoyarse en ella:* el
+historial **no va a contar que la bodega se mudó**. Para el stock y para «dónde
+estaba esto el 27/11» da igual, y si quiere que quede constancia es un
+comentario escrito una vez, no 45 movimientos.
+
+**2 · Los 24 nombres nuevos son el espacio de trabajo que evita el suelo.** Mi
+consejo anterior —un nombre de paso y bajar un estante al suelo— era para el
+caso sin nombres libres. **Él tiene 24.** Entonces:
+
+1. Crear hoy los 24 nombres nuevos (A6A…A10C, D1A…D3C). Sin choque.
+2. Llenar **primero** esos 24 desde los estantes viejos: **un movimiento por
+   pallet.**
+3. Eso vacía 24 bays viejos cuyos nombres **se reusan** en la distribución
+   nueva. Ahora están a cero en la app, así que el siguiente pallet entra
+   directo. **Otro movimiento por pallet, ninguno doble.**
+4. Seguir en ese orden hasta el final, y borrar al final B5* y C5*.
+
+**Hecho en ese orden, la mudanza entera es UN movimiento por pallet y no hace
+falta ni suelo ni nombre de paso.** Lo que lo hace posible es el orden; lo que
+lo rompe es empezar por un bay cuyo nombre de destino todavía tiene material
+viejo dentro — ahí los dos juegos se **mezclan** bajo el mismo nombre y ya no se
+distinguen. **El riesgo de la mudanza no es el nombre: es la mezcla.**
+
+**Lo que queda por decidir:** si la app debe **calcular ese orden** (le das la
+distribución nueva y te dice en qué secuencia vaciar) o si basta con MU-03 (el
+«Move everything» bay a bay) y la lista en papel. **Mi recomendación: MU-03 y la
+lista.** El planificador es bonito y es una semana; MU-03 es un día y le quita
+el 90 % de las pulsaciones.
+
+---
+
+## 🟡 MU-08 · Dos cosas anotadas y nada más, por ahora
+
+**1 · Las fotos en el mapa del almacén.** Él: *«EN EL MAPA TAMPOCO APARECEN LAS
+FOTOS, AUNQUE ESO ULTIMO PODRIAMOS TAMBIEN ANALIZARLO Y AÑADIRLO LUEGO.»*
+Anotado como **después de MU-04**, no antes: el mapa tendría que enseñar «las
+fotos de este bay», y qué es eso depende de la forma del dato que MU-04 decide.
+
+**2 · Crear varios incomings a la vez.** Él: *«TAMBIEN EN LA CORRECCION Y MEJORA
+DE LA CREACION DE VARIOS INCOMINGS A LA VEZ.»* Anotado sin analizar todavía.
+**Va junto con el tema pendiente de «el incoming y el entry como una sola
+cosa»** (ver la nota del 409 de este documento): no tiene sentido mejorar cómo
+se crean varios si está por decidirse si son dos pasos o uno.
