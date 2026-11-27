@@ -108,6 +108,30 @@
     <!-- N-07 · El estante malo se ve antes de mandar, y elegir ya es contestar. -->
     <!-- N-08 · La idea de la fila fantasma es de Jose. N-09/10/11 vienen del mismo repaso. -->
     <!-- H-09 · La X de un documento borraba el enlace y dejaba el fichero. -->
+    <!-- MU-02 · Ajustes no estaba en el reparto del repintado. Jose, 25/11. -->
+    <div class="entry" id="v16-5">
+      <span class="ver">v16.5</span>
+      <span class="tag fix">Fix</span>
+      <h3>Settings catches up on its own, without closing and reopening it</h3>
+      <p><b>Change something on one Settings tab, move to another, and the second one still showed
+         what it showed before.</b> Closing the window and opening it again was the only thing that
+         fixed it. The clearest case: rename or merge a material, go to Locations, and the units
+         per shelf, the reservation marks and the reason a shelf cannot be deleted were all still
+         the old ones.</p>
+      <p><b>There were two causes, not one.</b> Settings and the warehouse come from two separate
+         requests, and the Settings one was only made <i>when the window opened</i> &mdash; so
+         every panel after that was reading a snapshot. And separately, the repaint that runs
+         whenever data changes only knew about the five main sections; Settings is a window on top
+         of them, so none of its thirteen panels was ever in that round.</p>
+      <p><b>Both halves now follow the same order:</b> the panel in front of you is repainted
+         first, from what is already in memory; the rest is fetched straight after, quietly, so
+         the panels you have not opened yet are current by the time you click them. A refresh that
+         lands while you are typing <b>waits for the box you are in</b>, and one that lands while
+         you are halfway down a long list <b>keeps your place</b> instead of sending you back to
+         the top.</p>
+      <p class="meta">Nothing else changed in this version. The Materials list has its own
+         separate request and is now refreshed the same way.</p>
+    </div>
     <!-- La fila gris pedia movBody, que no existe. Roto desde la v15.8. -->
     <div class="entry" id="v16-4">
       <span class="ver">v16.4</span>

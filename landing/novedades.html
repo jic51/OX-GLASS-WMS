@@ -110,6 +110,31 @@
     <!-- N-07 · El estante malo se ve antes de mandar, y elegir ya es contestar. -->
     <!-- N-08 · La idea de la fila fantasma es de Jose. N-09/10/11 vienen del mismo repaso. -->
     <!-- H-09 · La X de un documento borraba el enlace y dejaba el fichero. -->
+    <!-- MU-02 · Ajustes no estaba en el reparto del repintado. Jose, 25/11. -->
+    <div class="entry" id="v16-5">
+      <span class="ver">v16.5</span>
+      <span class="tag fix">Arreglo</span>
+      <h3>Ajustes se pone al d&iacute;a solo, sin cerrarlo y volverlo a abrir</h3>
+      <p><b>Cambiabas algo en una pesta&ntilde;a de Ajustes, pasabas a otra, y la segunda
+         segu&iacute;a ense&ntilde;ando lo de antes.</b> Cerrar la ventana y volver a abrirla era
+         lo &uacute;nico que lo arreglaba. El caso m&aacute;s claro: renombrar o fusionar un
+         material, ir a Locations, y las unidades por estante, las marcas de reserva y el motivo
+         por el que un estante no se puede borrar segu&iacute;an siendo los viejos.</p>
+      <p><b>Las causas eran dos, no una.</b> Ajustes y el almac&eacute;n vienen de dos llamadas
+         distintas, y la de Ajustes s&oacute;lo se hac&iacute;a <i>al abrir la ventana</i>
+         &mdash; as&iacute; que todos los paneles de despu&eacute;s le&iacute;an una foto fija. Y
+         aparte, el repintado que corre cada vez que cambian los datos s&oacute;lo
+         conoc&iacute;a las cinco secciones grandes; Ajustes es una ventana por encima de ellas,
+         as&iacute; que ninguno de sus trece paneles entraba nunca en esa ronda.</p>
+      <p><b>Las dos mitades siguen ahora el mismo orden:</b> primero se repinta el panel que
+         tienes delante, con lo que ya est&aacute; en memoria; lo dem&aacute;s se va a buscar
+         justo despu&eacute;s, en silencio, para que los paneles que no has abierto est&eacute;n
+         al d&iacute;a cuando los pulses. Un refresco que llega mientras escribes <b>espera a que
+         sueltes la casilla</b>, y uno que llega cuando vas por la mitad de una lista larga
+         <b>te deja donde estabas</b> en vez de devolverte al principio.</p>
+      <p class="meta">En esta versi&oacute;n no cambi&oacute; nada m&aacute;s. La lista de
+         Materials tiene su propia llamada aparte, y ahora se refresca igual.</p>
+    </div>
     <!-- La fila gris pedia movBody, que no existe. Roto desde la v15.8. -->
     <div class="entry" id="v16-4">
       <span class="ver">v16.4</span>

@@ -6563,7 +6563,7 @@ var _MOV_PAGE_SZ = 75;   // rows per page in Movements tab
 var chartsReady = false;
 // Version handshake — must match APP_VERSION in Code.gs. If they differ, one
 // file was deployed without the other; loadDataFromGoogle shows a warning banner.
-var APP_VERSION = '16.4';
+var APP_VERSION = '16.5';
 // Build fingerprint — a short hash of the two shipped files, written by
 // tools/build-fingerprint.js and shown next to the version in the app.
 //
@@ -6575,7 +6575,7 @@ var APP_VERSION = '16.4';
 // part that matters in docs/LICENCIA-E-INTEGRIDAD.md.
 //
 // Never edit this by hand. Run: node tools/build-fingerprint.js --stamp
-var APP_BUILD = '05c42a57';
+var APP_BUILD = 'a4bc3b8c';
 var userRole = 'WAREHOUSE';
 /* QUÉ EDICIÓN ES. La manda el servidor con los datos iniciales; el navegador
  * NO la declara por su cuenta a propósito. Si hubiera una constante aquí y otra
@@ -16706,7 +16706,7 @@ function _settingsFocusInPanel(){
 
 function _redrawSettingsWhenFree(){
   var busy = _settingsFocusInPanel();
-  if (!busy) { _renderSettingsTab(_settingsTab); return; }
+  if (!busy) { _repintarAjustesSinSaltar(); return; }
   if (_settingsRedrawPending) return;
   _settingsRedrawPending = true;
   busy.addEventListener('blur', function(){
@@ -16715,6 +16715,119 @@ function _redrawSettingsWhenFree(){
     // the next field, and redrawing then is the same bug one box along.
     _redrawSettingsWhenFree();
   }, { once: true });
+}
+
+/* ═══ MU-02 · AJUSTES SE PONE AL DÍA SIN SALIR Y VOLVER A ENTRAR ═══════════
+ *
+ * Jose, 25/11: *"si elimino un material en Settings, y luego voy a Locations
+ * esa locación aún no actualiza. Debemos actualizar todo, pero —una
+ * corrección— debemos actualizar todo, PRIMERO LO QUE EL USUARIO ESTÁ VIENDO,
+ * LUEGO LO DEMÁS, así todo se actualiza sin tener que salir y volver a
+ * entrar."*
+ *
+ * Eran DOS fallos, y el segundo explica por qué pasaba justo así.
+ *
+ * ── UNO · EL BOTE DEL CATÁLOGO SE QUEDABA VIEJO CON LA VENTANA ABIERTA ────
+ *
+ * Los datos de Ajustes y los del almacén vienen de DOS llamadas distintas:
+ * `getSettings` llena `_settingsData` y `loadDataFromGoogle` llena `stockData`
+ * y compañía. Y `_settingsData` sólo se pedía AL ABRIR la ventana. Así que
+ * cambiar algo en Materials y pulsar Locations repintaba Locations leyendo la
+ * foto de cuando se abrió. Salir y volver a entrar lo arreglaba porque volver
+ * a entrar es lo único que volvía a pedir la lista.
+ *
+ * ── DOS · EL PANEL YA PINTADO NO SE REPINTABA NUNCA ───────────────────────
+ *
+ * Las unidades por estante, el 🔒 de las reservas y el «no se puede borrar:
+ * tiene N unidades» los calcula `_locUsage()` leyendo `stockData`, que SÍ se
+ * actualiza. Pero `renderAll` sólo conocía las cinco secciones de `_TAB_RENDERS`
+ * —dashboard, movements, projects, warehouse, incoming— y Ajustes no es una
+ * sección: es una ventana con trece solapas. No estaba en el reparto, así que
+ * los números seguían diciendo lo que decían al pintarse.
+ *
+ * ── POR QUÉ UNA SOLA FIRMA Y NO UNA LISTA POR PANEL ───────────────────────
+ *
+ * La tentación era un mapa «cada panel y de qué depende». Eso serían trece
+ * entradas escritas a mano, o sea la cuarta lista de paneles en este archivo
+ * (ya hay tres: `_TAB_RENDERS`, `_dirtyTabs` y `_activeTab`) y la decimocuarta
+ * cosa que alguien tendría que acordarse de rellenar. Es exactamente el fallo
+ * que este proyecto repite: dos cosas que tienen que coincidir sin que nada lo
+ * obligue.
+ *
+ * Así que la firma es UNA, y sus dos piezas no se pueden quedar cortas:
+ *
+ *   • `_dataStamp` — el sello que el propio servidor mueve cuando cambia
+ *     CUALQUIER cosa del almacén. Es el mismo que usa el latido para decidir
+ *     si recargar, y cubre `stockData`, `movements`, `materialLocks`,
+ *     `rackPhotos`, `config` y los precios de una vez. Un panel nuevo que lea
+ *     un global nuevo del almacén queda cubierto sin tocar nada.
+ *   • `_settingsData` — el catálogo, que puede cambiar SIN que el sello se
+ *     mueva (un `_cfgAdd` lo actualiza aquí mismo).
+ *
+ * Repinta de más —un guardado de otra persona repinta el panel de Categorías
+ * aunque no le afecte— y eso es a propósito: es lo mismo que hacen las cinco
+ * pestañas de abajo, que se repintan enteras con cada carga aplicada. Que
+ * Ajustes se porte igual es coherencia, no descuido. Y el salto de scroll que
+ * eso provocaría lo quita `_repintarAjustesSinSaltar`.
+ *
+ * Y NO ES UN SONDEO: `renderAll` sólo corre cuando se aplicó una carga, y el
+ * latido sólo carga cuando el sello cambió (ver `_pulseOk`). O sea, una llamada
+ * de más por cambio real, y sólo con la ventana de Ajustes abierta. Con la
+ * ventana cerrada esto no cuesta nada: se sale en la primera línea.
+ */
+var _firmaAjustes = '';
+
+function _ajustesAbiertos(){
+  var ov = document.getElementById('settingsOverlay');
+  return !!(ov && ov.classList.contains('show'));
+}
+
+function _firmaDeAjustes(){
+  try { return JSON.stringify([_dataStamp, _settingsData]); }
+  catch (e) { return ''; }   // una firma que no se puede calcular no bloquea nada
+}
+
+/* El repintado que NO te manda al principio de la lista.
+ *
+ * `_renderSettingsTab` rehace el panel entero, así que con cuarenta estantes en
+ * pantalla un refresco te devolvía arriba. Para un cambio de solapa eso está
+ * bien —acabas de llegar, se empieza por arriba, la misma regla que `showTab`—
+ * pero para un refresco que llega solo es perder el sitio donde estabas
+ * leyendo. Así que el scroll se guarda y se devuelve. */
+function _repintarAjustesSinSaltar(){
+  var pane = document.getElementById('settingsTabContent');
+  var y = pane ? pane.scrollTop : 0;
+  var yDoc = (pane && pane.parentElement) ? pane.parentElement.scrollTop : 0;
+  _renderSettingsTab(_settingsTab);
+  var ahora = document.getElementById('settingsTabContent');
+  if (ahora) {
+    if (y)    ahora.scrollTop = y;
+    if (yDoc && ahora.parentElement) ahora.parentElement.scrollTop = yDoc;
+  }
+}
+
+function _refrescarAjustesAbiertos(){
+  if (!_ajustesAbiertos()) return;
+
+  /* PRIMERO LO QUE EL USUARIO ESTÁ VIENDO —la mitad de la regla de Jose que ya
+     se puede contestar aquí mismo, porque lo del almacén ya está en memoria. */
+  var f = _firmaDeAjustes();
+  if (f !== _firmaAjustes) {
+    _firmaAjustes = f;
+    _redrawSettingsWhenFree();
+  }
+
+  /* Y LUEGO LO DEMÁS: el catálogo, que hay que ir a buscarlo. En modo
+     silencioso, que es el que ya existe desde la v11.32 y sólo repinta si el
+     servidor contesta algo distinto — así los paneles que NO estás mirando
+     están al día para cuando los pulses, sin que esto parpadee. */
+  _loadSettings({ quiet: true });
+
+  /* LA TERCERA OLLA. La lista de Materials no sale de `getSettings` ni de
+     `loadDataFromGoogle`: tiene su propia llamada (`listMaterials`). Sin esto,
+     el panel de Materials seguiría enseñando lo de antes cuando lo cambia otra
+     persona — el mismo fallo, un bote más allá. */
+  if (_settingsTab === 'materials') _loadMatList({ quiet: true });
 }
 
 function _loadSettings(opts) {
@@ -19583,6 +19696,18 @@ function switchSettingsTab(tab) {
   _clearRowModes();
   _settingsTab = tab;
   _renderSettingsTab(tab);
+  /* MU-02 · Y SE EMPIEZA POR ARRIBA, que es la misma regla de `showTab` —
+   * *«volver a la página 1 tiene sentido cuando LO QUE MIRAS cambia»*— dicha
+   * aquí por primera vez.
+   *
+   * Hacía falta decirla porque `settingsTabContent` es UN SOLO elemento que
+   * cambia de contenido: el navegador no reinicia su scroll al reemplazar los
+   * hijos, así que bajar media lista de estantes y pulsar Materials te dejaba
+   * a mitad de una lista distinta. Lo encontró la prueba de MU-02 al comprobar
+   * lo contrario: que un REFRESCO sí te deja donde estabas. Las dos cosas
+   * tienen que ser verdad, y sólo una lo era. */
+  var pane = document.getElementById('settingsTabContent');
+  if (pane) pane.scrollTop = 0;
 }
 
 // Every scope off, and every bar that is currently on screen repainted to say
@@ -19599,6 +19724,11 @@ function _clearRowModes(){
 
 function _renderSettingsTab(tab) {
   _syncSettingsTabButtons(tab);
+  /* MU-02 · LO QUE SE ESTÁ PINTANDO QUEDA APUNTADO AQUÍ, en la única puerta por
+   * la que pasan los trece paneles. Así «¿hace falta repintar?» es una
+   * comparación contra lo que de verdad hay en pantalla, y no contra lo que
+   * alguien se acordó de registrar en otra parte. Ver `_refrescarAjustesAbiertos`. */
+  _firmaAjustes = _firmaDeAjustes();
   var content = document.getElementById('settingsTabContent');
   /* CADA PINTADA REHACE EL CONTENIDO, así que el apagado hay que rehacerlo
    * también — y DESPUÉS, no antes. Jose encontró la pestaña de sistema con
@@ -22071,15 +22201,28 @@ function _packsPanelDelete(r, btn){
   });
 }
 
-function _loadMatList() {
-  var cont = document.getElementById('matListContainer');
-  if (cont) cont.innerHTML = '<p style="color:var(--muted);font-size:.82rem;padding:.5rem">Loading…</p>';
+/* MU-02 · `quiet` es el mismo trato que `_loadSettings` desde la v11.32: el
+ * panel ya está enseñando algo de verdad, así que no se borra para escribir
+ * «Loading…», y sólo se repinta si la respuesta trae algo distinto. Sin eso, un
+ * refresco silencioso haría parpadear la lista entera en cada guardado de
+ * cualquiera, que es peor que la lista vieja. Y un fallo callado se calla: hay
+ * datos buenos en pantalla, y un error rojo encima de algo que funciona enseña
+ * a no hacer caso de los errores rojos. */
+function _loadMatList(opts) {
+  var quiet = !!(opts && opts.quiet);
+  var cont  = document.getElementById('matListContainer');
+  if (!quiet && cont) cont.innerHTML = '<p style="color:var(--muted);font-size:.82rem;padding:.5rem">Loading…</p>';
+  var antes = quiet ? JSON.stringify(_matListAll || []) : null;
   google.script.run
     .withSuccessHandler(function(list) {
       _matListAll = list;
+      if (quiet && JSON.stringify(_matListAll || []) === antes) return;
       _filterMatList();
     })
-    .withFailureHandler(function(e){ if(cont) cont.innerHTML = '<p style="color:var(--red);font-size:.82rem">Error: '+_he(e.message||e)+'</p>'; })
+    .withFailureHandler(function(e){
+      if (quiet) return;
+      if (cont) cont.innerHTML = '<p style="color:var(--red);font-size:.82rem">Error: '+_he(e.message||e)+'</p>';
+    })
     .processMovement('listMaterials', _h({}));
 }
 
@@ -26854,6 +26997,21 @@ function renderAll(){
    * popup está cerrado, que es casi siempre — la primera línea de
    * _refreshMorningPopup se va si el overlay no está abierto. */
   _refreshMorningPopup();
+
+  /* MU-02 · Y AJUSTES TAMPOCO ES DE NINGUNA PESTAÑA, por lo mismo y con las
+   * mismas palabras. Es una ventana con trece solapas que vive por encima de
+   * las cinco secciones, así que no estaba en el reparto de arriba y ningún
+   * panel suyo se repintaba nunca — Jose, 25/11: *"esa locación aún no
+   * actualiza… sin tener que salir y volver a entrar"*.
+   *
+   * Gratis con la ventana cerrada, que es casi siempre: la primera línea de
+   * `_refrescarAjustesAbiertos` se va si el overlay no está abierto.
+   *
+   * EN SU PROPIO `try` y no por costumbre: `renderAll` corre también en medio
+   * de un borrado (ver `_delEnqueue`, que lo llama a pelo), y un tropiezo
+   * repintando Ajustes no puede llevarse por delante la fila que se está
+   * borrando. */
+  try { _refrescarAjustesAbiertos(); } catch (e) { console.error('_refrescarAjustesAbiertos:', e); }
 }
 
 // ── Stock Detail Panel ────────────────────────────────────────────────────────
@@ -34761,6 +34919,18 @@ var LEGAL_DOCS = {
  */
 
 var NOVEDADES = [
+  { ver: '16.5',
+    titulo: 'Settings catches up on its own, without closing and reopening it',
+    puntos: [
+      '<b>Change something on one Settings tab, move to another, and the second one still showed what it showed before.</b> Closing the window and opening it again was the only thing that fixed it. The clearest case: rename or merge a material, go to Locations, and the units per shelf, the reservation marks and the reason a shelf cannot be deleted were all still the old ones.',
+      '<b>There were two causes, not one.</b> Settings and the warehouse come from two separate requests, and the Settings one was only made <i>when the window opened</i> — so every panel after that was reading a snapshot. And separately, the repaint that runs whenever data changes only knew about the five main sections; Settings is a window on top of them, so none of its thirteen panels was ever in that round.',
+      '<b>Both halves now follow the same order:</b> the panel in front of you is repainted first, from what is already in memory; the rest is fetched straight after, quietly, so the panels you have not opened yet are current by the time you click them.',
+      '<b>A refresh waits for you.</b> One that lands while you are typing waits for the box you are in, and one that lands while you are halfway down a long list keeps your place instead of sending you back to the top.',
+      'Nothing else changed. The Materials list has its own separate request and is now refreshed the same way.'
+    ],
+    antes:  'Close Settings and open it again to see the change',
+    ahora:  'The panel in front of you first, the rest right after' },
+
   { ver: '16.4',
     titulo: 'The grey row really appears now, and the saving notice has a spinner',
     puntos: [
@@ -34794,20 +34964,6 @@ var NOVEDADES = [
     ],
     antes:  'A delivery and its entry drifted apart in silence',
     ahora:  'It asks, naming what changed, and waits for an answer' },
-
-  { ver: '16.1',
-    titulo: 'Material used on another job changes hands, not just shelves',
-    puntos: [
-      '<b>When material bought for one job gets fitted on another, the app had one button for it: Transfer.</b> So that is what everybody used \u2014 and a transfer answers a different question. <b>Transfer answers \u201cwhere is it?\u201d. This answers \u201cwhose is it?\u201d</b> The result came out right on the shelf and wrong on the job: the units kept the old material\u2019s name and stayed on the old job\u2019s books, and all the app knew was that four units moved from one rack to another.',
-      '<b>There is a <i>Reassign</i> button now</b>, on the material in its rack, which is where you are standing when it happens. It asks what they become, for which job, and why.',
-      '<b>Two rows, written together.</b> One takes the units off the old material and one puts them on the new one, and each says the other\u2019s name: <i>\u201cReassigned to MH 145 \u00b7 LAKESHORE\u201d</i> and <i>\u201cReassigned from PAT.SEI902 \u00b7 TOWNHOME 2\u201d</i>. They read on their own, without going to look for the other one. They also go in one write, so either both are there or neither is \u2014 half a reassignment would make material vanish from both sides at once.',
-      '<b>Nothing moves.</b> Both rows carry the same rack, because the windows are where they always were. Nothing shows as fitted on a site and nothing as wasted, and the warehouse total does not change \u2014 only which material holds it. If you also want them somewhere else, that is still a Transfer.',
-      '<b>The cost travels with the units.</b> The price the old material paid is what the new one takes on. Without that, moving cheap material onto an expensive one <i>invents money</i>, and the other way round destroys it.',
-      '<b>If the material was on hold, the hold is released</b> \u2014 and only an admin can do it, because keeping a hold on something already fitted in another house makes somebody unable to take out material they do have. The app says so before you press, and the audit log records that a reassignment released it, not an anonymous hand.',
-      '<b>And it offers to print the new label.</b> The sticker on the pallet still says the old name, and that is a physical object that sends somebody looking for the wrong thing.'
-    ],
-    antes:  'A transfer, and the units kept the old name',
-    ahora:  'They belong to the new job, and say where they came from' },
 
 ];
 
